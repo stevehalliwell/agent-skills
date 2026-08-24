@@ -1,0 +1,28 @@
+{
+  "deadline": 1200,
+  "defaults": {
+    "harness": "pi",
+    "model": "openai-codex/gpt-5.6-sol",
+    "thinking": "high",
+    "skills": ["technical-review"],
+    "extensions": [],
+    "exclude_skills": [],
+    "exclude_extensions": []
+  },
+  "tasks": [
+    {
+      "name": "pi-review",
+      "prompt": "tasks/pi-review.md"
+    },
+    {
+      "name": "codex-second-opinion",
+      "prompt": "tasks/codex-second-opinion.md",
+      "harness": "codex",
+      "model": "gpt-5.6-terra",
+      "thinking": "low",
+      "web_search": false,
+      "ephemeral": true,
+      "sandbox": "workspace-write"
+    }
+  ]
+}
