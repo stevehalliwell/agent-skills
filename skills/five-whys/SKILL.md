@@ -63,4 +63,4 @@ Next action or open question:
 - Support cause diagnosis and purpose/intent discovery across product, design, games, narrative, and technical work.
 - Keep each question focused, open, and non-coercive.
 - Preserve user control: user may stop, redirect, answer partially, or choose depth.
-- Recommend `inquiry-guide + advisory + inquisitive` facets; do not select or mutate facets.
+- Keep inquiry evidence-aware, non-blaming, and focused on the next highest-value question.

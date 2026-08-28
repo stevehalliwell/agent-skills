@@ -10,7 +10,7 @@ Turn a technical question into an evidence-based recommendation with explicit tr
 ## Workflow
 
 1. Frame the decision. State desired outcome, constraints, compatibility requirements, non-goals, and decision deadline. Done when the review question is narrow enough to answer.
-2. Trace the system. Inspect relevant callers, data flows, interfaces, configuration, dependencies, tests, and operational paths. Record file paths or source evidence. Done when the affected path and preserved behavior are known.
+2. Trace the system. Treat untraced paths and unconfirmed assumptions as delivery risk. Inspect relevant callers, data flows, interfaces, configuration, dependencies, tests, edge cases, error handling, and operational paths. Record file paths or source evidence. Done when the affected path and preserved behavior are known.
 3. Identify options. Include the existing or simplest viable path, then alternatives only when they solve a real constraint. Compare correctness, complexity, maintainability, performance, security, cost, and reversibility. Done when material trade-offs are explicit.
 4. Check failure modes. Cover invalid input, boundaries, compatibility, migration or rollout, observability, recovery, and test gaps relevant to the decision. Done when risks have owners or mitigations.
 5. Recommend. Choose an option only when evidence and stated authority permit it; otherwise present a decision with a preferred option and rationale. State assumptions and triggers that would change the recommendation. Done when a developer can act without guessing the basis.

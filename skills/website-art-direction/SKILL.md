@@ -9,7 +9,7 @@ Create decision-ready visual-direction brief from supplied evidence.
 
 ## Trigger clarification
 
-Use for deliberate website visual-expression direction before implementation. If user needs messaging/positioning, full identity work, or code changes instead, route to appropriate workflow. Recommend `visual-direction` preset; do not select or mutate facets.
+Use for deliberate website visual-expression direction before implementation. If user needs messaging/positioning, full identity work, or code changes instead, route to the appropriate workflow.
 
 ## Workflow
 

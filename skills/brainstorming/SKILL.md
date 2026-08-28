@@ -13,7 +13,7 @@ Use when the user wants generative ideation rather than evidence-first research,
 
 ## Workflow
 
-1. Enter brainstorming mode. State: `Brainstorming start. Current work resumes after ideation.` Identify the topic and desired outcome. Ask for goal, constraints, audience/context, or selection criteria only when their absence would materially distort ideas. Done when there is enough context to generate useful options.
+1. Enter brainstorming mode. State: `Brainstorming start. Current work resumes after ideation.` Identify the topic and desired outcome before optimizing possible solutions. Ask for goal, constraints, audience/context, or selection criteria only when their absence would materially distort ideas. Done when there is enough context to generate useful options.
 2. Associate. Surface varied starting associations, analogies, tensions, and adjacent approaches. Keep distinct directions visible; label assumptions rather than presenting them as evidence. Done when the option space extends beyond the first obvious answer.
 3. Expand. Build on promising associations through combinations, variants, reversals, and low-commitment experiments. Prefer breadth before judgment. Done when each direction has enough detail to compare.
 4. Contract. Group related ideas, state practical trade-offs against supplied criteria, and identify a small set of next-step candidates. Do not select a material direction or turn ideas into implementation. Done when the user can choose, test, research, or refine a candidate.

@@ -66,5 +66,6 @@ Run these directly from this package with explicit project paths:
 - Preserve raw observations, source type, source context, contradictory evidence, capture failures, and applicable timestamps.
 - Evidence labels describe provenance; they do not decide truth.
 - Never use a model synthesis as a substitute for retained source evidence.
+- Separate observations, interpretations, hypotheses, and recommendations in retained artifacts and reports; test conclusions against relevant alternatives.
 - An evidence dossier may be inconclusive; say so rather than forcing a judgement.
 - The global package is canonical. Run its scripts directly; do not copy them into projects.

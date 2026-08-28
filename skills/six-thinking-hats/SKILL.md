@@ -13,7 +13,7 @@ Use only when deliberate separation of perspectives will improve a creative, des
 
 ## Workflow
 
-1. Frame exploration. State question, decision horizon, constraints, available evidence, and what remains user-owned. Recommend `pragmatic-collaborator + advisory + structured`; do not select or mutate facets. Done when question is narrow enough to examine.
+1. Frame exploration. State question, decision horizon, constraints, available evidence, and what remains user-owned. Keep the exploration structured, present options and trade-offs, and preserve the user's decision authority. Done when question is narrow enough to examine.
 2. Select lenses. Explain hats and ask user to select relevant ones and optional order:
    - **Facts** — evidence, data, constraints, unknowns.
    - **Feelings** — intuition, reactions, hopes, concerns; not evidence claims.
@@ -58,4 +58,4 @@ Next step:
 - Keep lens outputs separate; surface disagreement instead of blending it away.
 - Label evidence, assumptions, and unknowns in every substantive lens.
 - User retains material decisions and may add, remove, reorder, or stop lenses.
-- Do not add persistent hat facets, a preset, or a prompt template.
+- Do not add persistent hat state or a prompt template; this workflow is temporary.
