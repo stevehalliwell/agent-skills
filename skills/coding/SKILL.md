@@ -1,11 +1,13 @@
 ---
 name: coding
-description: "Write, change, fix, or review ordinary code when a more specific workflow does not apply. Use Ponytail engineering judgment to understand the real path, prefer the smallest correct solution, avoid speculative abstraction, and leave proportionate runnable verification. Use implementation for agreed tracked work, web-implementation for web delivery, and technical-review for recommendation-only review."
+description: "Before writing, modifying, generating, patching, or deleting code of any kind, load this skill as soon as the agent decides code changes are needed. This is mandatory even when implementation, web-implementation, or another delivery skill also applies; use it for the engineering judgment that keeps any code change small, traced, and proportionately verified. Skip only recommendation-only work with no code change."
 ---
 
 # Coding
 
 Make the smallest correct code change after understanding the real path.
+
+This skill is the mandatory engineering layer for every code change. Other delivery skills may add workflow requirements; they do not replace this one.
 
 ## Required read
 
