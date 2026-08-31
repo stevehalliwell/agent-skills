@@ -68,10 +68,12 @@ Completion: skill use is confirmed or rejected before any extra files are loaded
    - Rephrase negation as positive target unless hard guardrail requires ban.
    - Completion: every line changes invocation, execution, or safety.
 
-8. Check response shape.
+8. Check invocation behavior and response shape.
+   - A manually invoked skill must perform its primary safe action immediately; it must never respond only that the workflow or skill was loaded.
+   - When that action needs user-specific scope or direction, ask one focused question instead of acknowledging the load.
    - Add output format only when consistent responses matter.
    - Keep format short enough agent will use it.
-   - Completion: user-facing response style is predictable without overconstraining content.
+   - Completion: user-facing response starts useful work or asks for required direction; it is predictable without overconstraining content.
 
 9. Validate locally.
    - Run `node ./validate-frontmatter.mjs <SKILL.md>`. It enforces quoted `description`, name format/64-char limit, and 1024-char description limit. Do not write ad-hoc validators for these checks.
@@ -134,6 +136,8 @@ disable-model-invocation: true # only for user-invoked
 - Negations become positive target behaviour where possible.
 - Skill stays narrow; split only when invocation, sequence, or noise reduction earns the load.
 - Output shape exists only when it improves predictable user response.
+- Manual invocation begins the skill’s primary safe action; it never returns a load-only acknowledgement.
+- If manual invocation lacks direction needed for that action, the skill asks one focused question.
 
 ## Output shape for reviews
 
@@ -159,5 +163,6 @@ Keep:
 - Prefer deleting weak prose over rewriting it.
 - Prefer several concrete trigger phrases over one abstract label when model invocation matters.
 - Prefer one strong leading word over repeated explanation.
+- Make manual invocation operational: begin the primary safe action, or ask one focused question when direction is required. Never use a load-only acknowledgement as the response.
 - For skills that act as temporary modes, prefer explicit lifecycle phrases over implied control flow.
 - Preserve project-local skill conventions unless they harm predictability.

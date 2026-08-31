@@ -29,7 +29,7 @@ Read [`references/index.md`](references/index.md) during inquiry framing. Read [
 4. **Report the first blush and gate the workflow.** Give the user a concise provisional answer, strongest sources or observations, material caveats, and what deeper work could change. If sufficient, stop and retain the first-blush artifacts. Otherwise, use `ask_user` to obtain permission to enter the full retained-evidence workflow; ask for `evidence-answer` or `evidence-dossier` if it remains unclear.
    *Done when the user has explicitly stopped or authorised deeper research.*
 
-5. **Create and review the register, queue, and source map.** Use the standard register in the output directory and record the approved outcome. Run packaged normalisation and queue scripts with explicit paths. Preserve every observation and merge only exact canonical URLs. Review every queue row, then create `capture-queue-reviewed.csv` with a proposed status, selection reason, and review notes for every source; no source proceeds to capture without that record. Generate `source-map.md` from the index and reviewed queue; regenerate it after capture updates.
+5. **Create and review the register, queue, and source map.** Use the standard register in the output directory and record the approved outcome. Read [packaged scripts](references/scripts.md), then run its normalisation and queue scripts with explicit paths. Preserve every observation and merge only exact canonical URLs. Review every queue row, then create `capture-queue-reviewed.csv` with a proposed status, selection reason, and review notes for every source; no source proceeds to capture without that record. Generate `source-map.md` from the index and reviewed queue; regenerate it after capture updates.
    *Done when the register and source map link observations to normalised sources and every capture candidate has a recorded review decision.*
 
 6. **Reconnoitre, then capture bounded evidence and data.** Load `crawl4ai` and make one bounded Crawl4AI reconnaissance fetch for each reviewed seed URL before preparing any capture batch. Inspect its rendered page and retained response to decide whether the seed itself answers the question, relevant content is at explicit linked URLs, or a clearly identified pagination rule needs a bounded listing/detail crawl. Record that rule and bounds in the queue review or run metadata; do not infer a site-wide crawl from the seed. Then capture only the seed, explicit discovered URLs, or an approved paginated sample with `capture-crawl4ai-batch.py`. Retain useful tables/figures as CSV/JSON. Build source-capture lineage and regenerate the source map after each batch. Preserve successes and failures; never handle private, paywalled, or CAPTCHA content.
@@ -46,19 +46,6 @@ Read [`references/index.md`](references/index.md) during inquiry framing. Read [
 
 10. **Validate and report.** Run packaged validation with explicit paths, verify local links, and report the outcome, retained evidence, limits, and next review step.
    *Done when another researcher can reproduce the path from question to conclusion or judgement.*
-
-## Packaged scripts
-
-Run these directly from this package with explicit project paths:
-
-- `scripts/normalise-sources.mjs --input-dir DIR --output-dir DIR` — preserve discovery observations, produce canonical source index and merge audit.
-- `scripts/prepare-capture-queue.mjs --index FILE --output FILE` — create one review row per indexed source.
-- `scripts/prepare-follow-up-batch.mjs --queue FILE --output FILE [--limit N]` — select reviewed Crawl4AI candidates without changing the queue.
-- `scripts/capture-crawl4ai-batch.py --batch FILE --output-dir DIR --capture-records FILE` — capture explicit public-page URLs and append every outcome.
-- `scripts/build-source-capture-lineage.mjs --index FILE --queue FILE --capture-records FILE --output FILE` — retain every source’s capture status and artifact lineage.
-- `scripts/build-source-map.mjs --index FILE --queue FILE --lineage FILE --output FILE` — generate the authoritative human-readable source/fetch/review map.
-- `scripts/update-research-register.mjs --register FILE --lineage FILE` — replace only the generated capture-status block in the register.
-- `scripts/validate-research-register.mjs --register FILE` — check required register shape and local artifact links.
 
 ## Rules
 

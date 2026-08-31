@@ -19,7 +19,11 @@ if (!files.length) {
 }
 
 function urlsIn(text) {
-  return [...new Set(text.match(urlPattern) ?? [])];
+  const prose = text
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`]*`/g, "");
+
+  return [...new Set(prose.match(urlPattern) ?? [])];
 }
 
 async function checkUrl(value) {

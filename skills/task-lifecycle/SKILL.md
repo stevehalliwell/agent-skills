@@ -43,7 +43,7 @@ Read `tasks/.schema.md` before applying this lifecycle. Existing project schemas
 
 5. Query and hand off.
    - Use `/skill:attendant` `query` for status/field selection and `search` for text. Its normal operations prepare the projection automatically.
-   - Run `validate`, `sync`, or `doctor` only for an explicitly requested diagnostic or a reported health/projection problem; resolve diagnostics before relying on record state.
+   - Normal Attendant data actions prepare the projection themselves. Run `validate`, `sync`, or `doctor` only for an explicitly requested diagnostic or a reported health/projection problem; resolve diagnostics before relying on record state.
    - Handoff points to records or exact queries. Each actionable next step has a work record.
    - Done when next session can locate current work directly.
 

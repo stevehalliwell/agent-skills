@@ -7,6 +7,10 @@ description: "Use for explicit Three.js rendering, animation, GPU, frame-rate, m
 
 Layer render constraints on the generic implementation workflow; retain its slice, cleanup, and reporting rules.
 
+## Required read
+
+Before an agreed performance change modifies code, load [Coding](../coding/SKILL.md) and [Implementation](../implementation/SKILL.md). Performance assessment alone does not require them. Done when applicable engineering and delivery constraints are loaded before code-change work begins.
+
 ## Workflow
 
 1. Establish budget. Before assessment or optimization without a project target, ask target device/browser/GPU class, FPS, resolution/device pixel ratio, representative scene and interaction complexity, memory, and network/load constraints. Done when budget is explicit.

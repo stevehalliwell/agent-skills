@@ -15,7 +15,7 @@ Work records hold durable task state. Handoff points next agent to them.
 2. Ground facts in repo state, user goal, changed paths, and checks actually run.
    - Done when completed work, unresolved work, and validation state are known.
 3. Update or create work records.
-   - If Attendant is configured, use `/skill:attendant` `sync`, find relevant records, update completed/current/future work status, priority, checks, and next slice. Create missing concrete follow-up work via `/skill:add-todo` behavior before handoff. Every actionable `Next:` must have a record.
+   - If Attendant is configured, find relevant records, then use its normal update operation for completed/current/future work status, priority, checks, and next slice. Create missing concrete follow-up work via `/skill:add-todo` behavior before handoff. Every actionable `Next:` must have a record. Run `validate`, `sync`, or `doctor` only for a reported health/projection problem.
    - If configuration is absent, do not create a tracker only for wrap-up; state that durable task state is unavailable.
    - Done when each next action has a current work record or absence is explicit.
 4. Create/update `.pi/handoff.md`.

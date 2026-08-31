@@ -29,7 +29,7 @@ Reconstruct state fast. Attendant tasks are planning authority; handoff is suppl
    - Done when user has clear choices.
 7. Record selected work before implementation.
    - If `tasks` exists, update selected record `status: doing`; create one via `/skill:add-todo` only when selected work lacks a record and user selection makes it necessary.
-   - Use `/skill:attendant` `validate`, then `sync`, and verify record.
+   - Use the normal Attendant update operation, which prepares its projection; verify the resulting record. Run `validate`, `sync`, or `doctor` only for a reported health/projection problem.
    - Do not update handoff after selection; it is stale once used.
    - Done when selected work has an active record or absence is stated.
 8. Exit and begin work.

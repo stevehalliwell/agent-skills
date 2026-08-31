@@ -9,12 +9,12 @@ Deliver one agreed, reviewable slice with smallest credible validation.
 
 ## Required read
 
-Load [Coding](../coding/SKILL.md) immediately once this workflow establishes that the selected slice will modify, create, generate, patch, or delete code. Complete Coding's required read and apply its workflow alongside this one before inspecting implementation paths or editing code. Done when Coding is loaded before any code-change work begins.
+Load [Coding](../coding/SKILL.md) before inspecting implementation paths or editing code. This workflow covers code changes, so complete Coding's required read and apply its workflow alongside this one. Done when Coding is loaded before any code-change work begins.
 
 ## Workflow
 
 1. Anchor work. Read selected task record, `tasks/.schema.md`, acceptance, current slice, and affected code paths. Confirm task is `status: todo`; when schema declares `scope`, also confirm `scope: agreed`. Preserve stated behavior and decisions. Done when target behavior and slice boundary are known.
-2. Establish slice. If task has no reviewable slices, write proposed slices to task plan, state first slice, and wait for user approval before editing implementation files. If slices exist, select one. When the authorized slice includes any code change, load Coding immediately. Done when one bounded slice is authorized and Coding is loaded before code-change work begins.
+2. Establish slice. If task has no reviewable slices, write proposed slices to task plan, state first slice, and wait for user approval before editing implementation files. If slices exist, select one. Done when one bounded slice is authorized.
 3. Trace before edit. Apply Coding's understanding and smallest-solution workflow. Treat untraced paths and unconfirmed assumptions as delivery risk. Inspect callers, interfaces, data flow, tests, edge cases, operational impact, and local conventions needed to avoid a wrong change. Done when changed path and preserved behavior are known.
 4. Implement slice. Prefer existing patterns, standard-library behavior, and small diffs; make the smallest complete change. Pause for decisions affecting behavior, scope, security, data, public API, or compatibility. Done when slice behavior is implemented without unrelated refactoring.
 5. Handle replacement. When removing or replacing behavior, identify obsolete references, tests, docs, and files. Ask user for cleanup scope before broad deletion. Done when cleanup is either agreed or explicitly deferred.

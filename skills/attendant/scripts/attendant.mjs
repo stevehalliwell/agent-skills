@@ -1320,34 +1320,56 @@ function fieldsFor(collection, name, requested) {
   }
   return fields;
 }
-async function createRecord(root2, collectionName, name, requested = {}) {
-  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(name)) throw new Error("create-name: name must be a safe filename stem.");
+async function createRecords(root2, collectionName, requestedRecords) {
+  if (!Array.isArray(requestedRecords) || !requestedRecords.length) throw new Error("create-items: --items must be a non-empty JSON array.");
   const contract = await loadContract(root2);
   const collection = contract.collections.find((item) => item.name === collectionName);
   if (!collection) throw new Error(`create-collection: unknown collection ${JSON.stringify(collectionName)}.`);
-  const path = join7(collection.directory, `${name}.md`);
-  const fields = fieldsFor(collection, name, requested);
+  const names = new Set();
+  const records = requestedRecords.map((requested, index) => {
+    if (!requested || typeof requested !== "object" || Array.isArray(requested)) throw new Error(`create-items: item ${index + 1} must be a JSON object.`);
+    const { name, fields = {} } = requested;
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(name)) throw new Error("create-name: name must be a safe filename stem.");
+    if (names.has(name)) throw new Error(`create-collision: ${name}.md is repeated.`);
+    names.add(name);
+    if (!fields || typeof fields !== "object" || Array.isArray(fields)) throw new Error(`create-items: fields for ${name} must be a JSON object.`);
+    return { name, path: join7(collection.directory, `${name}.md`), fields: fieldsFor(collection, name, fields) };
+  });
   await prepareProject(root2, true);
-  const text = `---
-${(0, import_yaml5.stringify)(fields).trimEnd()}
+  const body2 = await templateBody(collection);
+  for (const record2 of records) {
+    record2.text = `---
+${(0, import_yaml5.stringify)(record2.fields).trimEnd()}
 ---
-${await templateBody(collection)}`;
-  const snapshot = snapshotRecord(collection, path, text);
-  if (snapshot.diagnostics.length) throw new Error(`create-invalid: ${snapshot.diagnostics[0].message}`);
+${body2}`;
+    const snapshot = snapshotRecord(collection, record2.path, record2.text);
+    if (snapshot.diagnostics.length) throw new Error(`create-invalid: ${snapshot.diagnostics[0].message}`);
+  }
   const entries = await readdir6(collection.directory, { withFileTypes: true });
-  if (entries.some((entry) => entry.isFile() && entry.name === basename7(path))) throw new Error(`create-collision: ${basename7(path)} already exists.`);
-  const temporary = join7(collection.directory, `.${name}.attendant-${process.pid}-${randomBytes4(4).toString("hex")}`);
+  for (const record2 of records) if (entries.some((entry) => entry.isFile() && entry.name === basename7(record2.path))) throw new Error(`create-collision: ${basename7(record2.path)} already exists.`);
+  const created = [];
   try {
-    await writeFile4(temporary, text, { flag: "wx" });
-    await link(temporary, path);
+    for (const record2 of records) {
+      const temporary = join7(collection.directory, `.${record2.name}.attendant-${process.pid}-${randomBytes4(4).toString("hex")}`);
+      try {
+        await writeFile4(temporary, record2.text, { flag: "wx" });
+        await link(temporary, record2.path);
+        created.push(record2.path);
+      } finally {
+        await rm4(temporary, { force: true });
+      }
+    }
   } catch (error) {
-    if (error.code === "EEXIST") throw new Error(`create-collision: ${basename7(path)} already exists.`);
+    await Promise.all(created.map((path) => rm4(path, { force: true })));
+    if (error.code === "EEXIST") throw new Error(`create-collision: a requested record already exists.`);
     throw error;
-  } finally {
-    await rm4(temporary, { force: true });
   }
   await syncProjection(root2);
-  return { path, fields };
+  return records.map(({ path, fields }) => ({ path, fields }));
+}
+async function createRecord(root2, collectionName, name, requested = {}) {
+  const [record2] = await createRecords(root2, collectionName, [{ name, fields: requested }]);
+  return record2;
 }
 var import_yaml5;
 var init_create = __esm({
@@ -1596,7 +1618,7 @@ var init_cli_arguments = __esm({
     "use strict";
     commands = {
       "add-table": [{ name: "directory", alias: "d" }, { name: "alias", alias: "a" }],
-      create: [{ name: "collection", alias: "c" }, { name: "name", alias: "n" }, { name: "fields", alias: "f" }],
+      create: [{ name: "collection", alias: "c" }, { name: "name", alias: "n" }, { name: "fields", alias: "f" }, { name: "items", alias: "i" }],
       doctor: [],
       query: [{ name: "sql", alias: "s" }, { name: "params", alias: "P" }, { name: "limit", alias: "l" }],
       schema: [],
@@ -1642,9 +1664,15 @@ async function run() {
   if (command3 === "sync") return syncProjection(root2);
   if (command3 === "add-table") return addTable(root2, required(options.directory, command3, "directory"), typeof options.alias === "string" ? options.alias : void 0);
   if (command3 === "create") {
+    const collection = required(options.collection, command3, "collection");
+    if (typeof options.items === "string") {
+      if (options.name !== void 0 || options.fields !== void 0) throw new Error("create-items: --items cannot be combined with --name or --fields.");
+      const items = await jsonInput(options.items, read);
+      return { records: await createRecords(root2, collection, items) };
+    }
     const fields = await jsonInput(typeof options.fields === "string" ? options.fields : void 0, read);
     if (!fields || typeof fields !== "object" || Array.isArray(fields)) throw new Error("create-fields: --fields must be a JSON object.");
-    return createRecord(root2, required(options.collection, command3, "collection"), required(options.name, command3, "name"), fields);
+    return createRecord(root2, collection, required(options.name, command3, "name"), fields);
   }
   if (command3 === "query") {
     const params = await jsonInput(typeof options.params === "string" ? options.params : void 0, read);
@@ -1681,7 +1709,7 @@ var init_cli = __esm({
       global: { project: "--project, -p <path>; defaults to current directory", input: "@path reads UTF-8; - reads stdin once for SQL, JSON, search text, and collections", output: "one JSON value on stdout; diagnostics on stderr", exits: "0 on success; 1 on operation/input failure; doctor also exits 1 when unhealthy" },
       commands: {
         "add-table": { usage: "add-table --directory|-d <path> [--alias|-a <name>]", safety: "creates only an empty collection; rejects unsafe, duplicate, reserved, and non-empty targets" },
-        create: { usage: "create --collection|-c <name> --name|-n <name> [--fields|-f <json|@file|->]", defaults: { fields: {} }, safety: "fields must be a JSON object matching the collection schema" },
+        create: { usage: "create --collection|-c <name> (--name|-n <name> [--fields|-f <json|@file|->] | --items|-i <json|@file|->)", defaults: { fields: {} }, input: { items: "non-empty array of {name, fields?}; creates all records only after every item passes validation" }, safety: "fields must be JSON objects matching the collection schema" },
         validate: { usage: "validate [--no-correct] [--strict]", defaults: { correction: "mechanical corrections applied" }, safety: "--no-correct preserves source; --strict preserves source and fails pending corrections or diagnostics" },
         sync: { usage: "sync", safety: "rebuilds disposable projection from Markdown source" },
         schema: { usage: "schema", output: "collections, fields, SQLite/FTS metadata, diagnostics, and links" },

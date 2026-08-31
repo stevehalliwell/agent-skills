@@ -7,6 +7,10 @@ description: "Use when implementing or reviewing web code, browser behavior, acc
 
 Layer web-platform checks on the [implementation](../implementation/SKILL.md) workflow without duplicating its slicing, validation, or cleanup rules.
 
+## Required read
+
+For a web code change, load [Implementation](../implementation/SKILL.md) before inspecting implementation paths or editing code. It loads Coding's engineering constraints. Done when both layers apply before code-change work begins.
+
 ## Build
 
 1. Identify changed web pages, browser/platform capabilities, and applicable accessibility, responsiveness, SEO/GEO, and performance constraints. Support major desktop, mobile, and tablet browsers from last two years. Done when relevant constraints are explicit.

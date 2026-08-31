@@ -11,7 +11,7 @@ Operate Attendant through its runner. Markdown is the source of truth; `.attenda
 
 1. Identify the requested operation and read exactly its reference before acting:
    - Setup or an empty collection: [Setup and collection workflows](references/collections.md).
-   - Create, validate, sync, inspect, query, search, or diagnose: [Record and query commands](references/commands.md).
+   - Create one record or a validated batch, validate, sync, inspect, query, search, or diagnose: [Record and query commands](references/commands.md).
    - Convert existing Markdown records: [Markdown migration](references/migration.md).
    - Done: the operation's preconditions, confirmation gate, and completion condition are known.
 2. Resolve `<skill-dir>` as this `SKILL.md` directory. Run commands from the target project, or add `--project <path>` / `-p <path>`.

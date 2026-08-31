@@ -65,6 +65,16 @@ test("runner validates, projects, queries, searches, schemas, and creates record
   assert.match(await readFile(join(root, "todos/beta.md"), "utf8"), /status: done/);
   assert.match(await readFile(join(root, "todos/beta.md"), "utf8"), /desc: Complete documentation review/);
   assert.match(await readFile(join(root, "todos/beta.md"), "utf8"), /tags:\n  - docs/);
+
+  const batch = run(root, ["create", "-c", "todos", "-i", '[{"name":"gamma","fields":{"priority":1}},{"name":"delta","fields":{"status":"done","desc":"Finish docs"}}]']);
+  assert.equal(batch.status, 0, batch.stderr);
+  assert.deepEqual(batch.json.records.map((item) => item.fields.name), ["gamma", "delta"]);
+  assert.match(await readFile(join(root, "todos/gamma.md"), "utf8"), /priority: 1/);
+  assert.match(await readFile(join(root, "todos/delta.md"), "utf8"), /status: done/);
+
+  const invalidBatch = run(root, ["create", "-c", "todos", "-i", '[{"name":"epsilon","fields":{"missing":true}},{"name":"zeta"}]']);
+  assert.notEqual(invalidBatch.status, 0);
+  await assert.rejects(readFile(join(root, "todos/epsilon.md"), "utf8"));
 });
 
 test("runner rejects malformed transport and preserves strict validation source", async (t) => {

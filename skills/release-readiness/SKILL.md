@@ -1,38 +1,44 @@
 ---
 name: release-readiness
-description: "Use when preparing a release, checking README or CHANGELOG drift, or reconciling user-facing and developer-facing docs with changes since last release. Find release baseline, identify changes, update docs, and present edits for user confirmation. Do not publish, tag, version, or commit unless explicitly asked."
+description: "Assess whether a project is ready for a public release, prepare release readiness, check release blockers, or review README/CHANGELOG drift. Use when asked 'is this ready to release?', before publishing, or when a release-readiness check is triggered. Inspect repository evidence, identify blockers and documentation gaps, make only evidence-backed doc edits, and report a release verdict. Do not publish, tag, version, bump package metadata, or commit unless explicitly asked."
 ---
 
 # Release readiness
 
-Prepare accurate release documentation from repository evidence. Make doc edits; user approves or requests commit.
+Assess public-release readiness from repository evidence. On load, begin this workflow immediately; do not respond only that the workflow was loaded. Make only evidence-backed documentation edits; user approves or requests a commit.
 
 ## Workflow
 
-1. Resolve baseline. Use latest reachable Git tag. If absent, use latest released version heading in CHANGELOG. If absent, find version in package/version files and its introducing Git commit. If no reliable baseline, ask user. State baseline and evidence. Done when comparison range is explicit.
-2. Inspect changes. Review commits and diff since baseline, package/version metadata, tests, README, CHANGELOG, and changed public interfaces. Separate confirmed behavior from inference. Check README against GitHub-reader needs: what project is for, what it does, how to use it, then only brief developer setup. Done when user-facing features, developer usage changes, fixes, internal-only changes, and README drift are classified.
-3. State proposed release content. Summarize evidence, README drift, CHANGELOG entries, blockers, and unknown release target. Ask user to choose major or minor release when not supplied; do not choose it. Done when intended public claims and release target are explicit.
-4. Update docs. Make README concise and user-first: lead with purpose and user-visible behavior; show shortest credible use path; keep developer setup brief. Remove stale status, exhaustive internals, repeated explanation, and developer detail that does not help a GitHub reader; link to focused docs when detail remains useful. Update CHANGELOG for selected release target using existing format. Do not invent dates, release versions, compatibility claims, or undocumented behavior. Done when docs are concise, evidence-backed, and match stated release claims.
-5. Check and present. Run smallest relevant docs/resource checks, inspect diff, report changed files and remaining blockers. Wait for user confirmation; commit only after explicit request. Done when release documentation is reviewable.
+1. Establish repository state and baseline. Inspect Git status, latest reachable Git tag, CHANGELOG, package/version metadata, and project release instructions. Use latest tag as baseline; otherwise use latest released CHANGELOG version; otherwise find the commit that introduced the current version. If no reliable baseline exists, record it as a release blocker rather than stopping before inspection. Done when comparison range and pre-existing working-tree changes are explicit.
+2. Inspect release evidence. Review commits and diff since baseline; current package/version metadata; tests and CI/release configuration; README; CHANGELOG; and changed public interfaces. Run the project’s smallest relevant test, lint, build, or documentation checks when discoverable. Separate confirmed behavior from inference. Check README against GitHub-reader needs: what project is for, what it does, how to use it, then only brief developer setup. Done when user-facing features, developer usage changes, fixes, internal-only changes, documentation drift, check results, and release risks are classified.
+3. Give a verdict. State **Ready**, **Ready with decisions**, or **Not ready**, with every blocker and decision tied to repository evidence. Summarize proposed public release content and identify an unknown release target as a decision, not a reason to defer the assessment. Done when user can decide whether public release may proceed.
+4. Update docs when safe. Correct README drift immediately when evidence supports the change. Update CHANGELOG only when user has supplied or selects a release target, preserving its existing format. Do not invent dates, release versions, compatibility claims, or undocumented behavior. Done when safe documentation edits are concise, evidence-backed, and match stated release claims.
+5. Check and present. Inspect the final diff and report changed files, remaining blockers, decisions, and checks. Wait for user confirmation before any commit. Done when release assessment and any documentation edits are reviewable.
 
 ## Output shape
 
 ```text
-Release readiness: <baseline> → <target>
+Release readiness: <Ready | Ready with decisions | Not ready>
 
-Confirmed changes:
+Baseline and scope:
+- <baseline evidence and comparison range>
+
+Confirmed release content:
 - <evidence-backed item>
 
-Documentation updates:
-- <README/CHANGELOG change>
+Blockers:
+- <blocker or None>
 
-Blockers or open decisions:
-- <item or None>
+Decisions needed:
+- <decision or None>
+
+Documentation updates:
+- <README/CHANGELOG change or None>
 
 Checks:
 - <command/result>
 
-Next: review edits, confirm, or ask to commit.
+Next: <specific release-readiness action>
 ```
 
 ## Rules

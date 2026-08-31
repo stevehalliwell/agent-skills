@@ -10,11 +10,11 @@ Fetch a YouTube caption transcript with a local script rather than the Pi extens
 
 ## Workflow
 
-1. From this skill directory, install dependencies if `node_modules/youtube-transcript` is absent:
+1. From this skill directory, check whether `node_modules/youtube-transcript` exists. If absent, state that `npm install` is needed and ask approval before installing this dependency. After approval:
    ```bash
    npm install
    ```
-   Done when the dependency is installed without changing the script.
+   Done when the dependency is available or the installation decision/blocker is explicit.
 
 2. Fetch the transcript. The default output matches the former extension: one caption per line as `[MM:SS] text`.
    ```bash
