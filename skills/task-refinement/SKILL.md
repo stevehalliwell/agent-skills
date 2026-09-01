@@ -12,7 +12,7 @@ Turn task headline and desired outcome into shared executable technical shape, t
 Use this skill when either is true:
 
 - User explicitly asks to scope, refine, flesh out, or define a feature/task: its user-visible behavior, boundaries, edge cases, or acceptance checks.
-- Task goal is clear, but source material leaves behavior, technical shape, edge cases, acceptance, or implementation sequence vague; two or more plausible local approaches exist; and existing code/patterns do not clearly select one.
+- Task goal is clear, but source material leaves behavior, technical shape, edge cases, acceptance, or implementation sequence vague; two or more plausible local approaches exist; existing code/patterns do not clearly select one; and the choice materially affects observable behavior, acceptance, public interfaces, data, compatibility, security, or substantial rework. Do not use this skill merely because routine implementation details or file order are unknown.
 
 A selected task record only triggers this skill when user asks to make it implementation-ready, or it has unresolved behavior/technical shape with multiple plausible approaches.
 
@@ -26,8 +26,8 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
 
 1. Anchor current work.
    - Say: `Task refinement start. Current work resumes after shared task shape.`
-   - This mode may inspect project context, discuss task shape, and—after user agreement—update requested task records. It never modifies implementation code.
-   - Do not write docs during refinement discussion unless user explicitly switches modes.
+   - This mode may inspect project context, discuss task shape, and update the task record as user input resolves details. It never modifies implementation code.
+   - Record confirmed facts, user answers, resolved decisions, and remaining open questions in the task Markdown as refinement proceeds. If the user requests discussion only, do not write files.
    - Done when current task pause point is explicit.
 
 2. Ground in existing context.
@@ -51,25 +51,26 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
      - Alternatives ruled out: option, why rejected, revisit trigger if useful.
      - Acceptance: observable check or command/manual verification.
    - Keep broad system trade-offs in `tradeoff-review`; keep local implementation detail here.
-   - Done when another agent could implement after user confirms/corrects task shape and technical detail.
+   - Done when another agent could implement after material decisions are resolved through user input and the current task shape and technical detail are recorded.
 
-5. Ask user to steer, correct, or agree.
-   - Ask for confirmation when understanding seems complete enough.
+5. Resolve and record open questions.
    - Ask specific decision questions only when choices change task shape or acceptance.
+   - When the user supplies or corrects requested detail, immediately update the task Markdown and continue with the next unresolved material question or refinement step.
+   - Treat a direct answer as agreement on the answered detail unless the user marks it tentative, asks for discussion, or a material decision remains open.
    - Keep unknown product behavior open. `TBD` records unresolved detail; it does not authorize choosing behavior.
    - Agent may recommend a default only when clearly labelled `Proposed`.
-   - Done when remaining uncertainty is visible and user has clear next response path.
+   - Done when every resolved detail is recorded and remaining uncertainty is visible.
 
-6. Update docs only after shared understanding.
-   - If user asked to update record, first present detail block unless they explicitly asked for direct file edit.
-   - After user agrees or corrects, edit relevant task source record.
+6. Keep task record current.
+   - Update the relevant task source record after each resolved refinement detail; do not restate settled detail merely to seek final confirmation.
+   - When no material decision remains, record the completed task shape and set its declared ready state when the user requested implementation-ready work.
    - If user only wants discussion, do not write files.
-   - Done when output asks for review or includes saved paths after agreement.
+   - Done when saved task detail reflects current shared understanding or discussion-only scope is explicit.
 
 7. Exit refinement mode.
    - Use one explicit outcome:
-     - `Task refined: <summary>. Next: update requested docs or return to prior work.`
-     - `Task refinement open: <specific decisions>. Next: waiting for user direction.`
+     - `Task refined: <summary>. Saved: <task path>. Next: continue refinement or return to prior work.`
+     - `Task refinement open: <specific decisions>. Saved: <task path>. Next: ask the next material question.`
    - Do not imply implementation authorization from refinement discussion alone.
    - Done when refinement discussion is closed or waiting on a specific user decision.
 
@@ -86,30 +87,34 @@ Confirmed:
 Proposed:
 - ...
 
+Saved:
+- <task Markdown details updated in this turn>
+
 Open:
-- ...
+- <specific material decision, or None>
 
-Need from you: confirm, correct, or choose <specific decision>.
+Next:
+- <next material question, or continued refinement>.
 ```
 
-After agreement:
+When resolved:
 
 ```text
-Task refined: <summary>. Next: update requested docs or return to prior work.
+Task refined: <summary>. Saved: <task path>. Next: return to prior work.
 ```
 
-If unresolved:
+When unresolved:
 
 ```text
-Task refinement open: <specific decisions>. Next: waiting for user direction.
+Task refinement open: <specific decisions>. Saved: <task path>. Next: <next material question>.
 ```
 
 ## Rules
 
 - Brevity compresses wording, not required content.
 - Do not begin implementation while feature boundary or technical shape is vague.
-- Treat task refinement as temporary mode: enter explicitly, reach agreement, exit explicitly.
-- Discuss toward shared understanding before implementing or saving docs.
+- Treat task refinement as temporary mode: enter explicitly, resolve material questions while recording progress, then exit explicitly.
+- Discuss toward shared understanding while keeping the task record current; implementation remains a separate workflow.
 - Do not dump private checklist output to files; turn it into user-reviewable understanding first.
 - Use `tradeoff-review`, not this skill, for larger design direction, project priorities, cross-feature ramifications, or architectural trade-offs.
 - Do not invent product decisions silently; label assumptions.

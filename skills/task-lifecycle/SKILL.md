@@ -22,7 +22,7 @@ Read `tasks/.schema.md` before applying this lifecycle. Existing project schemas
 
 2. Keep readiness honest.
    - Keep unshaped work in `needs-refinement`; do not implement it.
-   - Move an item to `todo` only after its outcome and acceptance are sufficiently clear and the user has confirmed its shape.
+   - Move an item to `todo` when its outcome and acceptance are sufficiently clear and material decisions are resolved through user input.
    - When `priority` is declared, order backlog work: `critical`, `high`, `medium`, `low`, then `delay`. `delay` means deprioritised, not paused; use the schema's paused status for intentional pauses.
    - Preserve unresolved product behavior under `Open questions`; `TBD` is not permission to choose behavior.
    - Done when declared status/priority fields and authority match the task's actual state.
@@ -35,7 +35,7 @@ Read `tasks/.schema.md` before applying this lifecycle. Existing project schemas
    - Done when future agent can resume without reconstructing task intent.
 
 4. Preserve work cadence.
-   - Before implementation: selected record was `todo`, is now `doing`, and has user-confirmed acceptance.
+   - Before implementation: selected record was `todo`, is now `doing`, and has clear acceptance with material decisions resolved through user input.
    - During implementation: record material decisions, behavior changes, and meaningful checks.
    - Keep `doing` while task has remaining slices. Record completed slices under `Implemented so far` and next slice under `Review / next slice`; do not toggle `review` between slices.
    - Set `review` only when entire task is implementation-complete and awaits final user approval. After user approves: set `done`; retain record for search/history. Do not archive or duplicate it into a tracker file.

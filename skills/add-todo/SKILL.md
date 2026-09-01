@@ -34,7 +34,7 @@ Load before drafting:
 
 4. Choose capture depth.
    - Read `tasks/.schema.md` first; it is authoritative. Capture mode records smallest faithful description in its declared capture state (recommended `needs-refinement`), and uses `priority: medium` only when `priority` is declared; preserve unknowns as `TBD`.
-   - Refinement mode: when user asks to make work implementation-ready, use `task-refinement`; move it to its declared ready state (recommended `todo`) only after user confirms its shape.
+   - Refinement mode: when user asks to make work implementation-ready, use `task-refinement`; move it to its declared ready state (recommended `todo`) when its outcome and acceptance are sufficiently clear and material decisions are resolved through user input.
    - Future/unrelated work is normal capture mode. Use `priority: delay` only when that field and value are declared and the user explicitly wants deprioritisation.
    - Done when authority and declared status/priority fields are explicit.
 
