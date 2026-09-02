@@ -15,7 +15,7 @@ For a web code change, load [Implementation](../implementation/SKILL.md) before 
 
 1. Identify changed web pages, browser/platform capabilities, and applicable accessibility, responsiveness, SEO/GEO, and performance constraints. Support major desktop, mobile, and tablet browsers from last two years. Done when relevant constraints are explicit.
 2. Implement one agreed slice through the generic implementation workflow. Collect routine quality concerns for delivery review; flag direct material conflicts immediately with compliant alternatives. Done when slice preserves user control over material trade-offs.
-3. Verify uncertain modern web guidance against authoritative current sources. Unless discussion-only, capture provenance through [OKF research artifacts](../references/okf-artifacts.md); ask for bundle root if unknown. Done when uncertain guidance is evidenced or deferred.
+3. Verify uncertain modern web guidance against authoritative current sources. Done when uncertain guidance is evidenced or deferred.
 
 ## Delivery review
 

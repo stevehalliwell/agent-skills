@@ -14,7 +14,7 @@ Turn a technical question into an evidence-based recommendation with explicit tr
 3. Identify options. Include the existing or simplest viable path, then alternatives only when they solve a real constraint. Compare correctness, complexity, maintainability, performance, security, cost, and reversibility. Done when material trade-offs are explicit.
 4. Check failure modes. Cover invalid input, boundaries, compatibility, migration or rollout, observability, recovery, and test gaps relevant to the decision. Done when risks have owners or mitigations.
 5. Recommend. Choose an option only when evidence and stated authority permit it; otherwise present a decision with a preferred option and rationale. State assumptions and triggers that would change the recommendation. Done when a developer can act without guessing the basis.
-6. Capture uncertain standards research. Unless user explicitly requests discussion only, follow [OKF research artifacts](../references/okf-artifacts.md) when authoritative research informs the review. Done when provenance is saved or opt-out is explicit.
+6. Preserve uncertain standards research. Include source URLs, access dates, relevant excerpts or claims, and limitations in the review. If the user asks to build or update an OKF knowledgebase, load [OKF](../okf/SKILL.md). Done when research evidence is reviewable and any requested knowledgebase follows the OKF workflow.
 7. Define validation. Specify focused tests, checks, manual verification, and review points. Done when the recommendation has observable acceptance checks.
 
 ## Output shape

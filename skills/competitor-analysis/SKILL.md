@@ -14,7 +14,7 @@ Produce a structured comparison that separates observed evidence from interpreta
 3. Gather evidence. Inspect first-party pages, product flows, pricing, documentation, reviews, or other appropriate sources. Record source, date, observed claim, and relevant limitation. Done when each important comparison cell has evidence or is marked unknown.
 4. Compare consistently. Use the same dimensions across entries: audience, problem, promise, capabilities, proof, pricing or model, strengths, and gaps. Mark missing data instead of guessing. Done when differences are visible without narrative spin.
 5. Synthesize. Separate observation, inference, and recommendation. Identify patterns, meaningful differentiation, risks, and evidence gaps. Done when implications trace back to evidence.
-6. Capture artifacts. Unless user explicitly requests discussion only, follow [OKF research artifacts](../references/okf-artifacts.md) for source references and one synthesis. Done when provenance is saved or opt-out is explicit.
+6. Preserve provenance. Include source URLs, access dates, observed claims, and relevant limitations in the delivered analysis. If the user asks to build or update an OKF knowledgebase, load [OKF](../okf/SKILL.md). Done when evidence is reviewable and any requested knowledgebase follows the OKF workflow.
 7. Deliver and verify. State what the analysis supports, what it cannot establish, and what should be researched next. Done when the decision-maker can challenge sources and conclusions.
 
 ## Output shape
