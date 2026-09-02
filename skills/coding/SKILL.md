@@ -11,12 +11,12 @@ This skill is the mandatory engineering layer for every code change. Other deliv
 
 ## Required read
 
-Read [Ponytail engineering guidance](../references/ponytail.md) before changing code. Done when the applicable constraints are known.
+Read [Ponytail engineering guidance](references/ponytail.md) and [Simple versus easy](references/simple-vs-easy.md) before changing code. Before the first edit, reject each new helper, type, wrapper, interface, module, and configuration point unless it removes current complexity or repetition. Done when the applicable constraints are known and every new abstraction has a present-tense reason to exist.
 
 ## Workflow
 
 1. Understand the change. Trace the affected path, callers, existing patterns, and relevant edge cases before proposing or editing code. Done when the real change point is known.
-2. Choose the smallest solution. Apply the Ponytail ladder and reuse existing code, platform features, and installed dependencies before adding code or abstractions. Done when the chosen approach is the simplest correct option.
+2. Choose the smallest solution. Apply the Ponytail ladder and reuse existing code, platform features, and installed dependencies before adding code or abstractions. Prefer the change that leaves difficult future work understandable, not the one that is merely quickest or most familiar to write. Done when the chosen approach is the simplest correct option.
 3. Change and clean up. Implement the requested scope, remove obsolete local references created by replacement, and mark deliberate constrained simplifications with a `ponytail:` comment. Done when the requested behavior is complete without speculative scaffolding.
 4. Verify proportionately. Leave or run one smallest credible check for non-trivial logic; state any unrun validation and remaining risk. Done when verification matches the change's risk.
 
