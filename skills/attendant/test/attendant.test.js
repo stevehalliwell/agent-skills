@@ -60,8 +60,9 @@ test("runner validates, projects, queries, searches, schemas, and creates record
   const searched = run(root, ["search", "-q", "SQLite"]);
   assert.equal(searched.status, 0, searched.stderr);
   assert.equal(searched.json.rows[0].name, "alpha");
-  const created = run(root, ["create", "-c", "todos", "-n", "beta", "-f", '{"status":"done","priority":2,"desc":"Complete documentation review","tags":["docs"]}']);
+  const created = run(root, ["create", "-c", "todos", "-i", '[{"name":"beta","fields":{"status":"done","priority":2,"desc":"Complete documentation review","tags":["docs"]}}]']);
   assert.equal(created.status, 0, created.stderr);
+  assert.equal(created.json.records[0].fields.name, "beta");
   assert.match(await readFile(join(root, "todos/beta.md"), "utf8"), /status: done/);
   assert.match(await readFile(join(root, "todos/beta.md"), "utf8"), /desc: Complete documentation review/);
   assert.match(await readFile(join(root, "todos/beta.md"), "utf8"), /tags:\n  - docs/);
@@ -77,6 +78,32 @@ test("runner validates, projects, queries, searches, schemas, and creates record
   await assert.rejects(readFile(join(root, "todos/epsilon.md"), "utf8"));
 });
 
+test("runner updates one or many records only after batch validation", async (t) => {
+  const root = await fixture({
+    ".pi/attendant.tables": "todos/\n",
+    "todos/.schema.md": "---\nstatus: [open, done]\n---\n",
+    "todos/alpha.md": record("alpha", "alpha body\n"),
+    "todos/beta.md": record("beta", "beta body\n"),
+  });
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  const before = await readFile(join(root, "todos/alpha.md"), "utf8");
+  const rejected = run(root, ["update", "-c", "todos", "-i", '[{"name":"alpha","fields":{"status":"done"}},{"name":"beta","fields":{"status":"invalid"}}]']);
+  assert.notEqual(rejected.status, 0);
+  assert.equal(await readFile(join(root, "todos/alpha.md"), "utf8"), before);
+
+  const updated = run(root, ["update", "-c", "todos", "-i", '[{"name":"alpha","fields":{"status":"done"}},{"name":"beta","fields":{"status":"done"}}]']);
+  assert.equal(updated.status, 0, updated.stderr);
+  assert.equal(updated.json.records.length, 2);
+  assert.match(await readFile(join(root, "todos/alpha.md"), "utf8"), /status: done/);
+  assert.match(await readFile(join(root, "todos/alpha.md"), "utf8"), /alpha body/);
+  const queried = run(root, ["query", "-s", "SELECT name FROM todos WHERE status = :status ORDER BY name", "-P", '{"status":"done"}']);
+  assert.deepEqual(queried.json.rows, [{ name: "alpha" }, { name: "beta" }]);
+  const obsoleteSingle = run(root, ["update", "-c", "todos", "-n", "alpha", "-f", '{"status":"open"}']);
+  assert.notEqual(obsoleteSingle.status, 0);
+  assert.match(obsoleteSingle.stderr, /not valid for update/);
+});
+
 test("runner rejects malformed transport and preserves strict validation source", async (t) => {
   const root = await fixture({
     ".pi/attendant.tables": "todos/\n",
@@ -85,7 +112,7 @@ test("runner rejects malformed transport and preserves strict validation source"
   });
   t.after(() => rm(root, { recursive: true, force: true }));
 
-  const invalidJson = run(root, ["create", "-c", "todos", "-n", "other", "-f", "{bad"]);
+  const invalidJson = run(root, ["create", "-c", "todos", "-i", "{bad"]);
   assert.notEqual(invalidJson.status, 0);
   assert.match(invalidJson.stderr, /cli-json: invalid JSON/);
   const strict = run(root, ["validate", "--strict"]);

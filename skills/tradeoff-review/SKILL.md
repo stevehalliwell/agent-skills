@@ -27,7 +27,7 @@ Use for consequential architecture, framework, API, data model, schema, migratio
    - Done when decision, guardrails, or blocker is explicit.
 5. Record agreed decision.
    - Require configured `decisions` collection. If absent, route to `/skill:init-project` or `/skill:attendant` empty-collection workflow.
-   - Derive one or more stable kebab-case `revisit_triggers` from conditions that should reopen this decision; use `/skill:attendant` `create -c decisions -n <safe-slug> -f <declared-fields>` with `status: accepted`. Fill record body from `../init-project/templates/records/decisions/.template.md`, explaining each trigger alongside context, decision, options, consequences, affected areas, and guardrails.
+   - Derive one or more stable kebab-case `revisit_triggers` from conditions that should reopen this decision; use `/skill:attendant` `create -c decisions -i <items-json>` with one `{ "name": "<safe-slug>", "fields": <declared-fields> }` item including `status: accepted`. Fill record body from `../init-project/templates/records/decisions/.template.md`, explaining each trigger alongside context, decision, options, consequences, affected areas, and guardrails.
    - Done when saved source path accurately reflects agreement.
 6. Exit.
    - Say: `Design decision recorded: <path>. Decision: <choice>. Trade-off: <cost>. Next: return to prior work or request implementation.`

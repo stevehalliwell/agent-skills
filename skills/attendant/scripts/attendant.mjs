@@ -1283,7 +1283,7 @@ var init_lifecycle = __esm({
 
 // src/create.ts
 import { randomBytes as randomBytes4 } from "node:crypto";
-import { link, readFile as readFile8, readdir as readdir6, rm as rm4, writeFile as writeFile4 } from "node:fs/promises";
+import { link, readFile as readFile8, readdir as readdir6, rename as rename5, rm as rm4, writeFile as writeFile4 } from "node:fs/promises";
 import { basename as basename7, join as join7 } from "node:path";
 function uuidv73() {
   const timestamp = Date.now().toString(16).padStart(12, "0");
@@ -1367,9 +1367,62 @@ ${body2}`;
   await syncProjection(root2);
   return records.map(({ path, fields }) => ({ path, fields }));
 }
-async function createRecord(root2, collectionName, name, requested = {}) {
-  const [record2] = await createRecords(root2, collectionName, [{ name, fields: requested }]);
-  return record2;
+async function updateRecords(root2, collectionName, requestedRecords) {
+  if (!Array.isArray(requestedRecords) || !requestedRecords.length) throw new Error("update-items: --items must be a non-empty JSON array.");
+  const contract = await loadContract(root2);
+  const collection = contract.collections.find((item) => item.name === collectionName);
+  if (!collection) throw new Error(`update-collection: unknown collection ${JSON.stringify(collectionName)}.`);
+  const writable = new Set(["desc", "tags", ...collection.fields.map((field) => field.name)]);
+  const names = new Set();
+  const updates = [];
+  for (const [index, requested] of requestedRecords.entries()) {
+    if (!requested || typeof requested !== "object" || Array.isArray(requested)) throw new Error(`update-items: item ${index + 1} must be a JSON object.`);
+    const { name, fields } = requested;
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(name)) throw new Error("update-name: name must be a safe filename stem.");
+    if (names.has(name)) throw new Error(`update-collision: ${name}.md is repeated.`);
+    names.add(name);
+    if (!fields || typeof fields !== "object" || Array.isArray(fields) || !Object.keys(fields).length) throw new Error(`update-fields: fields for ${name} must be a non-empty JSON object.`);
+    for (const field of Object.keys(fields)) if (!writable.has(field)) throw new Error(`update-field: ${JSON.stringify(field)} is not writable for ${collection.name}.`);
+    const path = join7(collection.directory, `${name}.md`);
+    let text;
+    try {
+      text = await readFile8(path, "utf8");
+    } catch (error) {
+      if (error.code === "ENOENT") throw new Error(`update-missing: ${name}.md was not found in ${collection.name}.`);
+      throw error;
+    }
+    const diagnostics = [];
+    const parsed = parseRecord(text, path, diagnostics);
+    if (!parsed || diagnostics.length) throw new Error(`update-invalid: ${diagnostics[0]?.message ?? `${name}.md front matter cannot be parsed.`}`);
+    const nextText = buildText(parsed, fields);
+    const snapshot = snapshotRecord(collection, path, nextText);
+    if (snapshot.diagnostics.length) throw new Error(`update-invalid: ${snapshot.diagnostics[0].message}`);
+    updates.push({ name, path, fields, nextText, snapshot });
+  }
+  const byPath = new Map(updates.map((update) => [update.path, update.snapshot]));
+  const snapshots = [];
+  for (const current of contract.collections) {
+    for (const entry of await readdir6(current.directory, { withFileTypes: true })) {
+      if (!entry.isFile() || !isRecordFileName(entry.name)) continue;
+      const path = join7(current.directory, entry.name);
+      snapshots.push(byPath.get(path) ?? snapshotRecord(current, path, await readFile8(path, "utf8")));
+    }
+  }
+  const validation = validateSnapshots(contract, snapshots);
+  if (validation.length) throw new Error(`update-invalid: ${validation[0].message}`);
+  const temporary = [];
+  try {
+    for (const update of updates) {
+      const path = join7(collection.directory, `.${update.name}.attendant-${process.pid}-${randomBytes4(4).toString("hex")}`);
+      await writeFile4(path, update.nextText, { flag: "wx" });
+      temporary.push({ path, target: update.path });
+    }
+    for (const item of temporary) await rename5(item.path, item.target);
+  } finally {
+    await Promise.all(temporary.map((item) => rm4(item.path, { force: true })));
+  }
+  await syncProjection(root2);
+  return updates.map(({ path, fields }) => ({ path, fields }));
 }
 var import_yaml5;
 var init_create = __esm({
@@ -1618,7 +1671,8 @@ var init_cli_arguments = __esm({
     "use strict";
     commands = {
       "add-table": [{ name: "directory", alias: "d" }, { name: "alias", alias: "a" }],
-      create: [{ name: "collection", alias: "c" }, { name: "name", alias: "n" }, { name: "fields", alias: "f" }, { name: "items", alias: "i" }],
+      create: [{ name: "collection", alias: "c" }, { name: "items", alias: "i" }],
+      update: [{ name: "collection", alias: "c" }, { name: "items", alias: "i" }],
       doctor: [],
       query: [{ name: "sql", alias: "s" }, { name: "params", alias: "P" }, { name: "limit", alias: "l" }],
       schema: [],
@@ -1664,15 +1718,12 @@ async function run() {
   if (command3 === "sync") return syncProjection(root2);
   if (command3 === "add-table") return addTable(root2, required(options.directory, command3, "directory"), typeof options.alias === "string" ? options.alias : void 0);
   if (command3 === "create") {
-    const collection = required(options.collection, command3, "collection");
-    if (typeof options.items === "string") {
-      if (options.name !== void 0 || options.fields !== void 0) throw new Error("create-items: --items cannot be combined with --name or --fields.");
-      const items = await jsonInput(options.items, read);
-      return { records: await createRecords(root2, collection, items) };
-    }
-    const fields = await jsonInput(typeof options.fields === "string" ? options.fields : void 0, read);
-    if (!fields || typeof fields !== "object" || Array.isArray(fields)) throw new Error("create-fields: --fields must be a JSON object.");
-    return createRecord(root2, collection, required(options.name, command3, "name"), fields);
+    const items = await jsonInput(required(options.items, command3, "items"), read);
+    return { records: await createRecords(root2, required(options.collection, command3, "collection"), items) };
+  }
+  if (command3 === "update") {
+    const items = await jsonInput(required(options.items, command3, "items"), read);
+    return { records: await updateRecords(root2, required(options.collection, command3, "collection"), items) };
   }
   if (command3 === "query") {
     const params = await jsonInput(typeof options.params === "string" ? options.params : void 0, read);
@@ -1709,7 +1760,8 @@ var init_cli = __esm({
       global: { project: "--project, -p <path>; defaults to current directory", input: "@path reads UTF-8; - reads stdin once for SQL, JSON, search text, and collections", output: "one JSON value on stdout; diagnostics on stderr", exits: "0 on success; 1 on operation/input failure; doctor also exits 1 when unhealthy" },
       commands: {
         "add-table": { usage: "add-table --directory|-d <path> [--alias|-a <name>]", safety: "creates only an empty collection; rejects unsafe, duplicate, reserved, and non-empty targets" },
-        create: { usage: "create --collection|-c <name> (--name|-n <name> [--fields|-f <json|@file|->] | --items|-i <json|@file|->)", defaults: { fields: {} }, input: { items: "non-empty array of {name, fields?}; creates all records only after every item passes validation" }, safety: "fields must be JSON objects matching the collection schema" },
+        create: { usage: "create --collection|-c <name> --items|-i <json|@file|->", input: { items: "non-empty array of {name, fields?}; creates all records only after every item passes validation" }, safety: "fields must be JSON objects matching the collection schema" },
+        update: { usage: "update --collection|-c <name> --items|-i <json|@file|->", input: { items: "non-empty array of {name, fields}; validates every changed record before replacing any source file" }, safety: "updates only declared fields plus desc and tags; id, name, and created_at are immutable" },
         validate: { usage: "validate [--no-correct] [--strict]", defaults: { correction: "mechanical corrections applied" }, safety: "--no-correct preserves source; --strict preserves source and fails pending corrections or diagnostics" },
         sync: { usage: "sync", safety: "rebuilds disposable projection from Markdown source" },
         schema: { usage: "schema", output: "collections, fields, SQLite/FTS metadata, diagnostics, and links" },

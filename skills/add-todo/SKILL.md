@@ -39,7 +39,7 @@ Load before drafting:
    - Done when authority and declared status/priority fields are explicit.
 
 5. Create or update record.
-   - New record: use `/skill:attendant` `create -c tasks -n <safe-slug> -f <declared-fields>`; then replace copied template body with content populated by known facts.
+   - New record: use `/skill:attendant` `create -c tasks -i <items-json>` with one `{ "name": "<safe-slug>", "fields": <declared-fields> }` item; then replace copied template body with content populated by known facts.
    - Existing record: edit its source path directly; preserve confirmed decisions and prior checks.
    - Done when source record accurately captures request.
 
