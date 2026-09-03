@@ -6,7 +6,7 @@ Done:
 - [1-3 facts]
 
 Next:
-- [1-3 ordered actions]
+- [one concrete continuation]
 
 Files:
 - [key paths, max 5]

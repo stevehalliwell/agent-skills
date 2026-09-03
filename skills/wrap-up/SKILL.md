@@ -15,14 +15,14 @@ Work records hold durable task state. Handoff points next agent to them.
 2. Ground facts in repo state, user goal, changed paths, and checks actually run.
    - Done when completed work, unresolved work, and validation state are known.
 3. Update or create work records.
-   - If Attendant is configured, find relevant records, then use its normal update operation for completed/current/future work status, priority, checks, and next slice. Create missing concrete follow-up work via `/skill:add-todo` behavior before handoff. Every actionable `Next:` must have a record. Run `validate`, `sync`, or `doctor` only for a reported health/projection problem.
+   - If Attendant is configured, find relevant records, then use its normal update operation for completed/current/future work status, priority, checks, and next slice. Create missing concrete follow-up work via `/skill:add-todo` behavior before handoff. The one actionable `Next:` must have a record. Run `validate`, `sync`, or `doctor` only for a reported health/projection problem.
    - If configuration is absent, do not create a tracker only for wrap-up; state that durable task state is unavailable.
-   - Done when each next action has a current work record or absence is explicit.
+   - Done when one continuation has a current work record or absence is explicit.
 4. Create/update `.pi/handoff.md`.
    - Use `../init-project/templates/.pi/handoff.md`.
-   - `Next:` must name 1-3 actions and directly link relevant `records/tasks/*.md` paths or give an exact Attendant query. Include record source paths in `Files:`.
+   - `Next:` must name exactly one concrete continuation and directly link its relevant `records/tasks/*.md` path or give an exact Attendant query. Include record source paths in `Files:`.
    - Preserve human notes; replace only marked handoff block.
-   - Done when handoff is concise pointer, not duplicate tracker.
+   - Done when handoff is concise pointer to one continuation, not duplicate tracker.
 5. Exit.
 
 ```text
