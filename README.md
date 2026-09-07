@@ -15,6 +15,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 ### Tools and delegation
 
 - [`attendant`](skills/attendant/) — cli tools to generate sqlite dbs from schema light md collections. E.g. keeping a backlog of tasks in the repository.
+- [`agent-browser`](skills/agent-browser/) — Drives a visible shared browser for interactive web tasks.
 - [`crawl4ai`](skills/crawl4ai/) — Crawls public pages with Dockerized Crawl4AI when ordinary fetches fall short.
 - [`delegate-tasks`](skills/delegate-tasks/) — Launches bounded subagent or Codex jobs, then tracks their lifecycle, status, or cancellation.
 - [`docker-local`](skills/docker-local/) — Guides safe local Docker workflows for skills that depend on Docker.
@@ -75,6 +76,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`persona`](skills/persona/) was inspired by [pi-facets](https://github.com/stevehalliwell/pi-facets).
 - [`attendant`](skills/attendant/) was inspired by [pi-attendant](https://github.com/stevehalliwell/pi-attendant).
 - [`youtube-transcript-download`](skills/youtube-transcript-download/) was inspired by [pi-youtube-transcript](https://pi.dev/packages/pi-youtube-transcript?page=48).
+- [`agent-browser`](skills/agent-browser/) was inspired by [Vercel Labs agent-browser](https://www.skills.sh/vercel-labs/agent-browser/agent-browser).
 
 ## Repository notes
 
