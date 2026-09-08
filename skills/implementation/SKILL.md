@@ -7,6 +7,10 @@ description: "Use when implementing an agreed task, coding an approved change, f
 
 Deliver one agreed, reviewable slice with smallest credible validation.
 
+## Focus check
+
+When no clear implementation focus is supplied or selected, load and follow [Find implementation-ready tasks](ready-tasks.md) instead of this implementation workflow. Done when a ready-task report identifies the available focus or no ready work exists.
+
 ## Required read
 
 Load [Coding](../coding/SKILL.md) before inspecting implementation paths or editing code. This workflow covers code changes, so complete Coding's required read and apply its workflow alongside this one. Done when Coding is loaded before any code-change work begins.
