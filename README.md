@@ -60,6 +60,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 ### Skill and knowledge management
 
 - [`find-skills`](skills/find-skills/) — Finds suitable installable skills and installs them only with approval.
+- [`npx-global-skills-sync`](skills/npx-global-skills-sync/) — Reconciles npx global installs with Pi's tracked global-skill manifest.
 - [`okf`](skills/okf/) — Keeps Open Knowledge Format bundles conformant with the OKF specification.
 - [`skill-craft`](skills/skill-craft/) — Builds, reviews, and improves predictable, maintainable agent skills.
 
