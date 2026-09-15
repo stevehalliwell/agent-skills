@@ -6,7 +6,7 @@ Create one project-local `research-register.md` for each focused question. Keep 
 ---
 question_id: QR-001
 question: <one focused question>
-outcome: evidence-answer # or evidence-dossier
+outcome: evidence-answer # evidence-answer | evidence-dossier | source-discovery | orientation | gap-audit | archival-plan
 status: discovery # discovery | capture | coverage-review | synthesis | review | complete | inconclusive
 created_at: <ISO-8601 timestamp>
 updated_at: <ISO-8601 timestamp>
@@ -17,6 +17,7 @@ updated_at: <ISO-8601 timestamp>
 ## Intent and boundary
 
 - **Decision or use:** <who will use this and why>
+- **Research mode:** <source-discovery | orientation | evidence-answer | evidence-dossier | gap-audit | archival-plan>
 - **Coverage subquestions:** <2–5 distinct lenses needed to answer the focused question; not new inquiries>
 - **In scope:** <specific population, product, period, geography, or technical context>
 - **Out of scope:** <claims and adjacent questions excluded>
@@ -31,7 +32,7 @@ updated_at: <ISO-8601 timestamp>
 
 - **Provisional answer:** <short answer from bounded delegated first blush>
 - **Decision:** <stopped here | continued to retained-evidence workflow>
-- **Artifacts:** [answer analyst](first-blush/answer-analyst.md), [source candidates](discovery/D-001/source-candidates.csv)
+- **Artifacts:** [answer analyst](first-blush/answer-analyst.md), [source candidates](discovery/D-001/source-candidates.csv), [discovery journal](discovery-journal.md)
 - **What deeper work could change:** <specific uncertainty or `not applicable`>
 
 ## Discovery batches
@@ -52,17 +53,22 @@ Evidence labels: `primary`, `expert-secondary`, `reported-secondary`, `community
 
 ## Evidence matrix
 
-| Evidence ID | Claim, observation, or data point | Supports / challenges | Source IDs | Evidence kind | Observed at | Scope and limits |
-| --- | --- | --- | --- | --- | --- | --- |
-| E-001 | <verifiable statement or direct observation> | supports <proposition> | SRC-001 | direct statement | <ISO-8601 or n/a> | <limits> |
+| Evidence ID | Claim, observation, or data point | Supports / challenges | Source IDs | Evidence kind | Source passage and location | Observed at | Scope and limits |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| E-001 | <verifiable statement or direct observation> | supports <proposition> | SRC-001 | direct observation | <exact quote or bounded extract; page, section, timestamp, or archive ID> | <ISO-8601 or n/a> | <limits and whether source supports exact wording> |
 
-Evidence kinds: `direct statement`, `measured data`, `reported experience`, `expert interpretation`, `derived comparison`, and `absence/gap`. For volatile metrics, link a retained CSV/JSON artifact and record the metric definition, value, and observation time.
+Evidence kinds: `direct observation`, `paraphrase`, `inference`, `hypothesis`, `measured data`, `reported experience`, `expert interpretation`, `derived comparison`, `absence/gap`, and `unresolved`. For volatile metrics, link a retained CSV/JSON artifact and record the metric definition, value, and observation time. Do not let a source assertion stand as an established fact without recording its support and limits.
 
 ## Conflicts and gaps
 
 - **Conflict:** <competing evidence and source IDs>
 - **Gap:** <coverage dimension not met and why>
+- **Inaccessible or non-digitized record:** <record, likely repository, and uncertainty it could resolve>
 - **Capture failure:** <source ID, attempt, and result>
+
+## Research leads
+
+- **Lead:** <unverified anomaly, alternate explanation, missing source, or follow-up thread; not evidence>
 
 ## Synthesis
 
@@ -97,6 +103,7 @@ Run `build-source-capture-lineage.mjs` with the normalised index, reviewed queue
 ## Required companion artifacts
 
 - `discovery/<batch>/source-candidates.csv` — one row per discovery observation; never delete leads during normalisation.
+- `discovery-journal.md` — append-only chronological searches, source trails, rejected leads, and reasons for next actions.
 - `source-observations.csv`, `source-index.csv`, and `dedup-report.json` — generated normalisation artifacts.
 - `source-map.md` — generated authoritative human-readable mapping of each source’s origin, rationale, queue state, capture status, artifact, and failure notes.
 - `capture-queue.csv` and, when reviewed, `capture-queue-reviewed.csv` — every indexed source remains represented.

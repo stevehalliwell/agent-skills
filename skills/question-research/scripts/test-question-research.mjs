@@ -42,7 +42,7 @@ const sourceMap = path.join(temp, "source-map.md");
 await call("build-source-map.mjs", "--index", path.join(output, "source-index.csv"), "--queue", reviewed, "--lineage", lineage, "--output", sourceMap);
 assert.match(await readFile(sourceMap, "utf8"), /Primary test evidence/);
 const register = path.join(temp, "research-register.md");
-await writeFile(register, `---\nquestion_id: QR-001\nquestion: Does the example work?\noutcome: evidence-dossier\nstatus: review\ncreated_at: 2026-01-01T00:00:00Z\nupdated_at: 2026-01-01T00:00:00Z\n---\n\n# Does the example work?\n\n## Intent and boundary\n\n## First blush\n\n## Discovery batches\n\n## Source lineage\n\n- **Authoritative source map:** [source map](source-map.md)\n\n## Evidence matrix\n\n## Conflicts and gaps\n\n## Synthesis\n\n## Validation\n`);
+await writeFile(register, `---\nquestion_id: QR-001\nquestion: Does the example work?\noutcome: evidence-dossier\nstatus: review\ncreated_at: 2026-01-01T00:00:00Z\nupdated_at: 2026-01-01T00:00:00Z\n---\n\n# Does the example work?\n\n## Intent and boundary\n\n## First blush\n\n## Discovery batches\n\n## Source lineage\n\n- **Authoritative source map:** [source map](source-map.md)\n\n## Evidence matrix\n\n## Conflicts and gaps\n\n## Research leads\n\n## Synthesis\n\n## Validation\n`);
 await call("update-research-register.mjs", "--register", register, "--lineage", lineage);
 assert.match(await readFile(register, "utf8"), /question-research:source-capture-status:start/);
 await call("validate-research-register.mjs", "--register", register);

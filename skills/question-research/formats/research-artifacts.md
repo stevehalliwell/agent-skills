@@ -2,7 +2,9 @@
 
 Use these project-local paths under one inquiry output directory. The CSV files are machine-readable audit records; `source-map.md` is the single authoritative human-readable view of what each source is, why it was added, and its fetch/review state.
 
-## Discovery candidate CSV
+## Discovery journal and candidate CSV
+
+Create `discovery-journal.md` before discovery. Append each search or source-following action in chronological order with the query or URL, result, retained/rejected lead, and why the next action follows. Do not rewrite it into a retrospective summary.
 
 Every delegated discovery batch writes `discovery/D-###/source-candidates.csv`. Keep one row per observation; do not remove duplicates before normalisation.
 
@@ -37,6 +39,10 @@ CQ-0002,failed,crawl4ai,,2026-01-01T00:01:00Z,Robots denied capture
 ```
 
 `artifact_path` is relative to the directory holding `capture-records.csv`, so it can be linked by `source-map.md` and the register.
+
+## Claim fidelity
+
+For each material entry in the research register's evidence matrix, retain a bounded source extract and stable location: page/section for text, timestamp for media, or archive identifier for archival material. Label direct observation, paraphrase, inference, hypothesis, and unresolved claims separately. Record when a source does not support the exact report wording.
 
 ## Source map
 

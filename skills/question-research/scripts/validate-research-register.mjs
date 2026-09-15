@@ -19,7 +19,7 @@ const frontmatter = text.match(/^---\n([\s\S]*?)\n---/);
 if (!frontmatter) errors.push("Missing YAML frontmatter.");
 else for (const field of ["question_id", "question", "outcome", "status", "created_at", "updated_at"]) if (!new RegExp(`^${field}:\\s*\\S`, "m").test(frontmatter[1])) errors.push(`Missing frontmatter field: ${field}.`);
 const outcome = frontmatter?.[1].match(/^outcome:\s*(\S+)/m)?.[1];
-if (outcome && !new Set(["evidence-answer", "evidence-dossier"]).has(outcome)) errors.push(`Unsupported outcome: ${outcome}.`);
+if (outcome && !new Set(["evidence-answer", "evidence-dossier", "source-discovery", "orientation", "gap-audit", "archival-plan"]).has(outcome)) errors.push(`Unsupported outcome: ${outcome}.`);
 for (const heading of ["## Intent and boundary", "## First blush", "## Discovery batches", "## Source lineage", "## Evidence matrix", "## Conflicts and gaps", "## Synthesis", "## Validation"]) if (!text.includes(heading)) errors.push(`Missing required section: ${heading}.`);
 if (!/\[source map\]\(source-map\.md\)/i.test(text)) errors.push("Missing authoritative source-map.md link.");
 for (const match of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
