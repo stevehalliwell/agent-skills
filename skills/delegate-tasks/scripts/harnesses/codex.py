@@ -10,6 +10,26 @@ import shutil
 import subprocess
 
 
+def models() -> dict[str, set[str]]:
+    """Return models and supported reasoning levels from the signed-in Codex CLI."""
+    exe = shutil.which("codex")
+    if not exe:
+        raise RuntimeError("codex binary is not on PATH")
+
+    catalogue = subprocess.run([exe, "debug", "models"], capture_output=True)
+    stdout = catalogue.stdout.decode("utf-8", errors="replace") if catalogue.stdout else ""
+    stderr = catalogue.stderr.decode("utf-8", errors="replace") if catalogue.stderr else ""
+    if catalogue.returncode != 0:
+        raise RuntimeError("could not query Codex model catalogue: " + (stderr.strip() or stdout.strip()))
+    try:
+        return {
+            item["slug"]: {level["effort"] for level in item.get("supported_reasoning_levels", [])}
+            for item in json.loads(stdout)["models"]
+        }
+    except (KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Codex returned an invalid model catalogue: {exc}") from exc
+
+
 def command(base: Path, task: dict, result: Path) -> list[str]:
     exe = shutil.which("codex")
     if not exe:
@@ -24,18 +44,7 @@ def command(base: Path, task: dict, result: Path) -> list[str]:
             f"Codex sandbox must be 'workspace-write' or 'danger-full-access', got {sandbox!r}"
         )
 
-    catalogue = subprocess.run([exe, "debug", "models"], capture_output=True)
-    stdout = catalogue.stdout.decode("utf-8", errors="replace") if catalogue.stdout else ""
-    stderr = catalogue.stderr.decode("utf-8", errors="replace") if catalogue.stderr else ""
-    if catalogue.returncode != 0:
-        raise RuntimeError("could not query Codex model catalogue: " + (stderr.strip() or stdout.strip()))
-    try:
-        available = {
-            item["slug"]: {level["effort"] for level in item.get("supported_reasoning_levels", [])}
-            for item in json.loads(stdout)["models"]
-        }
-    except (KeyError, TypeError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"Codex returned an invalid model catalogue: {exc}") from exc
+    available = models()
     if model not in available:
         raise ValueError(f"Codex model is unavailable: {model}")
     if thinking not in available[model]:

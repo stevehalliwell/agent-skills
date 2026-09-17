@@ -29,7 +29,11 @@ For a single bounded Codex request, use this skill. Choose background mode only 
    ```bash
    python ~/.pi/agent/skills/delegate-tasks/scripts/agent-job.py models pi
    ```
-   Codex uses `web_search` (default false), `ephemeral` (default true), and `sandbox` (default `workspace-write`; `danger-full-access` only per task). Pi children start isolated from discovered skills, extensions, context files, templates, and themes; add back only named or explicit allowlisted resources.  
+   Codex uses `web_search` (default false), `ephemeral` (default true), and `sandbox` (default `workspace-write`; `danger-full-access` only per task). Query its signed-in catalogue before assigning a Codex `model` or `thinking` level:
+   ```bash
+   python ~/.pi/agent/skills/delegate-tasks/scripts/agent-job.py models codex
+   ```
+   Pi children start isolated from discovered skills, extensions, context files, templates, and themes; add back only named or explicit allowlisted resources.  
    *Done when each child’s available resources are intentional.*
 
 4. **Launch.** Use a blocking invocation only when results are needed now:

@@ -27,16 +27,13 @@ Use `"harness": "codex"` in a task for a bounded, non-interactive Codex CLI invo
 
 ## Model and thinking catalogue
 
-`codex debug models` runs before every task. Its signed-in runtime catalogue is authoritative.
+`codex debug models` runs before every task. Its signed-in runtime catalogue is authoritative: model access and supported thinking levels vary by Codex CLI version and account. Inspect that same catalogue before setting either field:
 
-Current expected catalogue:
+```bash
+python ~/.pi/agent/skills/delegate-tasks/scripts/agent-job.py models codex
+```
 
-| Model | Thinking levels |
-| --- | --- |
-| `gpt-5.6-sol` | `low`, `medium`, `high`, `xhigh`, `max`, `ultra` |
-| `gpt-5.6-terra` | `low`, `medium`, `high`, `xhigh`, `max`, `ultra` |
-| `gpt-5.6-luna` | `low`, `medium`, `high`, `xhigh`, `max` |
-| `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex-spark` | `low`, `medium`, `high`, `xhigh` |
+The command returns a JSON object mapping every currently available model to its supported thinking levels. On Codex CLI `0.145.0`, the observed catalogue included `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-reserve`, and `codex-auto-review`; do not use this snapshot as an availability guarantee.
 
 Set explicit `model` and `thinking` task fields when task requirements differ from inherited defaults. A task fails preflight if the requested combination is unavailable.
 

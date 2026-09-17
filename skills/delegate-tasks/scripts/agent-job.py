@@ -264,8 +264,9 @@ def start(args):
     print(json.dumps({"run_id":rid,"status":batch["status"],"launch_failures":failures,"manifest":str(base/"runs"/rid/"manifest.json")})); return 1 if failures else 0
 
 def models(args):
-    if args.harness != "pi": raise ValueError(f"model listing is not implemented for harness: {args.harness}")
-    return pi.list_models()
+    if args.harness == "pi": return pi.list_models()
+    print(json.dumps({model: sorted(levels) for model, levels in codex.models().items()}, indent=2, sort_keys=True))
+    return 0
 
 def status(args):
     base=folder(args.job_folder); m,_=manifest(base,args.run)
