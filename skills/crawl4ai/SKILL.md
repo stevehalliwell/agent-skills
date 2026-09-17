@@ -1,6 +1,6 @@
 ---
 name: crawl4ai
-description: "Crawl or scrape a website, fetch webpage content, extract an article from a URL, save a webpage as Markdown, render JavaScript pages, batch-fetch URLs, capture screenshots/MHTML, or retain raw HTML locally with Crawl4AI. Use when built-in web fetch fails or lacks usable public-page content and browser rendering could recover it, or when structured multi-page crawling is needed. Skip normal web research, authenticated sites, CAPTCHAs, paywalls, or sites user lacks permission to crawl."
+description: "Crawl or scrape a website, fetch webpage content, extract an article from a URL, save a webpage as Markdown, render JavaScript pages, batch-fetch URLs, capture screenshots/MHTML, or retain raw HTML locally with Crawl4AI. Use after built-in web fetch, fetch_content, or retrieval of a web-search result fails, returns 403/empty/incomplete public-page content, or cannot render JavaScript and a browser-rendered DOM could recover it; also use for structured multi-page crawling. Skip normal web research, authenticated sites, CAPTCHAs, paywalls, robots-denied, or unavailable sources."
 compatibility: "Docker running locally; Crawl4AI image unclecode/crawl4ai@sha256:bd36741e7bdd35ddc1a05d9183e1d6d8cefb61dd640d944a25d026b76e917690 available or pullable."
 ---
 
@@ -12,7 +12,7 @@ Crawl rendered public pages → retained project-local artifacts.
 
 Use for public-page retrieval where browser rendering, repeated crawl calls, screenshots/MHTML, raw response retention, or project-local Markdown output matter. For one static article, prefer built-in fetch while it returns usable content. For broad web research, use web search.
 
-After built-in web fetch fails or returns incomplete content, consider one bounded Crawl4AI fetch when its browser-rendered DOM could plausibly recover requested public content. Do not retry with Crawl4AI for authentication, paywall, CAPTCHA, permission, robots, or unavailable-source failures; report those blockers.
+After built-in web fetch, `fetch_content`, or retrieval of a web-search result fails or returns incomplete content (including an HTTP 403), make one bounded Crawl4AI fetch when its browser-rendered DOM could plausibly recover requested public content. Do not retry with Crawl4AI for authentication, paywall, CAPTCHA, permission, robots, or unavailable-source failures; report those blockers.
 
 Completion: Crawl4AI is needed for requested source and output.
 
