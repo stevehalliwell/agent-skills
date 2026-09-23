@@ -2,7 +2,7 @@
   "deadline": 1200,
   "defaults": {
     "harness": "pi",
-    "model": "openai-codex/gpt-5.6-sol",
+    "model": "openai-codex/gpt-6-sol",
     "thinking": "high",
     "skills": ["technical-review"],
     "extensions": [],
@@ -18,7 +18,7 @@
       "name": "codex-second-opinion",
       "prompt": "tasks/codex-second-opinion.md",
       "harness": "codex",
-      "model": "gpt-5.6-terra",
+      "model": "gpt-6-sol",
       "thinking": "low",
       "web_search": false,
       "ephemeral": true,

@@ -9,7 +9,7 @@ Use `"harness": "codex"` in a task for a bounded, non-interactive Codex CLI invo
   "name": "implementation-review",
   "prompt": "tasks/implementation-review.md",
   "harness": "codex",
-  "model": "gpt-5.6-sol",
+  "model": "gpt-6-sol",
   "thinking": "high",
   "web_search": false,
   "ephemeral": true,
@@ -17,7 +17,7 @@ Use `"harness": "codex"` in a task for a bounded, non-interactive Codex CLI invo
 }
 ```
 
-- `model` defaults to `gpt-5.6-terra`.
+- `model` defaults to `gpt-5.6-terra` in this runner (not Codex CLI's own recommended default). Set an explicit model for new work after checking the signed-in catalogue; this fallback is retained for older CLI installs.
 - `thinking` defaults to `medium`.
 - `web_search` defaults to `false`; enable it only when the task needs current web information.
 - `ephemeral` defaults to `true`. Set it to `false` only when a task has a demonstrated need for a non-ephemeral Codex invocation.
@@ -33,9 +33,11 @@ Use `"harness": "codex"` in a task for a bounded, non-interactive Codex CLI invo
 python ~/.pi/agent/skills/delegate-tasks/scripts/agent-job.py models codex
 ```
 
-The command returns a JSON object mapping every currently available model to its supported thinking levels. On Codex CLI `0.145.0`, the observed catalogue included `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-reserve`, and `codex-auto-review`; do not use this snapshot as an availability guarantee.
+The command returns a JSON object mapping models exposed by the installed CLI to their supported thinking levels. As of September 23, 2026, OpenAI is rolling out GPT-6 Sol (`gpt-6-sol`) for complex coding and GPT-6 Luna (`gpt-6-luna`) for focused, high-volume tasks. Codex CLI `0.156.1` adds both to its model picker. GPT-6 Astra (`gpt-6-astra`) is intended for harder work and requires CLI `0.153.0` or later. Access still depends on account, rollout, and workspace settings. [OpenAI models](https://developers.openai.com/codex/models) · [Codex changelog](https://developers.openai.com/codex/changelog)
 
-Set explicit `model` and `thinking` task fields when task requirements differ from inherited defaults. A task fails preflight if the requested combination is unavailable.
+On September 23, 2026, Codex CLI `0.156.1` and Pi's `openai-codex` catalogue both exposed `gpt-6-sol`, `gpt-6-luna`, and `gpt-6-astra`. Their IDs still differ: Pi uses provider-qualified IDs such as `openai-codex/gpt-6-sol`, whereas Codex uses bare slugs. Older CLI versions may omit new models; update the CLI and query again rather than bypassing preflight. OpenAI plans to retire `gpt-5.5` for Codex with ChatGPT sign-in on October 14, 2026; API-key use is not covered by that retirement. [OpenAI models](https://developers.openai.com/codex/models)
+
+Set explicit `model` and `thinking` task fields when task requirements differ from inherited defaults. A task fails preflight if the requested combination is unavailable. Neither the runner nor this snapshot promises a model will remain available.
 
 ## Execution contract
 

@@ -1,6 +1,6 @@
 # Complete batch example
 
-Copy this directory into a project job folder, then adapt task names, prompts, and the model/resource settings before launch.
+Copy this directory into a project job folder, then adapt task names, prompts, and the model/resource settings before launch. The example uses `openai-codex/gpt-6-sol` for Pi and `gpt-6-sol` for Codex. Both were available locally with Codex CLI `0.156.1` on September 23, 2026. Check `agent-job.py models pi` and `agent-job.py models codex` on your installation before running; availability depends on CLI version and account.
 
 ```text
 mkdir -p .agent-jobs

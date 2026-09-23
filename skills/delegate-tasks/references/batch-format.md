@@ -7,7 +7,7 @@
   "deadline": 1200,
   "defaults": {
     "harness": "pi",
-    "model": "gpt-5.6-sol",
+    "model": "openai-codex/gpt-6-sol",
     "thinking": "high",
     "skills": [],
     "extensions": []
@@ -21,7 +21,7 @@
       "name": "independent-opinion",
       "prompt": "tasks/opinion.md",
       "harness": "codex",
-      "model": "gpt-5.6-terra",
+      "model": "gpt-6-sol",
       "thinking": "low",
       "web_search": true,
       "ephemeral": true,
@@ -45,7 +45,7 @@
 | `name` | task | Unique safe artifact-directory name. |
 | `prompt` | task | Non-empty prompt path inside the job folder. |
 | `harness` | default/task | `pi` (default) or `codex`. |
-| `model` | default/task | Harness-specific model selection. |
+| `model` | default/task | Harness-specific model selection: Pi uses provider-qualified IDs (for example, `openai-codex/gpt-6-sol`); Codex uses bare slugs (for example, `gpt-6-sol`). Check `agent-job.py models pi` or `agent-job.py models codex` before pinning a model; one catalogue does not imply availability in the other. |
 | `thinking` | default/task | Harness-specific reasoning level. |
 | `web_search` | Codex default/task | Enable Codex web search; default false. |
 | `ephemeral` | Codex default/task | Request Codex ephemeral mode; default true. |

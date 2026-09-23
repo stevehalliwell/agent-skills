@@ -33,7 +33,7 @@ For a single bounded Codex request, use this skill. Choose background mode only 
    ```bash
    python ~/.pi/agent/skills/delegate-tasks/scripts/agent-job.py models codex
    ```
-   Pi children start isolated from discovered skills, extensions, context files, templates, and themes; add back only named or explicit allowlisted resources.  
+   Pi uses provider-qualified IDs (for example, `openai-codex/gpt-6-sol`); Codex uses bare slugs (`gpt-6-sol`). Both catalogues currently expose GPT-6, but availability can differ by CLI version and account. Check the selected harness's live catalogue. Pi children start isolated from discovered skills, extensions, context files, templates, and themes; add back only named or explicit allowlisted resources.
    *Done when each child’s available resources are intentional.*
 
 4. **Launch.** Use a blocking invocation only when results are needed now:
