@@ -8,6 +8,9 @@ Done:
 Next:
 - [one concrete continuation]
 
+Context:
+- [Current expected path forward on the task]
+
 Files:
 - [key paths, max 5]
 
