@@ -24,8 +24,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 
 ### Project and task workflow
 
-- [`add-todo`](skills/add-todo/) — Captures project-local tasks without inventing implementation details.
-- [`backlog-capture`](skills/backlog-capture/) — Records ideas and deferred work for later refinement.
+- [`backlog-capture`](skills/backlog-capture/) — Captures one or several tasks, ideas, and deferred requests in Attendant, with project-local Markdown as fallback.
 - [`backlog-refinement`](skills/backlog-refinement/) — Turns one unready backlog item into implementation-ready work at a time.
 - [`coding`](skills/coding/) — Applies mandatory engineering judgment to every code change. Close to caveman and Ponytail.
 - [`systems-coding`](skills/systems-coding/) — Guides C and other low-level systems work toward explicit limits, safe failure handling, testability, and measured performance.

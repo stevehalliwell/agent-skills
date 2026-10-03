@@ -49,7 +49,7 @@ Read `tasks/.schema.md` before applying this lifecycle. Existing project schemas
 
 ## Operation ownership
 
-- `add-todo`: bootstrap/capture/dedupe/create records.
+- `backlog-capture`: capture/dedupe/create one or several records; use Markdown only when task storage is not configured.
 - `pick-up`: query candidates and select active work.
 - `task-refinement`: agree implementation shape.
 - `wrap-up`: update task state and handoff.

@@ -30,7 +30,7 @@ Reconstruct state fast. Attendant tasks are planning authority; handoff is suppl
 6. If no current handoff action was selected, ask user to select from max three concrete actions.
    - Done when user has clear choices or the handoff action is selected.
 7. Dispatch selected work according to its state.
-   - For implementation, follow [Implementation](../implementation/SKILL.md): start only ready work or resume authorized active work. Let that workflow perform the active-state transition. Create a missing record via [Add Todo](../add-todo/SKILL.md) only when selected work requires one, then resolve its readiness before implementation.
+   - For implementation, follow [Implementation](../implementation/SKILL.md): start only ready work or resume authorized active work. Let that workflow perform the active-state transition. Create a missing record via [Backlog capture](../backlog-capture/SKILL.md) only when selected work requires one, then resolve its readiness before implementation.
    - For refinement, review, or diagnosis of a blocker, preserve the task's state and start that operation's workflow instead of setting it `doing`.
    - Verify any changed record through Attendant's normal operation. Run `validate`, `sync`, or `doctor` only for a reported health/projection problem.
    - Do not update handoff after selection; it is stale once used.
