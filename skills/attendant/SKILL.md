@@ -22,7 +22,7 @@ Operate Attendant through its runner. Markdown is the source of truth; `.attenda
 
    Commands emit one JSON result to stdout and diagnostics to stderr. Use the runner rather than writing generated projection files.
    - Done: command location and target project are unambiguous.
-3. Follow the selected reference's workflow, including its required inspection and user-confirmation gates. Report the JSON result and any diagnostics with affected paths.
+3. Follow the selected reference's workflow, including its required inspection and user-confirmation gates. On failure, inspect the JSON/diagnostic and actual source state before retrying a mutation. Correct only supported in-scope defects, then rerun the failed check; report unresolved runtime, schema, or migration blockers with affected paths. Report successful JSON results and any remaining diagnostics.
    - Done: source changes, if any, are within the approved workflow and the result is understood.
 
 ## Rules

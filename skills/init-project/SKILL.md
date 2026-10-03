@@ -44,7 +44,8 @@ Set up high-signal project guidance plus Attendant-backed records.
 5. If target docs/config already exist, ask whether to merge templates, add only missing pieces, or skip existing files.
    - Done when merge policy is chosen.
 6. Read matching templates, adapt wording, create missing files. For new default collections, create configured directories, schemas, and body templates, add `.attendant/` ignore entry, then use `/skill:attendant` runner: `validate --no-correct` and `sync`. Run `doctor` only when setup reports a health or projection problem.
-   - Done when collection setup validates or diagnostic is reported.
+   - Correct supported setup diagnostics without replacing existing records, rerun the affected validation, and sync only after validation passes. Stop with paths and a blocker when correction needs user decisions.
+   - Done when collection setup validates or an unresolved diagnostic is reported.
 7. Ask only for missing facts that change human docs: project purpose, install/use commands, and concise developer setup. Keep current goal and acceptance check in agent records rather than the README.
    - Done when unknowns can safely remain `TBD`.
 8. Final output: created/updated paths, skipped/migration items, TBD fields.

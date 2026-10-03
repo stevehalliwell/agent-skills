@@ -15,6 +15,8 @@ def synthetic_command(base, task, result):
     if kind in {"test-complete", "codex"}: return [sys.executable, "-c", f"from pathlib import Path; Path(r'{result}').write_text('complete')"]
     if kind == "test-fail": return [sys.executable, "-c", "import sys; print('fail'); sys.exit(7)"]
     if kind == "test-sleep": return [sys.executable, "-c", "import time; time.sleep(5); print('late')"]
+    if kind == "pi": return [sys.executable, "-c", "import time; print('complete', flush=True); time.sleep(.8)"]
+    if kind == "test-empty": return [sys.executable, "-c", f"from pathlib import Path; Path(r'{result}').touch()"]
     raise ValueError(f"unsupported harness: {kind!r}")
 agent_job.adapter_command = synthetic_command
 
@@ -92,8 +94,8 @@ def main():
         boundary = (base/"runs"/"codex-boundary"/"boundary"/"execution-prompt.md").read_text(encoding="utf-8")
         assert f"You may write only inside this job folder: {base}." in boundary, boundary
         assert m["tasks"]["boundary"]["artifacts"]["execution_prompt"] == str(Path("runs")/"codex-boundary"/"boundary"/"execution-prompt.md"), m
-        # Background mode launches harnesses directly; no scheduler/worker PID
-        # may be required for a later wait to reconcile their result artifacts.
+        # Each background task has its own supervisor, independent of the
+        # original launcher; its durable manifest carries the actual exit code.
         write_batch(base, [{"name":"detached","prompt":"tasks/detached.md","harness":"test-complete"}])
         class BackgroundArgs: job_folder=str(base); background=True; parent_pid=None
         assert agent_job.start(BackgroundArgs()) == 0
@@ -111,5 +113,61 @@ def main():
         assert agent_job.wait(WaitArgs()) == 0
         boundary=(base/"runs"/detached_codex_rid/"detached-codex"/"execution-prompt.md").read_text(encoding="utf-8")
         assert f"You may write only inside this job folder: {base}." in boundary, boundary
+        # Precreated and partial result files must not end a live Pi task.
+        write_batch(base, [{"name":"pi-output","prompt":"tasks/pi-output.md","harness":"pi"}])
+        assert agent_job.start(BackgroundArgs()) == 0
+        pi_rid = agent_job.current(base)
+        pi_result = base/"runs"/pi_rid/"pi-output"/"result.md"
+        pi_result.touch()
+        live = agent_job.reconcile(base, pi_rid)
+        assert live["tasks"]["pi-output"]["status"] in {"starting", "running"}, live
+        WaitArgs.run = pi_rid
+        assert agent_job.wait(WaitArgs()) == 0
+        finished = agent_job.load(base/"runs"/pi_rid/"manifest.json")["tasks"]["pi-output"]
+        assert finished["exit_code"] == 0, finished
+        assert pi_result.read_text(encoding="utf-8").strip() == "complete"
+        # A successful exit with empty output is incomplete, not completed.
+        write_batch(base, [{"name":"empty","prompt":"tasks/empty.md","harness":"test-empty"}])
+        assert agent_job.start(BackgroundArgs()) == 0
+        WaitArgs.run = agent_job.current(base)
+        assert agent_job.wait(WaitArgs()) == 1
+        empty = agent_job.load(base/"runs"/WaitArgs.run/"manifest.json")["tasks"]["empty"]
+        assert empty["status"] == "incomplete" and empty["exit_code"] == 0, empty
+        # Nonzero exit remains failure even if an output file exists.
+        write_batch(base, [{"name":"failure","prompt":"tasks/failure.md","harness":"test-fail"}])
+        assert agent_job.start(BackgroundArgs()) == 0
+        WaitArgs.run = agent_job.current(base)
+        (base/"runs"/WaitArgs.run/"failure"/"result.md").write_text("partial", encoding="utf-8")
+        assert agent_job.wait(WaitArgs()) == 1
+        failure = agent_job.load(base/"runs"/WaitArgs.run/"manifest.json")["tasks"]["failure"]
+        assert failure["status"] == "failed" and failure["exit_code"] == 7, failure
+        # Cancellation terminates surviving task processes even if an old
+        # manifest incorrectly claimed completion.
+        write_batch(base, [{"name":"stale","prompt":"tasks/stale.md","harness":"test-sleep"}])
+        assert agent_job.start(BackgroundArgs()) == 0
+        stale_rid = agent_job.current(base)
+        task_path = base/"runs"/stale_rid/"stale"/"manifest.json"
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            stale = agent_job.load(task_path)
+            if stale.get("pid"): break
+            time.sleep(.05)
+        assert stale.get("pid"), stale
+        pid = stale["pid"]
+        stale["status"] = "completed"
+        agent_job.dump(task_path, stale)
+        Args.run = stale_rid
+        agent_job.cancel(Args())
+        deadline = time.monotonic() + 5
+        while agent_job.identity(pid) is not None and time.monotonic() < deadline:
+            time.sleep(.05)
+        assert agent_job.identity(pid) is None, pid
+        assert agent_job.load(task_path)["status"] == "cancelled"
+        # Background timeouts are supervised without relying on result files.
+        write_batch(base, [{"name":"timeout","prompt":"tasks/timeout.md","harness":"test-sleep","deadline":.2}])
+        assert agent_job.start(BackgroundArgs()) == 0
+        WaitArgs.run = agent_job.current(base)
+        assert agent_job.wait(WaitArgs()) == 1
+        assert agent_job.load(base/"runs"/WaitArgs.run/"manifest.json")["tasks"]["timeout"]["status"] == "timeout"
     print("agent-job scheduler integration tests: OK")
 if __name__ == "__main__": main()

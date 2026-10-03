@@ -10,6 +10,21 @@ Theme status: Planned / Not yet applied
 
 Use this as a checklist and copy source for itch.io's **Create a new project** form. `Pending` means not decided or not verified; do not paste placeholder text. Markdown formatting does not automatically transfer to the itch rich-text editor. When creating `page.md`, keep only the sections applicable to the actual project/build; do not carry HTML settings into a downloadable-only listing.
 
+## Contents
+
+Keep these links aligned with the sections retained in this kit.
+
+- [Build and delivery](#build-and-delivery-first)
+- [Identity and listing](#identity-and-listing)
+- [Pricing and access](#pricing-and-access)
+- [Files and delivery settings](#files-and-delivery-settings-keep-applicable-branches-only)
+- [Paste-ready page copy](#paste-ready-page-copy)
+- [Discovery and links](#discovery-and-links)
+- [Media](#media)
+- [Page theme](#page-theme-plan-now-apply-after-creating-the-basic-page-as-draft)
+- [Disclosure and checks](#disclosure-and-checks)
+- [Remaining actions](#remaining-actions)
+
 ## Build and delivery first
 
 - What kind of project/build is this? Pending

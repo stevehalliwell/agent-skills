@@ -23,12 +23,12 @@ Run only after explicit delivery language: deliver, ship, release, publish, audi
 
 1. Identify changed deliverable pages and applicable Lighthouse categories: Performance, Accessibility, Best Practices, and SEO. Target 100 in every applicable category. Done when pages, categories, and audit availability are known.
 2. If audit tooling is absent, propose smallest setup and wait for approval before installing or changing project tooling. Done when audit can run or setup is explicitly deferred.
-3. Fix every remediable issue within task outcome. Pause for behavior, visual, scope, external-dependency, or unsatisfiable-target trade-offs. Done when remaining issues require explicit user choice.
+3. Fix every remediable issue within task outcome, then rerun affected pages/categories to verify the fixes. Continue targeted correction and rechecking while progress is possible within scope. Pause for behavior, visual, scope, external-dependency, repeated no-progress, or unsatisfiable-target trade-offs; report the remaining issue and needed decision rather than looping indefinitely. Done when applicable scores reach the target or remaining failures require an explicit user choice.
 4. Review relevant browser, accessibility, and discoverability requirements; report scores, fixes, blockers, and follow-up. Done when delivery status is auditable.
 
 ## Rules
 
 - Do not run broad audits during routine implementation slices.
-- Keep website messaging and marketing strategist first for copy/positioning work.
+- Route website copy and positioning to [Messaging strategy](../messaging-strategy/SKILL.md); this skill owns web-platform implementation and checks.
 - Do not install audit tooling without approval.
 - Do not silently accept a non-100 applicable Lighthouse result or override material trade-offs.

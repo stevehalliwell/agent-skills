@@ -15,7 +15,7 @@ Produce a structured comparison that separates observed evidence from interpreta
 4. Compare consistently. Use the same dimensions across entries: audience, problem, promise, capabilities, proof, pricing or model, strengths, and gaps. Mark missing data instead of guessing. Done when differences are visible without narrative spin.
 5. Synthesize. Separate observation, inference, and recommendation. Identify patterns, meaningful differentiation, risks, and evidence gaps. Done when implications trace back to evidence.
 6. Preserve provenance. Include source URLs, access dates, observed claims, and relevant limitations in the delivered analysis. If the user asks to build or update an OKF knowledgebase, load [OKF](../okf/SKILL.md). Done when evidence is reviewable and any requested knowledgebase follows the OKF workflow.
-7. Deliver and verify. State what the analysis supports, what it cannot establish, and what should be researched next. Done when the decision-maker can challenge sources and conclusions.
+7. Deliver and verify. Check material comparison cells and conclusions against recorded sources, consistent dimensions, and the observation/inference distinction. Correct unsupported or incomparable claims and recheck affected cells and conclusions. Mark unresolved evidence gaps as unknown or limited, stating what they prevent the analysis from establishing and what to research next. Done when the decision-maker can challenge sources and conclusions without unsupported certainty.
 
 ## Output shape
 

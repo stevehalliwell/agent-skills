@@ -20,11 +20,11 @@ Iteration is for low-risk changes where the direct requested change and final st
 
 ## Workflow
 
-1. Enter iteration mode. State: `Iteration mode: bundled tweaks; direct edits and no per-tweak checks unless needed for obvious breakage.` Do not update work records, status, handoff, or changelog for each tweak.
-2. Make the direct requested edit. Read only files needed for it. Keep the diff narrow; do not plan, refactor, add abstractions, or ask exploratory questions unless ambiguity or risk materially changes the requested behaviour.
-3. Check only for obvious breakage. Do not run tests, linters, builds, or broad audits per tweak by default. Run the fastest relevant check only when the user requests it or the change cannot be safely assessed otherwise.
-4. Report the delta. Name the changed file, exact change, and check state, then invite the next tweak.
-5. End cleanly. Treat `done`, `end iteration`, `iteration complete`, `return to normal`, `that works`, or a request for summary as completion. Summarize the final bundle; when task storage is configured, record one completed iteration bundle. Return to normal project behaviour.
+1. Enter iteration mode. Anchor the current task and pause point, if any. State: `Iteration mode: bundled tweaks; direct edits and no per-tweak checks unless needed for obvious breakage.` Do not update work records, status, handoff, or changelog for each tweak. Done when the tweak area and return context are known.
+2. Make the direct requested edit. Read only files needed for it; load [Coding](../coding/SKILL.md) for code changes. Keep the diff narrow; do not plan, refactor, add abstractions, or ask exploratory questions unless ambiguity or risk materially changes the requested behaviour. Done when the requested tweak is applied without unrelated changes.
+3. Check only for obvious breakage. Do not run tests, linters, builds, or broad audits per tweak by default. Run the fastest relevant check only when requested or needed for safety; correct any in-scope failure and recheck, or exit with a blocker. Done when obvious breakage is excluded or reported.
+4. Report the delta. Name the changed file, exact change, and check state, then invite the next tweak. Done when the user can assess the change and continue or stop.
+5. End cleanly. Treat `done`, `end iteration`, `iteration complete`, `return to normal`, `that works`, or a request for summary as the end of the tweak loop. Review the final diff and run one smallest credible check for the bundle when its risk warrants it; otherwise state why no check was run. Correct failures and recheck or report a blocker. When `tasks` is configured, load [Task lifecycle](../task-lifecycle/SKILL.md) and [Attendant](../attendant/SKILL.md), update the existing task or record one bundle, and use `review` unless the user explicitly approved the resulting work as complete. Ending the mode or asking for a summary alone does not authorize `done`. Summarize the bundle and resume the anchored context or normal work. Done when final checks, record state, and mode exit are explicit.
 
 ## Output shape
 

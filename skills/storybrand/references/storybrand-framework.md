@@ -2,6 +2,20 @@
 
 Practical summary of StoryBrand's public framework material. This is a method guide, not copied source text. Use it to structure messaging; do not treat it as evidence for user, product, customer, outcome, or authority claims.
 
+## Contents
+
+- [Core idea: clarity before cleverness](#core-idea-clarity-before-cleverness)
+- [Script scope](#script-scope)
+- [Seven-part BrandScript template](#seven-part-brandscript-template)
+- [One-liner](#one-liner)
+- [Optional deployment supplements](#optional-deployment-supplements)
+- [Workshop rules](#workshop-rules)
+- [Optional local SB7 clarity score](#optional-local-sb7-clarity-score)
+- [Content-alignment review](#content-alignment-review)
+- [Illustrative example](#illustrative-example)
+- [Source and claim limits](#source-and-claim-limits)
+- [Curated source material and local caches](#curated-source-material-and-local-caches)
+
 ## Core idea: clarity before cleverness
 
 Customers give limited attention to unfamiliar marketing. Make message low-calorie: low cognitive effort to grasp on first read. Lead with a clear customer goal, problem blocking it, and simple action path.

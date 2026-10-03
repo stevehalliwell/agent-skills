@@ -7,6 +7,12 @@ The style-profile skill resolves profile `<name>` in this order:
 
 If neither Markdown profile exists, report both checked paths and ask user to use the learn workflow to create a profile or supply another name. Do not silently select another profile. A profile created from local Markdown exemplars writes its metrics sidecar alongside the Markdown profile; a missing sidecar makes quantitative comparison unavailable, not inferred.
 
+## Contents
+
+- [Profile format](#profile-format)
+- [Measurement](#measurement)
+- [Rules](#rules)
+
 ## Profile format
 
 ```markdown
@@ -88,12 +94,12 @@ Weights are profile-specific comparison priorities. They are normalised among av
 
 ## Measurement
 
-The metric scripts use winkNLP and its English model. Install their locked dependencies after obtaining these skills with `npm ci --prefix <path-to-style-profile-skill>` (use the equivalent path on Windows).
+The metric scripts use winkNLP and its English model. If execution reports missing dependencies, obtain approval before installing them with `npm ci --prefix <skill-dir>`. Resolve `<skill-dir>` from the loaded skill and report other runtime errors directly.
 
 Use the bundled metric script for repeatable local Markdown evidence:
 
-- `references/style-profile-metrics.mjs [--output <metrics.json>] [--paragraph-label-max-words <number>] <Markdown files...>` — corpus words; filtered vocabulary counts and common/rare words; Universal POS word-type counts and percentages across articles, sentences, and paragraphs; sentence-length distribution; paragraph word and sentence lengths; corpus paragraph progression; list ratio; header depth; code-block frequency; punctuation counts per 1,000 words.
-- `references/style-profile-compare.mjs <profile.metrics.json> <Markdown files...>` — calculate each target’s metrics, compare them with robust per-document corpus distributions, and return grouped, weighted heuristic statistical-deviation results. It never modifies source files.
+- `node <skill-dir>/references/style-profile-metrics.mjs [--output <metrics.json>] [--paragraph-label-max-words <number>] <Markdown files...>` — corpus words; filtered vocabulary counts and common/rare words; Universal POS word-type counts and percentages across articles, sentences, and paragraphs; sentence-length distribution; paragraph word and sentence lengths; corpus paragraph progression; list ratio; header depth; code-block frequency; punctuation counts per 1,000 words.
+- `node <skill-dir>/references/style-profile-compare.mjs <profile.metrics.json> <Markdown files...>` — calculate each target’s metrics, compare them with robust per-document corpus distributions, and return grouped, weighted heuristic statistical-deviation results. It never modifies source files.
 
 `references/style-profile-metrics.mjs` emits machine-readable JSON plus a concise human summary. Its JSON retains one corpus-level `metrics` summary with statistical summaries, per-document comparison distributions, paragraph progression summaries, Universal POS word-type percentages, vocabulary counts, and bounded common/rare word lists, so a generated target can be compared meaningfully. Common/rare vocabulary excludes conjunctions, pronouns, determiners, prepositions, particles, numeric/mixed tokens, and one-character tokens. It excludes source text, paths, raw arrays, per-document results, and complete word-frequency tables. Sentence rhythm is not one number: report sentence-length distribution, variation, short-sentence rate, paragraph cadence as measurable proxies; retain qualitative observations in profile. Markdown-aware parsing excludes frontmatter, code blocks, URLs, quoted excerpts from prose metrics where appropriate.
 

@@ -1,6 +1,6 @@
 ---
 name: task-refinement
-description: "Refine a task when user explicitly asks to define how it should work; or task goal is clear but implementation is vague and multiple plausible local approaches exist. Produce executable technical shape: behavior, boundaries, path, edge cases, and acceptance. Skip todo review, triage, prioritization, status checks, task selection, and routine implementation with an established approach."
+description: "Scope a task, flesh out a feature, define behavior or acceptance checks, or refine how work should function when the user asks; also use when a clear task goal has vague implementation shape and multiple plausible local approaches. Produce executable technical shape: behavior, boundaries, path, edge cases, and acceptance. Skip todo review, triage, prioritization, status checks, task selection, and routine implementation with an established approach."
 ---
 
 # Task Refinement
@@ -27,7 +27,6 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
 1. Anchor current work.
    - Say: `Task refinement start. Current work resumes after shared task shape.`
    - This mode may inspect project context, discuss task shape, and update the task record as user input resolves details. It never modifies implementation code.
-   - Record confirmed facts, user answers, resolved decisions, and remaining open questions in the task Markdown as refinement proceeds. If the user requests discussion only, do not write files.
    - Done when current task pause point is explicit.
 
 2. Ground in existing context.
@@ -55,14 +54,14 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
 
 5. Resolve and record open questions.
    - Ask specific decision questions only when choices change task shape or acceptance.
-   - When the user supplies or corrects requested detail, immediately update the task Markdown and continue with the next unresolved material question or refinement step.
+   - When the user supplies or corrects requested detail, apply the persistence rule in step 6 and continue with the next unresolved material question or refinement step.
    - Treat a direct answer as agreement on the answered detail unless the user marks it tentative, asks for discussion, or a material decision remains open.
    - Keep unknown product behavior open. `TBD` records unresolved detail; it does not authorize choosing behavior.
    - Agent may recommend a default only when clearly labelled `Proposed`.
    - Done when every resolved detail is recorded and remaining uncertainty is visible.
 
 6. Keep task record current.
-   - Update the relevant task source record after each resolved refinement detail; do not restate settled detail merely to seek final confirmation.
+   - Immediately save confirmed facts, resolved user answers, proposals, and remaining open questions to the task source record as refinement proceeds; do not restate settled detail merely to seek final confirmation.
    - When no material decision remains, record the completed task shape and set its declared ready state when the user requested implementation-ready work.
    - If user only wants discussion, do not write files.
    - Done when saved task detail reflects current shared understanding or discussion-only scope is explicit.
@@ -113,8 +112,6 @@ Task refinement open: <specific decisions>. Saved: <task path>. Next: <next mate
 
 - Brevity compresses wording, not required content.
 - Do not begin implementation while feature boundary or technical shape is vague.
-- Treat task refinement as temporary mode: enter explicitly, resolve material questions while recording progress, then exit explicitly.
-- Discuss toward shared understanding while keeping the task record current; implementation remains a separate workflow.
 - Do not dump private checklist output to files; turn it into user-reviewable understanding first.
 - Use `tradeoff-review`, not this skill, for larger design direction, project priorities, cross-feature ramifications, or architectural trade-offs.
 - Do not invent product decisions silently; label assumptions.

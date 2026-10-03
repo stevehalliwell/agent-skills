@@ -30,7 +30,9 @@ Use for consequential architecture, framework, API, data model, schema, migratio
    - Derive one or more stable kebab-case `revisit_triggers` from conditions that should reopen this decision; use `/skill:attendant` `create -c decisions -i <items-json>` with one `{ "name": "<safe-slug>", "fields": <declared-fields> }` item including `status: accepted`. Fill record body from `../init-project/templates/records/decisions/.template.md`, explaining each trigger alongside context, decision, options, consequences, affected areas, and guardrails.
    - Done when saved source path accurately reflects agreement.
 6. Exit.
-   - Say: `Design decision recorded: <path>. Decision: <choice>. Trade-off: <cost>. Next: return to prior work or request implementation.`
+   - After a verified save, say: `Design decision recorded: <path>. Decision: <choice>. Trade-off: <cost>. Next: return to prior work or request implementation.`
+   - If deferred, cancelled, blocked, or unable to save, say: `Trade-off review unresolved: <reason>. Next: <required decision, record repair, or independent prior work>.` Do not resume work that depends on the unresolved choice or claim a missing record was saved. Other independent work may resume if the user chooses it.
+   - Done when the review is closed with a saved decision or a specific unresolved gate.
 
 ## Rules
 

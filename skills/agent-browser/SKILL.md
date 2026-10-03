@@ -1,6 +1,6 @@
 ---
 name: agent-browser
-description: "Automates browser interactions for web testing, form filling, screenshots, and data extraction. Use when the user needs to navigate websites, interact with web pages, fill forms, take screenshots, test web applications, or extract information from web pages. Default to a visible shared browser so the user can observe and interact alongside the agent."
+description: "Navigate websites, interact with pages, fill forms, take screenshots, test browser applications, or extract page data through agent-browser. Default to a visible shared browser so the user can observe and interact alongside the agent."
 ---
 # Browser Automation with agent-browser
 
@@ -58,10 +58,10 @@ agent-browser --headed fill @e2 "text"   # Fill input by ref
 
 ## Core workflow
 
-1. Navigate visibly: `agent-browser --headed open <url>`
-2. Snapshot: `agent-browser --headed snapshot -i` (returns elements with refs like `@e1`, `@e2`)
-3. Interact using refs from the snapshot
-4. Re-snapshot after navigation, user interaction, or significant DOM changes
+1. Navigate visibly: `agent-browser --headed open <url>`. Done when the intended origin/page is loaded or navigation failure is reported.
+2. Snapshot: `agent-browser --headed snapshot -i` (returns elements with refs like `@e1`, `@e2`). Done when the current target is identified from live page state.
+3. Interact using current refs within the confirmation boundary. Done when the intended action is performed or its blocker is known.
+4. Re-snapshot after navigation, user interaction, or significant DOM changes. Verify the requested result using visible text, URL, field/state checks, or saved artifacts. For a stale ref or transient render failure, obtain one fresh snapshot and retry only a safe read or reversible interaction once. Before retrying a submission, inspect whether it already took effect; never duplicate a purchase, send, publish, or other mutation. Stop with observed state and a blocker when the result cannot be verified. Done when the outcome is confirmed, not merely the command's success.
 
 ## Commands
 
@@ -87,7 +87,7 @@ agent-browser --headed fill @e2 "text"   # Fill input by ref
 
 Add `--json` to any command for machine-readable output.
 
-See [references/commands.md](references/commands.md) for the full command reference.
+Read [references/commands.md](references/commands.md) only when the task needs commands/options beyond the common commands above.
 
 ## Trust and Secret Handling
 

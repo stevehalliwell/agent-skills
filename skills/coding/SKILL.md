@@ -18,7 +18,7 @@ Read [Ponytail engineering guidance](references/ponytail.md), [Simple versus eas
 1. Understand the change. Trace the affected path, callers, existing patterns, and relevant edge cases before proposing or editing code. Done when the real change point is known.
 2. Choose the smallest solution. Apply the Ponytail ladder and reuse existing code, platform features, and installed dependencies before adding code or abstractions. Prefer the change that leaves difficult future work understandable, not the one that is merely quickest or most familiar to write. Done when the chosen approach is the simplest correct option.
 3. Change and clean up. Implement the requested scope, remove obsolete local references created by replacement, and mark deliberate constrained simplifications with a `ponytail:` comment. Done when the requested behavior is complete without speculative scaffolding.
-4. Verify proportionately. Leave or run one smallest credible check for non-trivial logic; state any unrun validation and remaining risk. Done when verification matches the change's risk.
+4. Verify proportionately. Leave or run one smallest credible check for non-trivial logic. Correct in-scope failures and rerun affected checks; if correction is blocked or requires broader scope, report the blocker. State any unrun validation and remaining risk without claiming a pass. Done when verification matches the change's risk and unresolved failures are explicit.
 
 ## Code shape
 

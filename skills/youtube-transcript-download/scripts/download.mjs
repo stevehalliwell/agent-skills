@@ -6,12 +6,12 @@
  *   node scripts/download.mjs <youtube-url-or-id> [--lang <code>] [--format text|json] [--output <path>]
  */
 import { writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { fetchTranscript } from "youtube-transcript";
 
 function usage(error) {
   if (error) console.error(`Error: ${error}\n`);
-  console.error("Usage: download.mjs <youtube-url-or-id> [--lang <code>] [--format text|json] [--output <path>");
+  console.error("Usage: download.mjs <youtube-url-or-id> [--lang <code>] [--format text|json] [--output <path>]");
   process.exit(error ? 1 : 0);
 }
 
@@ -63,21 +63,38 @@ while (args.length > 0) {
 }
 
 const videoId = extractVideoId(input);
-const segments = await fetchTranscript(videoId, lang ? { lang } : undefined);
-if (segments.length === 0) throw new Error("No transcript available for this video.");
+if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) usage("Input must contain a valid 11-character YouTube video ID.");
 
-const result = format === "json"
-  ? JSON.stringify({
-      videoId,
-      language: segments[0]?.lang,
-      segments: segments.map(({ text, duration, offset }) => ({ text, duration, offset })),
-    }, null, 2)
-  : segments.map((segment) => `${formatOffset(segment.offset)} ${segment.text}`).join("\n");
+try {
+  const segments = await fetchTranscript(videoId, lang ? { lang } : undefined);
+  if (segments.length === 0 || !segments.some((segment) => segment.text?.trim())) {
+    throw new Error("No transcript available for this video.");
+  }
+  if (lang && segments[0]?.lang && segments[0].lang !== lang) {
+    throw new Error(`Requested language ${lang}, but received ${segments[0].lang}.`);
+  }
 
-if (output) {
-  const path = resolve(output);
-  await writeFile(path, `${result}\n`, "utf8");
-  console.error(`Saved transcript to ${path}`);
-} else {
-  process.stdout.write(`${result}\n`);
+  const result = format === "json"
+    ? JSON.stringify({
+        videoId,
+        language: segments[0]?.lang,
+        segments: segments.map(({ text, duration, offset }) => ({ text, duration, offset })),
+      }, null, 2)
+    : segments.map((segment) => `${formatOffset(segment.offset)} ${segment.text}`).join("\n");
+
+  if (output) {
+    const path = resolve(output);
+    await writeFile(path, `${result}\n`, { encoding: "utf8", flag: "wx" });
+    console.error(`Saved transcript to ${path}`);
+  } else {
+    process.stdout.write(`${result}\n`);
+  }
+} catch (error) {
+  const detail = error.code === "EEXIST"
+    ? `Refusing to overwrite existing output: ${resolve(output)}. Choose a new --output path.`
+    : error.code === "ENOENT" && output
+      ? `Output directory does not exist: ${resolve(output)}. Create the directory or choose another --output path.`
+      : error.message;
+  console.error(`download: ${detail}`);
+  process.exitCode = 1;
 }

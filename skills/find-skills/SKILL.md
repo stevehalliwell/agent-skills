@@ -29,8 +29,8 @@ Find installable skills for a requested capability.
 
    Confirm both destination and installation approval.
    - Done when destination and approval are explicit.
-6. Run the selected install command. Report what was installed and any follow-up needed.
-   - Done when installation succeeds, or its exact error is reported.
+6. Run the selected install command. After success, verify the actual installed path is in the approved destination and read the installed `SKILL.md` to confirm it is the selected skill. If either check fails, correct only within the approved installation scope and recheck; ask before any additional install, update, or removal. Report the verified path and skill, or the exact error or mismatch and required follow-up.
+   - Done when the selected skill and installed path are verified, or a precise blocker is reported.
 
 ## Rules
 

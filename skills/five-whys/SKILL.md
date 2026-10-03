@@ -11,18 +11,14 @@ Guide cause or purpose inquiry until next action becomes clear.
 
 Use when user wants to understand why something happened, why it matters, or what purpose it serves. If request only asks for known facts or demands blame, state mismatch and use appropriate workflow instead.
 
-## Required read
-
-Read [method reference](references/five-whys.md) before first substantive question. Done when inquiry limits and evidence needs are known.
-
 ## Workflow
 
-1. Frame inquiry. State observed outcome or intended purpose, scope, stakes, and what user wants to decide. Separate facts from assumptions. Done when question is narrow enough to probe.
-2. Establish evidence. Record available observations, sources, constraints, and unknowns. Treat unsupported explanations as hypotheses. Done when first question can target highest-value gap.
+1. Frame inquiry. If interrupting existing work, anchor its pause point and state that it resumes after inquiry closes. State observed outcome or intended purpose, scope, stakes, and what user wants to decide. Separate facts from assumptions. Done when question is narrow enough to probe.
+2. Establish evidence. Record available observations, sources, constraints, and unknowns. Separate observation, reported experience, inference, and hypothesis; distinguish proximate causes, contributing conditions, and systemic context. Look for evidence that would disconfirm the leading explanation. Done when first question can target highest-value gap.
 3. Ask one question. Ask one open, non-leading “why” or purpose question. Wait for user response; do not supply a chain of questions. Done when user can answer or correct premise.
 4. Map response. Add response to causal/purpose map, label evidence versus hypothesis, identify branches, then ask next highest-value question. Continue only while it adds understanding. Done when chain, branch, or evidence gap is clear.
 5. Stop safely. Stop before or after five questions when insight is actionable, evidence is insufficient, user reaches a limit, causes become speculative, or further probing has diminishing value. Done when no justified next question remains.
-6. Synthesize. Return map, strongest hypotheses, evidence gaps, and one next action or open question. Do not present a hypothesis as proven or assign blame. Done when user can choose next step.
+6. Synthesize and exit. Check the map against supplied evidence; correct unsupported causal certainty and recheck, or retain a named evidence gap. Return the map, strongest hypotheses, and one next action or open question without assigning blame. Close inquiry explicitly and resume the anchored work only if its blocking question was resolved; otherwise name the blocker. Done when the inquiry's outcome and continuation are explicit.
 
 ## Output shape
 

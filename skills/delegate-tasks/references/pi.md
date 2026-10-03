@@ -33,4 +33,4 @@ To opt in to a known resource, list its Pi name (resolved from global or contain
 
 `model` and `thinking` are passed to Pi when specified. `web_search` and `ephemeral` are Codex-specific: use a deliberately allowlisted search extension or skill only when a Pi child needs network access.
 
-The task prompt is passed explicitly as `@<prompt-file>` to `pi --print`. Pi’s final stdout is saved as the task `result.md`; stderr is retained separately. This applies to both blocking and detached launches.
+The task prompt is passed explicitly as `@<prompt-file>` to `pi --print`. Pi stdout is retained in `events.log` and copied to `result.md` only after a successful harness exit. Empty output is incomplete, not success; stderr is retained separately. In background mode an independent per-task supervisor records the actual exit code and final manifest. Status never infers completion from a precreated result file.

@@ -17,9 +17,15 @@ Identify the requested outcome, then read **only** its workflow:
 
 If the outcome is ambiguous, ask whether the user wants to learn a profile, generate with one, or verify a match. Complete the selected workflow before changing outcomes.
 
-## Rules
+## Shared format and executable resources
 
-- Read [references/style-profiles.md](references/style-profiles.md) when the selected workflow requires it.
+Read [Profile format and measurement rules](references/style-profiles.md) before any selected workflow. Resolve `<skill-dir>` from this loaded skill. Scripts are executable resources, not reading assignments; they use Node.js, winkNLP, and its English model. If missing dependencies block execution, obtain approval for `npm ci --prefix <skill-dir>`; otherwise report the runtime failure directly.
+
+- When learning from local Markdown, execute [Metrics](references/style-profile-metrics.mjs) with `node <skill-dir>/references/style-profile-metrics.mjs [--output FILE] [--paragraph-label-max-words N] <Markdown files...>`.
+- When verifying against a saved metrics sidecar, execute [Comparator](references/style-profile-compare.mjs) with `node <skill-dir>/references/style-profile-compare.mjs <profile.metrics.json> <Markdown files...>`. It is report-only; subjective rewrites remain the generate workflow's responsibility.
+- After generating with a sidecar, read [Verify](workflows/verify.md) for the report-only comparison and any one-pass redraft recheck. After learning, read it only when the user accepts the offered corpus review.
+
+## Rules
 - Keep profile creation, generation, and verification as distinct outcomes; route between workflows only when their stated handoff conditions apply.
 - Preserve user meaning, exact technical text, explicit requirements, and accessibility over profile preferences.
 - Treat measurements as evidence for review, not quality grades, generation quotas, or automatic rewrite authority.

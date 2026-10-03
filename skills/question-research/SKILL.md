@@ -13,11 +13,18 @@ Use this only when the request needs iterative discovery, public-source evidence
 
 ## Required materials
 
-Read [`references/index.md`](references/index.md) during inquiry framing. Read [`formats/research-register.md`](formats/research-register.md) and [`formats/research-artifacts.md`](formats/research-artifacts.md) before creating inquiry artifacts. The register is the project-local lineage record; `source-map.md` is the single human-readable source/fetch/review map.
+During framing, select every guide whose trigger applies, record its selection and reason, and read only those guides before discovery:
+
+- [Current data](references/current-data.md) — rankings, popularity, prices, availability, catalogues, usage metrics, or recent trends.
+- [Business viability](references/business-viability.md) — market opportunity, pricing, earnings, operating burden, or competition.
+- [Historical and archival research](references/historical-archival.md) — origin, attribution, terminology, historical narrative, or primary-text research.
+- [AI-assisted research](references/ai-assisted-research.md) — every inquiry using AI for discovery, interpretation, or synthesis.
+
+Read [`formats/research-register.md`](formats/research-register.md) and [`formats/research-artifacts.md`](formats/research-artifacts.md) before creating inquiry artifacts. The register is the project-local lineage record; `source-map.md` is the single human-readable source/fetch/review map.
 
 ## Workflow
 
-1. **Frame the inquiry and select a research mode.** Restate the focused question and the decision or use it informs. Select one: `source-discovery` (annotated references, no synthesis), `orientation` (provisional topic map), `evidence-answer`, `evidence-dossier`, `gap-audit` (test a supplied corpus or draft for omissions and weak claims), or `archival-plan` (identify records that could resolve uncertainty). Derive 2–5 coverage subquestions that test the answer from distinct necessary angles; they are lenses for this inquiry, not permission to broaden it. Define what is in and out of the corpus, appropriate source authority, applicable time/geography/version/population boundaries, required freshness, and what would count as sufficient evidence. Use the reference catalogue to select applicable guides, record each selection and reason, and read those guides. Ask one focused clarification only when a missing boundary could materially change the corpus or conclusion; otherwise record the working assumptions and proceed.
+1. **Frame the inquiry and select a research mode.** Restate the focused question and the decision or use it informs. Select one: `source-discovery` (annotated references, no synthesis), `orientation` (provisional topic map), `evidence-answer`, `evidence-dossier`, `gap-audit` (test a supplied corpus or draft for omissions and weak claims), or `archival-plan` (identify records that could resolve uncertainty). Derive 2–5 coverage subquestions that test the answer from distinct necessary angles; they are lenses for this inquiry, not permission to broaden it. Define what is in and out of the corpus, appropriate source authority, applicable time/geography/version/population boundaries, required freshness, and what would count as sufficient evidence. Use the required-materials guide list to select applicable guides, record each selection and reason, and read those guides. Ask one focused clarification only when a missing boundary could materially change the corpus or conclusion; otherwise record the working assumptions and proceed.
    *Done when the question, consumer, mode, coverage subquestions, corpus boundaries, evidence bar, freshness, and selected references are explicit.*
 
 2. **Set up the inquiry location and first-pass brief.** Create a project-relative output directory with `first-blush/`, `discovery/D-001/`, and `discovery-journal.md`. Read the required formats and record the research frame, labels, URL cap, output paths, lenses, and constraints. The journal records searches, source trails, rejected leads, and why each next action was taken; it is chronological and append-only. Defer the full outcome and register.
@@ -44,7 +51,7 @@ Read [`references/index.md`](references/index.md) during inquiry framing. Read [
 9. **Synthesize from retained artifacts only.** For an `evidence-answer`, distinguish directly supported claims, source-reported claims, interpretations, and unresolved questions. For an `evidence-dossier`, preserve raw observations and opposing interpretations, then offer a clearly labelled proposed judgement. For historical or archival inquiries, end with records, repositories, or custodians that could resolve open questions. Treat direct reports as reports rather than proof of prevalence, demand, causality, authorship, or intent.
    *Done when conclusions, data, interpretation, uncertainty, and artifact links are separate.*
 
-10. **Validate and report.** Run packaged validation with explicit paths, verify local links, and report the outcome, retained evidence, limits, research leads, and next review step.
+10. **Validate and report.** Run the packaged register validator with explicit paths and verify local links and material claim/source fidelity. Correct supported artifact or lineage defects and rerun affected checks. If correction needs unavailable evidence or a broader inquiry, retain the gap and report the blocker instead of inventing support. Report the outcome, checks, retained evidence, limits, research leads, and next review step.
    *Done when another researcher can reproduce the path from question to conclusion or judgement.*
 
 ## Rules

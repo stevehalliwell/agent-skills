@@ -39,8 +39,8 @@ Build CLIs that remain usable at a terminal and reliable under automation.
 
 6. Validate both interfaces.
    - Test an interactive TTY invocation, a piped invocation, an explicit JSON invocation, an empty result, an expected failure, missing non-interactive credentials, and agent mode.
-   - Verify stdout parses cleanly and stderr contains no required machine data.
-   Done when each case has expected output, exit status, and no interactive dependency.
+   - Verify stdout parses cleanly and stderr contains no required machine data. Correct failed cases within scope and rerun affected cases; report any blocker or unrun case rather than claiming it passed.
+   Done when each case has expected output, exit status, and no interactive dependency, or remaining failures and gaps are explicit.
 
 ## Rules
 

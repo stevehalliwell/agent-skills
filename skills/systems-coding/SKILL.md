@@ -29,9 +29,13 @@ Use these rules where resource behavior is part of correctness or product value.
 
 - **Separate expected failures from broken reasoning.** Handle or deliberately document operational errors where recovery belongs. Use side-effect-free assertions for violated programmer assumptions, invariants, and impossible states. Assert inputs, outputs, bounds, and critical relationships close to where they matter; test both the valid path and the boundary or failure path.
 
-- **Use representations that make correctness checkable.** Prefer integers over floating point when the domain is discrete or exact arithmetic is required; choose widths, ranges, scaling, and overflow behavior explicitly. Floating point is fast on modern hardware, but integer is faster. Integer operations may be cheaper and some CPUs can execute integer and floating-point work in parallel. Neither advantage is universal: use floating point when the domain needs it, and measure representative workloads before changing a numeric representation for speed. Treat integer width, signedness, conversion, indexing, units, alignment, and byte order as design decisions when they affect behavior. Keep platform-specific code behind small boundaries with explicit contracts and fault models. Keep dependencies, macros, build variants, and feature flags few because each expands behavior that must be understood and tested.
+- **Use representations that make correctness checkable.** Prefer integers over floating point when the domain is discrete or exact arithmetic is required; choose widths, ranges, scaling, and overflow behavior explicitly. Integer operations may be cheaper and some CPUs can execute integer and floating-point work in parallel. Neither advantage is universal: use floating point when the domain needs it, and measure representative workloads before changing a numeric representation for speed. Treat integer width, signedness, conversion, indexing, units, alignment, and byte order as design decisions when they affect behavior. Keep platform-specific code behind small boundaries with explicit contracts and fault models. Keep dependencies, macros, build variants, and feature flags few because each expands behavior that must be understood and tested.
+
+## Application and verification
+
+On invocation, inspect the supplied target or ask for the code/system and operating constraint when no target is known. Apply the relevant ground rules rather than restating the entire list. For code changes, load [Coding](../coding/SKILL.md). Check ownership, bounds, failure paths, and any performance claim against the operating model using the smallest relevant tests, analysis, or measurement. Correct in-scope violations and rerun affected checks; report unresolved resource or evidence limits as blockers. Done when the review/change has a traceable result and verification state.
 
 ## References
 
-- [NASA/JPL Power of 10](references/10rules.md)
-- [TigerStyle](references/TIGER_STYLE.md)
+- [NASA/JPL Power of 10](references/10rules.md) — read when evaluating safety-critical C control flow, bounds, assertions, or analysis constraints; it is not a universal compliance mandate.
+- [TigerStyle](references/TIGER_STYLE.md) — read when a low-level design/review needs detailed safety, performance, or developer-experience rationale beyond the inline rules.

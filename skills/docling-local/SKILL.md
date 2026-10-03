@@ -95,7 +95,7 @@ Read [`../docker-local/SKILL.md`](../docker-local/SKILL.md) before using or star
 
 ## Rules
 
-- The service is local and the standard pipeline uses local OCR/layout/table models; do not select VLM, picture-description, formula-enrichment, or any remote/API option unless the user explicitly asks to revisit that policy. Vision interpretation is not presently handled: the skill does not describe images or convert diagrams to Mermaid. A future opt-in local vision-model stage could add reviewable descriptions or diagram representations while retaining the original image.
+- The service is local and the standard pipeline uses local OCR/layout/table models; do not select VLM, picture-description, formula-enrichment, or any remote/API option unless the user explicitly asks to revisit that policy. Vision interpretation is not presently handled: the skill does not describe images or convert diagrams to Mermaid.
 - The Docker image is intentionally persistent per machine. Conversion outputs remain project-local; the source file is uploaded to loopback only and is not mounted into the container.
 - The required image is `quay.io/docling-project/docling-serve-cpu:v1.30.0`. Before a deliberate version update, show the intended tag/digest and ask approval; do not use `latest` or auto-pull during ordinary conversion.
 - Image export means rasterized detected figures and, when supported, page images—not necessarily the original embedded binary assets byte-for-byte.

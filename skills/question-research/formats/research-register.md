@@ -2,6 +2,14 @@
 
 Create one project-local `research-register.md` for each focused question. Keep captured files in a sibling directory and link them with project-relative paths. The register is a maintained lineage view, not a replacement for raw discovery or capture artifacts. `source-map.md` is the single human-readable source/fetch/review mapping document; do not maintain a competing source list.
 
+## Contents
+
+- [Register template](#register-template)
+- [Capture records](#capture-records)
+- [Required companion artifacts](#required-companion-artifacts)
+
+## Register template
+
 ```markdown
 ---
 question_id: QR-001

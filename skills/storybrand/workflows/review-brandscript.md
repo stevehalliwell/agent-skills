@@ -2,6 +2,14 @@
 
 This is a three-part diagnostic, not praise or a generic copy review. It tests whether the message is evident, whether it follows the StoryBrand structure, and whether it conveys the user's intended story.
 
+## Contents
+
+- [Required read](#required-read)
+- [Part 1: inspect the existing brand and material](#part-1-inspect-the-existing-brand-and-material)
+- [Part 2: establish the user's intended StoryBrand independently](#part-2-establish-the-users-intended-storybrand-independently)
+- [Part 3: deliver the critical review](#part-3-deliver-the-critical-review)
+- [Output shape](#output-shape)
+
 ## Required read
 
 Read [../references/storybrand-framework.md](../references/storybrand-framework.md). Done when the seven-part structure and claim limits are known.
@@ -31,7 +39,7 @@ Read [../references/storybrand-framework.md](../references/storybrand-framework.
    - **Intent alignment:** Compare the material's communicated StoryBrand with the user's intended StoryBrand. Identify every mismatch, omission, distortion, contradiction, unsupported promise, or competing priority.
 6. Diagnose the source of each issue. State whether it is: **a poor StoryBrand** (the intended story itself is weak, incomplete, contradictory, or unsupported); **poor communication** (the intended story is sound but the material fails to convey it); or **a mismatch** (the material conveys a different story from the user's intent). Assess each story as a connected whole: whether the recognisable hero pursues a tangible quest; the problem credibly obstructs it; the organisation remains the guide; the plan gives the hero a believable path; the CTA asks for the appropriate next step; and failure and success make that choice meaningful. Identify all broken links, contradictions, competing heroes, unsupported leaps, and points where the story loses momentum. Done when the review states whether the issue is in the story, its communication, or both, and whether the material tells one compelling, coherent customer story.
 7. Read [../references/post-storybrand-checks.md](../references/post-storybrand-checks.md) and run every check, marking genuinely inapplicable checks as such. Diagnose whether each failure is in the underlying story, its communication, or the wider decision/channel context. Done when every post-StoryBrand check has a finding and remedy.
-8. Be critical and direct. A sound element may simply be marked `Good`; do not add praise padding or soften criticism. Every element that is weak, missing, wrong, unsupported, or misaligned—and every coherence failure—must have a remedy: replacement wording when evidence permits, otherwise the different approach, decision, or evidence needed. When requested, add content direction, a rewrite, newly generated channel copy, or a revised BrandScript. Ground every addition in supplied evidence; label unsupported additions `Assumption` or `Question`. Done when all three axes and the post-StoryBrand checks have findings, every criticism has a remedy, and any requested direction, draft, or revision is grounded in the supplied material and evidence.
+8. Be critical and direct. A sound element may simply be marked `Good`; do not add praise padding or soften criticism. Every element that is weak, missing, wrong, unsupported, or misaligned—and every coherence failure—must have a remedy: replacement wording when evidence permits, otherwise the different approach, decision, or evidence needed. When requested, add content direction, a rewrite, newly generated channel copy, or a revised BrandScript. Ground every addition in supplied evidence; label unsupported additions `Assumption` or `Question`. Before delivery, check findings against their cited material and user intent. Correct unsupported diagnoses; when revising copy or a BrandScript, rerun the affected SB7, coherence, intent, and post-check criteria after the remedy. Leave unresolved evidence or intent conflicts explicit rather than guessing. Done when all three axes and the post-StoryBrand checks have findings, every criticism has a remedy, and any requested direction, draft, or revision is grounded in the supplied material and evidence.
 
 ## Output shape
 

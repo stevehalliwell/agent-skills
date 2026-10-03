@@ -18,8 +18,8 @@ Restructure a transcript for reading without substantively rewriting it.
 3. Join caption fragments into complete sentences and group each continuous thought into coherent paragraphs. Place paragraph boundaries at substantive transitions, speaker changes, or natural pauses—not at fixed time or word-count intervals. Add minimal capitalization and punctuation where needed for legibility; preserve the speaker's wording, order, tone, uncertainty, and claims.
    Done when no paragraph splits a sentence or evident continuous thought.
 
-4. Return clean paragraphs as Markdown. Omit timestamps by default; retain or add sparse timestamp anchors only when the user requests traceability.
-   Done when the result is easy to read and remains source-faithful.
+4. Compare the prose with the transcript in source order, accounting only for allowed noise removals and minimal punctuation/capitalization. Restore lost wording, qualifiers, claims, or speaker labels and recheck affected passages. Flag uncertain segments or removals rather than guessing. Return clean paragraphs as Markdown. Omit timestamps by default; retain or add sparse timestamp anchors only when the user requests traceability.
+   Done when the result is easy to read and source-faithful, with any unresolved fidelity gaps explicit.
 
 ## Rules
 

@@ -46,13 +46,16 @@ Read [`../docker-local/SKILL.md`](../docker-local/SKILL.md) before starting the 
    token="$(openssl rand -hex 24)"
    port="$((12000 + ($$ % 30000)))"
    container="crawl4ai-$PPID-$$"
+   trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+   trap 'exit 130' INT
+   trap 'exit 143' TERM
    docker run -d --rm --name "$container" \
      -e "CRAWL4AI_API_TOKEN=$token" \
-     -p "127.0.0.1:${port}:11235" --shm-size=1g "$image"
+     -p "127.0.0.1:${port}:11235" --shm-size=1g "$image" || exit 1
    ```
    - Use unique container name, loopback-only port, random token. Poll `GET /health` with `Authorization: Bearer $token` for up to 30 seconds before crawl.
    - For user-requested OpenAI LLM summaries/extraction only, first test without printing value: `[ -n "${OPENAI_API_KEY:-}" ]`. If present, add `-e OPENAI_API_KEY` and `-e LLM_PROVIDER=openai/<user-selected-model>` to `docker run`; pass no LLM token in request JSON. If user says smallest/cheapest without naming model, default to `openai/gpt-4.1-nano` and report choice. If absent, state `LLM unavailable: OPENAI_API_KEY is not set; continuing Crawl4AI without LLM enrichment.` then complete ordinary crawl. Never read or copy Pi `auth.json`/OAuth credentials to supply this variable.
-   - Ensure cleanup with `docker rm -f "$container"` on success, error, or interruption.
+   - Run service startup and crawl in one Bash scope so the traps remove only this run's container on success, error, or interruption. If Docker reports a port collision, choose one new unused candidate port and retry this run's startup once; never stop the process owning the occupied port. Report a blocker if the retry fails.
    - Done when health endpoint returns success or failure states exact blocker.
 
 4. Crawl through API.

@@ -18,6 +18,23 @@ produce and consume OKF v0.2. A summary of what changed from v0.1 is in
 
 ---
 
+## Contents
+
+- [1. Motivation](#1-motivation)
+- [2. Terminology](#2-terminology)
+- [3. Bundle structure](#3-bundle-structure)
+- [4. Concept documents](#4-concept-documents)
+- [5. Provenance, trust, and lifecycle](#5-provenance-trust-and-lifecycle)
+- [6. Cross-linking and paths](#6-cross-linking-and-paths)
+- [7. Actor convention](#7-actor-convention)
+- [8. Index files](#8-index-files)
+- [9. Log files](#9-log-files)
+- [10. Attested computations concept](#10-attested-computations-concept)
+- [11. Conformance](#11-conformance)
+- [12. Versioning](#12-versioning)
+- [13. Changes from v0.1](#13-changes-from-v01)
+- [Appendix A: Worked example](#appendix-a-worked-example-an-income-statement)
+
 ## 1. Motivation
 
 The space of knowledge representation for AI agents is evolving quickly,

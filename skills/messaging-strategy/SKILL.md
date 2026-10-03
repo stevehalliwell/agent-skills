@@ -18,7 +18,9 @@ Inventory message framing, supporting copy, claims, proof, hierarchy or narrativ
 
 ## Copy-direction branch
 
-Present 2–3 viable directions with candidate wording, trade-offs, and recommendation. Wait for user choice before final copy. Do not invent claims, positioning, or proof. Done when user can choose a direction.
+1. Present 2–3 viable directions with candidate wording, trade-offs, and recommendation. Do not invent claims, positioning, or proof. Done when the user can choose a direction.
+2. Wait for the user's choice, then produce final copy in that direction from supplied facts and approved claims. Do not reopen settled choices merely to seek approval again. Done when the selected direction has usable final copy or a material evidence gap is named.
+3. Check final copy against audience, message goal, selected direction, claim support, and requested channel. Correct unsupported claims or intent drift and recheck; leave unresolved proof or product decisions explicit rather than fabricating them. Done when final copy and remaining limits are reviewable.
 
 ## Output shapes
 
@@ -45,7 +47,7 @@ Need from you: choose a direction before final copy.
 
 ## Rules
 
-- Marketing strategist remains first for customer-facing messaging, including website messaging and SEO/GEO relevance where applicable.
+- Use this skill for customer-facing messaging, including website copy and SEO/GEO audience relevance; route visual direction or browser implementation to their own workflows.
 - Use supplied facts; label assumptions.
 - Keep messaging separate from HTML, CSS, CMS, analytics, visual design, and deployment.
 - Claims require user, legal, product, or evidence approval.

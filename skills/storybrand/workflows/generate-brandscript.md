@@ -9,7 +9,7 @@ Read [../references/storybrand-framework.md](../references/storybrand-framework.
 1. Choose the script scope—brand, division, offer, campaign, or other coherent decision context—then gather its offer, audience, primary customer desire, desired action, evidence, constraints, customer language, and existing positioning. Use separate scripts when audiences, offers, or desired outcomes materially differ. Record supplied local-source path, origin or permission note, and claim boundary. Label unsupported statements `Assumption` or `Question`. Done when scope is explicit and every script field has supported input, an assumption, or a question.
 2. For file output, ask for a target path before writing; chat output needs no path. Done when output mode is known.
 3. Produce the BrandScript in the shape below. Preserve confirmed facts and make gaps explicit. Done when all applicable sections are completed or marked as gaps.
-4. Read [../references/post-storybrand-checks.md](../references/post-storybrand-checks.md) and run every check, marking genuinely inapplicable checks as such. Apply supported remedies or record them as next work. Done when the BrandScript includes a post-check result for every check.
+4. Read [../references/post-storybrand-checks.md](../references/post-storybrand-checks.md) and run every check, marking genuinely inapplicable checks as such. Apply evidence-supported remedies and rerun affected checks, including coherence and claim support. Stop with named evidence/intent gaps when a remedy cannot be supported; record those as next work rather than inventing claims. Done when the BrandScript includes a final post-check result for every check.
 
 ## Output shape
 

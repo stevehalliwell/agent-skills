@@ -21,14 +21,14 @@ Fetch a YouTube caption transcript with a local script rather than the Pi extens
    node scripts/download.mjs '<youtube-url-or-video-id>'
    node scripts/download.mjs '<youtube-url-or-video-id>' --lang en
    ```
-   Done when timestamped transcript text is returned.
+   Check that returned segments contain caption text and timestamps, and that requested language matches returned metadata when available. Report unavailable captions, language mismatch, or retrieval failure directly; correct only a known input/option mistake and retry once. Done when a non-empty transcript of the requested video is returned or the blocker is explicit.
 
 3. Save it only when the user requests a local file; use JSON when raw caption metadata is needed.
    ```bash
    node scripts/download.mjs '<youtube-url-or-video-id>' --output transcript.txt
    node scripts/download.mjs '<youtube-url-or-video-id>' --format json --output transcript.json
    ```
-   Done when the requested file exists and its path is reported.
+   The script refuses existing output files. Use a new path rather than silently replacing a prior transcript. Verify the saved file is non-empty and has the requested text/JSON shape; correct a supported output error and recheck, or report the write blocker. Done when verified output and its path are reported.
 
 4. Use the retrieved transcript as source material for requested summaries, notes, outlines, or other transformations. Preserve timestamps when the user needs to trace claims back to the video.
    Done when the requested output is delivered.

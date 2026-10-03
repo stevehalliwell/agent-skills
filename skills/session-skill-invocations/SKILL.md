@@ -1,11 +1,11 @@
 ---
 name: session-skill-invocations
-description: Report user and agent skill loads from saved Pi sessions. Use when auditing prior sessions for which skills were invoked, whether a user explicitly invoked a skill or the agent loaded its SKILL.md, and the associated session and JSONL line.
+description: "Report user and agent skill loads from saved Pi sessions. Use when auditing prior sessions for which skills were invoked, whether a user explicitly invoked a skill or the agent loaded its SKILL.md, and the associated session and JSONL line."
 ---
 
 # Session Skill Invocations
 
-Run the bundled report tool from this skill directory:
+Use the supplied session directory/globs when present; otherwise report the tool's default saved-session scope. Run the bundled Python report tool from this skill directory:
 
 ```bash
 python scripts/report-session-skill-invocations.py
@@ -43,6 +43,10 @@ python scripts/report-session-skill-invocations.py --session-glob '*'
 # One conversation file, or a matching subset
 python scripts/report-session-skill-invocations.py --session-glob '**/session.jsonl'
 ```
+
+## Check and report
+
+Check the exit status, output header/record shape, and requested session scope. A valid empty report means no detected loads, not that no skills were ever used. Correct an in-scope path or option error and rerun; report unreadable inputs, runtime failures, and detection limits rather than claiming a complete audit. Done when the requested report is delivered with scope, row count, and unresolved diagnostics.
 
 ## Detection limits
 

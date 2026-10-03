@@ -1,5 +1,22 @@
 # TigerStyle
 
+## Contents
+
+- [The Essence Of Style](#the-essence-of-style)
+- [Why Have Style?](#why-have-style)
+- [On Simplicity And Elegance](#on-simplicity-and-elegance)
+- [Technical Debt](#technical-debt)
+- [Safety](#safety)
+- [Performance](#performance)
+- [Developer Experience](#developer-experience)
+  - [Naming Things](#naming-things)
+  - [Cache Invalidation](#cache-invalidation)
+  - [Off-By-One Errors](#off-by-one-errors)
+  - [Style By The Numbers](#style-by-the-numbers)
+  - [Dependencies](#dependencies)
+  - [Tooling](#tooling)
+- [The Last Stage](#the-last-stage)
+
 ## The Essence Of Style
 
 > “There are three things extremely hard: steel, a diamond, and to know one's self.” — Benjamin

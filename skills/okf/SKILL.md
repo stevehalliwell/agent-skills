@@ -22,13 +22,13 @@ Use [OKF v0.2 specification](ref/OKF-SPEC-v0.2.md) as the authority. Before acti
    - **Create or update concepts, including code-alignment upkeep:** [maintain](workflows/maintain.md)
    - **Audit or repair conformance and documentation drift:** [validate](workflows/validate.md)
    - **Migrate a v0.1 bundle to v0.2:** [upgrade](workflows/upgrade.md)
-   If more than one mode is needed, complete upgrade before maintain or validate. Done when the sequence is explicit.
+   After maintain or upgrade, read and run the [validation workflow](workflows/validate.md) before reporting completion. If more than one mode is needed, complete upgrade before maintain or validate. Done when the sequence, including post-change validation, is explicit.
 3. Apply the selected workflow. Preserve existing producer-defined frontmatter keys and document meaning; do not fabricate sources, verification events, actors, timestamps, or implementation facts. Done when all selected workflow completion criteria hold.
 4. Report the bundle root, mode, files changed, validation result, and remaining warnings or unknowns. Done when the user can distinguish completed alignment from deferred work.
 
 ## Deterministic validation
 
-Run `python scripts/validate_okf.py <bundle-root>` from this skill directory for structural conformance. Install its dependency once with `python -m pip install -r scripts/requirements.txt`. Add `--drift` for Git-based resource freshness warnings, and use `--strict-links` or `--strict-drift` only when the repository adopts those stricter policies.
+Run `python scripts/validate_okf.py <bundle-root>` from this skill directory for structural conformance. The validator uses Python and PyYAML. If execution reports the missing dependency, obtain installation approval before running `python -m pip install -r scripts/requirements.txt`; report other runtime failures directly. Add `--drift` for Git-based resource freshness warnings, and use `--strict-links` or `--strict-drift` only when the repository adopts those stricter policies.
 
 ## Rules
 

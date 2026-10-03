@@ -9,16 +9,7 @@ Make skill behavior predictable while leaving room for task-specific judgment.
 
 ## Trigger clarification
 
-Frontmatter description is the primary trigger surface. It must carry enough plain-language trigger phrases for the agent to load the skill without relying on global `AGENTS.md` instructions. Add Trigger clarification only for checks after the skill has already loaded.
-
-Use this skill for:
-
-- creating new skills
-- editing or reviewing `SKILL.md` files
-- improving skill descriptions, trigger branches, steps, completion criteria, output shapes, or rules
-- deciding whether content belongs in `SKILL.md`, disclosed files, or another skill
-
-Before loading bulky workflow/reference files, confirm the clarified trigger still fits. If it does not fit, stop and do not load them.
+Confirm the request concerns a skill's invocation, instructions, references, resources, or behavior before loading bulky files. Stop when it concerns ordinary project work rather than skill design. Trigger clarification is post-load; discovery belongs in the frontmatter description.
 
 Completion: skill use is confirmed or rejected before any extra files are loaded.
 
@@ -82,17 +73,18 @@ Completion: skill use is confirmed or rejected before any extra files are loaded
 
 9. Specify executable resources when present.
    - Prefer bundled scripts for repeatable deterministic operations rather than asking the agent to regenerate them.
-   - State whether each script should be executed or read as reference; document commands, required dependencies, and how to check availability before use.
+   - State whether each script should be executed or read as reference; document commands and required dependencies. Attempt the documented operation and report actionable runtime or harness failures; do not add generic availability preflight instructions.
    - Require scripts to handle expected errors with actionable messages and document the rationale for non-obvious defaults and parameters.
    - For destructive or complex batch operations, validate a structured intermediate plan before applying changes, then verify the result.
    - Use forward-slash paths and tool identifiers supported by the target harness; do not assume another platform's naming or runtime conventions.
    - Completion: resources have clear execution intent, prerequisites, failure handling, and checks proportionate to risk. Skip this step for instruction-only skills.
 
 10. Validate locally.
-   - Run `node ./validate-frontmatter.mjs <SKILL.md>`. It enforces quoted `description`, name format/64-char limit, and 1024-char description limit. Do not write ad-hoc validators for these checks.
-   - Run `node ./md-words.mjs <SKILL.md>` when checking information hierarchy; it excludes YAML frontmatter.
-   - Run `node ./validate-urls.mjs <SKILL.md> [<linked-file.md> ...]` when content has HTTP(S) URLs. It checks URL syntax and follows HTTP redirects; it fails on request errors and non-2xx/3xx responses.
-   - Check relative links resolve from skill dir and conditional references are directly discoverable.
+   - Resolve `<skill-craft-dir>` from this loaded skill, not the project's working directory. The bundled validators require Node.js 18+.
+   - Run `node <skill-craft-dir>/validate-frontmatter.mjs <SKILL.md>`. It enforces quoted `description`, name format/64-char limit, and 1024-char description limit. Do not write ad-hoc validators for these checks.
+   - Run `node <skill-craft-dir>/md-words.mjs <SKILL.md>` when checking information hierarchy; it excludes YAML frontmatter.
+   - Run `node <skill-craft-dir>/validate-urls.mjs <SKILL.md> [<linked-file.md> ...]` when content has HTTP(S) URLs. It checks URL syntax and follows HTTP redirects; it fails on request errors and non-2xx/3xx responses.
+   - Run `node <skill-craft-dir>/validate-links.mjs <SKILL.md> [<linked-file.md> ...]` for inline local links and heading anchors; it skips fenced examples and does not fetch URLs. Check bare resource paths and conditional reference discovery manually.
    - Fix validation errors and rerun affected checks; report unresolved failures rather than declaring completion.
    - Completion: bundled validation passes; structural checks alone do not establish execution quality.
 
@@ -103,7 +95,7 @@ Prefer this order. Omit empty/no-op sections.
 ```markdown
 ---
 name: <lowercase-hyphen-name>
-description: <trigger-rich when-to-use + goal; for model-invoked include concrete user phrases and agent situations>
+description: "<trigger-rich when-to-use + goal; for model-invoked include concrete user phrases and agent situations>"
 disable-model-invocation: true # only for user-invoked
 ---
 
@@ -132,17 +124,7 @@ disable-model-invocation: true # only for user-invoked
 
 ## Review checklist
 
-- Invocation and description distinguish intended use from neighboring skills without relying on global instructions.
-- Trigger clarification is post-load; required reads follow it.
-- Main path stays focused; size thresholds prompt review, not arbitrary splitting.
-- Conditional references link directly from `SKILL.md`; long references have a table of contents.
-- Workflow freedom matches risk; steps have checkable completion and quality-critical checks include correction and rechecking.
-- Mode skills define enter/anchor/gate/exit/resume lifecycle.
-- Concepts, caveats, and useful examples are co-located; terminology is consistent and each meaning has one home.
-- Templates impose only necessary constraints; concrete examples clarify behavior where needed.
-- Manual invocation starts safe useful work or asks for required direction, never a load-only acknowledgement.
-- Executable resources specify intent, dependencies, helpful errors, justified defaults, and validation before risky changes.
-- Paths and tool references fit the target harness; local validation passes or unresolved failures are reported.
+Use the workflow's completion conditions as the review checklist. Inspect the actual entrypoint and applicable references/resources; distinguish demonstrated execution defects from static conformance gaps. Cite the smallest decisive file location and recommend the least change that fixes it. Report checks not run and unresolved failures.
 
 ## Output shape for reviews
 
@@ -168,6 +150,4 @@ Keep:
 - Prefer deleting weak prose over rewriting it.
 - Prefer discriminative trigger phrases over abstract labels or synonym lists when model invocation matters.
 - Prefer one strong leading word over repeated explanation.
-- Make manual invocation operational: begin the primary safe action, or ask one focused question when direction is required. Never use a load-only acknowledgement as the response.
-- For skills that act as temporary modes, prefer explicit lifecycle phrases over implied control flow.
 - Preserve project-local skill conventions unless they harm predictability.

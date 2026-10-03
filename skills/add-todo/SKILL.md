@@ -9,10 +9,7 @@ Capture one task. Attendant Markdown record is source of truth.
 
 ## Required read
 
-Load before drafting:
-- `../init-project/templates/.pi/attendant.tables`
-- `../init-project/templates/records/tasks/.schema.md`
-- `../init-project/templates/records/tasks/.template.md`
+Load [Attendant](../attendant/SKILL.md) before collection or record operations. When `tasks` is configured, load [Task lifecycle](../task-lifecycle/SKILL.md) and read the project's configured schema before drafting. Read the [default configuration](../init-project/templates/.pi/attendant.tables), [task schema](../init-project/templates/records/tasks/.schema.md), and [task body template](../init-project/templates/records/tasks/.template.md) only when bootstrapping default task storage; existing project schemas remain authoritative.
 
 ## Workflow
 
@@ -22,9 +19,9 @@ Load before drafting:
 
 2. Find or bootstrap task collection.
    - Prefer Git root; else cwd.
-   - If `.pi/attendant.tables` is absent, create `.pi/attendant.tables`, collection `.schema.md` files, and collection `.template.md` files from required templates; add `.attendant/` to `.gitignore` when missing.
+   - If `.pi/attendant.tables` is absent, inspect existing record folders first. Route legacy task or decision records to Attendant's guarded migration workflow; do not create blank default collections over existing records. For a fresh project with no migration candidates, use [Init Project](../init-project/SKILL.md) to bootstrap the default task storage while preserving existing docs.
    - If config exists but `tasks` is absent, use `/skill:attendant` empty-collection workflow; do not invent a second tracker.
-   - Run `node <attendant-skill-dir>/scripts/attendant.mjs validate --no-correct`, then `node <attendant-skill-dir>/scripts/attendant.mjs sync`; stop on diagnostics.
+   - Follow the chosen setup operation's validation contract; ordinary Attendant operations prepare the projection. Resolve reported diagnostics and recheck, or stop with the affected path and blocker.
    - Done when valid `tasks` collection exists.
 
 3. Find duplicate records.
@@ -41,7 +38,8 @@ Load before drafting:
 5. Create or update record.
    - New record: use `/skill:attendant` `create -c tasks -i <items-json>` with one `{ "name": "<safe-slug>", "fields": <declared-fields> }` item; then replace copied template body with content populated by known facts.
    - Existing record: edit its source path directly; preserve confirmed decisions and prior checks.
-   - Done when source record accurately captures request.
+   - Read the saved source record and compare its fields/body with the request. Correct inaccurate or missing captured detail and recheck; report a blocker rather than claiming a failed save.
+   - Done when the saved source record accurately captures the request.
 
 6. Finish.
    - If Git repo, show diff for changed record and setup files.

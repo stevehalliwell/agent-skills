@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Launch bounded, self-contained Pi or Codex task batches with durable artifacts.
 
-`run --background` preflights and launches every harness as an independent,
-detached process. Status, waiting, deadlines, and cancellation reconcile durable
-task manifests without depending on a launcher or scheduler process.
+`run --background` launches an independent detached supervisor for each task.
+Each supervisor records the harness exit status and result in a durable manifest.
+Status, waiting, and cancellation do not depend on the original launcher.
 """
 from __future__ import annotations
 import argparse, datetime as dt, json, os, signal, subprocess, sys, threading, time, uuid
@@ -15,7 +15,9 @@ from harnesses import codex, pi
 DEFAULT_DEADLINE = 20 * 60
 POLL = 0.5
 GRACE = 10
-TERMINAL = {"completed", "failed", "timeout", "cancelled", "preflight_failed", "incomplete", "parent_exited"}
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+STILL_ACTIVE = 259
+TERMINAL = {"completed", "failed", "timeout", "cancelled", "preflight_failed", "incomplete", "parent_exited", "failed_to_start"}
 
 
 def now(): return dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
@@ -33,15 +35,36 @@ def folder(raw: str):
     return value
 def identity(pid: int):
     if pid <= 0: return None
+    if os.name == "nt":
+        # os.kill(pid, 0) can terminate a Windows process. Query its handle and
+        # creation time instead; the latter also protects against PID reuse.
+        import ctypes
+        from ctypes import wintypes
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+        kernel.GetProcessTimes.argtypes = [wintypes.HANDLE] + [ctypes.POINTER(wintypes.FILETIME)] * 4
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        handle = kernel.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle: return None
+        try:
+            code = wintypes.DWORD()
+            if not kernel.GetExitCodeProcess(handle, ctypes.byref(code)) or code.value != STILL_ACTIVE: return None
+            times = [wintypes.FILETIME() for _ in range(4)]
+            if not kernel.GetProcessTimes(handle, *(ctypes.byref(value) for value in times)): return None
+            created = times[0].dwHighDateTime << 32 | times[0].dwLowDateTime
+            return f"{pid}:{created}"
+        finally:
+            kernel.CloseHandle(handle)
     try: os.kill(pid, 0)
     except ProcessLookupError: return None
     except PermissionError: pass
     except OSError: return None
     # Creation time prevents a reused PID being mistaken for the parent on Unix hosts.
-    # `ps` is not a reliable PID probe under Windows/MSYS, where kill(0) is enough.
-    if os.name == "nt": return str(pid)
-    out = subprocess.run(["ps", "-p", str(pid), "-o", "lstart="], capture_output=True, text=True).stdout.strip()
-    return out or None
+    out = subprocess.run(["ps", "-p", str(pid), "-o", "stat=", "-o", "lstart="], capture_output=True, text=True).stdout.strip()
+    state, _, created = out.partition(" ")
+    return created.strip() if created and not state.startswith("Z") else None
 def process_options():
     # Windows has no Unix process groups. CREATE_NEW_PROCESS_GROUP gives the
     # child a distinct process group; taskkill /T terminates its descendants.
@@ -103,7 +126,7 @@ def effective_task(base: Path, defaults: dict, raw: dict):
     task["harness"] = str(task.get("harness", "pi"))
     return task
 
-def task_run(base: Path, batch_run: Path, task: dict, stop: threading.Event):
+def task_run(base: Path, batch_run: Path, task: dict, stop: threading.Event, command=None, supervisor=False):
     name = task["name"]; work = batch_run / name; work.mkdir(parents=True, exist_ok=True)
     prompt, result, events, stderr = safe_child(base, task["prompt"], "prompt"), work / "result.md", work / "events.log", work / "stderr.log"
     execution_prompt = prompt
@@ -118,13 +141,15 @@ def task_run(base: Path, batch_run: Path, task: dict, stop: threading.Event):
     manifest_path = work / "manifest.json"
     started = time.monotonic()
     m = {"name": name, "harness": task["harness"], "status": "starting", "started_at": now(), "ended_at": None, "exit_code": None, "deadline_seconds": task["deadline"], "artifacts": {"prompt": rel(base,prompt), "execution_prompt": rel(base,execution_prompt), "result": rel(batch_run,result), "events": rel(batch_run,events), "stderr": rel(batch_run,stderr)}, "requested": {k: task.get(k) for k in ("model","thinking","web_search","ephemeral","sandbox","skills","exclude_skills","extensions","exclude_extensions") if k in task}}
-    try: cmd = adapter_command(base, task, result)
+    if supervisor:
+        m.update(supervisor_pid=os.getpid(), supervisor_identity=identity(os.getpid()))
+    try: cmd = command if command is not None else adapter_command(base, task, result)
     except Exception as exc:
         m.update(status="preflight_failed", ended_at=now(), elapsed_seconds=round(time.monotonic() - started, 3), error=str(exc)); dump(manifest_path,m); return m
     m["command"] = cmd; dump(manifest_path,m)
     with execution_prompt.open("rb") as inp, events.open("wb") as out, stderr.open("wb") as err:
         proc = subprocess.Popen(cmd, cwd=base, stdin=inp, stdout=out, stderr=err, **process_options())
-        m.update(status="running", pid=proc.pid, process_group=proc.pid); dump(manifest_path,m)
+        m.update(status="running", pid=proc.pid, process_group=proc.pid, process_identity=identity(proc.pid)); dump(manifest_path,m)
         until = time.monotonic() + task["deadline"]
         status = None
         while status is None:
@@ -134,10 +159,11 @@ def task_run(base: Path, batch_run: Path, task: dict, stop: threading.Event):
                 code = proc.wait(timeout=POLL)
                 if task["harness"] == "pi" and code == 0:
                     result.write_bytes(events.read_bytes())
-                status = "completed" if code == 0 and result.is_file() else ("failed" if code else "incomplete")
+                usable = result.is_file() and bool(result.read_text(encoding="utf-8").strip())
+                status = "completed" if code == 0 and usable else ("failed" if code else "incomplete")
             except subprocess.TimeoutExpired: pass
     m.update(status=status, ended_at=now(), exit_code=proc.returncode, elapsed_seconds=round(time.monotonic() - started, 3))
-    if status == "incomplete": m["error"] = "harness exited successfully without a result artifact"
+    if status == "incomplete": m["error"] = "harness exited successfully without a non-empty result artifact"
     dump(manifest_path,m); return m
 
 def run_batch(base: Path, rid: str, parent=None, initial_status="running"):
@@ -205,14 +231,71 @@ def launch_detached_task(base: Path, batch_run: Path, task: dict):
     except Exception as exc:
         manifest.update(status="preflight_failed",ended_at=now(),error=str(exc)); dump(path,manifest); return manifest
     manifest["command"]=cmd; dump(path,manifest)
-    # Pi's final stdout is its result. Codex emits JSON events while writing its
-    # final message itself to result.md.
-    with execution_prompt.open("rb") as inp, (result if task["harness"]=="pi" else events).open("wb") as out, stderr.open("wb") as err:
-        try: proc=subprocess.Popen(cmd,cwd=base,stdin=inp,stdout=out,stderr=err,**detached_process_options())
+    dump(work / "task.json", task)
+    # A result file can exist while its writer is running. Only the supervisor
+    # may report completion, after observing the harness exit and usable output.
+    with (work / "supervisor.log").open("wb") as diagnostics:
+        try:
+            proc = subprocess.Popen(
+                [sys.executable, str(Path(__file__).resolve()), "_task", str(base), batch_run.name, name],
+                cwd=base, stdin=subprocess.DEVNULL, stdout=diagnostics, stderr=diagnostics,
+                **detached_process_options(),
+            )
         except OSError as exc:
             manifest.update(status="failed_to_start",ended_at=now(),error=str(exc)); dump(path,manifest); return manifest
-    manifest.update(status="running",pid=proc.pid,process_group=proc.pid,process_identity=identity(proc.pid)); dump(path,manifest)
+    # Do not overwrite a manifest the supervisor may already have advanced.
+    manifest.update(supervisor_pid=proc.pid, supervisor_identity=identity(proc.pid))
     return manifest
+
+
+def detached_task(base: Path, rid: str, name: str):
+    batch_run = base / "runs" / rid
+    work = safe_child(batch_run, name, "task")
+    task = load(work / "task.json")
+    command = load(work / "manifest.json")["command"]
+    stop = threading.Event()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, lambda _sig, _frame: stop.set())
+    try:
+        task_run(base, batch_run, task, stop, command=command, supervisor=True)
+    except Exception as exc:
+        state = load(work / "manifest.json")
+        state.update(status="failed", ended_at=now(), error=str(exc))
+        dump(work / "manifest.json", state)
+    return 0
+
+
+def stop_detached(task):
+    """Stop only the recorded process identities, including stale terminal jobs."""
+    targets = []
+    for pid_key, identity_key in (("pid", "process_identity"), ("supervisor_pid", "supervisor_identity")):
+        pid = task.get(pid_key)
+        if not isinstance(pid, int):
+            continue
+        observed = identity(pid)
+        if observed is None or observed != task.get(identity_key):
+            continue
+        targets.append((pid, observed))
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, check=False)
+        else:
+            try: os.killpg(pid, signal.SIGTERM)
+            except ProcessLookupError: pass
+    until = time.monotonic() + GRACE
+    while targets and time.monotonic() < until:
+        targets = [(pid, token) for pid, token in targets if identity(pid) == token]
+        if targets: time.sleep(POLL)
+    if os.name != "nt":
+        for pid, token in targets:
+            if identity(pid) == token:
+                try: os.killpg(pid, signal.SIGKILL)
+                except ProcessLookupError: pass
+        until = time.monotonic() + GRACE
+        while targets and time.monotonic() < until:
+            targets = [(pid, token) for pid, token in targets if identity(pid) == token]
+            if targets: time.sleep(POLL)
+    if targets:
+        raise RuntimeError(f"could not terminate recorded task processes: {[pid for pid, _ in targets]}")
 
 def reconcile(base: Path, rid: str):
     batch,path=manifest(base,rid); changed=False; batch_run=base/"runs"/rid
@@ -220,21 +303,20 @@ def reconcile(base: Path, rid: str):
         task_path=batch_run/name/"manifest.json"
         if not task_path.is_file(): continue
         task=load(task_path)
+        for key in ("supervisor_pid", "supervisor_identity"):
+            if key not in task and key in summary:
+                task[key] = summary[key]
         if not terminal(task.get("status")):
-            result=batch_run/name/"result.md"
-            # Both harnesses write their final response only on completion.
-            # Prefer that durable signal over an unreliable Windows PID probe.
-            if result.is_file():
-                task.update(status="completed",ended_at=now(),error=None)
-            else:
-                expired=dt.datetime.now(dt.timezone.utc) >= parsed_time(task["started_at"]) + dt.timedelta(seconds=task["deadline_seconds"])
-                alive=isinstance(task.get("pid"),int) and identity(task["pid"]) is not None
-                if expired and alive:
-                    subprocess.run(["taskkill","/PID",str(task["pid"]),"/T","/F"],capture_output=True,check=False) if os.name=="nt" else None
-                    task.update(status="timeout",ended_at=now(),error="deadline elapsed; process terminated")
-                elif not alive:
-                    task.update(status="failed",ended_at=now(),error="process exited without a result artifact")
-                else: continue
+            expired=dt.datetime.now(dt.timezone.utc) >= parsed_time(task["started_at"]) + dt.timedelta(seconds=task["deadline_seconds"])
+            pid = task.get("supervisor_pid")
+            alive = isinstance(pid, int) and identity(pid) == task.get("supervisor_identity") and task.get("supervisor_identity") is not None
+            if expired:
+                stop_detached(task)
+                task.update(status="timeout",ended_at=now(),error="deadline elapsed; processes terminated")
+            elif not alive:
+                stop_detached(task)
+                task.update(status="failed",ended_at=now(),error="task supervisor exited without recording harness completion")
+            else: continue
             dump(task_path,task); changed=True
         if summary != task: batch["tasks"][name]=task; changed=True
     statuses=[task.get("status") for task in batch.get("tasks",{}).values()]
@@ -298,10 +380,16 @@ def result(args):
 def cancel(args):
     base=folder(args.job_folder); m,path=manifest(base,args.run)
     if m.get("launch_mode")=="detached":
-        for name, task in m.get("tasks",{}).items():
-            if task.get("status")=="running" and isinstance(task.get("pid"),int):
-                if os.name=="nt": subprocess.run(["taskkill","/PID",str(task["pid"]),"/T","/F"],capture_output=True,check=False)
-                task.update(status="cancelled",ended_at=now()); dump(base/"runs"/m["run_id"]/name/"manifest.json",task)
+        for name, summary in m.get("tasks",{}).items():
+            task_path = base/"runs"/m["run_id"]/name/"manifest.json"
+            task = load(task_path)
+            for key in ("supervisor_pid", "supervisor_identity"):
+                if key not in task and key in summary:
+                    task[key] = summary[key]
+            live = any(isinstance(task.get(key), int) and identity(task[key]) is not None for key in ("pid", "supervisor_pid"))
+            if live or not terminal(task.get("status")):
+                stop_detached(task)
+                task.update(status="cancelled",ended_at=now()); dump(task_path,task)
         m["tasks"]={name:load(base/"runs"/m["run_id"]/name/"manifest.json") for name in m.get("tasks",{})}
         m.update(status="cancelled",ended_at=now(),cancel_requested_at=now()); dump(path,m)
         print(json.dumps({"run_id":m["run_id"],"status":"cancelled","cancelled":True})); return 0
@@ -320,6 +408,7 @@ def parser():
         x=s.add_parser(op);x.add_argument("job_folder");x.add_argument("--background",action="store_true")
     for op in ("status","wait","result", "cancel"):
         x=s.add_parser(op);x.add_argument("job_folder");x.add_argument("--run")
+    x=s.add_parser("_task");x.add_argument("job_folder");x.add_argument("run_id");x.add_argument("name")
     x=s.add_parser("_run");x.add_argument("job_folder");x.add_argument("run_id");x.add_argument("--parent-pid",type=int);x.add_argument("--parent-identity")
     return p
 
@@ -333,6 +422,7 @@ def main():
         if a.op=="wait": return wait(a)
         if a.op=="result": return result(a)
         if a.op=="cancel": return cancel(a)
+        if a.op=="_task": return detached_task(folder(a.job_folder), a.run_id, a.name)
         if a.op=="_run":
             parent = {"pid":a.parent_pid,"identity":a.parent_identity} if a.parent_pid is not None and a.parent_identity else None
             run_batch(folder(a.job_folder),a.run_id,parent); return 0

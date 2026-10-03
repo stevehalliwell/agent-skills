@@ -30,7 +30,7 @@ Use `"harness": "codex"` in a task for a bounded, non-interactive Codex CLI invo
 `codex debug models` runs before every task. Its signed-in runtime catalogue is authoritative: model access and supported thinking levels vary by Codex CLI version and account. Inspect that same catalogue before setting either field:
 
 ```bash
-python ~/.pi/agent/skills/delegate-tasks/scripts/agent-job.py models codex
+python <skill-dir>/scripts/agent-job.py models codex
 ```
 
 The command returns a JSON object mapping models exposed by the installed CLI to their supported thinking levels. As of September 23, 2026, OpenAI is rolling out GPT-6 Sol (`gpt-6-sol`) for complex coding and GPT-6 Luna (`gpt-6-luna`) for focused, high-volume tasks. Codex CLI `0.156.1` adds both to its model picker. GPT-6 Astra (`gpt-6-astra`) is intended for harder work and requires CLI `0.153.0` or later. Access still depends on account, rollout, and workspace settings. [OpenAI models](https://developers.openai.com/codex/models) · [Codex changelog](https://developers.openai.com/codex/changelog)
@@ -50,4 +50,4 @@ codex --sandbox <workspace-write|danger-full-access> --ask-for-approval never [-
   --output-last-message <run>/<task>/result.md --json -
 ```
 
-The runner writes `execution-prompt.md` beside the result, prepends its write-boundary instruction, and passes that file to Codex on standard input; Codex does not receive Pi’s conversation. The job folder is the writable workspace. The runner never uses sandbox-bypass flags; `danger-full-access` is a consciously recorded task setting, not a bypass. Codex writes its final response to `result.md`; JSON events and stderr are retained beside it. This applies to both blocking and detached launches.
+The runner writes `execution-prompt.md` beside the result, prepends its write-boundary instruction, and passes that file to Codex on standard input; Codex does not receive Pi’s conversation. The job folder is the writable workspace. The runner never uses sandbox-bypass flags; `danger-full-access` is a consciously recorded task setting, not a bypass. Codex writes its final response to `result.md`; JSON events and stderr are retained beside it. This applies to both blocking and detached launches. Background tasks have independent supervisors which record actual exit codes; a non-empty result is accepted only after successful harness exit, never merely because a file exists.

@@ -1,4 +1,8 @@
-![Image](images/10rules-001.png)
+## Contents
+
+- [Article and introduction](#the-power-of-10-rules-for-developing-safety-critical-code)
+- [Safety-critical coding rules (1–10)](#safety-critical-coding-rules)
+- [Following the rules and author details](#following-the-rules)
 
 ## June 2006
 
@@ -31,8 +35,6 @@ The choice of language for safety-critical code is in itself a key consideration
 These rules might prove to be beneficial, especially if the small number means that developers will actually adhere to them.
 
 Rule 1 : Restrict all code to very simple control flow constructs-do not use goto statements, setjmp or longjmp constructs, or direct or indirect recursion .
-
-![Image](images/10rules-002.png)
 
 **Image OCR**
 
@@ -101,7 +103,3 @@ If these rules seem draconian at first, bear in mind that they are meant to make
 The research described in this paper was carried out at the Jet Propulsion Laboratory, California Institute of Technology, under a contract with NASA.
 
 Gerard J. Holzmann is a principal computer scientist at NASA's Jet Propulsion Laboratories, where he leads the Laboratory for Reliable Software. Contact him at gholzmann@acm.org.
-
-![Image](images/10rules-003.png)
-
-![Image](images/10rules-004.png)
