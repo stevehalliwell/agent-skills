@@ -11,7 +11,7 @@ This skill is the mandatory engineering layer for every code change. Other deliv
 
 ## Required read
 
-Read [Ponytail engineering guidance](references/ponytail.md), [Simple versus easy](references/simple-vs-easy.md), and [Casey Muratori: simple, good code](references/casey-muratori-good-code.md) before changing code. Before the first edit, reject each new helper, type, wrapper, interface, module, and configuration point unless it removes current complexity or repetition. Done when the applicable constraints are known and every new abstraction has a present-tense reason to exist.
+Read [Ponytail engineering guidance](references/ponytail.md), [Simple versus easy](references/simple-vs-easy.md), [Casey Muratori: simple, good code](references/casey-muratori-good-code.md), and [John Ousterhout: software design](references/ousterhout-software-design.md) before changing code. Before the first edit, reject each new helper, type, wrapper, interface, module, and configuration point unless it removes current complexity or repetition. Done when the applicable constraints are known and every new abstraction has a present-tense reason to exist.
 
 ## Workflow
 
