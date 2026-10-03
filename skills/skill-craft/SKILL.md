@@ -5,7 +5,7 @@ description: "Use when creating, editing, reviewing, or improving agent skills/S
 
 # Skill Craft
 
-Make skills predictable: same process every run, not same output.
+Make skill behavior predictable while leaving room for task-specific judgment.
 
 ## Trigger clarification
 
@@ -32,24 +32,28 @@ Completion: skill use is confirmed or rejected before any extra files are loaded
 2. Shape description.
    - Treat frontmatter description as the model's routing table, not a summary.
    - Say when to use the skill and what goal it serves.
-   - Model-invoked: pack description with concrete trigger phrases users/agents actually say, including synonyms, natural phrasing, and near-miss wording.
+   - Model-invoked: use concise, specific trigger phrases users/agents actually say. Include synonyms only when they clarify distinct likely requests.
    - Include both user phrases (`dig into details`, `flesh out`, `scope this`, `pause on design`) and agent situations (`before coding`, `unclear requirements`, `cross-cutting change`) when relevant.
-   - Prefer a slightly over-triggering description plus clear skip/stop criteria in body over under-triggering that prevents the skill from loading. Add short, concrete negative cases to description when they prevent likely false positives.
+   - Make scope distinguishable from neighboring skills; avoid both missed invocations and false positives. Add short, concrete negative cases to description when they prevent likely confusion.
    - Avoid listing internal steps; put procedure in body.
    - User-invoked: keep description human-facing.
    - Front-load strongest trigger phrases in first sentence; do not hide triggers behind abstract labels.
-   - Completion: description has rich trigger phrases, clear goals, real trigger branches, no reliance on `AGENTS.md`, no duplicate branches, no body-only trigger detail, no vague summary.
+   - Completion: description states capability and use conditions with discriminative triggers, clear goals, no reliance on `AGENTS.md`, no duplicate branches, and no body-only discovery detail.
 
 3. Build information hierarchy.
    - Keep trigger clarification before any required reads/references.
    - Keep always-needed workflow and reference inline when `SKILL.md` remains under about 1,000 words.
-   - Split or move branch-only/bulky material to linked files with strong context pointers once it exceeds about 1,000 words.
-   - Completion: agent can follow main path without wading through rarely used material.
+   - Treat about 1,000 words as a local review threshold, not an automatic split. Keep the body under 500 lines; move branch-only/bulky material out when it obscures the main path.
+   - Link each operational reference directly from `SKILL.md` with an explicit read-when condition; avoid chained discovery through references.
+   - Give reference files over 100 lines a table of contents so partial reads reveal their scope.
+   - Completion: agent can find each relevant branch directly and follow the main path without loading unrelated material.
 
-4. Write steps with completion criteria.
-   - Each ordered step ends with a checkable done condition.
+4. Match workflow specificity to risk.
+   - Use heuristics when multiple approaches are valid and context determines the path; use preferred patterns or parameterized scripts when limited variation is useful; use exact commands and sequences for fragile operations.
+   - Each ordered step ends with a checkable done condition. Prescribe sequence only where order matters.
    - Demand enough legwork: exhaustive where needed, narrow where not.
-   - Completion: no step can be honestly skipped by vague “done enough” reading.
+   - For quality-critical outputs, specify a check, correction, and recheck loop using a validator or explicit reference criteria. State how to stop or report a blocker when correction cannot succeed.
+   - Completion: instructions allow appropriate judgment, protect fragile operations, and define both success and recovery from failed checks.
 
 5. Add lifecycle for mode skills.
    - If skill temporarily interrupts current work, make lifecycle explicit: enter mode, anchor current work, perform bounded workflow, confirm/decide/write only at right gate, exit mode, state next step or resume prior task.
@@ -58,13 +62,13 @@ Completion: skill use is confirmed or rejected before any extra files are loaded
 
 6. Co-locate material.
    - Keep each concept's definition, rules, caveats, and examples together.
-   - If splitting files, prefer one action/workflow file and one reference/context file.
+   - Split by workflow, branch, or domain according to what the agent needs together; do not force unrelated material into one reference file.
    - Completion: agent reading one heading gets nearby context needed to act.
 
 7. Prune hard.
    - Remove duplication: one meaning, one home.
    - Remove sediment: stale or future-maybe content.
-   - Remove no-ops: lines that do not change agent behaviour.
+   - Remove no-ops and explanations the agent already knows; retain task-specific knowledge and constraints.
    - Rephrase negation as positive target unless hard guardrail requires ban.
    - Completion: every line changes invocation, execution, or safety.
 
@@ -72,15 +76,25 @@ Completion: skill use is confirmed or rejected before any extra files are loaded
    - A manually invoked skill must perform its primary safe action immediately; it must never respond only that the workflow or skill was loaded.
    - When that action needs user-specific scope or direction, ask one focused question instead of acknowledging the load.
    - Add output format only when consistent responses matter.
-   - Keep format short enough agent will use it.
-   - Completion: user-facing response starts useful work or asks for required direction; it is predictable without overconstraining content.
+   - Keep format short enough agent will use it. Make templates strict for exact data contracts and flexible for context-dependent responses.
+   - Add concrete input/output pairs when examples communicate expected behavior better than more prose; co-locate them with the relevant guidance.
+   - Completion: user-facing response starts useful work or asks for required direction; examples and templates clarify behavior without overconstraining content.
 
-9. Validate locally.
+9. Specify executable resources when present.
+   - Prefer bundled scripts for repeatable deterministic operations rather than asking the agent to regenerate them.
+   - State whether each script should be executed or read as reference; document commands, required dependencies, and how to check availability before use.
+   - Require scripts to handle expected errors with actionable messages and document the rationale for non-obvious defaults and parameters.
+   - For destructive or complex batch operations, validate a structured intermediate plan before applying changes, then verify the result.
+   - Use forward-slash paths and tool identifiers supported by the target harness; do not assume another platform's naming or runtime conventions.
+   - Completion: resources have clear execution intent, prerequisites, failure handling, and checks proportionate to risk. Skip this step for instruction-only skills.
+
+10. Validate locally.
    - Run `node ./validate-frontmatter.mjs <SKILL.md>`. It enforces quoted `description`, name format/64-char limit, and 1024-char description limit. Do not write ad-hoc validators for these checks.
    - Run `node ./md-words.mjs <SKILL.md>` when checking information hierarchy; it excludes YAML frontmatter.
    - Run `node ./validate-urls.mjs <SKILL.md> [<linked-file.md> ...]` when content has HTTP(S) URLs. It checks URL syntax and follows HTTP redirects; it fails on request errors and non-2xx/3xx responses.
-   - Check relative links resolve from skill dir.
-   - Completion: bundled validation passes and skill should load cleanly in pi.
+   - Check relative links resolve from skill dir and conditional references are directly discoverable.
+   - Fix validation errors and rerun affected checks; report unresolved failures rather than declaring completion.
+   - Completion: bundled validation passes; structural checks alone do not establish execution quality.
 
 ## Section contract
 
@@ -118,26 +132,17 @@ disable-model-invocation: true # only for user-invoked
 
 ## Review checklist
 
-- Invocation correct: model-invoked only when agent/other skills must reach it.
-- Description is strong enough to trigger without global `AGENTS.md` help.
-- Description says when to use the skill and what goal it serves, not internal steps.
-- Description front-loads concrete user phrases and agent situations, including likely synonyms and near-misses.
-- Description prefers controlled false positives over missed invocations for model-invoked skills.
-- Trigger clarification exists only for post-load checks, not primary discovery.
-- Required reads/references come after trigger clarification.
-- Branches are real branches, not synonyms.
-- `SKILL.md` stays self-contained unless it grows beyond about 1,000 words or has branch-only bulk.
-- Steps are ordered and have checkable completion criteria.
-- Mode skills have explicit enter/anchor/gate/exit/resume lifecycle, not just steps to run.
-- Reference sits at right level: inline if every run needs it, linked if branch-only/bulky.
-- Related reference is co-located.
-- One meaning has one source of truth.
-- No no-op advice, stale sediment, or unneeded prose.
-- Negations become positive target behaviour where possible.
-- Skill stays narrow; split only when invocation, sequence, or noise reduction earns the load.
-- Output shape exists only when it improves predictable user response.
-- Manual invocation begins the skill’s primary safe action; it never returns a load-only acknowledgement.
-- If manual invocation lacks direction needed for that action, the skill asks one focused question.
+- Invocation and description distinguish intended use from neighboring skills without relying on global instructions.
+- Trigger clarification is post-load; required reads follow it.
+- Main path stays focused; size thresholds prompt review, not arbitrary splitting.
+- Conditional references link directly from `SKILL.md`; long references have a table of contents.
+- Workflow freedom matches risk; steps have checkable completion and quality-critical checks include correction and rechecking.
+- Mode skills define enter/anchor/gate/exit/resume lifecycle.
+- Concepts, caveats, and useful examples are co-located; terminology is consistent and each meaning has one home.
+- Templates impose only necessary constraints; concrete examples clarify behavior where needed.
+- Manual invocation starts safe useful work or asks for required direction, never a load-only acknowledgement.
+- Executable resources specify intent, dependencies, helpful errors, justified defaults, and validation before risky changes.
+- Paths and tool references fit the target harness; local validation passes or unresolved failures are reported.
 
 ## Output shape for reviews
 
@@ -161,7 +166,7 @@ Keep:
 - Do not add boilerplate sections to satisfy contract; empty sections are no-ops.
 - Do not split skills for neatness alone.
 - Prefer deleting weak prose over rewriting it.
-- Prefer several concrete trigger phrases over one abstract label when model invocation matters.
+- Prefer discriminative trigger phrases over abstract labels or synonym lists when model invocation matters.
 - Prefer one strong leading word over repeated explanation.
 - Make manual invocation operational: begin the primary safe action, or ask one focused question when direction is required. Never use a load-only acknowledgement as the response.
 - For skills that act as temporary modes, prefer explicit lifecycle phrases over implied control flow.
