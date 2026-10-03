@@ -56,6 +56,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`messaging-strategy`](skills/messaging-strategy/) — Strengthens customer-facing positioning, copy, and calls to action.
 - [`note-taking`](skills/note-taking/) — Captures concise structured notes without creating durable project records.
 - [`style-profile`](skills/style-profile/) — Learns reusable profiles from examples, writes or rewrites Markdown with them, and checks documents or corpora against them.
+- [`itch-page`](skills/itch-page/) — Prepares a build-specific itch.io page kit; when live setup is requested, creates a Draft page and then applies its theme.
 - [`transcript-to-prose`](skills/transcript-to-prose/) — Turns timestamped spoken text into readable paragraphs without rewriting it.
 
 ### Skill and knowledge management
