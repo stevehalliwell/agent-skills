@@ -38,6 +38,42 @@ test("runner creates an empty collection from a temporary fixture", async (t) =>
   assert.equal(await readFile(join(root, ".pi/attendant.tables"), "utf8"), "records/notes as notes\n");
   assert.equal(await readFile(join(root, "records/notes/.schema.md"), "utf8"), "---\n---\n");
   assert.equal(await readFile(join(root, "records/notes/.template.md"), "utf8"), "");
+  assert.equal(result.json.usagePath, join(root, "records/notes/.usage.md"));
+  assert.equal(await readFile(result.json.usagePath, "utf8"), "");
+  const inspected = run(root, ["schema"]);
+  assert.equal(inspected.status, 0, inspected.stderr);
+  assert.equal(inspected.json.collections[0].usage, "");
+});
+
+test("schema reports collection paths and live usage without treating it as a record", async (t) => {
+  const usage = "# Notes\n\nCapture observations, not tasks.\n";
+  const root = await fixture({
+    ".pi/attendant.tables": "records/notes as notes\nlegacy\n",
+    "records/notes/.schema.md": "---\nstatus: [open, done]\n---\n",
+    "records/notes/.usage.md": usage,
+    "records/notes/alpha.md": record("alpha", "An observation\n"),
+    "legacy/.schema.md": "---\n---\n",
+  });
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  const result = run(root, ["schema"]);
+  assert.equal(result.status, 0, result.stderr);
+  const [notes, legacy] = result.json.collections;
+  assert.equal(notes.directory, join(root, "records/notes"));
+  assert.equal(notes.schemaPath, join(root, "records/notes/.schema.md"));
+  assert.equal(notes.usagePath, join(root, "records/notes/.usage.md"));
+  assert.equal(notes.usage, usage);
+  assert.equal(notes.fields[0].name, "status");
+  assert.equal(legacy.usage, null);
+  assert.equal(legacy.usagePath, join(root, "legacy/.usage.md"));
+  assert.deepEqual(run(root, ["query", "-s", "SELECT name FROM notes"]).json.rows, [{ name: "alpha" }]);
+  assert.equal(run(root, ["search", "-q", "observations"]).json.rows.length, 0);
+
+  await writeFile(notes.usagePath, "Updated guidance\n");
+  assert.equal(run(root, ["schema"]).json.collections[0].usage, "Updated guidance\n");
+  await rm(notes.usagePath);
+  await mkdir(notes.usagePath);
+  assert.notEqual(run(root, ["schema"]).status, 0);
 });
 
 test("runner validates, projects, queries, searches, schemas, and creates records", async (t) => {
@@ -175,8 +211,15 @@ files:
   const checked = run(root, ["migrate", "check", "--plan", "migrations/notes.md"]);
   assert.equal(checked.status, 0, checked.stderr);
   assert.equal(checked.json.ok, true);
+  assert.deepEqual(checked.json.usages, [join("records", "notes", ".usage.md")]);
+  await mkdir(join(root, "records/notes"), { recursive: true });
+  await writeFile(join(root, "records/notes/.usage.md"), "Preserve collection guidance\n");
+  const preserved = run(root, ["migrate", "check", "--plan", "migrations/notes.md"]);
+  assert.equal(preserved.status, 0, preserved.stderr);
+  assert.deepEqual(preserved.json.usages, []);
   const applied = run(root, ["migrate", "apply", "--plan", "migrations/notes.md"]);
   assert.equal(applied.status, 0, applied.stderr);
   assert.equal(applied.json.applied, true);
+  assert.equal(await readFile(join(root, "records/notes/.usage.md"), "utf8"), "Preserve collection guidance\n");
   assert.match(await readFile(join(root, "records/notes/idea.md"), "utf8"), /title: Idea/);
 });

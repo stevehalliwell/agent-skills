@@ -4,7 +4,7 @@ Discover first. Convert only reviewed mappings. Use only for existing Markdown t
 
 1. Inspect Git status, existing Markdown folders, front matter, headings, and prose. Complete setup if `.pi/attendant.tables` is missing.
    - Done: source folders, candidate metadata, unsupported nested data, links, and proposed collection boundaries are known.
-2. Write `migrations/<slug>.md` with front matter status `draft`. Include `collections` and `files` mapping arrays. Each file needs project-relative `source`, `destination`, SHA-256 `source_hash`, `fields`, and exact body `remove` spans (`start`, `end`, `text`). Explain inferred fields, warnings, and unmapped prose in Markdown body. Apply creates `.template.md` for each new collection: preserve an existing template, otherwise copy body from first mapped record in plan order.
+2. Write `migrations/<slug>.md` with front matter status `draft`. Include `collections` and `files` mapping arrays. Each file needs project-relative `source`, `destination`, SHA-256 `source_hash`, `fields`, and exact body `remove` spans (`start`, `end`, `text`). Explain inferred fields, warnings, and unmapped prose in Markdown body. Apply creates `.template.md` for each new collection: preserve an existing template, otherwise copy body from first mapped record in plan order. Apply also preserves an existing `.usage.md`, or creates an empty one. Do not infer collection purpose or workflow policy from migrated records; author confirmed guidance separately.
    - Done: plan states every candidate source write and body deletion exactly.
 3. Re-read plan with user. Identify ambiguous field meaning, invalid flat-schema markers, conflicting destinations, unmapped metadata, stale hashes, unresolved refs, overlapping spans, and record-loss risk. Ask targeted questions; update plan; repeat until no gaps remain. Preserve unmapped prose.
    - Done: user accepts complete mapping; plan status is `ready`.
@@ -22,7 +22,7 @@ Discover first. Convert only reviewed mappings. Use only for existing Markdown t
    node <skill-dir>/scripts/attendant.mjs migrate apply --plan migrations/<slug>.md
    ```
 
-   Git must have an existing commit, but plan and unrelated worktree changes may remain uncommitted. Apply creates inferred or empty `.template.md` before moving records. Normal Attendant actions automatically validate and refresh generated projection; do not run doctor after successful migration. Use `node <skill-dir>/scripts/attendant.mjs doctor` only if an error or health/projection problem needs diagnosis. Report changed paths and Git diff; plan status becomes `applied`.
+   Git must have an existing commit, but plan and unrelated worktree changes may remain uncommitted. Apply creates inferred or empty `.template.md` and missing empty `.usage.md` before moving records. Check/apply results list newly created usage paths under `usages`. Normal Attendant actions automatically validate and refresh generated projection; do not run doctor after successful migration. Use `node <skill-dir>/scripts/attendant.mjs doctor` only if an error or health/projection problem needs diagnosis. Report changed paths and Git diff; plan status becomes `applied`.
    - Done: apply result and any diagnostics are understood.
 
 ## Plan shape
@@ -56,6 +56,6 @@ Rules:
 - Apply requires existing Git history and matching hashes; Git diff/revert is rollback.
 - Paths stay inside project root. Never overwrite destination files.
 - Do not rewrite links, delete unapproved content, flatten nested data, or create backup copies.
-- `.schema.md` defines flat front matter; `.template.md` is body-only record copy.
+- `.schema.md` defines flat front matter; `.usage.md` defines collection purpose and operating guidance; `.template.md` is body-only record copy.
 - Preserve an existing `.template.md`; do not infer templates during normal record creation.
 - Apply writes universal Attendant fields plus approved fields, moves files, and removes only exact mapped spans.

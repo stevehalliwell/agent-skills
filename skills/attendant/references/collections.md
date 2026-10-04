@@ -10,7 +10,7 @@ Use this workflow for an unconfigured project. If `.pi/attendant.tables` already
    - Done: bootstrap files, current Attendant locations, candidate migration sources, and existing Markdown are known.
 2. If candidate record sources exist, explain why migration may preserve more value than a blank setup and ask whether to route to migration. Continue bootstrap only when user chooses fresh setup or candidates are unrelated docs. Create missing `.pi/attendant.tables` as an empty file. Create `.gitignore` if absent, or append `.attendant/` only when no equivalent ignore entry exists. Do not alter existing config lines or ignore rules.
    - Done: user has chosen migration or project has Attendant config and generated state is ignored.
-3. Create or update a concise `## Attendant` section in project-root `AGENTS.md`. State that Attendant is in use; identify `.pi/attendant.tables` as the collection configuration; list each configured collection directory and its `.schema.md` path; and state that Markdown is source of truth while `.attendant/` is generated state. If no collection exists yet, say so explicitly. Preserve unrelated instructions and an existing Attendant section's relevant project-specific guidance.
+3. Create or update a concise `## Attendant` section in project-root `AGENTS.md`. State that Attendant is in use; identify `.pi/attendant.tables` as the collection configuration; list each configured collection directory and its `.schema.md` and `.usage.md` paths; instruct agents to read collection usage before operating on its records; and state that Markdown is source of truth while `.attendant/` is generated state. If no collection exists yet, say so explicitly. Preserve unrelated instructions and an existing Attendant section's relevant project-specific guidance.
    - Done: `AGENTS.md` tells future agents whether Attendant is in use and where its configuration and schemas are.
 4. Normal Attendant actions automatically validate and refresh generated projection; do not invoke manual validation or sync tools as routine setup. Run `node <skill-dir>/scripts/attendant.mjs doctor` only if setup reports an error or health/projection problem needs diagnosis.
    - Done: setup result is understood; any error is reported with path and cause.
@@ -31,7 +31,7 @@ Use only for a new collection. If `.pi/attendant.tables` is missing, complete se
 
 1. Inspect `AGENTS.md`, `.pi/attendant.tables`, `.gitignore`, configured collection schemas, requested target folder, and nearby unconfigured Markdown folders. Use `node <skill-dir>/scripts/attendant.mjs doctor` when health diagnostics are needed; normal actions automatically validate and refresh generated projection.
    - Done: existing collection names, documented locations, target state, and possible migration sources are known.
-2. Ask for collection directory and optional alias. Do not ask for schema fields; collection creation intentionally starts with empty `.schema.md` and `.template.md`.
+2. Ask for collection directory and optional alias. Do not ask for schema fields; collection creation intentionally starts with empty `.schema.md`, `.usage.md`, and `.template.md`. Purpose and usage authoring is a separate step; do not invent policy during empty setup.
    - Done: proposed config line and empty source files are concrete.
 3. Check target directory and migration fit. Accept only a nonexistent directory or an empty existing directory. Reject duplicate collection alias/name, reserved `__attendant_` name, duplicate config entry, unsafe path, and non-empty directory. If existing Markdown appears intended as collection data, explain that migration preserves and maps it; route there unless user explicitly confirms a separate empty collection.
    - Done: creation cannot overwrite, adopt, or hide source records; migration alternative is considered.
@@ -41,16 +41,17 @@ Use only for a new collection. If `.pi/attendant.tables` is missing, complete se
    node <skill-dir>/scripts/attendant.mjs add-table --directory <directory> [--alias <alias>]
    ```
 
-   Do not write collection files directly, add fields, or create records.
+   Do not write collection files directly, add fields, author usage rules, or create records.
    - Done: runner result reports one declared empty collection and created source paths.
-5. Update the project-root `AGENTS.md` `## Attendant` section to list the new collection directory and `.schema.md` path, while preserving existing project-specific Attendant guidance and unrelated instructions. Report collection path/name, empty declared fields, and created source paths. Do not invoke manual validation, sync, or doctor after success; normal actions handle preparation automatically. Use `doctor` only if an error or health/projection problem needs diagnosis.
+5. Update the project-root `AGENTS.md` `## Attendant` section to list the new collection directory and `.schema.md` and `.usage.md` paths, with instructions to read usage before operating on records, while preserving existing project-specific Attendant guidance and unrelated instructions. Report collection path/name, empty declared fields, and created source paths. Do not invoke manual validation, sync, or doctor after success; normal actions handle preparation automatically. Use `doctor` only if an error or health/projection problem needs diagnosis.
    - Done: `AGENTS.md` and the operation result identify the new collection and schema; any diagnostic is reported with path and cause.
 
 Rules:
 
 - Preserve existing config lines, schemas, records, `.gitignore`, and unrelated agent instructions.
-- Keep schema flat. `.schema.md` defines front-matter fields; `.template.md` defines optional record body copy.
-- Stop after empty collection setup; field authoring and record creation are separate workflows.
+- Keep schema flat. `.schema.md` defines front-matter fields; `.usage.md` defines collection purpose and operating guidance; `.template.md` defines optional record body copy.
+- Preserve existing collections without `.usage.md`; inspection reports their usage as missing rather than retrofitting policy.
+- Stop after empty collection setup; field authoring, usage authoring, and record creation are separate steps.
 - Never create nested YAML, database migrations, or an alternate manifest.
 - Do not choose a first record or semantic fields for user.
 - Use project-relative paths unless user explicitly chooses a configured external directory.

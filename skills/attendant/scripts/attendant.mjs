@@ -612,6 +612,7 @@ async function addTable(root2, rawDirectory, rawAlias) {
   if (name.startsWith("__attendant_")) fail2(`name: ${JSON.stringify(name)} is reserved.`);
   const schemaPath = join4(directory, ".schema.md");
   const templatePath = join4(directory, ".template.md");
+  const usagePath = join4(directory, ".usage.md");
   let existingDirectory = false;
   try {
     const entries = await readdir3(directory, { withFileTypes: true });
@@ -622,7 +623,7 @@ async function addTable(root2, rawDirectory, rawAlias) {
   }
   const line = configLine(projectRoot, directory, alias);
   if (config.split(/\r?\n/).some((item) => item.trim() === line)) fail2(`duplicate: config entry ${JSON.stringify(line)} already exists.`);
-  const created = [schemaPath, templatePath];
+  const created = [schemaPath, templatePath, usagePath];
   const temporaryConfig = join4(dirname2(tablesPath), `.${basename4(tablesPath)}.attendant-${process.pid}-${randomBytes2(4).toString("hex")}`);
   let targetCreated = false;
   try {
@@ -632,13 +633,14 @@ async function addTable(root2, rawDirectory, rawAlias) {
     }
     await writeFile2(schemaPath, "---\n---\n", { flag: "wx" });
     await writeFile2(templatePath, "", { flag: "wx" });
+    await writeFile2(usagePath, "", { flag: "wx" });
     const currentConfig = await readFile5(tablesPath, "utf8");
     if (currentConfig !== config) fail2("config: changed while collection was being created.");
     const nextConfig = `${config.replace(/\s*$/, "")}${config.trim() ? "\n" : ""}${line}
 `;
     await writeFile2(temporaryConfig, nextConfig, { flag: "wx" });
     await rename2(temporaryConfig, tablesPath);
-    return { name, directory, schemaPath, templatePath, configPath: tablesPath };
+    return { name, directory, schemaPath, templatePath, usagePath, configPath: tablesPath };
   } catch (error) {
     await rm2(temporaryConfig, { force: true });
     for (const path of created) await rm2(path, { force: true });
@@ -1509,10 +1511,21 @@ async function schema(root2) {
   const columns = (table) => db.prepare(`PRAGMA table_info(${quote2(table)})`).all();
   try {
     return {
-      collections: contract.collections.map((collection) => {
+      collections: await Promise.all(contract.collections.map(async (collection) => {
         const ftsTable = `__attendant_fts_${collection.name}`;
+        const usagePath = join8(collection.directory, ".usage.md");
+        let usage = null;
+        try {
+          usage = await readFile8(usagePath, "utf8");
+        } catch (error) {
+          if (error.code !== "ENOENT") throw error;
+        }
         return {
           name: collection.name,
+          directory: collection.directory,
+          schemaPath: collection.schemaPath,
+          usagePath,
+          usage,
           table: collection.name,
           columns: columns(collection.name),
           fields: collection.fields.map((field) => ({
@@ -1525,7 +1538,7 @@ async function schema(root2) {
           })),
           fts: { table: ftsTable, columns: columns(ftsTable) }
         };
-      }),
+      })),
       systemTables: [
         { name: "__attendant_diagnostics", columns: columns("__attendant_diagnostics") },
         { name: "__attendant_edges", columns: columns("__attendant_edges") }
@@ -1764,7 +1777,7 @@ var init_cli = __esm({
         update: { usage: "update --collection|-c <name> --items|-i <json|@file|->", input: { items: "non-empty array of {name, fields}; validates every changed record before replacing any source file" }, safety: "updates only declared fields plus desc and tags; id, name, and created_at are immutable" },
         validate: { usage: "validate [--no-correct] [--strict]", defaults: { correction: "mechanical corrections applied" }, safety: "--no-correct preserves source; --strict preserves source and fails pending corrections or diagnostics" },
         sync: { usage: "sync", safety: "rebuilds disposable projection from Markdown source" },
-        schema: { usage: "schema", output: "collections, fields, SQLite/FTS metadata, diagnostics, and links" },
+        schema: { usage: "schema", output: "collections, source paths, usage Markdown, fields, SQLite/FTS metadata, diagnostics, and links" },
         query: { usage: "query --sql|-s <sql|@file|-> [--params|-P <json|@file|->] [--limit|-l <integer>]", defaults: { params: {}, limit: 100 }, safety: "one read-only authorizer-contained SQL statement; use a literal collection alias" },
         search: { usage: "search --query|-q <text|@file|-> [--collections|-c <csv|@file|->] [--limit|-l <integer>]", defaults: { limit: 100 }, safety: "searches projected full text; limit is a non-negative integer" },
         doctor: { usage: "doctor", safety: "read-only health diagnosis; does not correct or refresh state" },
@@ -1872,7 +1885,9 @@ async function planApply(planPath) {
     const line = `${relative(root, directory).split(sep).join("/")}${alias ? ` as ${alias}` : ""}`;
     const schemaPath = resolve(directory, ".schema.md");
     const templatePath = resolve(directory, ".template.md");
+    const usagePath = resolve(directory, ".usage.md");
     let templateExists = false;
+    let usageExists = false;
     try {
       await access(schemaPath);
       fail(`schema already exists: ${relative(root, schemaPath)}.`);
@@ -1885,8 +1900,14 @@ async function planApply(planPath) {
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") throw error;
     }
+    try {
+      await access(usagePath);
+      usageExists = true;
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") throw error;
+    }
     if (tables.split(/\r?\n/).map((item) => item.trim()).includes(line)) fail(`config already contains ${JSON.stringify(line)}.`);
-    collectionWrites.push({ directory, schemaPath, templatePath, templateExists, line, schema: collection.schema });
+    collectionWrites.push({ directory, schemaPath, templatePath, templateExists, usagePath, usageExists, line, schema: collection.schema });
   }
   const fileWrites = [];
   const destinations = /* @__PURE__ */ new Set();
@@ -1933,12 +1954,13 @@ async function runMigration(projectRoot, argv) {
     if (command === "apply") gitRepository();
     const prepared = await planApply(planPath);
     if (command === "check") {
-      return { ok: true, collections: prepared.collectionWrites.map((item) => item.line), templates: prepared.collectionWrites.filter((item) => !item.templateExists).map((item) => relative(root, item.templatePath)), files: prepared.fileWrites.map((item) => relative(root, item.destination)) };
+      return { ok: true, collections: prepared.collectionWrites.map((item) => item.line), templates: prepared.collectionWrites.filter((item) => !item.templateExists).map((item) => relative(root, item.templatePath)), usages: prepared.collectionWrites.filter((item) => !item.usageExists).map((item) => relative(root, item.usagePath)), files: prepared.fileWrites.map((item) => relative(root, item.destination)) };
     }
     for (const collection of prepared.collectionWrites) {
       await mkdir(collection.directory, { recursive: true });
       await writeFile(collection.schemaPath, collection.schema, { encoding: "utf8", flag: "wx" });
       if (!collection.templateExists) await writeFile(collection.templatePath, collection.template, { encoding: "utf8", flag: "wx" });
+      if (!collection.usageExists) await writeFile(collection.usagePath, "", { encoding: "utf8", flag: "wx" });
     }
     const config = `${prepared.tables.replace(/\s*$/, "")}${prepared.tables.trim() ? "\n" : ""}${prepared.collectionWrites.map((item) => item.line).join("\n")}
 `;
@@ -1954,7 +1976,7 @@ async function runMigration(projectRoot, argv) {
     prepared.document.set("applied_at", (/* @__PURE__ */ new Date()).toISOString());
     await writeFile(planPath, `---
 ${prepared.document.toString({ lineWidth: 0 })}---${prepared.suffix}`, "utf8");
-    return { applied: true, collections: prepared.collectionWrites.map((item) => item.line), templates: prepared.collectionWrites.filter((item) => !item.templateExists).map((item) => relative(root, item.templatePath)), files: prepared.fileWrites.map((item) => relative(root, item.destination)) };
+    return { applied: true, collections: prepared.collectionWrites.map((item) => item.line), templates: prepared.collectionWrites.filter((item) => !item.templateExists).map((item) => relative(root, item.templatePath)), usages: prepared.collectionWrites.filter((item) => !item.usageExists).map((item) => relative(root, item.usagePath)), files: prepared.fileWrites.map((item) => relative(root, item.destination)) };
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : "migration: failed.");
   }
