@@ -25,7 +25,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 ### Project and task workflow
 
 - [`backlog-capture`](skills/backlog-capture/) — Captures one or several tasks, ideas, and deferred requests in Attendant, with project-local Markdown as fallback.
-- [`backlog-refinement`](skills/backlog-refinement/) — Turns one unready backlog item into implementation-ready work at a time.
+- [`refine-the-backlog`](skills/refine-the-backlog/) — Works through oldest unready tasks one at a time using task refinement.
 - [`coding`](skills/coding/) — Applies mandatory engineering judgment to every code change. Close to caveman and Ponytail.
 - [`systems-coding`](skills/systems-coding/) — Guides C and other low-level systems work toward explicit limits, safe failure handling, testability, and measured performance.
 - [`implementation`](skills/implementation/) — Delivers an agreed, reviewable implementation slice and validates it proportionately.

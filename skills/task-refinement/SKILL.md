@@ -5,7 +5,7 @@ description: "Scope a task, flesh out a feature, define behavior or acceptance c
 
 # Task Refinement
 
-Turn task headline and desired outcome into shared executable technical shape, then return to implementation or docs.
+Turn one task's headline and desired outcome into shared executable technical shape, then return to the calling workflow or prior work.
 
 ## Trigger clarification
 
@@ -25,18 +25,21 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
 ## Workflow
 
 1. Anchor current work.
-   - Say: `Task refinement start. Current work resumes after shared task shape.`
+   - For a standalone invocation, say: `Task refinement start. Current work resumes after shared task shape.`
+   - When called by [Refine the backlog](../refine-the-backlog/SKILL.md), retain its selected item and return context. That caller requests persisted, implementation-ready refinement; do not select another task or resume implementation here.
    - This mode may inspect project context, discuss task shape, and update the task record as user input resolves details. It never modifies implementation code.
-   - Done when current task pause point is explicit.
+   - Done when the selected task, persistence intent, and return context are explicit.
 
 2. Ground in existing context.
-   - If Attendant is configured; read selected task source path or use `/skill:attendant` `search`/`query` to locate it.
-   - If no record exists, use user's message as source.
-   - Done when source text and selected item are known.
+   - When `.pi/attendant.tables` configures `tasks`, load [Attendant](../attendant/SKILL.md) and [Task lifecycle](../task-lifecycle/SKILL.md), then read the configured schema and selected task source path; use Attendant `search`/`query` to locate that record when needed.
+   - If no record exists, use the user's message as source.
+   - Inspect related records, existing behavior, dependencies, and adjacent work as needed to ground task shape. Separate confirmed facts from assumptions and identify behavior to preserve.
+   - Done when source text, selected item, and relevant constraints are known.
 
 3. Identify missing implementation detail.
-   - Check for: feature summary, user/value, in-scope behavior, out-of-scope behavior, affected code/data flows, technical approach, alternatives ruled out, acceptance checks, open questions.
-   - Done when gaps are explicit.
+   - Check for: desired outcome, user/business value, in-scope behavior, out-of-scope behavior, affected code/data flows, technical approach, alternatives ruled out, acceptance checks, open questions.
+   - Keep one independently reviewable outcome per task. Identify split points for oversized work and make sequencing, dependencies, opportunity cost, and speculative complexity explicit where they affect the boundary.
+   - Done when gaps and any necessary split points are explicit.
 
 4. Reflect understanding, not checklist results.
    - Separate:
@@ -48,7 +51,7 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
      - What it is not: non-goals and tempting adjacent work.
      - Technical detail: affected files/flows/interfaces, data shape, edge cases, constraints, expected sequence.
      - Alternatives ruled out: option, why rejected, revisit trigger if useful.
-     - Acceptance: observable check or command/manual verification.
+     - Acceptance: observable checks and proportionate validation, including a command or manual verification where useful.
    - Keep broad system trade-offs in `tradeoff-review`; keep local implementation detail here.
    - Done when another agent could implement after material decisions are resolved through user input and the current task shape and technical detail are recorded.
 
@@ -62,51 +65,21 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
 
 6. Keep task record current.
    - Immediately save confirmed facts, resolved user answers, proposals, and remaining open questions to the task source record as refinement proceeds; do not restate settled detail merely to seek final confirmation.
-   - When no material decision remains, record the completed task shape and set its declared ready state when the user requested implementation-ready work.
-   - If user only wants discussion, do not write files.
+   - When no material decision remains and the user or calling workflow requested implementation-ready work, record the completed task shape and set `status: todo` for an item in declared `needs-refinement`; for legacy `status: todo` plus `scope: draft`, set `scope: agreed` and retain `status: todo` only when those fields and values are declared. Otherwise use only the schema's declared ready state; report a blocker if none exists. Do not set `doing` or change unrelated task state.
+   - If the user only wants discussion, do not write files.
    - Done when saved task detail reflects current shared understanding or discussion-only scope is explicit.
 
 7. Exit refinement mode.
    - Use one explicit outcome:
-     - `Task refined: <summary>. Saved: <task path>. Next: continue refinement or return to prior work.`
-     - `Task refinement open: <specific decisions>. Saved: <task path>. Next: ask the next material question.`
+     - `Task refined: <summary>. Saved: <task path, or discussion only>. Next: return to calling workflow or prior work.`
+     - `Task refinement open: <specific decisions or blocker>. Saved: <task path, or discussion only>. Next: ask the next material question or resolve the blocker.`
+   - Return a resolved item to its caller immediately. For an unresolved item, retain the selected item and record the material decision, blocker, or explicit pause; the caller must not advance past it.
    - Do not imply implementation authorization from refinement discussion alone.
    - Done when refinement discussion is closed or waiting on a specific user decision.
 
 ## Output shape
 
-```text
-Task refinement start. Current work resumes after shared task shape.
-
-Task refinement: <name>
-
-Confirmed:
-- ...
-
-Proposed:
-- ...
-
-Saved:
-- <task Markdown details updated in this turn>
-
-Open:
-- <specific material decision, or None>
-
-Next:
-- <next material question, or continued refinement>.
-```
-
-When resolved:
-
-```text
-Task refined: <summary>. Saved: <task path>. Next: return to prior work.
-```
-
-When unresolved:
-
-```text
-Task refinement open: <specific decisions>. Saved: <task path>. Next: <next material question>.
-```
+Keep updates brief: task name, confirmed behavior, proposals, observable acceptance, saved details, open decisions, and next action. Omit empty groups. Use the exit phrases in step 7; for discussion-only work, report `Saved: discussion only` rather than implying a record was written.
 
 ## Rules
 

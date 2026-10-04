@@ -51,7 +51,8 @@ Read `tasks/.schema.md` before applying this lifecycle. Existing project schemas
 
 - `backlog-capture`: capture/dedupe/create one or several records; use Markdown only when task storage is not configured.
 - `pick-up`: query candidates and select active work.
-- `task-refinement`: agree implementation shape.
+- `refine-the-backlog`: select oldest unready items and iterate through task refinement.
+- `task-refinement`: agree single-task implementation shape and record its declared ready state when requested.
 - `wrap-up`: update task state and handoff.
 - `iteration`: write one completed iteration record.
 - `tradeoff-review`: durable decision records, not task mechanics.
