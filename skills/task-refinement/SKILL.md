@@ -31,7 +31,7 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
    - Done when the selected task, persistence intent, and return context are explicit.
 
 2. Ground in existing context.
-   - When `.pi/attendant.tables` configures `tasks`, load [Attendant](../attendant/SKILL.md) and [Task lifecycle](../task-lifecycle/SKILL.md), then read the configured schema and selected task source path; use Attendant `search`/`query` to locate that record when needed.
+   - When `.pi/attendant.tables` configures `tasks`, load [Attendant](../attendant/SKILL.md), run `schema`, and read the configured task schema, usage guidance, and selected source record; use Attendant `search`/`query` to locate that record when needed. Follow usage for readiness and state transitions; resolve material ambiguity when usage is missing or contradicts the schema.
    - If no record exists, use the user's message as source.
    - Inspect related records, existing behavior, dependencies, and adjacent work as needed to ground task shape. Separate confirmed facts from assumptions and identify behavior to preserve.
    - Done when source text, selected item, and relevant constraints are known.
@@ -65,7 +65,7 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
 
 6. Keep task record current.
    - Immediately save confirmed facts, resolved user answers, proposals, and remaining open questions to the task source record as refinement proceeds; do not restate settled detail merely to seek final confirmation.
-   - When no material decision remains and the user or calling workflow requested implementation-ready work, record the completed task shape and set `status: todo` for an item in declared `needs-refinement`; for legacy `status: todo` plus `scope: draft`, set `scope: agreed` and retain `status: todo` only when those fields and values are declared. Otherwise use only the schema's declared ready state; report a blocker if none exists. Do not set `doing` or change unrelated task state.
+   - When no material decision remains and the user or calling workflow requested implementation-ready work, record the completed task shape and apply the ready-state transition documented in collection usage, using only schema-declared fields and values. Report a blocker when the transition is unspecified or conflicts with the current task state. Do not set the implementation-active state or change unrelated task state.
    - If the user only wants discussion, do not write files.
    - Done when saved task detail reflects current shared understanding or discussion-only scope is explicit.
 

@@ -24,8 +24,10 @@ Set up high-signal project guidance plus Attendant-backed records.
 - `AGENTS.md` — local agent instructions.
 - `.pi/attendant.tables` — default collections configuration.
 - `records/tasks/.schema.md` — canonical task tracker schema.
+- `records/tasks/.usage.md` — task lifecycle, readiness, approval, and operating rules.
 - `records/tasks/.template.md` — starting body for new task records.
 - `records/decisions/.schema.md` — canonical durable decisions schema.
+- `records/decisions/.usage.md` — decision purpose, approval, supersession, and revisit rules.
 - `records/decisions/.template.md` — starting body for new decision records.
 - `.gitignore` entry `.attendant/` — generated local state.
 - `.pi/handoff.md` — optional agent pickup summary.
@@ -47,11 +49,13 @@ Set up high-signal project guidance plus Attendant-backed records.
 5. If target docs/config already exist, ask whether to merge templates, add only missing pieces, or skip existing files.
    - Done when merge policy is chosen.
 6. Read matching templates and generate/adapt files using gathered facts. Keep unknown commands, paths, constraints, and acceptance details `TBD`; never invent install/test commands from a likely stack. Label unimplemented features and tentative tools as planned, not available or verified. Do not claim a release, versioning policy, or completed change without evidence; retain an unreleased changelog rather than copying the example release.
-   - For new default collections, create configured directories, schemas, and body templates, add `.attendant/` ignore entry, then use `/skill:attendant` runner: `validate --no-correct` and `sync`. Run `doctor` only for a reported health or projection problem.
+   - For new default collections, create configured directories, schemas, usage guidance, and body templates, add `.attendant/` ignore entry, then use `/skill:attendant` runner: `validate --no-correct` and `sync`. Run `doctor` only for a reported health or projection problem.
+   - Adapt usage guidance to confirmed project policy and keep it consistent with each schema. Preserve existing collection guidance under the chosen merge policy; do not silently retrofit default lifecycle rules. Include configured schema and usage paths in `AGENTS.md` and require reading usage before operating on records.
    - Correct supported setup diagnostics without replacing records; rerun validation and sync only after validation passes. Stop with paths and a blocker when correction needs user decisions.
    - Done when generated docs match answers/evidence and collection setup validates, or an unresolved diagnostic is reported.
 7. Review generated files against interview answers and inspected facts. Replace leftover template instructions with actual text or `TBD`; remove unsupported claims; verify that unknown applicable fields remain visible. Correct and recheck before reporting completion.
-   - Done when docs distinguish confirmed facts, planned choices, and unknowns without presenting an empty project as runnable.
+   - Inspect Attendant `schema` output to confirm both new collections report their usage paths and full guidance. Review lifecycle values, approval gates, and references against the schemas; schema validation does not enforce usage policy. Correct inconsistencies and recheck, or report a blocker.
+   - Done when docs distinguish confirmed facts, planned choices, and unknowns without presenting an empty project as runnable, and collection usage matches the schemas and confirmed policy.
 8. Report created/updated paths, skipped/migration items, and remaining TBD fields.
    - Done when user can resume cleanly.
 
@@ -71,8 +75,10 @@ Template map:
 - `templates/AGENTS.md` → `AGENTS.md`
 - `templates/.pi/attendant.tables` → `.pi/attendant.tables`
 - `templates/records/tasks/.schema.md` → `records/tasks/.schema.md`
+- `templates/records/tasks/.usage.md` → `records/tasks/.usage.md`
 - `templates/records/tasks/.template.md` → `records/tasks/.template.md`
 - `templates/records/decisions/.schema.md` → `records/decisions/.schema.md`
+- `templates/records/decisions/.usage.md` → `records/decisions/.usage.md`
 - `templates/records/decisions/.template.md` → `records/decisions/.template.md`
 - `templates/.pi/handoff.md` → `.pi/handoff.md`
 - `templates/CHANGELOG.md` → `CHANGELOG.md`

@@ -11,13 +11,13 @@ Work through the unready task queue using the single-task refinement workflow. T
 
 1. Enter and resolve the queue.
    - State: `Backlog refinement start. Current work resumes after backlog refinement.` Retain the prior work context.
-   - Inspect `.pi/attendant.tables`. When `tasks` is configured, load [Attendant](../attendant/SKILL.md) and [Task lifecycle](../task-lifecycle/SKILL.md), then read the configured schema.
+   - Inspect `.pi/attendant.tables`. When `tasks` is configured, load [Attendant](../attendant/SKILL.md), run `schema`, and read the configured task schema and usage guidance. Follow its unready/ready state meanings and backlog ordering; resolve material ambiguity when usage is missing or contradicts the schema.
    - If `tasks` is not configured, report that this workflow requires a configured task queue. Do not bootstrap storage or invent a tracker; a specified task can still use task refinement directly.
    - Done when the queue's schema and return context are known, or a storage blocker is explicit.
 
 2. Select the oldest eligible item.
-   - Use Attendant `query` to find `status: needs-refinement` items when declared; otherwise use legacy `status: todo` plus `scope: draft` only when both fields and values are declared. If neither representation exists, report a schema blocker rather than guessing eligibility.
-   - Order by the documented creation-time field, oldest first, then record name as a tie-breaker. If no creation-time field exists, use stable record-name order and state that age is unavailable; never infer age from modification time.
+   - Use Attendant `query` to find items in the unready state documented by collection usage (the init-project default is `needs-refinement`). Use only declared fields and values; do not guess eligibility from status names.
+   - For oldest-first refinement, use Attendant's documented built-in `created_at`, then record name as a tie-breaker. If collection usage requires a different order, make the conflict with this workflow explicit and resolve it before selecting; never infer age from modification time.
    - If no eligible items remain, state: `Backlog refinement complete. Next: resume prior work or choose another workflow.`
    - Done when one oldest eligible item and its source path are selected, or the empty-queue exit is clear.
 
@@ -35,5 +35,5 @@ Work through the unready task queue using the single-task refinement workflow. T
 ## Rules
 
 - Refine one item at a time, oldest first; task refinement owns all per-task shaping and readiness rules.
-- Never implement, set an item to `doing`, reprioritize without request, or modify task-lifecycle status definitions.
+- Never implement, set an item to `doing`, reprioritize without request, or modify collection lifecycle rules.
 - Do not treat completion of one item as completion of the requested backlog pass.

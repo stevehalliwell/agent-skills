@@ -17,8 +17,8 @@ Reconstruct state fast. Attendant tasks are planning authority; handoff is suppl
 2. Check repo state: `git status --short`, recent commits, relevant paths.
    - Done when recent changes and dirty files are known.
 3. Inspect Attendant when configured.
-   - Load `/skill:attendant` and `/skill:task-lifecycle`; read `tasks/.schema.md`. Use `/skill:attendant` `query` for `tasks` with declared status values `doing`, `todo`, `blocked`, `review`, and `needs-refinement`, ordered by updated/current relevance. Use its `search` only for targeted text.
-   - For every `review`, `doing`, and `needs-refinement` task, read enough of its record to show exact name and a faithful short description, using its outcome or summary when present.
+   - Load `/skill:attendant`; run `schema` and read the configured task schema and usage guidance. Query work in its documented active, ready, blocked, review, and unready states, using only declared fields and values and following collection selection rules. Resolve material ambiguity when usage is missing or contradicts the schema. Use `search` only for targeted text.
+   - For every task in the documented review, active, or unready states, read enough of its record to show exact name and a faithful short description, using its outcome or summary when present.
    - If config is absent, state that no work collection exists; do not create one during pickup.
    - Done when active/resumable work is known or absence is confirmed.
 4. Read `.pi/handoff.md` if present.
@@ -31,7 +31,7 @@ Reconstruct state fast. Attendant tasks are planning authority; handoff is suppl
    - Done when user has clear choices or the handoff action is selected.
 7. Dispatch selected work according to its state.
    - For implementation, follow [Implementation](../implementation/SKILL.md): start only ready work or resume authorized active work. Let that workflow perform the active-state transition. Create a missing record via [Backlog capture](../backlog-capture/SKILL.md) only when selected work requires one, then resolve its readiness before implementation.
-   - For refinement, review, or diagnosis of a blocker, preserve the task's state and start that operation's workflow instead of setting it `doing`.
+   - For refinement, review, or diagnosis of a blocker, preserve the task's state and start that operation's workflow instead of setting its implementation-active state.
    - Verify any changed record through Attendant's normal operation. Run `validate`, `sync`, or `doctor` only for a reported health/projection problem.
    - Do not update handoff after selection; it is stale once used.
    - Done when the selected action has the correct workflow and declared task state, or tracking absence is stated.

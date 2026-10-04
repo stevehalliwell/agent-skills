@@ -33,7 +33,6 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`iteration`](skills/iteration/) — Drives rapid, low-risk tweak loops without workflow churn.
 - [`pick-up`](skills/pick-up/) — Rebuilds project context from repository state, handoffs, and tasks.
 - [`release-readiness`](skills/release-readiness/) — Aligns release-facing documentation with changes since the last release.
-- [`task-lifecycle`](skills/task-lifecycle/) — Governs status transitions and record rules for tracked Attendant tasks, including automatic record updates.
 - [`task-refinement`](skills/task-refinement/) — Turns clear goals into defined behavior, boundaries, and acceptance criteria.
 - [`wrap-up`](skills/wrap-up/) — Records progress and leaves concise context for the next session.
 

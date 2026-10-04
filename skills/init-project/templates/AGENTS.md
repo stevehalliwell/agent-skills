@@ -7,9 +7,20 @@ Before committing: replace or delete every `[TBD]` item. Keep only verified, dur
 ## Read first
 
 - `README.md` — public-facing project purpose, installation, usage, and brief developer setup; do not use it for current work or internal status.
-- `.pi/attendant.tables` — configured record collections; load `/skill:attendant` and use its `schema` command to discover every tracked table and fields before planning/querying.
+- `.pi/attendant.tables` — configured record collections; load `/skill:attendant` and use its `schema` command to discover every tracked collection, fields, source paths, and usage guidance before planning/querying.
 - `.pi/handoff.md` — previous pickup summary, if present.
 - Read specific record source paths only after `/skill:attendant` `schema`, `query`, or `search` identifies them.
+
+## Attendant
+
+Attendant tracks tasks and durable decisions through `.pi/attendant.tables`:
+
+- `records/tasks/`: `.schema.md` declares task fields; `.usage.md` defines lifecycle, readiness, approval, and operating rules.
+- `records/decisions/`: `.schema.md` declares decision fields; `.usage.md` defines purpose, approval, supersession, and revisit rules.
+
+Read each collection's `.usage.md` before creating, selecting, updating, or resuming its records. Use `schema` to discover current configured paths and full usage text; do not assume these default paths after configuration changes. Schema fields and values are authoritative; report contradictions with usage rather than silently choosing one. Missing usage is not permission to import defaults from another project; resolve material ambiguity with the user.
+
+Markdown is the source of truth. `.attendant/` is generated local state, not a record source. `.template.md` supplies starting record-body copy, not lifecycle rules.
 
 ## Verified commands
 
