@@ -1,11 +1,11 @@
 ---
 name: task-refinement
-description: "Scope a task, flesh out a feature, define behavior or acceptance checks, or refine how work should function when the user asks; also use when a clear task goal has vague implementation shape and multiple plausible local approaches. Produce executable technical shape: behavior, boundaries, path, edge cases, and acceptance. Skip todo review, triage, prioritization, status checks, task selection, and routine implementation with an established approach."
+description: "Scope a task, flesh out a feature, define behavior or acceptance checks, or refine how work should function when the user asks; also use when a clear task goal has vague implementation shape and multiple plausible local approaches. Establish a shared completed end state with worked examples, explicit non-goals, technical shape, and observable acceptance. Skip todo review, triage, prioritization, status checks, task selection, and routine implementation with an established approach."
 ---
 
 # Task Refinement
 
-Turn one task's headline and desired outcome into shared executable technical shape, then return to the calling workflow or prior work.
+Make the completed result concrete enough that the user can recognize what they will receive and an implementer can deliver it without choosing unresolved product behavior, then return to the calling workflow or prior work.
 
 ## Trigger clarification
 
@@ -31,13 +31,13 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
    - Done when the selected task, persistence intent, and return context are explicit.
 
 2. Ground in existing context.
-   - When `.pi/attendant.tables` configures `tasks`, load [Attendant](../attendant/SKILL.md), run `schema`, and read the configured task schema, usage guidance, and selected source record; use Attendant `search`/`query` to locate that record when needed. Follow usage for readiness and state transitions; resolve material ambiguity when usage is missing or contradicts the schema.
+   - When `.pi/attendant.tables` configures `tasks`, load [Attendant](../attendant/SKILL.md), run `schema`, and read the configured task schema, usage guidance, body template when present, and selected source record; use Attendant `search`/`query` to locate that record when needed. Follow usage for readiness and state transitions; resolve material ambiguity when usage is missing or contradicts the schema.
    - If no record exists, use the user's message as source.
    - Inspect related records, existing behavior, dependencies, and adjacent work as needed to ground task shape. Separate confirmed facts from assumptions and identify behavior to preserve.
    - Done when source text, selected item, and relevant constraints are known.
 
-3. Identify missing implementation detail.
-   - Check for: desired outcome, user/business value, in-scope behavior, out-of-scope behavior, affected code/data flows, technical approach, alternatives ruled out, acceptance checks, open questions.
+3. Identify missing outcome and implementation detail.
+   - Check for: completed end state, worked examples, user/business value, in-scope behavior, explicit non-goals, behavior to preserve, affected code/data flows, technical approach, alternatives ruled out, acceptance checks, open questions.
    - Keep one independently reviewable outcome per task. Identify split points for oversized work and make sequencing, dependencies, opportunity cost, and speculative complexity explicit where they affect the boundary.
    - Done when gaps and any necessary split points are explicit.
 
@@ -47,13 +47,15 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
      - Proposed: agent recommendations requiring user agreement.
      - Open: unknowns that could change behavior, boundaries, or acceptance.
    - Within those groups cover:
-     - What it is: user-visible behavior/change.
-     - What it is not: non-goals and tempting adjacent work.
+     - What it is: the completed result, including what someone can see, do, or receive after the whole task, not merely the next implementation slice.
+     - Worked examples: concrete starting conditions, action/input, and exact expected output or resulting state. Cover the main outcome and materially distinct failure, empty, or compatibility cases where relevant; use enough examples to expose choices, not a fixed quota. For internal work, show observable before/after behavior or artifacts. Label unresolved behavior as Proposed or Open rather than inventing it to complete an example.
+     - What it is not: explicit non-goals and tempting adjacent work, including behavior the examples might otherwise imply.
      - Technical detail: affected files/flows/interfaces, data shape, edge cases, constraints, expected sequence.
      - Alternatives ruled out: option, why rejected, revisit trigger if useful.
-     - Acceptance: observable checks and proportionate validation, including a command or manual verification where useful.
+     - Acceptance: observable checks tied to the promised end state and examples, with expected results and a command or manual verification where useful. A passing test command alone does not define acceptance; actual validation evidence belongs to implementation.
    - Keep broad system trade-offs in `tradeoff-review`; keep local implementation detail here.
-   - Done when another agent could implement after material decisions are resolved through user input and the current task shape and technical detail are recorded.
+   - Present the end state, worked examples, and exclusions to the user as a coherent explanation, not only a saved path or technical plan. Reuse already supplied requirements and answers; do not add a final approval gate for settled details.
+   - Done when the user has a reviewable picture of what the task is and is not, and the recorded technical shape supports that result.
 
 5. Resolve and record open questions.
    - Ask specific decision questions only when choices change task shape or acceptance.
@@ -65,7 +67,8 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
 
 6. Keep task record current.
    - Immediately save confirmed facts, resolved user answers, proposals, and remaining open questions to the task source record as refinement proceeds; do not restate settled detail merely to seek final confirmation.
-   - When no material decision remains and the user or calling workflow requested implementation-ready work, record the completed task shape and apply the ready-state transition documented in collection usage, using only schema-declared fields and values. Report a blocker when the transition is unspecified or conflicts with the current task state. Do not set the implementation-active state or change unrelated task state.
+   - Before declaring refinement complete, check the presented explanation and saved record against the end state, examples, exclusions, preserved behavior, and acceptance. Could materially different results satisfy the wording? Are any examples dependent on unagreed product behavior? Correct gaps, resolve material questions through user input, and recheck. If blocked, keep the uncertainty explicit and do not mark ready; absence of questions is not evidence of clarity.
+   - When that check passes and the user or caller requested implementation-ready work, apply the ready-state transition documented in collection usage, using only schema-declared fields and values. Report a blocker when the transition is unspecified or conflicts with the current state. Do not set the implementation-active state or change unrelated task state.
    - If the user only wants discussion, do not write files.
    - Done when saved task detail reflects current shared understanding or discussion-only scope is explicit.
 
@@ -79,7 +82,30 @@ Completion: task needs an executable-path pass or skill is skipped for clear rea
 
 ## Output shape
 
-Keep updates brief: task name, confirmed behavior, proposals, observable acceptance, saved details, open decisions, and next action. Omit empty groups. Use the exit phrases in step 7; for discussion-only work, report `Saved: discussion only` rather than implying a record was written.
+Show the completed end state, worked examples, and explicit exclusions before closing refinement. Include technical shape, acceptance, and confirmed/proposed/open distinctions where relevant. Routine updates may be brief; neither the user-facing explanation nor the durable record may omit required content to shorten the reply. Use the exit phrases in step 7; for discussion-only work, report `Saved: discussion only`.
+
+### Example: from headline to shared end state
+
+Input: `Export filtered tasks to CSV.`
+
+Insufficient: `Add an export button and CSV generation; tests pass.` This describes work, not the agreed result.
+
+After the user has supplied or agreed these details:
+
+- End state: Export downloads the tasks matching the active filters in their displayed order, with columns `title,status` and filename `tasks.csv`.
+- Worked example: Given displayed tasks `Fix login` (`todo`) and `Update docs` (`doing`), with `Old task` excluded by the filters, clicking Export downloads `tasks.csv` containing:
+
+  ```csv
+  title,status
+  Fix login,todo
+  Update docs,doing
+  ```
+
+- Empty case: With no matching tasks, Export downloads a header-only CSV containing `title,status`.
+- Not included: Exporting excluded tasks, choosing columns, or changing filters or task data.
+- Acceptance: Check the downloaded filename, headers, values, ordering, excluded row, empty case, and unchanged filters/task data against these examples.
+
+These are illustrative agreed requirements, not defaults for other tasks. If filename, columns, ordering, empty behavior, or relevant CSV escaping rules remain unknown, record and resolve them rather than silently choosing them.
 
 ## Rules
 
@@ -88,4 +114,4 @@ Keep updates brief: task name, confirmed behavior, proposals, observable accepta
 - Do not dump private checklist output to files; turn it into user-reviewable understanding first.
 - Use `tradeoff-review`, not this skill, for larger design direction, project priorities, cross-feature ramifications, or architectural trade-offs.
 - Do not invent product decisions silently; label assumptions.
-- Prefer fewer, concrete bullets over broad prose.
+- Prefer concrete examples and clear prose over abstract claims of readiness.
