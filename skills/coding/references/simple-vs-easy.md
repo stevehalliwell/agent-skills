@@ -4,13 +4,13 @@ Based on Rich Hickey's [Simple Made Easy](https://github.com/matthiasn/talk-tran
 
 Build software that stays simple so difficult work remains possible. Do not optimize for making already-simple work easier to type, familiar, or immediately convenient.
 
+Lines of code, number of files, and number of components are not measures of simplicity. Do not simply favour brevity or shorter functions.
+
 ## Terms
 
 - **Simple**: unentangled. A change can be understood and made while holding few independent concepts, layers, files, and hidden dependencies in mind.
 - **Complex**: entangled. Concerns that could vary independently are braided together, so changing one requires understanding or changing others.
 - **Easy**: near at hand, familiar, or within current capability. It is relative to the developer and does not establish that the resulting system is simple.
-
-Lines of code, number of files, and number of components are not measures of simplicity. Fewer lines can hide more coupling; several small, independent parts can be simpler than one tightly bound part. Layers and abstraction to not hide complexity in and of themselves, often they make more of it.
 
 ## Do
 

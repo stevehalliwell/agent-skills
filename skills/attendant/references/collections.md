@@ -31,11 +31,11 @@ Use only for a new collection. If `.pi/attendant.tables` is missing, complete se
 
 1. Inspect `AGENTS.md`, `.pi/attendant.tables`, `.gitignore`, configured collection schemas, requested target folder, and nearby unconfigured Markdown folders. Use `node <skill-dir>/scripts/attendant.mjs doctor` when health diagnostics are needed; normal actions automatically validate and refresh generated projection.
    - Done: existing collection names, documented locations, target state, and possible migration sources are known.
-2. Ask for collection directory and optional alias. Do not ask for schema fields; collection creation intentionally starts with empty `.schema.md`, `.usage.md`, and `.template.md`. Purpose and usage authoring is a separate step; do not invent policy during empty setup.
+2. Use supplied collection directory and alias; ask for directory only if missing. Alias is optional; default to directory basename. Do not ask for schema fields; collection creation intentionally starts with empty `.schema.md`, `.usage.md`, and `.template.md`. Purpose and usage authoring is a separate step; do not invent policy during empty setup.
    - Done: proposed config line and empty source files are concrete.
 3. Check target directory and migration fit. Accept only a nonexistent directory or an empty existing directory. Reject duplicate collection alias/name, reserved `__attendant_` name, duplicate config entry, unsafe path, and non-empty directory. If existing Markdown appears intended as collection data, explain that migration preserves and maps it; route there unless user explicitly confirms a separate empty collection.
    - Done: creation cannot overwrite, adopt, or hide source records; migration alternative is considered.
-4. Present proposed directory and config line. After user confirms, run:
+4. Present proposed directory and config line. Require explicit confirmation of this proposal before creation; do not repeat confirmation if user already approved the same proposal. Run:
 
    ```sh
    node <skill-dir>/scripts/attendant.mjs add-table --directory <directory> [--alias <alias>]

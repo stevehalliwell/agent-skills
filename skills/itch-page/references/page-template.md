@@ -6,7 +6,8 @@ Prepared: <date>
 Live setup requested? Pending (No means kit only)
 Draft page URL: Not created
 Draft status verified: Not yet
-Theme status: Planned / Not yet applied
+Theme status: Planned / Applied and verified / Blocked
+Remote blocker: None / <reason>
 
 Use this as a checklist and copy source for itch.io's **Create a new project** form. `Pending` means not decided or not verified; do not paste placeholder text. Markdown formatting does not automatically transfer to the itch rich-text editor. When creating `page.md`, keep only the sections applicable to the actual project/build; do not carry HTML settings into a downloadable-only listing.
 
@@ -48,7 +49,7 @@ Keep these links aligned with the sections retained in this kit.
 - Pricing ($0 or donate / paid / no payments): Pending
 - Minimum price, if applicable: Pending
 - Payment account ready, if collecting payments: Pending
-- Intended visibility (Draft / Restricted / Public after save): Draft until explicitly chosen
+- Intended visibility: Draft; record any separately requested Restricted/Public intent without applying it here
 - Community (disabled / comments / discussion board): Pending
 
 ## Files and delivery settings (keep applicable branches only)
@@ -84,14 +85,14 @@ Pending / Not applicable
 
 ## Media
 
-- Cover: Pending — required by saved form; minimum 315×250 px, recommended 630×500 px; saved page config lists PNG/GIF/JPG/JPEG and a 3 MiB limit (recheck live). Relative asset path, dimensions, source/rights, and approval: Pending
-- Screenshots / previews: Pending — saved form recommends 3–5. For each, list relative path, what it shows, capture source, dimensions, and whether it is authentic gameplay or a labeled preview.
+- Cover: Pending — reference requirements: minimum 315×250 px, recommended 630×500 px; PNG/GIF/JPG/JPEG up to 3 MiB. Confirm current requirement and limits live. Relative asset path, dimensions, source/rights, and approval: Pending
+- Screenshots / previews: Pending — target 3–5 when applicable. For each, list relative path, what it shows, capture source, dimensions, and whether it is authentic gameplay or a labeled preview.
 - Missing shot list / cover brief: Pending / None
 - Image upload compatibility and current form requirements checked: Pending
 
 ## Page theme (plan now; apply after creating the basic page as Draft)
 
-These are theme-editor settings, not cover or listing settings. Record explicit hex colors or `Use default`; do not copy values from the example page. Confirm current controls in the live editor before applying.
+These are theme-editor settings, not cover or listing settings. Record explicit hex colors or `Use default`; do not copy example values. Confirm current controls live. After saving, distinguish planned and verified applied values wherever they differ.
 
 ### Colors
 
@@ -128,10 +129,10 @@ These are theme-editor settings, not cover or listing settings. Record explicit 
 
 ## Remaining actions
 
-- [ ] Resolve pending required fields and verify copy against actual project.
+- [ ] Resolve pending required fields and verify copy against actual project; record unresolved blockers before remote actions.
 - [ ] Confirm cover and screenshot/preview files exist and have usage rights.
 - [ ] Verify build and page settings for intended delivery type and platform(s).
 - [ ] If live setup requested: fill basic form, inspect rich-text formatting and cover crop, select Draft, confirm before Save & view page, and record the verified draft URL/status.
 - [ ] On the existing Draft: open Edit theme, preview desktop/mobile, confirm before saving, verify theme and Draft visibility, then record applied values and gaps.
 - [ ] If requested, upload build to existing page via form or butler after confirming destination and channel.
-- [ ] Make public only after separate explicit approval.
+- [ ] Verify saved page remains Draft; publishing is outside this workflow.

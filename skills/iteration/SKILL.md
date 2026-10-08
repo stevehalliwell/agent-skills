@@ -31,21 +31,19 @@ Iteration is for low-risk changes where the direct requested change and final st
 During iteration:
 
 ```text
-Iteration mode: bundled.
-Changed: <path>
-Tweak: <exact small change>
-Check: <not run / command and result>
-Next: send the next tweak or say done.
+Changed: <path> — <exact small change>
+Check: <not run: reason / command and result>
 ```
 
 On completion:
 
 ```text
-Iteration complete.
+Iteration ended: <bundle complete / blocker / escalated>.
 Changed:
 - <path> — <final bundled change>
-Check: <command or not run>
-Record: <records/tasks/iteration-*.md / not created: task storage unavailable>
+Check: <command and result / not run: reason>
+Record: <actual task path and state / not updated: reason>
+Next: <anchored return point / normal work / blocker>
 ```
 
 ## Rules

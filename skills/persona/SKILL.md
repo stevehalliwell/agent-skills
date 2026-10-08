@@ -1,6 +1,6 @@
 ---
 name: persona
-description: "Start a deliberate role-based discussion or work session. Use only when the user explicitly invokes /skill:persona; choose the agent persona and the user's role, agree what to work on, then end the persona session and resume prior work on request."
+description: "Start a bounded role-based discussion or work session with /skill:persona. Choose agent and user roles, frame shared work, and resume prior work when the session ends. Roles supply perspectives, not decision authority or implementation approval."
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,9 @@ Establish complementary roles for a bounded discussion or work session, then ret
 
 ## Role cards
 
-Available role-neutral persona cards:
+Read only selected cards, after roles are known. Each card supplies a perspective, not authority, workflow, or communication style.
+
+Available cards:
 
 - [Art director](personas/art-director.md)
 - [Development peer](personas/development-peer.md)
@@ -19,17 +21,19 @@ Available role-neutral persona cards:
 - [Researcher](personas/researcher.md)
 - [Delivery lead](personas/delivery-lead.md)
 
-A participant may also name a custom role. Read only the selected card or cards. A card describes a perspective, not decision authority, workflow, or communication style.
+Either participant may name a custom role or share the same role. Use a custom role when no card fits; do not force a closest match.
 
 ## Workflow
 
-1. Enter persona session. State: `Persona session start. Prior work resumes when you say “end persona.”` Briefly list available cards and ask which persona the agent should take. Wait for one role. Done when the agent role is explicit.
-2. Set the user's role. Ask what role the user will take; they may select any card, use the same role as the agent, or name a custom role. Read the selected card or cards. Done when both perspectives are explicit.
-3. Frame shared work. Ask what the participants will work on, the intended outcome, and any constraints or decision the user wants to reach. State the agreed frame and the complementary contribution of each selected role. Done when the session has a bounded topic and outcome.
-4. Collaborate from the selected perspectives. Use each role's interests and standards of judgment to structure questions, observations, options, and recommendations. Keep confirmed facts, assumptions, and open decisions distinct. The user retains final decisions unless they explicitly delegate one. Done when the requested discussion or work reaches its agreed stopping point.
-5. End and resume. When the user says `end persona`, `end the persona`, or equivalent, summarise the result, drop both role perspectives, and state: `Persona session ended. Resuming: <prior work or normal conversation>.` Do not carry the persona roles into later work unless the user starts a new persona session. Done when the prior context is restored or no prior context exists.
+1. Enter and anchor. Retain prior task, current step, and pending decision in conversation context. State: `Persona session start. Prior work resumes when you say “end persona.”` Use any agent role already supplied; otherwise list cards and ask which role the agent should take. Done when prior context is anchored and agent role is explicit.
+2. Set user role. Use supplied role; otherwise ask which role the user will take. Read selected cards, once each. Done when both perspectives are explicit.
+3. Frame shared work. Use supplied topic, intended outcome, and constraints. Ask one focused question at a time for missing details that materially affect the session. State bounded frame and each role's contribution. Done when topic and outcome are clear.
+4. Collaborate. Use selected perspectives to structure questions, observations, options, and recommendations. Do not invent the user's opinions from their role. Keep facts, assumptions, and open decisions distinct. User retains final decisions unless explicitly delegated. Check recommendations against frame and card boundaries; correct drift before continuing. If a material gap prevents progress, name blocker and ask one focused question. Done when agreed outcome is reached; summarise result and wait for user direction rather than starting new work.
+5. End and resume. At any step, `end persona`, `end the persona`, or equivalent ends session. Summarise result, discard session-only roles, and state: `Persona session ended. Resuming: <prior work or normal conversation>.` Restore prior step and pending decision; resume only within existing authority. Done when prior context is restored and roles no longer shape responses.
 
 ## Output shape
+
+After framing, use a short session summary; do not repeat it every turn.
 
 ```text
 Persona session

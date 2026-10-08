@@ -49,7 +49,7 @@
 | `thinking` | default/task | Harness-specific reasoning level. |
 | `web_search` | Codex default/task | Enable Codex web search; default false. |
 | `ephemeral` | Codex default/task | Request Codex ephemeral mode; default true. |
-| `sandbox` | Codex default/task | `workspace-write` (default) confines reads and writes to the job folder; copy every required input there and name it in the task prompt. `danger-full-access` permits unrestricted host commands. |
+| `sandbox` | Codex default/task | `workspace-write` (default) restricts writes, not all reads. The runner adds a prompt-only job-folder read/write boundary; copy required inputs there. `danger-full-access` permits unrestricted host commands and needs user approval. |
 | `deadline` | batch/default/task | Wall-clock seconds for one task. |
 | `skills`, `extensions` | Pi default/task | Explicit resource allowlists. |
 | `exclude_skills`, `exclude_extensions` | Pi default/task | Remove named allowlist entries for one task. |

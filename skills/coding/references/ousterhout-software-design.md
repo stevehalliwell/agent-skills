@@ -30,7 +30,7 @@ Build software that stays understandable as it grows. Working code is necessary,
 -   Do not specialize a lower-level API around one client’s UI actions or expose client-specific state it need not know.
 -   Do not assume the fewest changed lines produce the best change. A narrow patch that adds another exception to a poor design may cost more later; balance cleanup against scope, compatibility, and regression risk.
 -   Do not suppress errors or remove required safeguards to make a path look uniform. The talk mentions “define errors out of existence” but does not explain it sufficiently to derive an error-handling rule here.
--   Do not assume the cludge, mess, etc. will all get cleaned up later a tech debt repayment. That will never happen.
+-   Do not justify added complexity by assuming a later technical-debt cleanup.
 
 ## Decision check
 

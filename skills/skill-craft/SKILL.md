@@ -5,14 +5,7 @@ description: "Use when creating, editing, reviewing, or improving agent skills/S
 
 # Skill Craft
 
-Make skill behavior predictable while leaving room for task-specific judgment.
-
-## Trigger clarification
-
-Confirm the request concerns a skill's invocation, instructions, references, resources, or behavior before loading bulky files. Stop when it concerns ordinary project work rather than skill design. Trigger clarification is post-load; discovery belongs in the frontmatter description.
-
-Completion: skill use is confirmed or rejected before any extra files are loaded.
-
+Make skill behavior predictable while leaving room for task-specific judgment. Apply global Caveman guidance to skill instructions, operational references, and templates.
 ## Workflow
 
 1. Identify invocation.
@@ -33,8 +26,8 @@ Completion: skill use is confirmed or rejected before any extra files are loaded
 
 3. Build information hierarchy.
    - Keep trigger clarification before any required reads/references.
-   - Keep always-needed workflow and reference inline when `SKILL.md` remains under about 1,000 words.
-   - Treat about 1,000 words as a local review threshold, not an automatic split. Keep the body under 500 lines; move branch-only/bulky material out when it obscures the main path.
+   - Keep always-needed workflow inline. Treat about 1,000 words as a review threshold, not an automatic split; shared guidance may stay inline above it.
+   - Keep body under 500 lines; move branch-only/bulky material out when it obscures the main path.
    - Link each operational reference directly from `SKILL.md` with an explicit read-when condition; avoid chained discovery through references.
    - Give reference files over 100 lines a table of contents so partial reads reveal their scope.
    - Completion: agent can find each relevant branch directly and follow the main path without loading unrelated material.
@@ -59,16 +52,21 @@ Completion: skill use is confirmed or rejected before any extra files are loaded
 7. Prune hard.
    - Remove duplication: one meaning, one home.
    - Remove sediment: stale or future-maybe content.
-   - Remove no-ops and explanations the agent already knows; retain task-specific knowledge and constraints.
+   - Remove no-ops and explanations the agent already knows; retain task-specific knowledge and constraints. Omit empty or boilerplate sections.
    - Rephrase negation as positive target unless hard guardrail requires ban.
-   - Completion: every line changes invocation, execution, or safety.
+   - Preserve project-local conventions unless they harm predictability.
+   - Completion: every line changes invocation, execution, or safety; material contracts survive compression.
 
 8. Check invocation behavior and response shape.
    - A manually invoked skill must perform its primary safe action immediately; it must never respond only that the workflow or skill was loaded.
    - When that action needs user-specific scope or direction, ask one focused question instead of acknowledging the load.
    - Add output format only when consistent responses matter.
    - Keep format short enough agent will use it. Make templates strict for exact data contracts and flexible for context-dependent responses.
-   - Add concrete input/output pairs when examples communicate expected behavior better than more prose; co-locate them with the relevant guidance.
+   - Add small samples beside the rule they explain:
+     - Invocation-sensitive skills: user request and expected action or skip.
+     - Tools: command/code and expected output; material failure cases where useful.
+     - Output contracts: representative artifact, not paragraphs describing it.
+   - Use actual agreed behavior; label unsettled details Proposed or Open. No sample quota.
    - Completion: user-facing response starts useful work or asks for required direction; examples and templates clarify behavior without overconstraining content.
 
 9. Specify executable resources when present.
@@ -90,41 +88,15 @@ Completion: skill use is confirmed or rejected before any extra files are loaded
 
 ## Section contract
 
-Prefer this order. Omit empty/no-op sections.
-
-```markdown
----
-name: <lowercase-hyphen-name>
-description: "<trigger-rich when-to-use + goal; for model-invoked include concrete user phrases and agent situations>"
-disable-model-invocation: true # only for user-invoked
----
-
-# <Title>
-
-<One-sentence purpose / leading word.>
-
-## Trigger clarification
-<Only when frontmatter cannot safely carry all trigger checks.>
-
-## Required read
-<Only after trigger clarification; point to disclosed workflow/reference if needed.>
-
-## Workflow
-<Ordered steps. Each step has completion criterion. If very long, split into separate .md files.>
-
-## Output shape
-<Only if user response shape matters.>
-
-## Rules
-<Guardrails and invariants. Positive phrasing preferred.>
-
-## References
-<Context pointers to linked files, only if needed.>
-```
+Preferred order: frontmatter, title, purpose, Trigger clarification, Required read, Workflow, Output shape, Rules, References. Omit sections with no applicable content.
 
 ## Review checklist
 
-Use the workflow's completion conditions as the review checklist. Inspect the actual entrypoint and applicable references/resources; distinguish demonstrated execution defects from static conformance gaps. Cite the smallest decisive file location and recommend the least change that fixes it. Report checks not run and unresolved failures.
+- Use workflow completion conditions; inspect entrypoint and applicable references/resources.
+- Check instructions, references, and templates against global Caveman guidance; correct violations and recheck.
+- Distinguish demonstrated execution defects from static conformance gaps.
+- Cite the smallest decisive location and least corrective change.
+- Report checks not run and unresolved failures.
 
 ## Output shape for reviews
 
@@ -132,12 +104,8 @@ Use the workflow's completion conditions as the review checklist. Inspect the ac
 Skill craft review: <skill/path>
 
 Invocation: <model/user> — <fit>
-Main issues:
-- <issue> -> <fix>
-
-Recommended edits:
-1. <edit> — <why>
-2. <edit> — <why>
+Findings:
+- <file/section>: <issue>; <smallest fix and reason>
 
 Keep:
 - <parts already working>

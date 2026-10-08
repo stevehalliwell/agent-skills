@@ -1,6 +1,6 @@
 ---
 name: coding
-description: "Before writing, modifying, generating, patching, or deleting code of any kind, load this skill as soon as the agent decides code changes are needed. This is mandatory even when implementation, web-implementation, or another delivery skill also applies; use it for the engineering judgment that keeps any code change small, traced, and proportionately verified. Skip only recommendation-only work with no code change."
+description: "Use before any code change: writing, modifying, generating, patching, or deleting code. Load as soon as code changes are needed, including when implementation, web-implementation, or another delivery skill applies. Mandatory engineering layer for small, traced, proportionately verified changes. Skip recommendation-only work and documentation-only edits with no code change."
 ---
 
 # Coding
@@ -11,14 +11,19 @@ This skill is the mandatory engineering layer for every code change. Other deliv
 
 ## Required read
 
-Read [Ponytail engineering guidance](references/ponytail.md), [Simple versus easy](references/simple-vs-easy.md), [Casey Muratori: simple, good code](references/casey-muratori-good-code.md), and [John Ousterhout: software design](references/ousterhout-software-design.md) before changing code. Before the first edit, reject each new helper, type, wrapper, interface, module, and configuration point unless it removes current complexity or repetition. Done when the applicable constraints are known and every new abstraction has a present-tense reason to exist.
+Before changing code, read [Ponytail engineering guidance](references/ponytail.md) and [Simple versus easy](references/simple-vs-easy.md).
+
+- When performance, dispatch, concurrency, or test strategy affects the change, also read [Casey Muratori: simple, good code](references/casey-muratori-good-code.md).
+- When introducing or changing a module boundary or caller-facing interface, also read [John Ousterhout: software design](references/ousterhout-software-design.md).
+
+Done when applicable constraints are known and every new abstraction removes current complexity or repetition.
 
 ## Workflow
 
 1. Understand the change. Trace the affected path, callers, existing patterns, and relevant edge cases before proposing or editing code. Done when the real change point is known.
 2. Choose the smallest solution. Apply the Ponytail ladder and reuse existing code, platform features, and installed dependencies before adding code or abstractions. Prefer the change that leaves difficult future work understandable, not the one that is merely quickest or most familiar to write. Done when the chosen approach is the simplest correct option.
 3. Change and clean up. Implement the requested scope, remove obsolete local references created by replacement, and mark deliberate constrained simplifications with a `ponytail:` comment. Done when the requested behavior is complete without speculative scaffolding.
-4. Verify proportionately. Leave or run one smallest credible check for non-trivial logic. Correct in-scope failures and rerun affected checks; if correction is blocked or requires broader scope, report the blocker. State any unrun validation and remaining risk without claiming a pass. Done when verification matches the change's risk and unresolved failures are explicit.
+4. Verify proportionately. Run the smallest credible check for non-trivial logic; for bug fixes, prefer a reproduction that fails before the fix and passes after it. Correct in-scope failures and rerun affected checks; if correction is blocked or requires broader scope, report the blocker. State any unrun validation and remaining risk without claiming a pass. Done when verification matches the change's risk and unresolved failures are explicit.
 
 ## Code shape
 
@@ -31,5 +36,4 @@ Read [Ponytail engineering guidance](references/ponytail.md), [Simple versus eas
 ## Rules
 
 - Preserve requested scope; do not simplify away validation at trust boundaries, data-loss protection, security, accessibility basics, or explicitly requested behavior.
-- Prefer a more specific workflow skill when its trigger fits.
-- Do not add frameworks, fixtures, or broad test suites unless the task needs them or the user requests them.
+- Apply a more specific workflow skill alongside this layer when its trigger fits.

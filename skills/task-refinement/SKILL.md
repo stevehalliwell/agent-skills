@@ -86,4 +86,4 @@ bench_second();
 
 **Acceptance:** compare fixture includes/call order; test explicit order and exhaustion; compile standalone `build.h` without `base.h`.
 
-The artifact replaces paragraphs describing emitted C. Acceptance references the contract; it does not repeat it. Example snippets specify behavior, not permission to implement an entire API.
+Acceptance references the contract without repeating it. Example snippets specify behavior, not permission to implement an API.
