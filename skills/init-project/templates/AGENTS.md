@@ -2,7 +2,7 @@
 
 Project-specific agent notes only. Global Pi rules already apply.
 
-Before committing: replace or delete every `[TBD]` item. Keep only verified, durable facts. Pi concatenates context files; refine global rules without contradicting them. State any narrow exception, condition, and reason.
+Adapt to project facts: remove template instructions, irrelevant headings, and empty placeholders; keep material unknowns explicit. Use concise, ordered, structured documentation, with each fact in one place. Pi concatenates context files; refine global rules without contradicting them. State any narrow exception, condition, and reason.
 
 ## Read first
 

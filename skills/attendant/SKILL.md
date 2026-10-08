@@ -35,7 +35,7 @@ Each collection keeps three separate source files:
 
 Run `schema` to discover each collection's source paths, declared fields, and full `.usage.md` text. Read that usage before creating, updating, selecting, or resuming work in the collection. An empty file supplies no guidance; a missing file is reported as `usage: null` for compatibility with existing collections. Do not infer missing rules from a collection name or another project's defaults. Resolve material ambiguity with the user. Schema declarations remain authoritative for fields and values; report contradictions with usage guidance rather than silently choosing one.
 
-When authoring `.usage.md`, record confirmed purpose and rules in normal prose. Do not invent workflow policy or migrate external skill instructions without an explicit request. Usage documentation is not projected as a record or enforced by schema validation.
+When authoring `.usage.md`, record confirmed purpose and rules as concise, ordered, structured documentation; omit irrelevant headings and empty placeholders while retaining material unknowns. Do not invent workflow policy or migrate external skill instructions without an explicit request. Usage documentation is not projected as a record or enforced by schema validation.
 
 ## Rules
 
