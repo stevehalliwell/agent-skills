@@ -53,6 +53,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`editorial-review`](skills/editorial-review/) — Sharpens supplied long-form drafts while preserving author intent.
 - [`messaging-strategy`](skills/messaging-strategy/) — Strengthens customer-facing positioning, copy, and calls to action.
 - [`note-taking`](skills/note-taking/) — Captures concise structured notes without creating durable project records.
+- [`offline-html-report`](skills/offline-html-report/) — Creates explicitly requested offline HTML reports from bundled single-file template with inline Chart.js, sidebar TOC, and scroll progress.
 - [`style-profile`](skills/style-profile/) — Learns reusable profiles from examples, writes or rewrites Markdown with them, and checks documents or corpora against them.
 - [`itch-page`](skills/itch-page/) — Prepares a build-specific itch.io page kit; when live setup is requested, creates a Draft page and then applies its theme.
 - [`transcript-to-prose`](skills/transcript-to-prose/) — Turns timestamped spoken text into readable paragraphs without rewriting it.

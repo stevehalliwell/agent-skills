@@ -1,0 +1,10 @@
+{
+  "name": "Chart.js",
+  "version": "4.5.1",
+  "source": "https://registry.npmjs.org/chart.js/-/chart.js-4.5.1.tgz",
+  "archive_sha256": "f540d98468457ac7a0aabb32006dfb066297e096c5ea063a5d80aa973d1c337a",
+  "original_js_sha256": "ecc3cd1eeb8c34d2178e3f59fd63ec5a3d84358c11730af0b9958dc886d7652a",
+  "embedded_js_sha256": "6fa1085d008687b4cab63d7e08e30be081f08966fb6880ce9970158bde9d383f",
+  "embedded_in": "report-template.html#vendor-chartjs",
+  "transformation": "Removed sourceMappingURL directive; preserved library and license."
+}
