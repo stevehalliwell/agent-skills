@@ -1,6 +1,6 @@
 ---
 name: herdr-parallel-work
-description: "Use when splitting independent portions of one task for simultaneous work through Herdr. Require a human-reviewed common base before launching isolated workers. Skip unrelated background jobs, concurrent shell commands, and sequential work."
+description: "Use for coordinated parallel implementation of one task through Herdr, with a human-reviewed common base, worktree-isolated workers, and explicit integration ownership. Skip fire-and-forget asides, independent reviews or research jobs, unrelated background jobs, concurrent shell commands, and sequential work; use delegate-tasks for self-contained asides."
 ---
 
 # Herdr Parallel Work
@@ -9,7 +9,7 @@ Owner prepares base and handles user review; orchestrator launches workers and i
 
 ## Trigger clarification
 
-Split only independent portions of one task. Resolve shared interfaces and prerequisites first; do not spawn agents to discover a split.
+Split only independent implementation portions of one task that need a shared checkpoint and coordinated integration. Resolve shared interfaces and prerequisites first; do not spawn agents to discover a split. Use `delegate-tasks` for self-contained asides whose results can be collected later, even inside Herdr; those do not need this workflow's base review or dedicated orchestrator.
 
 “Build API and UI simultaneously” starts base review, not worker launch. “Run tests while server starts” does not invoke this skill.
 

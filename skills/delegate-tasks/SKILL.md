@@ -1,19 +1,40 @@
 ---
 name: delegate-tasks
-description: "Delegate tasks, launch parallel subagents, run a Codex one-shot, kick Codex off in the background, start a background Pi agent, check delegated-job status, wait for delegated tasks, cancel jobs, or get independent reviews concurrently. Use for bounded self-contained investigations, second opinions, or independent implementation/research work; skip tiny work, dependent steps, interactive Codex conversations, and tasks needing unstated session context."
+description: "Delegate a fire-and-forget aside, background investigation, independent review, research job, or bounded Codex one-shot while main work continues. Use for self-contained side work whose result can be collected later; use Herdr directly when running inside Herdr, otherwise the bundled job runner. Skip tiny work, dependent steps, tasks needing unstated session context, and coordinated multi-worker implementation or integration; use herdr-parallel-work for that workflow."
 ---
 
 # Delegate tasks
 
-Launch durable delegated jobs through the harness-neutral runner.
+Hand off self-contained asides without interrupting main work. Use Herdr's lifecycle management inside Herdr; otherwise use the harness-neutral job runner.
 
 ## Trigger clarification
 
-Use this skill only when each child can receive a complete written task and work independently. Use the parent directly when the work is small, requires iterative clarification, depends on another child’s intermediate result, or would cost more to explain than to perform.
+Use this skill when each child can receive a complete written task and work independently, usually while the parent continues main work. “Fire-and-forget” means no ongoing orchestration, not permission to ignore failures or trust unchecked results. Use the parent directly when work is small, requires iterative clarification, depends on another child’s intermediate result, or costs more to explain than to perform.
 
-For a single bounded Codex request, use this skill. Choose background mode only when the parent can genuinely continue before the results are needed.
+Typical asides: independent review, research, diagnosis, or a bounded artifact. Give any file-writing aside explicit owned paths that do not overlap active parent or sibling edits. Route coordinated implementation needing a reviewed shared base, worker worktrees, or planned integration to `herdr-parallel-work`.
 
-## Workflow
+For a single bounded Codex request, use this skill. Background execution is useful only when the parent can continue before results are needed.
+
+## Choose execution route
+
+- When `HERDR_ENV=1`, load `herdr` and use [Herdr asides](#herdr-asides). Let Herdr manage agents and panes; do not scaffold a runner batch, add a detached supervisor, or launch a dedicated orchestrator.
+- Otherwise use [Job runner workflow](#job-runner-workflow). Use this route inside Herdr too when explicitly requested or when runner-specific durable manifests or resource isolation are required. Herdr panes do not provide the runner's resource isolation.
+
+## Herdr asides
+
+1. **Define aside.** Write goal, inputs, constraints, modification authority, checks, and deliverable into a complete prompt. Include applicable [result contract](#result-contracts). Do not assume the child knows parent conversation history.
+   *Done when child can work independently within explicit scope.*
+
+2. **Launch through Herdr.** Follow `herdr` CLI discovery, sibling-pane creation, agent startup, and targeting rules. Preserve user focus. Send prompt without a blocking wait when parent can continue. Record returned pane ID and unique agent name; no separate batch manifest is needed.
+   *Done when prompt submission succeeds and child identity is recorded.*
+
+3. **Resume main work; collect later.** Use Herdr's agent state, waits, and reads when result is needed, not a separate polling loop. Inspect blockers or timeouts before intervening; never blindly resend prompt. Follow `herdr` file-output fallback if scrollback cannot recover full result. Inspect actual output and checks before using it; `idle` or `done` alone is not accepted completion.
+   *Done when result is inspected, or failure/blocker is reported.*
+
+4. **Finish aside.** Report result and remaining limits. Leave pane available unless closure is authorized; close only recorded workflow-created panes after verifying no essential work remains. Preserve file outputs. For cancellation, use Herdr controls and report unfinished work; never target original or unrelated panes.
+   *Done when result and pane disposition are clear.*
+
+## Job runner workflow
 
 1. **Decide whether delegation earns its overhead.** Split only independent, self-contained work. Write all goal, inputs, constraints, deliverable, modification authority, verification, and network requirements into each prompt. Include a task-specific [result contract](#result-contracts); isolated children cannot rely on parent global guidance. For Codex tasks using `workspace-write`, name every required input and ensure it is copied into the job folder; Codex can read and write only that folder.
    *Done when each child can work without Pi conversation history or files outside its available workspace.*
