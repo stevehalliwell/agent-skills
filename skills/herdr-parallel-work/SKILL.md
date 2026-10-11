@@ -91,7 +91,8 @@ Report results, integration, checks, unresolved issues, and cleanup status; resu
 
 ## Shared-input rules — include in every child contract
 
-- No child may control user's keyboard, mouse, desktop, browser focus, or global input. No GUI automation assuming exclusive focus.
+- No child may control user's OS-level keyboard, mouse, desktop focus, or global input. No GUI automation assuming exclusive focus.
+- Use `agent-browser` as needed; load its skill and use a distinct named browser session per worker. Visible (`--headed`) and headless modes are both allowed. Browser-scoped input does not move user's mouse or send OS-level keystrokes; automation must work while browser is defocused. Do not bring browser to foreground or require exclusive desktop focus. Keep browser skill's trust, secret, and confirmation rules.
 - Targeted Herdr input is allowed only for workflow-owned targets, never OS-level input or manipulation of user's focused pane.
 - Preserve focus with `--no-focus`; use explicit IDs or unique agent names, never implicit focused targets.
-- If desktop interaction is needed, pause that portion and request human help in named pane through orchestrator.
+- If OS-level desktop interaction is needed, pause that portion and request human help in named pane through orchestrator. This restriction does not block `agent-browser`.

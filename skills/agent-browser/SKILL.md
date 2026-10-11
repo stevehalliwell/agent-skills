@@ -6,9 +6,9 @@ description: "Navigate websites, interact with pages, fill forms, take screensho
 
 ## Shared browser default
 
-Start new sessions with `--headed` so the browser window stays visible to both user and agent. Keep it open after the task unless the user asks to close it. Use headless mode only when the user requests it or a visible desktop is unavailable. Re-snapshot after user interaction, navigation, or significant DOM changes.
+Start new sessions with `--headed` so the browser window stays visible to both user and agent. Keep it open after the task unless the user asks to close it. Use headless mode only when the user requests it, a visible desktop is unavailable, or a `herdr-parallel-work` child chooses it for assigned work. Those children may use either visible or headless mode; browser automation must work while defocused and must not control OS-level mouse, keyboard, or desktop focus. Re-snapshot after user interaction, navigation, or significant DOM changes.
 
-If an existing session is headless, close it and reopen it with `--headed`; the flag cannot make an already-running headless browser visible.
+If an existing session is headless and visible mode is required, close it and reopen it with `--headed`; the flag cannot make an already-running headless browser visible.
 
 ## Contract
 
