@@ -18,6 +18,8 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`agent-browser`](skills/agent-browser/) — Drives a visible shared browser for interactive web tasks.
 - [`crawl4ai`](skills/crawl4ai/) — Crawls public pages with Dockerized Crawl4AI when ordinary fetches fall short.
 - [`delegate-tasks`](skills/delegate-tasks/) — Launches bounded subagent or Codex jobs, then tracks their lifecycle, status, or cancellation.
+- [`herdr`](skills/herdr/) — Controls Herdr panes and agents through explicit session-scoped targets.
+- [`herdr-parallel-work`](skills/herdr-parallel-work/) — Runs parallel portions of one task from a human-reviewed base, with worktree-isolated workers and dedicated orchestrator.
 - [`docker-local`](skills/docker-local/) — Guides safe local Docker workflows for skills that depend on Docker.
 - [`docling-local`](skills/docling-local/) — Converts local documents and images to Markdown with Dockerized Docling.
 - [`youtube-transcript-download`](skills/youtube-transcript-download/) — Retrieves YouTube transcripts and captions for later use.
