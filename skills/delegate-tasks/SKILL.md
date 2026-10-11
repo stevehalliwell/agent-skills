@@ -15,7 +15,7 @@ For a single bounded Codex request, use this skill. Choose background mode only 
 
 ## Workflow
 
-1. **Decide whether delegation earns its overhead.** Split only independent, self-contained work. Write all goal, inputs, constraints, deliverable, modification authority, verification, and network requirements into each prompt. For Codex tasks using `workspace-write`, name every required input and ensure it is copied into the job folder; Codex can read and write only that folder.
+1. **Decide whether delegation earns its overhead.** Split only independent, self-contained work. Write all goal, inputs, constraints, deliverable, modification authority, verification, and network requirements into each prompt. Include a task-specific [result contract](#result-contracts); isolated children cannot rely on parent global guidance. For Codex tasks using `workspace-write`, name every required input and ensure it is copied into the job folder; Codex can read and write only that folder.
    *Done when each child can work without Pi conversation history or files outside its available workspace.*
 
 2. **Create the batch folder.** Resolve `<skill-dir>` from this loaded skill. The runner uses Python and the chosen Pi/Codex CLI; report actionable invocation failures instead of adding availability probes. Prefer `.agent-jobs/<name>` in the current project. Read [Batch format](references/batch-format.md) before writing task/default settings. Run:
@@ -56,6 +56,35 @@ For a single bounded Codex request, use this skill. Choose background mode only 
    ```
    `wait` blocks until every task reaches a terminal state; a failed task does not return the batch early. Read completed artifacts and report the result path, harness/model where relevant, elapsed time, and any failure, timeout, or missing result before integrating results.  
    *Done when every result used by the parent is traceable to its run artifact.*
+
+## Result contracts
+
+Put the applicable contract directly in each child prompt. Return only relevant sections; no routine tool narration or repeated summary. Compact output does not limit investigation or reasoning. Keep evidence, necessary rationale, safety warnings, and unresolved uncertainty; expand when a short finding would mislead.
+
+- Localization: locations and blockers only. Do not propose fixes unless requested.
+- Review: findings with evidence and suggested fixes, plus checks and limits. No findings means no findings within inspected scope, not proof of correctness.
+- Implementation: material changes, actual checks, and unresolved risk. Re-reading a file is not sufficient verification of behavior.
+- Cite only line ranges actually read; never estimate or invent ranges. If no relevant location exists, say so.
+
+```text
+Locations:
+- path:line-range — `symbol` — relevance
+
+Findings:
+- path:line — problem — evidence — suggested fix
+
+Changes:
+- path:line-range — material change
+
+Validation:
+- command — pass, fail, unavailable, or blocked — decisive result
+
+Risks:
+- unresolved uncertainty or unrun check
+
+Blocked:
+- exact missing input or capability
+```
 
 ## Artifacts
 
