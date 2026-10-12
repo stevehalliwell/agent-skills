@@ -29,13 +29,14 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 
 - [`backlog-capture`](skills/backlog-capture/) — Captures one or several tasks, ideas, and deferred requests in Attendant, with project-local Markdown as fallback.
 - [`refine-the-backlog`](skills/refine-the-backlog/) — Works through oldest unready tasks one at a time using task refinement.
+- [`cli-design`](skills/cli-design/) — Designs and reviews predictable CLI interfaces for humans, scripts, and AI agents.
 - [`coding`](skills/coding/) — Applies mandatory engineering judgment to every code change. Close to caveman and Ponytail.
 - [`systems-coding`](skills/systems-coding/) — Guides C and other low-level systems work toward explicit limits, safe failure handling, testability, and measured performance.
 - [`implementation`](skills/implementation/) — Delivers an agreed, reviewable implementation slice and validates it proportionately.
 - [`init-project`](skills/init-project/) — Sets up project guidance, status documents, and Attendant records.
 - [`iteration`](skills/iteration/) — Drives rapid, low-risk tweak loops without workflow churn.
 - [`pick-up`](skills/pick-up/) — Rebuilds project context from repository state, handoffs, and tasks.
-- [`release-readiness`](skills/release-readiness/) — Aligns release-facing documentation with changes since the last release.
+- [`release-readiness`](skills/release-readiness/) — Assesses public-release readiness and aligns release-facing documentation with repository evidence.
 - [`task-refinement`](skills/task-refinement/) — Turns clear goals into defined behavior, boundaries, and acceptance criteria.
 - [`wrap-up`](skills/wrap-up/) — Records progress and leaves concise context for the next session.
 
@@ -65,13 +66,13 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 ### Skill and knowledge management
 
 - [`find-skills`](skills/find-skills/) — Finds suitable installable skills and installs them only with approval.
-- [`npx-global-skills-sync`](skills/npx-global-skills-sync/) — Reconciles npx global installs with Pi's tracked global-skill manifest.
+- [`session-skill-invocations`](skills/session-skill-invocations/) — Reports user and agent skill loads from saved Pi sessions.
 - [`okf`](skills/okf/) — Keeps Open Knowledge Format bundles conformant with the OKF specification.
 - [`skill-craft`](skills/skill-craft/) — Builds, reviews, and improves predictable, maintainable agent skills.
 
 ### Web delivery
 
-- [`threejs-performance`](skills/threejs-performance/) — Keeps Three.js work within agreed rendering budgets.
+- [`gltf-assets`](skills/gltf-assets/) — Inspects and safely optimizes GLB/glTF assets while checking runtime compatibility.
 - [`web-implementation`](skills/web-implementation/) — Brings standards-aware constraints to web implementation and review.
 - [`website-art-direction`](skills/website-art-direction/) — Shapes evidence-led visual directions for website design.
 
