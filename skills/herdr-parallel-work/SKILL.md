@@ -5,7 +5,7 @@ description: "Use for coordinated parallel implementation of one task through He
 
 # Herdr Parallel Work
 
-Owner prepares base and handles user review; orchestrator launches workers and integrates results; owner closes created panes.
+Owner prepares base and handles user review; orchestrator launches workers and integrates results; owner closes created panes and removes integrated worktrees.
 
 ## Trigger clarification
 
@@ -33,7 +33,7 @@ Load `coding` before code changes and applicable delivery skills for assigned wo
 
 ### 2. Review and checkpoint — owner
 
-Present base changes, checks, split, write scopes, integration target, and commit scope. Ask structured approval covering base/result commits, required local integration, and closure of created panes. Honor any separate commit-approval policy. Default: stay in original pane until approved. Do not push or publish.
+Present base changes, checks, split, write scopes, integration target, and commit scope. Ask structured approval covering base/result commits, required local integration, closure of created panes, and removal of clean, fully integrated worktrees. Honor any separate commit-approval policy. Default: stay in original pane until approved. Do not push or publish.
 
 Revise and recheck requested changes, then repeat review. Commit only reviewed paths with explicit staging, not `git add .`; record SHA. If base already matches a commit, use its SHA without an empty commit. Commit failure blocks launch.
 
@@ -79,15 +79,17 @@ Without integration, report deliverable locations. Preserve unfinished work and 
 
 *Done: results gathered, required integration verified, owner has summary and inventory.*
 
-### 7. Close panes — owner only
+### 7. Close panes and integrated worktrees — owner only
 
 Verify outputs and inventory; confirm agents are no longer writing or awaiting essential help. Close recorded worker panes, then orchestrator pane. Never close original/unrelated panes or whole sessions; children must not close themselves or siblings.
 
-Preserve branches, worktrees, and run record. Failure/cancellation does not authorize data deletion or forced termination of active agents; report cleanup blockers.
+After closing panes, remove each workflow-created worker worktree only when all its result changes are integrated into target, combined acceptance checks pass, and `git status --porcelain --untracked-files=all` in that worktree is empty. Verify integration by commit ancestry for merges or patch/diff comparison for cherry-picks; worker completion alone is not proof. Check for ignored files holding needed outputs or local data before removal.
+
+Run `git worktree remove <recorded-path>` from outside worktree; never use `--force` or delete directories manually. Verify removal with `git worktree list` and update run record. Preserve branches and run record. Preserve worktrees for unintegrated results, failed checks, dirty state, needed local data, or removal failures; report exact cleanup blockers. Failure/cancellation does not authorize data deletion or forced termination of active agents.
 
 Report results, integration, checks, unresolved issues, and cleanup status; resume original task.
 
-*Done: created panes closed or blockers reported; user has consolidated result.*
+*Done: created panes closed and clean, fully integrated worktrees removed, or cleanup blockers recorded; user has consolidated result.*
 
 ## Shared-input rules — include in every child contract
 
