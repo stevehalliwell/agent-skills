@@ -19,6 +19,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`crawl4ai`](skills/crawl4ai/) — Crawls public pages with Dockerized Crawl4AI when ordinary fetches fall short.
 - [`delegate-tasks`](skills/delegate-tasks/) — Hands off self-contained asides while main work continues; uses Herdr when available, otherwise bundled job runner.
 - [`herdr`](skills/herdr/) — Controls Herdr panes and agents through explicit session-scoped targets.
+- [`herdr-docker-agents`](skills/herdr-docker-agents/) — Isolates parallel Herdr children needing full-box control or risky filesystem operations; bundles Pi image and runtime credential handoff.
 - [`herdr-parallel-work`](skills/herdr-parallel-work/) — Coordinates parallel implementation from a human-reviewed base, with worktree-isolated workers, dedicated orchestrator, and explicit integration ownership.
 - [`docker-local`](skills/docker-local/) — Guides safe local Docker workflows for skills that depend on Docker.
 - [`docling-local`](skills/docling-local/) — Converts local documents and images to Markdown with Dockerized Docling.
@@ -46,6 +47,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`question-research`](skills/question-research/) — Builds retained, evidence-linked answers to focused questions.
 - [`persona`](skills/persona/) — Runs focused, explicit role-based collaboration sessions.
 - [`six-thinking-hats`](skills/six-thinking-hats/) — Separates facts, feelings, benefits, risks, and alternatives before decisions.
+- [`spike-comparison`](skills/spike-comparison/) — Compares candidates through shared tests and Herdr panes/worktrees; delivers offline HTML report with findings, evidence, and recommendations.
 - [`technical-review`](skills/technical-review/) — Examines feasibility, architecture, delivery risk, and technical trade-offs before coding.
 - [`tradeoff-review`](skills/tradeoff-review/) — Frames material cross-system choices and records agreed decisions.
 - [`storybrand`](skills/storybrand/) — Builds or reviews BrandScripts and content through the StoryBrand framework.
