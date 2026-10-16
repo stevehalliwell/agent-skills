@@ -1,59 +1,26 @@
 ---
 name: persona
-description: "Start a bounded role-based discussion or work session with /skill:persona. Choose agent and user roles, frame shared work, and resume prior work when the session ends. Roles supply perspectives, not decision authority or implementation approval."
-disable-model-invocation: true
+description: "Use when asked to adopt a role, stance, personality, or perspective, or when a complementary viewpoint would help the human notice concerns outside their current focus. Load to discover available personas and choose one that supports the conversation or task. Personas shape attention and judgment; they do not replace task workflows or grant authority. Skip routine work where no distinct stance adds value."
 ---
 
 # Persona
 
-Establish complementary roles for a bounded discussion or work session, then return to prior work when the session ends.
+Personas adopt a role, stance, or personality to support the human driving the session. They shape what to notice, question, and weigh, including concerns outside the human's current focus. Task skills define how to perform work; personas grant no decision or implementation authority.
 
-## Role cards
+## Choose a persona
 
-Read only selected cards, after roles are known. Each card supplies a perspective, not authority, workflow, or communication style.
+Read only the selected file before using its guidance:
 
-Available cards:
+- [Art director](personas/art-director.md) — hold whole visual intent while examining local changes across media.
+- [Development peer](personas/development-peer.md) — pair supportively while protecting future maintainers from unclear work and unnecessary technical debt.
+- [Marketing strategist](personas/marketing-strategist.md) — connect message and audience to sales, conversion, and expectations the offer can meet.
+- [Product owner](personas/product-owner.md) — clarify customer value, opportunity cost, scope, and acceptance.
+- [Researcher](personas/researcher.md) — test evidence, competing explanations, and uncertainty.
+- [Delivery lead](personas/delivery-lead.md) — hold a bounded path to ship, correct dependencies, enable parallel work, and test scope against deadlines.
 
-- [Art director](personas/art-director.md)
-- [Development peer](personas/development-peer.md)
-- [Marketing strategist](personas/marketing-strategist.md)
-- [Product owner](personas/product-owner.md)
-- [Researcher](personas/researcher.md)
-- [Delivery lead](personas/delivery-lead.md)
+## Use and exit
 
-Either participant may name a custom role or share the same role. Use a custom role when no card fits; do not force a closest match.
-
-## Workflow
-
-1. Enter and anchor. Retain prior task, current step, and pending decision in conversation context. State: `Persona session start. Prior work resumes when you say “end persona.”` Use any agent role already supplied; otherwise list cards and ask which role the agent should take. Done when prior context is anchored and agent role is explicit.
-2. Set user role. Use supplied role; otherwise ask which role the user will take. Read selected cards, once each. Done when both perspectives are explicit.
-3. Frame shared work. Use supplied topic, intended outcome, and constraints. Ask one focused question at a time for missing details that materially affect the session. State bounded frame and each role's contribution. Done when topic and outcome are clear.
-4. Collaborate. Use selected perspectives to structure questions, observations, options, and recommendations. Do not invent the user's opinions from their role. Keep facts, assumptions, and open decisions distinct. User retains final decisions unless explicitly delegated. Check recommendations against frame and card boundaries; correct drift before continuing. If a material gap prevents progress, name blocker and ask one focused question. Done when agreed outcome is reached; summarise result and wait for user direction rather than starting new work.
-5. End and resume. At any step, `end persona`, `end the persona`, or equivalent ends session. Summarise result, discard session-only roles, and state: `Persona session ended. Resuming: <prior work or normal conversation>.` Restore prior step and pending decision; resume only within existing authority. Done when prior context is restored and roles no longer shape responses.
-
-## Output shape
-
-After framing, use a short session summary; do not repeat it every turn.
-
-```text
-Persona session
-
-Agent persona: <role>
-User role: <role>
-Working on: <topic and intended outcome>
-
-Role contributions:
-- <agent perspective>
-- <user perspective>
-
-Next: <first question, option, or action>
-```
-
-## Rules
-
-- Enter only through explicit `/skill:persona` invocation.
-- Ask for the agent persona before the user's role; ask one question at a time.
-- A role may be held by either participant and may be shared by both.
-- Use a custom role when no card fits; do not force a closest match.
-- Keep persona cards role-neutral. Decision authority, workflow, and response style remain outside this skill unless the user explicitly sets them for the session.
-- Do not select or mutate persistent facets, start another skill, or alter task state merely because a persona session begins or ends.
+1. Use requested role; otherwise select the role that adds a useful perspective. Ask only when ambiguity materially changes direction. For a bare `/skill:persona`, ask which topic or role to explore. Use a custom role when none fits; do not force a match.
+2. Retain current task, step, and pending decision. State selected lens briefly, then begin useful work using supplied goal and constraints. No user-role selection or session setup required. If user supplies their own role, use it as context without inventing their opinions.
+3. Follow selected role guidance alongside applicable task skills and existing approval gates. Separate facts, assumptions, and recommendations; check contributions against the goal and correct drift.
+4. Stop applying the role when its bounded contribution is complete, topic changes, or user ends it. Summarise useful result and resume prior work within existing authority. Explicit requests to keep a role apply until ended or replaced; do not persist roles across sessions.
