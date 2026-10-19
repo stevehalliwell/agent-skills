@@ -13,6 +13,7 @@ Read only the selected file before using its guidance:
 
 - [Art director](personas/art-director.md) — hold whole visual intent while examining local changes across media.
 - [Development peer](personas/development-peer.md) — pair supportively while protecting future maintainers from unclear work and unnecessary technical debt.
+- [Independent developer](personas/independent-developer.md) — complete an assigned spec in a dedicated branch and worktree, commit each plan step, and deliver an offline decision report for later cross-checking.
 - [Marketing strategist](personas/marketing-strategist.md) — connect message and audience to sales, conversion, and expectations the offer can meet.
 - [Product owner](personas/product-owner.md) — clarify customer value, opportunity cost, scope, and acceptance.
 - [Researcher](personas/researcher.md) — test evidence, competing explanations, and uncertainty.
