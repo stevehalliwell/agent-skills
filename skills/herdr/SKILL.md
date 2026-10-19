@@ -94,9 +94,17 @@ IDs and live agent names are scoped to one server. Two saved SSH machines can bo
 
 ## Start and coordinate an agent
 
-Default to a sibling pane in the current tab and the current working directory. Do not create a workspace, tab, worktree, or different cwd unless the user explicitly requests that topology or location.
+Choose layout by expected work and user involvement. Use a separate labeled tab in the caller's workspace for substantial delegated work, work likely to need user assistance, or work the user may inspect later. “Implement this task through review” and a deep research assignment belong in tabs. Small transient helpers may use sibling split panes. Honor explicitly requested topology.
 
-Honor a direction requested by the user. Otherwise inspect the caller pane:
+Preserve caller's working directory and user focus. Do not create a workspace, worktree, or different cwd unless requested. For a tab:
+
+```bash
+herdr tab create --workspace <live-caller-workspace-id> --cwd "$PWD" --label '<task-label>' --no-focus
+```
+
+Discover caller workspace from live state, not UI focus or stale inherited IDs. Read new pane ID from `.result.root_pane.pane_id`; use it for `agent start`.
+
+For a small helper using a split, honor a direction requested by the user. Otherwise inspect the caller pane:
 
 ```bash
 herdr pane layout --pane "$HERDR_PANE_ID"
@@ -160,7 +168,7 @@ If a wait fails or returns `blocked`, inspect `agent get` and `agent read` befor
 
 ## Run an ordinary command in another pane
 
-Create a sibling pane with the same geometry rule, preserve the caller's working directory, and keep user focus unchanged:
+Small transient build/test runners and one-off commands may use sibling split panes with the same geometry rule. Use a labeled tab instead when work is substantial, likely to need user assistance, or intended for later user inspection. Preserve caller's working directory and user focus. For a split:
 
 ```bash
 herdr pane split --current --direction right --cwd "$PWD" --no-focus

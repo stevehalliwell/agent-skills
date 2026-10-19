@@ -25,7 +25,7 @@ For a single bounded Codex request, use this skill. Background execution is usef
 1. **Define aside.** Write goal, inputs, constraints, modification authority, checks, and deliverable into a complete prompt. Include applicable [result contract](#result-contracts). Do not assume the child knows parent conversation history.
    *Done when child can work independently within explicit scope.*
 
-2. **Launch through Herdr.** Follow `herdr` CLI discovery, sibling-pane creation, agent startup, and targeting rules. Preserve user focus. Send prompt without a blocking wait when parent can continue. Record returned pane ID and unique agent name; no separate batch manifest is needed.
+2. **Launch through Herdr.** Follow `herdr` CLI discovery, layout selection, agent startup, and targeting rules. Substantial assignments, work likely to need user help, and work intended for later user inspection get separate labeled tabs; small transient helpers may use split panes. Preserve user focus. Send prompt without a blocking wait when parent can continue. Record returned pane ID and unique agent name; no separate batch manifest is needed.
    *Done when prompt submission succeeds and child identity is recorded.*
 
 3. **Resume main work; collect later.** Use Herdr's agent state, waits, and reads when result is needed, not a separate polling loop. Inspect blockers or timeouts before intervening; never blindly resend prompt. Follow `herdr` file-output fallback if scrollback cannot recover full result. Inspect actual output and checks before using it; `idle` or `done` alone is not accepted completion.
