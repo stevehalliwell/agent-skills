@@ -20,13 +20,11 @@ Attribution: Penelope Sweetser and Peta Wyeth (2005)
 
 Use applicable enjoyment conditions to question a selected mechanic, encounter, or session: concentration, challenge, skills, control, goals, feedback, immersion, and social interaction.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `mechanics`, `challenges`, `controls`, `hypotheses`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `mechanics`, `challenges`, `controls`, `experiments`.
 
-Available recipes: `query routes`; `query controls`; `query evidence`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query routes`; `query controls`; `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -82,5 +80,3 @@ These are original questions, not a reproduction or scoring implementation of th
 - [GameFlow: A Model for Evaluating Player Enjoyment in Games](https://doi.org/10.1145/1077246.1077253)
 
 Access checked 2026-10-19: ACM DOI requests blocked; paper identity/eight-element summary checked through source-linked search. Suggested PDF returned 404. Full evaluation criteria not reviewed or copied.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

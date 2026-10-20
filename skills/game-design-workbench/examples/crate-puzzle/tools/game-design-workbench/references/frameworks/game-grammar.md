@@ -20,13 +20,11 @@ Attribution: Related meaningful-play concepts: Katie Salen Tekinbaş and Eric Zi
 
 Inspect a selected noun/action pair, its conditional cases, consequences, feedback, and relevance to later play.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `nouns`, `verbs`, `interactions`, `mechanics`, `challenges`. Read actual role mapping and live schema/usage before writing.
+Roles: `nouns`, `verbs`, `interactions`, `mechanics`, `challenges`.
 
-Available recipes: `query matrix`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query matrix`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -83,5 +81,3 @@ Matrix rows expand only explicitly declared applicable nouns. Missing Cartesian 
 - [Meaningful Play teaching excerpt](https://sites.cc.gatech.edu/classes/AY2006/cs4455_spring/documents/sz-unit11.pdf)
 
 Access checked 2026-10-19: MIT Press request returned 403. Search-linked teaching excerpt supports discernible/integrated outcomes; PDF text extraction was incomplete. No full-book review claimed.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

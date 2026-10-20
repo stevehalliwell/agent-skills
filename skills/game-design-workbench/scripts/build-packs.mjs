@@ -23,8 +23,8 @@ for (const pack of packs) {
     if (!Array.isArray(detail[key]) || !detail[key].length || detail[key].some(value => ['concepts', 'example'].includes(key) ? !Array.isArray(value) || value.length !== 2 || value.some(text => typeof text !== 'string' || !text.trim()) : typeof value !== 'string' || !value.trim())) throw Error(`Invalid ${key} guidance for ${pack.id}.`);
   }
   const sections = [
-    ['Scope', `${pack.scope}\n\nUse only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.`],
-    ['Inputs and query support', `Roles: ${pack.roles.map(role => `\`${role}\``).join(', ')}. Read actual role mapping and live schema/usage before writing.\n\nAvailable recipes: ${pack.queries.map(query => `\`query ${query}${query === 'records' ? ' --collection <mapped-alias>' : ''}\``).join('; ')}. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.`],
+    ['Scope', pack.scope],
+    ['Inputs and query support', `Roles: ${pack.roles.map(role => `\`${role}\``).join(', ')}.\n\nAvailable recipes: ${pack.queries.map(query => `\`query ${query}${query === 'records' ? ' --collection <mapped-alias>' : ''}\``).join('; ')}.`],
     ['Working concepts', `${pack.vocabulary ? `Vocabulary: ${pack.vocabulary}\n\n` : ''}${pairs(detail.concepts)}`],
     ['Apply to selected slice', ordered(detail.procedure)],
     ['Original prompts', ordered(pack.questions)],
@@ -32,13 +32,13 @@ for (const pack of packs) {
     ['Evidence and counterchecks', bullets(detail.evidence)],
     ['Common traps', bullets(detail.traps)],
     ['Missing data and evidence limits', `${pack.missing}\n\n${pack.limits}`],
-    ['Sources', `${pack.sources.map(([title, url]) => `- [${title}](${url})`).join('\n')}\n\nAccess checked 2026-10-19: ${pack.access}\n\nGuidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.`]
+    ['Sources', `${pack.sources.map(([title, url]) => `- [${title}](${url})`).join('\n')}\n\nAccess checked 2026-10-19: ${pack.access}`]
   ];
   const contents = sections.map(([title]) => `- [${title}](#${title.toLowerCase().replaceAll(' ', '-')})`).join('\n');
   const body = `# ${pack.title}\n\nPack: \`${pack.id}\` · version 1\nAttribution: ${pack.attribution}\n\n## Contents\n\n${contents}\n\n${sections.map(([title, text]) => `## ${title}\n\n${text}`).join('\n\n')}\n`;
   outputs.push([`${pack.id}.md`, body]);
 }
-outputs.push(['catalog.json', `${JSON.stringify(packs.map(pack => ({ id: pack.id, title: pack.title, version: 1, path: `references/frameworks/${pack.id}.md`, attribution: pack.attribution, required_roles: pack.roles, queries: pack.queries })), null, 2)}\n`]);
+outputs.push(['catalog.json', `${JSON.stringify(packs.map(pack => ({ id: pack.id, title: pack.title, version: 1, status: 'provisional', path: `references/frameworks/${pack.id}.md`, attribution: pack.attribution, required_roles: pack.roles, queries: pack.queries })), null, 2)}\n`]);
 if (write) await mkdir(directory, { recursive: true });
 const stale = [];
 for (const [name, body] of outputs) {

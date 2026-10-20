@@ -20,13 +20,11 @@ Attribution: John Sweller, Cognitive Load During Problem Solving: Effects on Lea
 
 Examine unfamiliar operations, concurrent coordination, problem-solving effort, and information presentation in a selected challenge.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `skill-atoms`, `challenges`, `mechanics`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `mechanics`, `experiments`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -82,5 +80,3 @@ A required skill-atom list does not establish simultaneous demand. No count-base
 - [Cognitive Load During Problem Solving: Effects on Learning](https://doi.org/10.1207/s15516709cog1202_4)
 
 Access checked 2026-10-19: Wiley/ScienceDirect requests blocked. Bibliography and abstract argument about problem solving/schema acquisition checked through source-linked search; full study not read.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

@@ -20,13 +20,11 @@ Attribution: Tracy Fullerton, Game Design Workshop: A Playcentric Approach to Cr
 
 Connect intended player experience with a testable question, prototype, observations, and resulting design choices.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `aesthetics`, `hypotheses`, `experiments`, `observations`, `decisions`, `measures`, `expectations`. Read actual role mapping and live schema/usage before writing.
+Roles: `aesthetics`, `experiments`, `decisions`, `measures`.
 
-Available recipes: `query evidence`; `query decisions`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query evidence`; `query decisions`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -37,7 +35,7 @@ Available recipes: `query evidence`; `query decisions`; `query records --collect
 
 ## Apply to selected slice
 
-1. Connect one supplied experience goal to a decision that remains open. Read hypotheses, experiments, observations, measures, expectations, and decisions as available. Do not require a complete experiment record set to discuss a question.
+1. Connect one supplied experience goal to a decision that remains open. Read relevant experiments, their hypothesis/expectation/observation sections, measures, and decisions. Incomplete investigation is valid input for discussion.
 2. Write the uncertain claim and a plausible rival explanation. Specify what observation or result could distinguish them. Keep player experience claims separate from numerical model predictions.
 3. Propose the smallest suitable prototype or method. State what it includes, what it omits, what would be recorded, and what assumptions limit the answer. Proposal does not authorize execution or participant recruitment.
 4. Inspect existing evidence provenance before interpreting it. Identify source, method, conditions, and whether the result is analytical, simulated, observed, or merely expected. Empty observations remain empty.
@@ -82,5 +80,3 @@ A proposed experiment is not execution evidence. Simulated predictions are not o
 - [Game Design Workshop — official site](https://www.gamedesignworkshop.com/)
 
 Access checked 2026-10-19: Official Game Design Workshop overview inspected: experience goals, prototyping, playtesting, revision. Full book/exercises not reproduced.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

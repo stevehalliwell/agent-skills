@@ -20,13 +20,11 @@ Attribution: Nicole Lazzaro / XEODesign; Why We Play Games research (2004)
 
 Explore possible routes to emotion through challenge/triumph, curiosity, meaningful engagement, and social amusement.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `dynamics`, `aesthetics`, `interactions`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `dynamics`, `aesthetics`, `interactions`, `experiments`.
 
-Available recipes: `query mda`; `query matrix`; `query evidence`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query mda`; `query matrix`; `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -84,5 +82,3 @@ No category quota, emotional score, copied questionnaire, or rule that every gam
 - [The 4 Keys 2 Fun](https://www.nicolelazzaro.com/the4-keys-to-fun/)
 
 Access checked 2026-10-19: Author’s Four Keys overview inspected. Full white paper/slides and proprietary methods not reproduced.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

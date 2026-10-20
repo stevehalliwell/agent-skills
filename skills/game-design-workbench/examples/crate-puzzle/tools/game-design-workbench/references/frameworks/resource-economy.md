@@ -20,13 +20,11 @@ Attribution: Ernest Adams and Joris Dormans, Game Mechanics: Advanced Game Desig
 
 Examine a selected resource and the rules that create, spend, transform, or limit it. Separate resource identity from adjustable quantities.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `nouns`, `resources`, `controls`, `mechanics`, `interactions`, `measures`, `expectations`, `experiments`. Read actual role mapping and live schema/usage before writing.
+Roles: `nouns`, `resources`, `controls`, `mechanics`, `interactions`, `measures`, `experiments`.
 
-Available recipes: `query controls`; `query matrix`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query controls`; `query matrix`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -82,5 +80,3 @@ This release inventories literal controls and formula text; it does not evaluate
 - [Game Mechanics: Advanced Game Design — publication record](https://research.hva.nl/en/publications/game-mechanics-advanced-game-design/)
 
 Access checked 2026-10-19: Hogeschool van Amsterdam publication summary inspected; book and Machinations implementation not inspected.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

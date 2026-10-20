@@ -2,17 +2,17 @@
 
 ## Review
 
-1. Use requested lens and scope. If selection remains material, ask one focused question; no all-lenses sweep. Read selected pack directly from skill entrypoint. Done: relevant questions/limits are known.
+1. Use requested lens and scope. If selection remains material, ask one focused question; no all-lenses sweep. Read selected provisional guide; identify relevant coverage gaps before using it. Done: relevant questions/limits are known.
 2. Inspect actual source/usage and prior alternatives/rationale. Capture snapshot **before** review; include relevant unconfigured documents explicitly:
 
    ```sh
    node <workbench>/scripts/workbench.mjs snapshot --project <project> --include design-notes.md --output <new-snapshot.json> --json
    ```
 
-   Omit `--include` when configured sources suffice. Output file must be new and outside canonical collections/config/tools. Snapshot inventories source/schema/usage/templates, registry, project instructions, installed manifest, tool/guidance hashes, and installed Attendant skill fingerprint. Dependency changes make old reviews stale even when workbench files are unchanged. Done: review has frozen hash inventory; this is not a frozen copy of file content or a Git checkpoint.
+   Include project experience brief (for example `--include README.md`) when it informs review. Compare overall intent/player voice with individual MDA aesthetics; record support, contradiction, drift, and evidence without equating those lenses. Omit `--include` only when configured sources suffice. Output file must be new and outside canonical collections/config/tools. Snapshot inventories source/schema/usage/templates, registry, project instructions, installed manifest, tool/guidance hashes, and installed Attendant skill fingerprint. Dependency changes make old reviews stale even when workbench files are unchanged. Done: review has frozen hash inventory; this is not a frozen copy of file content or a Git checkpoint.
 3. Run only useful available queries, then inspect source bodies. Separate malformed/broken data, required missing relationships, unknowns, opportunities, conflicts, unverified hypotheses, and deliberate exclusions. Missing optional data is not invalid. Done: findings cite exact source field/section and distinguish fact from interpretation.
-4. Keep deterministic findings separate from agent judgments. A bootstrap recipe is a data projection, not a framework evaluator. Do not label manually derived rank/route observations deterministic C99 findings. Do not run experiments or repair records. Done: reasons/evidence/coverage are explicit.
-5. Present useful questions and limitations. Save dated report when requested using [finding input](../templates/review-input.json), or return concise review in chat. A request to save review authorizes result files, not source edits. Done: reviewed scope, findings, missing inputs, and unsupported checks remain visible.
+4. Keep deterministic findings separate from agent judgments. A bootstrap recipe is a data projection, not a framework evaluator. Do not label manually derived rank/route observations deterministic C99 findings. Done: reasons/evidence/coverage are explicit.
+5. Present useful questions and limitations. Save dated report when requested using [finding input](../templates/review-input.json), or return concise review in chat. Done: reviewed scope, findings, missing inputs, and unsupported checks remain visible.
 
 ## Save and reopen
 

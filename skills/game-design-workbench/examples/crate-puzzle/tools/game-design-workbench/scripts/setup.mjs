@@ -51,6 +51,7 @@ export async function planSetup(root, options = {}) {
   const priorBytes = await optional(await safePath(root, manifestPath));
   const prior = priorBytes ? JSON.parse(priorBytes) : null;
   if (Object.hasOwn(prior?.roles ?? {}, 'skills')) fail('COLLECTION_RENAME_REQUIRED', 'Legacy skills collection role needs explicit migration to skill-atoms before setup/update. Preserve record IDs and rename references; do not create a second empty collection. Read references/setup.md.');
+  if (['hypotheses', 'expectations', 'observations'].some(role => Object.hasOwn(prior?.roles ?? {}, role))) fail('EXPERIMENT_MIGRATION_REQUIRED', 'Consolidate legacy investigation collections into experiments before setup/update. Preserve claims, criteria, observations, provenance, and record identities; read references/setup.md#experiment-consolidation.');
   const mapping = { ...Object.fromEntries(roles.map(role => [role, role])), ...(prior?.roles ?? {}), ...(options.mapping ?? {}) };
   if (Object.keys(mapping).some(role => !roles.includes(role)) || new Set(Object.values(mapping)).size !== roles.length || Object.values(mapping).some(alias => typeof alias !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(alias))) fail('MAPPING_INVALID', 'Map distinct known roles to safe collection aliases.');
   const configured = await collections(root);
@@ -115,8 +116,7 @@ export async function planSetup(root, options = {}) {
   const lines = ignore.split(/\r?\n/).map(line => line.trim());
   for (const pattern of ['.attendant/', 'game-design-results/*/artifacts/']) if (!lines.some(line => line === pattern || line === `/${pattern}` || (pattern === '.attendant/' && line === '**/.attendant/'))) ignore += `${ignore && !ignore.endsWith('\n') ? '\n' : ''}${pattern}\n`;
   await propose('.gitignore', Buffer.from(ignore), true);
-  const all = roles.map(role => [...reused, ...newCollections].find(collection => collection.role === role)).filter(Boolean);
-  const block = `<!-- game-design-workbench:start -->\n### Game design workbench\n\nMarkdown is source of truth; .attendant/ is disposable. Configuration: .pi/attendant.tables. Read schema and usage before record operations. Local tools/references: tools/game-design-workbench/. Require installed attendant skill; load its instructions and set GD_ATTENDANT_SKILL to its absolute directory. Never vendor or copy Attendant.\n\n${all.map(c => `- ${c.alias}: ${c.directory}/.schema.md; ${c.directory}/.usage.md`).join('\n')}\n<!-- game-design-workbench:end -->`;
+  const block = `<!-- game-design-workbench:start -->\n### Game design workbench\n\nFor game-design operations, load tools/game-design-workbench/SKILL.md.\n<!-- game-design-workbench:end -->`;
   const agents = (await optional(await safePath(root, 'AGENTS.md')))?.toString('utf8') ?? '';
   const managed = /<!-- game-design-workbench:start -->[\s\S]*?<!-- game-design-workbench:end -->/.exec(agents);
   const normalizedManaged = managed?.[0].replaceAll('\r\n', '\n');
@@ -137,7 +137,7 @@ export async function planSetup(root, options = {}) {
     }
     await propose('AGENTS.md', Buffer.from(next), true);
   }
-  const manifest = { schema_version: 1, release: '0.1.0', distribution_revision: packageHash, model_version: 1, report_version: 1, roles: mapping, files: Object.fromEntries(files.map(file => [file.path, hash(file.bytes)])), guidance_hash: hash(block), capabilities: ['guided-framework-review', 'attendant-sql-queries', 'term-resolution', 'dated-review-storage'], unavailable: ['native-c99-analysis', 'native-viewer', 'control-evaluation-export', 'simulation-runtime'], dependencies: { node: '>=24.10.0', attendant: 'required installed skill; GD_ATTENDANT_SKILL points to skill directory' } };
+  const manifest = { schema_version: 1, release: '0.1.0', distribution_revision: packageHash, model_version: 2, report_version: 1, roles: mapping, files: Object.fromEntries(files.map(file => [file.path, hash(file.bytes)])), guidance_hash: hash(block), capabilities: ['guided-framework-review', 'attendant-sql-queries', 'term-resolution', 'dated-review-storage'], unavailable: ['native-c99-analysis', 'native-viewer', 'control-evaluation-export', 'simulation-runtime'], dependencies: { node: '>=24.10.0', attendant: 'required installed skill; GD_ATTENDANT_SKILL points to skill directory' } };
   await propose(manifestPath, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`), true);
   const publicPlan = { project: root, distribution_revision: packageHash, attendant_fingerprint: dependency_hash, roles: mapping, new_collections: newCollections, reused_collections: reused, candidate_sources, candidate_scan: { maximum_directory_depth: 2, excludes: ['hidden paths', 'node_modules', 'tools', 'vendor', 'build', 'configured collections'] }, fresh_acknowledged: Boolean(options.fresh), conflicts, files: changes.map(({ bytes, ...change }) => change), expected: expect, dependencies: manifest.dependencies };
   return { ...publicPlan, plan_id: hash(JSON.stringify(publicPlan)), changes };

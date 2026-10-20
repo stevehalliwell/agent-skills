@@ -32,7 +32,7 @@ test('setup approval, idempotency, local-only execution, and conflict preservati
   await writeFile(join(root, 'AGENTS.md'), '# Custom\n\nKeep this instruction.\n');
   await writeFile(join(root, '.gitignore'), '# Existing ignore rules\nlocal-only/\n');
   const plan = await planSetup(root);
-  assert.equal(plan.new_collections.length, 19);
+  assert.equal(plan.new_collections.length, 16);
   assert.equal(plan.conflicts.length, 0);
   assert.deepEqual((await readdir(root)).sort(), ['.gitignore', 'AGENTS.md']);
   await assert.rejects(applySetup(root, undefined, {}), { code: 'APPROVAL_REQUIRED' });
@@ -65,6 +65,12 @@ test('setup approval, idempotency, local-only execution, and conflict preservati
   manifest.roles.skills = manifest.roles['skill-atoms']; delete manifest.roles['skill-atoms'];
   await writeFile(manifestPath, JSON.stringify(manifest));
   await assert.rejects(planSetup(root), { code: 'COLLECTION_RENAME_REQUIRED' });
+  delete manifest.roles.skills; manifest.roles['skill-atoms'] = 'skill-atoms';
+  manifest.roles.hypotheses = 'hypotheses';
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  const beforeLegacyPlan = (await snapshot(root)).metadata.fingerprint;
+  await assert.rejects(planSetup(root), { code: 'EXPERIMENT_MIGRATION_REQUIRED' });
+  assert.equal((await snapshot(root)).metadata.fingerprint, beforeLegacyPlan);
 });
 
 test('stale setup approval fails before creating configuration', async () => {
@@ -119,7 +125,23 @@ test('all SQL recipes run on fixture and return declared data', async () => {
   }
   const decisions = await runQuery(root, 'decisions');
   assert.equal(decisions.data.rows.find(row => row.name === 'no-pulling').status, 'rejected');
-  assert.equal((await runQuery(root, 'records', { collection: 'observations' })).data.rows.length, 0);
+  const evidence = (await runQuery(root, 'evidence')).data.rows;
+  assert.equal(evidence.length, 2);
+  assert.ok(evidence.every(row => row.stage === 'proposed'));
+  for (const role of ['hypotheses', 'expectations', 'observations']) {
+    assert.ok(!Object.hasOwn(model, role));
+    await assert.rejects(runQuery(root, 'records', { collection: role }), { code: 'COLLECTION_UNKNOWN' });
+  }
+  const planning = await readFile(join(root, 'game-design/experiments/energy-encourages-planning.md'), 'utf8');
+  assert.match(planning, /01a15175-3c00-74e8-81e5-dcc6330be146/);
+  const timing = await readFile(join(root, 'game-design/experiments/route-cost.md'), 'utf8');
+  for (const heading of model.experiments.sections) assert.ok(timing.includes(`# ${heading}`));
+  assert.match(timing, /target 8 s; minimum_pass_rate 0.9/);
+  assert.match(timing, /upper_target, target_control, and upper_target_control remain null/);
+  assert.match(timing, /01a15175-3c00-7003-8c7e-5f8225a0df35/);
+  // Progress vocabulary can grow without committing to a transition engine.
+  await writeFile(join(root, 'game-design/experiments/route-cost.md'), timing.replace('"stage": "proposed"', '"stage": "awaiting-method-review"'));
+  assert.equal((await runQuery(root, 'evidence')).data.rows.find(row => row.name === 'route-cost').stage, 'awaiting-method-review');
 });
 
 test('term normalization, inactive disposition, collisions, and unknown synonyms', async () => {
@@ -178,9 +200,26 @@ test('all 18 generated packs match catalog, queries, roles, and selected entrypo
     assert.ok(detail.concepts.length >= 3 && detail.procedure.length >= 4 && detail.example.length >= 3 && detail.evidence.length >= 2 && detail.traps.length >= 2, entry.id);
     for (const text of Object.values(detail).flat(2)) assert.ok(body.includes(text), `${entry.id}: generated guidance omitted`);
     assert.ok(body.includes('Access checked 2026-10-19:'), entry.id);
+    assert.equal(entry.status, 'provisional');
+    assert.ok(!body.includes('../review.md'), `${entry.id}: no back-link to already-read parent workflow`);
+    assert.ok(!body.includes('Read actual role mapping'), `${entry.id}: shared workflow is not repeated`);
     assert.ok(entry.required_roles.every(role => Object.hasOwn(model, role)), entry.id);
     assert.ok(entry.queries.every(query => ['matrix', 'skill-atoms', 'routes', 'mda', 'decisions', 'glossary', 'controls', 'evidence', 'records'].includes(query)), entry.id);
   }
+  assert.ok(skill.indexOf('references/model.md') < skill.indexOf('references/capture.md'));
+  for (const path of ['SKILL.md', 'README.md', 'references/setup.md', 'references/capture.md', 'references/inspect.md', 'references/review.md', 'references/cli.md', 'examples/crate-puzzle/README.md']) {
+    const text = await readFile(join(home, path), 'utf8');
+    assert.ok(!text.includes('>=24.10.0'), `${path}: dependency version belongs to runtime reference`);
+    assert.ok(!text.includes('export GD_ATTENDANT_SKILL='), `${path}: environment setup belongs to runtime reference`);
+  }
+  for (const role of Object.keys(model)) {
+    const usage = await readFile(join(home, 'templates', role, '.usage.md'), 'utf8');
+    assert.ok(!usage.includes('## Operating rules'), `${role}: shared rules precede collection-specific usage`);
+  }
+  const brief = await readFile(join(home, 'examples/crate-puzzle/README.md'), 'utf8');
+  assert.ok(brief.includes('## Player experience / player story'));
+  assert.ok(brief.includes('Overall brief has not been authored.'));
+  assert.ok(model.aesthetics.purpose.includes('not the overall player experience'));
   const child = spawnSync(process.execPath, [join(home, 'scripts/build-packs.mjs'), '--check'], { encoding: 'utf8' });
   assert.equal(child.status, 0, child.stdout + child.stderr);
 });

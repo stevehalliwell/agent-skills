@@ -20,13 +20,11 @@ Attribution: Edward Deci, Richard Ryan, and collaborators
 
 Question support for autonomy, competence, and relatedness in a selected activity without inferring an individual psychological state.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `aesthetics`, `mechanics`, `dynamics`, `challenges`, `hypotheses`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `aesthetics`, `mechanics`, `dynamics`, `challenges`, `experiments`.
 
-Available recipes: `query mda`; `query routes`; `query evidence`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query mda`; `query routes`; `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -82,5 +80,3 @@ Autonomy, competence, and relatedness are common concepts here, not mandatory pr
 - [Self-Determination Theory — official overview](https://selfdeterminationtheory.org/theory/)
 
 Access checked 2026-10-19: Official SDT overview inspected, including three basic needs and support/thwarting distinctions. No questionnaire reproduced.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

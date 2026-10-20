@@ -20,13 +20,11 @@ Attribution: Daniel Cook, The Chemistry of Game Design (original article; 2021 r
 
 Inspect a selected learned interaction, its prerequisite chain, authored progression rank, feedback, and challenge opportunities.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `skill-atoms`, `challenges`, `levels`, `mechanics`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `levels`, `mechanics`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -82,5 +80,3 @@ Skills use AND prerequisites; absent/null/empty arrays declare no links. Rank is
 - [The Chemistry of Game Design](https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/)
 
 Access checked 2026-10-19: Lostgarden article inspected, including action/rule/feedback/mental-model loop. Questions independently authored.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

@@ -10,10 +10,7 @@ game-design/challenges as challenges
 game-design/levels as levels
 game-design/controls as controls
 game-design/measures as measures
-game-design/expectations as expectations
 game-design/experiments as experiments
-game-design/hypotheses as hypotheses
-game-design/observations as observations
 game-design/decisions as decisions
 game-design/glossary as glossary
 game-design/resources as resources

@@ -1,6 +1,6 @@
 # Inspection and change questions
 
-Inspect without repairs or framework review. Read actual role mapping/schema/usage before interpreting query fields. Resolve `<workbench>` as skill directory or installed `tools/game-design-workbench`.
+Use scoped recipes for declared relationships and change questions.
 
 ```sh
 node <workbench>/scripts/workbench.mjs query matrix --project <project> --json
@@ -20,10 +20,12 @@ node <workbench>/scripts/workbench.mjs resolve --term "box" --project <project> 
 - `controls`: accepted typed declarations, literal values, units, and formula text. No evaluation, conversion, bound validation, temporary overrides, or exports.
 - `decisions`: all dispositions, including rejected/proposed. Unchosen is not rejected.
 - `glossary`: all canonical terms/aliases/definition targets with disposition.
-- `evidence`: hypothesis/observation inventory with status. Read linked bodies for methods and provenance; absent observations are not empirical rejection.
-- `query records --collection <alias>`: all fields/all dispositions for configured collection. Use for resources, experiments, measures, expectations, context links, and other details not selected by a recipe.
+- `evidence`: experiment inventory with stage, kind, disposition, and source path. Read hypothesis/expectation/observation/result headings for evidence and provenance.
+- `query records --collection <alias>`: all fields/all dispositions for configured collection. Use for resources, experiments, measures, context links, and other details not selected by a recipe.
 
 SQLite link arrays remain JSON text in query cells. This is a projection format, not a second source schema. Respect `truncated`/coverage; increase limit or narrow source inspection before drawing completeness conclusions. Missing config/contracts fail; invalid source is never disguised as zero rows.
+
+## Source-safe projections
 
 Helpers copy source into a temporary project and call installed Attendant skill's public runner against that copy. No Attendant files are copied. Any mechanical corrections occur only in that copy and are disclosed as `projection_corrections`. Sources are hashed before/after; intervening changes abort. No live `.attendant/` is required or created by workbench query/validate. Raw Attendant query preparation can mechanically correct live records; do not substitute it for read-only review.
 
@@ -33,4 +35,4 @@ Helpers copy source into a temporary project and call installed Attendant skill'
 
 ## Scoped impact
 
-For `What changes if pushing costs two energy?`, inspect control, resource, mechanic/case references, affected challenge descriptions, and expectations/experiments. Explain declared dependencies and conditional hypotheses. Do not adopt proposed value or execute a model. No transitive impact checker is installed; use complete scoped source inspection and report its limits. Request explicit revision or experiment authority only if needed to continue beyond inspection.
+For `What changes if pushing costs two energy?`, inspect control, resource, mechanic/case references, affected challenge descriptions, and experiment expectations. Explain declared dependencies and conditional hypotheses. Do not adopt proposed value or execute a model. No transitive impact checker is installed; use complete scoped source inspection and report its limits. Request explicit revision or experiment authority only if needed to continue beyond inspection.

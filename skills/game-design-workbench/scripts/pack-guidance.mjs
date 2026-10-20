@@ -5,7 +5,7 @@ export const guidance = {
     concepts: [
       ['Mechanics', 'Rules and constraints that define available actions and state changes. An energy cost belongs to a mechanic; the numerical cost can live in a linked control. Neither establishes how a person will play.'],
       ['Dynamics', 'Behavior that could emerge when rules, choices, and context interact over time. Describe a sequence or recurring relationship, not another inventory of objects. A system is an authored grouping, not automatically a dynamic.'],
-      ['Aesthetics', 'Intended qualities of experience, such as deliberate tension. Name whose experience and which moment matter. A declared intention is not an observed feeling, even when a designer considers the supporting rule obvious.'],
+      ['Aesthetics', 'Intended qualities of experience, such as deliberate tension. Each is an MDA A aspect, not the overall player experience/player story. Compare both lenses when a brief exists. A declared intention is not an observed feeling, even when a designer considers the supporting rule obvious.'],
       ['Direction of reasoning', 'Design can work backward from an intention toward supporting behavior and rules. Review can work forward from a rule toward several plausible behaviors. Neither direction makes the links causal evidence.']
     ],
     procedure: [
@@ -16,7 +16,7 @@ export const guidance = {
       'Propose a discriminating observation only if useful to the decision. State what would weaken the preferred interpretation. Finish with a scoped chain and its uncertainty, not a verdict that the game delivers its intended emotion.'
     ],
     example: [
-      ['Authored facts', 'Crate-pushing, careful-positioning, and deliberate-tension are linked design concepts. Energy spending belongs to crate-pushing. The observations collection contains no play evidence.'],
+      ['Authored facts', 'Crate-pushing, careful-positioning, and deliberate-tension are linked design concepts. Energy spending belongs to crate-pushing. Experiment Observations sections contain no play evidence.'],
       ['Interpretation', 'Costly pushes could encourage advance planning, which could support deliberate tension. This assumes players understand the cost, can anticipate consequences, and regard mistakes as meaningful rather than arbitrary.'],
       ['Counterreading', 'The same commitment could instead produce confusion if feedback hides the reason a push failed. This is a competing hypothesis, not an observed problem or a new canonical dynamic.'],
       ['Useful next question', 'What source describes how the cost becomes legible before commitment? If play evidence is later requested, distinguish visible planning and rule explanation from an inferred emotional response.']
@@ -536,7 +536,7 @@ export const guidance = {
       ['Evidence and iteration', 'Separate assumptions, analytical derivations, executed model output, and observed play. A resulting design choice is another step that needs explicit authority; evidence does not silently adopt an option.']
     ],
     procedure: [
-      'Connect one supplied experience goal to a decision that remains open. Read hypotheses, experiments, observations, measures, expectations, and decisions as available. Do not require a complete experiment record set to discuss a question.',
+      'Connect one supplied experience goal to a decision that remains open. Read relevant experiments, their hypothesis/expectation/observation sections, measures, and decisions. Incomplete investigation is valid input for discussion.',
       'Write the uncertain claim and a plausible rival explanation. Specify what observation or result could distinguish them. Keep player experience claims separate from numerical model predictions.',
       'Propose the smallest suitable prototype or method. State what it includes, what it omits, what would be recorded, and what assumptions limit the answer. Proposal does not authorize execution or participant recruitment.',
       'Inspect existing evidence provenance before interpreting it. Identify source, method, conditions, and whether the result is analytical, simulated, observed, or merely expected. Empty observations remain empty.',

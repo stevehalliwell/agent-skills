@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Verify staged workbench/example in a disposable Git-index export. No stage,
 // commit, installation, or project-source writes. Only private temp files change.
-// Usage: node scripts/check-workbench-export.mjs --run-id ID [--previous-run ID] [--json|--text]
+// Usage: node scripts/check-workbench-export.mjs --run-id ID [--previous-run ID] [--expect-stale] [--json|--text]
 // Requires Node >=24.10.0 and GD_ATTENDANT_SKILL. Exit 0 pass, 1 failure, 2 usage.
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -31,12 +31,16 @@ function invoke(helper, project, parameters) {
 }
 try {
   if (args.length === 1 && args[0] === '--help') {
-    console.log('Verify staged workbench/example: --run-id <saved-run> [--previous-run <stale-run>] [--json|--text]. Stage intended source, installed snapshot, and saved run first. Requires installed Attendant via GD_ATTENDANT_SKILL; never installs, stages, or commits. Default JSON when piped/GD_AGENT=1, text at TTY. Private Git-index export is removed. Exit 0 pass, 1 failure, 2 usage.');
+    console.log('Verify staged workbench/example: --run-id <saved-run> [--previous-run <stale-run>] [--expect-stale] [--json|--text]. --expect-stale verifies history after source changes without inventing a new review. Stage intended source, installed snapshot, and saved run first. Requires installed Attendant via GD_ATTENDANT_SKILL; never installs, stages, or commits. Default JSON when piped/GD_AGENT=1, text at TTY. Private Git-index export is removed. Exit 0 pass, 1 failure, 2 usage.');
     process.exit(0);
   }
   exit = 2;
   for (let index = 0; index < args.length; index++) {
     const key = args[index];
+    if (key === '--expect-stale') {
+      if (options[key]) fail('ARGUMENT_INVALID', 'Duplicate --expect-stale.');
+      options[key] = true; continue;
+    }
     if (['--json', '--text'].includes(key)) {
       if (options.format) fail('ARGUMENT_INVALID', 'Choose one output format.');
       options.format = key; json = key === '--json'; continue;
@@ -59,8 +63,12 @@ try {
   assert.equal(skillAtoms.rows.length, 6);
   assert.equal(skillAtoms.rows.find(row => row.name === 'coordinate').rank, 2);
   assert.equal(skillAtoms.rows.find(row => row.name === 'plan-push').rank, null);
+  assert.equal(Object.keys(plan.roles).length, 16);
+  const experiments = invoke(helper, project, ['query', 'evidence']);
+  assert.equal(experiments.rows.length, 2);
+  assert.ok(experiments.rows.every(row => row.stage === 'proposed'));
   const review = invoke(helper, project, ['report', 'show', options['--run-id']]);
-  assert.equal(review.matches_current_source, true, 'Selected review is stale in export.');
+  assert.equal(review.matches_current_source, !options['--expect-stale'], options['--expect-stale'] ? 'Historical review must remain stale after source changes.' : 'Selected review is stale in export.');
   assert.equal(review.historical, true);
   assert.equal(review.freshly_run, false);
   let previous;
@@ -70,9 +78,9 @@ try {
     assert.deepEqual(review.report.findings.map(item => item.id).sort(), previous.report.findings.map(item => item.id).sort());
   }
   assert.equal(git(['ls-files', '--stage', '--', 'skills/game-design-workbench']), inventory, 'Workbench index changed during verification.');
-  const data = { base_commit: git(['rev-parse', 'HEAD']), index_workbench_inventory_sha256: createHash('sha256').update(inventory).digest('hex'), platform: process.platform, node: process.versions.node, setup_changes: 0, conflicts: 0, skill_atom_rows: skillAtoms.rows.length, saved_review: options['--run-id'], saved_review_source_match: true, historical: true, freshly_run: false, ...(previous ? { previous_review_source_match: false, stable_finding_ids: true } : {}), dependency_fingerprint: review.report.source_state.dependencies.attendant };
+  const data = { base_commit: git(['rev-parse', 'HEAD']), index_workbench_inventory_sha256: createHash('sha256').update(inventory).digest('hex'), platform: process.platform, node: process.versions.node, setup_changes: 0, conflicts: 0, collections: Object.keys(plan.roles).length, experiment_rows: experiments.rows.length, skill_atom_rows: skillAtoms.rows.length, saved_review: options['--run-id'], saved_review_source_match: review.matches_current_source, expected_stale: Boolean(options['--expect-stale']), historical: true, freshly_run: false, ...(previous ? { previous_review_source_match: false, stable_finding_ids: true } : {}), dependency_fingerprint: plan.attendant_fingerprint, review_dependency_fingerprint: review.report.source_state.dependencies?.attendant ?? null };
   await rm(temporary, { recursive: true, force: true }); temporary = undefined;
-  console.log(json ? JSON.stringify({ schema_version: 1, ok: true, data, errors: [] }) : `Export passes: setup unchanged; six skill atoms; saved review matches; required Attendant stays external.${previous ? ' Previous review stays stale; finding IDs stable.' : ''}`);
+  console.log(json ? JSON.stringify({ schema_version: 1, ok: true, data, errors: [] }) : `Export passes: setup unchanged; six skill atoms; two proposed investigations; saved review ${options['--expect-stale'] ? 'stays stale as expected' : 'matches'}; required Attendant stays external.${previous ? ' Previous review stays stale; finding IDs stable.' : ''}`);
 } catch (error) {
   console.error(error.message);
   if (json) console.log(JSON.stringify({ schema_version: 1, ok: false, data: null, errors: [{ code: error.code ?? 'CHECK_FAILED', message: error.message }] }));

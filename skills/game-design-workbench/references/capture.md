@@ -2,7 +2,7 @@
 
 ## Supplied facts and guided input
 
-Read live schema/usage and [model ownership](model.md). Supplied non-tentative facts authorize faithful capture; do not require an interview or reconfirm an explicit choice. Mark consequential unresolved details unknown rather than supplying them. If requested, guide from intended experience to behavior, then rules/actions; this sequence is optional.
+Capture supplied non-tentative facts faithfully; no interview or reconfirmation. For overall experience/player story, preserve supplied voice in its project brief. For one MDA aesthetic, use aesthetics record. For investigations, use experiment stage and body headings; do not create separate hypothesis, expectation, or observation collections.
 
 Examples:
 
@@ -21,7 +21,7 @@ No setup is implied by capture. If required storage is absent, use approved exis
 
 ## Record writes
 
-Load required `attendant` skill and read its `references/commands.md`. Use its public runner, not generated SQLite edits. Before a write, run its `validate --no-correct` and inspect pending mechanical corrections. If unrelated source would be corrected by Attendant preparation, stop and get scope for those changes or use a precise source edit instead; do not hide collateral writes.
+Use loaded Attendant skill's record-command workflow. Before a write, run its `validate --no-correct` and inspect pending mechanical corrections. If unrelated source would be corrected by Attendant preparation, stop and get scope for those changes or use a precise source edit instead; do not hide collateral writes.
 
 For a compatible existing collection, create/update one or a reviewed batch through runner. Supply only declared fields and built-ins. Example input file for an explicitly requested rank change:
 
@@ -39,7 +39,6 @@ Attendant preserves body and immutable identity metadata. It may reserialize fro
 ## Requested rank edit
 
 - Edit selected authored `rank` only; preserve `id`, `name`, `created_at`, body, unrelated metadata, and all descendants' authored ranks.
-- Rank accepts null or JSON-safe signed integer in intended model contract. Zero and negative ranks are valid. No automatic prerequisite-depth conversion.
 - Explain remaining conflicts rather than repairing them. Derived display movement is not source mutation; native display/resolver is deferred.
 - For tutorial coordinate 2 → 3, use exact update above. Compare selected record and every other source file before/after; query skill-atoms again. Do not claim prerequisite conflict detection is automated in this release.
 
@@ -47,4 +46,4 @@ Attendant preserves body and immutable identity metadata. It may reserialize fro
 
 Glossary owns canonical spelling/aliases and chooses inline meaning **or** a canonical documentation target such as `nouns/crate`. Edit that one owner. Domain references stay `alias/name`; aliases do not change technical identity. Explicit renaming/moving between collections requires reviewed reference migration, not string replacement across guessed synonyms.
 
-Run declared relationship queries and inspect exact source references to assess a change. Report unknown prose dependencies and unsupported transitive/game-state impact analysis. Validate changed source; do not commit unless separately authorized.
+Run declared relationship queries and inspect exact source references to assess a change. Report unknown prose dependencies and unsupported transitive/game-state impact analysis. Validate changed source.

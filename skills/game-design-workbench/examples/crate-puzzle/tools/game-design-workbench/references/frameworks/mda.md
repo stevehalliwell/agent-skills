@@ -20,19 +20,17 @@ Attribution: Robin Hunicke, Marc LeBlanc, Robert Zubek (2004)
 
 Trace a selected rule or intended experience through authored mechanics, runtime-behavior hypotheses, and aesthetics. Systems group mechanics; they are not dynamics.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `mechanics`, `systems`, `dynamics`, `aesthetics`, `hypotheses`, `experiments`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `mechanics`, `systems`, `dynamics`, `aesthetics`, `experiments`.
 
-Available recipes: `query mda`; `query evidence`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query mda`; `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
 - **Mechanics:** Rules and constraints that define available actions and state changes. An energy cost belongs to a mechanic; the numerical cost can live in a linked control. Neither establishes how a person will play.
 - **Dynamics:** Behavior that could emerge when rules, choices, and context interact over time. Describe a sequence or recurring relationship, not another inventory of objects. A system is an authored grouping, not automatically a dynamic.
-- **Aesthetics:** Intended qualities of experience, such as deliberate tension. Name whose experience and which moment matter. A declared intention is not an observed feeling, even when a designer considers the supporting rule obvious.
+- **Aesthetics:** Intended qualities of experience, such as deliberate tension. Each is an MDA A aspect, not the overall player experience/player story. Compare both lenses when a brief exists. A declared intention is not an observed feeling, even when a designer considers the supporting rule obvious.
 - **Direction of reasoning:** Design can work backward from an intention toward supporting behavior and rules. Review can work forward from a rule toward several plausible behaviors. Neither direction makes the links causal evidence.
 
 ## Apply to selected slice
@@ -54,7 +52,7 @@ Available recipes: `query mda`; `query evidence`; `query records --collection <m
 
 ## Worked example
 
-- **Authored facts:** Crate-pushing, careful-positioning, and deliberate-tension are linked design concepts. Energy spending belongs to crate-pushing. The observations collection contains no play evidence.
+- **Authored facts:** Crate-pushing, careful-positioning, and deliberate-tension are linked design concepts. Energy spending belongs to crate-pushing. Experiment Observations sections contain no play evidence.
 - **Interpretation:** Costly pushes could encourage advance planning, which could support deliberate tension. This assumes players understand the cost, can anticipate consequences, and regard mistakes as meaningful rather than arbitrary.
 - **Counterreading:** The same commitment could instead produce confusion if feedback hides the reason a push failed. This is a competing hypothesis, not an observed problem or a new canonical dynamic.
 - **Useful next question:** What source describes how the cost becomes legible before commitment? If play evidence is later requested, distinguish visible planning and rule explanation from an inferred emotional response.
@@ -82,5 +80,3 @@ A declared mechanic–dynamic–aesthetic chain is not causal proof or emotional
 - [MDA: A Formal Approach to Game Design and Game Research](https://aaai.org/papers/ws04-04-001-mda-a-formal-approach-to-game-design-and-game-research/)
 
 Access checked 2026-10-19: AAAI abstract inspected; full paper not retrieved. Questions use broad published distinctions, not reproduced passages.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

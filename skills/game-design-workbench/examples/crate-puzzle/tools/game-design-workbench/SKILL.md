@@ -5,50 +5,36 @@ description: "Use for game-design-workbench requests, structured game-design rec
 
 # Game Design Workbench
 
-Use one human-editable design model through selected operations and lenses. This release delivers guided design work, 19 collection templates, 18 original attributed packs, and local Node helpers. Native C99 analysis, graphical views, formula resolution/exports, and simulation execution are **not installed**.
-
 ## Trigger clarification
 
-- `Review this encounter using GameFlow`: use selected pack only; review does not authorize repairs.
-- `Capture that pushing costs one energy`: record supplied fact without an interview when owner is clear.
-- `Explore three alternatives to pulling`: retain proposed alternatives and rationale; do not adopt them.
-- `Implement crate movement in Unity`: skip; use implementation workflow.
-- `Make my game better`: no unsolicited 18-lens sweep. Ask for a material scope only if no bounded operation is apparent.
+- `Review this encounter using GameFlow`: selected framework review, not repair.
+- `Capture that pushing costs one energy`: supplied fact, not an interview.
+- `Explore alternatives to pulling`: retain proposals and rationale, not adoption.
+- `Implement crate movement in Unity`: use implementation workflow instead.
+- `Make my game better`: establish bounded operation; no unsolicited framework sweep.
 
-On explicit invocation without an operation, inspect `.pi/attendant.tables` if present, then ask one focused operation question. Default: inspect existing model; no setup or review. Use `ask_user` for a focused choice when available.
+On explicit invocation without operation, inspect project registry if present, then ask one focused operation question. Default: inspect existing model; no setup.
 
 ## Workflow
 
-1. Identify target project, requested operation, source authority, and scope. Start anywhere: existing facts bypass guided input; experience-first input is optional. Read the matching operation reference below. Done: requested action and its write authority are clear.
-2. Inspect `.pi/attendant.tables` and, if present, `tools/game-design-workbench/manifest.json`. Read live `.schema.md` and `.usage.md` for relevant roles before interpreting fields or changing records. Require and load installed `attendant` skill for collection/record operations. Follow its operation references. Set `GD_ATTENDANT_SKILL` to that loaded skill's absolute directory for helper commands; never copy or vendor Attendant. Done: actual paths/aliases and source owners are known.
-3. Perform bounded action. Use supplied non-tentative facts as facts; mark generated options proposed. Resolve declared aliases before creating identities. Ask only when consequential ambiguity remains. Done: output matches requested scope without inventing requirements, evidence, or exclusions.
-4. Check affected source with read-only `validate`; inspect scoped queries and exact source diff after edits. Correct only authorized in-scope errors; otherwise report blockers. Never treat a failed load as an empty design. Done: source authority, unsupported checks, and unresolved issues remain visible.
-5. Return result, changed paths or report path, and material limits. No aggregate quality score. Do not commit, publish, repair, set up collections, or execute experiments merely because a review was requested.
+1. Establish project, requested operation, scope, and write authority. Read [model contract](references/model.md) before interpreting design records. Done: shared owners, lifecycle, and partial-state rules are known.
+2. Inspect `.pi/attendant.tables` and installed manifest for actual role paths/aliases. Read relevant live schemas/usages. For helpers, complete [Runtime](references/runtime.md#runtime); for record operations, follow loaded Attendant operation instructions. Done: storage and execution paths are known.
+3. Read matching operation reference below and execute bounded action. Done: requested result exists without invented facts, evidence, or authority.
+4. After source edits, run read-only validation and inspect exact source diff. Correct only authorized in-scope errors; report other blockers. Failed load is not an empty design. Done: performed checks, unsupported checks, and remaining unknowns are explicit.
+5. Return result and changed/report paths. Done: user can inspect outcome and material limits.
 
-Run bundled helper; resolve `<workbench>` to this skill folder or installed project-local snapshot:
+## Conditional reads
 
-```sh
-node <workbench>/scripts/workbench.mjs capabilities --project <project> --json
-node <workbench>/scripts/workbench.mjs query skill-atoms --project <project> --json
-```
-
-Requires installed `attendant` skill and Node.js `>=24.10.0`; no npm dependency or running service. Missing Attendant configuration fails `ATTENDANT_REQUIRED` before source writes. Query helpers use temporary Attendant projections; source Markdown remains authoritative. Execute documented command rather than guessing tool availability. On failure, retain sources and report actionable error/code.
-
-## Conditional operation reads
-
-Read only reference matching current operation:
-
-- Setup, bind existing collections, update tools, or resume installation: [Setup](references/setup.md).
-- Capture supplied rules, generate alternatives, adopt/reject/revise decisions, define terms, or requested rank edits: [Capture and revision](references/capture.md).
-- Inspect cases/relationships, search declared terms, or assess change impact: [Inspection](references/inspect.md).
-- Review a selected lens or save/read a dated review: [Review and provenance](references/review.md), plus selected pack below.
-- Clarify field ownership, lifecycle, or partial-model interpretation: [Model contract](references/model.md).
-- Run helpers directly, interpret errors/limits, or use machine output: [CLI contract](references/cli.md).
-- Try worked source without creating a new design: [Crate-puzzle walkthrough](examples/crate-puzzle/README.md).
+- Set up, bind collections, or update: [Setup](references/setup.md).
+- Capture facts, revise records, retain/adopt/reject alternatives, or edit rank: [Capture](references/capture.md).
+- Inspect relationships, terms, or change impact: [Inspection](references/inspect.md).
+- Review or store/read review: [Review](references/review.md), then selected framework below.
+- Use direct commands, output formats, errors, or maintenance tools: [CLI](references/cli.md).
+- Try tutorial: [Walkthrough](examples/crate-puzzle/README.md).
 
 ## Selected framework reads
 
-Load only selected pack. If user supplies a clear lens, do not ask again. If lens choice materially changes requested review, present a narrow choice; default to nearest stated concern. No `all` selector or automatic framework sequence.
+Guides are provisional pending individual source/completeness review. Load only selected framework; clear user selection needs no reconfirmation. If selection remains consequentially ambiguous, ask focused choice. No automatic sequence or `all` selector.
 
 - Rule/experience trace: [MDA](references/frameworks/mda.md).
 - Actions, conditions, consequences, feedback: [Game grammar](references/frameworks/game-grammar.md).
@@ -60,20 +46,15 @@ Load only selected pack. If user supplies a clear lens, do not ask again. If len
 - Enjoyment conditions: [GameFlow](references/frameworks/gameflow.md).
 - Unfamiliar concurrent demands: [Cognitive load](references/frameworks/cognitive-load.md).
 - Memory, cues, chunking: [Working memory](references/frameworks/working-memory.md).
-- Temporary support and independent transfer: [ZPD/scaffolding](references/frameworks/zpd-scaffolding.md).
+- Temporary support/independent transfer: [ZPD/scaffolding](references/frameworks/zpd-scaffolding.md).
 - Autonomy, competence, relatedness: [Self-Determination Theory](references/frameworks/self-determination.md).
 - Published interest vocabulary: [Quantic Foundry](references/frameworks/quantic-foundry.md).
 - Routes to emotion: [Four Keys](references/frameworks/four-keys.md).
 - Historical multiplayer participation: [Bartle](references/frameworks/bartle.md).
 - Forms/freedoms of play: [Caillois](references/frameworks/caillois.md).
-- Contextual reflective questions: [Schell](references/frameworks/schell.md).
+- Contextual reflection; lens catalog missing: [Schell](references/frameworks/schell.md).
 - Goals, prototypes, play evidence: [Playcentric](references/frameworks/playcentric.md).
 
-## Authority rules
+## Authority
 
-- Review/inspection reads source; requested report writes results only. No repair/adoption permission is implied.
-- Optional absence is valid. Distinguish unknown, explicit exclusion/non-applicability, defined no effect, invalid data, and unsupported checks.
-- Preserve alternatives and useful rationale. Choosing one leaves siblings proposed unless user states another disposition.
-- Keep definitions in one owner. Resolve declared aliases only; do not guess synonyms or revive inactive concepts silently.
-- Frameworks ask questions, not verdicts. Missing teaching is not incapability; declared experience links are not observed feelings. No cohort/profile datasets or psychological scores.
-- Proposed experiments remain proposals. Measurements, execution status, expectation comparison, and design judgment are separate. Never invent executed trials or player observations.
+Review/inspection does not authorize source repair, adoption, setup, experiment execution, commits, or publication. Requested report storage writes results only. No aggregate quality/fun/psychological score. Do not infer player capability, feelings, or causal support from declared links.

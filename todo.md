@@ -340,81 +340,17 @@ Not yet established by execution: authored pack quality/source research, schema/
 
 ### Table responsibilities
 
-Install these supported table sets; records need not populate every set:
+Current ownership, lifecycle, and partial-state contract: [model reference](skills/game-design-workbench/references/model.md). Distribution field/usage/template source: [model.mjs](skills/game-design-workbench/scripts/model.mjs). Live project schema/usage remains authoritative after setup. Do not keep another field dictionary in this task record.
 
-- `nouns`: entity/resource identity and meaning, not duplicated pool properties.
-- `verbs`: action identity and meaning.
-- `interactions`: applicable noun(s), verb, context links, shared mechanic/control links, case coverage classification, and canonical case-specific conditions/consequences in prose.
-- `mechanics`: reusable rules and state transitions; refer to controls for tuning.
-- `systems`: membership/grouping of mechanics and constructed rule arrangements.
-- `dynamics`: intended/predicted/observed behavior, supporting mechanics/systems, assumptions and evidence.
-- `aesthetics`: natural-language intended player experience and supporting dynamics. Capture initial experience description here; do not require controlled aesthetic vocabulary before starting.
-- `skill-atoms`: prerequisite AND set, conceptual rank, related mechanics, and descriptions of understanding/expression.
-- `challenges`: introduced/practised/required/mastery-demonstration skill atoms, entry marker, possible next challenges, and relevant mechanic/context links.
-- `levels`: optional challenge grouping and design context. No initial physical-layout mapping or second route authority.
-- `controls`: typed integer/continuous/boolean/enum settings, literal value or relative formula, units, optional declared bounds/allowed values. One authoritative setting per control.
-- `measures`: named output quantities, meaning, type, and units shared by experiments, observations, and expectations.
-- `expectations`: measurable criteria/targets over measures, with scope and relevant assumptions. Targets are not proof or observed results.
-- `experiments`: question, fixed design snapshot, model/test method, assumptions, controls/measures/expectations, code or test-plan references, and linked results. Simulations answer one question; create a new experiment for a changed design. Distinguish simulation from player testing.
-- `hypotheses`: unverified design claims and supporting/refuting evidence links; do not confuse hypothesis with accepted factual observation.
-- `observations`: actual player/playtest/telemetry observations with source, date, context, and interpretation separated. Simulated outcomes are not observed player behavior.
-- `decisions`: retained proposal records and adopted rationale, distinguished by kind and lifecycle. Group related alternatives and link elaborated domain records; do not require full domain normalization for each idea. No rigid edit transcript.
-- `glossary`: canonical term, aliases, brief inline meaning or concept-document link; derived combined glossary.
-- `resources`: noun extension owning pool properties/ownership/lifetime and canonical control/rule references. Runtime balances belong to simulation/game state, not baseline tuning records.
+Model version 2 consolidates investigation data into experiments. Future executable criteria encoding needs refinement as experiment work proceeds. Earlier outline/research files are planning inputs, not current field contracts.
 
-These responsibilities define core source ownership, not a closed collection inventory. Framework packs reuse canonical facts and may add collections for distinct required data. Such collections remain Attendant-compatible Markdown under the same project, not separate framework databases. Each addition needs an ownership/relationship contract and an example showing why core records are insufficient; shared inputs should serve multiple packs where useful.
-
-### Initial field contract
-
-Use Attendant built-ins for `id`, `name`, `created_at`, `desc`, and `tags`; do not redeclare them in schemas. Common domain lifecycle field: `status` with proposed/accepted/rejected/superseded/defunct values. Relation arrays are sets of qualified references; derive reverse links.
-
-Core typed fields:
-
-- Interactions: `nouns` → nouns array; `verb` → verb; `context_nouns` → nouns array; `mechanics` → mechanics array; `controls` → controls array; `resources` → resources array; `coverage` = unknown/defined/excluded/not_applicable. Conditional rules/consequences stay in body.
-- Mechanics: relevant noun/verb/control/resource reference arrays. Body owns reusable rule, assumptions, and open questions; no structured consumes/produces fields initially.
-- Systems: `mechanics` membership array. Dynamics: supporting `mechanics`/`systems`, related `hypotheses`, `experiments`, `observations` arrays. Aesthetics: supporting `dynamics`, related `hypotheses`/`observations` arrays.
-- Skill atoms: `prerequisites` → skill-atoms array; `rank` → nullable integer; `mechanics` → mechanics array. Body sections: learning loop, understanding, expression, evidence sought, open questions. Evidence sought is not an observation.
-- Challenges: `introduces`, `practises`, `requires`, `tests_mastery` → skill arrays; `entry` boolean; `next` → challenge array; optional `mechanics`, `interactions`, `nouns`, `verbs`, `resources` reference arrays for declared use/context. Body records goals, assistance, intentional discovery/prior-knowledge context, and route-gate prose. Mentioning a mechanic does not prove every case is reachable in that challenge. Teaching/mastery roles describe design intent, not measured achievement.
-- Levels: `challenges` membership array. No competing next-level route graph or physical map field in initial model.
-- Controls: `value_type` = unspecified/integer/number/boolean/enum; `value` nullable scalar; `expression` string; `unit` string; `allowed_values` string array; nullable numeric `minimum`/`maximum`. Define literal or expression, not two active values. Empty fields preserve incompleteness; numeric unit `1` explicitly means dimensionless.
-- Measures: `value_type`, `unit`, optional enum `allowed_values`; body defines quantity and measurement boundaries. Experiments reference this definition instead of redefining units.
-- Expectations: `measure` reference; `statistic` = unspecified/per_run/mean/min/max/p50/p90/p95; `operator` = unspecified/lt/le/eq/ge/gt/between; nullable scalar `target`/`upper_target`; optional `target_control`/`upper_target_control` references instead of duplicate literals; nullable `minimum_pass_rate` in [0,1] for per-run criteria. Target values use measure units; reject competing literal/reference definitions. Missing aggregate target stays descriptive, not assumed 100% success.
-- Experiments: `experiment_kind` = unspecified/simulation/playtest; `controls`, `measures`, `expectations` arrays; relevant mechanic/interaction references; project-relative `program`, `inputs`, `results` paths where present. Assumptions belong to experiment input sidecar/body, not exported game controls. Body states question, model scope, limitations, and evidence context.
-- Hypotheses: relevant mechanics/dynamics/aesthetics, experiments, and observations references; body owns claim/assumptions/evidence interpretation. Observations: optional measure/hypothesis/experiment references, source/date/context, and optional data sidecar. Keep firsthand observation, reported evidence, synthetic data, and interpretation explicit.
-- Decisions: `record_kind` = proposal/decision; optional `alternative_group` string, `related_decisions` → decisions array, and `subjects` string array of qualified subject/domain links. Attendant cannot type one reference field against multiple collections; workbench validates/indexes these polymorphic links rather than inventing `ref:any` syntax. Body retains proposal context or adopted rationale. Accepted proposal details become canonical domain definitions; decision retains links, not independently current rule text.
-- Glossary: `term`, `aliases` string array, optional `documentation` path. Inline body owns short meaning only when no full document exists. Structured paths are project-relative; rendered Markdown links are rebased to containing document. Promote inline meaning into full concept document and replace former definition with link; do not copy into two editable homes.
-- Resources: `noun` reference, optional `initial_control`/`capacity_control` references. Body owns pool ownership/scope/lifetime and points to canonical behavior rules. Related mechanics/interaction involvement is reverse-derived; flow direction remains prose.
-
-Schema encoding uses optional `?ref:<collection>` / `?ref[]:<collection>` where partial records are allowed, `string[]` for simple lists, and null schema declarations for nullable scalar fields where a numeric default would invent a value. Attendant treats null schema declarations as optional/untyped; workbench enforces numeric/integer/scalar subtype constraints. Do not invent nullable numeric marker syntax. Workbench checks subtype/unit/range/cross-field rules that Attendant's flat schema does not express.
-
-Source identity and typed links must still validate when provided. Missing/null relationship arrays describe no declared links; never infer reverse edges from prose. Required relationships mean explicit schema/role invariants or declared design constraints, not whatever a framework usually discusses. Prose-level constraints are agent-interpreted unless a documented deterministic check implements them. Accepted case classified defined/excluded/not_applicable must identify its applicable noun(s) and verb; incomplete cases use unknown coverage rather than fabricate links. Do not confuse no-effect outcome with exclusion.
-
-Body templates need only relevant sections; do not demand every optional annotation or every framework's inputs on each record. Template implementation must pass Attendant schema/record tests and preserve this null/empty/ownership contract.
+New collections require distinct source ownership and an example showing why existing records are insufficient.
 
 ### Framework pack contracts
 
 All 18 packs ship as attributed, independently authored guidance in first slice, with necessary collection templates and query helpers. Reuse Attendant queries or direct record inspection where sufficient; add C99 helpers when needed and justify `.mjs` exceptions. Each pack declares scope, useful source records, original questions, available queries, evidence limits, and missing-data behavior. Empty optional tables do not block conceptual discussion; reports identify unavailable data/checks. Do not add one collection per theory or require framework labels on every record.
 
-Initial mapping uses core collections below. Collections such as skill-atoms, resources, and observations already supply framework-specific data. Add a supplemental collection only for a distinct source fact without an adequate existing owner; common framework vocabulary alone does not justify one.
-
-- `mda`: mechanics/systems → dynamics → aesthetics, plus hypotheses/experiments/observations. Queries expose declared forward/reverse links and disconnected records. Agent asks which behavior and experience each rule supports. Missing links are documentation questions; links do not prove emotional outcomes.
-- `game-grammar`: nouns, verbs, interactions, mechanics, challenges. Matrix/connectivity queries expose declared cases, exclusions, unknown cells, and contextual links. Agent examines conditions, consequences, discernible feedback, and inconsistent prose. Templates include case-specific feedback with consequences; shared feedback rules remain in mechanics.
-- `resource-economy`: resources, controls, mechanics/interactions, measures, expectations, experiments. Queries resolve controls and inspect declared involvement; agent interprets prose flows/feedback loops. Explicit simulation requests can investigate distributions/sensitivity. No deterministic flow graph or automatic execution.
-- `gameplay-patterns`: mechanics, systems, dynamics, linked proposals/decisions, and cited external pattern references in relevant bodies. Agent compares structures, alternatives, and applicability. No bundled exhaustive pattern database, automatic pattern identification, or copied catalog.
-- `skill-atoms`: skill atoms, challenges, optional levels, and related mechanics. Shared prerequisite/rank/route checks expose cycles, intent conflicts, and declared learning opportunities. Agent examines learning loop, understanding, expression, feedback, combination, and transfer; opportunity is not acquired mastery.
-- `theory-of-fun`: skill atoms, challenge progression, mechanics, and evidence. Reuse chains/role views; ask whether progression introduces patterns, combinations, or only numerical repetition. Do not compute fun or equate repeated actions with lack of learning.
-- `flow`: challenges, skill atoms, goals/feedback in source bodies, and relevant evidence. Original qualitative questions examine challenge, capability, clarity, and feedback. No required cohort data, estimated capability curve, or computed flow/anxiety/boredom score.
-- `gameflow`: scoped mechanics/challenges, goals, controls, feedback, and observations. Original evaluative questions cover applicable enjoyment conditions; social criteria can be inapplicable. Keep distinct from Flow; do not reproduce a proprietary questionnaire or aggregate score.
-- `cognitive-load`: declared required skill atoms, prerequisite combinations, challenge context, information/feedback, and support. Queries show declared relationships; agent asks what must be coordinated concurrently and what remains unfamiliar. A required skill-atom list does not prove simultaneous demand or calibrated cognitive load.
-- `working-memory`: same relevant skill-atoms/challenges and source descriptions of cues, memory demands, and learned combinations. Original chunking/external-memory questions; no fixed four/seven-item failure threshold or player-capacity dataset.
-- `zpd-scaffolding`: skill-atoms/challenges, route opportunities, documented assistance, and observations. Reuse route/role queries; ask about demonstrations, hints, safe practice, intermediate combinations, and withdrawal of support. No teaching prerequisite, player diagnosis, or claim that unsupported skill atoms make success impossible.
-- `self-determination`: aesthetics, mechanics/dynamics, choices/constraints, challenges, hypotheses, and observations. Ask about autonomy, competence, and relatedness as common concepts. No personality profiles or inferred psychological measurements.
-- `quantic-foundry`: intended experiences, mechanics/dynamics, rewards, and evidence. Use attributed published motivation vocabulary in original support questions. No audience/cohort collection, questionnaire reproduction, preference scoring, or single player type.
-- `four-keys`: dynamics, aesthetics, interactions, and observations. Original questions explore challenge/triumph, curiosity, meaning, and social amusement. Keep distinct from MDA vocabulary and Koster's account; category links remain interpretations.
-- `bartle`: player activities, exploration, social/competitive mechanics, and rewards. Original genre-aware questions; solo puzzle fixture reports limited applicability. No universal typing or requirement to serve every category.
-- `caillois`: mechanics/dynamics, randomness, competition, role-play, sensory/movement descriptions, freedoms, and constraints. Original forms-of-play questions; no numeric profile or requirement to cover every form.
-- `schell`: any scoped records, retained alternatives, and design rationale. Original contextual questions reuse relevant queries; no reproduction of complete deck/book or requirement for another lens run.
-- `playcentric`: aesthetics/intentions, hypotheses, experiments, observations, and decisions. Query evidence links and distinguish untested claims, simulated predictions, and observed play. Original questions connect goals to prototypes/tests and resulting choices; do not invent evidence.
+Per-framework scope, role/query mappings, questions, and source limits have one authoring owner: [pack source](skills/game-design-workbench/scripts/pack-data.mjs), with detailed guidance in `pack-guidance.mjs`. Catalog and guides are generated projections, not independent copies to maintain.
 
 Section E perspectives are cross-cutting prompts attached to relevant packs, not extra mandatory datasets or an all-perspectives command. Framework-specific tools must name their actual query and required records; prefer shared C99 operations. Justify any dedicated `.mjs` query and document Node requirement. A question-only pack is usable without pretending its interpretive review is implemented in C.
 
@@ -695,6 +631,13 @@ Static inspection of `skills/attendant/scripts/attendant.mjs` and `references/co
 
 Acceptance: [First-slice walkthroughs and acceptance](#first-slice-walkthroughs-and-acceptance). No broad native application or working simulation is implied.
 
+### Framework completeness pass — before Slice 2
+
+- [ ] Review one framework at a time after current model/documentation cleanup. Catalog status tracks provisional coverage; word count and file generation are not completeness evidence.
+- [ ] For each framework, establish purpose, actual concepts/categories/lenses, required/optional data, application procedure, revealed outputs, limits, worked example, and inspected sources. Resolve missing inputs before native data contracts are frozen.
+- [ ] For Schell, resolve missing lens catalog and individual lens application guidance; generic reflective questions are not equivalent coverage. Research attribution/access/reproduction limits before promising completeness.
+- [ ] Preserve overall player experience/player story and MDA A aspects as distinct lenses; do not treat one as canonical translation of the other.
+
 ### Slice 2 — C99 source core and structured inspection
 
 - [ ] Vendor reviewed/pinned LibYAML subset with license; implement bounded flat source/config/schema loading, typed scalar semantics, identity/term lookup, declared relationships, and reverse indexes. No database fork.
@@ -801,6 +744,14 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Handoff refreshed: current review `20261020T192957597Z-4698820e` uses renamed paths and matches current source. Both earlier runs/baselines remain unchanged and stale. Staged export passes; finding IDs remain stable.
 - Current offline static checks pass: six section anchors, no remote resources, unchanged script/style bytes. Headed-browser recheck blocked because agent-browser CDP discovery exceeded 100-second and 90-second command limits. Prior browser results remain explicitly historical, not relabeled as current.
 - Source rename committed as `0f7f433`; no merge/push/publication.
+
+## Model/documentation feedback pass
+
+- Model 2: consolidate hypotheses, expectations, and observations into experiments; current templates and fixture migrated. Record stage is extensible text, not a prematurely fixed transition engine.
+- Preserve original planning-hypothesis UUID as experiment; embed timing criterion with original UUID, threshold, rate, and authored nulls. Do not conflate human-planning investigation with assumed-delay timing model. Current fixture has 67 records across 16 collections.
+- Runtime prerequisites have one reference owner. Shared model/authority rules load before operation branches; collection usages keep local meaning only. Framework guides no longer link back to already-read review parent or repeat shared boilerplate.
+- Example README surfaces unauthored overall experience/player story separately from local MDA aesthetic. No new game goals or player voice invented.
+- Verification in progress. Earlier handoff/report evidence remains historical; do not relabel it current.
 
 ## Comments
 

@@ -3,7 +3,7 @@ export const packs = [
   {
     id: 'mda', title: 'Mechanics, Dynamics, Aesthetics', attribution: 'Robin Hunicke, Marc LeBlanc, Robert Zubek (2004)',
     scope: 'Trace a selected rule or intended experience through authored mechanics, runtime-behavior hypotheses, and aesthetics. Systems group mechanics; they are not dynamics.',
-    roles: ['mechanics', 'systems', 'dynamics', 'aesthetics', 'hypotheses', 'experiments', 'observations'], queries: ['mda', 'evidence', 'records'],
+    roles: ['mechanics', 'systems', 'dynamics', 'aesthetics', 'experiments'], queries: ['mda', 'evidence', 'records'],
     questions: [
       'Which specific rule could produce the named behavior, and under which player choices?',
       'Working backward from the intended feeling, which behavior would make that intention plausible?',
@@ -37,7 +37,7 @@ export const packs = [
   {
     id: 'resource-economy', title: 'Resources, flows, and feedback', attribution: 'Ernest Adams and Joris Dormans, Game Mechanics: Advanced Game Design (2012); Machinations approach',
     scope: 'Examine a selected resource and the rules that create, spend, transform, or limit it. Separate resource identity from adjustable quantities.',
-    roles: ['nouns', 'resources', 'controls', 'mechanics', 'interactions', 'measures', 'expectations', 'experiments'], queries: ['controls', 'matrix', 'records'],
+    roles: ['nouns', 'resources', 'controls', 'mechanics', 'interactions', 'measures', 'experiments'], queries: ['controls', 'matrix', 'records'],
     questions: [
       'What is the resource, what stores it, and which rule changes it?',
       'Which sources and sinks depend on player choices, elapsed time, or chance?',
@@ -88,7 +88,7 @@ export const packs = [
   {
     id: 'theory-of-fun', title: 'Learning, patterns, and fun', attribution: 'Raph Koster, A Theory of Fun for Game Design; 2003 presentation and book',
     scope: 'Ask what understanding a selected progression invites and whether repetition serves its intended experience.',
-    roles: ['skill-atoms', 'challenges', 'mechanics', 'hypotheses', 'observations'], queries: ['skill-atoms', 'routes', 'evidence'],
+    roles: ['skill-atoms', 'challenges', 'mechanics', 'experiments'], queries: ['skill-atoms', 'routes', 'evidence'],
     questions: [
       'What new pattern could the player discover here rather than merely execute faster?',
       'Does the next challenge combine familiar ideas in a new way or only change a number?',
@@ -105,7 +105,7 @@ export const packs = [
   {
     id: 'flow', title: 'Flow: challenge and capability', attribution: 'Mihaly Csikszentmihalyi, Flow: The Psychology of Optimal Experience (1990)',
     scope: 'Explore challenge relative to assumed capability, clear goals, feedback, and conditions for sustained attention in a selected encounter.',
-    roles: ['skill-atoms', 'challenges', 'mechanics', 'hypotheses', 'observations'], queries: ['skill-atoms', 'routes', 'evidence'],
+    roles: ['skill-atoms', 'challenges', 'mechanics', 'experiments'], queries: ['skill-atoms', 'routes', 'evidence'],
     questions: [
       'What makes the immediate goal understandable before the player commits to an action?',
       'What feedback lets the player judge progress while there is still time to adapt?',
@@ -122,7 +122,7 @@ export const packs = [
   {
     id: 'gameflow', title: 'GameFlow enjoyment conditions', attribution: 'Penelope Sweetser and Peta Wyeth (2005)',
     scope: 'Use applicable enjoyment conditions to question a selected mechanic, encounter, or session: concentration, challenge, skills, control, goals, feedback, immersion, and social interaction.',
-    roles: ['mechanics', 'challenges', 'controls', 'hypotheses', 'observations'], queries: ['routes', 'controls', 'evidence', 'records'],
+    roles: ['mechanics', 'challenges', 'controls', 'experiments'], queries: ['routes', 'controls', 'evidence', 'records'],
     questions: [
       'What deserves attention now, and what competing presentation could obscure it?',
       'Do controls let the player express the intended decision without unexplained loss of control?',
@@ -139,7 +139,7 @@ export const packs = [
   {
     id: 'cognitive-load', title: 'Cognitive load and unfamiliar coordination', attribution: 'John Sweller, Cognitive Load During Problem Solving: Effects on Learning (1988)',
     scope: 'Examine unfamiliar operations, concurrent coordination, problem-solving effort, and information presentation in a selected challenge.',
-    roles: ['skill-atoms', 'challenges', 'mechanics', 'observations'], queries: ['skill-atoms', 'routes', 'records'],
+    roles: ['skill-atoms', 'challenges', 'mechanics', 'experiments'], queries: ['skill-atoms', 'routes', 'records'],
     questions: [
       'What must be coordinated at the same time, rather than merely appearing somewhere in the challenge?',
       'Which parts are assumed familiar, and what source or observation supports that assumption?',
@@ -156,7 +156,7 @@ export const packs = [
   {
     id: 'working-memory', title: 'Working memory and chunking', attribution: 'George A. Miller (1956); Nelson Cowan (2001, later reassessments)',
     scope: 'Explore what must be remembered, what is visible, and how familiarity might combine elements into learned chunks.',
-    roles: ['skill-atoms', 'challenges', 'mechanics', 'observations'], queries: ['skill-atoms', 'routes', 'records'],
+    roles: ['skill-atoms', 'challenges', 'mechanics', 'experiments'], queries: ['skill-atoms', 'routes', 'records'],
     questions: [
       'Which state must the player remember after it disappears from view?',
       'Could a stable cue externalize that memory without solving the intended puzzle?',
@@ -173,7 +173,7 @@ export const packs = [
   {
     id: 'zpd-scaffolding', title: 'Supported challenge and scaffolding', attribution: 'Lev Vygotsky: zone of proximal development; David Wood, Jerome Bruner, Gail Ross: scaffolding/tutoring (1976)',
     scope: 'Explore temporary support, independent performance, demonstrations, practice, and withdrawal of help in a selected learning path.',
-    roles: ['skill-atoms', 'challenges', 'levels', 'observations'], queries: ['skill-atoms', 'routes', 'records'],
+    roles: ['skill-atoms', 'challenges', 'levels', 'experiments'], queries: ['skill-atoms', 'routes', 'records'],
     questions: [
       'What could the learner attempt independently, and what currently needs support? Which part is only an assumption?',
       'Could a hint reveal a relevant feature without choosing the whole solution?',
@@ -190,7 +190,7 @@ export const packs = [
   {
     id: 'self-determination', title: 'Self-Determination Theory', attribution: 'Edward Deci, Richard Ryan, and collaborators',
     scope: 'Question support for autonomy, competence, and relatedness in a selected activity without inferring an individual psychological state.',
-    roles: ['aesthetics', 'mechanics', 'dynamics', 'challenges', 'hypotheses', 'observations'], queries: ['mda', 'routes', 'evidence', 'records'],
+    roles: ['aesthetics', 'mechanics', 'dynamics', 'challenges', 'experiments'], queries: ['mda', 'routes', 'evidence', 'records'],
     questions: [
       'What choice is meaningful to the intended experience rather than only cosmetically different?',
       'Which constraint helps the player act intentionally, and which might feel controlling?',
@@ -207,7 +207,7 @@ export const packs = [
   {
     id: 'quantic-foundry', title: 'Published gamer-motivation vocabulary', attribution: 'Quantic Foundry, Gamer Motivation Model and 2015 profile-v2 explanation',
     scope: 'Compare an intended experience with activities that might support interests described by the published multidimensional motivation vocabulary.',
-    roles: ['aesthetics', 'mechanics', 'dynamics', 'challenges', 'hypotheses', 'observations'], queries: ['mda', 'evidence', 'records'],
+    roles: ['aesthetics', 'mechanics', 'dynamics', 'challenges', 'experiments'], queries: ['mda', 'evidence', 'records'],
     vocabulary: 'Action: Destruction/Excitement; Social: Competition/Community; Mastery: Challenge/Strategy; Achievement: Completion/Power; Creativity: Discovery/Design; Immersion: Fantasy/Story. These are attributed model labels, not workbench scores.',
     questions: [
       'Which named interest is actually part of the current design intention?',
@@ -225,7 +225,7 @@ export const packs = [
   {
     id: 'four-keys', title: 'Four Keys to Fun', attribution: 'Nicole Lazzaro / XEODesign; Why We Play Games research (2004)',
     scope: 'Explore possible routes to emotion through challenge/triumph, curiosity, meaningful engagement, and social amusement.',
-    roles: ['dynamics', 'aesthetics', 'interactions', 'observations'], queries: ['mda', 'matrix', 'evidence', 'records'],
+    roles: ['dynamics', 'aesthetics', 'interactions', 'experiments'], queries: ['mda', 'matrix', 'evidence', 'records'],
     vocabulary: 'Hard Fun, Easy Fun, Serious Fun, People Fun are Lazzaro’s labels. They are not synonyms for MDA aesthetics or Koster’s learning account.',
     questions: [
       'What sequence could make overcoming this obstacle feel like earned triumph?',
@@ -243,7 +243,7 @@ export const packs = [
   {
     id: 'bartle', title: 'MUD participation patterns', attribution: 'Richard A. Bartle, Hearts, Clubs, Diamonds, Spades: Players Who Suit MUDs (1996)',
     scope: 'Use historically situated player/world and acting/interacting distinctions to question activities and tensions in multiplayer designs.',
-    roles: ['mechanics', 'dynamics', 'challenges', 'decisions', 'observations'], queries: ['mda', 'decisions', 'evidence', 'records'],
+    roles: ['mechanics', 'dynamics', 'challenges', 'decisions', 'experiments'], queries: ['mda', 'decisions', 'evidence', 'records'],
     vocabulary: 'Achievers, Explorers, Socialisers, Killers describe approaches discussed in multiplayer MUD research; they are not universal identities.',
     questions: [
       'Which activities concern changing the world, understanding it, interacting with people, or exerting influence over them?',
@@ -279,7 +279,7 @@ export const packs = [
   {
     id: 'schell', title: 'Contextual reflective design questions', attribution: 'Jesse Schell, The Art of Game Design: A Book of Lenses',
     scope: 'Reframe a selected design question through concrete player experience, rules, alternatives, and consequences. This is original reflective guidance, not Schell’s deck.',
-    roles: ['mechanics', 'aesthetics', 'challenges', 'decisions', 'hypotheses'], queries: ['decisions', 'mda', 'records'],
+    roles: ['mechanics', 'aesthetics', 'challenges', 'decisions', 'experiments'], queries: ['decisions', 'mda', 'records'],
     questions: [
       'What does the player need to notice, decide, and feel at this exact moment?',
       'Which rule is essential to that experience, and what would change if it were removed?',
@@ -296,7 +296,7 @@ export const packs = [
   {
     id: 'playcentric', title: 'Playcentric design and evidence', attribution: 'Tracy Fullerton, Game Design Workshop: A Playcentric Approach to Creating Innovative Games',
     scope: 'Connect intended player experience with a testable question, prototype, observations, and resulting design choices.',
-    roles: ['aesthetics', 'hypotheses', 'experiments', 'observations', 'decisions', 'measures', 'expectations'], queries: ['evidence', 'decisions', 'records'],
+    roles: ['aesthetics', 'experiments', 'decisions', 'measures'], queries: ['evidence', 'decisions', 'records'],
     questions: [
       'What experience goal is concrete enough to guide a prototype choice?',
       'Which uncertain claim matters most to the next decision?',

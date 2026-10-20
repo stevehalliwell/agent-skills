@@ -20,13 +20,11 @@ Attribution: Richard A. Bartle, Hearts, Clubs, Diamonds, Spades: Players Who Sui
 
 Use historically situated player/world and acting/interacting distinctions to question activities and tensions in multiplayer designs.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `mechanics`, `dynamics`, `challenges`, `decisions`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `mechanics`, `dynamics`, `challenges`, `decisions`, `experiments`.
 
-Available recipes: `query mda`; `query decisions`; `query evidence`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query mda`; `query decisions`; `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -84,5 +82,3 @@ No universal player typing, percentage allocation, psychological diagnosis, or r
 - [Players Who Suit MUDs — original-text mirror](https://www.majormud.com/pwsm.html)
 
 Access checked 2026-10-19: Original article mirror inspected, including MUD scope, four approaches, and movement between them.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

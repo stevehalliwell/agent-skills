@@ -20,13 +20,11 @@ Attribution: Staffan Björk, Sus Lundgren, Jussi Holopainen (2003), and later Bj
 
 Compare a selected structure with a cited pattern or contrasting configuration. Use patterns as exploratory vocabulary, not required tags.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `mechanics`, `systems`, `dynamics`, `decisions`. Read actual role mapping and live schema/usage before writing.
+Roles: `mechanics`, `systems`, `dynamics`, `decisions`.
 
-Available recipes: `query mda`; `query decisions`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query mda`; `query decisions`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -83,5 +81,3 @@ No exhaustive pattern catalog, automatic recognition, or copied pattern entries.
 - [Gameplay Design Patterns catalog](https://gdp.cse.chalmers.se/index.php?title=Main_Page)
 
 Access checked 2026-10-19: DiGRA abstract inspected. External catalog is a further-reading link, not a bundled database or a claim of full inspection.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

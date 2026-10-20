@@ -20,13 +20,11 @@ Attribution: Lev Vygotsky: zone of proximal development; David Wood, Jerome Brun
 
 Explore temporary support, independent performance, demonstrations, practice, and withdrawal of help in a selected learning path.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `skill-atoms`, `challenges`, `levels`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `levels`, `experiments`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -83,5 +81,3 @@ ZPD and later scaffolding are related but not identical. No teaching prerequisit
 - [The Role of Tutoring in Problem Solving](https://doi.org/10.1111/j.1469-7610.1976.tb00381.x)
 
 Access checked 2026-10-19: Oxford reference blocked; ZPD definition checked through source-linked APA/academic search. Tutoring DOI returned 406; PDF extraction incomplete. Full studies not claimed.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

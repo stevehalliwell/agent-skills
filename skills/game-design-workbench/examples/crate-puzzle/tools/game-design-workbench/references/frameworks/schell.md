@@ -20,13 +20,11 @@ Attribution: Jesse Schell, The Art of Game Design: A Book of Lenses
 
 Reframe a selected design question through concrete player experience, rules, alternatives, and consequences. This is original reflective guidance, not Schell’s deck.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `mechanics`, `aesthetics`, `challenges`, `decisions`, `hypotheses`. Read actual role mapping and live schema/usage before writing.
+Roles: `mechanics`, `aesthetics`, `challenges`, `decisions`, `experiments`.
 
-Available recipes: `query decisions`; `query mda`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query decisions`; `query mda`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -82,5 +80,3 @@ No copied lens-card wording, numbering, complete deck, or claim of comprehensive
 - [The Art of Game Design — official page](https://schellgames.com/art-of-game-design)
 
 Access checked 2026-10-19: Official Art of Game Design page inspected; book/deck content not reproduced or reviewed in full.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

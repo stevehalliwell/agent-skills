@@ -20,13 +20,11 @@ Attribution: Raph Koster, A Theory of Fun for Game Design; 2003 presentation and
 
 Ask what understanding a selected progression invites and whether repetition serves its intended experience.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `skill-atoms`, `challenges`, `mechanics`, `hypotheses`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `mechanics`, `experiments`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query evidence`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query evidence`.
 
 ## Working concepts
 
@@ -83,5 +81,3 @@ No fun score. Learning is a perspective, not an exhaustive explanation of enjoym
 - [Author introduction to 2003 talk](https://www.raphkoster.com/gaming/theoryoffun.shtml)
 
 Access checked 2026-10-19: Official book site and author presentation introduction inspected; full book/presentation not extracted.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

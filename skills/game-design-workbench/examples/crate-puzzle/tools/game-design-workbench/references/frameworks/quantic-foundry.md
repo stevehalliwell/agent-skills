@@ -20,13 +20,11 @@ Attribution: Quantic Foundry, Gamer Motivation Model and 2015 profile-v2 explana
 
 Compare an intended experience with activities that might support interests described by the published multidimensional motivation vocabulary.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `aesthetics`, `mechanics`, `dynamics`, `challenges`, `hypotheses`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `aesthetics`, `mechanics`, `dynamics`, `challenges`, `experiments`.
 
-Available recipes: `query mda`; `query evidence`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query mda`; `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -85,5 +83,3 @@ No questionnaire, preference scoring, cohort collection, audience dataset, perso
 - [How We Developed the Gamer Motivation Profile v2](https://quanticfoundry.com/2015/07/20/how-we-developed-the-gamer-motivation-profile-v2/)
 
 Access checked 2026-10-19: Model page returned 403. Published labels and paired groups checked against source-linked 2015 explanation search; full questionnaire/scoring not accessed.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

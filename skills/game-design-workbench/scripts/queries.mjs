@@ -12,7 +12,7 @@ export const queries = {
   decisions: { needs: { decisions: ['status', 'record_kind', 'alternative_group', 'subjects'] }, sql: m => `SELECT name, desc, status, record_kind, alternative_group, subjects, source_path FROM ${quote(m.decisions)} ORDER BY name` },
   glossary: { needs: { glossary: ['term', 'aliases', 'documentation', 'status'] }, sql: m => `SELECT name, term, aliases, documentation, status, source_path FROM ${quote(m.glossary)} ORDER BY name` },
   controls: { needs: { controls: ['status', 'value_type', 'value', 'expression', 'unit'] }, sql: m => `SELECT name, value_type, value, expression, unit, source_path FROM ${quote(m.controls)} WHERE status='accepted' ORDER BY name` },
-  evidence: { needs: { hypotheses: ['status', 'observations', 'experiments'], observations: ['status', 'source'] }, sql: m => `SELECT 'hypotheses' AS role, name, desc, status, source_path FROM ${quote(m.hypotheses)} UNION ALL SELECT 'observations', name, desc, status, source_path FROM ${quote(m.observations)} ORDER BY role,name` }
+  evidence: { needs: { experiments: ['status', 'stage', 'experiment_kind'] }, sql: m => `SELECT name, desc, status, stage, experiment_kind, source_path FROM ${quote(m.experiments)} ORDER BY name` }
 };
 export async function projected(root, operation) {
   const before = await snapshot(root);

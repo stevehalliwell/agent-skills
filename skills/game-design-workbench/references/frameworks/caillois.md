@@ -20,13 +20,11 @@ Attribution: Roger Caillois, Man, Play and Games (1958; English translation by M
 
 Explore competition, chance, make-believe, vertigo, and movement between free improvisation and rule-bound challenge.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `mechanics`, `dynamics`, `challenges`, `aesthetics`. Read actual role mapping and live schema/usage before writing.
+Roles: `mechanics`, `dynamics`, `challenges`, `aesthetics`.
 
-Available recipes: `query mda`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query mda`; `query routes`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -84,5 +82,3 @@ Historical conceptual lens, not a numeric design profile or universal taxonomy t
 - [Man, Play, and Games — book record](https://books.google.com/books/about/Man_Play_and_Games.html?id=bDjOPsjzfC4C)
 
 Access checked 2026-10-19: Google Books publisher description inspected; full translated book not accessed.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.

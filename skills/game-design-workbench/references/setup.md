@@ -1,8 +1,8 @@
 # Setup, binding, and updates
 
-Setup is a separate authorized operation, not a side effect of opening the skill. Markdown stays authoritative; `.attendant/` is disposable. Installed `attendant` skill and Node.js `>=24.10.0` required. Load Attendant; set `GD_ATTENDANT_SKILL` to its absolute directory. Never copy its code or guidance into workbench. No network/service is needed for installed tools.
-
 ## Plan before apply
+
+
 
 1. Inspect target root, existing registry/schemas/usages, manifest, and unconfigured Markdown. Read required Attendant skill's `references/collections.md`. Existing source stays in place.
 2. Resolve `<workbench>` to supplied skill folder. Prepare combined proposal:
@@ -12,7 +12,7 @@ Setup is a separate authorized operation, not a side effect of opening the skill
    ```
 
    Plan lists new collections, role mapping, exact file changes, dependency checks, conflicts, and candidate sources needing migration. Plan itself writes nothing. Default mapping: `game-design/<role>` configured as `<role>`.
-3. Present scope: 19 empty collections; live schema/usage/body templates; project-local `tools/game-design-workbench/` snapshot; manifest; managed `AGENTS.md` block; generated-cache ignore rules. No tutorial records are added. Ask for combined proposal approval using focused choice. Approval must include any source migration/fresh decision.
+3. Present scope: empty role collections; live schema/usage/body templates; project-local `tools/game-design-workbench/` snapshot; manifest; managed `AGENTS.md` block; generated-cache ignore rules. No tutorial records are added. Ask for combined proposal approval using focused choice. Approval must include any source migration/fresh decision.
 4. Apply same options with returned content-derived plan ID:
 
    ```sh
@@ -41,6 +41,12 @@ An existing partial model can still be discussed without setup. Helpers needing 
 Earlier snapshots used `skills` for game-design skill atoms. Current role/default alias, directory, and query are `skill-atoms`; no old query alias remains. Existing legacy manifests fail `COLLECTION_RENAME_REQUIRED` before setup can create a duplicate collection.
 
 Explicitly migrate collection directory/config, schema references, record references, glossary targets, role mapping, and managed guidance together. Preserve record UUIDs and frozen reports/baselines; old evidence remains historical/stale. Do not bypass local-edit guards by changing hashes. Canonical repository maintainer tool `scripts/rename-workbench-skill-atoms.mjs --help` handles only its fixture/source, not arbitrary user projects.
+
+## Experiment consolidation
+
+Model version 2 replaces separate hypotheses, expectations, and observations collections with experiment headings and frontmatter `stage`. Old installed roles fail `EXPERIMENT_MIGRATION_REQUIRED` before setup writes. Explicitly migrate records/references/schema/registry and retain source identities, criteria, provenance, and authored unknowns. Do not merely remove roles from manifest or delete collections to bypass this gate.
+
+Canonical maintainer migration `scripts/consolidate-workbench-experiments.mjs` operates only on this repository's pristine fixture; not arbitrary user projects. Older saved reports remain historical/stale. Native execution and structured expectation analysis contracts need refinement before implementation.
 
 ## Update and local edits
 

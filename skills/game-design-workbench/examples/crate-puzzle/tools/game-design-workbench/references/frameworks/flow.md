@@ -20,13 +20,11 @@ Attribution: Mihaly Csikszentmihalyi, Flow: The Psychology of Optimal Experience
 
 Explore challenge relative to assumed capability, clear goals, feedback, and conditions for sustained attention in a selected encounter.
 
-Use only when this lens is selected. Follow [review operation](../review.md); do not repair source during review.
-
 ## Inputs and query support
 
-Roles: `skill-atoms`, `challenges`, `mechanics`, `hypotheses`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `mechanics`, `experiments`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query evidence`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query evidence`.
 
 ## Working concepts
 
@@ -83,5 +81,3 @@ No required cohort/profile dataset, calibrated capability curve, flow score, anx
 - [Flow Engine Framework — later research context](https://pmc.ncbi.nlm.nih.gov/articles/PMC5973526/)
 
 Access checked 2026-10-19: Publisher requests returned 403. Bibliographic identity and broad conditions checked through source-linked search summaries; full book not read.
-
-Guidance is independently authored. No book, proprietary deck, questionnaire, or scoring method is reproduced.
