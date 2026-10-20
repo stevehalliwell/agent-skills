@@ -751,6 +751,13 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Generate a small C99 interaction simulation from supplied prose, recording assumptions and using current controls.
 - Demonstrate authorized Git checkpoint and comparison/recovery workflow without a document-level edit log or loss of unrelated changes.
 
+## Implementation checks
+
+- Plan checkpoint: `2a69e10`.
+- Step 2: generated 19 schema/usage/body-template sets and 68 tutorial records; `attendant validate --strict` returned zero diagnostics/corrections. Observation collection intentionally empty; analytical timing reference is not executed evidence.
+- Vendored unchanged Attendant runner plus YAML dependency and license notices for project-local operation. No new database/query engine.
+- Remaining: tools, researched packs/entrypoint, integrated tests, offline report.
+
 ## Comments
 
 - Unrelated untracked `skills/unity-cli/` remains untouched. Starting brief and supplied framework reference remain untracked.
