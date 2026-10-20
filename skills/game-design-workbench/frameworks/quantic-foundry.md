@@ -14,7 +14,7 @@ Attribution: Quantic Foundry, Gamer Motivation Model and 2015 profile-v2 explana
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -77,7 +77,7 @@ Discuss intended interests without surveyed profiles. If no interest is supplied
 
 No questionnaire, preference scoring, cohort collection, audience dataset, personality inference, or single player type. Published empirical model does not validate a workbench-specific support claim.
 
-## Sources
+## References
 
 - [Gamer Motivation Model](https://quanticfoundry.com/gamer-motivation-model/)
 - [How We Developed the Gamer Motivation Profile v2](https://quanticfoundry.com/2015/07/20/how-we-developed-the-gamer-motivation-profile-v2/)

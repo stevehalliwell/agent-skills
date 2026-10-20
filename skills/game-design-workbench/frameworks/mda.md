@@ -14,7 +14,7 @@ Attribution: Robin Hunicke, Marc LeBlanc, Robert Zubek (2004)
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Discuss intention without complete links. Mark disconnected records as unknown/u
 
 A declared mechanic–dynamic–aesthetic chain is not causal proof or emotional measurement. Declared-link inventories show relationships; disconnected-path interpretation remains agent work. Do not demand all eight familiar aesthetic labels.
 
-## Sources
+## References
 
 - [MDA: A Formal Approach to Game Design and Game Research](https://aaai.org/papers/ws04-04-001-mda-a-formal-approach-to-game-design-and-game-research/)
 

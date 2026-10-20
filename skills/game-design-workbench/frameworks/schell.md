@@ -14,7 +14,7 @@ Attribution: Jesse Schell, The Art of Game Design: A Book of Lenses
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Start from supplied facts and scoped alternatives. Unknowns become questions/hyp
 
 No copied lens-card wording, numbering, complete deck, or claim of comprehensive book coverage. Do not use this pack as permission to run other framework reviews.
 
-## Sources
+## References
 
 - [The Art of Game Design — official page](https://schellgames.com/art-of-game-design)
 

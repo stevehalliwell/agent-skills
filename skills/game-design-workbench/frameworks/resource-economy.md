@@ -14,7 +14,7 @@ Attribution: Ernest Adams and Joris Dormans, Game Mechanics: Advanced Game Desig
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ A missing resource extension does not prevent discussing a noun. Missing flow di
 
 This release inventories named game configuration values and formula text; it does not evaluate formulas, resolve units, draw directional flow graphs, or execute simulations. Flow direction stays in rule prose. At most one accepted resource extension per noun is a source invariant to inspect manually here.
 
-## Sources
+## References
 
 - [Game Mechanics: Advanced Game Design — publication record](https://research.hva.nl/en/publications/game-mechanics-advanced-game-design/)
 

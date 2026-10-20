@@ -14,7 +14,7 @@ Attribution: Lev Vygotsky: zone of proximal development; David Wood, Jerome Brun
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Missing support is a question, not automatic failure. Proceed without level reco
 
 ZPD and later scaffolding are related but not identical. No teaching prerequisite, developmental diagnosis, or proof that a player cannot succeed without a declared introduction. Routes are declared structural opportunities, not gameplay reachability.
 
-## Sources
+## References
 
 - [Zone of proximal development — Oxford Reference](https://www.oxfordreference.com/display/10.1093/oi/authority.20110803133528287)
 - [The Role of Tutoring in Problem Solving](https://doi.org/10.1111/j.1469-7610.1976.tb00381.x)

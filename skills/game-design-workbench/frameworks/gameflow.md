@@ -14,7 +14,7 @@ Attribution: Penelope Sweetser and Peta Wyeth (2005)
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Mark social criteria inapplicable for an intentionally solo experience. Missing 
 
 These are original questions, not a reproduction or scoring implementation of the published evaluation instrument. No aggregate enjoyment score. Flow theory and GameFlow are distinct. Control-variable records are named game configuration, not a complete account of player agency or input controls.
 
-## Sources
+## References
 
 - [GameFlow: A Model for Evaluating Player Enjoyment in Games](https://doi.org/10.1145/1077246.1077253)
 

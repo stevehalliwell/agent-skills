@@ -164,11 +164,15 @@ Possible package shape:
 ```text
 skills/game-design-workbench/
   SKILL.md                # when to use; workflow; core commands
+  workflows/
+    model.md              # shared domain/ownership contract
+    commands.md           # existing tools and experiment checkpoint workflow
+    ...                   # setup, capture, inspection, review, intent
+  frameworks/
+    catalog.json          # discovery index
+    ...                   # one application guide per framework
   references/
-    model.md              # domain vocabulary and relationship meaning
-    diagnostics.md        # checks and their interpretation
-    experiments.md        # sim contract / measurement conventions
-    attendant.md          # how to coexist with Attendant
+    <framework>/          # supporting material; not workflow/application guidance
   scripts/
     ...                   # small C99 core, CLI and optional viewer
   examples/

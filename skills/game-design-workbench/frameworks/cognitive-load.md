@@ -14,7 +14,7 @@ Attribution: John Sweller, Cognitive Load During Problem Solving: Effects on Lea
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Ask about concurrent demand and familiarity when absent. Preserve them as assump
 
 A required skill-atom list does not establish simultaneous demand. No count-based cognitive-load score or diagnosis. Game-design application is a hypothesis; original laboratory findings are not calibrated mechanic-count limits.
 
-## Sources
+## References
 
 - [Cognitive Load During Problem Solving: Effects on Learning](https://doi.org/10.1207/s15516709cog1202_4)
 

@@ -14,7 +14,7 @@ Attribution: Richard A. Bartle, Hearts, Clubs, Diamonds, Spades: Players Who Sui
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -77,7 +77,7 @@ If multiplayer participation is absent, report limited applicability and stop th
 
 No universal player typing, percentage allocation, psychological diagnosis, or requirement to serve every category. Do not translate Killers directly into all combat or competitive play without context.
 
-## Sources
+## References
 
 - [Players Who Suit MUDs — original-text mirror](https://www.majormud.com/pwsm.html)
 

@@ -14,7 +14,7 @@ Attribution: Staffan Björk, Sus Lundgren, Jussi Holopainen (2003), and later Bj
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Proceed from described rule relationships without pattern labels. If external pa
 
 No exhaustive pattern catalog, automatic recognition, or copied pattern entries. Cite a specific external pattern only after inspecting that source; title similarity is not evidence of implementation.
 
-## Sources
+## References
 
 - [Game Design Patterns — DiGRA](https://dl.digra.org/index.php/dl/article/view/60)
 - [Gameplay Design Patterns catalog](https://gdp.cse.chalmers.se/index.php?title=Main_Page)

@@ -14,7 +14,7 @@ Attribution: Tracy Fullerton, Game Design Workshop: A Playcentric Approach to Cr
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Empty observations honestly mean no observations recorded. Discuss test design w
 
 A proposed experiment is not execution evidence. Simulated predictions are not observed play. No automatic repairs, playtest execution, or simulation. The evidence query is an inventory; inspect linked record bodies for full method and evidence trail.
 
-## Sources
+## References
 
 - [Game Design Workshop — official site](https://www.gamedesignworkshop.com/)
 

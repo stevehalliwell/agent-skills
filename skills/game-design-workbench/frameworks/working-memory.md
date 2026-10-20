@@ -14,7 +14,7 @@ Attribution: George A. Miller (1956); Nelson Cowan (2001, later reassessments)
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Unspecified visibility and familiarity remain unknown. Do not equate number of s
 
 Never use four, seven, or another item count as universal failure/capacity threshold. Chunk size depends on learning and task. No player-capacity dataset or computed memory score.
 
-## Sources
+## References
 
 - [The Magical Number Seven, Plus or Minus Two](https://psychclassics.yorku.ca/Miller/)
 - [The Magical Number 4 in Short-Term Memory](https://pubmed.ncbi.nlm.nih.gov/11515286/)

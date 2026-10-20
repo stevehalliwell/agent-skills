@@ -14,7 +14,7 @@ Attribution: Raph Koster, A Theory of Fun for Game Design; 2003 presentation and
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Use authored skill/challenge descriptions when progression links are incomplete.
 
 No fun score. Learning is a perspective, not an exhaustive explanation of enjoyment. Repeated actions can support mastery, comfort, expression, or other intentions; do not label repetition defective without context.
 
-## Sources
+## References
 
 - [A Theory of Fun — official site](https://www.theoryoffun.com/)
 - [Author introduction to 2003 talk](https://www.raphkoster.com/gaming/theoryoffun.shtml)

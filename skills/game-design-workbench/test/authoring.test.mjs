@@ -32,16 +32,17 @@ test('shipped templates and example contain readable collection contracts and co
 });
 
 test('manual framework catalog indexes all 18 provisional guides', async () => {
-  const catalog = JSON.parse(await text(join(home, 'references/frameworks/catalog.json')));
+  const catalog = JSON.parse(await text(join(home, 'frameworks/catalog.json')));
   assert.equal(catalog.length, 18);
   assert.equal(new Set(catalog.map(item => item.id)).size, 18);
-  assert.deepEqual((await readdir(join(home, 'references/frameworks'))).filter(name => name.endsWith('.md')).sort(), catalog.map(item => `${item.id}.md`).sort());
+  assert.deepEqual((await readdir(join(home, 'frameworks'))).filter(name => name.endsWith('.md')).sort(), catalog.map(item => `${item.id}.md`).sort());
   for (const item of catalog) {
-    assert.equal(item.path, `references/frameworks/${item.id}.md`);
+    assert.equal(item.path, `frameworks/${item.id}.md`);
     assert.equal(item.status, 'provisional');
     const guide = await text(join(home, item.path));
     assert.ok(guide.startsWith(`# ${item.title}\n`));
-    assert.match(guide, /## Sources/);
+    assert.equal(guide.match(/^## References$/gm)?.length, 1);
+    assert.equal([...guide.matchAll(/^## (.+)$/gm)].at(-1)?.[1], 'References');
     assert.match(guide, /Inspection topics:/);
   }
 });

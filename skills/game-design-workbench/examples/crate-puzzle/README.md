@@ -24,7 +24,7 @@ SELECT name, rank, prerequisites FROM "skill-atoms"
 WHERE status = 'accepted' ORDER BY name;
 ```
 
-Read [inspection topics](../../references/inspect.md) for cases, routes, MDA links, configuration, glossary, and experiments. Inspect non-correcting validation before allowing query preparation to touch source. Use source directly when projection would cause unrelated changes.
+Read [inspection topics](../../workflows/inspect.md) for cases, routes, MDA links, configuration, glossary, and experiments. Inspect non-correcting validation before allowing query preparation to touch source. Use source directly when projection would cause unrelated changes.
 
 Expected: coordinate rank 2; plan-push null; switch-chain ranks 3. Three distinct crate/push cases. Closed-exit walking unknown; wall activation not applicable. Experiments have proposed stage, not completed tests. Declared glossary maps box to crate and shove to push; `shoves` is not a declared alias.
 
@@ -44,4 +44,4 @@ Expected: coordinate rank 2; plan-push null; switch-chain ranks 3. Three distinc
 
 ## Saved history
 
-Earlier baselines and dated reviews remain unchanged/historical. Their hashes and CLI-era metadata do not require retaining old tooling. For current review, follow [review workflow](../../references/review.md); record commit plus relevant draft paths, and explicitly select an actual committed intention only when comparing intent. Do not relabel old evidence as freshly run.
+Earlier baselines and dated reviews remain unchanged/historical. Their hashes and CLI-era metadata do not require retaining old tooling. For current review, follow [review workflow](../../workflows/review.md); record commit plus relevant draft paths, and explicitly select an actual committed intention only when comparing intent. Do not relabel old evidence as freshly run.

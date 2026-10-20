@@ -14,7 +14,7 @@ Attribution: Related meaningful-play concepts: Katie Salen Tekinbaş and Eric Zi
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Keep blank cells unknown. Preserve explicit excluded/not_applicable cases and de
 
 Matrix rows expand only explicitly declared applicable nouns. Missing Cartesian pairs are not synthesized or condemned. Shared mechanics own common rules; cases own their conditions/consequences/feedback. No automatic reachability or exhaustive coverage proof.
 
-## Sources
+## References
 
 - [Rules of Play — MIT Press](https://mitpress.mit.edu/9780262240451/rules-of-play/)
 - [Meaningful Play teaching excerpt](https://sites.cc.gatech.edu/classes/AY2006/cs4455_spring/documents/sz-unit11.pdf)

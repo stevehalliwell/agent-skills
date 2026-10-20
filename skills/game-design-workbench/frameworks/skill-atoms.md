@@ -14,7 +14,7 @@ Attribution: Daniel Cook, The Chemistry of Game Design (original article; 2021 r
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Keep unknown ranks unknown and late roots visible. Optional levels are not requi
 
 Skills use AND prerequisites; absent/null/empty arrays declare no links. Rank is nullable signed conceptual placement, not physical level or graph depth. Recipes expose links/ranks/routes; cycle, rank-conflict, and all-route opportunity checks remain manual until C99 analysis ships. Opportunity does not prove acquired mastery.
 
-## Sources
+## References
 
 - [The Chemistry of Game Design](https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/)
 

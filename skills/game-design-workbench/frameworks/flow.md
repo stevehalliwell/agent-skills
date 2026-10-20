@@ -14,7 +14,7 @@ Attribution: Mihaly Csikszentmihalyi, Flow: The Psychology of Optimal Experience
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ State capability assumptions explicitly. Missing observations leave experience u
 
 No required cohort/profile dataset, calibrated capability curve, flow score, anxiety score, or boredom score. Keep separate from GameFlow. Authored challenge/rank numbers do not measure a player state.
 
-## Sources
+## References
 
 - [Flow — publisher](https://www.harpercollins.com/products/flow-mihaly-csikszentmihalyi)
 - [Flow Engine Framework — later research context](https://pmc.ncbi.nlm.nih.gov/articles/PMC5973526/)

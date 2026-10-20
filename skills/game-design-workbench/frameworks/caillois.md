@@ -14,7 +14,7 @@ Attribution: Roger Caillois, Man, Play and Games (1958; English translation by M
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -77,7 +77,7 @@ Absent forms can be deliberate boundaries. Ask for rules/presentation context ra
 
 Historical conceptual lens, not a numeric design profile or universal taxonomy test. No requirement to include competition, randomness, role-play, or vertigo.
 
-## Sources
+## References
 
 - [Man, Play, and Games — book record](https://books.google.com/books/about/Man_Play_and_Games.html?id=bDjOPsjzfC4C)
 

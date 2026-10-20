@@ -14,7 +14,7 @@ Attribution: Edward Deci, Richard Ryan, and collaborators
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -75,7 +75,7 @@ Keep motivation hypotheses explicit. No observations means unverified support, n
 
 Autonomy, competence, and relatedness are common concepts here, not mandatory profile records or independent fun-point scores. Mechanics alone do not measure need satisfaction. Solo play does not automatically imply a relatedness defect.
 
-## Sources
+## References
 
 - [Self-Determination Theory — official overview](https://selfdeterminationtheory.org/theory/)
 

@@ -339,7 +339,7 @@ Not yet established by execution: authored pack quality/source research, schema/
 
 ### Table responsibilities
 
-Current ownership, lifecycle, and partial-state contract: [model reference](skills/game-design-workbench/references/model.md). Distribution field/usage/template authority: [shipped templates](skills/game-design-workbench/templates/), edited directly. Live project schema/usage remains authoritative after setup. Do not keep another field dictionary in this task record.
+Current ownership, lifecycle, and partial-state contract: [model reference](skills/game-design-workbench/workflows/model.md). Distribution field/usage/template authority: [shipped templates](skills/game-design-workbench/templates/), edited directly. Live project schema/usage remains authoritative after setup. Do not keep another field dictionary in this task record.
 
 Model version 2 consolidates investigation data into experiments. Future executable criteria encoding needs refinement as experiment work proceeds. Earlier outline/research files are planning inputs, not current field contracts.
 
@@ -349,7 +349,7 @@ New collections require distinct source ownership and an example showing why exi
 
 All 18 packs ship as attributed, independently authored guidance in first slice, with necessary collection templates and query helpers. Reuse Attendant queries or direct record inspection where sufficient; add C99 helpers when needed and justify `.mjs` exceptions. Each pack declares scope, useful source records, original questions, available queries, evidence limits, and missing-data behavior. Empty optional tables do not block conceptual discussion; reports identify unavailable data/checks. Do not add one collection per theory or require framework labels on every record.
 
-Each [framework guide](skills/game-design-workbench/references/frameworks/) owns its scope, relevant inputs/inspection topics, questions, and source limits. Edit guides directly; catalog is discovery index, not an executable recipe or JavaScript content mirror.
+Each [framework guide](skills/game-design-workbench/frameworks/) owns its scope, relevant inputs/inspection topics, questions, and source limits. Edit guides directly; catalog is discovery index, not an executable recipe or JavaScript content mirror.
 
 Section E perspectives are cross-cutting prompts attached to relevant packs, not extra mandatory datasets or an all-perspectives command. Framework-specific tools must name their actual query and required records; prefer shared C99 operations. Justify any dedicated `.mjs` query and document Node requirement. A question-only pack is usable without pretending its interpretive review is implemented in C.
 
@@ -645,7 +645,7 @@ Implemented delivery shape:
 - [x] Agent preserves existing owner/body/navigation during setup and explicit header changes. Project instructions record binding; no managed-link installer.
 - [x] Use ordinary Git log/show/diff for selected intent comparison and historical citations. No custom context/history/snapshot service. Earlier scripted tests remain historical evidence, not current interfaces.
 
-Current source/workflow contract: [concept and working mode](skills/game-design-workbench/references/concept.md). Implementation verification recorded after checks below. Framework packs remain provisional; framework completeness pass and Slice 2 have not started.
+Current source/workflow contract: [concept and working mode](skills/game-design-workbench/workflows/concept.md). Implementation verification recorded after checks below. Framework packs remain provisional; framework completeness pass and Slice 2 have not started.
 
 ### Collection cleanup — before further review
 
@@ -664,6 +664,7 @@ Current source/workflow contract: [concept and working mode](skills/game-design-
 
 ### Framework completeness pass — before Slice 2
 
+- [x] Separate `workflows/`, `frameworks/`, and supporting `references/<framework>/`. All 18 guides end with References. Reserve 13 non-book/mixed-source folders, including Flow and Theory of Fun; `.gitkeep` only, no source text or reuse permission implied. Updated links/catalog/tests; 3/3 tests, frontmatter, local links, and exact folder/marker checks pass. No reference acquisition or framework completeness review performed.
 - [ ] Review one framework at a time after current model/documentation cleanup. Catalog status tracks provisional coverage; word count and file generation are not completeness evidence.
 - [ ] For each framework, establish purpose, actual concepts/categories/lenses, required/optional data, application procedure, revealed outputs, limits, worked example, and inspected sources. Resolve missing inputs before native data contracts are frozen.
 - [ ] For Schell, resolve missing lens catalog and individual lens application guidance; generic reflective questions are not equivalent coverage. Research attribution/access/reproduction limits before promising completeness.

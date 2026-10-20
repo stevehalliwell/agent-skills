@@ -14,7 +14,7 @@ Attribution: Nicole Lazzaro / XEODesign; Why We Play Games research (2004)
 - [Evidence and counterchecks](#evidence-and-counterchecks)
 - [Common traps](#common-traps)
 - [Missing data and evidence limits](#missing-data-and-evidence-limits)
-- [Sources](#sources)
+- [References](#references)
 
 ## Scope
 
@@ -77,7 +77,7 @@ Keep undeclared social experience inapplicable when appropriate. Do not treat mi
 
 No category quota, emotional score, copied questionnaire, or rule that every game needs every key. Links to emotional categories remain interpretations until supported by relevant evidence.
 
-## Sources
+## References
 
 - [The 4 Keys 2 Fun](https://www.nicolelazzaro.com/the4-keys-to-fun/)
 
