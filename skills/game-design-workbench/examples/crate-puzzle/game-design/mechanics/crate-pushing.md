@@ -1,21 +1,27 @@
 ---
-id: 01a15175-3c00-7115-8cde-8cb37cfe1ff1
-name: crate-pushing
-created_at: 2026-10-19T00:00:00.000Z
-desc: Crate pushing rule
-tags: []
-status: accepted
-nouns:
-  - nouns/player
-  - nouns/crate
-  - nouns/wall
-verbs:
-  - verbs/push
-controls:
-  - controls/push-duration
-  - controls/push-cost
-resources:
-  - resources/player-energy
+{
+  "id": "01a15175-3c00-7115-8cde-8cb37cfe1ff1",
+  "name": "crate-pushing",
+  "created_at": "2026-10-19T00:00:00.000Z",
+  "desc": "Crate pushing rule",
+  "tags": [],
+  "status": "accepted",
+  "nouns": [
+    "nouns/player",
+    "nouns/crate",
+    "nouns/wall"
+  ],
+  "verbs": [
+    "verbs/push"
+  ],
+  "control-vars": [
+    "control-vars/push-duration",
+    "control-vars/push-cost"
+  ],
+  "resources": [
+    "resources/player-energy"
+  ]
+}
 ---
 # Crate pushing
 

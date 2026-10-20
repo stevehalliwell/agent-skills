@@ -1,6 +1,6 @@
 ---
 name: game-design-workbench
-description: "Use for game-design-workbench requests, structured game-design records, concept/intent work, project game-design/game-explorer mode, noun–verb case exploration, skill/challenge-chain inspection, or an explicitly selected game-design framework review. Organize and question one Markdown design model while retaining alternatives and evidence. Skip ordinary game implementation, generic brainstorming, and unsolicited framework reviews."
+description: "Use for game-design-workbench requests, structured game-design records, concept/intent work, project game-design/game-explorer mode, noun–verb case exploration, skill/challenge-chain inspection, or an explicitly selected game-design framework review. Organize and question one Markdown design model with user-owned retention of alternatives and evidence. Skip ordinary game implementation, generic brainstorming, and unsolicited framework reviews."
 ---
 
 # Game Design Workbench
@@ -9,7 +9,7 @@ description: "Use for game-design-workbench requests, structured game-design rec
 
 - `Review this encounter using GameFlow`: selected framework review, not repair.
 - `Capture that pushing costs one energy`: supplied fact, not an interview.
-- `Explore alternatives to pulling`: retain proposals and rationale, not adoption.
+- `Explore alternatives to pulling`: discuss proposals, not adoption or compulsory archiving.
 - `Implement crate movement in Unity`: use implementation workflow instead.
 - `Make my game better`: establish bounded operation; no unsolicited framework sweep.
 
@@ -26,7 +26,7 @@ On explicit invocation without operation, inspect project registry if present, t
 ## Conditional reads
 
 - Set up, bind collections, update, or plan mode-header change: [Setup](references/setup.md).
-- Capture concept/intent or facts, revise records, retain/adopt/reject alternatives, or edit rank: [Capture](references/capture.md).
+- Capture concept/intent or facts, revise records, retain/adopt/reject/delete alternatives, or edit rank: [Capture](references/capture.md).
 - Inspect relationships, terms, or change impact: [Inspection](references/inspect.md).
 - Review or store/read review: [Review](references/review.md), then selected framework below.
 - Use direct commands, output formats, errors, or maintenance tools: [CLI](references/cli.md).

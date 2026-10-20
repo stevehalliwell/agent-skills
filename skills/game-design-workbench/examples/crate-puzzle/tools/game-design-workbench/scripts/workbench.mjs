@@ -8,11 +8,11 @@ import { planSetup, displayPlan, applySetup } from './setup.mjs';
 import { projected, runQuery, resolveTerm } from './queries.mjs';
 import { catalog, saveReport, showReport } from './reports.mjs';
 const help = {
-  release: '0.1.0 guided workbench; model 2; provisional framework guides; runtime instructions: references/runtime.md#runtime',
-  commands: ['setup plan [--mode game-design|game-explorer] [--concept <path.md>] [--mapping map.json] [--fresh]', 'setup apply --approve <plan-id> [same mode/concept/mapping/fresh options]', 'capabilities', 'context [--intent-ref <full-commit>] [--intent-path <former-path.md>]', 'lenses', 'query <matrix|skill-atoms|routes|mda|decisions|glossary|controls|evidence>', 'query records --collection <alias>', 'resolve --term <text>', 'validate', 'snapshot [--include <comma-separated-extra-source-paths>] [--intent-ref <full-commit>] [--intent-path <former-path.md>]', 'report save --lens <id> --input <findings.json> --snapshot <snapshot.json>', 'report show <run-id>'],
+  release: '0.1.0 guided workbench; model 3; provisional framework guides; runtime instructions: references/runtime.md#runtime',
+  commands: ['setup plan [--mode game-design|game-explorer] [--concept <path.md>] [--mapping map.json] [--fresh]', 'setup apply --approve <plan-id> [same mode/concept/mapping/fresh options]', 'capabilities', 'context [--intent-ref <full-commit>] [--intent-path <former-path.md>]', 'lenses', 'query <matrix|skill-atoms|routes|mda|glossary|control-vars|evidence>', 'query records --collection <alias>', 'resolve --term <text>', 'validate', 'snapshot [--include <comma-separated-extra-source-paths>] [--intent-ref <full-commit>] [--intent-path <former-path.md>]', 'report save --lens <id> --input <findings.json> --snapshot <snapshot.json>', 'report show <run-id>'],
   common: '--project <root> --json --format json|text --fields <comma-separated-row-fields> --output <new-file> --limit <1..10000>',
   contract: 'stdout=data; stderr=diagnostics; exit 0 completed, 1 validation findings, 2 invalid input/runtime/approval. GD_AGENT=1 selects noninteractive JSON. No prompts or implicit consent.',
-  unavailable: ['native C99 checks/views', 'formula evaluation/control exports', 'simulation/sweep/replay execution'],
+  unavailable: ['native C99 checks/views', 'formula evaluation/control-variable import/export', 'simulation/sweep/replay execution'],
   query_safety: 'Queries run Attendant against temporary source copy; live Markdown is not mechanically corrected. Source fingerprints detect intervening edits.'
 };
 async function readInput(path) {
@@ -40,7 +40,7 @@ try {
   }
   if (options.json && options.format && options.format !== 'json') fail('FORMAT_CONFLICT', '--json conflicts with non-JSON --format.');
   if (options.format && !['json', 'text'].includes(options.format)) fail('FORMAT_INVALID', 'Choose --format json or text.');
-  if (options.fields && !options.fields.split(',').every(field => /^[A-Za-z_][A-Za-z0-9_]*$/.test(field))) fail('FIELDS_INVALID', 'Use comma-separated row field names.');
+  if (options.fields && !options.fields.split(',').every(field => /^[A-Za-z_][A-Za-z0-9_-]*$/.test(field))) fail('FIELDS_INVALID', 'Use comma-separated row field names.');
   if (options.limit && (!/^\d+$/.test(options.limit) || Number(options.limit) < 1 || Number(options.limit) > 10000)) fail('LIMIT_INVALID', 'Limit must be integer from 1 through 10000.');
   const [command = 'help', action, extra] = tokens;
   if (tokens.length > 3) fail('ARGUMENT_INVALID', 'Unexpected positional arguments.');

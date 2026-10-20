@@ -37,16 +37,16 @@ export const packs = [
   {
     id: 'resource-economy', title: 'Resources, flows, and feedback', attribution: 'Ernest Adams and Joris Dormans, Game Mechanics: Advanced Game Design (2012); Machinations approach',
     scope: 'Examine a selected resource and the rules that create, spend, transform, or limit it. Separate resource identity from adjustable quantities.',
-    roles: ['nouns', 'resources', 'controls', 'mechanics', 'interactions', 'measures', 'experiments'], queries: ['controls', 'matrix', 'records'],
+    roles: ['nouns', 'resources', 'control-vars', 'mechanics', 'interactions', 'experiments'], queries: ['control-vars', 'matrix', 'records'],
     questions: [
       'What is the resource, what stores it, and which rule changes it?',
       'Which sources and sinks depend on player choices, elapsed time, or chance?',
       'Does gaining more of this resource make future gains easier, harder, or neither? What intervening rule creates that feedback?',
-      'Which capacity or initial-value controls bound the state, and where are conversion assumptions written?',
+      'Which capacity or initial-value control variables bound the state, and where are conversion assumptions written?',
       'Could a proposed balance change produce different outcomes for different strategies rather than one new average?',
       'What minimal measurement would test the disputed system claim, and which behavior assumptions would that model omit?'
     ],
-    limits: 'This release inventories literal controls and formula text; it does not evaluate formulas, resolve units, draw directional flow graphs, or execute simulations. Flow direction stays in rule prose. At most one accepted resource extension per noun is a source invariant to inspect manually here.',
+    limits: 'This release inventories named game configuration values and formula text; it does not evaluate formulas, resolve units, draw directional flow graphs, or execute simulations. Flow direction stays in rule prose. At most one accepted resource extension per noun is a source invariant to inspect manually here.',
     missing: 'A missing resource extension does not prevent discussing a noun. Missing flow direction is unresolved prose, not an inferred edge. Suggest an experiment without running it.',
     access: 'Hogeschool van Amsterdam publication summary inspected; book and Machinations implementation not inspected.',
     sources: [['Game Mechanics: Advanced Game Design — publication record', 'https://research.hva.nl/en/publications/game-mechanics-advanced-game-design/']]
@@ -54,7 +54,7 @@ export const packs = [
   {
     id: 'gameplay-patterns', title: 'Gameplay design patterns', attribution: 'Staffan Björk, Sus Lundgren, Jussi Holopainen (2003), and later Björk/Holopainen pattern work',
     scope: 'Compare a selected structure with a cited pattern or contrasting configuration. Use patterns as exploratory vocabulary, not required tags.',
-    roles: ['mechanics', 'systems', 'dynamics', 'decisions'], queries: ['mda', 'decisions', 'records'],
+    roles: ['mechanics', 'systems', 'dynamics'], queries: ['mda', 'records'],
     questions: [
       'What relationship among rules makes this resemble the proposed pattern beyond sharing a name?',
       'Which context makes that resemblance useful, and which difference makes it misleading?',
@@ -122,7 +122,7 @@ export const packs = [
   {
     id: 'gameflow', title: 'GameFlow enjoyment conditions', attribution: 'Penelope Sweetser and Peta Wyeth (2005)',
     scope: 'Use applicable enjoyment conditions to question a selected mechanic, encounter, or session: concentration, challenge, skills, control, goals, feedback, immersion, and social interaction.',
-    roles: ['mechanics', 'challenges', 'controls', 'experiments'], queries: ['routes', 'controls', 'evidence', 'records'],
+    roles: ['mechanics', 'challenges', 'control-vars', 'experiments'], queries: ['routes', 'control-vars', 'evidence', 'records'],
     questions: [
       'What deserves attention now, and what competing presentation could obscure it?',
       'Do controls let the player express the intended decision without unexplained loss of control?',
@@ -131,7 +131,7 @@ export const packs = [
       'Which elements support sustained involvement, and which interruptions are intentional?',
       'If social interaction matters here, what activity enables it? If it does not, why is that criterion inapplicable?'
     ],
-    limits: 'These are original questions, not a reproduction or scoring implementation of the published evaluation instrument. No aggregate enjoyment score. Flow theory and GameFlow are distinct. Control records are adjustable parameters, not a complete account of player agency or input controls.',
+    limits: 'These are original questions, not a reproduction or scoring implementation of the published evaluation instrument. No aggregate enjoyment score. Flow theory and GameFlow are distinct. Control-variable records are named game configuration, not a complete account of player agency or input controls.',
     missing: 'Mark social criteria inapplicable for an intentionally solo experience. Missing goal/feedback prose is a documentation question, not proof players cannot understand the game.',
     access: 'ACM DOI requests blocked; paper identity/eight-element summary checked through source-linked search. Suggested PDF returned 404. Full evaluation criteria not reviewed or copied.',
     sources: [['GameFlow: A Model for Evaluating Player Enjoyment in Games', 'https://doi.org/10.1145/1077246.1077253']]
@@ -243,7 +243,7 @@ export const packs = [
   {
     id: 'bartle', title: 'MUD participation patterns', attribution: 'Richard A. Bartle, Hearts, Clubs, Diamonds, Spades: Players Who Suit MUDs (1996)',
     scope: 'Use historically situated player/world and acting/interacting distinctions to question activities and tensions in multiplayer designs.',
-    roles: ['mechanics', 'dynamics', 'challenges', 'decisions', 'experiments'], queries: ['mda', 'decisions', 'evidence', 'records'],
+    roles: ['mechanics', 'dynamics', 'challenges', 'experiments'], queries: ['mda', 'evidence', 'records'],
     vocabulary: 'Achievers, Explorers, Socialisers, Killers describe approaches discussed in multiplayer MUD research; they are not universal identities.',
     questions: [
       'Which activities concern changing the world, understanding it, interacting with people, or exerting influence over them?',
@@ -279,7 +279,7 @@ export const packs = [
   {
     id: 'schell', title: 'Contextual reflective design questions', attribution: 'Jesse Schell, The Art of Game Design: A Book of Lenses',
     scope: 'Reframe a selected design question through concrete player experience, rules, alternatives, and consequences. This is original reflective guidance, not Schell’s deck.',
-    roles: ['mechanics', 'aesthetics', 'challenges', 'decisions', 'experiments'], queries: ['decisions', 'mda', 'records'],
+    roles: ['mechanics', 'aesthetics', 'challenges', 'experiments'], queries: ['mda', 'records'],
     questions: [
       'What does the player need to notice, decide, and feel at this exact moment?',
       'Which rule is essential to that experience, and what would change if it were removed?',
@@ -289,14 +289,14 @@ export const packs = [
       'What small comparison could expose that assumption before a durable decision?'
     ],
     limits: 'No copied lens-card wording, numbering, complete deck, or claim of comprehensive book coverage. Do not use this pack as permission to run other framework reviews.',
-    missing: 'Start from supplied facts and scoped alternatives. Unknowns become questions/hypotheses, not invented rules. Preserve rejected alternatives and rationale.',
+    missing: 'Start from supplied facts and scoped alternatives. Unknowns become questions/hypotheses, not invented rules. Consult retained alternatives/rationale when available; storage and retention follow user choice.',
     access: 'Official Art of Game Design page inspected; book/deck content not reproduced or reviewed in full.',
     sources: [['The Art of Game Design — official page', 'https://schellgames.com/art-of-game-design']]
   },
   {
     id: 'playcentric', title: 'Playcentric design and evidence', attribution: 'Tracy Fullerton, Game Design Workshop: A Playcentric Approach to Creating Innovative Games',
     scope: 'Connect intended player experience with a testable question, prototype, observations, and resulting design choices.',
-    roles: ['aesthetics', 'experiments', 'decisions', 'measures'], queries: ['evidence', 'decisions', 'records'],
+    roles: ['aesthetics', 'experiments'], queries: ['evidence', 'records'],
     questions: [
       'What experience goal is concrete enough to guide a prototype choice?',
       'Which uncertain claim matters most to the next decision?',

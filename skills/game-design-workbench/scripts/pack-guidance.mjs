@@ -65,20 +65,20 @@ export const guidance = {
   },
   'resource-economy': {
     concepts: [
-      ['Resource identity and quantity', 'A resource extends a noun identity; its starting amount, capacity, and costs are separate authored controls. Changing a number should not create a different resource or silently alter its meaning.'],
+      ['Resource identity and quantity', 'A resource extends a noun identity; its starting amount, capacity, and costs are separate authored control variables. Changing a number should not create a different resource or silently alter its meaning.'],
       ['Source, sink, and transformation', 'A source adds quantity, a sink removes it, and a transformation relates quantities or states. Identify the rule and its trigger. Flow direction comes from source prose, not from a generic link between records.'],
       ['Feedback', 'A reinforcing relationship amplifies a change; a balancing relationship counteracts it. Explain the intervening rules and time scale. A rising quantity alone is not proof of either relationship.'],
       ['Strategy dependence', 'The same quantities can produce different outcomes under different decisions, routes, and timing assumptions. An average is not a substitute for inspecting bottlenecks, depleted states, or an alternative strategy.']
     ],
     procedure: [
-      'Choose one resource and one disputed claim, such as sufficiency for a declared route. Read noun, resource extension, controls, spending mechanics, and relevant interaction cases. Record the exact claim and scope.',
+      'Choose one resource and one disputed claim, such as sufficiency for a declared route. Read noun, resource extension, control variables, spending mechanics, and relevant interaction cases. Record the exact claim and scope.',
       'List starting quantity, bounds, changes, and triggers with their source owners. Keep unknown amounts and opaque units explicit. Distinguish authored formula text from evaluated values; this slice does not evaluate formulas.',
       'Trace a concrete action sequence by hand only as a labeled analytical example. State assumptions about successes, failed-action costs, replenishment, and optional routes. Do not call the result an executed simulation.',
       'Examine a contrasting strategy or boundary state. Ask whether costs alter choices, merely delay progress, or permit a dead end under the stated assumptions. Separate quantity feasibility from reachability and desired experience.',
       'Return the flow narrative, disputed assumptions, and one useful measurement proposal. Preserve candidate tuning changes as alternatives. No control override, formula export, balance adoption, or experiment execution follows from this review.'
     ],
     example: [
-      ['Authored facts', 'Energy has noun/resource identity; initial-energy and push-cost are controls. Crate-pushing owns spending. The tutorial includes a proposed route requiring three successful pushes.'],
+      ['Authored facts', 'Energy has noun/resource identity; initial-energy and push-cost are named configuration values. Crate-pushing owns spending. The tutorial includes a proposed route requiring three successful pushes.'],
       ['Conditional analysis', 'Starting with energy 2 raises a sufficiency question for three pushes. A conclusion needs the authored cost, replenishment rules, and which attempts spend energy; the resource label alone cannot settle it.'],
       ['Competing options', 'Increasing starting energy, changing cost, adding a recovery source, or choosing another route are distinct proposals with different consequences. None is automatically the right balance fix.'],
       ['Useful next question', 'Is scarcity intended to constrain this route, and can the relevant state actually occur? Keep that design-intent question separate from any hand calculation.']
@@ -102,7 +102,7 @@ export const guidance = {
       ['Vocabulary and attribution', 'Distinguish an inspected published pattern from an original working description. Use a descriptive local phrase when source evidence is unavailable; do not invent catalog authority for it.']
     ],
     procedure: [
-      'Start with the selected rule relationship and intended behavior. Read relevant mechanics, system grouping, dynamic hypotheses, and prior decisions. State what problem the comparison is meant to clarify.',
+      'Start with the selected rule relationship and intended behavior. Read relevant mechanics, system grouping, dynamic hypotheses, and any existing project decisions. State what problem the comparison is meant to clarify.',
       'If a specific published pattern is named, inspect that entry before making detailed attribution. Record the source, context, and relevant relationship. Otherwise label the comparison an unverified resemblance or original design description.',
       'Map the relationship onto actual source rules. Identify a meaningful match and a meaningful mismatch. Avoid treating a shared label as a sufficient comparison.',
       'Construct one contrasting configuration serving the same intention. Compare consequences, integration costs, and conflicts with existing rules. Revisit rejected alternatives without silently reviving or adopting them.',
@@ -245,7 +245,7 @@ export const guidance = {
     ],
     traps: [
       'Do not reproduce the published evaluation instrument under slightly altered labels. Keep these questions independently authored and qualitative.',
-      'Do not infer player agency from the existence of adjustable controls such as push-cost.',
+      'Do not infer player agency from the existence of adjustable configuration values such as push-cost.',
       'Do not treat every theme as mandatory or use social inapplicability as a negative score.'
     ]
   },
@@ -289,7 +289,7 @@ export const guidance = {
     ],
     procedure: [
       'Choose one decision and trace what information is available when it is made. Identify what disappeared, changed, or must be recalled from elsewhere. Mark unspecified presentation unknown.',
-      'Separate recognizing visible state from recalling hidden state and reasoning about consequences. Name the actual information involved; do not substitute counts of records, skill atoms, or controls.',
+      'Separate recognizing visible state from recalling hidden state and reasoning about consequences. Name the actual information involved; do not substitute counts of records, skill atoms, or control variables.',
       'Describe how a familiar player might group the information and why a beginner might not. Keep both as assumptions unless relevant observations establish that familiarity.',
       'Consider one stable cue, history aid, or presentation variant. State whether it externalizes information, reveals a solution, or changes the intended memory challenge. Preserve alternatives and trade-offs.',
       'Return the selected memory demand, its context, and a comparison question. Do not apply four, seven, or any other fixed count as a universal failure threshold or capacity diagnosis.'
@@ -444,7 +444,7 @@ export const guidance = {
     ],
     procedure: [
       'Check whether the selected question involves meaningful multiplayer participation. If it does not, report limited applicability and stop this lens. Do not invent social systems to make the frame fit.',
-      'For applicable scope, name actual participant activities and their targets. Read rules, dynamic hypotheses, challenge descriptions, and relevant decisions rather than assigning labels from genre.',
+      'For applicable scope, name actual participant activities and their targets. Read rules, dynamic hypotheses, challenge descriptions, and any existing project decisions rather than assigning labels from genre.',
       'Use the two distinctions to compare approaches to those activities. Allow the same person to pursue different approaches at different times. Mark uncertain mappings as interpretations.',
       'Inspect interactions between approaches, including consent, disruption, recovery, and shared incentives where relevant. Distinguish intended competitive effects from assumptions about harmful behavior.',
       'Return the activity tension and its design context. No player-type percentages, population balancing prescription, psychological labels, or requirement to support all four approaches is justified.'
@@ -505,7 +505,7 @@ export const guidance = {
       ['Consequences and memory', 'A local improvement can create costs elsewhere. Retained decisions and rejected alternatives help distinguish a genuinely new option from a renamed version of an old proposal.']
     ],
     procedure: [
-      'Select the exact design question and player moment. Read relevant source, intended experience, and prior decisions. State the assumption or choice this reflection should clarify.',
+      'Select the exact design question and player moment. Read relevant source, intended experience, and any existing project decisions. State the assumption or choice this reflection should clarify.',
       'Describe what the player needs to notice, decide, and experience in that moment. Separate supplied facts from imagined reactions, and mark missing context explicitly.',
       'Question one important rule through a counterfactual or contrasting proposal. Explain what the alternative preserves, changes, and costs; do not generate unrelated options for breadth alone.',
       'Trace the consequences into adjacent rules, challenges, and retained rationale. Surface the strongest reason against the attractive option rather than treating a fresh perspective as automatic improvement.',
@@ -520,7 +520,7 @@ export const guidance = {
     evidence: [
       'A thought experiment can expose an assumption but cannot establish an experienced outcome. Label its conclusion accordingly.',
       'A fair later comparison should address the disputed rule relationship, not reward whichever candidate has more polish or content.',
-      'Retain contrary evidence and the reason an alternative was rejected. Changed context may justify reconsideration without rewriting prior history.'
+      'Consider contrary evidence and any retained rejection rationale. User chooses storage/retention; changed context may justify reconsideration without silently adopting a proposal.'
     ],
     traps: [
       'Do not invent lens-card names, numbers, or attributed wording to give original questions borrowed authority.',
@@ -536,11 +536,11 @@ export const guidance = {
       ['Evidence and iteration', 'Separate assumptions, analytical derivations, executed model output, and observed play. A resulting design choice is another step that needs explicit authority; evidence does not silently adopt an option.']
     ],
     procedure: [
-      'Connect one supplied experience goal to a decision that remains open. Read relevant experiments, their hypothesis/expectation/observation sections, measures, and decisions. Incomplete investigation is valid input for discussion.',
+      'Connect one supplied experience goal to a decision that remains open. Read relevant experiments, their hypothesis/expectation/observation sections and local measure definitions, plus any existing project decisions. Incomplete investigation is valid input for discussion.',
       'Write the uncertain claim and a plausible rival explanation. Specify what observation or result could distinguish them. Keep player experience claims separate from numerical model predictions.',
       'Propose the smallest suitable prototype or method. State what it includes, what it omits, what would be recorded, and what assumptions limit the answer. Proposal does not authorize execution or participant recruitment.',
       'Inspect existing evidence provenance before interpreting it. Identify source, method, conditions, and whether the result is analytical, simulated, observed, or merely expected. Empty observations remain empty.',
-      'Return the decision-linked question, proposed method, and interpretation boundary. If evidence later exists, explain what it changes and what remains uncertain; retain alternatives and rationale instead of automatically adopting a repair.'
+      'Return the decision-linked question, proposed method, and interpretation boundary. If evidence later exists, explain what it changes and what remains uncertain; follow user choice on retaining alternatives/rationale instead of automatically adopting a repair.'
     ],
     example: [
       ['Authored facts', 'The illustrative route has 4 walks and 3 pushes, with base time 5 s. A proposed model assumes independent uniform delays of 0–1 s per action. No trials or participant observations exist.'],
@@ -556,7 +556,7 @@ export const guidance = {
     traps: [
       'Do not treat a proposed method, analytical probability, or expectation as an executed result.',
       'Do not infer participant counts, motivation, emotion, or capability from a timing distribution.',
-      'Do not let evidence storage imply adoption. Preserve the resulting decision, rejected alternatives, and remaining uncertainty separately.'
+      'Do not let evidence storage imply adoption. Record uncertainty with the investigation; use existing project decisions only when wanted, not a mandatory archive.'
     ]
   }
 };

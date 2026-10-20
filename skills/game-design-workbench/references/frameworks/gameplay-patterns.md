@@ -22,9 +22,9 @@ Compare a selected structure with a cited pattern or contrasting configuration. 
 
 ## Inputs and query support
 
-Roles: `mechanics`, `systems`, `dynamics`, `decisions`.
+Roles: `mechanics`, `systems`, `dynamics`.
 
-Available recipes: `query mda`; `query decisions`; `query records --collection <mapped-alias>`.
+Available recipes: `query mda`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -35,7 +35,7 @@ Available recipes: `query mda`; `query decisions`; `query records --collection <
 
 ## Apply to selected slice
 
-1. Start with the selected rule relationship and intended behavior. Read relevant mechanics, system grouping, dynamic hypotheses, and prior decisions. State what problem the comparison is meant to clarify.
+1. Start with the selected rule relationship and intended behavior. Read relevant mechanics, system grouping, dynamic hypotheses, and any existing project decisions. State what problem the comparison is meant to clarify.
 2. If a specific published pattern is named, inspect that entry before making detailed attribution. Record the source, context, and relevant relationship. Otherwise label the comparison an unverified resemblance or original design description.
 3. Map the relationship onto actual source rules. Identify a meaningful match and a meaningful mismatch. Avoid treating a shared label as a sufficient comparison.
 4. Construct one contrasting configuration serving the same intention. Compare consequences, integration costs, and conflicts with existing rules. Revisit rejected alternatives without silently reviving or adopting them.

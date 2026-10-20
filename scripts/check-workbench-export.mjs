@@ -83,7 +83,11 @@ try {
   assert.equal(skillAtoms.rows.length, 6);
   assert.equal(skillAtoms.rows.find(row => row.name === 'coordinate').rank, 2);
   assert.equal(skillAtoms.rows.find(row => row.name === 'plan-push').rank, null);
-  assert.equal(Object.keys(plan.roles).length, 16);
+  assert.equal(Object.keys(plan.roles).length, 14);
+  assert.ok(!Object.hasOwn(plan.roles, 'decisions'));
+  assert.ok(!Object.hasOwn(plan.roles, 'measures'));
+  const variables = invoke(helper, project, ['query', 'control-vars']);
+  assert.equal(variables.rows.length, 7);
   const experiments = invoke(helper, project, ['query', 'evidence']);
   assert.equal(experiments.rows.length, 2);
   assert.ok(experiments.rows.every(row => row.stage === 'proposed'));

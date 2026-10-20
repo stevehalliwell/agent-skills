@@ -12,7 +12,7 @@ One Markdown game-design model, selected framework reviews, and local query/repo
 ## Delivery status
 
 - Available: guarded setup/update, declared-data queries, term resolution, selected agent review, dated report storage.
-- Deferred: C99 semantics/control exports, graphical model inspection (Slice 4), simulation and result views (Slice 5).
+- Deferred: C99 semantics/control-variable import/export (Slice 3), graphical model inspection (Slice 4), simulation and result views (Slice 5).
 - Offline handoff report describes delivery evidence; it is not a model viewer.
 
 ## Maintenance

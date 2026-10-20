@@ -22,9 +22,9 @@ Connect intended player experience with a testable question, prototype, observat
 
 ## Inputs and query support
 
-Roles: `aesthetics`, `experiments`, `decisions`, `measures`.
+Roles: `aesthetics`, `experiments`.
 
-Available recipes: `query evidence`; `query decisions`; `query records --collection <mapped-alias>`.
+Available recipes: `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -35,11 +35,11 @@ Available recipes: `query evidence`; `query decisions`; `query records --collect
 
 ## Apply to selected slice
 
-1. Connect one supplied experience goal to a decision that remains open. Read relevant experiments, their hypothesis/expectation/observation sections, measures, and decisions. Incomplete investigation is valid input for discussion.
+1. Connect one supplied experience goal to a decision that remains open. Read relevant experiments, their hypothesis/expectation/observation sections and local measure definitions, plus any existing project decisions. Incomplete investigation is valid input for discussion.
 2. Write the uncertain claim and a plausible rival explanation. Specify what observation or result could distinguish them. Keep player experience claims separate from numerical model predictions.
 3. Propose the smallest suitable prototype or method. State what it includes, what it omits, what would be recorded, and what assumptions limit the answer. Proposal does not authorize execution or participant recruitment.
 4. Inspect existing evidence provenance before interpreting it. Identify source, method, conditions, and whether the result is analytical, simulated, observed, or merely expected. Empty observations remain empty.
-5. Return the decision-linked question, proposed method, and interpretation boundary. If evidence later exists, explain what it changes and what remains uncertain; retain alternatives and rationale instead of automatically adopting a repair.
+5. Return the decision-linked question, proposed method, and interpretation boundary. If evidence later exists, explain what it changes and what remains uncertain; follow user choice on retaining alternatives/rationale instead of automatically adopting a repair.
 
 ## Original prompts
 
@@ -67,7 +67,7 @@ Available recipes: `query evidence`; `query decisions`; `query records --collect
 
 - Do not treat a proposed method, analytical probability, or expectation as an executed result.
 - Do not infer participant counts, motivation, emotion, or capability from a timing distribution.
-- Do not let evidence storage imply adoption. Preserve the resulting decision, rejected alternatives, and remaining uncertainty separately.
+- Do not let evidence storage imply adoption. Record uncertainty with the investigation; use existing project decisions only when wanted, not a mandatory archive.
 
 ## Missing data and evidence limits
 

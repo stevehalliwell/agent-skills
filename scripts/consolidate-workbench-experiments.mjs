@@ -21,7 +21,7 @@ const applied = [];
 try {
   const manifestPath = `${example}/tools/game-design-workbench/manifest.json`;
   const manifestBytes = await readFile(join(root, manifestPath)); const manifest = JSON.parse(manifestBytes);
-  if (manifest.model_version === 2) {
+  if (manifest.model_version >= 2) {
     for (const role of ['hypotheses', 'expectations', 'observations']) if (await optional(join(root, example, 'game-design', role, '.schema.md'))) throw Error(`Partial migration: ${role}. Inspect Git diff before recovery.`);
     console.log(JSON.stringify({ schema_version: 1, already_consolidated: true, changes: [] })); process.exit(0);
   }

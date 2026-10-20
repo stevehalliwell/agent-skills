@@ -37,10 +37,8 @@ game-design/
   skill-atoms/             # skill atoms and prerequisite structure
   challenges/         # encounters, puzzles, teaching moments
   levels/             # progression/placement of challenges
-  controls/           # tunable values and assumptions
-  expectations/       # measurable design targets/hypotheses
-  experiments/        # experiments and simulation links
-  decisions/          # deliberate exclusions and design rationale
+  control-vars/       # named game configuration values
+  experiments/        # question, local measures/expectations, method and results
 ```
 
 These are **candidate categories**, not a mandatory hierarchy. Start with the minimum needed for the first example, and permit project-specific collections. Do not conflate a *system* (the constructed arrangement of rules) with a *dynamic* (the behaviour the arrangement produces).
@@ -136,7 +134,7 @@ Keep the GUI primarily **read-only/exploratory initially**. Editing is through n
 
 ## 6. Lightweight C99 experiments
 
-Simulation is for **exploring specific dynamics and evaluating design expectations**, not recreating the full game. Each experiment can be a small independent C99 program or module, linked to Markdown controls, measures and target expectations.
+Simulation is for **exploring specific dynamics and evaluating design expectations**, not recreating the full game. Each experiment can be a small independent C99 program or module, linked to named game configuration and experiment-local measures/target expectations.
 
 Examples:
 

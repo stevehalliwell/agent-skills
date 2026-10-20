@@ -122,18 +122,18 @@ These are safeguards within an operation, not a linear design process.
 5. Persist authorized changes in source records and link relevant evidence or rationale.
 6. Rerun affected consistency checks and any lens-based checks included in requested operation. Report what changed, what remains unknown, and what evidence supports the result.
 
-A review request must not silently become a repair operation. Explicit design input authorizes direct capture. Persist generated alternatives as proposed; do not adopt them or change accepted intent without designer direction.
+A review request must not silently become a repair operation. Explicit design input authorizes direct capture. Generated alternatives remain proposals; persist only when wanted. Do not adopt them or change accepted intent without designer direction.
 
 ### Alternatives and design memory
 
-- Keep all generated design alternatives as retained proposal records, initially marked proposed. Start with idea/context/links rather than fully normalize every quick alternative across domain tables.
-- Elaborate linked proposed domain records when exploration needs them. Adoption writes selected facts into canonical domain records; proposal/decision record retains rationale and links, not a competing authoritative rule copy.
-- Lifecycle meanings: proposed = not adopted; accepted = current design; rejected = explicitly ruled out; superseded = replaced by linked design content; defunct = no longer applicable. Record disposition rationale when supplied; do not invent a reason.
+- User owns alternative retention: keep wanted proposals in relevant domain records or existing project-level decisions, or leave discussion unpersisted. No workbench decisions collection or mandatory archive.
+- Adoption writes selected facts into canonical domain records. Preserve supplied rationale when retaining an option; do not create competing rule definitions.
+- Status is free text, default proposed; standard query recipes select accepted definitions. Common meanings: proposed = not adopted; accepted = current design; rejected = explicitly ruled out; superseded = replaced by linked design content; defunct = no longer applicable. Record disposition rationale when supplied; do not invent a reason.
 - Treat lifecycle as current state, not an edit log. Ordinary edits to a record rely on Git history; they do not require making a superseded copy of every previous version.
 - User direction authorizes adoption, rejection, replacement, retirement, or reopening. Matching an alias on inactive content must expose its disposition, not silently reactivate it.
 - Acceptance means adopted design, not empirically proven behavior. Keep intention, assumption, prediction, and observation distinct from lifecycle.
 - Selecting an alternative makes it accepted but does not automatically reject its siblings. Unchosen alternatives remain proposed until designer explicitly assigns another disposition.
-- When an alternative is rejected, superseded, or defunct, retain it rather than delete it. Preserve enough context and rationale to avoid repeatedly redesigning something already ruled out.
+- Users may retain ignored alternatives under rejected, superseded, defunct, inactive, disabled, or other statuses, or request deletion. Check affected references before authorized deletion; no forced retention.
 - Proposed and inactive alternatives do not count as active rules or silently create contradictions in accepted-design analysis. Permit explicit exploration/review of alternatives.
 - Consult relevant retained alternatives when generating or revisiting design choices. Surface prior rejection and its reason; do not present a ruled-out idea as new.
 - Retained alternatives describe current disposition and useful rationale. Use Git for edit history rather than maintaining a chronological transcript in each record.
@@ -216,13 +216,13 @@ A review request must not silently become a repair operation. Explicit design in
 - Support integer, continuous-number, boolean, and enum controls. Arithmetic applies only to numeric controls; using booleans/enums as numeric operands is an error. Preserve types in exports where supported by target format.
 - Integer controls reject fractional results unless an explicit rounding operation produces an integer. Never silently truncate exports or simulation inputs. Invalid/non-finite arithmetic is an error.
 - Manage numeric control variables with absolute values and relative values expressed through named-control references and simple arithmetic. Support ratios, offsets, and formulas combining controls.
-- Example: `enemy-move-speed` uses expression `${controls/player-move-speed} * 0.75`. Preserve authored relationship; changes to referenced controls propagate to resolved values.
+- Example: `enemy-move-speed` uses expression `${control-vars/player-move-speed} * 0.75`. Preserve authored relationship; changes to referenced controls propagate to resolved values.
 - Detect missing references and dependency cycles rather than inventing values or evaluating indefinitely.
 - Export current control values to CSV, INI, JSON, and potentially other formats. Exports and simulations can consume resolved numeric values without losing authoritative formulas in source records.
 - Controls declare units; dimensionless controls are explicit. Validate dimensional consistency: compatible dimensions for addition/subtraction and derived dimensions for multiplication/division.
 - Initial numeric representation follows Attendant/JSON numeric interoperability: binary64 continuous values and integers limited to exact safe range `-(2^53 - 1)` through `2^53 - 1`. Reject overflow/inexact integer storage rather than silently round. Larger numeric domains require an explicit later representation change.
 - Do not silently convert compatible unit scales such as seconds and milliseconds; require explicitly compatible scales. Unit mismatches produce actionable errors.
-- Formula constants may carry explicit units, e.g. `${controls/base-cooldown} + 0.2[s]`. Plain numbers are dimensionless; do not infer units from addition context. Separately tunable offsets may instead be control references.
+- Formula constants may carry explicit units, e.g. `${control-vars/base-cooldown} + 0.2[s]`. Plain numbers are dimensionless; do not infer units from addition context. Separately tunable offsets may instead be control references.
 - [Controls and experiments](#controls-and-experiments) defines evaluator/export behavior. Exact implementation limits must be documented and checked, never silently truncate.
 - Simulations and exports consume the same current control definitions; do not maintain separate hand-copied values.
 - Experiment/sweep overrides are temporary. Resolve dependent formulas using effective overrides and save the resolved input snapshot with each run. Do not mutate canonical baseline controls unless designer explicitly adopts a configuration.
@@ -321,7 +321,7 @@ Absence alone is not a defect. Check applicability and project expectations befo
 
 ## Refinement status
 
-No unresolved product decision currently identified. Contracts below cover operations, source ownership, framework scope, partial data, aliases, progression, controls, reports, views, and simulation checkpoint flow. First-slice walkthroughs and delivery plan define reviewable outcomes.
+Control-variable import formats, validation, and merge/overwrite behavior need refinement before Slice 3. Other contracts below cover operations, source ownership, framework scope, partial data, aliases, progression, control variables, reports, views, and simulation checkpoint flow. First-slice walkthroughs and delivery plan define reviewable outcomes.
 
 Not yet established by execution: authored pack quality/source research, schema/fixture compatibility, full C99 loader/evaluator, native raylib build, safe rank patching, simulation supervisor/reproduction, seeded sample counts, performance/resource limits, and non-Windows portability. These are explicit delivery checks, not facts inferred from the LibYAML probe. If implementation reveals a material behavior/data/compatibility choice, return to refinement instead of silently changing this contract.
 
@@ -385,7 +385,7 @@ Section E perspectives are cross-cutting prompts attached to relevant packs, not
 
 ### Controls and experiments
 
-- Formula syntax: decimal/scientific numeric literals, qualified references `${controls/record-name}`, unary `+`/`-`, binary `+`/`-`/`*`/`/`, and parentheses. Use standard arithmetic precedence; references resolve stable control keys, not glossary aliases.
+- Formula syntax: decimal/scientific numeric literals, qualified references `${control-vars/record-name}`, unary `+`/`-`, binary `+`/`-`/`*`/`/`, and parentheses. Use standard arithmetic precedence; references resolve stable control keys, not glossary aliases.
 - Permit unit-bearing literals such as `0.2[s]`; unadorned literals are dimensionless. Unit expressions use case-sensitive named symbols, products/divisions, and integer powers; `1` is dimensionless. Canonicalize algebraically equivalent forms such as `m/s` and `m*s^-1`. Symbols are opaque, including game-specific units; no implicit SI scale/offset registry. Conversions require explicit formulas, e.g. multiply an ms value by `0.001[s/ms]`.
 - Support `min(a,b)`, `max(a,b)`, `clamp(value,lower,upper)`, and unary `abs`, `floor`, `ceil`, and `round`. `round` uses ties away from zero. Comparisons/conditional expressions, assignments, arbitrary functions, and code execution are not part of control expressions.
 - Preserve units through rounding/absolute value; min/max/clamp require compatible units. Unknown functions, invalid bounds, or excessive expression complexity produce actionable errors. Never use a shell or arbitrary code evaluator.
@@ -396,7 +396,7 @@ Section E perspectives are cross-cutting prompts attached to relevant packs, not
 - Refuse to replace an existing output file without explicit overwrite permission. Never overwrite canonical design records/configuration/tool source through export.
 - Temporary overrides recompute formulas without changing baseline; explicit adoption changes canonical controls.
 - Each one-shot experiment uses common input/measurement helpers rather than hand-copied control constants. Freeze declared controls and their transitive formula dependencies; unrelated unknown controls do not block the investigation. Missing required inputs do block execution.
-- Do not keep old simulations synchronized with later rules. Results name canonical measures; viewers use their recorded type/unit definitions.
+- Do not keep old simulations synchronized with later rules. Results name experiment-local measures; viewers use their recorded type/unit/boundary definitions.
 - Simulation request establishes model question and material assumptions; missing target permits descriptive exploration, not an invented pass criterion.
 - Model/player-behavior assumptions are experiment-local by default, explicitly recorded with question inputs. Do not mix assumed action delays, policies, or success rates into exported game tuning. Shared reuse requires deliberate promotion into appropriate design data.
 - Bound runs, steps, and elapsed execution; persist partial/error/limit status rather than label a stopped run successful. Incomplete evidence cannot establish a satisfied target.
@@ -446,7 +446,7 @@ Section E perspectives are cross-cutting prompts attached to relevant packs, not
 
 ### CLI contract requirements
 
-- Commands cover source inspection, validation, selected-lens gaps, interaction matrix/graph, skill chains/rank updates, connectivity, impact, controls/export, expectations, simulations/sweeps, views, and report inspection.
+- Commands cover source inspection, validation, selected-lens gaps, interaction matrix/graph, skill chains/rank updates, connectivity, impact, control-vars/import/export, expectations, simulations/sweeps, views, and report inspection.
 - `gaps` requires explicit framework selection unless calling context already supplies it. Framework catalog/listing is discovery, not execution of every pack.
 - stdout contains result data; diagnostics/progress/display tables use stderr. Explicit output format wins; piped/agent paths emit JSON without interactive prompts. Support field selection for large structured results.
 - Version structured schema; include data, provenance/coverage, and structured errors. Empty successful results are empty data, not failures.
@@ -522,7 +522,7 @@ First slice delivers usable guided work, not a claim that later native tools exi
 
 1. **Setup:** request “Set up game-design workbench here.” Return combined file/collection/dependency proposal. After approval, install empty configured collections and local snapshot. Existing Markdown and custom configuration remain unchanged outside approved plan; no tutorial facts appear in live design.
 2. **Direct capture:** supply “Crates can be pushed into free cells; wall-blocked pushes cost no energy.” Resolve declared box/shove aliases if used; capture canonical case/mechanic facts as accepted. Do not invent an energy amount, interview for experience first, or run a lens review. Return changed paths and unresolved material questions only.
-3. **Generation:** request “Suggest alternatives to make blocked pushes interesting.” Retain each idea as a proposed decision with context/group/subject links. Surface rejected pulling rationale if relevant. Choosing one adopts only selected facts; siblings remain proposed and rules retain one canonical home.
+3. **Generation:** request “Suggest alternatives to make blocked pushes interesting.” Keep ideas proposed; persist wanted ideas in domain records or existing project decisions according to user choice. Surface rejected pulling rationale if relevant. Choosing one adopts only selected facts; siblings remain proposed and rules retain one canonical home.
 4. **Scoped review:** request “Review combined-room scaffolding using skill atoms.” Load that pack and relevant challenge/prerequisite/route context; save dated structured and readable findings. Report missing planning opportunity, route-dependent switch support, single-shot roles, and rank conflict only to extent established by inspected data. No automatic Flow or other-lens review; no silent repair or invented player incapability.
 5. **Change impact:** request “What would removing pushing affect?” Trace declared references to cases, skill atoms, challenges, and experiments. Return paths/link kinds and uncertain consequences; do not remove records or reinterpret historical simulations.
 6. **Resolve:** explicitly change `coordinate` authored rank from 2 to 3 in baseline example. Rerun same skill review; rank conflict clears while missing/route-dependent learning questions remain. First slice may perform authorized source edit through Attendant; later GUI/CLI rank operation must produce same source outcome.
@@ -654,6 +654,14 @@ Implemented delivery shape:
 
 Current source/CLI contract: [concept and working mode](skills/game-design-workbench/references/concept.md). Implementation verification recorded after checks below. Framework packs remain provisional; framework completeness pass and Slice 2 have not started.
 
+### Collection cleanup — before further review
+
+- Implemented: rename `controls` to `control-vars`. Own named game configuration values, not only tuning inputs. Documentation and simulations reference names instead of repeating magic numbers. Later exports support experiments, game consumption, and CSV/spreadsheets. Keep runtime resource state and experiment-local assumptions distinct.
+- Implemented: remove independent `measures` collection. Define measured outputs, units, and measurement boundaries inside owning experiment; no independent reuse requirement.
+- Implemented: remove workbench-owned `decisions` collection and compulsory alternative archive. Existing project-level Attendant decisions may serve that role; do not create/require another. Users may retain ignored alternatives through their chosen statuses or delete them. This supersedes mandatory retention policy; do not automatically delete or discard existing content while removing collection support.
+- Keep `challenges` as concrete gameplay tasks/situations with optional learning/route annotations. Current consumers versus planned checks: route query and selected framework reviews now; deterministic all-route scaffolding/prerequisite checks in Slice 3; progression/graph views in Slice 4. Declared opportunity is not observed learning or game-state reachability.
+- Import/export belongs in Slice 3 control-variable delivery. Export resolves JSON/INI/CSV through same value resolver used by experiments. Import formats, validation, and merge/overwrite behavior remain unresolved until refinement.
+
 ### Framework completeness pass — before Slice 2
 
 - [ ] Review one framework at a time after current model/documentation cleanup. Catalog status tracks provisional coverage; word count and file generation are not completeness evidence.
@@ -673,7 +681,7 @@ Acceptance: same source identities/declared links as fixture and Attendant; inva
 ### Slice 3 — deterministic semantics and control exports
 
 - [ ] Add sparse matrix/case inspection, accepted-pair connectivity, skill prerequisites/ranks/route-opportunity checks, MDA declared traces, scoped gaps, and shared minimal rank-update operation.
-- [ ] Implement control grammar/units/types, dependency resolution, temporary overrides, expectation inspection, and CSV/INI/JSON resolved exports.
+- [ ] Implement control-variable grammar/units/types, dependency resolution, temporary overrides, expectation inspection, and CSV/INI/JSON resolved exports. Refine import formats and merge/overwrite behavior before implementing import in this same slice.
 - [ ] Verify stable planned findings and source locations, explicit exclusions/no-effect/unknown distinctions, all declared routes including revisits, prerequisite cycles, null/zero/false, exact integers, enums, unit/formula errors, and override propagation.
 - [ ] Verify rank update changes only selected authored field, preserves body/metadata/descendant intent, allows conflicts, detects stale source, and survives failed writes without data loss. Rerun coordinate resolution fixture.
 
@@ -710,7 +718,7 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Demonstrate multiple conditional outcomes within one matrix cell and exploration of their source relationships.
 - Show same skill atom chains by dependency depth and authored order, exposing parallel skillset development.
 - Seed highly connected and sparse graph nodes; verify reported connectivity against fixture relationships.
-- Retain generated alternatives with disposition and rationale; verify inactive ideas do not act as accepted rules and later generation surfaces relevant prior rejection.
+- Honor user-owned retention/deletion of alternatives; verify inactive ideas do not act as accepted rules and later generation consults relevant retained rationale.
 - Resolve alternate terms to canonical records without creating divergent duplicates; test ambiguous aliases.
 - Change one canonical definition and verify all dependent views use updated source without manual duplicate edits.
 - Change absolute and relative control values; verify resolved CSV/INI/JSON exports and simulation inputs agree.
@@ -784,6 +792,13 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - All 18 generated packs current; both canonical migrations remain no-ops. Framework completeness remains provisional, not established by these checks. Earlier reviews stay unchanged/stale; no new framework review, simulation, viewer, or browser audit.
 - Evidence: [verification](reports/game-design-workbench-concept-verification.json), [tests](reports/game-design-workbench-concept-tests.txt), [staged export](reports/game-design-workbench-concept-export.json). Supplied root concept documents remain unchanged/untracked; not adopted or committed.
 - Next: framework-by-framework completeness review before Slice 2.
+
+## Collection cleanup verification
+
+- Model 3: 14 collections, 63 records, 189 installed files. `control-vars` replaces controls in roles, fields, references, formulas, queries, templates, and fixture. No old query alias. Local measures live in experiments; no workbench decisions collection or mandatory archive.
+- Existing pulling/crate-color proposals moved to rejected verb/proposed mechanic records with identity, rationale, and provenance intact. All 63 surviving UUIDs match `82a97f6`; four measure UUIDs retained beside embedded definitions. No new game facts or executed evidence.
+- 31/31 tests pass, including custom ignored statuses, independent project decisions preservation, legacy update gates, hyphenated field selection, and refreshed installed example. 223 local links/anchors and skill frontmatter pass; all 18 generated packs current. Framework completeness remains provisional.
+- Canonical cleanup helper ran guarded apply, then no-op check. Both earlier migration helpers remain no-ops. Updated example setup and staged export have zero pending changes/conflicts. Export verifies 14 collections, seven control variables, six skill atoms, two proposed investigations, and unchanged/stale historical findings. No new report files generated; existing reports/baselines remain historical and unchanged.
 
 ## Comments
 

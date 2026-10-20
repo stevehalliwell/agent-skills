@@ -48,6 +48,12 @@ Model version 2 replaces separate hypotheses, expectations, and observations col
 
 Canonical maintainer migration `scripts/consolidate-workbench-experiments.mjs` operates only on this repository's pristine fixture; not arbitrary user projects. Older saved reports remain historical/stale. Native execution and structured expectation analysis contracts need refinement before implementation.
 
+## Collection cleanup
+
+Model 3 renames `controls` to `control-vars`, puts measured-output definitions inside experiments, and removes workbench-owned decisions. Legacy manifest roles fail `COLLECTION_CLEANUP_REQUIRED` before writes. Migrate role bindings, field names, reference values, formula references, and schemas/registry explicitly. Do not delete user content to bypass gate. Move measure definitions/provenance into owning experiments. Existing decisions use user-chosen project decisions/domain records or explicitly requested deletion; no automatic new archive. Status templates now accept free text.
+
+Canonical tutorial only: execute `node scripts/cleanup-workbench-collections.mjs --check`, then `--apply`. Helper guards affected files against `82a97f6`, embeds four measures, preserves 63 record UUIDs, and moves pulling/crate-color proposals into domain records. It does not migrate arbitrary projects, stage/commit, write reports, or update installed tools. Run guarded setup update afterward. Local edits/unknown retired files block cleanup; partial failures list applied paths for recovery.
+
 ## Update and local edits
 
 Run newer supplied package's `setup plan` against project; inspect changes before approval/apply. Installed helper alone has no newer upstream bytes and cannot update itself to an unseen version.

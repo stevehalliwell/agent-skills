@@ -6,18 +6,18 @@ Capture supplied non-tentative facts faithfully; no interview or reconfirmation.
 
 Examples:
 
-- `Pushing costs one energy`: accepted fact; control owns amount, mechanic owns spending rule. Link relevant cases/resource rather than copying the cost everywhere.
+- `Pushing costs one energy`: accepted fact; control variable owns amount, mechanic owns spending rule. Link relevant cases/resource rather than copying the cost everywhere.
 - `Could crates also pull?`: exploratory proposal, not an accepted verb/rule. Surface prior pulling rationale before creating a genuinely distinct option.
 - `Box means the existing crate`: resolve declared glossary mapping; an undeclared synonym needs a material identity decision, not a guessed merge.
 
 No setup is implied by capture. If required storage is absent, use approved existing document or pause for storage/setup choice. Do not silently add collections.
 
-## Retained alternatives
+## Alternatives and user-owned retention
 
-1. Inspect relevant decisions and canonical facts, including inactive options and rationale. Done: new proposals do not silently repeat known rejected ideas.
-2. Retain every generated alternative as a separate `decisions` record with `record_kind: proposal`, `status: proposed`, common `alternative_group`, subjects, and useful rationale. Preserve source context; do not invent acceptance checks. Done: alternatives survive beyond chat.
-3. On supplied adoption, write adopted facts in their canonical domain records; update decision disposition/rationale and links. Choosing one does not reject siblings. Done: accepted source owns behavior; decision record retains why it was chosen.
-4. Rejection/supersession/defunct status retains record and rationale. Do not delete useful history or silently revive inactive definitions. Done: later exploration can find previous reasoning.
+1. Inspect relevant canonical facts and any retained rationale. Consult existing project-level decisions only when useful, following that collection's actual schema/usage. Done: available context is known; no second decision archive is created.
+2. Generated options remain proposals, not accepted rules. Save them only when wanted, in relevant domain records or chosen existing project storage. Done: no compulsory record for every conversational alternative.
+3. On supplied adoption, update canonical domain definitions. Selecting one option does not reject siblings unless user says so. Done: accepted source owns behavior.
+4. Users may retain ignored options with statuses such as rejected, defunct, inactive, or disabled, or request deletion. Follow live schema; distribution status is free text, default proposed. Inspect affected references before requested deletion; do not silently remove extra records or reactivate ignored ones. Done: user controls retention.
 
 ## Record writes
 

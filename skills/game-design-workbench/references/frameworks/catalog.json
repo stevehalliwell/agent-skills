@@ -48,14 +48,13 @@
     "required_roles": [
       "nouns",
       "resources",
-      "controls",
+      "control-vars",
       "mechanics",
       "interactions",
-      "measures",
       "experiments"
     ],
     "queries": [
-      "controls",
+      "control-vars",
       "matrix",
       "records"
     ]
@@ -70,12 +69,10 @@
     "required_roles": [
       "mechanics",
       "systems",
-      "dynamics",
-      "decisions"
+      "dynamics"
     ],
     "queries": [
       "mda",
-      "decisions",
       "records"
     ]
   },
@@ -146,12 +143,12 @@
     "required_roles": [
       "mechanics",
       "challenges",
-      "controls",
+      "control-vars",
       "experiments"
     ],
     "queries": [
       "routes",
-      "controls",
+      "control-vars",
       "evidence",
       "records"
     ]
@@ -285,12 +282,10 @@
       "mechanics",
       "dynamics",
       "challenges",
-      "decisions",
       "experiments"
     ],
     "queries": [
       "mda",
-      "decisions",
       "evidence",
       "records"
     ]
@@ -325,11 +320,9 @@
       "mechanics",
       "aesthetics",
       "challenges",
-      "decisions",
       "experiments"
     ],
     "queries": [
-      "decisions",
       "mda",
       "records"
     ]
@@ -343,13 +336,10 @@
     "attribution": "Tracy Fullerton, Game Design Workshop: A Playcentric Approach to Creating Innovative Games",
     "required_roles": [
       "aesthetics",
-      "experiments",
-      "decisions",
-      "measures"
+      "experiments"
     ],
     "queries": [
       "evidence",
-      "decisions",
       "records"
     ]
   }

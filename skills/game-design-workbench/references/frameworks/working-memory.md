@@ -36,7 +36,7 @@ Available recipes: `query skill-atoms`; `query routes`; `query records --collect
 ## Apply to selected slice
 
 1. Choose one decision and trace what information is available when it is made. Identify what disappeared, changed, or must be recalled from elsewhere. Mark unspecified presentation unknown.
-2. Separate recognizing visible state from recalling hidden state and reasoning about consequences. Name the actual information involved; do not substitute counts of records, skill atoms, or controls.
+2. Separate recognizing visible state from recalling hidden state and reasoning about consequences. Name the actual information involved; do not substitute counts of records, skill atoms, or control variables.
 3. Describe how a familiar player might group the information and why a beginner might not. Keep both as assumptions unless relevant observations establish that familiarity.
 4. Consider one stable cue, history aid, or presentation variant. State whether it externalizes information, reveals a solution, or changes the intended memory challenge. Preserve alternatives and trade-offs.
 5. Return the selected memory demand, its context, and a comparison question. Do not apply four, seven, or any other fixed count as a universal failure threshold or capacity diagnosis.

@@ -8,8 +8,7 @@
   "status": "accepted",
   "stage": "proposed",
   "experiment_kind": "playtest",
-  "controls": [],
-  "measures": [],
+  "control-vars": [],
   "mechanics": [
     "mechanics/crate-pushing"
   ],
@@ -31,6 +30,9 @@ Does limited push energy encourage deliberate positioning?
 
 ## Hypotheses
 Limited push energy may encourage deliberate positioning.
+
+## Measures
+Not yet defined; playtest method remains open.
 
 ## Expectations
 No measurable criterion supplied.

@@ -22,9 +22,9 @@ Use applicable enjoyment conditions to question a selected mechanic, encounter, 
 
 ## Inputs and query support
 
-Roles: `mechanics`, `challenges`, `controls`, `experiments`.
+Roles: `mechanics`, `challenges`, `control-vars`, `experiments`.
 
-Available recipes: `query routes`; `query controls`; `query evidence`; `query records --collection <mapped-alias>`.
+Available recipes: `query routes`; `query control-vars`; `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -66,14 +66,14 @@ Available recipes: `query routes`; `query controls`; `query evidence`; `query re
 ## Common traps
 
 - Do not reproduce the published evaluation instrument under slightly altered labels. Keep these questions independently authored and qualitative.
-- Do not infer player agency from the existence of adjustable controls such as push-cost.
+- Do not infer player agency from the existence of adjustable configuration values such as push-cost.
 - Do not treat every theme as mandatory or use social inapplicability as a negative score.
 
 ## Missing data and evidence limits
 
 Mark social criteria inapplicable for an intentionally solo experience. Missing goal/feedback prose is a documentation question, not proof players cannot understand the game.
 
-These are original questions, not a reproduction or scoring implementation of the published evaluation instrument. No aggregate enjoyment score. Flow theory and GameFlow are distinct. Control records are adjustable parameters, not a complete account of player agency or input controls.
+These are original questions, not a reproduction or scoring implementation of the published evaluation instrument. No aggregate enjoyment score. Flow theory and GameFlow are distinct. Control-variable records are named game configuration, not a complete account of player agency or input controls.
 
 ## Sources
 

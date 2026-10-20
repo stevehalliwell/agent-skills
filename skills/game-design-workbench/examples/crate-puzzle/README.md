@@ -1,6 +1,6 @@
 # Crate-and-switch example
 
-67 records across 16 collections. Includes six skill atoms, three crate/push cases, two unexecuted investigations, and local `tools/game-design-workbench/` snapshot. Tutorial source inside that snapshot is documentation, not a second configured design.
+63 records across 14 collections. Includes six skill atoms, three crate/push cases, two unexecuted investigations, and local `tools/game-design-workbench/` snapshot. Tutorial source inside that snapshot is documentation, not a second configured design.
 
 ## Game concept
 
@@ -34,6 +34,8 @@ Expected: coordinate rank 2; plan-push null; switch-chain ranks 3. Three distinc
 `experiments/energy-encourages-planning` retains original hypothesis UUID and claim as a proposed playtest investigation. Method remains undesigned. It is not combined with timing model: human planning and assumed route delays ask different questions.
 
 `experiments/route-cost` owns timing method and former route-time criterion, including original criterion UUID and authored null thresholds.
+Measured outputs are defined locally under route-cost's Measures heading. Pulling remains a rejected verb proposal; crate-color remains a proposed mechanic. Their original identities/rationale survive without a separate decisions collection. Named configuration lives in `game-design/control-vars/`; formula references use that namespace.
+
 ## Saved history
 
 Earlier baselines and dated reviews predate consolidation and remain unchanged/stale. To review current source, follow installed `references/review.md` §Review and §Save and reopen; capture a new baseline. Bound concept/mode is captured automatically; select an actual committed intention only when one exists. Do not relabel old evidence.

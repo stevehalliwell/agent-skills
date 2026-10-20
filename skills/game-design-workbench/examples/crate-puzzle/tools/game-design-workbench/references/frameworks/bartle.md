@@ -22,9 +22,9 @@ Use historically situated player/world and acting/interacting distinctions to qu
 
 ## Inputs and query support
 
-Roles: `mechanics`, `dynamics`, `challenges`, `decisions`, `experiments`.
+Roles: `mechanics`, `dynamics`, `challenges`, `experiments`.
 
-Available recipes: `query mda`; `query decisions`; `query evidence`; `query records --collection <mapped-alias>`.
+Available recipes: `query mda`; `query evidence`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -38,7 +38,7 @@ Vocabulary: Achievers, Explorers, Socialisers, Killers describe approaches discu
 ## Apply to selected slice
 
 1. Check whether the selected question involves meaningful multiplayer participation. If it does not, report limited applicability and stop this lens. Do not invent social systems to make the frame fit.
-2. For applicable scope, name actual participant activities and their targets. Read rules, dynamic hypotheses, challenge descriptions, and relevant decisions rather than assigning labels from genre.
+2. For applicable scope, name actual participant activities and their targets. Read rules, dynamic hypotheses, challenge descriptions, and any existing project decisions rather than assigning labels from genre.
 3. Use the two distinctions to compare approaches to those activities. Allow the same person to pursue different approaches at different times. Mark uncertain mappings as interpretations.
 4. Inspect interactions between approaches, including consent, disruption, recovery, and shared incentives where relevant. Distinguish intended competitive effects from assumptions about harmful behavior.
 5. Return the activity tension and its design context. No player-type percentages, population balancing prescription, psychological labels, or requirement to support all four approaches is justified.

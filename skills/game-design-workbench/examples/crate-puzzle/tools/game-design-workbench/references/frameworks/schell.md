@@ -22,9 +22,9 @@ Reframe a selected design question through concrete player experience, rules, al
 
 ## Inputs and query support
 
-Roles: `mechanics`, `aesthetics`, `challenges`, `decisions`, `experiments`.
+Roles: `mechanics`, `aesthetics`, `challenges`, `experiments`.
 
-Available recipes: `query decisions`; `query mda`; `query records --collection <mapped-alias>`.
+Available recipes: `query mda`; `query records --collection <mapped-alias>`.
 
 ## Working concepts
 
@@ -35,7 +35,7 @@ Available recipes: `query decisions`; `query mda`; `query records --collection <
 
 ## Apply to selected slice
 
-1. Select the exact design question and player moment. Read relevant source, intended experience, and prior decisions. State the assumption or choice this reflection should clarify.
+1. Select the exact design question and player moment. Read relevant source, intended experience, and any existing project decisions. State the assumption or choice this reflection should clarify.
 2. Describe what the player needs to notice, decide, and experience in that moment. Separate supplied facts from imagined reactions, and mark missing context explicitly.
 3. Question one important rule through a counterfactual or contrasting proposal. Explain what the alternative preserves, changes, and costs; do not generate unrelated options for breadth alone.
 4. Trace the consequences into adjacent rules, challenges, and retained rationale. Surface the strongest reason against the attractive option rather than treating a fresh perspective as automatic improvement.
@@ -61,7 +61,7 @@ Available recipes: `query decisions`; `query mda`; `query records --collection <
 
 - A thought experiment can expose an assumption but cannot establish an experienced outcome. Label its conclusion accordingly.
 - A fair later comparison should address the disputed rule relationship, not reward whichever candidate has more polish or content.
-- Retain contrary evidence and the reason an alternative was rejected. Changed context may justify reconsideration without rewriting prior history.
+- Consider contrary evidence and any retained rejection rationale. User chooses storage/retention; changed context may justify reconsideration without silently adopting a proposal.
 
 ## Common traps
 
@@ -71,7 +71,7 @@ Available recipes: `query decisions`; `query mda`; `query records --collection <
 
 ## Missing data and evidence limits
 
-Start from supplied facts and scoped alternatives. Unknowns become questions/hypotheses, not invented rules. Preserve rejected alternatives and rationale.
+Start from supplied facts and scoped alternatives. Unknowns become questions/hypotheses, not invented rules. Consult retained alternatives/rationale when available; storage and retention follow user choice.
 
 No copied lens-card wording, numbering, complete deck, or claim of comprehensive book coverage. Do not use this pack as permission to run other framework reviews.
 

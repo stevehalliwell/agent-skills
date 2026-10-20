@@ -48,7 +48,7 @@ Setup supports compatible dedicated in-project collection directories and unique
 
 Initial engineering limits: 5000 source files, 2 MiB per source/JSON-input file, 32 MiB total snapshot, 30 s per Attendant child, 16 MiB child output. They bound bootstrap cost, not game quality. Oversize input fails rather than silently truncating source. Query row limits explicitly mark partial output; matrix expansion obeys same limit. Source recursion includes all files in configured collection folders; keep private/unrelated large files outside them. Extra snapshot documents must be regular in-project files.
 
-Unavailable commands fail `CAPABILITY_UNAVAILABLE`: native C99 inspect/impact/semantic validation, formula resolution/control exports, native views, simulation/Monte Carlo/sweeps/replay, and expectation comparison. Guidance may describe a proposed experiment; helper does not compile or execute it. Later delivery must add real implementations, not aliases that pretend projections are analysis.
+Unavailable commands fail `CAPABILITY_UNAVAILABLE`: native C99 inspect/impact/semantic validation, formula resolution/control-variable import/export, native views, simulation/Monte Carlo/sweeps/replay, and expectation comparison. Guidance may describe a proposed experiment; helper does not compile or execute it. Later delivery must add real implementations, not aliases that pretend projections are analysis.
 
 ## Maintainer tools
 

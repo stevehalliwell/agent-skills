@@ -8,9 +8,7 @@ game-design/aesthetics as aesthetics
 game-design/skill-atoms as skill-atoms
 game-design/challenges as challenges
 game-design/levels as levels
-game-design/controls as controls
-game-design/measures as measures
+game-design/control-vars as control-vars
 game-design/experiments as experiments
-game-design/decisions as decisions
 game-design/glossary as glossary
 game-design/resources as resources
