@@ -683,13 +683,13 @@ Static inspection of `skills/attendant/scripts/attendant.mjs` and `references/co
 - [x] Ground starting brief, framework reference, Attendant contracts, and Windows/CJIT parser feasibility.
 - [x] Define non-linear operations, routing/authority, lifecycle, source ownership, and partial-data semantics.
 - [x] Specify all 18 pack contracts, first-slice walkthroughs/acceptance, model fields, CLI/results, projections, controls, and one-shot simulation flow.
-- [x] Separate settled behavior from unverified implementation claims. No workbench code/templates/fixtures created and no commits authorized.
+- [x] Separate settled behavior from unverified implementation claims. Refinement ended before implementation; user subsequently authorized implementation and step commits.
 
 ### Slice 1 — usable skill, model, and all framework packs
 
 - [ ] Create `skills/game-design-workbench/SKILL.md`, conditionally loaded operation references, 18 pack documents, source citations, and original prompts. Research each pack's sources before authoring; report inaccessible evidence.
 - [ ] Implement 19 core schema/usage/body-template sets, justified supplemental data/query support, setup/update/resume instructions, snapshot manifest, and local quickstart/dependencies.
-- [ ] Build bundled crate-and-switch source fixture and retained proposals, glossary, resource/control/formula examples, explicit case classifications, skill/challenge graph, and expected findings. Do not claim simulation execution yet.
+- [x] Build bundled crate-and-switch source fixture and retained proposals, glossary, resource/control/formula examples, explicit case classifications, skill/challenge graph, and expected findings. No simulation execution claimed.
 - [ ] Test setup against empty and preconfigured temporary projects; preserve user files/configuration and honor Attendant proposal/apply gates. Test all first-slice walkthroughs, one selected framework per run, partial source, and unsupported-check disclosure.
 - [ ] Add identity/reference/alias tests with actual schemas; verify generic Attendant operations locally without global skill. Validate entrypoint/frontmatter/links and update repository skill index.
 
@@ -728,7 +728,7 @@ Acceptance: human can inspect multi-case cell and parallel/late-root chains, nav
 - [ ] Test missing approvals/declined commits, dirty/untracked relevant source, unchanged recipe retry, stale recipe, compile/protocol/runtime/timeout/step/output failures, undefined measurements, missing historical dependencies, and replay without current controls or overwritten user files.
 - [ ] Verify dated results, tracked reproduction provenance versus ignored rebuildable output, no auto-run on open/preview, CLI/view parity, and new simulation after rule changes. Use temporary Git repositories; never checkpoint this skills repo as a test.
 
-Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show measurements/spread/percentiles and limits, inspect a selected run, and distinguish simulated predictions from observed play. Separately requested analysis can compare declared expectations; simulation does not decide design meaning. Full workbench scope is delivered across slices; implementation remains unstarted.
+Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show measurements/spread/percentiles and limits, inspect a selected run, and distinguish simulated predictions from observed play. Separately requested analysis can compare declared expectations; simulation does not decide design meaning. Full workbench scope is delivered across slices; current implementation covers Slice 1 only.
 
 ## Acceptance approach
 
@@ -756,7 +756,11 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Plan checkpoint: `2a69e10`.
 - Step 2: generated 19 schema/usage/body-template sets and 68 tutorial records; `attendant validate --strict` returned zero diagnostics/corrections. Observation collection intentionally empty; analytical timing reference is not executed evidence.
 - Vendored unchanged Attendant runner plus YAML dependency and license notices for project-local operation. No new database/query engine.
-- Remaining: tools, researched packs/entrypoint, integrated tests, offline report.
+- Step 3: bootstrap CLI, guarded setup/update, source-preserving queries, term resolution, snapshots, and report-storage module. Windows/Node tests: **8/8 passed**. Report integration remains pending catalog delivery.
+- Tests cover empty setup/idempotency, local-only runner, stale approval, migration gate, local edit conflicts, all eight query recipes, non-correcting reads, inactive terms/collisions, bounded output/fields, validation findings, source fingerprints, and path escapes.
+- Rejected weakening Attendant authorizer after `json_each` denial. Kept vendor unchanged; matrix selects declared arrays and expands bounded output in helper. No domain analysis duplicated in Node.
+- Preserved Attendant `scripts/` and `references/` vendor layout so notice links resolve.
+- Remaining: researched packs/entrypoint, report integration tests, integrated verification, offline report.
 
 ## Comments
 

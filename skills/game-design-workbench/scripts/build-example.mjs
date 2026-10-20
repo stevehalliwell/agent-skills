@@ -6,7 +6,7 @@ import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { stringify } from '../vendor/attendant/yaml.mjs';
+import { stringify } from '../vendor/attendant/scripts/yaml.mjs';
 import { model, schemaFor, usageFor } from './model.mjs';
 import { records } from './fixture-data.mjs';
 const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
