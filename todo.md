@@ -687,8 +687,8 @@ Static inspection of `skills/attendant/scripts/attendant.mjs` and `references/co
 
 ### Slice 1 — usable skill, model, and all framework packs
 
-- [ ] Create `skills/game-design-workbench/SKILL.md`, conditionally loaded operation references, 18 pack documents, source citations, and original prompts. Research each pack's sources before authoring; report inaccessible evidence.
-- [ ] Implement 19 core schema/usage/body-template sets, justified supplemental data/query support, setup/update/resume instructions, snapshot manifest, and local quickstart/dependencies.
+- [x] Create `skills/game-design-workbench/SKILL.md`, conditionally loaded operation references, 18 pack documents, source citations, and original prompts. Each pack records actual source-access limits, including abstract/search-only evidence.
+- [x] Implement 19 core schema/usage/body-template sets, shared query support, setup/update/resume instructions, snapshot manifest, and local quickstart/dependencies. No supplemental theory datasets needed.
 - [x] Build bundled crate-and-switch source fixture and retained proposals, glossary, resource/control/formula examples, explicit case classifications, skill/challenge graph, and expected findings. No simulation execution claimed.
 - [ ] Test setup against empty and preconfigured temporary projects; preserve user files/configuration and honor Attendant proposal/apply gates. Test all first-slice walkthroughs, one selected framework per run, partial source, and unsupported-check disclosure.
 - [ ] Add identity/reference/alias tests with actual schemas; verify generic Attendant operations locally without global skill. Validate entrypoint/frontmatter/links and update repository skill index.
@@ -760,7 +760,15 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Tests cover empty setup/idempotency, local-only runner, stale approval, migration gate, local edit conflicts, all eight query recipes, non-correcting reads, inactive terms/collisions, bounded output/fields, validation findings, source fingerprints, and path escapes.
 - Rejected weakening Attendant authorizer after `json_each` denial. Kept vendor unchanged; matrix selects declared arrays and expands bounded output in helper. No domain analysis duplicated in Node.
 - Preserved Attendant `scripts/` and `references/` vendor layout so notice links resolve.
-- Remaining: researched packs/entrypoint, report integration tests, integrated verification, offline report.
+- Step 4: all 18 original attributed packs, narrow entrypoint (769 body words), operation/CLI/model references, direct quickstart, tutorial walkthrough, repository index, and report input template.
+- Integrated Node tests: **14/14 passed**, including reports/history/freshness/stable finding identity, explicit source capture, all-lenses rejection, custom role reuse/local schema preservation, oversize sources, and Windows junction rejection.
+- Frontmatter passes; **55 local links pass** after fixing one template-directory link. No skipped internal-link failures.
+- External URL validator reports **8 HTTP 403 responses** across publisher/academic/model links. Sources retained as canonical citations; source access limitations documented per pack. No full-book/questionnaire/deck inspection claimed.
+- Tool snapshot includes tutorial documentation/source but never its installed tools/results, avoiding recursive bundles. Canonical empty collections stay empty; tutorial copy under tools is reference material.
+- Owned package text uses LF; vendored bytes remain unmodified. Attribute files accompany installed snapshot so recorded hashes survive checkout.
+- Step 4 final regression: **15/15 passed**. Added explicit untyped-scalar coverage and actual temporary Git commit/Windows autocrlf checkout round trip. Found/fixed CRLF false conflicts in managed instructions; package hashes and setup idempotency survive checkout.
+- Setup candidate scan now includes root Markdown and runs alongside existing registries; configured collection directories are excluded. Shallow scan depth/exclusions are explicit, not claimed exhaustive.
+- Remaining: final example-local snapshot, integrated verification, offline report.
 
 ## Comments
 

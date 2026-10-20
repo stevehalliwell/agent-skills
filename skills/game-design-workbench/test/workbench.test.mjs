@@ -1,18 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, cp, readFile, writeFile, readdir, rm, mkdir } from 'node:fs/promises';
+import { mkdtemp, cp, readFile, writeFile, readdir, rm, mkdir, symlink } from 'node:fs/promises';
 import { join, resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { planSetup, applySetup } from '../scripts/setup.mjs';
 import { runQuery, resolveTerm } from '../scripts/queries.mjs';
-import { snapshot, hash } from '../scripts/lib.mjs';
+import { snapshot } from '../scripts/lib.mjs';
+import { catalog, saveReport, showReport } from '../scripts/reports.mjs';
+import { model } from '../scripts/model.mjs';
 const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const roots = [];
 async function temporary(fixture = false) {
   const root = await mkdtemp(join(tmpdir(), 'gd-test space-é-')); roots.push(root);
-  if (fixture) await cp(join(home, 'examples/crate-puzzle'), root, { recursive: true, filter: source => basename(source) !== '.attendant' && basename(source) !== 'game-design-results' });
+  if (fixture) await cp(join(home, 'examples/crate-puzzle'), root, { recursive: true, filter: source => !['.attendant', 'game-design-results', 'tools'].includes(basename(source)) });
   return root;
 }
 function cli(root, args, script = join(home, 'scripts/workbench.mjs')) {
@@ -42,6 +44,15 @@ test('setup approval, idempotency, local-only execution, and conflict preservati
   const result = cli(root, ['query', 'skills'], localScript);
   assert.equal(result.status, 0, JSON.stringify(result.json));
   assert.deepEqual(result.json.data.rows, []);
+  // Ordinary Windows Git checkout must not invalidate owned-file/guidance hashes.
+  for (const args of [['init', '-q'], ['-c', 'core.autocrlf=true', 'add', '.'], ['-c', 'user.name=Workbench Test', '-c', 'user.email=workbench@example.invalid', 'commit', '-qm', 'fixture'], ['-c', 'core.autocrlf=true', 'checkout-index', '-af']]) {
+    const command = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+    assert.equal(command.status, 0, command.stderr);
+  }
+  const afterCheckout = await planSetup(root);
+  assert.deepEqual(afterCheckout.conflicts, []);
+  assert.equal(afterCheckout.files.length, 0);
+  assert.equal(cli(root, ['query', 'skills'], localScript).status, 0);
   await writeFile(localScript, `${await readFile(localScript, 'utf8')}\n// User local edit.\n`);
   const conflict = await planSetup(root);
   assert.ok(conflict.conflicts.includes('tools/game-design-workbench/scripts/workbench.mjs'));
@@ -62,8 +73,10 @@ test('unconfigured frontmatter needs migration/fresh decision', async () => {
   await mkdir(join(root, 'notes'));
   const source = '---\nname: old-design\n---\nOriginal notes.\n';
   await writeFile(join(root, 'notes/design.md'), source);
+  await writeFile(join(root, 'old-design.md'), source);
+  await mkdir(join(root, '.pi')); await writeFile(join(root, '.pi/attendant.tables'), '');
   const plan = await planSetup(root);
-  assert.deepEqual(plan.candidate_sources, ['notes/design.md']);
+  assert.deepEqual(plan.candidate_sources.sort(), ['notes/design.md', 'old-design.md']);
   await assert.rejects(applySetup(root, plan.plan_id, {}), { code: 'MIGRATION_DECISION_REQUIRED' });
   assert.equal(await readFile(join(root, 'notes/design.md'), 'utf8'), source);
   assert.equal((await planSetup(root, { fresh: true })).fresh_acknowledged, true);
@@ -142,4 +155,132 @@ test('snapshot detects source changes and rejects escapes', async () => {
   assert.notEqual((await snapshot(root)).metadata.fingerprint, before.fingerprint);
   await assert.rejects(snapshot(root, ['../private.txt']), { code: 'PATH_OUTSIDE_PROJECT' });
   assert.equal(cli(root, ['snapshot', '--output', join(root, 'game-design/skills/overwrite.md')]).json.errors[0].code, 'OUTPUT_SOURCE_CONFLICT');
+});
+
+test('all 18 generated packs match catalog, queries, roles, and selected entrypoint links', async () => {
+  const entries = await catalog();
+  assert.equal(entries.length, 18);
+  assert.equal(new Set(entries.map(entry => entry.id)).size, 18);
+  const skill = await readFile(join(home, 'SKILL.md'), 'utf8');
+  for (const entry of entries) {
+    const body = await readFile(join(home, entry.path), 'utf8');
+    assert.ok(skill.includes(`(${entry.path})`), entry.id);
+    assert.ok(body.includes('## Original prompts'), entry.id);
+    assert.ok(body.includes('Access checked 2026-10-19:'), entry.id);
+    assert.ok(entry.required_roles.every(role => Object.hasOwn(model, role)), entry.id);
+    assert.ok(entry.queries.every(query => ['matrix', 'skills', 'routes', 'mda', 'decisions', 'glossary', 'controls', 'evidence', 'records'].includes(query)), entry.id);
+  }
+  const child = spawnSync(process.execPath, [join(home, 'scripts/build-packs.mjs'), '--check'], { encoding: 'utf8' });
+  assert.equal(child.status, 0, child.stdout + child.stderr);
+});
+
+function rankFinding() {
+  return { scope: ['skills/coordinate authored rank'], findings: [{ code: 'skill.rank-intent', origin: 'agent', kind: 'unknown_unresolved', severity: 'warning', records: ['01a15175-3c00-7529-8fb6-09255d506737'], sources: [{ path: 'game-design/skills/coordinate.md', field: 'rank' }], reason: 'Authored rank is before rank-3 prerequisite; interpretation, not native check.', suggested_investigation: 'Ask whether this authored order is intentional.', trigger_key: 'authored-order' }], coverage: { status: 'partial', performed: ['source inspection'] }, limitations: ['No player observations or native C99 checks.'] };
+}
+
+test('dated reports preserve history, stable finding identity, and source freshness', async () => {
+  const root = await temporary(true);
+  const baseline = (await snapshot(root)).metadata;
+  const first = await saveReport(root, 'skill-atoms', rankFinding(), baseline);
+  assert.match(first.run_id, /^\d{8}T\d{9}Z-[a-f0-9]{8}$/);
+  const path = join(root, first.paths[1]);
+  const original = await readFile(path, 'utf8');
+  const shown = await showReport(root, first.run_id);
+  assert.equal(shown.matches_current_source, true);
+  assert.equal(shown.historical, true);
+  assert.equal(shown.freshly_run, false);
+  assert.equal(shown.report.coverage.native_c99_checks, 'unavailable in this release');
+  const revised = rankFinding(); revised.findings[0].reason = 'Different prose; same stable source rule.';
+  const second = await saveReport(root, 'skill-atoms', revised, baseline);
+  assert.notEqual(second.run_id, first.run_id);
+  assert.equal((await showReport(root, second.run_id)).report.findings[0].id, shown.report.findings[0].id);
+  const skill = join(root, 'game-design/skills/coordinate.md');
+  await writeFile(skill, (await readFile(skill, 'utf8')).replace('rank: 2', 'rank: 3'));
+  assert.equal((await showReport(root, first.run_id)).matches_current_source, false);
+  assert.equal(await readFile(path, 'utf8'), original);
+  await assert.rejects(saveReport(root, 'skill-atoms', revised, baseline), { code: 'SOURCE_CHANGED' });
+});
+
+test('report rejects all-lenses, uncaptured sources, invalid structure, and incomplete runs', async () => {
+  const root = await temporary(true);
+  const baseline = (await snapshot(root)).metadata;
+  await assert.rejects(saveReport(root, 'all', rankFinding(), baseline), { code: 'LENS_REQUIRED' });
+  const invalid = rankFinding(); invalid.findings[0].sources[0].path = 'private-not-captured.md';
+  await assert.rejects(saveReport(root, 'skill-atoms', invalid, baseline), { code: 'SOURCE_NOT_CAPTURED' });
+  await assert.rejects(saveReport(root, 'skill-atoms', { ...rankFinding(), coverage: [] }, baseline), { code: 'REPORT_INVALID' });
+  await assert.rejects(saveReport(root, 'skill-atoms', { ...rankFinding(), limitations: 'wrong' }, baseline), { code: 'REPORT_INVALID' });
+  const first = await saveReport(root, 'skill-atoms', rankFinding(), baseline);
+  const metadata = join(root, first.paths[0]);
+  await writeFile(metadata, JSON.stringify({ ...JSON.parse(await readFile(metadata, 'utf8')), status: 'writing' }));
+  await assert.rejects(showReport(root, first.run_id), { code: 'REPORT_INCOMPLETE' });
+});
+
+test('CLI snapshot/output/report round trip and explicit extra-source capture', async () => {
+  const root = await temporary(true);
+  const snapshotPath = join(root, 'baseline.json');
+  const inputPath = join(root, 'findings.json');
+  await writeFile(join(root, 'notes.md'), '# Context\n');
+  const command = spawnSync(process.execPath, [join(home, 'scripts/workbench.mjs'), 'snapshot', '--project', root, '--include', 'notes.md', '--output', snapshotPath, '--json'], { encoding: 'utf8' });
+  assert.equal(command.status, 0, command.stderr);
+  assert.equal(command.stdout, '');
+  const saved = JSON.parse(await readFile(snapshotPath, 'utf8'));
+  assert.ok(saved.data.sources.some(item => item.path === 'notes.md'));
+  await writeFile(inputPath, JSON.stringify(rankFinding()));
+  const report = cli(root, ['report', 'save', '--lens', 'skill-atoms', '--input', inputPath, '--snapshot', snapshotPath]);
+  assert.equal(report.status, 0, JSON.stringify(report.json));
+  assert.equal(cli(root, ['report', 'show', report.json.data.run_id]).json.data.matches_current_source, true);
+  assert.equal(cli(root, ['snapshot', '--output', snapshotPath]).status, 2); // Exclusive output, no overwrite.
+});
+
+test('custom role binding reuses existing contracts and preserves local guidance/extra fields', async () => {
+  const root = await temporary(true);
+  await rm(join(root, 'game-design/skills'), { recursive: true });
+  await cp(join(home, 'examples/crate-puzzle/game-design/skills'), join(root, 'game-design/abilities'), { recursive: true });
+  const configured = join(root, '.pi/attendant.tables');
+  await writeFile(configured, (await readFile(configured, 'utf8')).replace('game-design/skills as skills', 'game-design/abilities as abilities'));
+  // Reference declarations and actual references must change through explicit migration.
+  for (const folder of await readdir(join(root, 'game-design'))) {
+    for (const name of await readdir(join(root, 'game-design', folder))) {
+      const path = join(root, 'game-design', folder, name);
+      await writeFile(path, (await readFile(path, 'utf8')).replaceAll('ref[]:skills', 'ref[]:abilities').replaceAll('skills/', 'abilities/'));
+    }
+  }
+  const usage = join(root, 'game-design/abilities/.usage.md');
+  await writeFile(usage, '# Local ability policy\nPreserve this guidance.\n');
+  const schema = join(root, 'game-design/abilities/.schema.md');
+  await writeFile(schema, (await readFile(schema, 'utf8')).replace('---\n', '---\nlocal_note: ""\n'));
+  const options = { mapping: { skills: 'abilities' } };
+  const plan = await planSetup(root, options);
+  assert.equal(plan.conflicts.length, 0);
+  assert.equal(plan.new_collections.length, 0);
+  await applySetup(root, plan.plan_id, options);
+  assert.equal(await readFile(usage, 'utf8'), '# Local ability policy\nPreserve this guidance.\n');
+  assert.match(await readFile(schema, 'utf8'), /local_note/);
+  assert.equal((await runQuery(root, 'skills')).data.rows.length, 6);
+});
+
+test('generic validation explicitly does not enforce null-declared scalar subtypes', async () => {
+  const root = await temporary(true);
+  const path = join(root, 'game-design/skills/coordinate.md');
+  await writeFile(path, (await readFile(path, 'utf8')).replace('rank: 2', 'rank: not-an-integer'));
+  const result = cli(root, ['validate']);
+  assert.equal(result.status, 0);
+  assert.equal(result.json.coverage.status, 'partial');
+  assert.ok(result.json.coverage.not_performed[0].includes('semantic'));
+  assert.equal((await runQuery(root, 'skills')).data.rows.find(row => row.name === 'coordinate').rank, 'not-an-integer');
+});
+
+test('oversized source and out-of-project junction fail without touching target', async () => {
+  const root = await temporary(true);
+  const path = join(root, 'game-design/skills/large.md');
+  await writeFile(path, Buffer.alloc(2 * 1024 * 1024 + 1));
+  await assert.rejects(snapshot(root), { code: 'SOURCE_LIMIT' });
+  await rm(path);
+  const outside = await temporary();
+  await writeFile(join(outside, 'keep.txt'), 'Do not touch.');
+  const source = join(root, 'game-design/skills');
+  await rm(source, { recursive: true });
+  await symlink(outside, source, process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(snapshot(root), { code: 'SYMLINK_UNSUPPORTED' });
+  assert.equal(await readFile(join(outside, 'keep.txt'), 'utf8'), 'Do not touch.');
 });

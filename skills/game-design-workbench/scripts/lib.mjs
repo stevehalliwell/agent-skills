@@ -87,8 +87,12 @@ export async function bundle() {
     if (!info.isDirectory()) fail('PACKAGE_INVALID', `Package folder is not a directory: ${folder}`);
     await walk(home, join(home, folder), files);
   }
-  for (const name of ['README.md', 'SKILL.md']) { const bytes = await optional(join(home, name)); if (bytes) files.push({ path: name, bytes }); }
-  return files.filter(file => !['scripts/build-example.mjs', 'scripts/fixture-data.mjs'].includes(file.path)).sort((a, b) => a.path.localeCompare(b.path));
+  // Include tutorial source/docs, never its installed tools/results (no recursive bundle).
+  for (const folder of ['examples/crate-puzzle/.pi', 'examples/crate-puzzle/game-design']) {
+    if (await lstat(join(home, folder)).catch(error => { if (error.code === 'ENOENT') return null; throw error; })) await walk(home, join(home, folder), files);
+  }
+  for (const name of ['README.md', 'SKILL.md', '.gitattributes', 'examples/crate-puzzle/README.md']) { const bytes = await optional(join(home, name)); if (bytes) files.push({ path: name, bytes }); }
+  return files.filter(file => !['scripts/build-example.mjs', 'scripts/fixture-data.mjs', 'scripts/build-packs.mjs', 'scripts/pack-data.mjs'].includes(file.path)).sort((a, b) => a.path.localeCompare(b.path));
 }
 export async function snapshot(root, includes = []) {
   const files = [];

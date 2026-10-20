@@ -1,0 +1,349 @@
+[
+  {
+    "id": "mda",
+    "title": "Mechanics, Dynamics, Aesthetics",
+    "version": 1,
+    "path": "references/frameworks/mda.md",
+    "attribution": "Robin Hunicke, Marc LeBlanc, Robert Zubek (2004)",
+    "required_roles": [
+      "mechanics",
+      "systems",
+      "dynamics",
+      "aesthetics",
+      "hypotheses",
+      "experiments",
+      "observations"
+    ],
+    "queries": [
+      "mda",
+      "evidence",
+      "records"
+    ]
+  },
+  {
+    "id": "game-grammar",
+    "title": "Game grammar and meaningful play",
+    "version": 1,
+    "path": "references/frameworks/game-grammar.md",
+    "attribution": "Related meaningful-play concepts: Katie Salen Tekinbaş and Eric Zimmerman, Rules of Play. Noun–verb case matrix: workbench modeling technique, not an attributed book prescription.",
+    "required_roles": [
+      "nouns",
+      "verbs",
+      "interactions",
+      "mechanics",
+      "challenges"
+    ],
+    "queries": [
+      "matrix",
+      "records"
+    ]
+  },
+  {
+    "id": "resource-economy",
+    "title": "Resources, flows, and feedback",
+    "version": 1,
+    "path": "references/frameworks/resource-economy.md",
+    "attribution": "Ernest Adams and Joris Dormans, Game Mechanics: Advanced Game Design (2012); Machinations approach",
+    "required_roles": [
+      "nouns",
+      "resources",
+      "controls",
+      "mechanics",
+      "interactions",
+      "measures",
+      "expectations",
+      "experiments"
+    ],
+    "queries": [
+      "controls",
+      "matrix",
+      "records"
+    ]
+  },
+  {
+    "id": "gameplay-patterns",
+    "title": "Gameplay design patterns",
+    "version": 1,
+    "path": "references/frameworks/gameplay-patterns.md",
+    "attribution": "Staffan Björk, Sus Lundgren, Jussi Holopainen (2003), and later Björk/Holopainen pattern work",
+    "required_roles": [
+      "mechanics",
+      "systems",
+      "dynamics",
+      "decisions"
+    ],
+    "queries": [
+      "mda",
+      "decisions",
+      "records"
+    ]
+  },
+  {
+    "id": "skill-atoms",
+    "title": "Skill atoms and learning chains",
+    "version": 1,
+    "path": "references/frameworks/skill-atoms.md",
+    "attribution": "Daniel Cook, The Chemistry of Game Design (original article; 2021 repost)",
+    "required_roles": [
+      "skills",
+      "challenges",
+      "levels",
+      "mechanics"
+    ],
+    "queries": [
+      "skills",
+      "routes",
+      "records"
+    ]
+  },
+  {
+    "id": "theory-of-fun",
+    "title": "Learning, patterns, and fun",
+    "version": 1,
+    "path": "references/frameworks/theory-of-fun.md",
+    "attribution": "Raph Koster, A Theory of Fun for Game Design; 2003 presentation and book",
+    "required_roles": [
+      "skills",
+      "challenges",
+      "mechanics",
+      "hypotheses",
+      "observations"
+    ],
+    "queries": [
+      "skills",
+      "routes",
+      "evidence"
+    ]
+  },
+  {
+    "id": "flow",
+    "title": "Flow: challenge and capability",
+    "version": 1,
+    "path": "references/frameworks/flow.md",
+    "attribution": "Mihaly Csikszentmihalyi, Flow: The Psychology of Optimal Experience (1990)",
+    "required_roles": [
+      "skills",
+      "challenges",
+      "mechanics",
+      "hypotheses",
+      "observations"
+    ],
+    "queries": [
+      "skills",
+      "routes",
+      "evidence"
+    ]
+  },
+  {
+    "id": "gameflow",
+    "title": "GameFlow enjoyment conditions",
+    "version": 1,
+    "path": "references/frameworks/gameflow.md",
+    "attribution": "Penelope Sweetser and Peta Wyeth (2005)",
+    "required_roles": [
+      "mechanics",
+      "challenges",
+      "controls",
+      "hypotheses",
+      "observations"
+    ],
+    "queries": [
+      "routes",
+      "controls",
+      "evidence",
+      "records"
+    ]
+  },
+  {
+    "id": "cognitive-load",
+    "title": "Cognitive load and unfamiliar coordination",
+    "version": 1,
+    "path": "references/frameworks/cognitive-load.md",
+    "attribution": "John Sweller, Cognitive Load During Problem Solving: Effects on Learning (1988)",
+    "required_roles": [
+      "skills",
+      "challenges",
+      "mechanics",
+      "observations"
+    ],
+    "queries": [
+      "skills",
+      "routes",
+      "records"
+    ]
+  },
+  {
+    "id": "working-memory",
+    "title": "Working memory and chunking",
+    "version": 1,
+    "path": "references/frameworks/working-memory.md",
+    "attribution": "George A. Miller (1956); Nelson Cowan (2001, later reassessments)",
+    "required_roles": [
+      "skills",
+      "challenges",
+      "mechanics",
+      "observations"
+    ],
+    "queries": [
+      "skills",
+      "routes",
+      "records"
+    ]
+  },
+  {
+    "id": "zpd-scaffolding",
+    "title": "Supported challenge and scaffolding",
+    "version": 1,
+    "path": "references/frameworks/zpd-scaffolding.md",
+    "attribution": "Lev Vygotsky: zone of proximal development; David Wood, Jerome Bruner, Gail Ross: scaffolding/tutoring (1976)",
+    "required_roles": [
+      "skills",
+      "challenges",
+      "levels",
+      "observations"
+    ],
+    "queries": [
+      "skills",
+      "routes",
+      "records"
+    ]
+  },
+  {
+    "id": "self-determination",
+    "title": "Self-Determination Theory",
+    "version": 1,
+    "path": "references/frameworks/self-determination.md",
+    "attribution": "Edward Deci, Richard Ryan, and collaborators",
+    "required_roles": [
+      "aesthetics",
+      "mechanics",
+      "dynamics",
+      "challenges",
+      "hypotheses",
+      "observations"
+    ],
+    "queries": [
+      "mda",
+      "routes",
+      "evidence",
+      "records"
+    ]
+  },
+  {
+    "id": "quantic-foundry",
+    "title": "Published gamer-motivation vocabulary",
+    "version": 1,
+    "path": "references/frameworks/quantic-foundry.md",
+    "attribution": "Quantic Foundry, Gamer Motivation Model and 2015 profile-v2 explanation",
+    "required_roles": [
+      "aesthetics",
+      "mechanics",
+      "dynamics",
+      "challenges",
+      "hypotheses",
+      "observations"
+    ],
+    "queries": [
+      "mda",
+      "evidence",
+      "records"
+    ]
+  },
+  {
+    "id": "four-keys",
+    "title": "Four Keys to Fun",
+    "version": 1,
+    "path": "references/frameworks/four-keys.md",
+    "attribution": "Nicole Lazzaro / XEODesign; Why We Play Games research (2004)",
+    "required_roles": [
+      "dynamics",
+      "aesthetics",
+      "interactions",
+      "observations"
+    ],
+    "queries": [
+      "mda",
+      "matrix",
+      "evidence",
+      "records"
+    ]
+  },
+  {
+    "id": "bartle",
+    "title": "MUD participation patterns",
+    "version": 1,
+    "path": "references/frameworks/bartle.md",
+    "attribution": "Richard A. Bartle, Hearts, Clubs, Diamonds, Spades: Players Who Suit MUDs (1996)",
+    "required_roles": [
+      "mechanics",
+      "dynamics",
+      "challenges",
+      "decisions",
+      "observations"
+    ],
+    "queries": [
+      "mda",
+      "decisions",
+      "evidence",
+      "records"
+    ]
+  },
+  {
+    "id": "caillois",
+    "title": "Forms and freedoms of play",
+    "version": 1,
+    "path": "references/frameworks/caillois.md",
+    "attribution": "Roger Caillois, Man, Play and Games (1958; English translation by Meyer Barash)",
+    "required_roles": [
+      "mechanics",
+      "dynamics",
+      "challenges",
+      "aesthetics"
+    ],
+    "queries": [
+      "mda",
+      "routes",
+      "records"
+    ]
+  },
+  {
+    "id": "schell",
+    "title": "Contextual reflective design questions",
+    "version": 1,
+    "path": "references/frameworks/schell.md",
+    "attribution": "Jesse Schell, The Art of Game Design: A Book of Lenses",
+    "required_roles": [
+      "mechanics",
+      "aesthetics",
+      "challenges",
+      "decisions",
+      "hypotheses"
+    ],
+    "queries": [
+      "decisions",
+      "mda",
+      "records"
+    ]
+  },
+  {
+    "id": "playcentric",
+    "title": "Playcentric design and evidence",
+    "version": 1,
+    "path": "references/frameworks/playcentric.md",
+    "attribution": "Tracy Fullerton, Game Design Workshop: A Playcentric Approach to Creating Innovative Games",
+    "required_roles": [
+      "aesthetics",
+      "hypotheses",
+      "experiments",
+      "observations",
+      "decisions",
+      "measures",
+      "expectations"
+    ],
+    "queries": [
+      "evidence",
+      "decisions",
+      "records"
+    ]
+  }
+]

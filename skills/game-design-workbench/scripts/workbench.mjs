@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Bootstrap CLI: reuses Attendant, rather than implementing the later C99 core.
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname, relative, isAbsolute } from 'node:path';
 import { inspect } from 'node:util';
-import { collections, snapshot, safePath, projectRoot, fail } from './lib.mjs';
+import { collections, snapshot, safePath, projectRoot, optional, fail } from './lib.mjs';
 import { planSetup, displayPlan, applySetup } from './setup.mjs';
 import { projected, runQuery, resolveTerm } from './queries.mjs';
 import { catalog, saveReport, showReport } from './reports.mjs';
@@ -15,6 +15,12 @@ const help = {
   unavailable: ['native C99 checks/views', 'formula evaluation/control exports', 'simulation/sweep/replay execution'],
   query_safety: 'Queries run Attendant against temporary source copy; live Markdown is not mechanically corrected. Source fingerprints detect intervening edits.'
 };
+async function readInput(path) {
+  const bytes = await optional(resolve(path));
+  if (bytes === null) fail('INPUT_MISSING', `Missing JSON input: ${path}`);
+  try { return JSON.parse(bytes.toString('utf8')); }
+  catch { fail('JSON_INVALID', `Invalid JSON input: ${path}`); }
+}
 let options = {};
 let exit = 0;
 try {
@@ -53,7 +59,7 @@ try {
   else if (command === 'capabilities') data = { available: ['setup/update plans', 'read-only Attendant query recipes', 'declared term resolution', 'source snapshots', 'dated submitted reviews', '18 guided framework packs'], unavailable: help.unavailable, dependencies: help.release };
   else if (command === 'lenses') data = await catalog();
   else if (command === 'setup') {
-    const setupOptions = { fresh: Boolean(options.fresh), mapping: options.mapping ? JSON.parse(await readFile(resolve(options.mapping), 'utf8')) : undefined };
+    const setupOptions = { fresh: Boolean(options.fresh), mapping: options.mapping ? await readInput(options.mapping) : undefined };
     if (action === 'plan') data = displayPlan(await planSetup(root, setupOptions));
     else if (action === 'apply') data = await applySetup(root, options.approve, setupOptions);
     else fail('ARGUMENT_INVALID', 'Use setup plan or setup apply --approve <plan-id>.');
@@ -72,13 +78,13 @@ try {
   } else if (command === 'report') {
     if (action === 'save') {
       if (!options.input || !options.snapshot || !options.lens || extra) fail('ARGUMENT_INVALID', 'report save requires --lens, --input, and --snapshot.');
-      const input = JSON.parse(await readFile(resolve(options.input), 'utf8'));
-      const raw = JSON.parse(await readFile(resolve(options.snapshot), 'utf8'));
+      const input = await readInput(options.input);
+      const raw = await readInput(options.snapshot);
       data = await saveReport(root, options.lens, input, raw.data ?? raw);
     } else if (action === 'show' && extra) data = await showReport(root, extra);
     else fail('ARGUMENT_INVALID', 'Use report save or report show <run-id>.');
   }
-  const result = { schema_version: 1, ok: exit === 0, data, coverage, ...(provenance ? { provenance } : {}), errors: exit ? [{ code: 'VALIDATION_FINDINGS', message: 'Source diagnostics found; no corrections applied.' }] : [] };
+  const result = { schema_version: 1, ok: exit === 0, data, coverage, ...(provenance ? { provenance: { schema_version: provenance.schema_version, fingerprint: provenance.fingerprint, tool_hash: provenance.tool_hash, source_count: provenance.sources.length, includes: provenance.includes } } : {}), errors: exit ? [{ code: 'VALIDATION_FINDINGS', message: 'Source diagnostics found; no corrections applied.' }] : [] };
   const json = options.json || options.format === 'json' || (options.format !== 'text' && (process.env.GD_AGENT === '1' || !process.stdout.isTTY));
   const output = `${json ? JSON.stringify(result) : inspect(result, { depth: null, colors: false, maxArrayLength: null })}\n`;
   if (options.output) {

@@ -11,14 +11,15 @@ function schema(text) {
   if (document.errors.length) fail('SCHEMA_INVALID', document.errors[0].message);
   return { fields: document.toJS() ?? {}, body: text.slice(match.index + match[0].length) };
 }
-async function candidates(root) {
+async function candidates(root, configured) {
   const found = [];
   async function visit(directory, depth) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       if (entry.name.startsWith('.') || ['node_modules', 'tools', 'vendor', 'build'].includes(entry.name)) continue;
       const path = await safePath(root, join(directory, entry.name));
+      if (configured.some(collection => process.platform === 'win32' ? collection.absolute.toLowerCase() === path.toLowerCase() : collection.absolute === path)) continue;
       if (entry.isDirectory() && depth < 2) await visit(path, depth + 1);
-      else if (entry.isFile() && entry.name.endsWith('.md') && directory !== root) {
+      else if (entry.isFile() && entry.name.endsWith('.md')) {
         const bytes = await optional(path);
         if (bytes === null) fail('SOURCE_CHANGED', `Candidate disappeared: ${path}`);
         if (/^---\r?\n/.test(bytes.toString('utf8'))) found.push(slash(relative(root, path)));
@@ -38,8 +39,7 @@ export async function planSetup(root, options = {}) {
   const mapping = { ...Object.fromEntries(roles.map(role => [role, role])), ...(prior?.roles ?? {}), ...(options.mapping ?? {}) };
   if (Object.keys(mapping).some(role => !roles.includes(role)) || new Set(Object.values(mapping)).size !== roles.length || Object.values(mapping).some(alias => typeof alias !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(alias))) fail('MAPPING_INVALID', 'Map distinct known roles to safe collection aliases.');
   const configured = await collections(root);
-  const configBytes = await optional(await safePath(root, '.pi/attendant.tables'));
-  const candidate_sources = configBytes === null ? await candidates(root) : [];
+  const candidate_sources = await candidates(root, configured);
   const changes = [];
   const newCollections = [];
   const reused = [];
@@ -94,24 +94,27 @@ export async function planSetup(root, options = {}) {
   const block = `<!-- game-design-workbench:start -->\n### Game design workbench\n\nMarkdown is source of truth; .attendant/ is disposable. Configuration: .pi/attendant.tables. Read schema and usage before record operations. Local tools/references: tools/game-design-workbench/.\n\n${all.map(c => `- ${c.alias}: ${c.directory}/.schema.md; ${c.directory}/.usage.md`).join('\n')}\n<!-- game-design-workbench:end -->`;
   const agents = (await optional(await safePath(root, 'AGENTS.md')))?.toString('utf8') ?? '';
   const managed = /<!-- game-design-workbench:start -->[\s\S]*?<!-- game-design-workbench:end -->/.exec(agents);
-  if (managed && managed[0] !== block && prior?.guidance_hash !== hash(managed[0])) conflicts.push('Locally edited AGENTS.md workbench block');
+  const normalizedManaged = managed?.[0].replaceAll('\r\n', '\n');
+  if (managed && normalizedManaged !== block && prior?.guidance_hash !== hash(normalizedManaged)) conflicts.push('Locally edited AGENTS.md workbench block');
   else {
     let next;
-    if (managed) next = agents.replace(managed[0], () => block);
+    const newline = agents.includes('\r\n') ? '\r\n' : '\n';
+    const renderedBlock = block.replaceAll('\n', newline);
+    if (managed) next = agents.replace(managed[0], () => renderedBlock);
     else {
       const section = /^## Attendant\s*\r?$/m.exec(agents);
       if (section) {
         const rest = agents.slice(section.index + section[0].length);
         const boundary = /^## /m.exec(rest);
         const end = boundary ? section.index + section[0].length + boundary.index : agents.length;
-        next = `${agents.slice(0, end).trimEnd()}\n\n${block}\n\n${agents.slice(end)}`;
-      } else next = `${agents.trimEnd()}${agents.trim() ? '\n\n' : ''}## Attendant\n\n${block}\n`;
+        next = `${agents.slice(0, end).trimEnd()}${newline}${newline}${renderedBlock}${newline}${newline}${agents.slice(end)}`;
+      } else next = `${agents.trimEnd()}${agents.trim() ? newline + newline : ''}## Attendant${newline}${newline}${renderedBlock}${newline}`;
     }
     await propose('AGENTS.md', Buffer.from(next), true);
   }
   const manifest = { schema_version: 1, release: '0.1.0', distribution_revision: packageHash, model_version: 1, report_version: 1, roles: mapping, files: Object.fromEntries(files.map(file => [file.path, hash(file.bytes)])), guidance_hash: hash(block), capabilities: ['guided-framework-review', 'attendant-sql-queries', 'term-resolution', 'dated-review-storage'], unavailable: ['native-c99-analysis', 'native-viewer', 'control-evaluation-export', 'simulation-runtime'], dependencies: { node: '>=24.10.0', attendant: 'vendored snapshot', yaml: '2.9.0 MIT' } };
   await propose(manifestPath, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`), true);
-  const publicPlan = { project: root, distribution_revision: packageHash, roles: mapping, new_collections: newCollections, reused_collections: reused, candidate_sources, fresh_acknowledged: Boolean(options.fresh), conflicts, files: changes.map(({ bytes, ...change }) => change), expected: expect, dependencies: manifest.dependencies };
+  const publicPlan = { project: root, distribution_revision: packageHash, roles: mapping, new_collections: newCollections, reused_collections: reused, candidate_sources, candidate_scan: { maximum_directory_depth: 2, excludes: ['hidden paths', 'node_modules', 'tools', 'vendor', 'build', 'configured collections'] }, fresh_acknowledged: Boolean(options.fresh), conflicts, files: changes.map(({ bytes, ...change }) => change), expected: expect, dependencies: manifest.dependencies };
   return { ...publicPlan, plan_id: hash(JSON.stringify(publicPlan)), changes };
 }
 export function displayPlan(plan) { const { changes, ...publicPlan } = plan; return publicPlan; }

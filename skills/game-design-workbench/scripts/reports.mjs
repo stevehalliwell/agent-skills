@@ -14,17 +14,19 @@ export async function saveReport(root, lens, input, baseline) {
   const current = (await snapshot(root, baseline.includes)).metadata;
   if (current.fingerprint !== baseline.fingerprint) fail('SOURCE_CHANGED', 'Source/tool state changed since review snapshot. Reinspect and capture new snapshot; do not relabel old findings as current.');
   if (!input || !Array.isArray(input.findings) || input.findings.length > 10000 || !Array.isArray(input.scope) || !input.scope.every(item => typeof item === 'string')) fail('REPORT_INVALID', 'Report needs scope string array and findings array (at most 10000).');
+  if (input.coverage !== undefined && (!input.coverage || typeof input.coverage !== 'object' || Array.isArray(input.coverage))) fail('REPORT_INVALID', 'coverage must be an object.');
   if (input.limitations !== undefined && (!Array.isArray(input.limitations) || !input.limitations.every(item => typeof item === 'string'))) fail('REPORT_INVALID', 'limitations must be a string array.');
   const ids = new Set();
   const findings = [];
   for (const finding of input.findings) {
-    if (!finding || !/^[a-z][a-z0-9_.-]+$/.test(finding.code ?? '') || !['agent', 'deterministic'].includes(finding.origin) || !['error', 'warning', 'info'].includes(finding.severity) || !kinds.has(finding.kind) || !Array.isArray(finding.records) || !finding.records.every(record => typeof record === 'string') || !Array.isArray(finding.sources) || typeof finding.reason !== 'string' || typeof finding.suggested_investigation !== 'string') fail('REPORT_INVALID', 'Each finding needs code/origin/kind/severity/records/sources/reason/suggested_investigation.');
+    if (!finding || !/^[a-z][a-z0-9_.-]+$/.test(finding.code ?? '') || !['agent', 'deterministic'].includes(finding.origin) || !['error', 'warning', 'info'].includes(finding.severity) || !kinds.has(finding.kind) || !Array.isArray(finding.records) || !finding.records.every(record => typeof record === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(record)) || !Array.isArray(finding.sources) || typeof finding.reason !== 'string' || typeof finding.suggested_investigation !== 'string') fail('REPORT_INVALID', 'Each finding needs code/origin/kind/severity/records/sources/reason/suggested_investigation.');
     for (const source of finding.sources) {
       if (!source || typeof source.path !== 'string' || (typeof source.field !== 'string' && typeof source.section !== 'string')) fail('REPORT_INVALID', 'Each finding source needs project-relative path and field or section.');
       if (/^(?:[A-Za-z]:|[\\/])/.test(source.path)) fail('REPORT_INVALID', 'Finding source paths must be project-relative.');
       await safePath(root, source.path);
+      if (!current.sources.some(item => item.path === source.path)) fail('SOURCE_NOT_CAPTURED', `Finding source is not in frozen inventory: ${source.path}. Include it before reviewing.`);
     }
-    const identity = hash(JSON.stringify([finding.code, [...finding.records].sort(), finding.sources.map(source => [source.field ?? '', source.section ?? '']).sort(), finding.trigger_key ?? ''])).slice(0, 24);
+    const identity = hash(JSON.stringify([finding.code, [...new Set(finding.records)].sort(), finding.sources.map(source => [source.field ?? '', source.section ?? '']).sort(), finding.trigger_key ?? ''])).slice(0, 24);
     if (ids.has(identity)) fail('REPORT_INVALID', 'Duplicate finding identity; use distinct trigger_key for distinct triggers.');
     ids.add(identity);
     findings.push({ ...finding, id: identity });
@@ -36,7 +38,8 @@ export async function saveReport(root, lens, input, baseline) {
   const directory = await safePath(root, `game-design-results/${run_id}`);
   await mkdir(await safePath(root, 'game-design-results'), { recursive: true });
   await mkdir(directory); // Exclusive run directory; never reuse/overwrite.
-  const metadata = { schema_version: 1, run_id, created_at, lens, pack_version: pack.version, scope: input.scope, source_state: current, git_commit: git(root, ['rev-parse', 'HEAD']), git_dirty: Boolean(git(root, ['status', '--porcelain'])), status: 'writing' };
+  const gitStatus = git(root, ['status', '--porcelain']);
+  const metadata = { schema_version: 1, run_id, created_at, lens, pack_version: pack.version, scope: input.scope, source_state: current, git_commit: git(root, ['rev-parse', 'HEAD']), git_dirty: gitStatus === null ? null : Boolean(gitStatus), status: 'writing' };
   const metadataPath = `game-design-results/${run_id}/run.json`;
   const pending = Buffer.from(`${JSON.stringify(metadata, null, 2)}\n`);
   await writeFile(join(directory, 'run.json'), pending, { flag: 'wx' });
@@ -44,6 +47,7 @@ export async function saveReport(root, lens, input, baseline) {
   await writeFile(join(directory, 'review.json'), `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
   const body = `# ${text(pack.title)} review\n\nRun: ${run_id}\nDate: ${created_at}\nScope: ${input.scope.map(text).join(', ')}\nCoverage: ${status}. Historical report; source match is checked separately.\n\n${findings.length ? findings.map(finding => `## ${finding.code}\n\n${finding.origin}; ${finding.severity}; ${finding.kind}\n\n${text(finding.reason)}\n\nInvestigate: ${text(finding.suggested_investigation)}\n\n${finding.sources.map(source => `- [${text(source.path)}](../../${source.path.split(/[\\/]/).map(encodeURIComponent).join('/')}) — ${text(source.field ?? source.section)}`).join('\n')}`).join('\n\n') : 'No findings submitted; this is not completeness evidence.'}\n\n## Coverage and limitations\n\n${text(JSON.stringify(report.coverage))}\n\n${(report.limitations ?? []).map(item => `- ${text(item)}`).join('\n')}\n`;
   await writeFile(join(directory, 'review.md'), body, { flag: 'wx' });
+  if ((await snapshot(root, current.includes)).metadata.fingerprint !== current.fingerprint) fail('SOURCE_CHANGED', `Source changed while saving ${run_id}; run remains incomplete.`);
   await atomicWrite(root, metadataPath, Buffer.from(`${JSON.stringify({ ...metadata, status: 'complete' }, null, 2)}\n`), hash(pending));
   return { run_id, paths: [`${metadataPath}`, `game-design-results/${run_id}/review.json`, `game-design-results/${run_id}/review.md`], findings: findings.length };
 }
