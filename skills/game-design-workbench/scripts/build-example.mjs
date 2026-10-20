@@ -6,7 +6,6 @@ import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { stringify } from '../vendor/attendant/scripts/yaml.mjs';
 import { model, schemaFor, usageFor } from './model.mjs';
 import { records } from './fixture-data.mjs';
 const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -21,7 +20,7 @@ const output = resolve(args[outputIndex + 1]);
 let existing = [];
 try { existing = await readdir(output); } catch (error) { if (error.code !== 'ENOENT') throw error; }
 if (existing.length) throw new Error('Output must be empty. Refusing to overwrite tutorial edits.');
-const frontmatter = data => `---\n${stringify(data, { lineWidth: 0 }).trimEnd()}\n---\n`;
+const frontmatter = data => `---\n${JSON.stringify(data, null, 2)}\n---\n`;
 const put = async (path, text) => { await mkdir(dirname(path), { recursive: true }); await writeFile(path, text, { flag: 'wx' }); };
 for (const role of Object.keys(model)) {
   const files = { '.schema.md': `${frontmatter(schemaFor(role))}# ${role} schema\n\nGenerated from scripts/model.mjs for distribution. Project-local schema remains authoritative.\n`, '.usage.md': usageFor(role), '.template.md': model[role].sections.map(section => `## ${section}\n`).join('\n') };

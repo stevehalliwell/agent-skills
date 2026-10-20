@@ -1,8 +1,16 @@
 # Crate-and-switch workbench example
 
-Open this folder as project. Delivered folder contains 68 source records across 19 collections, deliberately incomplete design, and local `tools/game-design-workbench/` snapshot. Requires Node.js `>=24.10.0`; no global skill, service, compiler, or display. Tutorial is not a complete game or executed simulation.
+Open this folder as project. Delivered folder contains 68 source records across 19 collections, deliberately incomplete design, and local `tools/game-design-workbench/` snapshot. Requires Node.js `>=24.10.0`; installed `attendant` skill required; no service, compiler, or display. Load Attendant and set `GD_ATTENDANT_SKILL` to its absolute skill directory. Workbench does not bundle Attendant. Tutorial is not a complete game or executed simulation.
 
 ## Start
+
+Set dependency path from loaded Attendant skill (not this example):
+
+```sh
+export GD_ATTENDANT_SKILL="/absolute/path/to/attendant"
+```
+
+PowerShell: `$env:GD_ATTENDANT_SKILL = 'C:/absolute/path/to/attendant'`.
 
 Load `tools/game-design-workbench/SKILL.md` in your agent, or run from this folder:
 
@@ -28,6 +36,8 @@ Actual source: `.pi/attendant.tables` and `game-design/<role>/`. Installed tool'
 6. **One selected lens.** Ask `Review combined-room using skill-atoms; do not change source`. Read only that pack plus operation/model source. Discuss rank/prerequisite intent and bypassed practice as agent questions. Do not run all packs, change ranks, or claim deterministic C99 checks. For Bartle, report limited applicability to this solo puzzle rather than inventing multiplayer.
 7. **Evidence boundary.** Inspect controls, resources, experiment route-cost, expectation route-time, and empty observations. Energy identity is separate from initial/capacity tuning and spending rule. Formula text is not evaluated. Proposed timing model is not observed play or executed evidence.
 8. **Save a dated review.** Capture snapshot before inspecting. Write findings input outside canonical collections, then save with selected lens and snapshot. Reopen report; `historical: true`, `freshly_run: false`. After an authorized rank edit, source match becomes false; old report remains unchanged.
+
+Saved history retains original review and dependency-corrected review. `review-baseline.json` is original historical snapshot; `review-baseline-installed-attendant.json` captures required-skill packaging. Inspect dated `game-design-results/` directories to find saved runs. Original review stays stale after dependency correction; never rewrite it to match new tools. Capture a new uniquely named baseline before any new review.
 
 For command/schema details, read local skill's `references/cli.md`, `references/review.md`, and `references/capture.md`. Example report finding uses coordinate stable ID `01a15175-3c00-7529-8fb6-09255d506737`, source `game-design/skills/coordinate.md`, field `rank`, origin `agent`, kind `unknown_unresolved`. Do not present this manual interpretation as native analysis.
 

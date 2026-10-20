@@ -1,15 +1,28 @@
-import { readdir, readFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
-import { parseDocument, stringify } from '../vendor/attendant/scripts/yaml.mjs';
+import { readdir, readFile, mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { join, relative, resolve, isAbsolute } from 'node:path';
+import { tmpdir } from 'node:os';
+import { projected } from './queries.mjs';
 import { model } from './model.mjs';
-import { home, optional, safePath, collections, bundle, hash, slash, fail, attendant, atomicWrite } from './lib.mjs';
+import { home, optional, safePath, collections, bundle, hash, slash, fail, attendant, attendantFingerprint, atomicWrite, removeManaged } from './lib.mjs';
 const roles = Object.keys(model);
-function schema(text) {
-  const match = /^---\r?\n([\s\S]*?)^---\r?$/m.exec(text);
-  if (!match) fail('SCHEMA_INVALID', 'Schema needs flat YAML frontmatter.');
-  const document = parseDocument(match[1], { uniqueKeys: true });
-  if (document.errors.length) fail('SCHEMA_INVALID', document.errors[0].message);
-  return { fields: document.toJS() ?? {}, body: text.slice(match.index + match[0].length) };
+async function templateContracts(mapping) {
+  const temporary = await mkdtemp(join(tmpdir(), 'gd-contracts-'));
+  const files = new Map();
+  try {
+    await mkdir(join(temporary, '.pi'));
+    await writeFile(join(temporary, '.pi/attendant.tables'), roles.map(role => `${role} as ${mapping[role]}\n`).join(''));
+    for (const role of roles) {
+      await mkdir(join(temporary, role));
+      for (const name of ['.schema.md', '.usage.md', '.template.md']) {
+        let bytes = await readFile(join(home, 'templates', role, name));
+        // Substitute known reference tokens in authored distribution templates only.
+        if (name === '.schema.md') bytes = Buffer.from(bytes.toString('utf8').replace(/(\??ref(?:\[\])?:)([A-Za-z0-9_-]+)/g, (_, prefix, target) => `${prefix}${mapping[target] ?? target}`));
+        files.set(`${role}/${name}`, bytes);
+        await writeFile(join(temporary, role, name), bytes);
+      }
+    }
+    return { files, contracts: attendant(temporary, ['schema']).collections };
+  } finally { await rm(temporary, { recursive: true, force: true }); }
 }
 async function candidates(root, configured) {
   const found = [];
@@ -30,6 +43,7 @@ async function candidates(root, configured) {
   return found;
 }
 export async function planSetup(root, options = {}) {
+  const dependency_hash = await attendantFingerprint();
   const files = await bundle();
   const packageHash = hash(files.map(file => `${file.path}:${hash(file.bytes)}`).join('\n'));
   const target = 'tools/game-design-workbench';
@@ -40,6 +54,8 @@ export async function planSetup(root, options = {}) {
   if (Object.keys(mapping).some(role => !roles.includes(role)) || new Set(Object.values(mapping)).size !== roles.length || Object.values(mapping).some(alias => typeof alias !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(alias))) fail('MAPPING_INVALID', 'Map distinct known roles to safe collection aliases.');
   const configured = await collections(root);
   const candidate_sources = await candidates(root, configured);
+  const templates = await templateContracts(mapping);
+  const actualContracts = configured.length ? (await projected(root, context => context.schema)).data.collections : [];
   const changes = [];
   const newCollections = [];
   const reused = [];
@@ -57,16 +73,14 @@ export async function planSetup(root, options = {}) {
   for (const role of roles) {
     const alias = mapping[role];
     const existing = configured.find(c => c.alias === alias);
-    const templateBytes = await readFile(join(home, 'templates', role, '.schema.md'));
-    const parsed = schema(templateBytes.toString('utf8'));
-    const adapted = Object.fromEntries(Object.entries(parsed.fields).map(([key, value]) => [key, typeof value === 'string' ? value.replace(/^(\??ref(?:\[\])?:)(.+)$/, (_, prefix, roleName) => `${prefix}${mapping[roleName] ?? roleName}`) : value]));
+    const expectedFields = templates.contracts.find(collection => collection.name === alias).fields;
     if (existing) {
       const path = `${existing.directory}/.schema.md`;
       const bytes = await readFile(await safePath(root, path)); expect[path] = hash(bytes);
-      const actual = schema(bytes.toString('utf8')).fields;
+      const actual = actualContracts.find(collection => collection.name === alias).fields;
       const usagePath = `${existing.directory}/.usage.md`;
       const usage = await optional(await safePath(root, usagePath)); expect[usagePath] = usage ? hash(usage) : null;
-      if (Object.entries(adapted).some(([field, declaration]) => JSON.stringify(actual[field]) !== JSON.stringify(declaration)) || !usage?.toString('utf8').trim()) conflicts.push(`Incompatible schema or missing usage: ${existing.directory}`);
+      if (expectedFields.some(field => JSON.stringify(actual.find(candidate => candidate.name === field.name)) !== JSON.stringify(field)) || !usage?.toString('utf8').trim()) conflicts.push(`Incompatible schema or missing usage: ${existing.directory}`);
       reused.push({ role, alias, directory: existing.directory, usage: usagePath });
       continue;
     }
@@ -76,7 +90,7 @@ export async function planSetup(root, options = {}) {
     if (entries.length) { conflicts.push(`Nonempty unconfigured target requires migration: ${directory}`); continue; }
     newCollections.push({ role, alias, directory });
     for (const name of ['.schema.md', '.usage.md', '.template.md']) {
-      const bytes = name === '.schema.md' ? Buffer.from(`---\n${stringify(adapted, { lineWidth: 0 }).trimEnd()}\n---${parsed.body}`) : await readFile(join(home, 'templates', role, name));
+      const bytes = templates.files.get(`${role}/${name}`);
       await propose(`${directory}/${name}`, bytes);
     }
   }
@@ -86,12 +100,22 @@ export async function planSetup(root, options = {}) {
     const base = prior?.files?.[file.path];
     await propose(path, file.bytes, Boolean(current && base && hash(current) === base));
   }
+  for (const [name, base] of Object.entries(prior?.files ?? {})) {
+    if (isAbsolute(name) || name.includes('\\') || name.split('/').some(part => !part || part === '.' || part === '..')) fail('MANIFEST_INVALID', `Unsafe managed path: ${name}`);
+    if (files.some(file => file.path === name)) continue;
+    const path = `${target}/${name}`;
+    const current = await optional(await safePath(root, path));
+    expect[path] = current ? hash(current) : null;
+    if (!current) continue;
+    if (hash(current) !== base) { conflicts.push(`Locally edited retired file: ${path}`); continue; }
+    changes.push({ path, operation: 'delete', before: base, sha256: null });
+  }
   let ignore = (await optional(await safePath(root, '.gitignore')))?.toString('utf8') ?? '';
   const lines = ignore.split(/\r?\n/).map(line => line.trim());
   for (const pattern of ['.attendant/', 'game-design-results/*/artifacts/']) if (!lines.some(line => line === pattern || line === `/${pattern}` || (pattern === '.attendant/' && line === '**/.attendant/'))) ignore += `${ignore && !ignore.endsWith('\n') ? '\n' : ''}${pattern}\n`;
   await propose('.gitignore', Buffer.from(ignore), true);
   const all = roles.map(role => [...reused, ...newCollections].find(collection => collection.role === role)).filter(Boolean);
-  const block = `<!-- game-design-workbench:start -->\n### Game design workbench\n\nMarkdown is source of truth; .attendant/ is disposable. Configuration: .pi/attendant.tables. Read schema and usage before record operations. Local tools/references: tools/game-design-workbench/.\n\n${all.map(c => `- ${c.alias}: ${c.directory}/.schema.md; ${c.directory}/.usage.md`).join('\n')}\n<!-- game-design-workbench:end -->`;
+  const block = `<!-- game-design-workbench:start -->\n### Game design workbench\n\nMarkdown is source of truth; .attendant/ is disposable. Configuration: .pi/attendant.tables. Read schema and usage before record operations. Local tools/references: tools/game-design-workbench/. Require installed attendant skill; load its instructions and set GD_ATTENDANT_SKILL to its absolute directory. Never vendor or copy Attendant.\n\n${all.map(c => `- ${c.alias}: ${c.directory}/.schema.md; ${c.directory}/.usage.md`).join('\n')}\n<!-- game-design-workbench:end -->`;
   const agents = (await optional(await safePath(root, 'AGENTS.md')))?.toString('utf8') ?? '';
   const managed = /<!-- game-design-workbench:start -->[\s\S]*?<!-- game-design-workbench:end -->/.exec(agents);
   const normalizedManaged = managed?.[0].replaceAll('\r\n', '\n');
@@ -112,9 +136,9 @@ export async function planSetup(root, options = {}) {
     }
     await propose('AGENTS.md', Buffer.from(next), true);
   }
-  const manifest = { schema_version: 1, release: '0.1.0', distribution_revision: packageHash, model_version: 1, report_version: 1, roles: mapping, files: Object.fromEntries(files.map(file => [file.path, hash(file.bytes)])), guidance_hash: hash(block), capabilities: ['guided-framework-review', 'attendant-sql-queries', 'term-resolution', 'dated-review-storage'], unavailable: ['native-c99-analysis', 'native-viewer', 'control-evaluation-export', 'simulation-runtime'], dependencies: { node: '>=24.10.0', attendant: 'vendored snapshot', yaml: '2.9.0 MIT' } };
+  const manifest = { schema_version: 1, release: '0.1.0', distribution_revision: packageHash, model_version: 1, report_version: 1, roles: mapping, files: Object.fromEntries(files.map(file => [file.path, hash(file.bytes)])), guidance_hash: hash(block), capabilities: ['guided-framework-review', 'attendant-sql-queries', 'term-resolution', 'dated-review-storage'], unavailable: ['native-c99-analysis', 'native-viewer', 'control-evaluation-export', 'simulation-runtime'], dependencies: { node: '>=24.10.0', attendant: 'required installed skill; GD_ATTENDANT_SKILL points to skill directory' } };
   await propose(manifestPath, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`), true);
-  const publicPlan = { project: root, distribution_revision: packageHash, roles: mapping, new_collections: newCollections, reused_collections: reused, candidate_sources, candidate_scan: { maximum_directory_depth: 2, excludes: ['hidden paths', 'node_modules', 'tools', 'vendor', 'build', 'configured collections'] }, fresh_acknowledged: Boolean(options.fresh), conflicts, files: changes.map(({ bytes, ...change }) => change), expected: expect, dependencies: manifest.dependencies };
+  const publicPlan = { project: root, distribution_revision: packageHash, attendant_fingerprint: dependency_hash, roles: mapping, new_collections: newCollections, reused_collections: reused, candidate_sources, candidate_scan: { maximum_directory_depth: 2, excludes: ['hidden paths', 'node_modules', 'tools', 'vendor', 'build', 'configured collections'] }, fresh_acknowledged: Boolean(options.fresh), conflicts, files: changes.map(({ bytes, ...change }) => change), expected: expect, dependencies: manifest.dependencies };
   return { ...publicPlan, plan_id: hash(JSON.stringify(publicPlan)), changes };
 }
 export function displayPlan(plan) { const { changes, ...publicPlan } = plan; return publicPlan; }
@@ -131,6 +155,11 @@ export async function applySetup(root, approved, options) {
       applied.push(`${collection.directory}/ (empty Attendant collection)`);
     }
     for (const change of plan.changes) {
+      if (change.operation === 'delete') {
+        await removeManaged(root, change.path, change.before, resolve(root, 'tools/game-design-workbench'));
+        applied.push(`${change.path} (removed retired managed file)`);
+        continue;
+      }
       let expected = change.before;
       const created = plan.new_collections.some(c => change.path.startsWith(`${c.directory}/`));
       if (created) {

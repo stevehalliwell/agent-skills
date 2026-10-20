@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "release": "0.1.0",
-  "distribution_revision": "b0f33651e6c7c02358cb6219caa49a7b0df8589f2d38f79412bf35bc9b03e29b",
+  "distribution_revision": "ea8ea65f3715397c7495261f22243b16598ac7c35f140a922a34d839a9e67e13",
   "model_version": 1,
   "report_version": 1,
   "roles": {
@@ -26,7 +26,7 @@
     "resources": "resources"
   },
   "files": {
-    ".gitattributes": "21825070a10afd63461cbc8a14bf30ef1afdae3683a06c8888a9c497ccb21bdf",
+    ".gitattributes": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9",
     "examples/crate-puzzle/.pi/attendant.tables": "b2a5b4b03f0b04825c502400d09089fae7d9eaf5c06f72541c9ed123666b786a",
     "examples/crate-puzzle/game-design/aesthetics/.schema.md": "e2fff1db506f4af8e04a0047fb57a016615dfb2680afbc800fe2ea0dc06d43dd",
     "examples/crate-puzzle/game-design/aesthetics/.template.md": "e533a8fb8e0fb70ad3bb02da7929b5ccb5df0376ebe93d81ef93d66b2c47c7ca",
@@ -153,10 +153,10 @@
     "examples/crate-puzzle/game-design/verbs/activate.md": "7eb2fa43ccf0f83d11edfc6023a1b4041be8afd0bd7b2d1e97c47b0ff163253c",
     "examples/crate-puzzle/game-design/verbs/push.md": "604e9490a78c7965d384534cd9e229a573b9c194ef879ad15a85c47662358ab3",
     "examples/crate-puzzle/game-design/verbs/walk.md": "dfa8f996532aa281a80ba502584ee4ba24fd2f5ecf2c4e0f79d293c12f86da35",
-    "examples/crate-puzzle/README.md": "e7d2a2c333dfd142b15adfbd75471624c844d42e19c3ad8755759b0284e06086",
-    "README.md": "4b72b79bfaad86fbe1daa69de5a90e71fde12a25e57f764382363377eb9bd834",
-    "references/capture.md": "31e68c14eaaf0ad30253774a16af3cdc550012f73b4ff91357ea7f40853bc36a",
-    "references/cli.md": "71d8b329f814b4ded44bfb2b1e5e1be580c0be2f40e692a5a834dc708dc91761",
+    "examples/crate-puzzle/README.md": "c884e14b50c08da68e9601af23de7ad461fba0c8a948f59199168b484cabd277",
+    "README.md": "610c8b9f471b54a333707709010eb6126359689e9cb8e553e0c575d42d84c590",
+    "references/capture.md": "cda05af8255fb2e150545c12a2b01a0dde6b047986b723fc2c95c2ce68f2a1e7",
+    "references/cli.md": "9cb46a9ebff8c0fccfcf30c8c2050beb4f406ee49043cdf90999989ed4a39831",
     "references/frameworks/bartle.md": "e253704757857d2af11a91a3b8f120beb89dc61c0497ea4deacb16ac0310bd3d",
     "references/frameworks/caillois.md": "2b1274bfca4967f9f0336b1ee533ef931f66bec63f62650fe214ebdfe75fa26b",
     "references/frameworks/catalog.json": "b78fae566a2ca7119b7bbe79698a1fc3827863729213073311c00fa033e343a9",
@@ -176,17 +176,17 @@
     "references/frameworks/theory-of-fun.md": "a902f5ceb2a6a4864469a601c415a21846e2ab3eaf3f91e06f72e1a29e57d95b",
     "references/frameworks/working-memory.md": "ec7f19af8a2e277645bc406e41052f736760d6eea3d57655c7e52a07d49fa7a8",
     "references/frameworks/zpd-scaffolding.md": "0fc935c66cfef24ed0fe6a84b58757ed8b28ff24d9779e0c7a268902f8015c8b",
-    "references/inspect.md": "8b6d103ba298903cb677a052fc09259f62d9b000a7065ac2ef7d3c395c6d9df5",
+    "references/inspect.md": "546e3ddab5031a3170a0dae1b387b8a8089bb0c9f75b97b0ae117193f831d460",
     "references/model.md": "322b3f07cf8bf9c43abce6bd63326f2f1575c9ecedc93b3fd4825c747b60c071",
-    "references/review.md": "03c623da2480f61f1e73e72c32b59e1464790b72bef29eae6bad17d922cefca2",
-    "references/setup.md": "8daf522ab784ee29ef098f6c34a7d7d29dd59a5144db448d47a4092e091e1d7a",
-    "scripts/lib.mjs": "6989e9536bdd58715be08c224ce64ec83679da074b935a9edf4676bcde05f7ae",
+    "references/review.md": "0aaa0629620be1480f9765df57c223b0367164293f0f870a0b218f1879155d0b",
+    "references/setup.md": "736098b763b9b1a042f5b4cd665e15f6ad366210ba21d5fef95bec507c2de80e",
+    "scripts/lib.mjs": "cfc77804f4e46998911d05d190acf0f779690bd0d6b009a1ed34fb675ad3552e",
     "scripts/model.mjs": "58d77ce7f834b2f798ddcfc83ffec0625a161866d60124685a87a30c09e06542",
     "scripts/queries.mjs": "e2996d7f4fe3e34c3d6aacd5c2bc6898dee2b5db16f6f447f01901da0baa471e",
     "scripts/reports.mjs": "647ac46dc98f07674fa4c2325fb84d59d0a58dbd7f310122551c1453ae90ae95",
-    "scripts/setup.mjs": "03b385f9c8ef5dfae473d1ffac8f98da17dd1a790455a607029e7f2aa2d753ee",
-    "scripts/workbench.mjs": "99b48a404ddd33aa3bae3e087cd70de552d2ad6fa635ca6de7d54d351ae71d6f",
-    "SKILL.md": "618bf1463b16879c4dbdeb67a73c740989b42d157dbdf4fedd6fe58d569775c7",
+    "scripts/setup.mjs": "fd1c7782cfb6c61d2dbab5d27bd1afbdffce68c679f24c7ff8e2d73223974b36",
+    "scripts/workbench.mjs": "ba20c61d546a8f33f36ba1ae672e2b7922efee9ae40d8a5bb482120420a526b7",
+    "SKILL.md": "3ec36defc951c89f04bd968f53d8f43843c5c4f9e5146a4d33caba686078d104",
     "templates/aesthetics/.schema.md": "e2fff1db506f4af8e04a0047fb57a016615dfb2680afbc800fe2ea0dc06d43dd",
     "templates/aesthetics/.template.md": "e533a8fb8e0fb70ad3bb02da7929b5ccb5df0376ebe93d81ef93d66b2c47c7ca",
     "templates/aesthetics/.usage.md": "4ea433aef7ab68430c1a9ffb2855aeadb2e0b3b6a24be2b30d009a886dacb0bb",
@@ -244,17 +244,9 @@
     "templates/systems/.usage.md": "5dc18e260c0f947eae553c03deb0d5a7c739243da8481341311ad9e56a12f4b5",
     "templates/verbs/.schema.md": "7ddc630d1a439c536746a62a9c0377c79a6793aafdacbf55a10d09a43864a4ac",
     "templates/verbs/.template.md": "b9d4ea49a46c4bdf83675ea9ec1f04d7d3d35e8251e83fe2c570b8d9a30c9d02",
-    "templates/verbs/.usage.md": "989c8b357c97dc7bbcd97418b091d5ffe2e0df5f59b782b30c0de658c0132598",
-    "vendor/attendant/LICENSE": "78c3c2da474349f43f629f41c6cc6565a2f08c07fa4b9311f578fc322315ad9f",
-    "vendor/attendant/references/collections.md": "e14b920727ac5af3de83e838b9f75a59f8883e97dede530b41b71e69a04ab8ab",
-    "vendor/attendant/references/commands.md": "99ed3148505918a62b6c781f16f246edc83bc34a558d34fedb5591f175958f43",
-    "vendor/attendant/references/migration.md": "3c5c650aae0c9a4e481f0544aae851abe69311d5f49e4a2871472839cde9002d",
-    "vendor/attendant/references/third-party-notices.md": "5465d76afbf2a1d6db2cfc7b805562d765321965faaaa4846154c51c6933de36",
-    "vendor/attendant/scripts/attendant.mjs": "8724c330749693d399910d9d9fff21a29241430befff89107d511f238de37ee2",
-    "vendor/attendant/scripts/yaml.mjs": "9dbb8b12fdfb4a6c5650947b582318b10faf313bf0ef7088ed926e7fa39f76b3",
-    "vendor/attendant/SKILL.md": "3967c8668b96eab2b6d7db39955f96e22fedfac53fef9bd39b7c8d4af67f1fc6"
+    "templates/verbs/.usage.md": "989c8b357c97dc7bbcd97418b091d5ffe2e0df5f59b782b30c0de658c0132598"
   },
-  "guidance_hash": "d878978e35ed111c113c6b2a5ae4d7e7846ca41e46d9af48c627bd8c22fb5060",
+  "guidance_hash": "bfb9b3669788e0a6b223d8fe9b8052b7c3c5a59983b4af6b39d2cd374ed42062",
   "capabilities": [
     "guided-framework-review",
     "attendant-sql-queries",
@@ -269,7 +261,6 @@
   ],
   "dependencies": {
     "node": ">=24.10.0",
-    "attendant": "vendored snapshot",
-    "yaml": "2.9.0 MIT"
+    "attendant": "required installed skill; GD_ATTENDANT_SKILL points to skill directory"
   }
 }

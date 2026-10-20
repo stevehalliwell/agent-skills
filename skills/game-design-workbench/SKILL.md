@@ -20,7 +20,7 @@ On explicit invocation without an operation, inspect `.pi/attendant.tables` if p
 ## Workflow
 
 1. Identify target project, requested operation, source authority, and scope. Start anywhere: existing facts bypass guided input; experience-first input is optional. Read the matching operation reference below. Done: requested action and its write authority are clear.
-2. Inspect `.pi/attendant.tables` and, if present, `tools/game-design-workbench/manifest.json`. Read live `.schema.md` and `.usage.md` for relevant roles before interpreting fields or changing records. Use bundled [Attendant instructions](vendor/attendant/SKILL.md) for record operations; do not assume global skill installation. Done: actual paths/aliases and source owners are known.
+2. Inspect `.pi/attendant.tables` and, if present, `tools/game-design-workbench/manifest.json`. Read live `.schema.md` and `.usage.md` for relevant roles before interpreting fields or changing records. Require and load installed `attendant` skill for collection/record operations. Follow its operation references. Set `GD_ATTENDANT_SKILL` to that loaded skill's absolute directory for helper commands; never copy or vendor Attendant. Done: actual paths/aliases and source owners are known.
 3. Perform bounded action. Use supplied non-tentative facts as facts; mark generated options proposed. Resolve declared aliases before creating identities. Ask only when consequential ambiguity remains. Done: output matches requested scope without inventing requirements, evidence, or exclusions.
 4. Check affected source with read-only `validate`; inspect scoped queries and exact source diff after edits. Correct only authorized in-scope errors; otherwise report blockers. Never treat a failed load as an empty design. Done: source authority, unsupported checks, and unresolved issues remain visible.
 5. Return result, changed paths or report path, and material limits. No aggregate quality score. Do not commit, publish, repair, set up collections, or execute experiments merely because a review was requested.
@@ -32,7 +32,7 @@ node <workbench>/scripts/workbench.mjs capabilities --project <project> --json
 node <workbench>/scripts/workbench.mjs query skills --project <project> --json
 ```
 
-Requires Node.js `>=24.10.0`; no npm install or running service. Query helpers use temporary Attendant projections; source Markdown remains authoritative. Execute documented command rather than guessing tool availability. On failure, retain sources and report actionable error/code.
+Requires installed `attendant` skill and Node.js `>=24.10.0`; no npm dependency or running service. Missing Attendant configuration fails `ATTENDANT_REQUIRED` before source writes. Query helpers use temporary Attendant projections; source Markdown remains authoritative. Execute documented command rather than guessing tool availability. On failure, retain sources and report actionable error/code.
 
 ## Conditional operation reads
 

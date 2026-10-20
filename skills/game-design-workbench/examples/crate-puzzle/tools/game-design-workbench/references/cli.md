@@ -1,6 +1,6 @@
 # Bootstrap CLI contract
 
-Execute `node <workbench>/scripts/workbench.mjs <command> --project <root>`. Node.js `>=24.10.0` required for vendored Attendant/`node:sqlite`; no npm install, compiler, graphical display, service, or global skill required. Windows/Node v24.16.0 tested; other platforms not verified.
+Execute `node <workbench>/scripts/workbench.mjs <command> --project <root>`. Installed `attendant` skill and Node.js `>=24.10.0` required. Load Attendant and set `GD_ATTENDANT_SKILL` to its absolute directory. No Attendant code/guidance is bundled. Helpers call only its public runner; setup compares contracts using public `schema` output, not internal YAML imports. No npm dependency, compiler, graphical display, or service required. Windows/Node v24.16.0 tested; other platforms not verified.
 
 ## Commands
 
@@ -39,7 +39,7 @@ Exit codes:
 
 `validate` performs Attendant flat-schema/supplied type/reference checks against temporary copy. Optional/untyped null declarations do not enforce workbench scalar subtypes. Native alias/identity invariant, rank/cycle/route, formula/unit, and expectation semantics are not implemented here. Read coverage; do not call generic validation a full model conformance check.
 
-Queries/validation snapshot sources, copy to temporary project, run unchanged Attendant, rebase source paths, compare original state, and clean temporary projection. Query preparation corrections are reported separately and never applied to source. On invalid source, helpers reject query instead of returning misleading empty data. `SOURCE_CHANGED` requires reinspecting sources; do not retry a write from a stale copy. Busy/filesystem cleanup failures remain errors, not silent success.
+Queries/validation snapshot sources, copy to temporary project, call required installed Attendant skill's public runner, rebase source paths, compare original state, and clean temporary projection. Query preparation corrections are reported separately and never applied to source. On invalid source, helpers reject query instead of returning misleading empty data. `SOURCE_CHANGED` requires reinspecting sources; do not retry a write from a stale copy. Busy/filesystem cleanup failures remain errors, not silent success.
 
 Setup supports compatible dedicated in-project collection directories and unique role aliases. Root-as-collection, path escapes, symlinks/reparse entries, unsupported entry kinds, and malformed registries fail. No automatic local schema migration or conflict override. Per-file optimistic writes reduce accidental replacement but are not filesystem transactions or a lock against a concurrent editor; review actual state after partial failure.
 

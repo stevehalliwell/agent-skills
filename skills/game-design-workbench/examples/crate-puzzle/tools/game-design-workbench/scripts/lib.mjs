@@ -1,8 +1,9 @@
-import { open, readdir, lstat, realpath, mkdir, writeFile, rename, unlink } from 'node:fs/promises';
+import { open, readdir, lstat, realpath, mkdir, writeFile, rename, unlink, rmdir } from 'node:fs/promises';
 import { resolve, relative, join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 export const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export const slash = value => value.replaceAll('\\', '/');
@@ -39,8 +40,21 @@ export async function safePath(root, name) {
   return path;
 }
 export async function projectRoot(path) { return realpath(resolve(path)); }
+export function attendantHome() {
+  const path = process.env.GD_ATTENDANT_SKILL;
+  if (!path || !isAbsolute(path) || !existsSync(join(path, 'SKILL.md')) || !existsSync(join(path, 'scripts/attendant.mjs'))) fail('ATTENDANT_REQUIRED', 'Load installed attendant skill; set GD_ATTENDANT_SKILL to its absolute skill directory. No dependency is installed or copied automatically.');
+  return resolve(path);
+}
+export async function attendantFingerprint() {
+  const directory = attendantHome();
+  const files = await walk(directory, join(directory, 'scripts'));
+  if (existsSync(join(directory, 'references'))) await walk(directory, join(directory, 'references'), files);
+  const instructions = await optional(join(directory, 'SKILL.md'));
+  files.push({ path: 'SKILL.md', bytes: instructions });
+  return hash(files.sort((a, b) => a.path.localeCompare(b.path)).map(file => `${file.path}:${hash(file.bytes)}`).join('\n'));
+}
 export function attendant(root, args) {
-  const child = spawnSync(process.execPath, [join(home, 'vendor/attendant/scripts/attendant.mjs'), ...args, '--project', root], { encoding: 'utf8', timeout: 30000, maxBuffer: 16 * 1024 * 1024, windowsHide: true });
+  const child = spawnSync(process.execPath, [join(attendantHome(), 'scripts/attendant.mjs'), ...args, '--project', root], { encoding: 'utf8', timeout: 30000, maxBuffer: 16 * 1024 * 1024, windowsHide: true });
   if (child.error) fail('ATTENDANT_RUNTIME', child.error.message);
   let data;
   try { data = JSON.parse(child.stdout); } catch { fail('ATTENDANT_RUNTIME', child.stderr.trim() || 'Attendant did not return JSON.'); }
@@ -81,7 +95,7 @@ export async function walk(root, directory, files = []) {
 }
 export async function bundle() {
   const files = [];
-  for (const folder of ['scripts', 'templates', 'references', 'vendor']) {
+  for (const folder of ['scripts', 'templates', 'references']) {
     const info = await lstat(join(home, folder)).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
     if (!info) continue;
     if (!info.isDirectory()) fail('PACKAGE_INVALID', `Package folder is not a directory: ${folder}`);
@@ -104,8 +118,9 @@ export async function snapshot(root, includes = []) {
   const unique = [...new Map(files.map(file => [file.path, file])).values()].sort((a, b) => a.path.localeCompare(b.path));
   if (unique.reduce((sum, file) => sum + file.bytes.length, 0) > 32 * 1024 * 1024) fail('SOURCE_LIMIT', 'Snapshot exceeds 32 MiB source limit.');
   const sources = unique.map(file => ({ path: file.path, sha256: hash(file.bytes) }));
-  const tool_hash = hash((await bundle()).map(file => `${file.path}:${hash(file.bytes)}`).join('\n'));
-  return { files: unique, metadata: { schema_version: 1, fingerprint: hash(JSON.stringify({ sources, tool_hash })), sources, tool_hash, includes } };
+  const dependency_hash = await attendantFingerprint();
+  const tool_hash = hash(`${(await bundle()).map(file => `${file.path}:${hash(file.bytes)}`).join('\n')}\nattendant:${dependency_hash}`);
+  return { files: unique, metadata: { schema_version: 1, fingerprint: hash(JSON.stringify({ sources, tool_hash })), sources, tool_hash, dependencies: { attendant: dependency_hash }, includes } };
 }
 export async function atomicWrite(root, name, bytes, expected = null) {
   const path = await safePath(root, name);
@@ -119,4 +134,16 @@ export async function atomicWrite(root, name, bytes, expected = null) {
     if ((latest ? hash(latest) : null) !== expected) fail('SOURCE_CHANGED', `Changed destination: ${name}`);
     await rename(temporary, path);
   } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+}
+export async function removeManaged(root, name, expected, packageRoot) {
+  const path = await safePath(root, name);
+  await safePath(packageRoot, path);
+  const bytes = await optional(path);
+  if (bytes === null || hash(bytes) !== expected) fail('SOURCE_CHANGED', `Changed deletion target: ${name}`);
+  await unlink(path);
+  for (let directory = dirname(path); directory !== packageRoot; directory = dirname(directory)) {
+    // Only remove empty owned parent directories; preserve unknown local files.
+    try { await rmdir(directory); }
+    catch (error) { if (['ENOTEMPTY', 'EEXIST'].includes(error.code)) break; throw error; }
+  }
 }

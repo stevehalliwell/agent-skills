@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { planSetup, applySetup } from '../scripts/setup.mjs';
 import { runQuery, resolveTerm } from '../scripts/queries.mjs';
-import { snapshot } from '../scripts/lib.mjs';
+import { snapshot, attendantHome, attendantFingerprint, bundle, hash } from '../scripts/lib.mjs';
 import { catalog, saveReport, showReport } from '../scripts/reports.mjs';
 import { model } from '../scripts/model.mjs';
 const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -261,7 +261,7 @@ test('custom role binding reuses existing contracts and preserves local guidance
   assert.equal((await runQuery(root, 'skills')).data.rows.length, 6);
 });
 
-test('delivered example copy runs only its local snapshot on populated source', async () => {
+test('delivered example copy uses local workbench and required external Attendant on populated source', async () => {
   const root = await temporary();
   await cp(join(home, 'examples/crate-puzzle'), root, { recursive: true, filter: source => !['.attendant', 'game-design-results'].includes(basename(source)) });
   const script = join(root, 'tools/game-design-workbench/scripts/workbench.mjs');
@@ -279,7 +279,7 @@ test('delivered example copy runs only its local snapshot on populated source', 
   const prior = await snapshot(root);
   const selected = join(root, 'game-design/skills/coordinate.md');
   const priorText = await readFile(selected, 'utf8');
-  const update = spawnSync(process.execPath, [join(root, 'tools/game-design-workbench/vendor/attendant/scripts/attendant.mjs'), 'update', '-c', 'skills', '-i', JSON.stringify([{ name: 'coordinate', fields: { rank: 3 } }]), '--project', root], { encoding: 'utf8' });
+  const update = spawnSync(process.execPath, [join(attendantHome(), 'scripts/attendant.mjs'), 'update', '-c', 'skills', '-i', JSON.stringify([{ name: 'coordinate', fields: { rank: 3 } }]), '--project', root], { encoding: 'utf8' });
   assert.equal(update.status, 0, update.stderr);
   const after = await snapshot(root);
   assert.deepEqual(after.metadata.sources.filter(item => prior.metadata.sources.find(old => old.path === item.path)?.sha256 !== item.sha256).map(item => item.path), ['game-design/skills/coordinate.md']);
@@ -300,6 +300,93 @@ test('generic validation explicitly does not enforce null-declared scalar subtyp
   assert.equal(result.json.coverage.status, 'partial');
   assert.ok(result.json.coverage.not_performed[0].includes('semantic'));
   assert.equal((await runQuery(root, 'skills')).data.rows.find(row => row.name === 'coordinate').rank, 'not-an-integer');
+});
+
+test('required Attendant is explicit, never copied, and missing dependency cannot write', async () => {
+  const root = await temporary();
+  const previous = process.env.GD_ATTENDANT_SKILL;
+  try {
+    delete process.env.GD_ATTENDANT_SKILL;
+    assert.equal(cli(root, ['help']).status, 0);
+    assert.equal(cli(root, ['setup', 'plan']).json.errors[0].code, 'ATTENDANT_REQUIRED');
+    assert.deepEqual(await readdir(root), []);
+    await assert.rejects(planSetup(root), { code: 'ATTENDANT_REQUIRED' });
+    for (const path of ['skills/attendant', join(root, 'missing')]) {
+      process.env.GD_ATTENDANT_SKILL = path;
+      await assert.rejects(planSetup(root), { code: 'ATTENDANT_REQUIRED' });
+      assert.deepEqual(await readdir(root), []);
+    }
+    assert.ok((await bundle()).every(file => !file.path.startsWith('vendor/')));
+  } finally { if (previous === undefined) delete process.env.GD_ATTENDANT_SKILL; else process.env.GD_ATTENDANT_SKILL = previous; }
+});
+
+test('external dependency changes invalidate source/tool fingerprint', async () => {
+  const root = await temporary(true);
+  const dependency = await temporary();
+  await mkdir(join(dependency, 'scripts'));
+  await writeFile(join(dependency, 'SKILL.md'), '# Attendant test fixture\n');
+  await writeFile(join(dependency, 'scripts/attendant.mjs'), '// Never executed by this fingerprint test.\n');
+  const previous = process.env.GD_ATTENDANT_SKILL;
+  try {
+    process.env.GD_ATTENDANT_SKILL = dependency;
+    const first = await snapshot(root);
+    assert.equal(first.metadata.dependencies.attendant, await attendantFingerprint());
+    await writeFile(join(dependency, 'scripts/attendant.mjs'), '// Changed external dependency.\n');
+    const changed = await snapshot(root);
+    assert.notEqual(changed.metadata.fingerprint, first.metadata.fingerprint);
+    await mkdir(join(dependency, 'references'));
+    await writeFile(join(dependency, 'references/commands.md'), '# Changed dependency guidance\n');
+    assert.notEqual((await snapshot(root)).metadata.fingerprint, changed.metadata.fingerprint);
+  } finally { if (previous === undefined) delete process.env.GD_ATTENDANT_SKILL; else process.env.GD_ATTENDANT_SKILL = previous; }
+});
+
+test('update removes only unchanged retired managed files and guards edited legacy copies', async () => {
+  const root = await temporary(true);
+  let plan = await planSetup(root); await applySetup(root, plan.plan_id, {});
+  const packageRoot = join(root, 'tools/game-design-workbench');
+  const manifestPath = join(packageRoot, 'manifest.json');
+  const legacy = 'vendor/attendant/legacy.mjs';
+  const path = join(packageRoot, legacy);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, 'legacy\n');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  manifest.files[legacy] = hash(Buffer.from('legacy\n'));
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+  await writeFile(path, 'local changes\n');
+  plan = await planSetup(root);
+  assert.ok(plan.conflicts.some(item => item.includes('Locally edited retired file')));
+  await assert.rejects(applySetup(root, plan.plan_id, {}), { code: 'SETUP_CONFLICT' });
+  assert.equal(await readFile(path, 'utf8'), 'local changes\n');
+  await writeFile(path, 'legacy\n');
+  plan = await planSetup(root);
+  assert.ok(plan.files.some(item => item.operation === 'delete' && item.path.endsWith(legacy)));
+  await applySetup(root, plan.plan_id, {});
+  assert.ok(!(await readdir(packageRoot)).includes('vendor'));
+  assert.equal((await planSetup(root)).files.length, 0);
+  const owned = 'retired/managed.txt';
+  await mkdir(join(packageRoot, 'retired'));
+  await writeFile(join(packageRoot, owned), 'owned\n');
+  await writeFile(join(packageRoot, 'retired/local.txt'), 'preserve unknown file\n');
+  const updated = JSON.parse(await readFile(manifestPath, 'utf8'));
+  updated.files[owned] = hash(Buffer.from('owned\n'));
+  await writeFile(manifestPath, JSON.stringify(updated, null, 2) + '\n');
+  plan = await planSetup(root); await applySetup(root, plan.plan_id, {});
+  assert.deepEqual(await readdir(join(packageRoot, 'retired')), ['local.txt']);
+  assert.equal(await readFile(join(packageRoot, 'retired/local.txt'), 'utf8'), 'preserve unknown file\n');
+  updated.files['../outside.md'] = hash(Buffer.from('outside\n'));
+  await writeFile(manifestPath, JSON.stringify(updated, null, 2) + '\n');
+  await assert.rejects(planSetup(root), { code: 'MANIFEST_INVALID' });
+});
+
+test('fixture generator needs no YAML module or dependency install', async () => {
+  const root = await temporary();
+  const environment = { ...process.env }; delete environment.GD_ATTENDANT_SKILL;
+  const generated = spawnSync(process.execPath, [resolve('skills/game-design-workbench/scripts/build-example.mjs'), '--output', root], { encoding: 'utf8', env: environment });
+  assert.equal(generated.status, 0, generated.stderr);
+  const result = await runQuery(root, 'skills');
+  assert.equal(result.data.rows.length, 6);
+  assert.equal(result.data.rows.find(row => row.name === 'coordinate').rank, 2);
+  assert.equal(result.data.rows.find(row => row.name === 'plan-push').rank, null);
 });
 
 test('oversized source and out-of-project junction fail without touching target', async () => {

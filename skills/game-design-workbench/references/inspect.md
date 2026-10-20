@@ -25,7 +25,7 @@ node <workbench>/scripts/workbench.mjs resolve --term "box" --project <project> 
 
 SQLite link arrays remain JSON text in query cells. This is a projection format, not a second source schema. Respect `truncated`/coverage; increase limit or narrow source inspection before drawing completeness conclusions. Missing config/contracts fail; invalid source is never disguised as zero rows.
 
-Helpers copy source into a temporary project and run vendored Attendant there. Any mechanical corrections occur only in that copy and are disclosed as `projection_corrections`. Sources are hashed before/after; intervening changes abort. No live `.attendant/` is required or created by workbench query/validate. Raw Attendant query preparation can mechanically correct live records; do not substitute it for read-only review.
+Helpers copy source into a temporary project and call installed Attendant skill's public runner against that copy. No Attendant files are copied. Any mechanical corrections occur only in that copy and are disclosed as `projection_corrections`. Sources are hashed before/after; intervening changes abort. No live `.attendant/` is required or created by workbench query/validate. Raw Attendant query preparation can mechanically correct live records; do not substitute it for read-only review.
 
 ## Term resolution
 

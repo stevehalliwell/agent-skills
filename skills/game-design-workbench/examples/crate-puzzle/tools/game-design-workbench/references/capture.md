@@ -21,7 +21,7 @@ No setup is implied by capture. If required storage is absent, use approved exis
 
 ## Record writes
 
-Use bundled [Attendant record commands](../vendor/attendant/references/commands.md), not generated SQLite edits. Before a write, run its `validate --no-correct` and inspect pending mechanical corrections. If unrelated source would be corrected by Attendant preparation, stop and get scope for those changes or use a precise source edit instead; do not hide collateral writes.
+Load required `attendant` skill and read its `references/commands.md`. Use its public runner, not generated SQLite edits. Before a write, run its `validate --no-correct` and inspect pending mechanical corrections. If unrelated source would be corrected by Attendant preparation, stop and get scope for those changes or use a precise source edit instead; do not hide collateral writes.
 
 For a compatible existing collection, create/update one or a reviewed batch through runner. Supply only declared fields and built-ins. Example input file for an explicitly requested rank change:
 
@@ -30,7 +30,7 @@ For a compatible existing collection, create/update one or a reviewed batch thro
 ```
 
 ```sh
-node <workbench>/vendor/attendant/scripts/attendant.mjs update --collection <skills-alias> --items @rank-update.json --project <project>
+node <attendant-skill>/scripts/attendant.mjs update --collection <skills-alias> --items @rank-update.json --project <project>
 node <workbench>/scripts/workbench.mjs validate --project <project> --json
 ```
 

@@ -597,7 +597,7 @@ First-slice acceptance:
 
 - All 19 core collection schemas/usages/templates validate with Attendant; representative empty, incomplete, accepted, proposed, excluded, and conflicting records have documented meaning. Required pack-specific additions follow same ownership rules.
 - All 18 packs have citations, original actionable prompts, declared inputs/queries, evidence limits, and selected-pack walkthrough evidence. Research source materials before authoring; report inaccessible evidence and avoid unsupported claims.
-- Local quickstart/references and runtime dependencies suffice after removing global skill from test environment. Generic Attendant snapshot includes runner and YAML dependency. No Node-free claim for these commands.
+- Local workbench helpers require separately installed `attendant` skill. Load that skill and point `GD_ATTENDANT_SKILL` to its directory. Do not vendor/copy Attendant or import its internal modules. Test missing-dependency failure without writes. No Node-free claim for these commands.
 - Tests cover direct capture without unsolicited review, alias resolution/collision, retained alternatives/adoption, review without repair, current/historical reports, and supplied versus invented facts.
 - Validate skill frontmatter, links, conditional reference discovery, and repository index entry. No workbench implementation, workflow execution, or pack-source research is implied by this specification alone.
 
@@ -664,7 +664,7 @@ Static inspection of `skills/attendant/scripts/attendant.mjs` and `references/co
 - Runner updates reject changes to `id`, `name`, and `created_at`. Keep stable technical record keys separate from mutable agreed terms and aliases.
 - File location is not itself the reference key when record `name` and collection identity are preserved. Cross-collection moves or name changes need explicit reference migration; do not promise automatic stable-reference repair.
 - Schema inspection confirms null declarations are optional/untyped, scalar defaults determine scalar type, and enum declarations supply allowed values. Missing/null enum values are tolerated by Attendant validation; workbench must not silently infer accepted authority from that tolerance. Explicit lifecycle values belong in templates/captured records; unset authority is reported rather than treated as accepted.
-- Runner imports sibling `scripts/yaml.mjs`; project-local Attendant snapshots must include it. Runtime imports `node:sqlite`; documented Node floor is >=24.10.0.
+- Attendant owns its runner, dependencies, and operation guidance as a separate required skill. Workbench calls only public runner and consumes `schema` output; no internal YAML imports or copied Attendant files. Runtime imports `node:sqlite`; documented Node floor is >=24.10.0.
 - No concept-alias mechanism was found in inspected runner paths. Workbench must provide terminology semantics on top of compatible fields, not claim Attendant resolves aliases natively.
 - Use LibYAML event parser rather than write YAML syntax parser: Windows/CJIT feasibility probe passed. Enforce Attendant-compatible flat record semantics in workbench wrapper; parser library alone is not schema validation.
 - Wrapper must reject duplicate keys, unsupported nesting/aliases, and incompatible field values explicitly, and match supported YAML scalar/quoting semantics rather than silently reinterpret strings/numbers.
@@ -751,7 +751,7 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Generate a small C99 interaction simulation from supplied prose, recording assumptions and using current controls.
 - Demonstrate authorized Git checkpoint and comparison/recovery workflow without a document-level edit log or loss of unrelated changes.
 
-## Implementation checks
+## Initial implementation checks — dependency packaging superseded
 
 - Plan checkpoint: `2a69e10`.
 - Step 2: generated 19 schema/usage/body-template sets and 68 tutorial records; `attendant validate --strict` returned zero diagnostics/corrections. Observation collection intentionally empty; analytical timing reference is not executed evidence.
@@ -777,6 +777,14 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Reusable report browser audit: `scripts/check-offline-report.mjs --help`. First audit hit disabled-page callback timeout; changed waits to Node timers and reran successfully on final HTML. Preview left open.
 - Fresh Git-index export passes setup idempotency and saved-review source matching. Fixed source vendor index/working CRLF mismatch by preserving existing bytes; no vendor logic changed. Strict owned-file whitespace check passes; default check's vendor CRLF warnings are not silently rewritten.
 - Slice 1 complete for review. Slices 2–5 remain unimplemented. No merge/push/publication performed.
+
+## Dependency correction
+
+- User correction: Attendant is another required skill, not vendored infrastructure. Revision authorized; previous standalone-without-Attendant claims are superseded.
+- Remove canonical/example Attendant copies. Require loaded skill directory via `GD_ATTENDANT_SKILL`; fail before writes when absent. Call public runner only; compare schemas through public API. Fixture generator uses JSON-compatible YAML without private parser imports.
+- Fingerprint installed dependency separately. Preserve old reviews as historical/stale; capture fresh scoped review after package update. Guard legacy managed-file deletion; block local edits and preserve unknown files.
+- Dependency regression: 27/27 tests pass (20 workbench, 7 Attendant). Package contains 219 files, no vendored Attendant. Report refresh remains.
+- [ ] Final step, requested during correction: review and expand all 18 framework docs more fully. Add framework-specific explanations, application procedure, worked examples, interpretation boundaries, and evidence gaps where useful. Keep source-access limits and original prompts; do not copy proprietary instruments. Update generator source, regenerate, verify, then refresh package/review/report evidence.
 
 ## Comments
 

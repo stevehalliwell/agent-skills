@@ -3,7 +3,7 @@
 <!-- game-design-workbench:start -->
 ### Game design workbench
 
-Markdown is source of truth; .attendant/ is disposable. Configuration: .pi/attendant.tables. Read schema and usage before record operations. Local tools/references: tools/game-design-workbench/.
+Markdown is source of truth; .attendant/ is disposable. Configuration: .pi/attendant.tables. Read schema and usage before record operations. Local tools/references: tools/game-design-workbench/. Require installed attendant skill; load its instructions and set GD_ATTENDANT_SKILL to its absolute directory. Never vendor or copy Attendant.
 
 - nouns: game-design/nouns/.schema.md; game-design/nouns/.usage.md
 - verbs: game-design/verbs/.schema.md; game-design/verbs/.usage.md

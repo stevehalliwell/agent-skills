@@ -1,10 +1,10 @@
 # Game Design Workbench
 
-Slice 1: a local-first agent skill and direct CLI for one Markdown design model. Includes 19 Attendant collection contracts, 18 attributed original question packs, guarded setup/update, declared-data queries, term resolution, and dated review storage. No npm install or service. Requires Node.js `>=24.10.0`.
+Slice 1: a local-first agent skill and direct CLI for one Markdown design model. Includes 19 Attendant collection contracts, 18 attributed original question packs, guarded setup/update, declared-data queries, term resolution, and dated review storage. Requires installed `attendant` skill and Node.js `>=24.10.0`. No npm dependency or service; Attendant is not bundled.
 
 ## Try included example
 
-Open `examples/crate-puzzle/` as a project and follow [walkthrough](examples/crate-puzzle/README.md). Delivered example includes its own tool snapshot; no global skill is required. The copy of tutorial source inside installed tools is documentation, not configured user-design facts.
+Open `examples/crate-puzzle/` as a project and follow [walkthrough](examples/crate-puzzle/README.md). Example includes workbench helpers only. Load installed `attendant` skill and set `GD_ATTENDANT_SKILL` to its absolute directory before running helpers. The copy of tutorial source inside installed tools is documentation, not configured user-design facts.
 
 From canonical repository root:
 
@@ -20,7 +20,7 @@ For an agent, load [skill instructions](SKILL.md). Narrow requests work best: `I
 
 ## New project
 
-Run [setup proposal](references/setup.md), review combined changes, then approve exact plan before apply. Empty canonical collections stay empty; installer never invents game facts. Existing source/config and local tool edits are preserved or block update. All helpers run from installed `tools/game-design-workbench/`; Attendant runner/YAML/license notices are bundled.
+Run [setup proposal](references/setup.md), review combined changes, then approve exact plan before apply. Empty canonical collections stay empty; installer never invents game facts. Existing source/config and local tool edits are preserved or block update. All helpers run from installed `tools/game-design-workbench/`; Attendant remains a separate required skill; helpers call its public runner, not its internal YAML module.
 
 ## Available boundaries
 
@@ -36,4 +36,4 @@ Native C99 loader/checks, cycle/rank/all-route analysis, formula evaluation/unit
 
 Read [CLI contract](references/cli.md) for flags, envelopes, limits, errors, and maintainer commands. Read [model ownership](references/model.md) before changing definitions. Review does not authorize repair, setup, experiment execution, or commits.
 
-Canonical source contains `test/workbench.test.mjs` and pack/fixture generators. Project snapshots exclude maintainer scripts/tests, preserve vendored bytes, and pin owned text to LF so recorded tool hashes survive ordinary Git checkout. Windows with Node v24.16.0 verified; other platforms and native runtimes are not claimed tested.
+Canonical source contains `test/workbench.test.mjs` and pack/fixture generators. Project snapshots exclude maintainer scripts/tests, contain no Attendant copies, and pin owned text to LF so recorded tool hashes survive ordinary Git checkout. Windows with Node v24.16.0 verified; other platforms and native runtimes are not claimed tested.

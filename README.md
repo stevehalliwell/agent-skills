@@ -44,7 +44,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 
 - [`brainstorming`](skills/brainstorming/) — Expands and refines ideas before choosing a direction.
 - [`competitor-analysis`](skills/competitor-analysis/) — Compares competitor positioning and offerings with evidence.
-- [`game-design-workbench`](skills/game-design-workbench/) — Organizes Markdown game-design records, scoped queries, retained alternatives, and 18 selected framework packs; includes local tools and crate-puzzle example. Native analysis/views/simulation remain deferred.
+- [`game-design-workbench`](skills/game-design-workbench/) — Organizes Markdown game-design records, scoped queries, retained alternatives, and 18 selected framework packs; requires Attendant skill and includes workbench helpers/crate-puzzle example. Native analysis/views/simulation remain deferred.
 - [`five-whys`](skills/five-whys/) — Leads evidence-aware, non-blaming root-cause analysis.
 - [`question-research`](skills/question-research/) — Builds retained, evidence-linked answers to focused questions.
 - [`persona`](skills/persona/) — Applies on-demand working perspectives through a lightweight role catalog and separate role guidance; preserves task workflows and approval gates.

@@ -1,10 +1,10 @@
 # Setup, binding, and updates
 
-Setup is a separate authorized operation, not a side effect of opening the skill. Markdown stays authoritative; `.attendant/` is disposable. Node.js `>=24.10.0` required. No network/service is needed for installed tools.
+Setup is a separate authorized operation, not a side effect of opening the skill. Markdown stays authoritative; `.attendant/` is disposable. Installed `attendant` skill and Node.js `>=24.10.0` required. Load Attendant; set `GD_ATTENDANT_SKILL` to its absolute directory. Never copy its code or guidance into workbench. No network/service is needed for installed tools.
 
 ## Plan before apply
 
-1. Inspect target root, existing registry/schemas/usages, manifest, and unconfigured Markdown. Read bundled [Attendant collection workflow](../vendor/attendant/references/collections.md). Existing source stays in place.
+1. Inspect target root, existing registry/schemas/usages, manifest, and unconfigured Markdown. Read required Attendant skill's `references/collections.md`. Existing source stays in place.
 2. Resolve `<workbench>` to supplied skill folder. Prepare combined proposal:
 
    ```sh
@@ -32,7 +32,7 @@ Default reuse occurs when a role already has a collection alias matching its rol
 
 Pass `--mapping <map.json>` to both plan and apply. Existing aliases must already be configured; new aliases are created at `game-design/<alias>`. Role aliases must be distinct. Existing collection contracts must include compatible required fields; extra fields/local usage/templates remain untouched. Query helpers read installed mapping, not guessed directory names.
 
-Unconfigured frontmatter candidates block apply until migration or an explicit fresh-design choice, including root notes alongside an existing registry. Candidate scan descends at most two directories and skips hidden paths, dependencies, tools/vendor/build, and configured collections; inspect supplied deeper source paths separately. No candidates is not proof no prior design exists. Use bundled [Attendant migration workflow](../vendor/attendant/references/migration.md) for migration; review/adopt its plan separately. To intentionally create empty workbench collections while preserving old notes unchanged, include `--fresh` in both approved setup commands. This is an explicit acknowledgment, not a default.
+Unconfigured frontmatter candidates block apply until migration or an explicit fresh-design choice, including root notes alongside an existing registry. Candidate scan descends at most two directories and skips hidden paths, dependencies, tools/vendor/build, and configured collections; inspect supplied deeper source paths separately. No candidates is not proof no prior design exists. Use required Attendant skill's `references/migration.md` for migration; review/adopt its plan separately. To intentionally create empty workbench collections while preserving old notes unchanged, include `--fresh` in both approved setup commands. This is an explicit acknowledgment, not a default.
 
 An existing partial model can still be discussed without setup. Helpers needing absent/incompatible contracts return a named blocker. Empty optional collections are valid; absent core collection configuration is not treated as an empty query result.
 
@@ -40,7 +40,7 @@ An existing partial model can still be discussed without setup. Helpers needing 
 
 Run newer supplied package's `setup plan` against project; inspect changes before approval/apply. Installed helper alone has no newer upstream bytes and cannot update itself to an unseen version.
 
-Manifest records role mapping, capabilities, source-package hashes, and distribution hash. Existing config and records are preserved. Generated schema/usage/templates are not silently replaced. Locally edited installed tool/guidance files block replacement, including apparently compatible local modifications. Reconcile deliberately; do not change stored hashes merely to bypass conflict detection.
+Manifest records role mapping, capabilities, source-package hashes, and distribution hash. Existing config and records are preserved. Generated schema/usage/templates are not silently replaced. Locally edited installed tool/guidance files block replacement, including apparently compatible local modifications. Retired managed files are proposed as explicit deletions only when their hashes still match prior manifest. Modified retired files block update; unknown local files remain. This also removes legacy vendored Attendant copies. Reconcile deliberately; do not change stored hashes merely to bypass conflict detection.
 
 Apply is ordered and per-file guarded, **not a cross-file transaction**. On partial failure, inspect reported applied paths, registry, and manifest. Do not delete user sources or blindly retry previous approval. Re-plan actual state; preserve incomplete installation evidence. Manifest is written after its planned dependencies; retry remains subject to reviewed conflict handling.
 
