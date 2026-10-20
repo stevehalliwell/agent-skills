@@ -784,7 +784,9 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Remove canonical/example Attendant copies. Require loaded skill directory via `GD_ATTENDANT_SKILL`; fail before writes when absent. Call public runner only; compare schemas through public API. Fixture generator uses JSON-compatible YAML without private parser imports.
 - Fingerprint installed dependency separately. Preserve old reviews as historical/stale; capture fresh scoped review after package update. Guard legacy managed-file deletion; block local edits and preserve unknown files.
 - Dependency regression: 27/27 tests pass (20 workbench, 7 Attendant). Package contains 219 files, no vendored Attendant. Report refresh remains.
-- [ ] Final step, requested during correction: review and expand all 18 framework docs more fully. Add framework-specific explanations, application procedure, worked examples, interpretation boundaries, and evidence gaps where useful. Keep source-access limits and original prompts; do not copy proprietary instruments. Update generator source, regenerate, verify, then refresh package/review/report evidence.
+- [x] Final documentation step: reviewed/expanded all 18 framework docs to 803–925 words each. Added working concepts, scoped procedures, worked examples, evidence/counterchecks, and traps. Preserved original prompts, source-access limits, selected-lens routing, and no-instrument/no-score boundaries. Maintainer generator validates coverage; retired one-line fixture fields removed.
+- Final source/package checks: 27/27 tests pass; 18/18 generated packs current; frontmatter passes; 231 local links pass; entrypoint 797 words; 219 installed files; zero setup changes/conflicts after update. No new source fetches; eight original HTTP 403 warnings retained.
+- Remaining: refresh scoped review and offline report, verify fresh-index export/browser, commit handoff.
 
 ## Comments
 

@@ -58,4 +58,4 @@ node scripts/build-example.mjs --templates --output <empty-directory>
 node --test test/workbench.test.mjs
 ```
 
-Run from canonical skill folder. Pack authoring lives in `scripts/pack-data.mjs`; `--check` is read-only, `--write` regenerates pack Markdown/catalog. Fixture generator requires an empty output directory and creates deterministic tutorial identities/data, not real play evidence. Generated tutorial source is committed; installed runtime excludes maintainer generators/data and tests.
+Run from canonical skill folder. Pack sources/citations/prompts live in `scripts/pack-data.mjs`; expanded explanations, procedures, examples, counterchecks, and traps live in `scripts/pack-guidance.mjs`; `--check` is read-only, `--write` regenerates pack Markdown/catalog. Fixture generator requires an empty output directory and creates deterministic tutorial identities/data, not real play evidence. Generated tutorial source is committed; installed runtime excludes maintainer generators/data and tests.

@@ -10,6 +10,7 @@ import { runQuery, resolveTerm } from '../scripts/queries.mjs';
 import { snapshot, attendantHome, attendantFingerprint, bundle, hash } from '../scripts/lib.mjs';
 import { catalog, saveReport, showReport } from '../scripts/reports.mjs';
 import { model } from '../scripts/model.mjs';
+import { guidance } from '../scripts/pack-guidance.mjs';
 const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const roots = [];
 async function temporary(fixture = false) {
@@ -167,7 +168,10 @@ test('all 18 generated packs match catalog, queries, roles, and selected entrypo
   for (const entry of entries) {
     const body = await readFile(join(home, entry.path), 'utf8');
     assert.ok(skill.includes(`(${entry.path})`), entry.id);
-    assert.ok(body.includes('## Original prompts'), entry.id);
+    for (const heading of ['Contents', 'Working concepts', 'Apply to selected slice', 'Original prompts', 'Worked example', 'Evidence and counterchecks', 'Common traps']) assert.ok(body.includes(`## ${heading}`), `${entry.id}: ${heading}`);
+    const detail = guidance[entry.id];
+    assert.ok(detail.concepts.length >= 3 && detail.procedure.length >= 4 && detail.example.length >= 3 && detail.evidence.length >= 2 && detail.traps.length >= 2, entry.id);
+    for (const text of Object.values(detail).flat(2)) assert.ok(body.includes(text), `${entry.id}: generated guidance omitted`);
     assert.ok(body.includes('Access checked 2026-10-19:'), entry.id);
     assert.ok(entry.required_roles.every(role => Object.hasOwn(model, role)), entry.id);
     assert.ok(entry.queries.every(query => ['matrix', 'skills', 'routes', 'mda', 'decisions', 'glossary', 'controls', 'evidence', 'records'].includes(query)), entry.id);
@@ -316,7 +320,7 @@ test('required Attendant is explicit, never copied, and missing dependency canno
       await assert.rejects(planSetup(root), { code: 'ATTENDANT_REQUIRED' });
       assert.deepEqual(await readdir(root), []);
     }
-    assert.ok((await bundle()).every(file => !file.path.startsWith('vendor/')));
+    assert.ok((await bundle()).every(file => !file.path.startsWith('vendor/') && file.path !== 'scripts/pack-guidance.mjs'));
   } finally { if (previous === undefined) delete process.env.GD_ATTENDANT_SKILL; else process.env.GD_ATTENDANT_SKILL = previous; }
 });
 

@@ -14,7 +14,6 @@ export const packs = [
     ],
     limits: 'A declared mechanic–dynamic–aesthetic chain is not causal proof or emotional measurement. The mda recipe inventories declared links; disconnected-path interpretation remains agent work. Do not demand all eight familiar aesthetic labels.',
     missing: 'Discuss intention without complete links. Mark disconnected records as unknown/unresolved, not failed experiences. Distinguish empty observations from evidence against a claim.',
-    fixture: 'Inspect crate-pushing, careful-positioning, and deliberate-tension links. Ask whether the authored challenge intention has support beyond prose; observations are empty.',
     access: 'AAAI abstract inspected; full paper not retrieved. Questions use broad published distinctions, not reproduced passages.',
     sources: [['MDA: A Formal Approach to Game Design and Game Research', 'https://aaai.org/papers/ws04-04-001-mda-a-formal-approach-to-game-design-and-game-research/']]
   },
@@ -32,7 +31,6 @@ export const packs = [
     ],
     limits: 'Matrix rows expand only explicitly declared applicable nouns. Missing Cartesian pairs are not synthesized or condemned. Shared mechanics own common rules; cases own their conditions/consequences/feedback. No automatic reachability or exhaustive coverage proof.',
     missing: 'Keep blank cells unknown. Preserve explicit excluded/not_applicable cases and defined no-effect cases. Do not infer exclusions from genre conventions.',
-    fixture: 'Compare three crate/push cases; wall/activate is not applicable; closed exit/walk remains unknown. Blocked pushing has a defined no-effect consequence, not missing design.',
     access: 'MIT Press request returned 403. Search-linked teaching excerpt supports discernible/integrated outcomes; PDF text extraction was incomplete. No full-book review claimed.',
     sources: [['Rules of Play — MIT Press', 'https://mitpress.mit.edu/9780262240451/rules-of-play/'], ['Meaningful Play teaching excerpt', 'https://sites.cc.gatech.edu/classes/AY2006/cs4455_spring/documents/sz-unit11.pdf']]
   },
@@ -50,7 +48,6 @@ export const packs = [
     ],
     limits: 'This release inventories literal controls and formula text; it does not evaluate formulas, resolve units, draw directional flow graphs, or execute simulations. Flow direction stays in rule prose. At most one accepted resource extension per noun is a source invariant to inspect manually here.',
     missing: 'A missing resource extension does not prevent discussing a noun. Missing flow direction is unresolved prose, not an inferred edge. Suggest an experiment without running it.',
-    fixture: 'Energy is a noun/resource; initial-energy and push-cost are controls; crate-pushing owns spending behavior. Three required pushes with initial energy 2 raises a conditional feasibility question, not an executed result.',
     access: 'Hogeschool van Amsterdam publication summary inspected; book and Machinations implementation not inspected.',
     sources: [['Game Mechanics: Advanced Game Design — publication record', 'https://research.hva.nl/en/publications/game-mechanics-advanced-game-design/']]
   },
@@ -68,7 +65,6 @@ export const packs = [
     ],
     limits: 'No exhaustive pattern catalog, automatic recognition, or copied pattern entries. Cite a specific external pattern only after inspecting that source; title similarity is not evidence of implementation.',
     missing: 'Proceed from described rule relationships without pattern labels. If external pattern evidence is unavailable, frame resemblance as an unverified hypothesis.',
-    fixture: 'Compare retained pulling rejection with a proposed recovery option; preserve both rationale and new alternative without adopting either automatically.',
     access: 'DiGRA abstract inspected. External catalog is a further-reading link, not a bundled database or a claim of full inspection.',
     sources: [['Game Design Patterns — DiGRA', 'https://dl.digra.org/index.php/dl/article/view/60'], ['Gameplay Design Patterns catalog', 'https://gdp.cse.chalmers.se/index.php?title=Main_Page']]
   },
@@ -86,7 +82,6 @@ export const packs = [
     ],
     limits: 'Skills use AND prerequisites; absent/null/empty arrays declare no links. Rank is nullable signed conceptual placement, not physical level or graph depth. Recipes expose links/ranks/routes; cycle, rank-conflict, and all-route opportunity checks remain manual until C99 analysis ships. Opportunity does not prove acquired mastery.',
     missing: 'Keep unknown ranks unknown and late roots visible. Optional levels are not required for route discussion. No teaching requirement or learner incapability claim follows from missing practice records.',
-    fixture: 'Coordinate is authored rank 2 but depends on route-switch rank 3 and unranked plan-push. A requested edit to coordinate rank 3 changes only that field; descendants are not rewritten.',
     access: 'Lostgarden article inspected, including action/rule/feedback/mental-model loop. Questions independently authored.',
     sources: [['The Chemistry of Game Design', 'https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/']]
   },
@@ -104,7 +99,6 @@ export const packs = [
     ],
     limits: 'No fun score. Learning is a perspective, not an exhaustive explanation of enjoyment. Repeated actions can support mastery, comfort, expression, or other intentions; do not label repetition defective without context.',
     missing: 'Use authored skill/challenge descriptions when progression links are incomplete. Lack of observed novelty is not evidence of boredom.',
-    fixture: 'Combined-room combines push planning and switch routing; ask what new relationship the combination teaches instead of assuming harder means deeper.',
     access: 'Official book site and author presentation introduction inspected; full book/presentation not extracted.',
     sources: [['A Theory of Fun — official site', 'https://www.theoryoffun.com/'], ['Author introduction to 2003 talk', 'https://www.raphkoster.com/gaming/theoryoffun.shtml']]
   },
@@ -122,7 +116,6 @@ export const packs = [
     ],
     limits: 'No required cohort/profile dataset, calibrated capability curve, flow score, anxiety score, or boredom score. Keep separate from GameFlow. Authored challenge/rank numbers do not measure a player state.',
     missing: 'State capability assumptions explicitly. Missing observations leave experience unverified; they do not justify predicting anxiety.',
-    fixture: 'Examine optional bypass from push-room to combined-room. Ask about feedback and familiarity; do not infer a capability curve from skill ranks.',
     access: 'Publisher requests returned 403. Bibliographic identity and broad conditions checked through source-linked search summaries; full book not read.',
     sources: [['Flow — publisher', 'https://www.harpercollins.com/products/flow-mihaly-csikszentmihalyi'], ['Flow Engine Framework — later research context', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5973526/']]
   },
@@ -140,7 +133,6 @@ export const packs = [
     ],
     limits: 'These are original questions, not a reproduction or scoring implementation of the published evaluation instrument. No aggregate enjoyment score. Flow theory and GameFlow are distinct. Control records are adjustable parameters, not a complete account of player agency or input controls.',
     missing: 'Mark social criteria inapplicable for an intentionally solo experience. Missing goal/feedback prose is a documentation question, not proof players cannot understand the game.',
-    fixture: 'Check blocked-push feedback and visible switch state. Social interaction is outside this solo puzzle scope, not a missing mandatory feature.',
     access: 'ACM DOI requests blocked; paper identity/eight-element summary checked through source-linked search. Suggested PDF returned 404. Full evaluation criteria not reviewed or copied.',
     sources: [['GameFlow: A Model for Evaluating Player Enjoyment in Games', 'https://doi.org/10.1145/1077246.1077253']]
   },
@@ -158,7 +150,6 @@ export const packs = [
     ],
     limits: 'A required-skills list does not establish simultaneous demand. No count-based cognitive-load score or diagnosis. Game-design application is a hypothesis; original laboratory findings are not calibrated mechanic-count limits.',
     missing: 'Ask about concurrent demand and familiarity when absent. Preserve them as assumptions rather than inventing player capability data.',
-    fixture: 'Coordinate has two prerequisite chains. Inspect challenge prose before claiming both must be actively maintained at once.',
     access: 'Wiley/ScienceDirect requests blocked. Bibliography and abstract argument about problem solving/schema acquisition checked through source-linked search; full study not read.',
     sources: [['Cognitive Load During Problem Solving: Effects on Learning', 'https://doi.org/10.1207/s15516709cog1202_4']]
   },
@@ -176,7 +167,6 @@ export const packs = [
     ],
     limits: 'Never use four, seven, or another item count as universal failure/capacity threshold. Chunk size depends on learning and task. No player-capacity dataset or computed memory score.',
     missing: 'Unspecified visibility and familiarity remain unknown. Do not equate number of skills with number of active memory chunks.',
-    fixture: 'Ask whether switch state remains visible while planning crate movement. Existing prerequisite links alone cannot answer that presentation question.',
     access: 'Miller full-text mirror inspected for chunking/recoding. Cowan PubMed extraction incomplete; abstract claims checked through source-linked search. No universal threshold inferred.',
     sources: [['The Magical Number Seven, Plus or Minus Two', 'https://psychclassics.yorku.ca/Miller/'], ['The Magical Number 4 in Short-Term Memory', 'https://pubmed.ncbi.nlm.nih.gov/11515286/']]
   },
@@ -194,7 +184,6 @@ export const packs = [
     ],
     limits: 'ZPD and later scaffolding are related but not identical. No teaching prerequisite, developmental diagnosis, or proof that a player cannot succeed without a declared introduction. Routes are declared structural opportunities, not gameplay reachability.',
     missing: 'Missing support is a question, not automatic failure. Proceed without level records; inspect challenge entry/next links and explicit role lists.',
-    fixture: 'Push-room can lead directly to combined-room, bypassing switch-practice. Ask whether support is intentional on that route; do not assert impossible completion.',
     access: 'Oxford reference blocked; ZPD definition checked through source-linked APA/academic search. Tutoring DOI returned 406; PDF extraction incomplete. Full studies not claimed.',
     sources: [['Zone of proximal development — Oxford Reference', 'https://www.oxfordreference.com/display/10.1093/oi/authority.20110803133528287'], ['The Role of Tutoring in Problem Solving', 'https://doi.org/10.1111/j.1469-7610.1976.tb00381.x']]
   },
@@ -212,7 +201,6 @@ export const packs = [
     ],
     limits: 'Autonomy, competence, and relatedness are common concepts here, not mandatory profile records or independent fun-point scores. Mechanics alone do not measure need satisfaction. Solo play does not automatically imply a relatedness defect.',
     missing: 'Keep motivation hypotheses explicit. No observations means unverified support, not unmet psychological needs.',
-    fixture: 'Compare optional route choice with constrained crate movement. Constraints can support deliberate planning; avoid declaring either autonomy support or frustration proven.',
     access: 'Official SDT overview inspected, including three basic needs and support/thwarting distinctions. No questionnaire reproduced.',
     sources: [['Self-Determination Theory — official overview', 'https://selfdeterminationtheory.org/theory/']]
   },
@@ -231,7 +219,6 @@ export const packs = [
     ],
     limits: 'No questionnaire, preference scoring, cohort collection, audience dataset, personality inference, or single player type. Published empirical model does not validate a workbench-specific support claim.',
     missing: 'Discuss intended interests without surveyed profiles. If no interest is supplied, offer vocabulary as optional hypotheses rather than assigning an audience.',
-    fixture: 'Deliberate planning plausibly relates to Challenge/Strategy. That is an interpretation to test, not a measured preference profile for puzzle players.',
     access: 'Model page returned 403. Published labels and paired groups checked against source-linked 2015 explanation search; full questionnaire/scoring not accessed.',
     sources: [['Gamer Motivation Model', 'https://quanticfoundry.com/gamer-motivation-model/'], ['How We Developed the Gamer Motivation Profile v2', 'https://quanticfoundry.com/2015/07/20/how-we-developed-the-gamer-motivation-profile-v2/']]
   },
@@ -250,7 +237,6 @@ export const packs = [
     ],
     limits: 'No category quota, emotional score, copied questionnaire, or rule that every game needs every key. Links to emotional categories remain interpretations until supported by relevant evidence.',
     missing: 'Keep undeclared social experience inapplicable when appropriate. Do not treat missing observed emotion as evidence of absent emotion.',
-    fixture: 'A successful combined-room solution may invite triumph; discovering a switch relation may invite curiosity. Both are hypotheses, not observed reactions.',
     access: 'Author’s Four Keys overview inspected. Full white paper/slides and proprietary methods not reproduced.',
     sources: [['The 4 Keys 2 Fun', 'https://www.nicolelazzaro.com/the4-keys-to-fun/']]
   },
@@ -269,7 +255,6 @@ export const packs = [
     ],
     limits: 'No universal player typing, percentage allocation, psychological diagnosis, or requirement to serve every category. Do not translate Killers directly into all combat or competitive play without context.',
     missing: 'If multiplayer participation is absent, report limited applicability and stop this lens instead of inventing social features.',
-    fixture: 'Solo crate puzzle has limited applicability. Record that boundary; no automatic multiplayer recommendation.',
     access: 'Original article mirror inspected, including MUD scope, four approaches, and movement between them.',
     sources: [['Players Who Suit MUDs — original-text mirror', 'https://www.majormud.com/pwsm.html']]
   },
@@ -288,7 +273,6 @@ export const packs = [
     ],
     limits: 'Historical conceptual lens, not a numeric design profile or universal taxonomy test. No requirement to include competition, randomness, role-play, or vertigo.',
     missing: 'Absent forms can be deliberate boundaries. Ask for rules/presentation context rather than inferring chance or sensory experience from theme.',
-    fixture: 'Deterministic puzzle rules emphasize prescribed challenge; hypothetical player delay is an experiment assumption, not proof the game itself uses chance.',
     access: 'Google Books publisher description inspected; full translated book not accessed.',
     sources: [['Man, Play, and Games — book record', 'https://books.google.com/books/about/Man_Play_and_Games.html?id=bDjOPsjzfC4C']]
   },
@@ -306,7 +290,6 @@ export const packs = [
     ],
     limits: 'No copied lens-card wording, numbering, complete deck, or claim of comprehensive book coverage. Do not use this pack as permission to run other framework reviews.',
     missing: 'Start from supplied facts and scoped alternatives. Unknowns become questions/hypotheses, not invented rules. Preserve rejected alternatives and rationale.',
-    fixture: 'Question whether pulling would undermine deliberate placement; retain its prior rejection while exploring a distinct recovery alternative.',
     access: 'Official Art of Game Design page inspected; book/deck content not reproduced or reviewed in full.',
     sources: [['The Art of Game Design — official page', 'https://schellgames.com/art-of-game-design']]
   },
@@ -324,7 +307,6 @@ export const packs = [
     ],
     limits: 'A proposed experiment is not execution evidence. Simulated predictions are not observed play. No automatic repairs, playtest execution, or simulation. The evidence query is an inventory; inspect linked record bodies for full method and evidence trail.',
     missing: 'Empty observations honestly mean no observations recorded. Discuss test design without fabricating participants, sample counts, measured outcomes, or completed iterations.',
-    fixture: 'Timing experiment is proposed, its 5–12 s range and 1312/5040 deadline probability are analytical references under stated delay assumptions. There are no executed trials or play observations.',
     access: 'Official Game Design Workshop overview inspected: experience goals, prototyping, playtesting, revision. Full book/exercises not reproduced.',
     sources: [['Game Design Workshop — official site', 'https://www.gamedesignworkshop.com/']]
   }
