@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { conceptPath, describeConcept } from './concept.mjs';
 export const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export const slash = value => value.replaceAll('\\', '/');
@@ -108,19 +109,29 @@ export async function bundle() {
   for (const name of ['README.md', 'SKILL.md', '.gitattributes', 'examples/crate-puzzle/README.md']) { const bytes = await optional(join(home, name)); if (bytes) files.push({ path: name, bytes }); }
   return files.filter(file => !['scripts/build-example.mjs', 'scripts/fixture-data.mjs', 'scripts/build-packs.mjs', 'scripts/pack-data.mjs', 'scripts/pack-guidance.mjs'].includes(file.path)).sort((a, b) => a.path.localeCompare(b.path));
 }
-export async function snapshot(root, includes = []) {
+export async function projectContext(root, options = {}, manifestBytes = undefined) {
+  const manifest = manifestBytes === undefined ? await optional(await safePath(root, 'tools/game-design-workbench/manifest.json')) : manifestBytes;
+  const path = conceptPath(manifest ? JSON.parse(manifest).concept_path : undefined);
+  const comparable = value => process.platform === 'win32' ? value.toLowerCase() : value;
+  if ((await collections(root)).some(collection => comparable(path) === comparable(collection.directory) || comparable(path).startsWith(`${comparable(collection.directory)}/`))) fail('CONCEPT_PATH_INVALID', 'Project concept must be outside record collections.');
+  const bytes = await optional(await safePath(root, path));
+  return { path, bytes, metadata: describeConcept(root, path, bytes, options) };
+}
+export async function snapshot(root, includes = [], options = {}) {
   const files = [];
   for (const name of ['.pi/attendant.tables', 'AGENTS.md', 'tools/game-design-workbench/manifest.json']) {
     const path = await safePath(root, name); const bytes = await optional(path); if (bytes) files.push({ path: name, bytes });
   }
+  const context = await projectContext(root, { intentRef: options.intentRef, intentPath: options.intentPath }, files.find(file => file.path === 'tools/game-design-workbench/manifest.json')?.bytes ?? null);
+  if (context.bytes) files.push({ path: context.path, bytes: context.bytes });
   for (const collection of await collections(root)) await walk(root, collection.absolute, files);
-  for (const name of includes) { const path = await safePath(root, name); const bytes = await optional(path); if (bytes === null) fail('SOURCE_MISSING', `Missing included source: ${name}`); files.push({ path: slash(relative(root, path)), bytes }); }
+  for (const name of includes) { const path = await safePath(root, name); if (files.some(file => process.platform === 'win32' ? file.path.toLowerCase() === slash(relative(root, path)).toLowerCase() : file.path === slash(relative(root, path)))) continue; const bytes = await optional(path); if (bytes === null) fail('SOURCE_MISSING', `Missing included source: ${name}`); files.push({ path: slash(relative(root, path)), bytes }); }
   const unique = [...new Map(files.map(file => [file.path, file])).values()].sort((a, b) => a.path.localeCompare(b.path));
   if (unique.reduce((sum, file) => sum + file.bytes.length, 0) > 32 * 1024 * 1024) fail('SOURCE_LIMIT', 'Snapshot exceeds 32 MiB source limit.');
   const sources = unique.map(file => ({ path: file.path, sha256: hash(file.bytes) }));
   const dependency_hash = await attendantFingerprint();
   const tool_hash = hash(`${(await bundle()).map(file => `${file.path}:${hash(file.bytes)}`).join('\n')}\nattendant:${dependency_hash}`);
-  return { files: unique, metadata: { schema_version: 1, fingerprint: hash(JSON.stringify({ sources, tool_hash })), sources, tool_hash, dependencies: { attendant: dependency_hash }, includes } };
+  return { files: unique, metadata: { schema_version: 1, fingerprint: hash(JSON.stringify({ sources, tool_hash, project_context: context.metadata })), sources, tool_hash, dependencies: { attendant: dependency_hash }, includes, project_context: context.metadata } };
 }
 export async function atomicWrite(root, name, bytes, expected = null) {
   const path = await safePath(root, name);

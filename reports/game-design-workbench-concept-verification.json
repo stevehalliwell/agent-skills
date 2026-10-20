@@ -1,0 +1,52 @@
+{
+  "verified_at": "2026-10-20T21:28:32.637Z",
+  "scope": "Concept/mode implementation; not substantive framework completeness, native views, or simulations",
+  "tests": {
+    "passed": 30,
+    "failed": 0,
+    "artifact": "game-design-workbench-concept-tests.txt",
+    "sha256": "1040e9cb3419042cbe99c42f385f49e006f7edbe4cda578881d0cb5c0922cfdc"
+  },
+  "staged_export": {
+    "artifact": "game-design-workbench-concept-export.json",
+    "sha256": "7674403e88f531d33150b3c7dd89cf4a68c17dd1fa306a06e78da6ef87f6ec6e",
+    "base_commit": "5a53c5972512075ec08e0bbfbc0df2bd3984d7a0",
+    "index_workbench_inventory_sha256": "88bf1be5e8b6064f112fb4a90766b29c811f309d248a6affc5a5e45e19a6a81e",
+    "platform": "win32",
+    "node": "24.16.0",
+    "setup_changes": 0,
+    "conflicts": 0,
+    "local_link_targets_checked": 61,
+    "working_mode": "game-explorer",
+    "concept_path": "game-design/concept.md",
+    "concept_history_status": "git_unavailable",
+    "concept_sha256": "318a76874ddc1578eea1dc16a7f090aa377ecac672716e3c844629b26d7b9471",
+    "concept_comparison": null,
+    "collections": 16,
+    "experiment_rows": 2,
+    "skill_atom_rows": 6,
+    "saved_review": "20261020T192957597Z-4698820e",
+    "saved_review_source_match": false,
+    "expected_stale": true,
+    "historical": true,
+    "freshly_run": false,
+    "previous_review_source_match": false,
+    "stable_finding_ids": true,
+    "dependency_fingerprint": "7a516c4d7002594d1617fe0e5b1ad60c13767418d7beee383a3b17330a0a206a",
+    "review_dependency_fingerprint": "7a516c4d7002594d1617fe0e5b1ad60c13767418d7beee383a3b17330a0a206a"
+  },
+  "generated_packs": {
+    "current": 18,
+    "completeness": "provisional; not evaluated"
+  },
+  "installed_files": 205,
+  "canonical_migrations": {
+    "experiments": "already_consolidated; no changes",
+    "skill_atoms": "already_renamed; no changes"
+  },
+  "new_framework_review": false,
+  "new_experiment_execution": false,
+  "browser_audit_performed": false,
+  "reference_documents": "User originals untouched and untracked; not adopted as game facts",
+  "history": "Earlier reviews/baselines and offline report retained unchanged; old reviews remain stale"
+}

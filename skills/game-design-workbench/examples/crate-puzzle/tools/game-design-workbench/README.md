@@ -5,8 +5,9 @@ One Markdown game-design model, selected framework reviews, and local query/repo
 ## Start
 
 1. Agent: load [skill](SKILL.md). Direct CLI user: complete [Runtime](references/runtime.md#runtime), then read [CLI contract](references/cli.md).
-2. Try [crate-and-switch walkthrough](examples/crate-puzzle/README.md), or use [setup](references/setup.md) for a project. Setup creates no game facts.
-3. For field ownership and shared record rules, use [model contract](references/model.md).
+2. Project concept template, working-mode behavior, and versioned intent comparisons: [concept contract](references/concept.md).
+3. Try [crate-and-switch walkthrough](examples/crate-puzzle/README.md), or use [setup](references/setup.md) for a project. Setup creates no game facts.
+4. For field ownership and shared record rules, use [model contract](references/model.md).
 
 ## Delivery status
 

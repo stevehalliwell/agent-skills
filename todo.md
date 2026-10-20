@@ -313,7 +313,7 @@ Absence alone is not a defect. Check applicability and project expectations befo
 - Workbench manages design knowledge and evidence, not game runtime implementation.
 - No engine, game scripting language, document editor, generic issue tracker, or replacement for Attendant.
 - Do not require a simulation for every mechanic or intended experience.
-- Setup installs all supported table sets, but populating every collection or linking every domain is not mandatory. [Table responsibilities](#table-responsibilities) owns initial inventory; aesthetics owns natural-language experience/intent rather than requiring a competing intent table. Additional framework collections require a distinct fact/ownership need.
+- Setup installs all supported table sets, but populating every collection or linking every domain is not mandatory. [Table responsibilities](#table-responsibilities) owns initial inventory; Do not add a competing intent collection; use concept ownership specified below. Additional framework collections require a distinct fact/ownership need.
 - Preserve mechanics/system/dynamic distinctions and intention/prediction/observation distinctions.
 - Visualizations expose existing analysis; they do not introduce separate rules or authoritative state.
 - Narrow automatic routing: activate for explicit game-design workbench, structured design-data, noun–verb matrix, skill-chain/progression, framework-review, and design-simulation requests. Skip ordinary game-code-only work and unrelated brainstorming, research, or technical review. Loading skill does not authorize setup, a lens review, or simulation execution beyond requested operation.
@@ -631,6 +631,29 @@ Static inspection of `skills/attendant/scripts/attendant.mjs` and `references/co
 
 Acceptance: [First-slice walkthroughs and acceptance](#first-slice-walkthroughs-and-acceptance). No broad native application or working simulation is implied.
 
+### Concept and working mode — before framework completeness pass
+
+Reference inputs: root `Concept - Template.md` and `High Concept Doc.md`. Read both; retain originals unchanged. Older completed document is reference material, not automatically adopted current design or present-day market/platform evidence.
+
+Confirmed behavior:
+- Ship concept template and request existing concept/intention material during initial guided setup. Offer template when absent; incomplete input is valid, especially during exploration.
+- Preserve overall intent, intended player, player story/voice, and play across time scales separately from individual MDA A aspects. Cross-check framework interpretations against original intent when available; report support, contradiction/tension, unknown evidence, discovery outside intent, and possible goal drift.
+- One current project mode: `game-design` or `game-explorer`. Change explicitly; no per-session/investigation override. Switching preserves original intent, prior findings, and constraints; it does not adopt new goals.
+- Commit completed game-concept changes so ordinary Git history preserves recoverable versions. No separate frozen concept copies. Scope commits to intended concept changes; preserve unrelated work. Saved comparisons identify concept path and exact committed revision, rather than a moving HEAD reference. Label uncommitted concept text as a working draft, not as content of that commit; read-only review does not silently commit existing user edits. Blank template is not an adopted intention; if no recoverable intent baseline exists, report that limit instead of inventing one. This does not authorize adopting or committing supplied reference documents as current game facts.
+- Game design works toward intended experience for intended player. Game explorer assembles possibilities, investigates generated behavior, and follows promising leads toward potential experiences. Missing destination is not an explorer-mode defect. Emerging directions remain proposed until adopted.
+
+Implemented delivery shape:
+- One live concept document, default `game-design/concept.md`, prominently linked from README; no new collections merely for concept sections. Preserve an explicitly designated existing owner rather than creating duplicate live intent.
+- Concise template based on supplied outline: razor/purpose, intended player/appeal, platform/context, core features, intended experience/player story, second/minute/hour play, hook, risks, and open questions. Related products/commercial material optional. Detailed rules/tuning and tests belong in existing collections; concept links to canonical definitions.
+- Working mode and relevant concept revision accompany saved review context and freshness checks. Context must be available through progressive disclosure before framework interpretation, without repeating concept content in each guide.
+
+- [x] Add concept template and shared concept/mode instructions before model/operation interpretation. Tutorial explicitly chooses explorer mode; overall intent remains unknown.
+- [x] Implement guarded setup binding, header-only mode changes, README navigation, and mode-required first setup. Existing concept body/frontmatter stays intact; edited managed navigation conflicts rather than overwrites.
+- [x] Add read-only context/history command, exact-commit snapshot comparison, concept-aware freshness, historical citations, and optional intent-relation labels. No Git writes/fetches, frozen historical text copies, implicit mode overrides, or invented original baseline.
+- [x] Test existing/fresh/self-README setup, stale approval, local edits, incomplete explorer intent, malformed/duplicate/encoded headers, nested Unicode Git paths, working drafts, support/contradiction/drift labels, explicit switches, original-history recovery after rename, and historical viewing without comparison Git objects.
+
+Current source/CLI contract: [concept and working mode](skills/game-design-workbench/references/concept.md). Implementation verification recorded after checks below. Framework packs remain provisional; framework completeness pass and Slice 2 have not started.
+
 ### Framework completeness pass — before Slice 2
 
 - [ ] Review one framework at a time after current model/documentation cleanup. Catalog status tracks provisional coverage; word count and file generation are not completeness evidence.
@@ -753,6 +776,14 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Example README surfaces unauthored overall experience/player story separately from local MDA aesthetic. No new game goals or player voice invented.
 - Verification: 27/27 tests pass; 219 local links pass; frontmatter and pack generation checks pass. Staged export verifies 16 collections, two proposed-stage investigations, six skill atoms, unchanged setup, and historical/stale reviews with stable finding IDs. 67 original UUIDs retained; merged criterion UUID/values/nulls preserved in experiment provenance.
 - Current implementation commit: `087021c`. Fresh evidence lives in `reports/game-design-workbench-model-2-*`; earlier handoff/report evidence remains unchanged and historical. No new framework review, experiment execution, viewer, or browser audit performed.
+
+## Concept/mode verification
+
+- 30/30 tests pass on Windows / Node.js 24.16.0. Existing/new concept setup, mode switches, drafts, exact historical citations, and read-only review behavior covered.
+- Staged export passes: 61 local file-link targets, 16 collections, six skill atoms, two proposed investigations, explorer context, no inferred original intent, and zero setup changes/conflicts. Installed snapshot has 205 files. No domain records changed.
+- All 18 generated packs current; both canonical migrations remain no-ops. Framework completeness remains provisional, not established by these checks. Earlier reviews stay unchanged/stale; no new framework review, simulation, viewer, or browser audit.
+- Evidence: [verification](reports/game-design-workbench-concept-verification.json), [tests](reports/game-design-workbench-concept-tests.txt), [staged export](reports/game-design-workbench-concept-export.json). Supplied root concept documents remain unchanged/untracked; not adopted or committed.
+- Next: framework-by-framework completeness review before Slice 2.
 
 ## Comments
 

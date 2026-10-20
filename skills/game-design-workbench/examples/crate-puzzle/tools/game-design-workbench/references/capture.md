@@ -2,7 +2,7 @@
 
 ## Supplied facts and guided input
 
-Capture supplied non-tentative facts faithfully; no interview or reconfirmation. For overall experience/player story, preserve supplied voice in its project brief. For one MDA aesthetic, use aesthetics record. For investigations, use experiment stage and body headings; do not create separate hypothesis, expectation, or observation collections.
+Capture supplied non-tentative facts faithfully; no interview or reconfirmation. For overall experience/player story, update bound concept owner in supplied voice and commit completed authorized change through concept workflow. For one MDA aesthetic, use aesthetics record. For investigations, use experiment stage and body headings; do not create separate hypothesis, expectation, or observation collections.
 
 Examples:
 

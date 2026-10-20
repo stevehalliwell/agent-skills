@@ -2,11 +2,9 @@
 
 67 records across 16 collections. Includes six skill atoms, three crate/push cases, two unexecuted investigations, and local `tools/game-design-workbench/` snapshot. Tutorial source inside that snapshot is documentation, not a second configured design.
 
-## Player experience / player story
+## Game concept
 
-Overall brief has not been authored. Do not infer it from one mechanic or aesthetic, or invent player-voice goals to fill this gap.
-
-[MDA deliberate tension](game-design/aesthetics/deliberate-tension.md) is one supporting-aspect intention: tension when committing to a push. Relationship to the overall player story remains unknown. Future comparison may support or contradict either lens, expose drift, or motivate revising design/goals.
+[Concept and current working mode](game-design/concept.md). Separate [MDA aesthetic: deliberate tension](game-design/aesthetics/deliberate-tension.md).
 
 ## Start
 
@@ -38,4 +36,4 @@ Expected: coordinate rank 2; plan-push null; switch-chain ranks 3. Three distinc
 `experiments/route-cost` owns timing method and former route-time criterion, including original criterion UUID and authored null thresholds.
 ## Saved history
 
-Earlier baselines and dated reviews predate consolidation and remain unchanged/stale. To review current source, follow installed `references/review.md` §Review and §Save and reopen; capture a new baseline and include README when using player-experience brief. Do not relabel old evidence.
+Earlier baselines and dated reviews predate consolidation and remain unchanged/stale. To review current source, follow installed `references/review.md` §Review and §Save and reopen; capture a new baseline. Bound concept/mode is captured automatically; select an actual committed intention only when one exists. Do not relabel old evidence.

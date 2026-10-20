@@ -7,14 +7,15 @@ Execute `node <workbench>/scripts/workbench.mjs <command> --project <root>`.
 ```text
 help | --help
 capabilities
+context [--intent-ref <full-commit>] [--intent-path <former-path.md>]
 lenses
-setup plan [--mapping map.json] [--fresh]
+setup plan [--mode game-design|game-explorer] [--concept <path.md>] [--mapping map.json] [--fresh]
 setup apply --approve <plan-id> [same mapping/fresh options]
 query <recipe>
 query records --collection <configured-alias>
 resolve --term <text>
 validate
-snapshot [--include <comma-separated-extra-source-paths>]
+snapshot [--include <comma-separated-extra-source-paths>] [--intent-ref <full-commit>] [--intent-path <former-path.md>]
 report save --lens <id> --input <findings.json> --snapshot <snapshot.json>
 report show <run-id>
 ```
@@ -27,7 +28,9 @@ JSON is default for non-TTY stdout or `GD_AGENT=1`; explicit `--format text` ove
 {"schema_version":1,"ok":true,"data":{"rows":[],"returned":0,"truncated":false},"coverage":{"status":"partial"},"errors":[]}
 ```
 
-Query/validate `provenance` is compact fingerprint/tool hash/source count/includes; `snapshot` emits full path/hash inventory. Results contain no aggregate design score. `query` results are inventories; code 0 does not mean valid design or empirical success.
+`context` returns bound source and optional historical comparison without writes. `report save` requires configured mode. `--mode` is rejected outside setup. README and bound concept cannot be output targets.
+
+Query/validate `provenance` is compact fingerprint/tool hash/source count/includes/project context; `snapshot` emits full path/hash inventory. Results contain no aggregate design score. `query` results are inventories; code 0 does not mean valid design or empirical success.
 
 Exit codes:
 

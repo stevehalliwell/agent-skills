@@ -39,6 +39,7 @@ export async function projected(root, operation) {
 }
 export async function runQuery(root, name, options = {}) {
   return projected(root, async context => {
+    if (context.before.metadata.project_context?.status === 'invalid') fail(context.before.metadata.project_context.issue.code, context.before.metadata.project_context.issue.message);
     if (context.validation.diagnostics.length) fail('SOURCE_INVALID', 'Fix supplied invalid data before querying; validate reports source diagnostics.', context.validation);
     const bytes = await optional(await safePath(root, 'tools/game-design-workbench/manifest.json'));
     const roles = bytes ? JSON.parse(bytes).roles : {};

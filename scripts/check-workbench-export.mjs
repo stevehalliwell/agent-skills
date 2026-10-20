@@ -3,10 +3,10 @@
 // commit, installation, or project-source writes. Only private temp files change.
 // Usage: node scripts/check-workbench-export.mjs --run-id ID [--previous-run ID] [--expect-stale] [--json|--text]
 // Requires Node >=24.10.0 and GD_ATTENDANT_SKILL. Exit 0 pass, 1 failure, 2 usage.
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, lstat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve, dirname, join, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -54,11 +54,31 @@ try {
   const inventory = git(['ls-files', '--stage', '--', 'skills/game-design-workbench']);
   temporary = await mkdtemp(join(tmpdir(), 'gd-index-export-'));
   git(['checkout-index', '--all', `--prefix=${temporary.replaceAll('\\', '/')}/`]);
-  const project = join(temporary, 'skills/game-design-workbench/examples/crate-puzzle');
+  const packageHome = join(temporary, 'skills/game-design-workbench');
+  const { bundle } = await import(pathToFileURL(join(packageHome, 'scripts/lib.mjs')));
+  let localLinkTargets = 0;
+  for (const file of await bundle()) {
+    if (!file.path.endsWith('.md')) continue;
+    for (const match of file.bytes.toString('utf8').matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      const href = match[1];
+      if (/^[a-z][a-z\d+.-]*:/i.test(href) || href.startsWith('#')) continue;
+      const target = resolve(dirname(join(packageHome, file.path)), decodeURIComponent(href.split('#')[0]));
+      if (relative(temporary, target).startsWith('..')) fail('DOC_LINK_INVALID', `${file.path}: target escapes export: ${href}`);
+      if (!await lstat(target).catch(error => { if (error.code === 'ENOENT') return null; throw error; })) fail('DOC_LINK_INVALID', `${file.path}: missing target: ${href}`);
+      localLinkTargets++;
+    }
+  }
+  const project = join(packageHome, 'examples/crate-puzzle');
   const helper = join(project, 'tools/game-design-workbench/scripts/workbench.mjs');
   const plan = invoke(helper, project, ['setup', 'plan']);
   assert.equal(plan.files.length, 0, 'Exported setup has pending changes.');
   assert.equal(plan.conflicts.length, 0, 'Exported setup conflicts.');
+  const context = invoke(helper, project, ['context']);
+  assert.equal(context.mode, 'game-explorer');
+  assert.equal(context.path, 'game-design/concept.md');
+  assert.equal(context.revision.status, 'git_unavailable');
+  assert.equal(context.comparison, null, 'Blank example concept must not become original intent.');
+  assert.ok(context.current_text.includes('## Player story'));
   const skillAtoms = invoke(helper, project, ['query', 'skill-atoms', '--fields', 'name,rank']);
   assert.equal(skillAtoms.rows.length, 6);
   assert.equal(skillAtoms.rows.find(row => row.name === 'coordinate').rank, 2);
@@ -78,7 +98,7 @@ try {
     assert.deepEqual(review.report.findings.map(item => item.id).sort(), previous.report.findings.map(item => item.id).sort());
   }
   assert.equal(git(['ls-files', '--stage', '--', 'skills/game-design-workbench']), inventory, 'Workbench index changed during verification.');
-  const data = { base_commit: git(['rev-parse', 'HEAD']), index_workbench_inventory_sha256: createHash('sha256').update(inventory).digest('hex'), platform: process.platform, node: process.versions.node, setup_changes: 0, conflicts: 0, collections: Object.keys(plan.roles).length, experiment_rows: experiments.rows.length, skill_atom_rows: skillAtoms.rows.length, saved_review: options['--run-id'], saved_review_source_match: review.matches_current_source, expected_stale: Boolean(options['--expect-stale']), historical: true, freshly_run: false, ...(previous ? { previous_review_source_match: false, stable_finding_ids: true } : {}), dependency_fingerprint: plan.attendant_fingerprint, review_dependency_fingerprint: review.report.source_state.dependencies?.attendant ?? null };
+  const data = { base_commit: git(['rev-parse', 'HEAD']), index_workbench_inventory_sha256: createHash('sha256').update(inventory).digest('hex'), platform: process.platform, node: process.versions.node, setup_changes: 0, conflicts: 0, local_link_targets_checked: localLinkTargets, working_mode: context.mode, concept_path: context.path, concept_history_status: context.revision.status, concept_sha256: context.sha256, concept_comparison: context.comparison, collections: Object.keys(plan.roles).length, experiment_rows: experiments.rows.length, skill_atom_rows: skillAtoms.rows.length, saved_review: options['--run-id'], saved_review_source_match: review.matches_current_source, expected_stale: Boolean(options['--expect-stale']), historical: true, freshly_run: false, ...(previous ? { previous_review_source_match: false, stable_finding_ids: true } : {}), dependency_fingerprint: plan.attendant_fingerprint, review_dependency_fingerprint: review.report.source_state.dependencies?.attendant ?? null };
   await rm(temporary, { recursive: true, force: true }); temporary = undefined;
   console.log(json ? JSON.stringify({ schema_version: 1, ok: true, data, errors: [] }) : `Export passes: setup unchanged; six skill atoms; two proposed investigations; saved review ${options['--expect-stale'] ? 'stays stale as expected' : 'matches'}; required Attendant stays external.${previous ? ' Previous review stays stale; finding IDs stable.' : ''}`);
 } catch (error) {

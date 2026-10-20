@@ -2,7 +2,7 @@
 // Maintainer tool: regenerate distribution templates and create a fresh tutorial.
 // Usage: node scripts/build-example.mjs --templates --output <nonexistent-or-empty-dir>
 // --templates deliberately rewrites only shipped generated template files.
-import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -22,6 +22,7 @@ try { existing = await readdir(output); } catch (error) { if (error.code !== 'EN
 if (existing.length) throw new Error('Output must be empty. Refusing to overwrite tutorial edits.');
 const frontmatter = data => `---\n${JSON.stringify(data, null, 2)}\n---\n`;
 const put = async (path, text) => { await mkdir(dirname(path), { recursive: true }); await writeFile(path, text, { flag: 'wx' }); };
+await put(join(output, 'game-design/concept.md'), (await readFile(join(home, 'templates/concept.md'), 'utf8')).replace('{{mode}}', 'game-explorer'));
 for (const role of Object.keys(model)) {
   const files = { '.schema.md': `${frontmatter(schemaFor(role))}# ${role} schema\n\nGenerated from scripts/model.mjs for distribution. Project-local schema remains authoritative.\n`, '.usage.md': usageFor(role), '.template.md': model[role].sections.map(section => `## ${section}\n`).join('\n') };
   for (const [name, content] of Object.entries(files)) {

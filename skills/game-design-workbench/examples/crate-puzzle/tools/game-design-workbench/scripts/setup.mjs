@@ -3,6 +3,7 @@ import { join, relative, resolve, isAbsolute } from 'node:path';
 import { tmpdir } from 'node:os';
 import { projected } from './queries.mjs';
 import { model } from './model.mjs';
+import { conceptPath, describeConcept, withMode } from './concept.mjs';
 import { home, optional, safePath, collections, bundle, hash, slash, fail, attendant, attendantFingerprint, atomicWrite, removeManaged } from './lib.mjs';
 const roles = Object.keys(model);
 async function templateContracts(mapping) {
@@ -24,12 +25,13 @@ async function templateContracts(mapping) {
     return { files, contracts: attendant(temporary, ['schema']).collections };
   } finally { await rm(temporary, { recursive: true, force: true }); }
 }
-async function candidates(root, configured) {
+async function candidates(root, configured, excluded) {
   const found = [];
   async function visit(directory, depth) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       if (entry.name.startsWith('.') || ['node_modules', 'tools', 'vendor', 'build'].includes(entry.name)) continue;
       const path = await safePath(root, join(directory, entry.name));
+      if (excluded.includes(slash(relative(root, path)))) continue;
       if (configured.some(collection => process.platform === 'win32' ? collection.absolute.toLowerCase() === path.toLowerCase() : collection.absolute === path)) continue;
       if (entry.isDirectory() && depth < 2) await visit(path, depth + 1);
       else if (entry.isFile() && entry.name.endsWith('.md')) {
@@ -55,7 +57,18 @@ export async function planSetup(root, options = {}) {
   const mapping = { ...Object.fromEntries(roles.map(role => [role, role])), ...(prior?.roles ?? {}), ...(options.mapping ?? {}) };
   if (Object.keys(mapping).some(role => !roles.includes(role)) || new Set(Object.values(mapping)).size !== roles.length || Object.values(mapping).some(alias => typeof alias !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(alias))) fail('MAPPING_INVALID', 'Map distinct known roles to safe collection aliases.');
   const configured = await collections(root);
-  const candidate_sources = await candidates(root, configured);
+  const conceptName = conceptPath(options.concept ?? prior?.concept_path);
+  const comparable = value => process.platform === 'win32' ? value.toLowerCase() : value;
+  const isReadme = comparable(conceptName) === comparable('README.md');
+  if ([...configured.map(collection => collection.directory), ...roles.map(role => `game-design/${mapping[role]}`)].some(directory => comparable(conceptName) === comparable(directory) || comparable(conceptName).startsWith(`${comparable(directory)}/`))) fail('CONCEPT_PATH_INVALID', 'Concept must be outside record collections; keep one project-level document.');
+  const currentConcept = await optional(await safePath(root, conceptName));
+  let conceptBytes = currentConcept;
+  if (options.mode !== undefined) {
+    conceptBytes = currentConcept ? withMode(currentConcept, options.mode) : withMode(Buffer.from((await readFile(join(home, 'templates/concept.md'), 'utf8')).replace('{{mode}}', options.mode)), options.mode);
+  }
+  const context = describeConcept(root, conceptName, conceptBytes);
+  if (context.status !== 'ready') fail(context.issue?.code ?? 'CONCEPT_MODE_REQUIRED', context.issue?.message ?? 'Request existing concept material or offer template; choose --mode game-design or game-explorer. No mode is inferred from document presence.');
+  const candidate_sources = await candidates(root, configured, [conceptName, prior?.concept_path].filter(Boolean));
   const templates = await templateContracts(mapping);
   const actualContracts = configured.length ? (await projected(root, context => context.schema)).data.collections : [];
   const changes = [];
@@ -72,6 +85,31 @@ export async function planSetup(root, options = {}) {
   }
   const contextPaths = ['.pi/attendant.tables', 'AGENTS.md', '.gitignore', manifestPath];
   for (const path of contextPaths) { const bytes = await optional(await safePath(root, path)); expect[path] = bytes ? hash(bytes) : null; }
+  const readmePath = await safePath(root, 'README.md');
+  const readmeBytes = await optional(readmePath);
+  const readme = readmeBytes ? new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(readmeBytes) : '';
+  expect['README.md'] = readmeBytes ? hash(readmeBytes) : null;
+  const linkMarker = /<!-- game-design-workbench:concept:start -->[\s\S]*?<!-- game-design-workbench:concept:end -->/;
+  const existingLink = linkMarker.exec(readme)?.[0];
+  const desiredLink = isReadme ? '' : `<!-- game-design-workbench:concept:start -->\n## Game concept\n\n[Concept and working mode](${conceptName.split('/').map(encodeURIComponent).join('/')})\n<!-- game-design-workbench:concept:end -->`;
+  const linkOwned = existingLink && prior?.concept_link_hash === hash(existingLink.replaceAll('\r\n', '\n'));
+  const linkUnchanged = existingLink?.replaceAll('\r\n', '\n') === desiredLink;
+  if (existingLink && !linkOwned && !linkUnchanged) conflicts.push('Locally edited README.md concept link');
+  let conceptLinkHash = null;
+  if (isReadme) {
+    if (existingLink && linkOwned) conceptBytes = Buffer.from(conceptBytes.toString('utf8').replace(existingLink, ''));
+  } else if (existingLink || !readme.includes(`](${conceptName.split('/').map(encodeURIComponent).join('/')})`)) {
+    conceptLinkHash = hash(desiredLink);
+    if (!existingLink || linkOwned || linkUnchanged) {
+      const newline = readme.includes('\r\n') ? '\r\n' : '\n';
+      const rendered = desiredLink.replaceAll('\n', newline);
+      const opening = /^(?:\uFEFF)?(?:---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$))?(?:\r?\n)*(?:# [^\r\n]*(?:\r?\n|$))?/.exec(readme)[0].length;
+      const head = readme.slice(0, opening);
+      const next = existingLink ? readme.replace(existingLink, () => rendered) : `${head}${head && !head.endsWith('\n') ? newline : ''}${newline}${rendered}${newline}${newline}${readme.slice(opening)}`;
+      await propose('README.md', Buffer.from(next), true);
+    }
+  }
+  await propose(conceptName, conceptBytes, Boolean(options.mode || isReadme && linkOwned));
   for (const role of roles) {
     const alias = mapping[role];
     const existing = configured.find(c => c.alias === alias);
@@ -137,9 +175,9 @@ export async function planSetup(root, options = {}) {
     }
     await propose('AGENTS.md', Buffer.from(next), true);
   }
-  const manifest = { schema_version: 1, release: '0.1.0', distribution_revision: packageHash, model_version: 2, report_version: 1, roles: mapping, files: Object.fromEntries(files.map(file => [file.path, hash(file.bytes)])), guidance_hash: hash(block), capabilities: ['guided-framework-review', 'attendant-sql-queries', 'term-resolution', 'dated-review-storage'], unavailable: ['native-c99-analysis', 'native-viewer', 'control-evaluation-export', 'simulation-runtime'], dependencies: { node: '>=24.10.0', attendant: 'required installed skill; GD_ATTENDANT_SKILL points to skill directory' } };
+  const manifest = { schema_version: 1, release: '0.1.0', distribution_revision: packageHash, model_version: 2, report_version: 1, concept_path: conceptName, concept_link_hash: conceptLinkHash, roles: mapping, files: Object.fromEntries(files.map(file => [file.path, hash(file.bytes)])), guidance_hash: hash(block), capabilities: ['guided-framework-review', 'attendant-sql-queries', 'term-resolution', 'dated-review-storage'], unavailable: ['native-c99-analysis', 'native-viewer', 'control-evaluation-export', 'simulation-runtime'], dependencies: { node: '>=24.10.0', attendant: 'required installed skill; GD_ATTENDANT_SKILL points to skill directory' } };
   await propose(manifestPath, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`), true);
-  const publicPlan = { project: root, distribution_revision: packageHash, attendant_fingerprint: dependency_hash, roles: mapping, new_collections: newCollections, reused_collections: reused, candidate_sources, candidate_scan: { maximum_directory_depth: 2, excludes: ['hidden paths', 'node_modules', 'tools', 'vendor', 'build', 'configured collections'] }, fresh_acknowledged: Boolean(options.fresh), conflicts, files: changes.map(({ bytes, ...change }) => change), expected: expect, dependencies: manifest.dependencies };
+  const publicPlan = { project: root, distribution_revision: packageHash, attendant_fingerprint: dependency_hash, concept: { path: conceptName, mode: context.mode, commit_required: changes.some(change => change.path === conceptName) }, roles: mapping, new_collections: newCollections, reused_collections: reused, candidate_sources, candidate_scan: { maximum_directory_depth: 2, excludes: ['hidden paths', 'node_modules', 'tools', 'vendor', 'build', 'configured collections'] }, fresh_acknowledged: Boolean(options.fresh), conflicts, files: changes.map(({ bytes, ...change }) => change), expected: expect, dependencies: manifest.dependencies };
   return { ...publicPlan, plan_id: hash(JSON.stringify(publicPlan)), changes };
 }
 export function displayPlan(plan) { const { changes, ...publicPlan } = plan; return publicPlan; }
@@ -170,6 +208,6 @@ export async function applySetup(root, approved, options) {
       await atomicWrite(root, change.path, change.bytes, expected);
       applied.push(change.path);
     }
-    return { plan_id: approved, changed: applied, collections: plan.roles };
+    return { plan_id: approved, changed: applied, collections: plan.roles, concept: plan.concept };
   } catch (error) { error.data = { applied, cause: error.data ?? null, recovery: 'Inspect listed paths. No automatic reset/rollback was attempted.' }; throw error; }
 }

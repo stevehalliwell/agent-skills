@@ -5,14 +5,17 @@ import { join, resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { planSetup, applySetup } from '../scripts/setup.mjs';
+import { planSetup as planProject, applySetup as applyProject } from '../scripts/setup.mjs';
 import { runQuery, resolveTerm } from '../scripts/queries.mjs';
-import { snapshot, attendantHome, attendantFingerprint, bundle, hash } from '../scripts/lib.mjs';
+import { snapshot, projectContext, attendantHome, attendantFingerprint, bundle, hash } from '../scripts/lib.mjs';
 import { catalog, saveReport, showReport } from '../scripts/reports.mjs';
 import { model } from '../scripts/model.mjs';
 import { guidance } from '../scripts/pack-guidance.mjs';
 const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const roots = [];
+// Existing scenarios explicitly choose exploration; production has no inferred default.
+const planSetup = (root, options = {}) => planProject(root, { mode: 'game-explorer', ...options });
+const applySetup = (root, id, options = {}) => applyProject(root, id, { mode: 'game-explorer', ...options });
 async function temporary(fixture = false) {
   const root = await mkdtemp(join(tmpdir(), 'gd-test space-é-')); roots.push(root);
   if (fixture) await cp(join(home, 'examples/crate-puzzle'), root, { recursive: true, filter: source => !['.attendant', 'game-design-results', 'tools', 'AGENTS.md'].includes(basename(source)) });
@@ -217,8 +220,10 @@ test('all 18 generated packs match catalog, queries, roles, and selected entrypo
     assert.ok(!usage.includes('## Operating rules'), `${role}: shared rules precede collection-specific usage`);
   }
   const brief = await readFile(join(home, 'examples/crate-puzzle/README.md'), 'utf8');
-  assert.ok(brief.includes('## Player experience / player story'));
-  assert.ok(brief.includes('Overall brief has not been authored.'));
+  assert.ok(brief.includes('game-design/concept.md'));
+  const concept = await readFile(join(home, 'examples/crate-puzzle/game-design/concept.md'), 'utf8');
+  assert.ok(concept.includes('Working mode: game-explorer'));
+  assert.ok(concept.includes('## Player story'));
   assert.ok(model.aesthetics.purpose.includes('not the overall player experience'));
   const child = spawnSync(process.execPath, [join(home, 'scripts/build-packs.mjs'), '--check'], { encoding: 'utf8' });
   assert.equal(child.status, 0, child.stdout + child.stderr);
@@ -290,6 +295,7 @@ test('custom role binding reuses existing contracts and preserves local guidance
   await writeFile(configured, (await readFile(configured, 'utf8')).replace('game-design/skill-atoms as skill-atoms', 'game-design/abilities as abilities'));
   // Reference declarations and actual references must change through explicit migration.
   for (const folder of await readdir(join(root, 'game-design'))) {
+    if (folder.endsWith('.md')) continue;
     for (const name of await readdir(join(root, 'game-design', folder))) {
       const path = join(root, 'game-design', folder, name);
       await writeFile(path, (await readFile(path, 'utf8')).replaceAll('ref[]:skill-atoms', 'ref[]:abilities').replaceAll('skill-atoms/', 'abilities/'));

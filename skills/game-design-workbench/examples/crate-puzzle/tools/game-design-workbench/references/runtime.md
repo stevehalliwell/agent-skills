@@ -14,6 +14,8 @@ $env:GD_ATTENDANT_SKILL = 'C:/absolute/path/to/attendant'
 
 Workbench calls Attendant's public runner. Never copy/vendor its code or guidance, import private modules, or install it automatically. No npm dependency, network service, compiler, or display needed for current helpers. Missing/invalid dependency fails `ATTENDANT_REQUIRED` before source writes.
 
+Concept history requires local Git supporting `--no-lazy-fetch`. Current concept text/mode remains readable without Git.
+
 Command placeholders:
 - `<workbench>`: supplied skill directory or project's `tools/game-design-workbench` snapshot.
 - `<attendant-skill>`: loaded Attendant skill directory.

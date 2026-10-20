@@ -3,13 +3,13 @@
 ## Review
 
 1. Use requested lens and scope. If selection remains material, ask one focused question; no all-lenses sweep. Read selected provisional guide; identify relevant coverage gaps before using it. Done: relevant questions/limits are known.
-2. Inspect actual source/usage and prior alternatives/rationale. Capture snapshot **before** review; include relevant unconfigured documents explicitly:
+2. Establish current project mode and read concept plus prior alternatives/rationale. In design mode, relate findings to supplied player/experience goals; in explorer mode, investigate generated behavior and leads without treating absent destination as a defect. Do not switch mode or adopt goals during review. Select meaningful committed original intent when comparison is requested; no original intention is inferred from template existence. Inspect actual source/usage. Capture snapshot **before** review; include relevant unconfigured documents explicitly:
 
    ```sh
-   node <workbench>/scripts/workbench.mjs snapshot --project <project> --include design-notes.md --output <new-snapshot.json> --json
+   node <workbench>/scripts/workbench.mjs snapshot --project <project> --include design-notes.md --intent-ref <full-intent-commit> --output <new-snapshot.json> --json
    ```
 
-   Include project experience brief (for example `--include README.md`) when it informs review. Compare overall intent/player voice with individual MDA aesthetics; record support, contradiction, drift, and evidence without equating those lenses. Omit `--include` only when configured sources suffice. Output file must be new and outside canonical collections/config/tools. Snapshot inventories source/schema/usage/templates, registry, project instructions, installed manifest, tool/guidance hashes, and installed Attendant skill fingerprint. Dependency changes make old reviews stale even when workbench files are unchanged. Done: review has frozen hash inventory; this is not a frozen copy of file content or a Git checkpoint.
+   Omit `--intent-ref` when no comparison is selected; use `--intent-path` for former filename. Bound concept is captured automatically; `--include` adds other relevant documents only. Capture before interpreting both current and selected historical text. Output file must be new and outside canonical collections/config/tools. Snapshot inventories source/schema/usage/templates, registry, project instructions, installed manifest, tool/guidance hashes, and installed Attendant skill fingerprint. Dependency changes make old reviews stale even when workbench files are unchanged. Done: review has frozen hash inventory; this is not a frozen copy of file content or a Git checkpoint.
 3. Run only useful available queries, then inspect source bodies. Separate malformed/broken data, required missing relationships, unknowns, opportunities, conflicts, unverified hypotheses, and deliberate exclusions. Missing optional data is not invalid. Done: findings cite exact source field/section and distinguish fact from interpretation.
 4. Keep deterministic findings separate from agent judgments. A bootstrap recipe is a data projection, not a framework evaluator. Do not label manually derived rank/route observations deterministic C99 findings. Done: reasons/evidence/coverage are explicit.
 5. Present useful questions and limitations. Save dated report when requested using [finding input](../templates/review-input.json), or return concise review in chat. Done: reviewed scope, findings, missing inputs, and unsupported checks remain visible.
@@ -25,7 +25,8 @@ Submit plain input JSON; snapshot may be raw metadata or CLI envelope. A lens mu
 
 - `scope`: string array naming reviewed records/questions.
 - `findings`: array with `code`, `origin` (`agent` or `deterministic`), `kind`, `severity` (`error`, `warning`, `info`), `records` (stable lowercase UUID IDs, not mutable terms/names), `sources`, `reason`, `suggested_investigation`; optional stable `trigger_key` separates distinct triggers for same rule/records/fields.
-- `sources`: project-relative captured path plus `field` or `section`. Include external-to-collections documents in pre-review snapshot; uncaptured sources are rejected.
+- Optional finding `intent_relation`: supports, contradicts, tension, unknown, outside_intent, possible_goal_drift. Cite concept section; labels remain agent interpretation, not empirical proof.
+- `sources`: project-relative captured path plus `field` or `section`; optional `revision` must exactly match selected historical concept commit/path. Include external-to-collections documents in pre-review snapshot; uncaptured sources are rejected.
 - `kind`: `invalid_broken`, `missing_required_relationship`, `unknown_unresolved`, `possible_opportunity`, `conflicting_claims`, `unverified_hypothesis`, `deliberately_excluded`.
 - `coverage`: object with `status: partial|complete` **within declared scope**, performed/omitted checks and assumptions. `limitations`: string array. No finding is not completeness evidence.
 

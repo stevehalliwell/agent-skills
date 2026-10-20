@@ -4,23 +4,23 @@
 
 
 
-1. Inspect target root, existing registry/schemas/usages, manifest, and unconfigured Markdown. Read required Attendant skill's `references/collections.md`. Existing source stays in place.
+1. Request existing concept/intention material. Establish whether it is live intent or reference only. Offer shipped concept template if absent; do not require completed intent in explorer mode. Ask for one current project mode when not already explicit. Preserve supplied answers; no repeated interview. Inspect target root, existing registry/schemas/usages, manifest, and unconfigured Markdown. Read required Attendant skill's `references/collections.md`. Existing source stays in place.
 2. Resolve `<workbench>` to supplied skill folder. Prepare combined proposal:
 
    ```sh
-   node <workbench>/scripts/workbench.mjs setup plan --project <project> --json
+   node <workbench>/scripts/workbench.mjs setup plan --project <project> --mode game-explorer --json
    ```
 
-   Plan lists new collections, role mapping, exact file changes, dependency checks, conflicts, and candidate sources needing migration. Plan itself writes nothing. Default mapping: `game-design/<role>` configured as `<role>`.
+   Example explicitly chooses explorer mode; use supplied choice, not this example as default. Bind existing owner with `--concept <project-relative.md>`; otherwise default path is used. Existing body is preserved; explicit `--mode` adds/changes only header. Once bound/configured, omit both options to retain state. Plan lists concept/navigation changes and commit obligation, new collections, role mapping, exact file changes, dependency checks, conflicts, and candidate sources needing migration. Plan itself writes nothing. Default mapping: `game-design/<role>` configured as `<role>`.
 3. Present scope: empty role collections; live schema/usage/body templates; project-local `tools/game-design-workbench/` snapshot; manifest; managed `AGENTS.md` block; generated-cache ignore rules. No tutorial records are added. Ask for combined proposal approval using focused choice. Approval must include any source migration/fresh decision.
 4. Apply same options with returned content-derived plan ID:
 
    ```sh
-   node <workbench>/scripts/workbench.mjs setup apply --project <project> --approve <plan-id> --json
+   node <workbench>/scripts/workbench.mjs setup apply --project <project> --mode game-explorer --approve <plan-id> --json
    ```
 
    Stale approval fails before writes. CLI never prompts; an ID is a mechanical guard, not independent proof of human consent. Agent must obtain the actual approval first.
-5. Inspect returned paths and registry. Run installed read-only `validate` and one appropriate empty query. Report unknown/unsupported semantic checks. Stop on source conflicts; do not overwrite or silently widen schema.
+5. Commit completed concept changes through scoped ordinary Git workflow from concept instructions; helper itself does not commit. If Git/history or mixed edits block commit, report that limit; do not claim recoverable original intent. Inspect returned paths and registry. Run installed read-only `validate` and one appropriate empty query. Report unknown/unsupported semantic checks. Stop on source conflicts; do not overwrite or silently widen schema.
 
 ## Existing collections
 

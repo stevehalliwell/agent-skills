@@ -1,6 +1,6 @@
 ---
 name: game-design-workbench
-description: "Use for game-design-workbench requests, structured game-design records, noun–verb case exploration, skill/challenge-chain inspection, or an explicitly selected game-design framework review. Organize and question one Markdown design model while retaining alternatives and evidence. Skip ordinary game implementation, generic brainstorming, and unsolicited framework reviews."
+description: "Use for game-design-workbench requests, structured game-design records, concept/intent work, project game-design/game-explorer mode, noun–verb case exploration, skill/challenge-chain inspection, or an explicitly selected game-design framework review. Organize and question one Markdown design model while retaining alternatives and evidence. Skip ordinary game implementation, generic brainstorming, and unsolicited framework reviews."
 ---
 
 # Game Design Workbench
@@ -17,7 +17,7 @@ On explicit invocation without operation, inspect project registry if present, t
 
 ## Workflow
 
-1. Establish project, requested operation, scope, and write authority. Read [model contract](references/model.md) before interpreting design records. Done: shared owners, lifecycle, and partial-state rules are known.
+1. Establish project, requested operation, scope, and write authority. Read [concept and working mode](references/concept.md), then [model contract](references/model.md) before interpreting design records. Read project's actual concept owner; unknown mode needs a focused choice before setup/design interpretation, not an inferred default. Raw inspection can report unconfigured context. Done: shared owners, lifecycle, and partial-state rules are known.
 2. Inspect `.pi/attendant.tables` and installed manifest for actual role paths/aliases. Read relevant live schemas/usages. For helpers, complete [Runtime](references/runtime.md#runtime); for record operations, follow loaded Attendant operation instructions. Done: storage and execution paths are known.
 3. Read matching operation reference below and execute bounded action. Done: requested result exists without invented facts, evidence, or authority.
 4. After source edits, run read-only validation and inspect exact source diff. Correct only authorized in-scope errors; report other blockers. Failed load is not an empty design. Done: performed checks, unsupported checks, and remaining unknowns are explicit.
@@ -25,8 +25,8 @@ On explicit invocation without operation, inspect project registry if present, t
 
 ## Conditional reads
 
-- Set up, bind collections, or update: [Setup](references/setup.md).
-- Capture facts, revise records, retain/adopt/reject alternatives, or edit rank: [Capture](references/capture.md).
+- Set up, bind collections, update, or plan mode-header change: [Setup](references/setup.md).
+- Capture concept/intent or facts, revise records, retain/adopt/reject alternatives, or edit rank: [Capture](references/capture.md).
 - Inspect relationships, terms, or change impact: [Inspection](references/inspect.md).
 - Review or store/read review: [Review](references/review.md), then selected framework below.
 - Use direct commands, output formats, errors, or maintenance tools: [CLI](references/cli.md).
