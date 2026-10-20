@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-10-20T09:21:49.980Z",
-  "implementation_commit": "b755438",
+  "verified_at": "2026-10-20T19:36:49.230Z",
+  "implementation_commit": "0f7f433",
   "branch": "feat/game-design-workbench",
   "platform": "win32",
   "node": "24.16.0",
@@ -40,11 +40,11 @@
         },
         {
           "id": "skill-atoms",
-          "words": 872
+          "words": 874
         },
         {
           "id": "theory-of-fun",
-          "words": 834
+          "words": 835
         },
         {
           "id": "flow",
@@ -56,11 +56,11 @@
         },
         {
           "id": "cognitive-load",
-          "words": 834
+          "words": 836
         },
         {
           "id": "working-memory",
-          "words": 854
+          "words": 857
         },
         {
           "id": "zpd-scaffolding",
@@ -98,7 +98,7 @@
     },
     "external_http_403": 8,
     "external_url_recheck": "Not repeated; original source URLs and dated access limitations retained.",
-    "offline_report": "pass"
+    "offline_report": "Static pass; current headed-browser recheck blocked, previous evidence retained separately."
   },
   "attendant_dependency": {
     "required": "separately installed skill; GD_ATTENDANT_SKILL",
@@ -107,14 +107,14 @@
     "fingerprint": "7a516c4d7002594d1617fe0e5b1ad60c13767418d7beee383a3b17330a0a206a"
   },
   "fresh_index_export": {
-    "base_commit": "b755438bd563e9636d8e3c53f53bfb6e879c1612",
-    "index_workbench_inventory_sha256": "f55320cea0a8a8ed69f3943e0a5daf717c4398f571e4ce796341ea6207777db9",
+    "base_commit": "0f7f433c6f8f8695fa0d87ddece24536621d9ceb",
+    "index_workbench_inventory_sha256": "8e271ebd9db5a7bbe6632b45e93af3da4d8b583e7c7a04758ef552f5f620df7a",
     "platform": "win32",
     "node": "24.16.0",
     "setup_changes": 0,
     "conflicts": 0,
-    "skill_rows": 6,
-    "saved_review": "20261020T091047165Z-8da3234e",
+    "skill_atom_rows": 6,
+    "saved_review": "20261020T192957597Z-4698820e",
     "saved_review_source_match": true,
     "historical": true,
     "freshly_run": false,
@@ -125,52 +125,76 @@
   "export_checker": {
     "report": "reports/game-design-workbench-index-export.json",
     "checks": [
-      "explicit JSON success",
-      "explicit text success",
-      "usage failure exit 2",
-      "missing dependency exit 1"
+      "explicit JSON success after rename",
+      "current review matches export",
+      "previous review remains stale",
+      "finding IDs stable"
     ],
     "interactive_tty_default": "not directly observed; explicit text tested"
   },
   "browser": {
-    "ok": true,
-    "report": "D:\\Repos\\agent-skills-game-design-workbench\\reports\\game-design-workbench-slice-1.html",
-    "sections": 6,
-    "http_requests": 0,
-    "browser_errors": 0,
-    "checks": [
-      "anchors",
-      "direct hash",
-      "back/forward",
-      "scroll progress/history",
-      "theme",
-      "keyboard focus",
-      "mobile 320/390",
-      "reduced motion",
-      "JavaScript disabled",
-      "print PDF"
-    ],
-    "artifacts": "C:\\Users\\steve\\AppData\\Local\\Temp\\offline-report-check-XbO5Zv"
+    "schema_version": 1,
+    "ok": false,
+    "status": "blocked",
+    "reason": "agent-browser CDP discovery timed out before audit: 100 s and 90 s command limits.",
+    "current_static": {
+      "ok": true,
+      "sections": 6,
+      "remote_resources": 0,
+      "inline_scripts_styles_unchanged": true
+    },
+    "previous_verified_commit": "cce482f",
+    "previous_verification": {
+      "ok": true,
+      "report": "D:\\Repos\\agent-skills-game-design-workbench\\reports\\game-design-workbench-slice-1.html",
+      "sections": 6,
+      "http_requests": 0,
+      "browser_errors": 0,
+      "checks": [
+        "anchors",
+        "direct hash",
+        "back/forward",
+        "scroll progress/history",
+        "theme",
+        "keyboard focus",
+        "mobile 320/390",
+        "reduced motion",
+        "JavaScript disabled",
+        "print PDF"
+      ],
+      "artifacts": "C:\\Users\\steve\\AppData\\Local\\Temp\\offline-report-check-XbO5Zv"
+    }
   },
   "sha256": {
-    "report": "c0431674a81aa738467d8e7c22ad59d90694c33a0a4fc39b8c3b9af0d7fa6d43",
-    "tests": "277b63585d7377dac5c20a69fd016aa7ddae73d408d12b55d36b8327228b392d",
-    "test_log": "383f156a39f3fb9789a37d8709ef6b69d232b7d3ae477bb4ca273f6183db889a",
+    "report": "57ea8dbf104515b5497ba2f630cb81a7700d681e5db60aceb2476e48284d39da",
+    "tests": "a9ed6dd961e7bdc9149d42d3cbdcc0d22109adc67559b446b61129cc10896960",
+    "test_log": "ea4dd1d98dffbe6c91c442057fe1f0405d1b71c26336180b70eea2a685c1e5ab",
     "browser_checker": "5afa7e407f07585f4e383ab4ec96c273685533cd6d6008fe9066a317580e7357",
-    "export_checker": "94463e3a042880d1486f3c6953b29fcf4b3ab9e8cc989dd0b195afc88960f37d",
-    "index_export_report": "4c91103f5d9348e8cbf28b22dd9a5617186854be5fb7245b3080e606ef20f484"
+    "export_checker": "baf66a71acfb26adf5704dde3332a1dc98cbdcd6fd68aa815d3c938eaa2c70f1",
+    "index_export_report": "dd7d5f14916fa44f01138f38222581f9af6a91d9cf1d0db5359763bf2610eac2",
+    "rename_tool": "d9fc14d99f7d1de6b183c1bb6b6094d3de33a54c2775f9991bd804dd9aba6b55"
   },
   "tutorial": {
     "collections": 19,
     "records": 68,
     "tool_files": 219,
-    "distribution_revision": "c8e18ef64a9212923dcaf400b3d061e95f8b8f4706d3e2e507b5b14499c98edd",
-    "saved_review": "20261020T091047165Z-8da3234e",
-    "previous_review": "20261020T030047047Z-3af7318c",
+    "distribution_revision": "ea2729fafb2bcd5ed3de4fc2385c8d122a431ff154493acba5413065e2aa9ea7",
+    "saved_review": "20261020T192957597Z-4698820e",
+    "previous_review": "20261020T091047165Z-8da3234e",
     "previous_review_unchanged": true,
     "previous_review_source_match": false,
     "stable_finding_ids": true,
-    "setup_plan": "reports/example-required-skill-setup-plan.json",
+    "setup_plan": "reports/example-skill-atoms-setup-plan.json",
     "original_setup_plan": "reports/example-setup-plan.json (historical, superseded dependency packaging)"
+  },
+  "collection_rename": {
+    "collection": "skill-atoms",
+    "role": "skill-atoms",
+    "query": "skill-atoms",
+    "preserved_record_uuids": 68,
+    "old_query_alias": false,
+    "legacy_setup_error": "COLLECTION_RENAME_REQUIRED",
+    "maintainer_tool": "scripts/rename-workbench-skill-atoms.mjs",
+    "idempotent": true
   }
 }

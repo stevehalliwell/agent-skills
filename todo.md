@@ -797,7 +797,10 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Preserve agent-skill install paths and published GameFlow theme name. Keep frozen reports/baselines unchanged; old paths remain historical evidence, not active configuration.
 - Preserve all 68 record UUIDs. Explicit fixture identities keep regenerated records stable after collection and glossary-path renames.
 - Source verification: 27/27 tests pass; 231 local links pass; all 18 generated packs current; all 68 UUIDs match pre-rename commit. Fixture regeneration preserves complete UUID set. Old query is rejected; legacy manifests stop with `COLLECTION_RENAME_REQUIRED` rather than creating duplicate source.
-- Maintainer rename tool is idempotent. Guarded example update reuses all 19 collections, with zero final changes/conflicts. Handoff evidence refresh remains.
+- Maintainer rename tool is idempotent. Guarded example update reuses all 19 collections, with zero final changes/conflicts.
+- Handoff refreshed: current review `20261020T192957597Z-4698820e` uses renamed paths and matches current source. Both earlier runs/baselines remain unchanged and stale. Staged export passes; finding IDs remain stable.
+- Current offline static checks pass: six section anchors, no remote resources, unchanged script/style bytes. Headed-browser recheck blocked because agent-browser CDP discovery exceeded 100-second and 90-second command limits. Prior browser results remain explicitly historical, not relabeled as current.
+- Source rename committed as `0f7f433`; no merge/push/publication.
 
 ## Comments
 
