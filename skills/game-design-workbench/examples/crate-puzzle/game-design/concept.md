@@ -1,53 +1,81 @@
-# Game concept
+# Crate and switch — working concept
 
 Working mode: game-explorer
 
+Authored tutorial brief, not a completed game or player-research finding. This gives exploration a candidate direction; it does not adopt every proposed mechanic or claim the intended experience has been achieved.
+
 ## Razor and purpose
 
-_Unknown._ What is this game, and why should it exist? Aim for one clear sentence before elaborating.
+A compact spatial puzzle about committing to crate moves: use limited push energy to put a crate on a switch and open the exit.
+
+Purpose: explore how irreversible positioning, a finite action budget, and linked room states create planning decisions. The example also exercises workbench documentation and inspection; that tooling purpose is separate from what a player should enjoy.
 
 ## Intended player and appeal
 
-_Unknown._ Who might want this experience, and why? Separate intention from researched market evidence.
+Candidate player: someone who enjoys reading a small puzzle state, considering consequences, and trying a revised plan after a mistake. Appeal is understanding how a few interacting rules produce a solution, rather than fast execution.
+
+Audience fit, accessibility needs, and assumed puzzle familiarity are untested. No market demand or demographic claim is implied.
 
 ## Intended experience
 
-_Unknown._ What should playing feel like overall? What matters most, and what should this game not become?
+Aim for thoughtful commitment followed by the satisfaction of making a plan work. Player should understand what changed after an action and gradually connect crate placement, switch state, and available energy.
+
+Local tension around a push can support that experience, but tension is not the whole goal. Explore whether limited energy creates useful planning or merely blocks experimentation. Do not treat faster completion as evidence of a better experience.
 
 ## Player story
 
-_Unknown._ Describe a moment a player would recount to a friend. Preserve player voice when supplied; describe lived action and significance, not a feature list or technical input sequence.
+Hypothetical player voice, not a participant quote:
+
+“I thought putting the crate on the switch was the whole problem. Then I noticed that where I left it mattered for my next move, and I couldn't just pull it back. I restarted with a different plan. When the crate finally held the switch and the exit opened, the rules clicked together.”
+
+This illustrates desired understanding and recovery through replanning. It is not an observed play sequence or a specified room layout.
 
 ## Play over time
 
 ### Second to second
 
-_Unknown._ What are you noticing, deciding, and doing?
+Read nearby state, choose a walk or push, and inspect the result. A push commits position and spends energy when successful. Detailed conditions belong to the linked rules below.
 
 ### Minute to minute
 
-_Unknown._ How do choices combine into a short loop or changing situation?
+Form a short plan for a challenge, inspect its consequences, and revise it. Restart is available as a rule, but where/how the player receives assistance or discovers restart remains unspecified.
 
 ### Hour to hour
 
-_Unknown._ What changes, develops, or draws you back? Not every game needs this time scale.
+No hour-scale loop, campaign, or retention system is defined. Current scope is a small set of connected challenge descriptions, not a promised long-form game.
 
 ## Core features and hook
 
-_Unknown._ Which few features make this concept distinctive? Link detailed mechanics rather than copying their rules or tuning here.
+- [Grid walking](mechanics/grid-walking.md) and [crate pushing](mechanics/crate-pushing.md) share a small spatial vocabulary.
+- [Switch/exit coupling](mechanics/switch-exit.md) makes crate placement affect another part of the room.
+- [Player energy](resources/player-energy.md) limits successful pushes. Values/formulas live in [named configuration](control-vars/), not this brief.
+- [Restart](mechanics/challenge-restart.md) permits another attempt; challenge links and presentation still need investigation.
+- [Challenges](challenges/) describe a possible progression with an optional practice route. Their skill-role labels are design intentions, not proof of teaching or mastery.
+
+Hook to investigate: moving the crate solves one problem while constraining the next decision. Actual puzzle layouts must establish whether that produces interesting choices.
 
 ## Platform and context
 
-_Unknown._ Where, with whom, and under what play conditions? Include physical/digital form and connectivity only when relevant.
+Single-player interaction is assumed for this example. Target device, input scheme, presentation, engine, and delivery platform are not selected. Source records do not constitute a playable build.
 
 ## Constraints and risks
 
-_Unknown._ Which constraints matter? What could prevent this particular concept from working?
+- No physical room geometry or executable rule model yet; route legality cannot be certified from these documents.
+- Irreversible moves and scarce energy may create opaque dead ends rather than satisfying planning.
+- Closed-exit walking behavior and some blocked-action feedback remain unresolved.
+- A shortcut bypasses optional practice. Declared progression opportunities do not establish acquired knowledge on either route.
+- Keep detailed rules, configuration values, and investigation evidence in their existing owners; this brief states direction, not a competing rules database.
 
 ## Open questions and emerging leads
 
-_Unknown._ Keep discoveries and candidate directions separate from adopted goals. Exploration need not fill the rest of this brief first.
+- Does finite push energy encourage deliberate positioning, or discourage useful experimentation? See [planning investigation](experiments/energy-encourages-planning.md).
+- What feedback makes blocked and successful actions understandable?
+- Which assistance supports discovery without prescribing every move?
+- Does local [deliberate tension](aesthetics/deliberate-tension.md) support or conflict with the broader intended satisfaction and willingness to retry?
+- What can [route timing](experiments/route-cost.md) reveal under its stated assumptions? It is proposed, not executed, and does not model human puzzle solving.
 
-## Optional related products and commercial assumptions
+Crate-color feedback remains proposed; pulling remains rejected in current source. Neither is silently adopted by this brief.
 
-_Omit when not useful._ State what you borrow, reject, or want to investigate. Date evidence; old platform/market claims are not current facts. A mantra/tagline can help express the heart of the concept but is not required.
+## Related products and commercial assumptions
+
+No comparator study, business model, sales forecast, or market validation supplied. No commercial claim is needed to explore this tutorial design.

@@ -482,6 +482,7 @@ test('fixture generator needs no YAML module or dependency install', async () =>
   const environment = { ...process.env }; delete environment.GD_ATTENDANT_SKILL;
   const generated = spawnSync(process.execPath, [resolve('skills/game-design-workbench/scripts/build-example.mjs'), '--output', root], { encoding: 'utf8', env: environment });
   assert.equal(generated.status, 0, generated.stderr);
+  assert.equal(await readFile(join(root, 'game-design/concept.md'), 'utf8'), await readFile(join(home, 'examples/crate-puzzle/game-design/concept.md'), 'utf8'));
   const result = await runQuery(root, 'skill-atoms');
   assert.equal(result.data.rows.length, 6);
   assert.equal(result.data.rows.find(row => row.name === 'coordinate').rank, 2);

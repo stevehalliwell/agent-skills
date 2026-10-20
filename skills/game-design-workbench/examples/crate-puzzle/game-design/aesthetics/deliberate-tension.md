@@ -19,7 +19,7 @@
 Player should feel deliberate tension when committing to a push. This is one MDA aesthetic intention, not the entire player experience.
 
 ## Relationship to player experience
-Overall player experience/player story has not been authored. Support, contradiction, or drift relative to that brief remains unresolved.
+The [working concept](../concept.md) proposes thoughtful commitment, satisfaction, and willingness to retry. Deliberate tension is one local aspect to compare against that broader intent, not a substitute for it. Support, contradiction, or drift remains an interpretation to investigate.
 
 ## Support and open questions
 Links are design hypotheses, not measured emotion.

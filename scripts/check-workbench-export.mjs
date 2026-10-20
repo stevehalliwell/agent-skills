@@ -77,7 +77,7 @@ try {
   assert.equal(context.mode, 'game-explorer');
   assert.equal(context.path, 'game-design/concept.md');
   assert.equal(context.revision.status, 'git_unavailable');
-  assert.equal(context.comparison, null, 'Blank example concept must not become original intent.');
+  assert.equal(context.comparison, null, 'Example concept comparison must not be selected implicitly.');
   assert.ok(context.current_text.includes('## Player story'));
   const skillAtoms = invoke(helper, project, ['query', 'skill-atoms', '--fields', 'name,rank']);
   assert.equal(skillAtoms.rows.length, 6);

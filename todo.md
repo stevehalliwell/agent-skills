@@ -800,6 +800,11 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - 31/31 tests pass, including custom ignored statuses, independent project decisions preservation, legacy update gates, hyphenated field selection, and refreshed installed example. 223 local links/anchors and skill frontmatter pass; all 18 generated packs current. Framework completeness remains provisional.
 - Canonical cleanup helper ran guarded apply, then no-op check. Both earlier migration helpers remain no-ops. Updated example setup and staged export have zero pending changes/conflicts. Export verifies 14 collections, seven control variables, six skill atoms, two proposed investigations, and unchanged/stale historical findings. No new report files generated; existing reports/baselines remain historical and unchanged.
 
+### Example concept follow-up
+
+- Filled tutorial concept with candidate purpose, player/appeal, intended experience, hypothetical player story, play over time, linked features, constraints, and open questions. Kept `game-explorer`; no platform, market, or playtest evidence invented.
+- Generator now copies this authored concept instead of blank setup template. Updated MDA relationship and installed snapshot; no new modules or reports. Generator/installed-example tests pass (2/2), 11 local links pass, setup remains idempotent. No full-suite rerun for this follow-up.
+
 ## Comments
 
 - Unrelated untracked `skills/unity-cli/` remains untouched. Starting brief and supplied framework reference remain untracked.
