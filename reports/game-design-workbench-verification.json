@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-20T03:13:39.225Z",
+  "implementation_commit": "1b6a00e",
+  "branch": "feat/game-design-workbench",
+  "platform": "win32",
+  "node": "24.16.0",
+  "tests": {
+    "workbench": 16,
+    "attendant": 7,
+    "total": 23,
+    "passed": 23,
+    "failed": 0,
+    "log": "reports/game-design-workbench-tests.txt"
+  },
+  "static": {
+    "frontmatter": "pass",
+    "local_links": 61,
+    "packs": 18,
+    "external_http_403": 8,
+    "offline_report": "pass"
+  },
+  "fresh_index_export": {
+    "setup_changes": 0,
+    "conflicts": 0,
+    "saved_review_source_match": true
+  },
+  "browser": {
+    "ok": true,
+    "report": "D:\\Repos\\agent-skills-game-design-workbench\\reports\\game-design-workbench-slice-1.html",
+    "sections": 6,
+    "http_requests": 0,
+    "browser_errors": 0,
+    "checks": [
+      "anchors",
+      "direct hash",
+      "back/forward",
+      "scroll progress/history",
+      "theme",
+      "keyboard focus",
+      "mobile 320/390",
+      "reduced motion",
+      "JavaScript disabled",
+      "print PDF"
+    ],
+    "artifacts": "C:\\Users\\steve\\AppData\\Local\\Temp\\offline-report-check-slluJT"
+  },
+  "sha256": {
+    "report": "c6b01f78f9d6bc7d7ec7b77eaa21a0ea72790fbe8e23c74996bb54f07fb42eea",
+    "tests": "0d0dd6dd48fcd4f4a70cc48f4b245322d16ab10bf40e45255e30e373d822e7b6",
+    "test_log": "dcaf3763683f8399f7afd03db4c0e174a848c8558f602aefba712f51a75a6d9a",
+    "browser_checker": "5afa7e407f07585f4e383ab4ec96c273685533cd6d6008fe9066a317580e7357"
+  },
+  "tutorial": {
+    "collections": 19,
+    "records": 68,
+    "tool_files": 227,
+    "distribution_revision": "b0f33651e6c7c02358cb6219caa49a7b0df8589f2d38f79412bf35bc9b03e29b",
+    "saved_review": "20261020T030047047Z-3af7318c"
+  }
+}

@@ -1,0 +1,1580 @@
+{
+  "project": "D:\\Repos\\agent-skills-game-design-workbench\\skills\\game-design-workbench\\examples\\crate-puzzle",
+  "distribution_revision": "39fa28b6f81772f7e6b02758307cabf4e33865935cf466e54f130a6d9e016b45",
+  "roles": {
+    "nouns": "nouns",
+    "verbs": "verbs",
+    "interactions": "interactions",
+    "mechanics": "mechanics",
+    "systems": "systems",
+    "dynamics": "dynamics",
+    "aesthetics": "aesthetics",
+    "skills": "skills",
+    "challenges": "challenges",
+    "levels": "levels",
+    "controls": "controls",
+    "measures": "measures",
+    "expectations": "expectations",
+    "experiments": "experiments",
+    "hypotheses": "hypotheses",
+    "observations": "observations",
+    "decisions": "decisions",
+    "glossary": "glossary",
+    "resources": "resources"
+  },
+  "new_collections": [],
+  "reused_collections": [
+    {
+      "role": "nouns",
+      "alias": "nouns",
+      "directory": "game-design/nouns",
+      "usage": "game-design/nouns/.usage.md"
+    },
+    {
+      "role": "verbs",
+      "alias": "verbs",
+      "directory": "game-design/verbs",
+      "usage": "game-design/verbs/.usage.md"
+    },
+    {
+      "role": "interactions",
+      "alias": "interactions",
+      "directory": "game-design/interactions",
+      "usage": "game-design/interactions/.usage.md"
+    },
+    {
+      "role": "mechanics",
+      "alias": "mechanics",
+      "directory": "game-design/mechanics",
+      "usage": "game-design/mechanics/.usage.md"
+    },
+    {
+      "role": "systems",
+      "alias": "systems",
+      "directory": "game-design/systems",
+      "usage": "game-design/systems/.usage.md"
+    },
+    {
+      "role": "dynamics",
+      "alias": "dynamics",
+      "directory": "game-design/dynamics",
+      "usage": "game-design/dynamics/.usage.md"
+    },
+    {
+      "role": "aesthetics",
+      "alias": "aesthetics",
+      "directory": "game-design/aesthetics",
+      "usage": "game-design/aesthetics/.usage.md"
+    },
+    {
+      "role": "skills",
+      "alias": "skills",
+      "directory": "game-design/skills",
+      "usage": "game-design/skills/.usage.md"
+    },
+    {
+      "role": "challenges",
+      "alias": "challenges",
+      "directory": "game-design/challenges",
+      "usage": "game-design/challenges/.usage.md"
+    },
+    {
+      "role": "levels",
+      "alias": "levels",
+      "directory": "game-design/levels",
+      "usage": "game-design/levels/.usage.md"
+    },
+    {
+      "role": "controls",
+      "alias": "controls",
+      "directory": "game-design/controls",
+      "usage": "game-design/controls/.usage.md"
+    },
+    {
+      "role": "measures",
+      "alias": "measures",
+      "directory": "game-design/measures",
+      "usage": "game-design/measures/.usage.md"
+    },
+    {
+      "role": "expectations",
+      "alias": "expectations",
+      "directory": "game-design/expectations",
+      "usage": "game-design/expectations/.usage.md"
+    },
+    {
+      "role": "experiments",
+      "alias": "experiments",
+      "directory": "game-design/experiments",
+      "usage": "game-design/experiments/.usage.md"
+    },
+    {
+      "role": "hypotheses",
+      "alias": "hypotheses",
+      "directory": "game-design/hypotheses",
+      "usage": "game-design/hypotheses/.usage.md"
+    },
+    {
+      "role": "observations",
+      "alias": "observations",
+      "directory": "game-design/observations",
+      "usage": "game-design/observations/.usage.md"
+    },
+    {
+      "role": "decisions",
+      "alias": "decisions",
+      "directory": "game-design/decisions",
+      "usage": "game-design/decisions/.usage.md"
+    },
+    {
+      "role": "glossary",
+      "alias": "glossary",
+      "directory": "game-design/glossary",
+      "usage": "game-design/glossary/.usage.md"
+    },
+    {
+      "role": "resources",
+      "alias": "resources",
+      "directory": "game-design/resources",
+      "usage": "game-design/resources/.usage.md"
+    }
+  ],
+  "candidate_sources": [],
+  "candidate_scan": {
+    "maximum_directory_depth": 2,
+    "excludes": [
+      "hidden paths",
+      "node_modules",
+      "tools",
+      "vendor",
+      "build",
+      "configured collections"
+    ]
+  },
+  "fresh_acknowledged": false,
+  "conflicts": [],
+  "files": [
+    {
+      "path": "tools/game-design-workbench/.gitattributes",
+      "before": null,
+      "sha256": "21825070a10afd63461cbc8a14bf30ef1afdae3683a06c8888a9c497ccb21bdf"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/.pi/attendant.tables",
+      "before": null,
+      "sha256": "b2a5b4b03f0b04825c502400d09089fae7d9eaf5c06f72541c9ed123666b786a"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/aesthetics/.schema.md",
+      "before": null,
+      "sha256": "e2fff1db506f4af8e04a0047fb57a016615dfb2680afbc800fe2ea0dc06d43dd"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/aesthetics/.template.md",
+      "before": null,
+      "sha256": "e533a8fb8e0fb70ad3bb02da7929b5ccb5df0376ebe93d81ef93d66b2c47c7ca"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/aesthetics/.usage.md",
+      "before": null,
+      "sha256": "4ea433aef7ab68430c1a9ffb2855aeadb2e0b3b6a24be2b30d009a886dacb0bb"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/aesthetics/deliberate-tension.md",
+      "before": null,
+      "sha256": "78cc37913011c55b00a61c474865f9cef735a364f29bb7ec16f374597a20ff29"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/.schema.md",
+      "before": null,
+      "sha256": "4363ed4e6da6f1d87dee6896b20b89c4ead65ec1d962c44c215584cfc102a4b1"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/.template.md",
+      "before": null,
+      "sha256": "79d288be68173e05f91142b73cfd7399bbed48744c85f3293ab140d6eae61611"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/.usage.md",
+      "before": null,
+      "sha256": "d4d852752785c193105c5f47604c7fbc15adf1bd1be1f86bca0f0647b36190f8"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/combined-room.md",
+      "before": null,
+      "sha256": "9fa6e15e05748005784bc9d11ee274eb68a639d0619563f2363d4392b32bab31"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/move-demo.md",
+      "before": null,
+      "sha256": "16b5b684ce954cb706208d5328d94772be93633580f30d1737d2797245cfe4b0"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/push-room.md",
+      "before": null,
+      "sha256": "75d96b7c46fea475f8f2fd14f3d51fe21d9c6754760f8b73ce18c7fb5653785d"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/switch-practice.md",
+      "before": null,
+      "sha256": "aba0323edbc0f8a8d4a4044bd8f8c05fcef152023131288ebc24bdc2052e507e"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/.schema.md",
+      "before": null,
+      "sha256": "0fad0f2fe6c2dcad7b3bb5af9c9e32cb02e57d44db8b6009de7a7d95650d3029"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/.template.md",
+      "before": null,
+      "sha256": "2dfff7186b527670f057a65ec54be5544bc2437af24cfcb9fb2d5500dbe81e0d"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/.usage.md",
+      "before": null,
+      "sha256": "e914457fdebdf48c855787ce8b35714a44f32327855b4dd7f6c9dfbdc424e1c6"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/energy-capacity.md",
+      "before": null,
+      "sha256": "c25d5bbddc3ce73740e666782c2d7d3eb134dd1b9fee3a880abd3fc428707c83"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/initial-energy.md",
+      "before": null,
+      "sha256": "b25bffc3c7007c7a74f63036e120715e0a31aac250d7832c420b1e1e9c2d97f4"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/push-cost.md",
+      "before": null,
+      "sha256": "11cde3685032dac0dd62a00827a665b8c4fff48feff8fa7e713833d3f0c54057"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/push-duration.md",
+      "before": null,
+      "sha256": "83ad0bd20db46d66925f3f8e9fec627e98202d406e3b1810b45b57011eb4b321"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/tile-distance.md",
+      "before": null,
+      "sha256": "b1c4790854112855b1f2fe0b1c2d1123483ab50cfb0feeaaf1b6cbf2b9cb40c1"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/walk-duration.md",
+      "before": null,
+      "sha256": "665abe67a18e3d0ed88cff372d4b0c17df7ee7103b5d3c633fc259592bd516eb"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/walk-speed.md",
+      "before": null,
+      "sha256": "835ef8cee251056967002b750d1c041964d2c56bc978c355a197c7bdfc3f7ea1"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/.schema.md",
+      "before": null,
+      "sha256": "a8e2e641d76ba5efed0aff5d588f748ee9d5db1e19813cdfaee2326386d50c96"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/.template.md",
+      "before": null,
+      "sha256": "cbd77f83b0862a7b69ec060bf052cf851820525e570d2325e463257c4c2636ee"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/.usage.md",
+      "before": null,
+      "sha256": "8b756641196c480dfd197d9e0c28fcbe2e40be53605f52773ae249915e7c0d28"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/crate-color.md",
+      "before": null,
+      "sha256": "8fcb84c78feb86262f75ed94032ea8f073ecdff6150a293620bbfeda1acad93c"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/no-pulling.md",
+      "before": null,
+      "sha256": "ab8a1e8a2b75b7bff88cb55707d08b359f9b3fd5acfc697b6f813078416c67c0"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/dynamics/.schema.md",
+      "before": null,
+      "sha256": "0dad313190873e3d7ff51acef17f2d0f9e19b9cdfba0081e15d592c4b1be95fb"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/dynamics/.template.md",
+      "before": null,
+      "sha256": "7d290d3c694e99177b48b6900b2df095f39c18a6a201aead6c3addb250bec2a6"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/dynamics/.usage.md",
+      "before": null,
+      "sha256": "e6c27a1c7d80c656bc627c6a5698cfa5badd6b54410704f9fb8978531fa6c3ba"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/dynamics/careful-positioning.md",
+      "before": null,
+      "sha256": "4a068028b10bffa3e3edd13e92cd23f60bdd66b2ece7d9497bacd6a59ea618fa"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/expectations/.schema.md",
+      "before": null,
+      "sha256": "50454d726f1a8b32723f6e273f4ec873567c09c5f5791ea295f66855be510908"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/expectations/.template.md",
+      "before": null,
+      "sha256": "fdd279e11a74ed682fa208446ff263db3746bf2fc8888b0f273d142f3f06b591"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/expectations/.usage.md",
+      "before": null,
+      "sha256": "52c826088c3dc6ee210dcdee120fe9b42acf7cb89451c88e66159decc6651661"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/expectations/route-time.md",
+      "before": null,
+      "sha256": "922344f5cfcf8f050f59089fa9e0d953d7f102d35c2d2f8c1be130d624a35153"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/experiments/.schema.md",
+      "before": null,
+      "sha256": "eec2b576da626e8880b5aa6f4acfa3ae7fb1a08108909cfea1d53b642976d91b"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/experiments/.template.md",
+      "before": null,
+      "sha256": "aa4f1ff3cda2fd580feafd94367259c64b84d4bd82010a7880f87353b88d373f"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/experiments/.usage.md",
+      "before": null,
+      "sha256": "94277356e711f1107ddb45893ac252cee2d16de21fe4fe10212b53de345647e9"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/experiments/route-cost.md",
+      "before": null,
+      "sha256": "fdb15fab68ff61306614a867df5a30685c8a00d5da3afcbc60ee421f8b0838f4"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/.schema.md",
+      "before": null,
+      "sha256": "2f96d6674a0e6346030b15cb9daa66ea0b23b816bb0a6a6127cd6094959d9b48"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/.template.md",
+      "before": null,
+      "sha256": "7c3d2eead1184533dc0a82c7697c9e3f10cc1c07ea136e363fac01131335c1ba"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/.usage.md",
+      "before": null,
+      "sha256": "bbb8a788508b1b554a7e5f11889292c8c87c3b633cd686768d449de47f68a0e6"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/deadlock.md",
+      "before": null,
+      "sha256": "f50f6508b4ab17bd47809ffefc9428edefe914fa18765a63eba2ed92d6683162"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-crate.md",
+      "before": null,
+      "sha256": "938be646528e0067d53422175eaa05a1bea2a7ca2be3f364f7570a65b487a8af"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-energy.md",
+      "before": null,
+      "sha256": "2c8a9a6f91aa20b6559e4aec96fa4c13cd7e9f7c8af1387ad8b05a9e7c81a7f5"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-exit.md",
+      "before": null,
+      "sha256": "8cc430adb0f32131c7c271781a6e95eddd09bedcbcac0d92915164c56197ef16"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-player.md",
+      "before": null,
+      "sha256": "1a752b8959b446bb3ea2c83fa01964b2a02f456ea4dd8c8df1abd237b5764cc1"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-switch.md",
+      "before": null,
+      "sha256": "805d27ed30930381d09a4c3f8028929fee5330da31562205fcfc873dc7aa5fa1"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-wall.md",
+      "before": null,
+      "sha256": "7513020071d7c65218976e7281f8da896186845b3d2e11fc953b25b0baf1a269"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-coordinate.md",
+      "before": null,
+      "sha256": "6ce9a9133a42dda0d8417ac9834daab0ac35fcce4b6232b8ea4a0cc9b0b1701d"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-move.md",
+      "before": null,
+      "sha256": "252190f657ebcd541c0159ec7859e7afaedca63175d8a26a5a8874d3b8f79b44"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-plan-push.md",
+      "before": null,
+      "sha256": "6ee04a054dc845df5e3419f90a3b69f6b2be093c21972daac5ccbd0795474571"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-push.md",
+      "before": null,
+      "sha256": "397d8d349e1498a81c4da35ed3114993a5b4b63c71bba560fd2c50bea9cb24bc"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-read-switch.md",
+      "before": null,
+      "sha256": "d515ca5b0bc02510a2ee75a5f1bafb661eee6c8b59a8b08962a064c383b053d1"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-route-switch.md",
+      "before": null,
+      "sha256": "0c1ed20c787f722c37cbffedbb060e02072c46d47232ec17a11d9c2e2e8acabe"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/verbs-activate.md",
+      "before": null,
+      "sha256": "8da153dcc350792da3060ed041e2df9418c0f262db5936149c5cccfd977e3bc7"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/verbs-push.md",
+      "before": null,
+      "sha256": "3062602ae9326e9a860786bf6b4cfb3759bf9cf0b55ee82ee5c6573bf2b606fe"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/verbs-walk.md",
+      "before": null,
+      "sha256": "a7e164d4b6228e180e988bdabe2b8d8e231f663a71d104538eea602ce926c6c2"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/hypotheses/.schema.md",
+      "before": null,
+      "sha256": "052d08df64cab6f93df1392c883728f3e7ed8ecbb7ef3b38e3745bee3b9b689d"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/hypotheses/.template.md",
+      "before": null,
+      "sha256": "8cc80384402c3dd20dd31784bb2791de3af0c3b4dc5fba4e3b47966d051f0c6a"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/hypotheses/.usage.md",
+      "before": null,
+      "sha256": "b99e254b924d4ffa511e397c0b71e0efcb8b76743cdc476ee6e520ba3caf49e9"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/hypotheses/energy-encourages-planning.md",
+      "before": null,
+      "sha256": "55169f2e95dd9fee27df38fcf240fc47c6928a5b6331aca66d53ced1a3c98f52"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/.schema.md",
+      "before": null,
+      "sha256": "5700e34c525ecc6f64a8f5593235c5bde0060202da2fc47f1740995cc56a4e60"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/.template.md",
+      "before": null,
+      "sha256": "328fde0e451cb8d2bffa29b94c2c5cdd608ee0094b53cb45ee967cbaf1ba852e"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/.usage.md",
+      "before": null,
+      "sha256": "06914c352df73759f04df662bf6285bc9c05a0abfa1b6079862c5be4f3be0fd7"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/closed-exit-walk.md",
+      "before": null,
+      "sha256": "a775ce83c65fbf37ba00cb713206dc3aa37714965240f9c6a8b3d367e7d6e9d0"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/free-push.md",
+      "before": null,
+      "sha256": "bb0669dd8f67bf864c0c6d09e36a32f185e936e4b21a90ae11db112261146038"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/low-energy-push.md",
+      "before": null,
+      "sha256": "b13e1ba624df32f14f92bfc5016f916463091dc8cbb66315edcf7658a2dac206"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/occupied-switch.md",
+      "before": null,
+      "sha256": "7cc1c2b3fecc55b52fd62616251b8bd68491ffe6854b46ac6a12884d1e51dd90"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/wall-activation.md",
+      "before": null,
+      "sha256": "936581c3cf26d8d5ac8cc89a1d6723b84bd15c1b0f24111ee070b76b79dbc77a"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/wall-blocked-push.md",
+      "before": null,
+      "sha256": "500e9e2148d39513134b0b34487f22147acecbf91fce0307393975545c92310f"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/.schema.md",
+      "before": null,
+      "sha256": "c2e8addb3a2811287e207b85405b3c216026d42a86b1f2da2ef59fd62a5a019e"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/.template.md",
+      "before": null,
+      "sha256": "8415359fe91427c6edbc8b7136f764a2874d0ac40eb254fa574a29ec0dd5c2f2"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/.usage.md",
+      "before": null,
+      "sha256": "3fcd542d838995f9bab66f1755b74ef890e26cefb38061a585082b1d41d2cbf9"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/basics.md",
+      "before": null,
+      "sha256": "001db062cf850e25add0c8aa2e017f7a8d6aaae1a5d0c91061c808c02c8f9bf7"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/switch-rooms.md",
+      "before": null,
+      "sha256": "d0135a207d8cc4dda050da688fc6366e87a1e090dfbda3bcb60116a5720f6919"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/.schema.md",
+      "before": null,
+      "sha256": "73002a9dcecd7eee869628f931d354e815e754d6cefb3b987eb6ee56727d7ccf"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/.template.md",
+      "before": null,
+      "sha256": "0c388e4cd41d08195a31e0d8815bdede2ae28091eb15821fbcb915e86128d9a8"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/.usage.md",
+      "before": null,
+      "sha256": "3ade7733864e49de9c003a51857cd5764ed3a3853a8575db7347d85ff1e0132b"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/completion-time.md",
+      "before": null,
+      "sha256": "bb48682424e2ebd612e7f08414052b0d3a03c40124a3ddefdddc4a00a82093f0"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/elapsed-time.md",
+      "before": null,
+      "sha256": "748710f1daa3333f0f72f8a97c0ae0617f5c8935830b1e6e30edf5c713a81150"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/remaining-energy.md",
+      "before": null,
+      "sha256": "95115cbc1746c2d29faf054399bcfe485a673522f51a3d98b49ce6a51134d421"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/route-complete.md",
+      "before": null,
+      "sha256": "a4d211f2cf67ac2a8e5181b498e35cadb1846c7ec0430b5094b535d3cfdd3c7b"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/.schema.md",
+      "before": null,
+      "sha256": "10c87fcc6f713ba588636381cda7f31a8348497209bdb9cd16a7a0191330999d"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/.template.md",
+      "before": null,
+      "sha256": "0819112c4b193a0191ad33fbc6d9be6c503060f50ac07a74717791a45ea6606c"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/.usage.md",
+      "before": null,
+      "sha256": "6c177a160bf48c44ebf0a6afc24c607de61ff318fe87f10e3242f9864fc9649e"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/challenge-restart.md",
+      "before": null,
+      "sha256": "b832969db2b39bb3b4a7e4dcf250aefa407f5834bb571fb4271a13f372dfd036"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/crate-pushing.md",
+      "before": null,
+      "sha256": "b9d37d6d79da1521be4bcd6d55a5608b6430ab4af8667feabbdd212ca7fa1342"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/grid-walking.md",
+      "before": null,
+      "sha256": "0de464bf0372b9ebfe72053e97cbe88d209403cba7dcc0479ec8b44ab636a313"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/switch-exit.md",
+      "before": null,
+      "sha256": "3148615cd447be2bb01155c687ae18d76e5fadfd8612db7238b6ff7f1103eabb"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/wall-click.md",
+      "before": null,
+      "sha256": "25bc2ce34a59957080554ddb929b9af5e2b50dd7c9813b79dc444b5c76a61e7b"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/.schema.md",
+      "before": null,
+      "sha256": "2b5906112be7e1910f17ae374ed1f1455915e88fbbd0a64618fe0ac1c6eeefd0"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/.template.md",
+      "before": null,
+      "sha256": "b9d4ea49a46c4bdf83675ea9ec1f04d7d3d35e8251e83fe2c570b8d9a30c9d02"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/.usage.md",
+      "before": null,
+      "sha256": "a672bcf250f5d76aec2b374516f19592adf587a8ddf5287607a42a8e02bed0e5"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/crate.md",
+      "before": null,
+      "sha256": "6c86279db5bcf3292fd06718d06972e267a3927e08923b2eedf74d4d7f1e4d85"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/energy.md",
+      "before": null,
+      "sha256": "679fbfc745236a27b1437e2313b7619a58bd80e534e446735d39d30e7b2e21b1"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/exit.md",
+      "before": null,
+      "sha256": "0a1fc7aad45b59cc8978d23d3927bd260dff5ec46356de75bf82e41ba099f2ca"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/player.md",
+      "before": null,
+      "sha256": "306cec2be02335346dfbb9a5fce0aaf69473a7a7c0ccae30fd18672f29aa7dbb"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/switch.md",
+      "before": null,
+      "sha256": "6a24cccf8517442159b061a8e217ad764c667de71fa0259662c8722a0cf22734"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/wall.md",
+      "before": null,
+      "sha256": "0f4814812aa562bd42604d87542f2096dca4f6e513f2c0c2519daa413874ca34"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/observations/.schema.md",
+      "before": null,
+      "sha256": "ce617abc05012e8c727d37c30d22b7de27104d48390070af25cf7faed6575fae"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/observations/.template.md",
+      "before": null,
+      "sha256": "e5a6da831dc928aa0ba977c5810e470c41b3acce1f1dae6d5171fa92f3c89532"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/observations/.usage.md",
+      "before": null,
+      "sha256": "3658ceabb677d363c6a712e02970f39094865bbc1faf54ab80f4aba53e9f8fd3"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/resources/.schema.md",
+      "before": null,
+      "sha256": "08fbc71c9b3d827ef58b7bd829ebcd989a0761776dd6284d6641e201a374ec36"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/resources/.template.md",
+      "before": null,
+      "sha256": "93ff6543eabc87042f5e7ab3634de891553b98814a31b5f6dcf8a95ad68ad3ca"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/resources/.usage.md",
+      "before": null,
+      "sha256": "c57afda74de57ca9b141aa10efa3289564d167e17a67d0c4f8f763dd381f4966"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/resources/player-energy.md",
+      "before": null,
+      "sha256": "9fba2a3bdf757187f47ca3cbb9f212da10c710dc8097fbc8bb4ab045ea5d255f"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/.schema.md",
+      "before": null,
+      "sha256": "3c938a2b26887db34a8802fe84102a60f27d785fbdc3cdcabb9ee21f282e3905"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/.template.md",
+      "before": null,
+      "sha256": "c816d6e18177e15e104401a0eaa37c1d26890d37e7b419e7f24b887b8e9ba756"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/.usage.md",
+      "before": null,
+      "sha256": "230120690be1f10507616170183363d64da7c081c1193778eae49deec8dfbce3"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/coordinate.md",
+      "before": null,
+      "sha256": "782073c98422cb029ba8776cb47c4afafb7e1f78688a9286dab81d1ef2dbcafb"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/move.md",
+      "before": null,
+      "sha256": "4baca9c119b61bdf81b3da12b26bd04b30b44e31311ded992783f4a48aa84e8d"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/plan-push.md",
+      "before": null,
+      "sha256": "846b49eaf3aab618f7afc15b7ea91e1d7432abfb8640f412f37a869a7022efd4"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/push.md",
+      "before": null,
+      "sha256": "844f4b8532a7e6569529ab5c8d4aa446859c60a40c44c6a2122a5437061e224f"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/read-switch.md",
+      "before": null,
+      "sha256": "6cc28d20c0748f76df08292019a444dfc2502b303fb510b7e9b17785cdb7801c"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/route-switch.md",
+      "before": null,
+      "sha256": "680c0676f4b5f9b485cbc3540799f6747c751ea9741a86095d81bd454a1db4c9"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/systems/.schema.md",
+      "before": null,
+      "sha256": "ed54edab37bf73bf2ab65395a714b0eef046830ff838867bb33b08ce0838f4ee"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/systems/.template.md",
+      "before": null,
+      "sha256": "331d7af81e18a4cb4f88191e83cea26c0529f496c98a20dd374f54754a4619d6"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/systems/.usage.md",
+      "before": null,
+      "sha256": "5dc18e260c0f947eae553c03deb0d5a7c739243da8481341311ad9e56a12f4b5"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/systems/puzzle-rules.md",
+      "before": null,
+      "sha256": "7eb1a7bc0ebda6c610180d209506aa1593d59526978a4181cad4ff4327ac15d2"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/.schema.md",
+      "before": null,
+      "sha256": "7ddc630d1a439c536746a62a9c0377c79a6793aafdacbf55a10d09a43864a4ac"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/.template.md",
+      "before": null,
+      "sha256": "b9d4ea49a46c4bdf83675ea9ec1f04d7d3d35e8251e83fe2c570b8d9a30c9d02"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/.usage.md",
+      "before": null,
+      "sha256": "989c8b357c97dc7bbcd97418b091d5ffe2e0df5f59b782b30c0de658c0132598"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/activate.md",
+      "before": null,
+      "sha256": "7eb2fa43ccf0f83d11edfc6023a1b4041be8afd0bd7b2d1e97c47b0ff163253c"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/push.md",
+      "before": null,
+      "sha256": "604e9490a78c7965d384534cd9e229a573b9c194ef879ad15a85c47662358ab3"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/walk.md",
+      "before": null,
+      "sha256": "dfa8f996532aa281a80ba502584ee4ba24fd2f5ecf2c4e0f79d293c12f86da35"
+    },
+    {
+      "path": "tools/game-design-workbench/examples/crate-puzzle/README.md",
+      "before": null,
+      "sha256": "e7d2a2c333dfd142b15adfbd75471624c844d42e19c3ad8755759b0284e06086"
+    },
+    {
+      "path": "tools/game-design-workbench/README.md",
+      "before": null,
+      "sha256": "4b72b79bfaad86fbe1daa69de5a90e71fde12a25e57f764382363377eb9bd834"
+    },
+    {
+      "path": "tools/game-design-workbench/references/capture.md",
+      "before": null,
+      "sha256": "31e68c14eaaf0ad30253774a16af3cdc550012f73b4ff91357ea7f40853bc36a"
+    },
+    {
+      "path": "tools/game-design-workbench/references/cli.md",
+      "before": null,
+      "sha256": "71d8b329f814b4ded44bfb2b1e5e1be580c0be2f40e692a5a834dc708dc91761"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/bartle.md",
+      "before": null,
+      "sha256": "e253704757857d2af11a91a3b8f120beb89dc61c0497ea4deacb16ac0310bd3d"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/caillois.md",
+      "before": null,
+      "sha256": "2b1274bfca4967f9f0336b1ee533ef931f66bec63f62650fe214ebdfe75fa26b"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/catalog.json",
+      "before": null,
+      "sha256": "b78fae566a2ca7119b7bbe79698a1fc3827863729213073311c00fa033e343a9"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/cognitive-load.md",
+      "before": null,
+      "sha256": "919929bef0e76d6fa2843c88d3437237799b199bbf2e877e32f53511f31d8dcb"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/flow.md",
+      "before": null,
+      "sha256": "37b13b933cb05f99c37e57ee61d9fb466340a006d97ab2c8d797f0518d039e74"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/four-keys.md",
+      "before": null,
+      "sha256": "8eee8fef60eca043981988be75ab1db8421e38c7e84bc344b36198e06a405eab"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/game-grammar.md",
+      "before": null,
+      "sha256": "8bd442dcf6632de2bdef1b85922a61c751bc7bcf4708fdb07e4df212139aaa51"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/gameflow.md",
+      "before": null,
+      "sha256": "27de20d605cea04d4bc9fc51a4d90a8a989f88f7f780693e3bdb462454a62e92"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/gameplay-patterns.md",
+      "before": null,
+      "sha256": "bdcbb9ed031e280f66e14985bcf9e6cc9a7ea21873c6e059100f9000a271a0b4"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/mda.md",
+      "before": null,
+      "sha256": "bdeca680e2bc6a40cc85e753389e45d2fa8096ac28295526b879fd7aacb934c5"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/playcentric.md",
+      "before": null,
+      "sha256": "26358d7303766509f47eec29258f517c96799101a8b1c8174e98ad5faf3533b8"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/quantic-foundry.md",
+      "before": null,
+      "sha256": "9b66a56dae0c0607a353b01535ae9f2d2bd6135ad76e10dcc6256203cd0a9c0b"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/resource-economy.md",
+      "before": null,
+      "sha256": "2427eeb097d69c56d791c3ec9704d24f5f618a6c4ab9c853e8e9605713fd5ee7"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/schell.md",
+      "before": null,
+      "sha256": "62a0b6b64fbac16b08f2cd61dade27a411d632cc3ece132262856f7da1d1a43d"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/self-determination.md",
+      "before": null,
+      "sha256": "db46aa1cf4a5a297bcdb6142b4d9da69cfd19160480ccac98ef54ac735c310a2"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/skill-atoms.md",
+      "before": null,
+      "sha256": "ea75650a9e14c06c6dae8019c872e17cfc63aeea8d377c885a81191cc9b539ad"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/theory-of-fun.md",
+      "before": null,
+      "sha256": "a902f5ceb2a6a4864469a601c415a21846e2ab3eaf3f91e06f72e1a29e57d95b"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/working-memory.md",
+      "before": null,
+      "sha256": "ec7f19af8a2e277645bc406e41052f736760d6eea3d57655c7e52a07d49fa7a8"
+    },
+    {
+      "path": "tools/game-design-workbench/references/frameworks/zpd-scaffolding.md",
+      "before": null,
+      "sha256": "0fc935c66cfef24ed0fe6a84b58757ed8b28ff24d9779e0c7a268902f8015c8b"
+    },
+    {
+      "path": "tools/game-design-workbench/references/inspect.md",
+      "before": null,
+      "sha256": "8b6d103ba298903cb677a052fc09259f62d9b000a7065ac2ef7d3c395c6d9df5"
+    },
+    {
+      "path": "tools/game-design-workbench/references/model.md",
+      "before": null,
+      "sha256": "322b3f07cf8bf9c43abce6bd63326f2f1575c9ecedc93b3fd4825c747b60c071"
+    },
+    {
+      "path": "tools/game-design-workbench/references/review.md",
+      "before": null,
+      "sha256": "03c623da2480f61f1e73e72c32b59e1464790b72bef29eae6bad17d922cefca2"
+    },
+    {
+      "path": "tools/game-design-workbench/references/setup.md",
+      "before": null,
+      "sha256": "8daf522ab784ee29ef098f6c34a7d7d29dd59a5144db448d47a4092e091e1d7a"
+    },
+    {
+      "path": "tools/game-design-workbench/scripts/lib.mjs",
+      "before": null,
+      "sha256": "6989e9536bdd58715be08c224ce64ec83679da074b935a9edf4676bcde05f7ae"
+    },
+    {
+      "path": "tools/game-design-workbench/scripts/model.mjs",
+      "before": null,
+      "sha256": "58d77ce7f834b2f798ddcfc83ffec0625a161866d60124685a87a30c09e06542"
+    },
+    {
+      "path": "tools/game-design-workbench/scripts/queries.mjs",
+      "before": null,
+      "sha256": "e2996d7f4fe3e34c3d6aacd5c2bc6898dee2b5db16f6f447f01901da0baa471e"
+    },
+    {
+      "path": "tools/game-design-workbench/scripts/reports.mjs",
+      "before": null,
+      "sha256": "647ac46dc98f07674fa4c2325fb84d59d0a58dbd7f310122551c1453ae90ae95"
+    },
+    {
+      "path": "tools/game-design-workbench/scripts/setup.mjs",
+      "before": null,
+      "sha256": "03b385f9c8ef5dfae473d1ffac8f98da17dd1a790455a607029e7f2aa2d753ee"
+    },
+    {
+      "path": "tools/game-design-workbench/scripts/workbench.mjs",
+      "before": null,
+      "sha256": "92214021d0297ae9fc558cc0a32fa571e8e0fabc2bb756180e37ef85d98319ad"
+    },
+    {
+      "path": "tools/game-design-workbench/SKILL.md",
+      "before": null,
+      "sha256": "618bf1463b16879c4dbdeb67a73c740989b42d157dbdf4fedd6fe58d569775c7"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/aesthetics/.schema.md",
+      "before": null,
+      "sha256": "e2fff1db506f4af8e04a0047fb57a016615dfb2680afbc800fe2ea0dc06d43dd"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/aesthetics/.template.md",
+      "before": null,
+      "sha256": "e533a8fb8e0fb70ad3bb02da7929b5ccb5df0376ebe93d81ef93d66b2c47c7ca"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/aesthetics/.usage.md",
+      "before": null,
+      "sha256": "4ea433aef7ab68430c1a9ffb2855aeadb2e0b3b6a24be2b30d009a886dacb0bb"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/challenges/.schema.md",
+      "before": null,
+      "sha256": "4363ed4e6da6f1d87dee6896b20b89c4ead65ec1d962c44c215584cfc102a4b1"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/challenges/.template.md",
+      "before": null,
+      "sha256": "79d288be68173e05f91142b73cfd7399bbed48744c85f3293ab140d6eae61611"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/challenges/.usage.md",
+      "before": null,
+      "sha256": "d4d852752785c193105c5f47604c7fbc15adf1bd1be1f86bca0f0647b36190f8"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/controls/.schema.md",
+      "before": null,
+      "sha256": "0fad0f2fe6c2dcad7b3bb5af9c9e32cb02e57d44db8b6009de7a7d95650d3029"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/controls/.template.md",
+      "before": null,
+      "sha256": "2dfff7186b527670f057a65ec54be5544bc2437af24cfcb9fb2d5500dbe81e0d"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/controls/.usage.md",
+      "before": null,
+      "sha256": "e914457fdebdf48c855787ce8b35714a44f32327855b4dd7f6c9dfbdc424e1c6"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/decisions/.schema.md",
+      "before": null,
+      "sha256": "a8e2e641d76ba5efed0aff5d588f748ee9d5db1e19813cdfaee2326386d50c96"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/decisions/.template.md",
+      "before": null,
+      "sha256": "cbd77f83b0862a7b69ec060bf052cf851820525e570d2325e463257c4c2636ee"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/decisions/.usage.md",
+      "before": null,
+      "sha256": "8b756641196c480dfd197d9e0c28fcbe2e40be53605f52773ae249915e7c0d28"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/dynamics/.schema.md",
+      "before": null,
+      "sha256": "0dad313190873e3d7ff51acef17f2d0f9e19b9cdfba0081e15d592c4b1be95fb"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/dynamics/.template.md",
+      "before": null,
+      "sha256": "7d290d3c694e99177b48b6900b2df095f39c18a6a201aead6c3addb250bec2a6"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/dynamics/.usage.md",
+      "before": null,
+      "sha256": "e6c27a1c7d80c656bc627c6a5698cfa5badd6b54410704f9fb8978531fa6c3ba"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/expectations/.schema.md",
+      "before": null,
+      "sha256": "50454d726f1a8b32723f6e273f4ec873567c09c5f5791ea295f66855be510908"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/expectations/.template.md",
+      "before": null,
+      "sha256": "fdd279e11a74ed682fa208446ff263db3746bf2fc8888b0f273d142f3f06b591"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/expectations/.usage.md",
+      "before": null,
+      "sha256": "52c826088c3dc6ee210dcdee120fe9b42acf7cb89451c88e66159decc6651661"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/experiments/.schema.md",
+      "before": null,
+      "sha256": "eec2b576da626e8880b5aa6f4acfa3ae7fb1a08108909cfea1d53b642976d91b"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/experiments/.template.md",
+      "before": null,
+      "sha256": "aa4f1ff3cda2fd580feafd94367259c64b84d4bd82010a7880f87353b88d373f"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/experiments/.usage.md",
+      "before": null,
+      "sha256": "94277356e711f1107ddb45893ac252cee2d16de21fe4fe10212b53de345647e9"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/glossary/.schema.md",
+      "before": null,
+      "sha256": "2f96d6674a0e6346030b15cb9daa66ea0b23b816bb0a6a6127cd6094959d9b48"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/glossary/.template.md",
+      "before": null,
+      "sha256": "7c3d2eead1184533dc0a82c7697c9e3f10cc1c07ea136e363fac01131335c1ba"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/glossary/.usage.md",
+      "before": null,
+      "sha256": "bbb8a788508b1b554a7e5f11889292c8c87c3b633cd686768d449de47f68a0e6"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/hypotheses/.schema.md",
+      "before": null,
+      "sha256": "052d08df64cab6f93df1392c883728f3e7ed8ecbb7ef3b38e3745bee3b9b689d"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/hypotheses/.template.md",
+      "before": null,
+      "sha256": "8cc80384402c3dd20dd31784bb2791de3af0c3b4dc5fba4e3b47966d051f0c6a"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/hypotheses/.usage.md",
+      "before": null,
+      "sha256": "b99e254b924d4ffa511e397c0b71e0efcb8b76743cdc476ee6e520ba3caf49e9"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/interactions/.schema.md",
+      "before": null,
+      "sha256": "5700e34c525ecc6f64a8f5593235c5bde0060202da2fc47f1740995cc56a4e60"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/interactions/.template.md",
+      "before": null,
+      "sha256": "328fde0e451cb8d2bffa29b94c2c5cdd608ee0094b53cb45ee967cbaf1ba852e"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/interactions/.usage.md",
+      "before": null,
+      "sha256": "06914c352df73759f04df662bf6285bc9c05a0abfa1b6079862c5be4f3be0fd7"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/levels/.schema.md",
+      "before": null,
+      "sha256": "c2e8addb3a2811287e207b85405b3c216026d42a86b1f2da2ef59fd62a5a019e"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/levels/.template.md",
+      "before": null,
+      "sha256": "8415359fe91427c6edbc8b7136f764a2874d0ac40eb254fa574a29ec0dd5c2f2"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/levels/.usage.md",
+      "before": null,
+      "sha256": "3fcd542d838995f9bab66f1755b74ef890e26cefb38061a585082b1d41d2cbf9"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/measures/.schema.md",
+      "before": null,
+      "sha256": "73002a9dcecd7eee869628f931d354e815e754d6cefb3b987eb6ee56727d7ccf"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/measures/.template.md",
+      "before": null,
+      "sha256": "0c388e4cd41d08195a31e0d8815bdede2ae28091eb15821fbcb915e86128d9a8"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/measures/.usage.md",
+      "before": null,
+      "sha256": "3ade7733864e49de9c003a51857cd5764ed3a3853a8575db7347d85ff1e0132b"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/mechanics/.schema.md",
+      "before": null,
+      "sha256": "10c87fcc6f713ba588636381cda7f31a8348497209bdb9cd16a7a0191330999d"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/mechanics/.template.md",
+      "before": null,
+      "sha256": "0819112c4b193a0191ad33fbc6d9be6c503060f50ac07a74717791a45ea6606c"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/mechanics/.usage.md",
+      "before": null,
+      "sha256": "6c177a160bf48c44ebf0a6afc24c607de61ff318fe87f10e3242f9864fc9649e"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/nouns/.schema.md",
+      "before": null,
+      "sha256": "2b5906112be7e1910f17ae374ed1f1455915e88fbbd0a64618fe0ac1c6eeefd0"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/nouns/.template.md",
+      "before": null,
+      "sha256": "b9d4ea49a46c4bdf83675ea9ec1f04d7d3d35e8251e83fe2c570b8d9a30c9d02"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/nouns/.usage.md",
+      "before": null,
+      "sha256": "a672bcf250f5d76aec2b374516f19592adf587a8ddf5287607a42a8e02bed0e5"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/observations/.schema.md",
+      "before": null,
+      "sha256": "ce617abc05012e8c727d37c30d22b7de27104d48390070af25cf7faed6575fae"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/observations/.template.md",
+      "before": null,
+      "sha256": "e5a6da831dc928aa0ba977c5810e470c41b3acce1f1dae6d5171fa92f3c89532"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/observations/.usage.md",
+      "before": null,
+      "sha256": "3658ceabb677d363c6a712e02970f39094865bbc1faf54ab80f4aba53e9f8fd3"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/resources/.schema.md",
+      "before": null,
+      "sha256": "08fbc71c9b3d827ef58b7bd829ebcd989a0761776dd6284d6641e201a374ec36"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/resources/.template.md",
+      "before": null,
+      "sha256": "93ff6543eabc87042f5e7ab3634de891553b98814a31b5f6dcf8a95ad68ad3ca"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/resources/.usage.md",
+      "before": null,
+      "sha256": "c57afda74de57ca9b141aa10efa3289564d167e17a67d0c4f8f763dd381f4966"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/review-input.json",
+      "before": null,
+      "sha256": "9e780046e4ac5fb3a24f85e368c751ccd08aee0e71a48b76b66a969a9217af57"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/skills/.schema.md",
+      "before": null,
+      "sha256": "3c938a2b26887db34a8802fe84102a60f27d785fbdc3cdcabb9ee21f282e3905"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/skills/.template.md",
+      "before": null,
+      "sha256": "c816d6e18177e15e104401a0eaa37c1d26890d37e7b419e7f24b887b8e9ba756"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/skills/.usage.md",
+      "before": null,
+      "sha256": "230120690be1f10507616170183363d64da7c081c1193778eae49deec8dfbce3"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/systems/.schema.md",
+      "before": null,
+      "sha256": "ed54edab37bf73bf2ab65395a714b0eef046830ff838867bb33b08ce0838f4ee"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/systems/.template.md",
+      "before": null,
+      "sha256": "331d7af81e18a4cb4f88191e83cea26c0529f496c98a20dd374f54754a4619d6"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/systems/.usage.md",
+      "before": null,
+      "sha256": "5dc18e260c0f947eae553c03deb0d5a7c739243da8481341311ad9e56a12f4b5"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/verbs/.schema.md",
+      "before": null,
+      "sha256": "7ddc630d1a439c536746a62a9c0377c79a6793aafdacbf55a10d09a43864a4ac"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/verbs/.template.md",
+      "before": null,
+      "sha256": "b9d4ea49a46c4bdf83675ea9ec1f04d7d3d35e8251e83fe2c570b8d9a30c9d02"
+    },
+    {
+      "path": "tools/game-design-workbench/templates/verbs/.usage.md",
+      "before": null,
+      "sha256": "989c8b357c97dc7bbcd97418b091d5ffe2e0df5f59b782b30c0de658c0132598"
+    },
+    {
+      "path": "tools/game-design-workbench/vendor/attendant/LICENSE",
+      "before": null,
+      "sha256": "78c3c2da474349f43f629f41c6cc6565a2f08c07fa4b9311f578fc322315ad9f"
+    },
+    {
+      "path": "tools/game-design-workbench/vendor/attendant/references/collections.md",
+      "before": null,
+      "sha256": "e14b920727ac5af3de83e838b9f75a59f8883e97dede530b41b71e69a04ab8ab"
+    },
+    {
+      "path": "tools/game-design-workbench/vendor/attendant/references/commands.md",
+      "before": null,
+      "sha256": "99ed3148505918a62b6c781f16f246edc83bc34a558d34fedb5591f175958f43"
+    },
+    {
+      "path": "tools/game-design-workbench/vendor/attendant/references/migration.md",
+      "before": null,
+      "sha256": "3c5c650aae0c9a4e481f0544aae851abe69311d5f49e4a2871472839cde9002d"
+    },
+    {
+      "path": "tools/game-design-workbench/vendor/attendant/references/third-party-notices.md",
+      "before": null,
+      "sha256": "5465d76afbf2a1d6db2cfc7b805562d765321965faaaa4846154c51c6933de36"
+    },
+    {
+      "path": "tools/game-design-workbench/vendor/attendant/scripts/attendant.mjs",
+      "before": null,
+      "sha256": "8724c330749693d399910d9d9fff21a29241430befff89107d511f238de37ee2"
+    },
+    {
+      "path": "tools/game-design-workbench/vendor/attendant/scripts/yaml.mjs",
+      "before": null,
+      "sha256": "9dbb8b12fdfb4a6c5650947b582318b10faf313bf0ef7088ed926e7fa39f76b3"
+    },
+    {
+      "path": "tools/game-design-workbench/vendor/attendant/SKILL.md",
+      "before": null,
+      "sha256": "3967c8668b96eab2b6d7db39955f96e22fedfac53fef9bd39b7c8d4af67f1fc6"
+    },
+    {
+      "path": "AGENTS.md",
+      "before": null,
+      "sha256": "82bdff463829d822836569d25bbe269fb9b44c46a4153153699da660a36910c5"
+    },
+    {
+      "path": "tools/game-design-workbench/manifest.json",
+      "before": null,
+      "sha256": "aa9d7e1ca383144587101518a593bedfa05b83f40e1b24a619b60dcbf51599a9"
+    }
+  ],
+  "expected": {
+    ".pi/attendant.tables": "b2a5b4b03f0b04825c502400d09089fae7d9eaf5c06f72541c9ed123666b786a",
+    "AGENTS.md": null,
+    ".gitignore": "0678cefb242f2db773974a39b8a028b8dff8ba16350a532f3f969d0e91a46ef9",
+    "tools/game-design-workbench/manifest.json": null,
+    "game-design/nouns/.schema.md": "2b5906112be7e1910f17ae374ed1f1455915e88fbbd0a64618fe0ac1c6eeefd0",
+    "game-design/nouns/.usage.md": "a672bcf250f5d76aec2b374516f19592adf587a8ddf5287607a42a8e02bed0e5",
+    "game-design/verbs/.schema.md": "7ddc630d1a439c536746a62a9c0377c79a6793aafdacbf55a10d09a43864a4ac",
+    "game-design/verbs/.usage.md": "989c8b357c97dc7bbcd97418b091d5ffe2e0df5f59b782b30c0de658c0132598",
+    "game-design/interactions/.schema.md": "5700e34c525ecc6f64a8f5593235c5bde0060202da2fc47f1740995cc56a4e60",
+    "game-design/interactions/.usage.md": "06914c352df73759f04df662bf6285bc9c05a0abfa1b6079862c5be4f3be0fd7",
+    "game-design/mechanics/.schema.md": "10c87fcc6f713ba588636381cda7f31a8348497209bdb9cd16a7a0191330999d",
+    "game-design/mechanics/.usage.md": "6c177a160bf48c44ebf0a6afc24c607de61ff318fe87f10e3242f9864fc9649e",
+    "game-design/systems/.schema.md": "ed54edab37bf73bf2ab65395a714b0eef046830ff838867bb33b08ce0838f4ee",
+    "game-design/systems/.usage.md": "5dc18e260c0f947eae553c03deb0d5a7c739243da8481341311ad9e56a12f4b5",
+    "game-design/dynamics/.schema.md": "0dad313190873e3d7ff51acef17f2d0f9e19b9cdfba0081e15d592c4b1be95fb",
+    "game-design/dynamics/.usage.md": "e6c27a1c7d80c656bc627c6a5698cfa5badd6b54410704f9fb8978531fa6c3ba",
+    "game-design/aesthetics/.schema.md": "e2fff1db506f4af8e04a0047fb57a016615dfb2680afbc800fe2ea0dc06d43dd",
+    "game-design/aesthetics/.usage.md": "4ea433aef7ab68430c1a9ffb2855aeadb2e0b3b6a24be2b30d009a886dacb0bb",
+    "game-design/skills/.schema.md": "3c938a2b26887db34a8802fe84102a60f27d785fbdc3cdcabb9ee21f282e3905",
+    "game-design/skills/.usage.md": "230120690be1f10507616170183363d64da7c081c1193778eae49deec8dfbce3",
+    "game-design/challenges/.schema.md": "4363ed4e6da6f1d87dee6896b20b89c4ead65ec1d962c44c215584cfc102a4b1",
+    "game-design/challenges/.usage.md": "d4d852752785c193105c5f47604c7fbc15adf1bd1be1f86bca0f0647b36190f8",
+    "game-design/levels/.schema.md": "c2e8addb3a2811287e207b85405b3c216026d42a86b1f2da2ef59fd62a5a019e",
+    "game-design/levels/.usage.md": "3fcd542d838995f9bab66f1755b74ef890e26cefb38061a585082b1d41d2cbf9",
+    "game-design/controls/.schema.md": "0fad0f2fe6c2dcad7b3bb5af9c9e32cb02e57d44db8b6009de7a7d95650d3029",
+    "game-design/controls/.usage.md": "e914457fdebdf48c855787ce8b35714a44f32327855b4dd7f6c9dfbdc424e1c6",
+    "game-design/measures/.schema.md": "73002a9dcecd7eee869628f931d354e815e754d6cefb3b987eb6ee56727d7ccf",
+    "game-design/measures/.usage.md": "3ade7733864e49de9c003a51857cd5764ed3a3853a8575db7347d85ff1e0132b",
+    "game-design/expectations/.schema.md": "50454d726f1a8b32723f6e273f4ec873567c09c5f5791ea295f66855be510908",
+    "game-design/expectations/.usage.md": "52c826088c3dc6ee210dcdee120fe9b42acf7cb89451c88e66159decc6651661",
+    "game-design/experiments/.schema.md": "eec2b576da626e8880b5aa6f4acfa3ae7fb1a08108909cfea1d53b642976d91b",
+    "game-design/experiments/.usage.md": "94277356e711f1107ddb45893ac252cee2d16de21fe4fe10212b53de345647e9",
+    "game-design/hypotheses/.schema.md": "052d08df64cab6f93df1392c883728f3e7ed8ecbb7ef3b38e3745bee3b9b689d",
+    "game-design/hypotheses/.usage.md": "b99e254b924d4ffa511e397c0b71e0efcb8b76743cdc476ee6e520ba3caf49e9",
+    "game-design/observations/.schema.md": "ce617abc05012e8c727d37c30d22b7de27104d48390070af25cf7faed6575fae",
+    "game-design/observations/.usage.md": "3658ceabb677d363c6a712e02970f39094865bbc1faf54ab80f4aba53e9f8fd3",
+    "game-design/decisions/.schema.md": "a8e2e641d76ba5efed0aff5d588f748ee9d5db1e19813cdfaee2326386d50c96",
+    "game-design/decisions/.usage.md": "8b756641196c480dfd197d9e0c28fcbe2e40be53605f52773ae249915e7c0d28",
+    "game-design/glossary/.schema.md": "2f96d6674a0e6346030b15cb9daa66ea0b23b816bb0a6a6127cd6094959d9b48",
+    "game-design/glossary/.usage.md": "bbb8a788508b1b554a7e5f11889292c8c87c3b633cd686768d449de47f68a0e6",
+    "game-design/resources/.schema.md": "08fbc71c9b3d827ef58b7bd829ebcd989a0761776dd6284d6641e201a374ec36",
+    "game-design/resources/.usage.md": "c57afda74de57ca9b141aa10efa3289564d167e17a67d0c4f8f763dd381f4966",
+    "tools/game-design-workbench/.gitattributes": null,
+    "tools/game-design-workbench/examples/crate-puzzle/.pi/attendant.tables": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/aesthetics/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/aesthetics/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/aesthetics/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/aesthetics/deliberate-tension.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/combined-room.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/move-demo.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/push-room.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/challenges/switch-practice.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/energy-capacity.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/initial-energy.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/push-cost.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/push-duration.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/tile-distance.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/walk-duration.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/controls/walk-speed.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/crate-color.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/decisions/no-pulling.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/dynamics/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/dynamics/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/dynamics/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/dynamics/careful-positioning.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/expectations/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/expectations/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/expectations/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/expectations/route-time.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/experiments/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/experiments/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/experiments/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/experiments/route-cost.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/deadlock.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-crate.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-energy.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-exit.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-player.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-switch.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/nouns-wall.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-coordinate.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-move.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-plan-push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-read-switch.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/skills-route-switch.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/verbs-activate.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/verbs-push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/glossary/verbs-walk.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/hypotheses/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/hypotheses/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/hypotheses/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/hypotheses/energy-encourages-planning.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/closed-exit-walk.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/free-push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/low-energy-push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/occupied-switch.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/wall-activation.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/interactions/wall-blocked-push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/basics.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/levels/switch-rooms.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/completion-time.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/elapsed-time.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/remaining-energy.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/measures/route-complete.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/challenge-restart.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/crate-pushing.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/grid-walking.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/switch-exit.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/mechanics/wall-click.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/crate.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/energy.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/exit.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/player.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/switch.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/nouns/wall.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/observations/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/observations/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/observations/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/resources/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/resources/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/resources/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/resources/player-energy.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/coordinate.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/move.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/plan-push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/read-switch.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/skills/route-switch.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/systems/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/systems/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/systems/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/systems/puzzle-rules.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/.schema.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/.template.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/.usage.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/activate.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/push.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/game-design/verbs/walk.md": null,
+    "tools/game-design-workbench/examples/crate-puzzle/README.md": null,
+    "tools/game-design-workbench/README.md": null,
+    "tools/game-design-workbench/references/capture.md": null,
+    "tools/game-design-workbench/references/cli.md": null,
+    "tools/game-design-workbench/references/frameworks/bartle.md": null,
+    "tools/game-design-workbench/references/frameworks/caillois.md": null,
+    "tools/game-design-workbench/references/frameworks/catalog.json": null,
+    "tools/game-design-workbench/references/frameworks/cognitive-load.md": null,
+    "tools/game-design-workbench/references/frameworks/flow.md": null,
+    "tools/game-design-workbench/references/frameworks/four-keys.md": null,
+    "tools/game-design-workbench/references/frameworks/game-grammar.md": null,
+    "tools/game-design-workbench/references/frameworks/gameflow.md": null,
+    "tools/game-design-workbench/references/frameworks/gameplay-patterns.md": null,
+    "tools/game-design-workbench/references/frameworks/mda.md": null,
+    "tools/game-design-workbench/references/frameworks/playcentric.md": null,
+    "tools/game-design-workbench/references/frameworks/quantic-foundry.md": null,
+    "tools/game-design-workbench/references/frameworks/resource-economy.md": null,
+    "tools/game-design-workbench/references/frameworks/schell.md": null,
+    "tools/game-design-workbench/references/frameworks/self-determination.md": null,
+    "tools/game-design-workbench/references/frameworks/skill-atoms.md": null,
+    "tools/game-design-workbench/references/frameworks/theory-of-fun.md": null,
+    "tools/game-design-workbench/references/frameworks/working-memory.md": null,
+    "tools/game-design-workbench/references/frameworks/zpd-scaffolding.md": null,
+    "tools/game-design-workbench/references/inspect.md": null,
+    "tools/game-design-workbench/references/model.md": null,
+    "tools/game-design-workbench/references/review.md": null,
+    "tools/game-design-workbench/references/setup.md": null,
+    "tools/game-design-workbench/scripts/lib.mjs": null,
+    "tools/game-design-workbench/scripts/model.mjs": null,
+    "tools/game-design-workbench/scripts/queries.mjs": null,
+    "tools/game-design-workbench/scripts/reports.mjs": null,
+    "tools/game-design-workbench/scripts/setup.mjs": null,
+    "tools/game-design-workbench/scripts/workbench.mjs": null,
+    "tools/game-design-workbench/SKILL.md": null,
+    "tools/game-design-workbench/templates/aesthetics/.schema.md": null,
+    "tools/game-design-workbench/templates/aesthetics/.template.md": null,
+    "tools/game-design-workbench/templates/aesthetics/.usage.md": null,
+    "tools/game-design-workbench/templates/challenges/.schema.md": null,
+    "tools/game-design-workbench/templates/challenges/.template.md": null,
+    "tools/game-design-workbench/templates/challenges/.usage.md": null,
+    "tools/game-design-workbench/templates/controls/.schema.md": null,
+    "tools/game-design-workbench/templates/controls/.template.md": null,
+    "tools/game-design-workbench/templates/controls/.usage.md": null,
+    "tools/game-design-workbench/templates/decisions/.schema.md": null,
+    "tools/game-design-workbench/templates/decisions/.template.md": null,
+    "tools/game-design-workbench/templates/decisions/.usage.md": null,
+    "tools/game-design-workbench/templates/dynamics/.schema.md": null,
+    "tools/game-design-workbench/templates/dynamics/.template.md": null,
+    "tools/game-design-workbench/templates/dynamics/.usage.md": null,
+    "tools/game-design-workbench/templates/expectations/.schema.md": null,
+    "tools/game-design-workbench/templates/expectations/.template.md": null,
+    "tools/game-design-workbench/templates/expectations/.usage.md": null,
+    "tools/game-design-workbench/templates/experiments/.schema.md": null,
+    "tools/game-design-workbench/templates/experiments/.template.md": null,
+    "tools/game-design-workbench/templates/experiments/.usage.md": null,
+    "tools/game-design-workbench/templates/glossary/.schema.md": null,
+    "tools/game-design-workbench/templates/glossary/.template.md": null,
+    "tools/game-design-workbench/templates/glossary/.usage.md": null,
+    "tools/game-design-workbench/templates/hypotheses/.schema.md": null,
+    "tools/game-design-workbench/templates/hypotheses/.template.md": null,
+    "tools/game-design-workbench/templates/hypotheses/.usage.md": null,
+    "tools/game-design-workbench/templates/interactions/.schema.md": null,
+    "tools/game-design-workbench/templates/interactions/.template.md": null,
+    "tools/game-design-workbench/templates/interactions/.usage.md": null,
+    "tools/game-design-workbench/templates/levels/.schema.md": null,
+    "tools/game-design-workbench/templates/levels/.template.md": null,
+    "tools/game-design-workbench/templates/levels/.usage.md": null,
+    "tools/game-design-workbench/templates/measures/.schema.md": null,
+    "tools/game-design-workbench/templates/measures/.template.md": null,
+    "tools/game-design-workbench/templates/measures/.usage.md": null,
+    "tools/game-design-workbench/templates/mechanics/.schema.md": null,
+    "tools/game-design-workbench/templates/mechanics/.template.md": null,
+    "tools/game-design-workbench/templates/mechanics/.usage.md": null,
+    "tools/game-design-workbench/templates/nouns/.schema.md": null,
+    "tools/game-design-workbench/templates/nouns/.template.md": null,
+    "tools/game-design-workbench/templates/nouns/.usage.md": null,
+    "tools/game-design-workbench/templates/observations/.schema.md": null,
+    "tools/game-design-workbench/templates/observations/.template.md": null,
+    "tools/game-design-workbench/templates/observations/.usage.md": null,
+    "tools/game-design-workbench/templates/resources/.schema.md": null,
+    "tools/game-design-workbench/templates/resources/.template.md": null,
+    "tools/game-design-workbench/templates/resources/.usage.md": null,
+    "tools/game-design-workbench/templates/review-input.json": null,
+    "tools/game-design-workbench/templates/skills/.schema.md": null,
+    "tools/game-design-workbench/templates/skills/.template.md": null,
+    "tools/game-design-workbench/templates/skills/.usage.md": null,
+    "tools/game-design-workbench/templates/systems/.schema.md": null,
+    "tools/game-design-workbench/templates/systems/.template.md": null,
+    "tools/game-design-workbench/templates/systems/.usage.md": null,
+    "tools/game-design-workbench/templates/verbs/.schema.md": null,
+    "tools/game-design-workbench/templates/verbs/.template.md": null,
+    "tools/game-design-workbench/templates/verbs/.usage.md": null,
+    "tools/game-design-workbench/vendor/attendant/LICENSE": null,
+    "tools/game-design-workbench/vendor/attendant/references/collections.md": null,
+    "tools/game-design-workbench/vendor/attendant/references/commands.md": null,
+    "tools/game-design-workbench/vendor/attendant/references/migration.md": null,
+    "tools/game-design-workbench/vendor/attendant/references/third-party-notices.md": null,
+    "tools/game-design-workbench/vendor/attendant/scripts/attendant.mjs": null,
+    "tools/game-design-workbench/vendor/attendant/scripts/yaml.mjs": null,
+    "tools/game-design-workbench/vendor/attendant/SKILL.md": null
+  },
+  "dependencies": {
+    "node": ">=24.10.0",
+    "attendant": "vendored snapshot",
+    "yaml": "2.9.0 MIT"
+  },
+  "plan_id": "c0a12f191ffde0dedf7aa8636ec372e6ec2f3e516287d28238b45cdce841af1b"
+}

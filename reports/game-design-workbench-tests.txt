@@ -1,0 +1,31 @@
+✔ runner creates an empty collection from a temporary fixture (148.7918ms)
+✔ schema reports collection paths and live usage without treating it as a record (378.3922ms)
+✔ runner validates, projects, queries, searches, schemas, and creates records (611.9345ms)
+✔ runner updates one or many records only after batch validation (291.1176ms)
+✔ runner rejects malformed transport and preserves strict validation source (121.834ms)
+✔ runner accepts @file and stdin input and contains query writes (287.9576ms)
+✔ runner checks and applies reviewed Markdown migration plans (390.0282ms)
+✔ setup approval, idempotency, local-only execution, and conflict preservation (9022.9499ms)
+✔ stale setup approval fails before creating configuration (683.5831ms)
+✔ unconfigured frontmatter needs migration/fresh decision (1069.1484ms)
+✔ queries expose cases and authored ranks without correcting live source (3740.3141ms)
+✔ all SQL recipes run on fixture and return declared data (14673.7894ms)
+✔ term normalization, inactive disposition, collisions, and unknown synonyms (5789.7333ms)
+✔ CLI formats, limits, field selection, validation, unavailable commands, and errors (4205.327ms)
+✔ snapshot detects source changes and rejects escapes (1240.3298ms)
+✔ all 18 generated packs match catalog, queries, roles, and selected entrypoint links (64.1149ms)
+✔ dated reports preserve history, stable finding identity, and source freshness (3271.9082ms)
+✔ report rejects all-lenses, uncaptured sources, invalid structure, and incomplete runs (2197.3199ms)
+✔ CLI snapshot/output/report round trip and explicit extra-source capture (1967.625ms)
+✔ custom role binding reuses existing contracts and preserves local guidance/extra fields (2797.5905ms)
+✔ delivered example copy runs only its local snapshot on populated source (9228.8117ms)
+✔ generic validation explicitly does not enforce null-declared scalar subtypes (2936.7048ms)
+✔ oversized source and out-of-project junction fail without touching target (169.6117ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 63319.3152

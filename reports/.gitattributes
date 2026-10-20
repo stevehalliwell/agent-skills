@@ -1,0 +1,2 @@
+# Preserve checked artifact bytes and recorded SHA-256 values across checkout.
+* -text

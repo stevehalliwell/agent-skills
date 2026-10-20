@@ -772,11 +772,15 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Final integrated run: **23/23 passed** (**16 workbench + 7 existing Attendant tests**), Windows/Node v24.16.0. Delivered folder copied outside repository: local-only validation, populated queries/aliases/catalog, unchanged sources, and selected rank update all passed. Only selected record changed; body/immutable metadata/other authored ranks preserved.
 - Source and vendored references: **61 local links pass**; frontmatter and generated-pack checks pass. External access warnings remain as recorded above.
 - Saved scoped tutorial skill-atoms interpretation: `20261020T030047047Z-3af7318c`; one agent finding, partial coverage, no repair/simulation. Reopen confirms matching current source, historical status, and `freshly_run: false`. Setup re-plan reports zero changes/conflicts.
-- Remaining: offline review report and final handoff commit.
+- Step 6: offline review report at `reports/game-design-workbench-slice-1.html`; machine verification, final 23-test log, browser result, and original demo setup proposal retained in `reports/`.
+- Report static check passes: six sections, no charts, no packaging errors. Headed Chromium with HTTP(S) blocked passes anchors/direct hash/history, progress, theme, keyboard focus, mobile 320/390 px, reduced motion, JavaScript-disabled content, print CSS/PDF generation. Zero HTTP requests/browser errors; desktop/mobile screenshots inspected. Not an exhaustive accessibility/PDF-pagination audit.
+- Reusable report browser audit: `scripts/check-offline-report.mjs --help`. First audit hit disabled-page callback timeout; changed waits to Node timers and reran successfully on final HTML. Preview left open.
+- Fresh Git-index export passes setup idempotency and saved-review source matching. Fixed source vendor index/working CRLF mismatch by preserving existing bytes; no vendor logic changed. Strict owned-file whitespace check passes; default check's vendor CRLF warnings are not silently rewritten.
+- Slice 1 complete for review. Slices 2–5 remain unimplemented. No merge/push/publication performed.
 
 ## Comments
 
 - Unrelated untracked `skills/unity-cli/` remains untouched. Starting brief and supplied framework reference remain untracked.
 - Specification checks: 8 local links and 2 HTTP(S) URLs passed bundled skill-craft validators; whitespace check reported no errors. These are documentation checks, not workbench execution evidence.
 - Implementation authorized after refinement; current work isolated from original worktree. No task-management collection created.
-- Provisional engineering choice: first-slice queries reuse Attendant SQL/Node runtime rather than duplicate domain analysis in `.mjs`. C99 analysis belongs to later agreed slice. Cross-check usability during review.
+- First-slice engineering choice validated by local/copy/checkout tests: queries reuse Attendant SQL/Node runtime rather than duplicate domain analysis in `.mjs`. C99 analysis remains in later agreed slice; reviewer can assess bootstrap usability separately.
