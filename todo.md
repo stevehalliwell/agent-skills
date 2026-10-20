@@ -690,8 +690,8 @@ Static inspection of `skills/attendant/scripts/attendant.mjs` and `references/co
 - [x] Create `skills/game-design-workbench/SKILL.md`, conditionally loaded operation references, 18 pack documents, source citations, and original prompts. Each pack records actual source-access limits, including abstract/search-only evidence.
 - [x] Implement 19 core schema/usage/body-template sets, shared query support, setup/update/resume instructions, snapshot manifest, and local quickstart/dependencies. No supplemental theory datasets needed.
 - [x] Build bundled crate-and-switch source fixture and retained proposals, glossary, resource/control/formula examples, explicit case classifications, skill/challenge graph, and expected findings. No simulation execution claimed.
-- [ ] Test setup against empty and preconfigured temporary projects; preserve user files/configuration and honor Attendant proposal/apply gates. Test all first-slice walkthroughs, one selected framework per run, partial source, and unsupported-check disclosure.
-- [ ] Add identity/reference/alias tests with actual schemas; verify generic Attendant operations locally without global skill. Validate entrypoint/frontmatter/links and update repository skill index.
+- [x] Test setup against empty/preconfigured temporary projects, preservation, approval gates, query/report/rank-edit walkthroughs, partial source, and unsupported-check disclosure. Selected-pack routing/agent authority checked statically; no autonomous-agent benchmark claimed.
+- [x] Add identity/reference/alias tests with actual schemas; verify populated copied example and local Attendant rank update without global skill. Validate entrypoint/frontmatter/links and update repository skill index.
 
 Acceptance: [First-slice walkthroughs and acceptance](#first-slice-walkthroughs-and-acceptance). No broad native application or working simulation is implied.
 
@@ -768,7 +768,11 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Owned package text uses LF; vendored bytes remain unmodified. Attribute files accompany installed snapshot so recorded hashes survive checkout.
 - Step 4 final regression: **15/15 passed**. Added explicit untyped-scalar coverage and actual temporary Git commit/Windows autocrlf checkout round trip. Found/fixed CRLF false conflicts in managed instructions; package hashes and setup idempotency survive checkout.
 - Setup candidate scan now includes root Markdown and runs alongside existing registries; configured collection directories are excluded. Shallow scan depth/exclusions are explicit, not claimed exhaustive.
-- Remaining: final example-local snapshot, integrated verification, offline report.
+- Step 5: packaged **227 project-local tool/reference files** into tutorial using guarded setup. Initial reviewed proposal: 229 file changes, 19 reused collections, no new collections/conflicts/candidates. Field-selector bug found during direct use; fixed matching column metadata and unknown fields on empty results, then applied guarded two-file package update.
+- Final integrated run: **23/23 passed** (**16 workbench + 7 existing Attendant tests**), Windows/Node v24.16.0. Delivered folder copied outside repository: local-only validation, populated queries/aliases/catalog, unchanged sources, and selected rank update all passed. Only selected record changed; body/immutable metadata/other authored ranks preserved.
+- Source and vendored references: **61 local links pass**; frontmatter and generated-pack checks pass. External access warnings remain as recorded above.
+- Saved scoped tutorial skill-atoms interpretation: `20261020T030047047Z-3af7318c`; one agent finding, partial coverage, no repair/simulation. Reopen confirms matching current source, historical status, and `freshly_run: false`. Setup re-plan reports zero changes/conflicts.
+- Remaining: offline review report and final handoff commit.
 
 ## Comments
 

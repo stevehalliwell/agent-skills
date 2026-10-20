@@ -1,0 +1,4 @@
+* text eol=lf
+# Preserve vendored source bytes; fingerprints must survive checkout.
+vendor/** -text
+examples/crate-puzzle/tools/game-design-workbench/vendor/** -text

@@ -69,7 +69,11 @@ try {
     const result = command === 'resolve' ? await resolveTerm(root, options.term) : await runQuery(root, action, { collection: options.collection, limit: Number(options.limit ?? 1000) });
     data = result.data; provenance = result.snapshot;
     coverage = { status: data.truncated ? 'partial' : 'complete', operation: command === 'query' ? `query.${action}` : 'resolve', limitation: 'Declared data only; no native rank/scaffolding/formula interpretation.', projection_corrections: result.projection_corrections };
-    if (options.fields) data = { ...data, rows: data.rows.map(row => Object.fromEntries(options.fields.split(',').map(field => { if (!Object.hasOwn(row, field)) fail('FIELD_UNKNOWN', `Unknown row field: ${field}`); return [field, row[field]]; }))) };
+    if (options.fields) {
+      const fields = [...new Set(options.fields.split(','))];
+      for (const field of fields) if (!data.columns.includes(field)) fail('FIELD_UNKNOWN', `Unknown row field: ${field}`);
+      data = { ...data, columns: fields, rows: data.rows.map(row => Object.fromEntries(fields.map(field => [field, row[field]]))) };
+    }
   } else if (command === 'validate') {
     const result = await projected(root, async context => context.validation);
     data = result.data; provenance = result.snapshot;

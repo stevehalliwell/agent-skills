@@ -14,7 +14,7 @@ const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const roots = [];
 async function temporary(fixture = false) {
   const root = await mkdtemp(join(tmpdir(), 'gd-test space-é-')); roots.push(root);
-  if (fixture) await cp(join(home, 'examples/crate-puzzle'), root, { recursive: true, filter: source => !['.attendant', 'game-design-results', 'tools'].includes(basename(source)) });
+  if (fixture) await cp(join(home, 'examples/crate-puzzle'), root, { recursive: true, filter: source => !['.attendant', 'game-design-results', 'tools', 'AGENTS.md'].includes(basename(source)) });
   return root;
 }
 function cli(root, args, script = join(home, 'scripts/workbench.mjs')) {
@@ -44,6 +44,7 @@ test('setup approval, idempotency, local-only execution, and conflict preservati
   const result = cli(root, ['query', 'skills'], localScript);
   assert.equal(result.status, 0, JSON.stringify(result.json));
   assert.deepEqual(result.json.data.rows, []);
+  assert.equal(cli(root, ['query', 'skills', '--fields', 'missing_field'], localScript).json.errors[0].code, 'FIELD_UNKNOWN');
   // Ordinary Windows Git checkout must not invalidate owned-file/guidance hashes.
   for (const args of [['init', '-q'], ['-c', 'core.autocrlf=true', 'add', '.'], ['-c', 'user.name=Workbench Test', '-c', 'user.email=workbench@example.invalid', 'commit', '-qm', 'fixture'], ['-c', 'core.autocrlf=true', 'checkout-index', '-af']]) {
     const command = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
@@ -136,6 +137,7 @@ test('CLI formats, limits, field selection, validation, unavailable commands, an
   assert.equal(result.json.data.truncated, true);
   assert.equal(result.json.coverage.status, 'partial');
   assert.deepEqual(Object.keys(result.json.data.rows[0]), ['name', 'rank']);
+  assert.deepEqual(result.json.data.columns, ['name', 'rank']);
   assert.equal(cli(root, ['simulate']).json.errors[0].code, 'CAPABILITY_UNAVAILABLE');
   assert.equal(cli(root, ['query', 'skills', '--limit', '0']).status, 2);
   assert.equal(cli(root, ['query', 'skills', '--format', 'text']).json.errors[0].code, 'FORMAT_CONFLICT');
@@ -257,6 +259,36 @@ test('custom role binding reuses existing contracts and preserves local guidance
   assert.equal(await readFile(usage, 'utf8'), '# Local ability policy\nPreserve this guidance.\n');
   assert.match(await readFile(schema, 'utf8'), /local_note/);
   assert.equal((await runQuery(root, 'skills')).data.rows.length, 6);
+});
+
+test('delivered example copy runs only its local snapshot on populated source', async () => {
+  const root = await temporary();
+  await cp(join(home, 'examples/crate-puzzle'), root, { recursive: true, filter: source => !['.attendant', 'game-design-results'].includes(basename(source)) });
+  const script = join(root, 'tools/game-design-workbench/scripts/workbench.mjs');
+  const before = (await snapshot(root)).metadata.fingerprint;
+  assert.equal(cli(root, ['validate'], script).status, 0);
+  const skills = cli(root, ['query', 'skills'], script);
+  assert.equal(skills.json.data.rows.length, 6);
+  assert.equal(skills.json.provenance.fingerprint, before);
+  const matrix = cli(root, ['query', 'matrix'], script);
+  assert.equal(matrix.json.data.rows.filter(row => row.noun === 'nouns/crate' && row.verb === 'verbs/push').length, 3);
+  assert.equal(cli(root, ['resolve', '--term', 'BOX'], script).json.data.state, 'resolved');
+  assert.equal(cli(root, ['lenses'], script).json.data.length, 18);
+  assert.equal((await snapshot(root)).metadata.fingerprint, before);
+  assert.ok(!(await readdir(root)).includes('.attendant'));
+  const prior = await snapshot(root);
+  const selected = join(root, 'game-design/skills/coordinate.md');
+  const priorText = await readFile(selected, 'utf8');
+  const update = spawnSync(process.execPath, [join(root, 'tools/game-design-workbench/vendor/attendant/scripts/attendant.mjs'), 'update', '-c', 'skills', '-i', JSON.stringify([{ name: 'coordinate', fields: { rank: 3 } }]), '--project', root], { encoding: 'utf8' });
+  assert.equal(update.status, 0, update.stderr);
+  const after = await snapshot(root);
+  assert.deepEqual(after.metadata.sources.filter(item => prior.metadata.sources.find(old => old.path === item.path)?.sha256 !== item.sha256).map(item => item.path), ['game-design/skills/coordinate.md']);
+  const afterText = await readFile(selected, 'utf8');
+  assert.equal(afterText.split('\n---\n')[1], priorText.split('\n---\n')[1]);
+  for (const field of ['id', 'name', 'created_at']) assert.equal(afterText.match(new RegExp(`^${field}: (.+)$`, 'm'))[1], priorText.match(new RegExp(`^${field}: (.+)$`, 'm'))[1]);
+  const edited = cli(root, ['query', 'skills'], script).json.data.rows;
+  assert.equal(edited.find(row => row.name === 'coordinate').rank, 3);
+  assert.equal(edited.find(row => row.name === 'plan-push').rank, null);
 });
 
 test('generic validation explicitly does not enforce null-declared scalar subtypes', async () => {
