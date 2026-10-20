@@ -1,0 +1,35 @@
+✔ runner creates an empty collection from a temporary fixture (183.4045ms)
+✔ schema reports collection paths and live usage without treating it as a record (414.0246ms)
+✔ runner validates, projects, queries, searches, schemas, and creates records (629.8026ms)
+✔ runner updates one or many records only after batch validation (287.4325ms)
+✔ runner rejects malformed transport and preserves strict validation source (118.0194ms)
+✔ runner accepts @file and stdin input and contains query writes (288.0764ms)
+✔ runner checks and applies reviewed Markdown migration plans (369.5931ms)
+✔ setup approval, idempotency, local-only execution, and conflict preservation (14920.6535ms)
+✔ stale setup approval fails before creating configuration (1026.8637ms)
+✔ unconfigured frontmatter needs migration/fresh decision (1554.388ms)
+✔ queries expose cases and authored ranks without correcting live source (3381.7025ms)
+✔ all SQL recipes run on fixture and return declared data (16468.2649ms)
+✔ term normalization, inactive disposition, collisions, and unknown synonyms (4981.3229ms)
+✔ CLI formats, limits, field selection, validation, unavailable commands, and errors (3665.1041ms)
+✔ snapshot detects source changes and rejects escapes (989.8802ms)
+✔ all 18 generated packs match catalog, queries, roles, and selected entrypoint links (72.3116ms)
+✔ dated reports preserve history, stable finding identity, and source freshness (2513.6871ms)
+✔ report rejects all-lenses, uncaptured sources, invalid structure, and incomplete runs (1663.8178ms)
+✔ CLI snapshot/output/report round trip and explicit extra-source capture (1605.4292ms)
+✔ custom role binding reuses existing contracts and preserves local guidance/extra fields (4684.4064ms)
+✔ delivered example copy uses local workbench and required external Attendant on populated source (7456.8009ms)
+✔ generic validation explicitly does not enforce null-declared scalar subtypes (2369.3986ms)
+✔ required Attendant is explicit, never copied, and missing dependency cannot write (260.0891ms)
+✔ external dependency changes invalidate source/tool fingerprint (810.7315ms)
+✔ update removes only unchanged retired managed files and guards edited legacy copies (19161.3564ms)
+✔ fixture generator needs no YAML module or dependency install (4213.8024ms)
+✔ oversized source and out-of-project junction fail without touching target (149.9787ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 92211.198

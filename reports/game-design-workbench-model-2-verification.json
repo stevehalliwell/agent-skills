@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-20T20:20:26.922Z",
+  "implementation_commit": "087021c7454fe6d1c0e8be9d64ec0b5f2e13050d",
+  "platform": "win32",
+  "node": "24.16.0",
+  "model_version": 2,
+  "collections": 16,
+  "fixture": {
+    "records": 67,
+    "experiments": 2,
+    "stages": [
+      "proposed"
+    ],
+    "original_record_ids_retained": 67,
+    "merged_criterion_id": "01a15175-3c00-7003-8c7e-5f8225a0df35",
+    "criterion_provenance_values_and_nulls_retained": true,
+    "overall_player_experience": "not authored; explicit README section",
+    "aesthetics": "individual MDA A aspects, not overall player story"
+  },
+  "tests": {
+    "total": 27,
+    "passed": 27,
+    "failed": 0,
+    "log": "reports/game-design-workbench-model-2-tests.txt"
+  },
+  "static": {
+    "frontmatter": "pass",
+    "local_links": 219,
+    "pack_generation": "18 current; provisional, not completeness-verified",
+    "disclosure": "runtime reference owner; shared model before branches; local usages only; no parent-review back-links in guides"
+  },
+  "export": {
+    "base_commit": "087021c7454fe6d1c0e8be9d64ec0b5f2e13050d",
+    "index_workbench_inventory_sha256": "5fe13ed94f453f7156af6f817426af738470073aa7497551ca834ac17a652637",
+    "platform": "win32",
+    "node": "24.16.0",
+    "setup_changes": 0,
+    "conflicts": 0,
+    "collections": 16,
+    "experiment_rows": 2,
+    "skill_atom_rows": 6,
+    "saved_review": "20261020T192957597Z-4698820e",
+    "saved_review_source_match": false,
+    "expected_stale": true,
+    "historical": true,
+    "freshly_run": false,
+    "previous_review_source_match": false,
+    "stable_finding_ids": true,
+    "dependency_fingerprint": "7a516c4d7002594d1617fe0e5b1ad60c13767418d7beee383a3b17330a0a206a",
+    "review_dependency_fingerprint": "7a516c4d7002594d1617fe0e5b1ad60c13767418d7beee383a3b17330a0a206a"
+  },
+  "distribution_revision": "50da090fcc68e0cc1d1ded1ebf066508c2cd7d32ce0d2e624d30555874b9086d",
+  "installed_workbench_files": 201,
+  "framework_completeness": "deferred: individual pass before Slice 2",
+  "not_run": [
+    "new framework research/review",
+    "native C99 analysis",
+    "viewer/browser audit",
+    "simulation/playtest"
+  ],
+  "historical_evidence": "Earlier baselines, review runs, and offline report retained unchanged; no new review invented for export freshness.",
+  "sha256": {
+    "skills/game-design-workbench/test/workbench.test.mjs": "f89af23184163c5652c682936b451d07bc605db74971a7cd55bdd37f57f974d2",
+    "skills/game-design-workbench/scripts/model.mjs": "f1f7af911b0023d757e28e812b675fa0df19a82a3c867e4427a04977982ad608",
+    "skills/game-design-workbench/scripts/setup.mjs": "ae0bb79d4e73944945938889331a82e2323a7856022eb32e270a56603e75e9b0",
+    "scripts/consolidate-workbench-experiments.mjs": "6d02fd08d9772771b58c89d07df5388ff63fe7f1e513272f5ba7521078d8cc8d",
+    "scripts/check-workbench-export.mjs": "ab154c487fffeba2326fb3ab4166cc262c6ba0643bc3ad43903d62f4c9b9c3cf",
+    "reports/game-design-workbench-model-2-tests.txt": "97b7f4f8bb25b38c0bcaa6192c78068129ddede07c0aac61a64289fa7cc4c733",
+    "reports/game-design-workbench-model-2-export.json": "c9ab3017e90511ecc152c76d426e53c3fb27694b4426bdf986d9af559ccea137"
+  }
+}

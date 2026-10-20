@@ -751,7 +751,8 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Preserve original planning-hypothesis UUID as experiment; embed timing criterion with original UUID, threshold, rate, and authored nulls. Do not conflate human-planning investigation with assumed-delay timing model. Current fixture has 67 records across 16 collections.
 - Runtime prerequisites have one reference owner. Shared model/authority rules load before operation branches; collection usages keep local meaning only. Framework guides no longer link back to already-read review parent or repeat shared boilerplate.
 - Example README surfaces unauthored overall experience/player story separately from local MDA aesthetic. No new game goals or player voice invented.
-- Verification in progress. Earlier handoff/report evidence remains historical; do not relabel it current.
+- Verification: 27/27 tests pass; 219 local links pass; frontmatter and pack generation checks pass. Staged export verifies 16 collections, two proposed-stage investigations, six skill atoms, unchanged setup, and historical/stale reviews with stable finding IDs. 67 original UUIDs retained; merged criterion UUID/values/nulls preserved in experiment provenance.
+- Current implementation commit: `087021c`. Fresh evidence lives in `reports/game-design-workbench-model-2-*`; earlier handoff/report evidence remains unchanged and historical. No new framework review, experiment execution, viewer, or browser audit performed.
 
 ## Comments
 
