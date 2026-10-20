@@ -26,18 +26,16 @@ When an explicitly authorized experiment has executable implementation:
 3. Execute from that committed state, using ordinary checkout/worktree when needed to isolate later edits. Identify external inputs/toolchain versions explicitly. A commit alone does not freeze files read from a dirty working tree. Done: actual execution uses declared inputs.
 4. Record commit, command, versions, seed, effective inputs, limits, completion status, and results in owning experiment. Keep rebuildable outputs separate from non-rebuildable evidence. Done: observations and modeled outputs remain distinct from interpretation.
 
-Git and agent workflow provide copying, merge updates, history, and checkpoints. Do not add custom lifecycle programs for these steps. Keep executable code for domain computation, repeatable artifact generation, and tests where it removes actual repetitive work.
+Git and agent workflow provide copying, merge updates, history, and checkpoints. Do not add custom lifecycle programs for these steps. Keep executable code for domain computation and tests. Copying/editing existing Markdown assets is agent work; do not add code mirrors to regenerate them.
 
-## Repository authoring tools
+## Repository asset checks
 
-These maintain shipped assets; they are not installed into game projects or invoked during routine review. Node.js `>=24.10.0` for maintainer checks:
+Edit shipped templates, example Markdown, framework guides, and catalog directly. Templates are authoritative starting assets copied into approved destinations; each live project's schema/usage then owns its contract. Example owns its design data. No generator or JavaScript content mirror.
+
+Run from repository root with Node.js `>=24.10.0`:
 
 ```sh
-node skills/game-design-workbench/scripts/build-example.mjs --output <empty-directory>
-node skills/game-design-workbench/scripts/build-example.mjs --templates --output <empty-directory>
 node --test skills/game-design-workbench/test/authoring.test.mjs
 ```
 
-Run from repository root. Generator reads `model.mjs` for 14 collection contracts, `fixture-data.mjs` for deterministic tutorial records/UUIDs, and authored example concept Markdown. It refuses non-empty output; `--templates` explicitly rewrites shipped generated templates. These are synthetic fixtures, not play evidence. Do not use generator to update a user's live design.
-
-Framework guides and catalog are edited directly; no document generator or JavaScript content mirror. Test integration with external Attendant uses `GD_ATTENDANT_SKILL` only to locate that installed dependency during maintainer tests; tests mark integration skipped when absent. This variable is not part of normal skill use.
+Tests read shipped files and validate ordinary temporary copies through public Attendant; they do not regenerate templates or records. `GD_ATTENDANT_SKILL` locates installed Attendant for maintainer integration tests only; integration is explicitly skipped when absent. This variable is not part of normal skill use.

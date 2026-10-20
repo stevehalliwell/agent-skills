@@ -339,7 +339,7 @@ Not yet established by execution: authored pack quality/source research, schema/
 
 ### Table responsibilities
 
-Current ownership, lifecycle, and partial-state contract: [model reference](skills/game-design-workbench/references/model.md). Distribution field/usage/template source: [model.mjs](skills/game-design-workbench/scripts/model.mjs). Live project schema/usage remains authoritative after setup. Do not keep another field dictionary in this task record.
+Current ownership, lifecycle, and partial-state contract: [model reference](skills/game-design-workbench/references/model.md). Distribution field/usage/template authority: [shipped templates](skills/game-design-workbench/templates/), edited directly. Live project schema/usage remains authoritative after setup. Do not keep another field dictionary in this task record.
 
 Model version 2 consolidates investigation data into experiments. Future executable criteria encoding needs refinement as experiment work proceeds. Earlier outline/research files are planning inputs, not current field contracts.
 
@@ -349,7 +349,7 @@ New collections require distinct source ownership and an example showing why exi
 
 All 18 packs ship as attributed, independently authored guidance in first slice, with necessary collection templates and query helpers. Reuse Attendant queries or direct record inspection where sufficient; add C99 helpers when needed and justify `.mjs` exceptions. Each pack declares scope, useful source records, original questions, available queries, evidence limits, and missing-data behavior. Empty optional tables do not block conceptual discussion; reports identify unavailable data/checks. Do not add one collection per theory or require framework labels on every record.
 
-Per-framework scope, role/query mappings, questions, and source limits have one authoring owner: [pack source](skills/game-design-workbench/scripts/pack-data.mjs), with detailed guidance in `pack-guidance.mjs`. Catalog and guides are generated projections, not independent copies to maintain.
+Each [framework guide](skills/game-design-workbench/references/frameworks/) owns its scope, relevant inputs/inspection topics, questions, and source limits. Edit guides directly; catalog is discovery index, not an executable recipe or JavaScript content mirror.
 
 Section E perspectives are cross-cutting prompts attached to relevant packs, not extra mandatory datasets or an all-perspectives command. Framework-specific tools must name their actual query and required records; prefer shared C99 operations. Justify any dedicated `.mjs` query and document Node requirement. A question-only pack is usable without pretending its interpretive review is implemented in C.
 
@@ -659,7 +659,7 @@ Current source/workflow contract: [concept and working mode](skills/game-design-
 
 - [x] Remove generic lifecycle/query/report runtime and installed example copy; use Attendant, agent-guided merge, and ordinary Git instead.
 - [x] Remove completed fixture migration programs and legacy wrapper export checker. Keep old evidence unchanged; Git retains deleted code.
-- [x] Edit framework guides/catalog directly; remove JavaScript content mirrors/generator. Keep only deterministic fixture/template authoring modules and artifact/integration tests.
+- [x] Edit template files, example Markdown, and framework guides/catalog directly. Remove generators and JavaScript content mirrors. Tests validate shipped assets and ordinary temporary copies, not regeneration.
 - [x] Update setup, capture, inspection, review, intent comparison, experiment checkpoint instructions, example, and repository index. No normal-use custom environment/manifest requirement.
 
 ### Framework completeness pass — before Slice 2
@@ -812,9 +812,9 @@ These checks describe earlier deliveries, including retired runtime. They are no
 ## Workflow simplification verification
 
 - Removed six runtime modules including `lib.mjs`, wrapper CLI/projections/report storage/Git parser, installed seven-module example copy, three completed migration programs, legacy export checker, and document generator/content mirrors. Removed tests of retired interfaces.
-- Retained three authoring modules: `build-example.mjs` emits deterministic test/tutorial assets; `model.mjs` owns generated template data; `fixture-data.mjs` owns fixture records/UUIDs. `test/authoring.test.mjs` checks artifacts and public Attendant integration. Repository `check-offline-report.mjs` remains historical HTML verification, not skill runtime.
-- Checked installed copy before removal: all 189 files matched manifest; no local extras/edits. Canonical 63 records, 14 contracts, authored concept, and all reports/baselines unchanged.
-- Current checks: 4/4 authoring/integration tests pass, including canonical/generated field equality, strict external Attendant validation, direct query examples, null ranks, custom ignored proposal, and rank-only update preservation. Skill frontmatter and 230 local links/anchors pass. Ordinary Git index export passes same 4 tests; missing-dependency test run explicitly skips integration (3 pass, 1 skip). No new report generation, framework review, autonomous-agent merge benchmark, or native execution claimed.
+- Removed remaining template/example generator and both JavaScript data mirrors. Shipped templates and example Markdown own their respective content. No `scripts/` directory remains in skill; `test/authoring.test.mjs` validates real assets through public Attendant. Repository `check-offline-report.mjs` remains historical HTML verification, not skill runtime.
+- Checked installed copy before removal: all 189 files matched manifest; no local extras/edits. Canonical 63 records, authored concept, contract field definitions, and reports/baselines preserved. Removed obsolete generator notices from 28 schema bodies; frontmatter unchanged.
+- Current checks: 3/3 tests pass against real assets and ordinary temporary copies. External Attendant validates all 14 copied empty template collections and 63 example records/unique UUIDs; tests cover null rank, proposals, and rank-only update preservation. Ordinary Git index export passes same 3 tests. Without dependency, 2 pass/1 integration skip. Skill frontmatter and local links pass, including this record. No active generator imports/commands/notices remain. Earlier 4-test generator-based results are historical. No new report generation or framework review.
 
 ## Comments
 

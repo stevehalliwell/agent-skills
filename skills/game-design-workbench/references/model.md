@@ -1,6 +1,6 @@
 # Source model contract
 
-Live schemas and usage are authoritative for actual fields. Distribution templates are starting contracts, not instructions to overwrite local schemas. No separate database or collection per theory.
+Live schemas and usage are authoritative for actual fields. Shipped template files are authoritative starting contracts: copy/adapt them rather than regenerate them from code. They are not instructions to overwrite local schemas. No separate database or collection per theory.
 
 ## Owners
 

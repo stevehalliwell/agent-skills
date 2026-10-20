@@ -18,4 +18,4 @@ One Markdown game-design model, selected framework reviews, and agent workflows 
 
 ## Maintenance
 
-Edit framework guides/catalog directly. Three authoring modules generate consistent templates and deterministic tutorial records; one authoring test file checks those artifacts and integration with external Attendant. They are repository tools, not project runtime requirements.
+Edit templates, example Markdown, framework guides, and catalog directly. No generators or JavaScript content mirrors. One test file validates shipped assets and temporary copies through external Attendant; it is not a project runtime requirement.
