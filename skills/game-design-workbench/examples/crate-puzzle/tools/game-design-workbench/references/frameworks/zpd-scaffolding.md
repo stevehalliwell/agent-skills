@@ -24,9 +24,9 @@ Use only when this lens is selected. Follow [review operation](../review.md); do
 
 ## Inputs and query support
 
-Roles: `skills`, `challenges`, `levels`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `levels`, `observations`. Read actual role mapping and live schema/usage before writing.
 
-Available recipes: `query skills`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
 
 ## Working concepts
 

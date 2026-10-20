@@ -12,7 +12,7 @@ Markdown is source of truth; .attendant/ is disposable. Configuration: .pi/atten
 - systems: game-design/systems/.schema.md; game-design/systems/.usage.md
 - dynamics: game-design/dynamics/.schema.md; game-design/dynamics/.usage.md
 - aesthetics: game-design/aesthetics/.schema.md; game-design/aesthetics/.usage.md
-- skills: game-design/skills/.schema.md; game-design/skills/.usage.md
+- skill-atoms: game-design/skill-atoms/.schema.md; game-design/skill-atoms/.usage.md
 - challenges: game-design/challenges/.schema.md; game-design/challenges/.usage.md
 - levels: game-design/levels/.schema.md; game-design/levels/.usage.md
 - controls: game-design/controls/.schema.md; game-design/controls/.usage.md

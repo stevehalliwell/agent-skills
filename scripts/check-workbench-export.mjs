@@ -55,10 +55,10 @@ try {
   const plan = invoke(helper, project, ['setup', 'plan']);
   assert.equal(plan.files.length, 0, 'Exported setup has pending changes.');
   assert.equal(plan.conflicts.length, 0, 'Exported setup conflicts.');
-  const skills = invoke(helper, project, ['query', 'skills', '--fields', 'name,rank']);
-  assert.equal(skills.rows.length, 6);
-  assert.equal(skills.rows.find(row => row.name === 'coordinate').rank, 2);
-  assert.equal(skills.rows.find(row => row.name === 'plan-push').rank, null);
+  const skillAtoms = invoke(helper, project, ['query', 'skill-atoms', '--fields', 'name,rank']);
+  assert.equal(skillAtoms.rows.length, 6);
+  assert.equal(skillAtoms.rows.find(row => row.name === 'coordinate').rank, 2);
+  assert.equal(skillAtoms.rows.find(row => row.name === 'plan-push').rank, null);
   const review = invoke(helper, project, ['report', 'show', options['--run-id']]);
   assert.equal(review.matches_current_source, true, 'Selected review is stale in export.');
   assert.equal(review.historical, true);
@@ -70,9 +70,9 @@ try {
     assert.deepEqual(review.report.findings.map(item => item.id).sort(), previous.report.findings.map(item => item.id).sort());
   }
   assert.equal(git(['ls-files', '--stage', '--', 'skills/game-design-workbench']), inventory, 'Workbench index changed during verification.');
-  const data = { base_commit: git(['rev-parse', 'HEAD']), index_workbench_inventory_sha256: createHash('sha256').update(inventory).digest('hex'), platform: process.platform, node: process.versions.node, setup_changes: 0, conflicts: 0, skill_rows: skills.rows.length, saved_review: options['--run-id'], saved_review_source_match: true, historical: true, freshly_run: false, ...(previous ? { previous_review_source_match: false, stable_finding_ids: true } : {}), dependency_fingerprint: review.report.source_state.dependencies.attendant };
+  const data = { base_commit: git(['rev-parse', 'HEAD']), index_workbench_inventory_sha256: createHash('sha256').update(inventory).digest('hex'), platform: process.platform, node: process.versions.node, setup_changes: 0, conflicts: 0, skill_atom_rows: skillAtoms.rows.length, saved_review: options['--run-id'], saved_review_source_match: true, historical: true, freshly_run: false, ...(previous ? { previous_review_source_match: false, stable_finding_ids: true } : {}), dependency_fingerprint: review.report.source_state.dependencies.attendant };
   await rm(temporary, { recursive: true, force: true }); temporary = undefined;
-  console.log(json ? JSON.stringify({ schema_version: 1, ok: true, data, errors: [] }) : `Export passes: setup unchanged; six skills; saved review matches; required Attendant stays external.${previous ? ' Previous review stays stale; finding IDs stable.' : ''}`);
+  console.log(json ? JSON.stringify({ schema_version: 1, ok: true, data, errors: [] }) : `Export passes: setup unchanged; six skill atoms; saved review matches; required Attendant stays external.${previous ? ' Previous review stays stale; finding IDs stable.' : ''}`);
 } catch (error) {
   console.error(error.message);
   if (json) console.log(JSON.stringify({ schema_version: 1, ok: false, data: null, errors: [{ code: error.code ?? 'CHECK_FAILED', message: error.message }] }));

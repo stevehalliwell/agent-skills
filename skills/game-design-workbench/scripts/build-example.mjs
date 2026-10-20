@@ -7,7 +7,7 @@ import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { model, schemaFor, usageFor } from './model.mjs';
-import { records } from './fixture-data.mjs';
+import { records, fixtureIdentities } from './fixture-data.mjs';
 const home = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 if (args.includes('--help')) {
@@ -39,7 +39,7 @@ const created = '2026-10-19T00:00:00.000Z';
 const timestamp = Date.parse(created).toString(16).padStart(12, '0');
 for (const record of records) {
   const digest = createHash('sha256').update(`${record.role}/${record.name}`).digest('hex');
-  const id = `${timestamp.slice(0, 8)}-${timestamp.slice(8)}-7${digest.slice(0, 3)}-8${digest.slice(3, 6)}-${digest.slice(6, 18)}`;
+  const id = fixtureIdentities[`${record.role}/${record.name}`] ?? `${timestamp.slice(0, 8)}-${timestamp.slice(8)}-7${digest.slice(0, 3)}-8${digest.slice(3, 6)}-${digest.slice(6, 18)}`;
   const fields = {};
   for (const [key, declaration] of Object.entries(schemaFor(record.role))) fields[key] = Array.isArray(declaration) ? declaration[0] : declaration === 'string[]' || String(declaration).startsWith('?ref[]:') ? [] : String(declaration).startsWith('?ref:') || declaration === '?datetime' ? null : declaration;
   await put(join(output, 'game-design', record.role, `${record.name}.md`), `${frontmatter({ id, name: record.name, created_at: created, desc: record.desc, tags: [], ...fields, status: record.status, ...record.fields })}${record.body}\n`);

@@ -6,12 +6,12 @@ desc: Combined crate and switch challenge
 tags: []
 status: accepted
 introduces:
-  - skills/coordinate
+  - skill-atoms/coordinate
 practises: []
 requires:
-  - skills/plan-push
-  - skills/route-switch
-  - skills/coordinate
+  - skill-atoms/plan-push
+  - skill-atoms/route-switch
+  - skill-atoms/coordinate
 tests_mastery: []
 entry: false
 next: []

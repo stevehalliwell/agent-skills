@@ -6,7 +6,7 @@ desc: Movement introduction
 tags: []
 status: accepted
 introduces:
-  - skills/move
+  - skill-atoms/move
 practises: []
 requires: []
 tests_mastery: []

@@ -4,7 +4,7 @@ Inspect without repairs or framework review. Read actual role mapping/schema/usa
 
 ```sh
 node <workbench>/scripts/workbench.mjs query matrix --project <project> --json
-node <workbench>/scripts/workbench.mjs query skills --project <project> --fields name,rank,prerequisites --json
+node <workbench>/scripts/workbench.mjs query skill-atoms --project <project> --fields name,rank,prerequisites --json
 node <workbench>/scripts/workbench.mjs query routes --project <project> --json
 node <workbench>/scripts/workbench.mjs query mda --project <project> --json
 node <workbench>/scripts/workbench.mjs query decisions --project <project> --json
@@ -14,7 +14,7 @@ node <workbench>/scripts/workbench.mjs resolve --term "box" --project <project> 
 ## Query semantics
 
 - `matrix`: accepted explicit cases expanded per applicable noun. Multiple cases per pair remain separate; contextual nouns stay in source. Empty Cartesian cells are not generated. `coverage` distinguishes defined, unknown, excluded, not_applicable; inspect prose to distinguish no effect from unknown effect.
-- `skills`: accepted authored ranks/prerequisites/mechanic links. No computed rank placement, cycle detection, descendant rewrite, capability estimate, or graph layout.
+- `skill-atoms`: accepted authored ranks/prerequisites/mechanic links. No computed rank placement, cycle detection, descendant rewrite, capability estimate, or graph layout.
 - `routes`: accepted entry/next links and introduction/practice/required/mastery lists. Every next edge is declared structural opportunity, not geometry or game-state reachability. Do not assume list order is a route.
 - `mda`: accepted aesthetics/dynamics/systems/mechanics inventory with `link_kind` and declared links; one dynamics row per relationship kind. Agent can follow/reverse links or notice disconnected inventory records. No emotional inference.
 - `controls`: accepted typed declarations, literal values, units, and formula text. No evaluation, conversion, bound validation, temporary overrides, or exports.

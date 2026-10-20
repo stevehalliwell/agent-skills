@@ -1,5 +1,5 @@
 {
-  "scope": ["skills/coordinate authored rank and immediate prerequisites"],
+  "scope": ["skill-atoms/coordinate authored rank and immediate prerequisites"],
   "findings": [
     {
       "code": "skill.rank-intent",
@@ -8,9 +8,9 @@
       "severity": "warning",
       "records": ["01a15175-3c00-7529-8fb6-09255d506737", "01a15175-3c00-7769-8d3b-09be0d6c31b8"],
       "sources": [
-        {"path": "game-design/skills/coordinate.md", "field": "rank"},
-        {"path": "game-design/skills/coordinate.md", "field": "prerequisites"},
-        {"path": "game-design/skills/route-switch.md", "field": "rank"}
+        {"path": "game-design/skill-atoms/coordinate.md", "field": "rank"},
+        {"path": "game-design/skill-atoms/coordinate.md", "field": "prerequisites"},
+        {"path": "game-design/skill-atoms/route-switch.md", "field": "rank"}
       ],
       "trigger_key": "authored-order",
       "reason": "Coordinate is authored rank 2 and declares route-switch, authored rank 3, as an AND prerequisite. Plan-push, its other prerequisite, remains unranked. This raises a question about intended conceptual order; it is a manual interpretation, not an executed native check or evidence of learner incapability.",

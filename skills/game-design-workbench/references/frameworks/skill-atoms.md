@@ -24,9 +24,9 @@ Use only when this lens is selected. Follow [review operation](../review.md); do
 
 ## Inputs and query support
 
-Roles: `skills`, `challenges`, `levels`, `mechanics`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `levels`, `mechanics`. Read actual role mapping and live schema/usage before writing.
 
-Available recipes: `query skills`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
 
 ## Working concepts
 
@@ -41,7 +41,7 @@ Available recipes: `query skills`; `query routes`; `query records --collection <
 2. Inspect immediate prerequisites and relevant declared routes. Keep AND dependencies separate from alternative challenge links. Read descriptions before deciding whether the links represent genuine conceptual needs.
 3. Compare authored ranks without filling nulls or computing replacement values. A prerequisite placed later is a question about intent, not an instruction to reorder the graph.
 4. Trace where the selected skill could be introduced, practised, combined, and used in a changed context. Mark undocumented opportunities and bypasses without declaring those routes impossible.
-5. Return the specific loop, dependency question, and evidence gap. If an edit is explicitly requested, change only the selected authored field. Do not propagate ranks, infer mastered skills, or repair unrelated routes.
+5. Return the specific loop, dependency question, and evidence gap. If an edit is explicitly requested, change only the selected authored field. Do not propagate ranks, infer mastered skill atoms, or repair unrelated routes.
 
 ## Original prompts
 
@@ -67,7 +67,7 @@ Available recipes: `query skills`; `query routes`; `query records --collection <
 
 ## Common traps
 
-- Do not infer rank from prerequisite depth. Late roots and unranked skills are valid authored states.
+- Do not infer rank from prerequisite depth. Late roots and unranked skill atoms are valid authored states.
 - Do not treat AND prerequisites as interchangeable routes. All declared prerequisite links matter to the conceptual claim.
 - Fixing one rank does not validate the learning design. Keep structural editing separate from evidence of understanding.
 

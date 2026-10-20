@@ -9,12 +9,12 @@ Open `examples/crate-puzzle/` as a project and follow [walkthrough](examples/cra
 From canonical repository root:
 
 ```sh
-node skills/game-design-workbench/scripts/workbench.mjs query skills --project skills/game-design-workbench/examples/crate-puzzle --fields name,rank --json
+node skills/game-design-workbench/scripts/workbench.mjs query skill-atoms --project skills/game-design-workbench/examples/crate-puzzle --fields name,rank --json
 node skills/game-design-workbench/scripts/workbench.mjs query matrix --project skills/game-design-workbench/examples/crate-puzzle --json
 node skills/game-design-workbench/scripts/workbench.mjs lenses --json
 ```
 
-Expected: six skills, coordinate rank 2, plan-push null, three distinct crate/push cases. Closed-exit walking is unknown; wall activation is explicitly not applicable. These are source facts, not engine execution or design verdicts.
+Expected: six skill atoms, coordinate rank 2, plan-push null, three distinct crate/push cases. Closed-exit walking is unknown; wall activation is explicitly not applicable. These are source facts, not engine execution or design verdicts.
 
 For an agent, load [skill instructions](SKILL.md). Narrow requests work best: `Inspect declared crate/push cases`, `Review combined-room with skill-atoms; do not change source`, or `Capture pushing costs one energy`.
 

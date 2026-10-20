@@ -30,7 +30,7 @@ For a compatible existing collection, create/update one or a reviewed batch thro
 ```
 
 ```sh
-node <attendant-skill>/scripts/attendant.mjs update --collection <skills-alias> --items @rank-update.json --project <project>
+node <attendant-skill>/scripts/attendant.mjs update --collection <skill-atoms-alias> --items @rank-update.json --project <project>
 node <workbench>/scripts/workbench.mjs validate --project <project> --json
 ```
 
@@ -41,7 +41,7 @@ Attendant preserves body and immutable identity metadata. It may reserialize fro
 - Edit selected authored `rank` only; preserve `id`, `name`, `created_at`, body, unrelated metadata, and all descendants' authored ranks.
 - Rank accepts null or JSON-safe signed integer in intended model contract. Zero and negative ranks are valid. No automatic prerequisite-depth conversion.
 - Explain remaining conflicts rather than repairing them. Derived display movement is not source mutation; native display/resolver is deferred.
-- For tutorial coordinate 2 → 3, use exact update above. Compare selected record and every other source file before/after; query skills again. Do not claim prerequisite conflict detection is automated in this release.
+- For tutorial coordinate 2 → 3, use exact update above. Compare selected record and every other source file before/after; query skill-atoms again. Do not claim prerequisite conflict detection is automated in this release.
 
 ## Definition changes
 

@@ -9,7 +9,7 @@ import { projected, runQuery, resolveTerm } from './queries.mjs';
 import { catalog, saveReport, showReport } from './reports.mjs';
 const help = {
   release: '0.1.0 guided workbench; Node.js >=24.10.0; required attendant skill via GD_ATTENDANT_SKILL',
-  commands: ['setup plan [--mapping map.json] [--fresh]', 'setup apply --approve <plan-id> [same mapping/fresh options]', 'capabilities', 'lenses', 'query <matrix|skills|routes|mda|decisions|glossary|controls|evidence>', 'query records --collection <alias>', 'resolve --term <text>', 'validate', 'snapshot [--include <comma-separated-extra-source-paths>]', 'report save --lens <id> --input <findings.json> --snapshot <snapshot.json>', 'report show <run-id>'],
+  commands: ['setup plan [--mapping map.json] [--fresh]', 'setup apply --approve <plan-id> [same mapping/fresh options]', 'capabilities', 'lenses', 'query <matrix|skill-atoms|routes|mda|decisions|glossary|controls|evidence>', 'query records --collection <alias>', 'resolve --term <text>', 'validate', 'snapshot [--include <comma-separated-extra-source-paths>]', 'report save --lens <id> --input <findings.json> --snapshot <snapshot.json>', 'report show <run-id>'],
   common: '--project <root> --json --format json|text --fields <comma-separated-row-fields> --output <new-file> --limit <1..10000>',
   contract: 'stdout=data; stderr=diagnostics; exit 0 completed, 1 validation findings, 2 invalid input/runtime/approval. GD_AGENT=1 selects noninteractive JSON. No prompts or implicit consent.',
   unavailable: ['native C99 checks/views', 'formula evaluation/control exports', 'simulation/sweep/replay execution'],

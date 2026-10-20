@@ -299,7 +299,7 @@ These are recurring perspectives we discussed alongside the named frameworks. Th
 
 Maintain human-editable Markdown/frontmatter source records. Use Attendant's collection/reference/query capabilities where helpful, without making the visualisers dependent on a particular task manager, ORM, database or long-running service.
 
-Possible base record categories: `nouns`, `verbs`, `interactions`, `mechanics`, `systems`, `dynamics`, `aesthetics`, `skills`, `challenges`, `levels`, `controls`, `measures`, `expectations`, `experiments`, `hypotheses`, `observations`, and `decisions`. These are starting vocabulary, **not mandatory types for every game**.
+Possible base record categories: `nouns`, `verbs`, `interactions`, `mechanics`, `systems`, `dynamics`, `aesthetics`, `skill-atoms`, `challenges`, `levels`, `controls`, `measures`, `expectations`, `experiments`, `hypotheses`, `observations`, and `decisions`. These are starting vocabulary, **not mandatory types for every game**.
 
 Framework-specific classifications should generally be derived, attached as optional annotations, or requested when needed—not mandated on every file.
 

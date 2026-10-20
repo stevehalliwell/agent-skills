@@ -50,6 +50,7 @@ export async function planSetup(root, options = {}) {
   const manifestPath = `${target}/manifest.json`;
   const priorBytes = await optional(await safePath(root, manifestPath));
   const prior = priorBytes ? JSON.parse(priorBytes) : null;
+  if (Object.hasOwn(prior?.roles ?? {}, 'skills')) fail('COLLECTION_RENAME_REQUIRED', 'Legacy skills collection role needs explicit migration to skill-atoms before setup/update. Preserve record IDs and rename references; do not create a second empty collection. Read references/setup.md.');
   const mapping = { ...Object.fromEntries(roles.map(role => [role, role])), ...(prior?.roles ?? {}), ...(options.mapping ?? {}) };
   if (Object.keys(mapping).some(role => !roles.includes(role)) || new Set(Object.values(mapping)).size !== roles.length || Object.values(mapping).some(alias => typeof alias !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(alias))) fail('MAPPING_INVALID', 'Map distinct known roles to safe collection aliases.');
   const configured = await collections(root);

@@ -10,7 +10,7 @@ capabilities
 lenses
 setup plan [--mapping map.json] [--fresh]
 setup apply --approve <plan-id> [same mapping/fresh options]
-query matrix|skills|routes|mda|decisions|glossary|controls|evidence
+query matrix|skill-atoms|routes|mda|decisions|glossary|controls|evidence
 query records --collection <configured-alias>
 resolve --term <text>
 validate

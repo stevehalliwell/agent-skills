@@ -85,13 +85,13 @@
     "path": "references/frameworks/skill-atoms.md",
     "attribution": "Daniel Cook, The Chemistry of Game Design (original article; 2021 repost)",
     "required_roles": [
-      "skills",
+      "skill-atoms",
       "challenges",
       "levels",
       "mechanics"
     ],
     "queries": [
-      "skills",
+      "skill-atoms",
       "routes",
       "records"
     ]
@@ -103,14 +103,14 @@
     "path": "references/frameworks/theory-of-fun.md",
     "attribution": "Raph Koster, A Theory of Fun for Game Design; 2003 presentation and book",
     "required_roles": [
-      "skills",
+      "skill-atoms",
       "challenges",
       "mechanics",
       "hypotheses",
       "observations"
     ],
     "queries": [
-      "skills",
+      "skill-atoms",
       "routes",
       "evidence"
     ]
@@ -122,14 +122,14 @@
     "path": "references/frameworks/flow.md",
     "attribution": "Mihaly Csikszentmihalyi, Flow: The Psychology of Optimal Experience (1990)",
     "required_roles": [
-      "skills",
+      "skill-atoms",
       "challenges",
       "mechanics",
       "hypotheses",
       "observations"
     ],
     "queries": [
-      "skills",
+      "skill-atoms",
       "routes",
       "evidence"
     ]
@@ -161,13 +161,13 @@
     "path": "references/frameworks/cognitive-load.md",
     "attribution": "John Sweller, Cognitive Load During Problem Solving: Effects on Learning (1988)",
     "required_roles": [
-      "skills",
+      "skill-atoms",
       "challenges",
       "mechanics",
       "observations"
     ],
     "queries": [
-      "skills",
+      "skill-atoms",
       "routes",
       "records"
     ]
@@ -179,13 +179,13 @@
     "path": "references/frameworks/working-memory.md",
     "attribution": "George A. Miller (1956); Nelson Cowan (2001, later reassessments)",
     "required_roles": [
-      "skills",
+      "skill-atoms",
       "challenges",
       "mechanics",
       "observations"
     ],
     "queries": [
-      "skills",
+      "skill-atoms",
       "routes",
       "records"
     ]
@@ -197,13 +197,13 @@
     "path": "references/frameworks/zpd-scaffolding.md",
     "attribution": "Lev Vygotsky: zone of proximal development; David Wood, Jerome Bruner, Gail Ross: scaffolding/tutoring (1976)",
     "required_roles": [
-      "skills",
+      "skill-atoms",
       "challenges",
       "levels",
       "observations"
     ],
     "queries": [
-      "skills",
+      "skill-atoms",
       "routes",
       "records"
     ]

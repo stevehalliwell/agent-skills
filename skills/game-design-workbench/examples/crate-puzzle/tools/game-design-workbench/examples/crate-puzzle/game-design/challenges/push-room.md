@@ -6,11 +6,11 @@ desc: Push introduction
 tags: []
 status: accepted
 introduces:
-  - skills/push
+  - skill-atoms/push
 practises: []
 requires:
-  - skills/move
-  - skills/push
+  - skill-atoms/move
+  - skill-atoms/push
 tests_mastery: []
 entry: false
 next:

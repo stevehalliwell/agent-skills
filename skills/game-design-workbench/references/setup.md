@@ -27,7 +27,7 @@ Setup is a separate authorized operation, not a side effect of opening the skill
 Default reuse occurs when a role already has a collection alias matching its role name. For other aliases, prepare JSON mapping with only known roles:
 
 ```json
-{"skills":"abilities","challenges":"encounters"}
+{"skill-atoms":"abilities","challenges":"encounters"}
 ```
 
 Pass `--mapping <map.json>` to both plan and apply. Existing aliases must already be configured; new aliases are created at `game-design/<alias>`. Role aliases must be distinct. Existing collection contracts must include compatible required fields; extra fields/local usage/templates remain untouched. Query helpers read installed mapping, not guessed directory names.
@@ -35,6 +35,12 @@ Pass `--mapping <map.json>` to both plan and apply. Existing aliases must alread
 Unconfigured frontmatter candidates block apply until migration or an explicit fresh-design choice, including root notes alongside an existing registry. Candidate scan descends at most two directories and skips hidden paths, dependencies, tools/vendor/build, and configured collections; inspect supplied deeper source paths separately. No candidates is not proof no prior design exists. Use required Attendant skill's `references/migration.md` for migration; review/adopt its plan separately. To intentionally create empty workbench collections while preserving old notes unchanged, include `--fresh` in both approved setup commands. This is an explicit acknowledgment, not a default.
 
 An existing partial model can still be discussed without setup. Helpers needing absent/incompatible contracts return a named blocker. Empty optional collections are valid; absent core collection configuration is not treated as an empty query result.
+
+## Legacy collection name
+
+Earlier snapshots used `skills` for game-design skill atoms. Current role/default alias, directory, and query are `skill-atoms`; no old query alias remains. Existing legacy manifests fail `COLLECTION_RENAME_REQUIRED` before setup can create a duplicate collection.
+
+Explicitly migrate collection directory/config, schema references, record references, glossary targets, role mapping, and managed guidance together. Preserve record UUIDs and frozen reports/baselines; old evidence remains historical/stale. Do not bypass local-edit guards by changing hashes. Canonical repository maintainer tool `scripts/rename-workbench-skill-atoms.mjs --help` handles only its fixture/source, not arbitrary user projects.
 
 ## Update and local edits
 

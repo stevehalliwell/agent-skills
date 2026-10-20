@@ -137,7 +137,7 @@ export const guidance = {
       'Inspect immediate prerequisites and relevant declared routes. Keep AND dependencies separate from alternative challenge links. Read descriptions before deciding whether the links represent genuine conceptual needs.',
       'Compare authored ranks without filling nulls or computing replacement values. A prerequisite placed later is a question about intent, not an instruction to reorder the graph.',
       'Trace where the selected skill could be introduced, practised, combined, and used in a changed context. Mark undocumented opportunities and bypasses without declaring those routes impossible.',
-      'Return the specific loop, dependency question, and evidence gap. If an edit is explicitly requested, change only the selected authored field. Do not propagate ranks, infer mastered skills, or repair unrelated routes.'
+      'Return the specific loop, dependency question, and evidence gap. If an edit is explicitly requested, change only the selected authored field. Do not propagate ranks, infer mastered skill atoms, or repair unrelated routes.'
     ],
     example: [
       ['Authored facts', 'Coordinate has rank 2 and AND prerequisites plan-push and route-switch. Route-switch has rank 3; plan-push is unranked. Independent read-switch remains a root at rank 3.'],
@@ -151,7 +151,7 @@ export const guidance = {
       'Native cycle, rank-conflict, and all-route checks are deferred. Manual tracing should state inspected nodes and routes rather than imply exhaustive graph coverage.'
     ],
     traps: [
-      'Do not infer rank from prerequisite depth. Late roots and unranked skills are valid authored states.',
+      'Do not infer rank from prerequisite depth. Late roots and unranked skill atoms are valid authored states.',
       'Do not treat AND prerequisites as interchangeable routes. All declared prerequisite links matter to the conceptual claim.',
       'Fixing one rank does not validate the learning design. Keep structural editing separate from evidence of understanding.'
     ]
@@ -164,7 +164,7 @@ export const guidance = {
       ['Perspective, not total explanation', 'This lens emphasizes learning and pattern recognition. It does not reduce every pleasure, emotion, aesthetic intention, or personal preference to a single learning mechanism.']
     ],
     procedure: [
-      'Choose one progression segment and its intended experience. Read skills, challenges, mechanics, and any observations. State what learning question this lens should answer.',
+      'Choose one progression segment and its intended experience. Read skill atoms, challenges, mechanics, and any observations. State what learning question this lens should answer.',
       'Describe the decision relationship before and after the segment. Identify what becomes newly understandable, what stays familiar, and what merely changes presentation or quantity.',
       'Examine repetition in context. Ask what repeated action supports and what higher-level choice remains. Do not label a familiar action defective solely because an expert can perform it automatically.',
       'Consider a beginner and an already knowledgeable player as explicit hypothetical perspectives, not measured profiles. Identify where each might still make meaningful discoveries or enjoy fluent action.',
@@ -275,7 +275,7 @@ export const guidance = {
       'If a comparison is later authorized, keep the intended reasoning stable while changing the disputed burden. Do not label the difference a calibrated psychological measurement.'
     ],
     traps: [
-      'Two linked skills do not imply two simultaneous mental items. Inspect the actual sequence and context.',
+      'Two linked skill atoms do not imply two simultaneous mental items. Inspect the actual sequence and context.',
       'Harder is not automatically worse. Remove only work that conflicts with the intended experience or learning question.',
       'Do not present laboratory findings as universal maximum mechanic counts for game encounters.'
     ]
@@ -289,7 +289,7 @@ export const guidance = {
     ],
     procedure: [
       'Choose one decision and trace what information is available when it is made. Identify what disappeared, changed, or must be recalled from elsewhere. Mark unspecified presentation unknown.',
-      'Separate recognizing visible state from recalling hidden state and reasoning about consequences. Name the actual information involved; do not substitute counts of records, skills, or controls.',
+      'Separate recognizing visible state from recalling hidden state and reasoning about consequences. Name the actual information involved; do not substitute counts of records, skill atoms, or controls.',
       'Describe how a familiar player might group the information and why a beginner might not. Keep both as assumptions unless relevant observations establish that familiarity.',
       'Consider one stable cue, history aid, or presentation variant. State whether it externalizes information, reveals a solution, or changes the intended memory challenge. Preserve alternatives and trade-offs.',
       'Return the selected memory demand, its context, and a comparison question. Do not apply four, seven, or any other fixed count as a universal failure threshold or capacity diagnosis.'
@@ -298,7 +298,7 @@ export const guidance = {
       ['Authored facts', 'The puzzle links switch routing and crate planning. Source prerequisite links do not specify whether switch state stays visible during a placement decision.'],
       ['Interpretation', 'If switch state disappears while the player plans a push, remembering it could be part of the demand. If it remains visible, a different attention or planning question applies.'],
       ['Competing option', 'A persistent switch cue is a proposed external aid. It may preserve route reasoning while changing remembering, but that effect cannot be assumed without a concrete presentation and intended challenge.'],
-      ['Useful next question', 'Which exact state must be retained across which action or delay? Resolve that before drawing conclusions from the number of prerequisite skills.']
+      ['Useful next question', 'Which exact state must be retained across which action or delay? Resolve that before drawing conclusions from the number of prerequisite skill atoms.']
     ],
     evidence: [
       'Observe what is forgotten or rechecked, not merely whether an attempt fails. A bad move may reflect rule misunderstanding rather than memory loss.',

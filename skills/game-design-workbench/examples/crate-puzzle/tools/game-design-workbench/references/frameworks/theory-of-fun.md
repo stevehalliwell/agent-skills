@@ -24,9 +24,9 @@ Use only when this lens is selected. Follow [review operation](../review.md); do
 
 ## Inputs and query support
 
-Roles: `skills`, `challenges`, `mechanics`, `hypotheses`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `mechanics`, `hypotheses`, `observations`. Read actual role mapping and live schema/usage before writing.
 
-Available recipes: `query skills`; `query routes`; `query evidence`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query evidence`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
 
 ## Working concepts
 
@@ -37,7 +37,7 @@ Available recipes: `query skills`; `query routes`; `query evidence`. These are d
 
 ## Apply to selected slice
 
-1. Choose one progression segment and its intended experience. Read skills, challenges, mechanics, and any observations. State what learning question this lens should answer.
+1. Choose one progression segment and its intended experience. Read skill atoms, challenges, mechanics, and any observations. State what learning question this lens should answer.
 2. Describe the decision relationship before and after the segment. Identify what becomes newly understandable, what stays familiar, and what merely changes presentation or quantity.
 3. Examine repetition in context. Ask what repeated action supports and what higher-level choice remains. Do not label a familiar action defective solely because an expert can perform it automatically.
 4. Consider a beginner and an already knowledgeable player as explicit hypothetical perspectives, not measured profiles. Identify where each might still make meaningful discoveries or enjoy fluent action.

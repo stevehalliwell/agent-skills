@@ -8,7 +8,7 @@ Live schemas and usage are authoritative for actual fields. Distribution templat
 - `interactions`: one conditional case; applicable `nouns`, one `verb`, separate `context_nouns`, coverage, shared-rule links, case consequences/feedback in body.
 - `mechanics`: shared rules/state transitions; refer to controls for amounts and resources for pools.
 - `systems`: constructed mechanic arrangements. `dynamics`: intended/predicted/observed behavior with explicit evidence status. `aesthetics`: intended player experience; links are not proof of feelings.
-- `skills`: prerequisite AND sets, nullable signed authored rank, learning loop/understanding/expression/evidence sought.
+- `skill-atoms`: prerequisite AND sets, nullable signed authored rank, learning loop/understanding/expression/evidence sought.
 - `challenges`: `entry`, `next`, `introduces`, `practises`, `requires`, `tests_mastery`, applicable design links, assistance/route context. `levels`: optional grouping only.
 - `controls`: `value_type`, literal `value` or formula `expression`, units, enum values/bounds. `measures`: quantity meaning/type/unit/boundaries, not result values.
 - `expectations`: declared measurable criterion; separate from simulation exit or design verdict.

@@ -42,10 +42,10 @@ test('setup approval, idempotency, local-only execution, and conflict preservati
   assert.match(await readFile(join(root, '.gitignore'), 'utf8'), /local-only\//);
   assert.equal((await planSetup(root)).files.length, 0);
   const localScript = join(root, 'tools/game-design-workbench/scripts/workbench.mjs');
-  const result = cli(root, ['query', 'skills'], localScript);
+  const result = cli(root, ['query', 'skill-atoms'], localScript);
   assert.equal(result.status, 0, JSON.stringify(result.json));
   assert.deepEqual(result.json.data.rows, []);
-  assert.equal(cli(root, ['query', 'skills', '--fields', 'missing_field'], localScript).json.errors[0].code, 'FIELD_UNKNOWN');
+  assert.equal(cli(root, ['query', 'skill-atoms', '--fields', 'missing_field'], localScript).json.errors[0].code, 'FIELD_UNKNOWN');
   // Ordinary Windows Git checkout must not invalidate owned-file/guidance hashes.
   for (const args of [['init', '-q'], ['-c', 'core.autocrlf=true', 'add', '.'], ['-c', 'user.name=Workbench Test', '-c', 'user.email=workbench@example.invalid', 'commit', '-qm', 'fixture'], ['-c', 'core.autocrlf=true', 'checkout-index', '-af']]) {
     const command = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
@@ -54,12 +54,17 @@ test('setup approval, idempotency, local-only execution, and conflict preservati
   const afterCheckout = await planSetup(root);
   assert.deepEqual(afterCheckout.conflicts, []);
   assert.equal(afterCheckout.files.length, 0);
-  assert.equal(cli(root, ['query', 'skills'], localScript).status, 0);
+  assert.equal(cli(root, ['query', 'skill-atoms'], localScript).status, 0);
   await writeFile(localScript, `${await readFile(localScript, 'utf8')}\n// User local edit.\n`);
   const conflict = await planSetup(root);
   assert.ok(conflict.conflicts.includes('tools/game-design-workbench/scripts/workbench.mjs'));
   await assert.rejects(applySetup(root, conflict.plan_id, {}), { code: 'SETUP_CONFLICT' });
   assert.match(await readFile(localScript, 'utf8'), /User local edit/);
+  const manifestPath = join(root, 'tools/game-design-workbench/manifest.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  manifest.roles.skills = manifest.roles['skill-atoms']; delete manifest.roles['skill-atoms'];
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await assert.rejects(planSetup(root), { code: 'COLLECTION_RENAME_REQUIRED' });
 });
 
 test('stale setup approval fails before creating configuration', async () => {
@@ -86,7 +91,7 @@ test('unconfigured frontmatter needs migration/fresh decision', async () => {
 
 test('queries expose cases and authored ranks without correcting live source', async () => {
   const root = await temporary(true);
-  const path = join(root, 'game-design/skills/move.md');
+  const path = join(root, 'game-design/skill-atoms/move.md');
   const edited = (await readFile(path, 'utf8')).replace('desc: Grid movement\n', '');
   await writeFile(path, edited);
   const before = (await snapshot(root)).metadata.fingerprint;
@@ -94,12 +99,12 @@ test('queries expose cases and authored ranks without correcting live source', a
   assert.equal(matrix.data.rows.length, 6);
   assert.equal(matrix.data.rows.filter(row => row.noun === 'nouns/crate' && row.verb === 'verbs/push').length, 3);
   assert.equal(matrix.data.rows.find(row => row.interaction === 'interactions/wall-activation').coverage, 'not_applicable');
-  const skills = await runQuery(root, 'skills');
-  assert.equal(skills.data.rows.find(row => row.name === 'plan-push').rank, null);
-  assert.equal(skills.data.rows.find(row => row.name === 'coordinate').rank, 2);
-  assert.equal(skills.data.rows.find(row => row.name === 'move').rank, 0);
-  assert.ok(skills.data.rows.every(row => row.source_path.startsWith('game-design/skills/')));
-  assert.ok(skills.projection_corrections.some(item => item.path.endsWith('move.md')));
+  const skillAtoms = await runQuery(root, 'skill-atoms');
+  assert.equal(skillAtoms.data.rows.find(row => row.name === 'plan-push').rank, null);
+  assert.equal(skillAtoms.data.rows.find(row => row.name === 'coordinate').rank, 2);
+  assert.equal(skillAtoms.data.rows.find(row => row.name === 'move').rank, 0);
+  assert.ok(skillAtoms.data.rows.every(row => row.source_path.startsWith('game-design/skill-atoms/')));
+  assert.ok(skillAtoms.projection_corrections.some(item => item.path.endsWith('move.md')));
   assert.equal((await snapshot(root)).metadata.fingerprint, before);
   assert.equal(await readFile(path, 'utf8'), edited);
   assert.ok(!(await readdir(root)).includes('.attendant'));
@@ -107,7 +112,7 @@ test('queries expose cases and authored ranks without correcting live source', a
 
 test('all SQL recipes run on fixture and return declared data', async () => {
   const root = await temporary(true);
-  for (const name of ['matrix', 'skills', 'routes', 'mda', 'decisions', 'glossary', 'controls', 'evidence']) {
+  for (const name of ['matrix', 'skill-atoms', 'routes', 'mda', 'decisions', 'glossary', 'controls', 'evidence']) {
     const result = await runQuery(root, name);
     assert.ok(Array.isArray(result.data.rows), name);
     assert.equal(result.data.truncated, false, name);
@@ -133,18 +138,18 @@ test('term normalization, inactive disposition, collisions, and unknown synonyms
 
 test('CLI formats, limits, field selection, validation, unavailable commands, and errors', async () => {
   const root = await temporary(true);
-  const result = cli(root, ['query', 'skills', '--fields', 'name,rank', '--limit', '2']);
+  const result = cli(root, ['query', 'skill-atoms', '--fields', 'name,rank', '--limit', '2']);
   assert.equal(result.status, 0);
   assert.equal(result.json.data.truncated, true);
   assert.equal(result.json.coverage.status, 'partial');
   assert.deepEqual(Object.keys(result.json.data.rows[0]), ['name', 'rank']);
   assert.deepEqual(result.json.data.columns, ['name', 'rank']);
   assert.equal(cli(root, ['simulate']).json.errors[0].code, 'CAPABILITY_UNAVAILABLE');
-  assert.equal(cli(root, ['query', 'skills', '--limit', '0']).status, 2);
-  assert.equal(cli(root, ['query', 'skills', '--format', 'text']).json.errors[0].code, 'FORMAT_CONFLICT');
+  assert.equal(cli(root, ['query', 'skill-atoms', '--limit', '0']).status, 2);
+  assert.equal(cli(root, ['query', 'skill-atoms', '--format', 'text']).json.errors[0].code, 'FORMAT_CONFLICT');
   assert.equal(cli(root, ['validate']).status, 0);
-  const skill = join(root, 'game-design/skills/push.md');
-  await writeFile(skill, (await readFile(skill, 'utf8')).replace('skills/move', 'skills/missing'));
+  const skill = join(root, 'game-design/skill-atoms/push.md');
+  await writeFile(skill, (await readFile(skill, 'utf8')).replace('skill-atoms/move', 'skill-atoms/missing'));
   const invalid = cli(root, ['validate']);
   assert.equal(invalid.status, 1);
   assert.ok(invalid.json.data.diagnostics.some(item => item.code === 'record-ref-missing'));
@@ -153,11 +158,11 @@ test('CLI formats, limits, field selection, validation, unavailable commands, an
 test('snapshot detects source changes and rejects escapes', async () => {
   const root = await temporary(true);
   const before = (await snapshot(root)).metadata;
-  const path = join(root, 'game-design/skills/coordinate.md');
+  const path = join(root, 'game-design/skill-atoms/coordinate.md');
   await writeFile(path, (await readFile(path, 'utf8')).replace('rank: 2', 'rank: 3'));
   assert.notEqual((await snapshot(root)).metadata.fingerprint, before.fingerprint);
   await assert.rejects(snapshot(root, ['../private.txt']), { code: 'PATH_OUTSIDE_PROJECT' });
-  assert.equal(cli(root, ['snapshot', '--output', join(root, 'game-design/skills/overwrite.md')]).json.errors[0].code, 'OUTPUT_SOURCE_CONFLICT');
+  assert.equal(cli(root, ['snapshot', '--output', join(root, 'game-design/skill-atoms/overwrite.md')]).json.errors[0].code, 'OUTPUT_SOURCE_CONFLICT');
 });
 
 test('all 18 generated packs match catalog, queries, roles, and selected entrypoint links', async () => {
@@ -174,14 +179,14 @@ test('all 18 generated packs match catalog, queries, roles, and selected entrypo
     for (const text of Object.values(detail).flat(2)) assert.ok(body.includes(text), `${entry.id}: generated guidance omitted`);
     assert.ok(body.includes('Access checked 2026-10-19:'), entry.id);
     assert.ok(entry.required_roles.every(role => Object.hasOwn(model, role)), entry.id);
-    assert.ok(entry.queries.every(query => ['matrix', 'skills', 'routes', 'mda', 'decisions', 'glossary', 'controls', 'evidence', 'records'].includes(query)), entry.id);
+    assert.ok(entry.queries.every(query => ['matrix', 'skill-atoms', 'routes', 'mda', 'decisions', 'glossary', 'controls', 'evidence', 'records'].includes(query)), entry.id);
   }
   const child = spawnSync(process.execPath, [join(home, 'scripts/build-packs.mjs'), '--check'], { encoding: 'utf8' });
   assert.equal(child.status, 0, child.stdout + child.stderr);
 });
 
 function rankFinding() {
-  return { scope: ['skills/coordinate authored rank'], findings: [{ code: 'skill.rank-intent', origin: 'agent', kind: 'unknown_unresolved', severity: 'warning', records: ['01a15175-3c00-7529-8fb6-09255d506737'], sources: [{ path: 'game-design/skills/coordinate.md', field: 'rank' }], reason: 'Authored rank is before rank-3 prerequisite; interpretation, not native check.', suggested_investigation: 'Ask whether this authored order is intentional.', trigger_key: 'authored-order' }], coverage: { status: 'partial', performed: ['source inspection'] }, limitations: ['No player observations or native C99 checks.'] };
+  return { scope: ['skill-atoms/coordinate authored rank'], findings: [{ code: 'skill.rank-intent', origin: 'agent', kind: 'unknown_unresolved', severity: 'warning', records: ['01a15175-3c00-7529-8fb6-09255d506737'], sources: [{ path: 'game-design/skill-atoms/coordinate.md', field: 'rank' }], reason: 'Authored rank is before rank-3 prerequisite; interpretation, not native check.', suggested_investigation: 'Ask whether this authored order is intentional.', trigger_key: 'authored-order' }], coverage: { status: 'partial', performed: ['source inspection'] }, limitations: ['No player observations or native C99 checks.'] };
 }
 
 test('dated reports preserve history, stable finding identity, and source freshness', async () => {
@@ -200,7 +205,7 @@ test('dated reports preserve history, stable finding identity, and source freshn
   const second = await saveReport(root, 'skill-atoms', revised, baseline);
   assert.notEqual(second.run_id, first.run_id);
   assert.equal((await showReport(root, second.run_id)).report.findings[0].id, shown.report.findings[0].id);
-  const skill = join(root, 'game-design/skills/coordinate.md');
+  const skill = join(root, 'game-design/skill-atoms/coordinate.md');
   await writeFile(skill, (await readFile(skill, 'utf8')).replace('rank: 2', 'rank: 3'));
   assert.equal((await showReport(root, first.run_id)).matches_current_source, false);
   assert.equal(await readFile(path, 'utf8'), original);
@@ -240,29 +245,29 @@ test('CLI snapshot/output/report round trip and explicit extra-source capture', 
 
 test('custom role binding reuses existing contracts and preserves local guidance/extra fields', async () => {
   const root = await temporary(true);
-  await rm(join(root, 'game-design/skills'), { recursive: true });
-  await cp(join(home, 'examples/crate-puzzle/game-design/skills'), join(root, 'game-design/abilities'), { recursive: true });
+  await rm(join(root, 'game-design/skill-atoms'), { recursive: true });
+  await cp(join(home, 'examples/crate-puzzle/game-design/skill-atoms'), join(root, 'game-design/abilities'), { recursive: true });
   const configured = join(root, '.pi/attendant.tables');
-  await writeFile(configured, (await readFile(configured, 'utf8')).replace('game-design/skills as skills', 'game-design/abilities as abilities'));
+  await writeFile(configured, (await readFile(configured, 'utf8')).replace('game-design/skill-atoms as skill-atoms', 'game-design/abilities as abilities'));
   // Reference declarations and actual references must change through explicit migration.
   for (const folder of await readdir(join(root, 'game-design'))) {
     for (const name of await readdir(join(root, 'game-design', folder))) {
       const path = join(root, 'game-design', folder, name);
-      await writeFile(path, (await readFile(path, 'utf8')).replaceAll('ref[]:skills', 'ref[]:abilities').replaceAll('skills/', 'abilities/'));
+      await writeFile(path, (await readFile(path, 'utf8')).replaceAll('ref[]:skill-atoms', 'ref[]:abilities').replaceAll('skill-atoms/', 'abilities/'));
     }
   }
   const usage = join(root, 'game-design/abilities/.usage.md');
   await writeFile(usage, '# Local ability policy\nPreserve this guidance.\n');
   const schema = join(root, 'game-design/abilities/.schema.md');
   await writeFile(schema, (await readFile(schema, 'utf8')).replace('---\n', '---\nlocal_note: ""\n'));
-  const options = { mapping: { skills: 'abilities' } };
+  const options = { mapping: { 'skill-atoms': 'abilities' } };
   const plan = await planSetup(root, options);
   assert.equal(plan.conflicts.length, 0);
   assert.equal(plan.new_collections.length, 0);
   await applySetup(root, plan.plan_id, options);
   assert.equal(await readFile(usage, 'utf8'), '# Local ability policy\nPreserve this guidance.\n');
   assert.match(await readFile(schema, 'utf8'), /local_note/);
-  assert.equal((await runQuery(root, 'skills')).data.rows.length, 6);
+  assert.equal((await runQuery(root, 'skill-atoms')).data.rows.length, 6);
 });
 
 test('delivered example copy uses local workbench and required external Attendant on populated source', async () => {
@@ -271,9 +276,9 @@ test('delivered example copy uses local workbench and required external Attendan
   const script = join(root, 'tools/game-design-workbench/scripts/workbench.mjs');
   const before = (await snapshot(root)).metadata.fingerprint;
   assert.equal(cli(root, ['validate'], script).status, 0);
-  const skills = cli(root, ['query', 'skills'], script);
-  assert.equal(skills.json.data.rows.length, 6);
-  assert.equal(skills.json.provenance.fingerprint, before);
+  const skillAtoms = cli(root, ['query', 'skill-atoms'], script);
+  assert.equal(skillAtoms.json.data.rows.length, 6);
+  assert.equal(skillAtoms.json.provenance.fingerprint, before);
   const matrix = cli(root, ['query', 'matrix'], script);
   assert.equal(matrix.json.data.rows.filter(row => row.noun === 'nouns/crate' && row.verb === 'verbs/push').length, 3);
   assert.equal(cli(root, ['resolve', '--term', 'BOX'], script).json.data.state, 'resolved');
@@ -281,29 +286,29 @@ test('delivered example copy uses local workbench and required external Attendan
   assert.equal((await snapshot(root)).metadata.fingerprint, before);
   assert.ok(!(await readdir(root)).includes('.attendant'));
   const prior = await snapshot(root);
-  const selected = join(root, 'game-design/skills/coordinate.md');
+  const selected = join(root, 'game-design/skill-atoms/coordinate.md');
   const priorText = await readFile(selected, 'utf8');
-  const update = spawnSync(process.execPath, [join(attendantHome(), 'scripts/attendant.mjs'), 'update', '-c', 'skills', '-i', JSON.stringify([{ name: 'coordinate', fields: { rank: 3 } }]), '--project', root], { encoding: 'utf8' });
+  const update = spawnSync(process.execPath, [join(attendantHome(), 'scripts/attendant.mjs'), 'update', '-c', 'skill-atoms', '-i', JSON.stringify([{ name: 'coordinate', fields: { rank: 3 } }]), '--project', root], { encoding: 'utf8' });
   assert.equal(update.status, 0, update.stderr);
   const after = await snapshot(root);
-  assert.deepEqual(after.metadata.sources.filter(item => prior.metadata.sources.find(old => old.path === item.path)?.sha256 !== item.sha256).map(item => item.path), ['game-design/skills/coordinate.md']);
+  assert.deepEqual(after.metadata.sources.filter(item => prior.metadata.sources.find(old => old.path === item.path)?.sha256 !== item.sha256).map(item => item.path), ['game-design/skill-atoms/coordinate.md']);
   const afterText = await readFile(selected, 'utf8');
   assert.equal(afterText.split('\n---\n')[1], priorText.split('\n---\n')[1]);
   for (const field of ['id', 'name', 'created_at']) assert.equal(afterText.match(new RegExp(`^${field}: (.+)$`, 'm'))[1], priorText.match(new RegExp(`^${field}: (.+)$`, 'm'))[1]);
-  const edited = cli(root, ['query', 'skills'], script).json.data.rows;
+  const edited = cli(root, ['query', 'skill-atoms'], script).json.data.rows;
   assert.equal(edited.find(row => row.name === 'coordinate').rank, 3);
   assert.equal(edited.find(row => row.name === 'plan-push').rank, null);
 });
 
 test('generic validation explicitly does not enforce null-declared scalar subtypes', async () => {
   const root = await temporary(true);
-  const path = join(root, 'game-design/skills/coordinate.md');
+  const path = join(root, 'game-design/skill-atoms/coordinate.md');
   await writeFile(path, (await readFile(path, 'utf8')).replace('rank: 2', 'rank: not-an-integer'));
   const result = cli(root, ['validate']);
   assert.equal(result.status, 0);
   assert.equal(result.json.coverage.status, 'partial');
   assert.ok(result.json.coverage.not_performed[0].includes('semantic'));
-  assert.equal((await runQuery(root, 'skills')).data.rows.find(row => row.name === 'coordinate').rank, 'not-an-integer');
+  assert.equal((await runQuery(root, 'skill-atoms')).data.rows.find(row => row.name === 'coordinate').rank, 'not-an-integer');
 });
 
 test('required Attendant is explicit, never copied, and missing dependency cannot write', async () => {
@@ -387,21 +392,28 @@ test('fixture generator needs no YAML module or dependency install', async () =>
   const environment = { ...process.env }; delete environment.GD_ATTENDANT_SKILL;
   const generated = spawnSync(process.execPath, [resolve('skills/game-design-workbench/scripts/build-example.mjs'), '--output', root], { encoding: 'utf8', env: environment });
   assert.equal(generated.status, 0, generated.stderr);
-  const result = await runQuery(root, 'skills');
+  const result = await runQuery(root, 'skill-atoms');
   assert.equal(result.data.rows.length, 6);
   assert.equal(result.data.rows.find(row => row.name === 'coordinate').rank, 2);
   assert.equal(result.data.rows.find(row => row.name === 'plan-push').rank, null);
+  assert.ok(Object.hasOwn(model, 'skill-atoms'));
+  assert.ok(!Object.hasOwn(model, 'skills'));
+  await assert.rejects(runQuery(root, 'skills'), { code: 'QUERY_UNKNOWN' });
+  const records = await runQuery(root, 'records', { collection: 'skill-atoms' });
+  assert.equal(records.data.rows.find(row => row.name === 'coordinate').id, '01a15175-3c00-7529-8fb6-09255d506737');
+  const identities = async project => (await snapshot(project)).files.flatMap(file => [...file.bytes.toString('utf8').matchAll(/^\s*"?id"?: "?([a-f0-9-]{36})"?,?$/gm)].map(match => match[1])).sort();
+  assert.deepEqual(await identities(root), await identities(join(home, 'examples/crate-puzzle')));
 });
 
 test('oversized source and out-of-project junction fail without touching target', async () => {
   const root = await temporary(true);
-  const path = join(root, 'game-design/skills/large.md');
+  const path = join(root, 'game-design/skill-atoms/large.md');
   await writeFile(path, Buffer.alloc(2 * 1024 * 1024 + 1));
   await assert.rejects(snapshot(root), { code: 'SOURCE_LIMIT' });
   await rm(path);
   const outside = await temporary();
   await writeFile(join(outside, 'keep.txt'), 'Do not touch.');
-  const source = join(root, 'game-design/skills');
+  const source = join(root, 'game-design/skill-atoms');
   await rm(source, { recursive: true });
   await symlink(outside, source, process.platform === 'win32' ? 'junction' : 'dir');
   await assert.rejects(snapshot(root), { code: 'SYMLINK_UNSUPPORTED' });

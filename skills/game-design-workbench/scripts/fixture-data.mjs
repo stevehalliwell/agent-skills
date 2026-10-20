@@ -24,7 +24,7 @@ control('push-duration', 'number', null, 's', '2 * ${controls/walk-duration}');
 control('energy-capacity', 'integer', 3, 'energy');
 control('initial-energy', 'integer', null, 'energy', '${controls/energy-capacity}');
 control('push-cost', 'integer', 1, 'energy');
-const skills = [
+const skillAtoms = [
   ['move', 'Grid movement', [], 0, 'grid-walking'],
   ['push', 'Basic pushing', ['move'], 1, 'crate-pushing'],
   ['plan-push', 'Plan irreversible pushes', ['push'], null, 'crate-pushing'],
@@ -32,8 +32,8 @@ const skills = [
   ['route-switch', 'Route a crate to switch', ['read-switch'], 3, 'switch-exit'],
   ['coordinate', 'Coordinate crate and switch plan', ['plan-push', 'route-switch'], 2, 'crate-pushing']
 ];
-for (const [name, desc, prerequisites, rank, mechanic] of skills) add('skills', name, desc, { prerequisites: prerequisites.map(p => `skills/${p}`), rank, mechanics: [`mechanics/${mechanic}`] }, `# ${desc}\n\n## Learning loop\nAttempt relevant action, inspect resulting state, adjust plan.\n\n## Understanding\n${desc} in current puzzle context.\n\n## Expression\nChoose an action demonstrating that understanding.\n\n## Evidence sought\nObserve whether player can explain and repeat the choice. This is not observed mastery.`);
-const challenge = (name, desc, introduces, practises, requires, next, entry = false) => add('challenges', name, desc, { introduces: introduces.map(s => `skills/${s}`), practises: practises.map(s => `skills/${s}`), requires: requires.map(s => `skills/${s}`), next: next.map(c => `challenges/${c}`), entry, mechanics: ['mechanics/grid-walking', 'mechanics/crate-pushing'], nouns: ['nouns/player', 'nouns/crate'] }, `# ${desc}\n\nDeclared conceptual route only; no physical level map. Learning roles describe intent, not proof.\n\n${name === 'combined-room' ? 'Player combines planning with switch routing. Intentional discovery may be appropriate; prior planning support is not yet documented.' : 'Assistance and observed learning remain unspecified.'}`);
+for (const [name, desc, prerequisites, rank, mechanic] of skillAtoms) add('skill-atoms', name, desc, { prerequisites: prerequisites.map(p => `skill-atoms/${p}`), rank, mechanics: [`mechanics/${mechanic}`] }, `# ${desc}\n\n## Learning loop\nAttempt relevant action, inspect resulting state, adjust plan.\n\n## Understanding\n${desc} in current puzzle context.\n\n## Expression\nChoose an action demonstrating that understanding.\n\n## Evidence sought\nObserve whether player can explain and repeat the choice. This is not observed mastery.`);
+const challenge = (name, desc, introduces, practises, requires, next, entry = false) => add('challenges', name, desc, { introduces: introduces.map(s => `skill-atoms/${s}`), practises: practises.map(s => `skill-atoms/${s}`), requires: requires.map(s => `skill-atoms/${s}`), next: next.map(c => `challenges/${c}`), entry, mechanics: ['mechanics/grid-walking', 'mechanics/crate-pushing'], nouns: ['nouns/player', 'nouns/crate'] }, `# ${desc}\n\nDeclared conceptual route only; no physical level map. Learning roles describe intent, not proof.\n\n${name === 'combined-room' ? 'Player combines planning with switch routing. Intentional discovery may be appropriate; prior planning support is not yet documented.' : 'Assistance and observed learning remain unspecified.'}`);
 challenge('move-demo', 'Movement introduction', ['move'], [], [], ['push-room'], true);
 challenge('push-room', 'Push introduction', ['push'], [], ['move', 'push'], ['switch-practice', 'combined-room']);
 challenge('switch-practice', 'Optional switch practice', ['read-switch', 'route-switch'], ['push'], ['push'], ['combined-room']);
@@ -49,5 +49,21 @@ add('expectations', 'route-time', 'Route completion criterion', { measure: 'meas
 add('experiments', 'route-cost', 'Proposed route timing investigation', { experiment_kind: 'simulation', controls: ['controls/tile-distance', 'controls/walk-speed', 'controls/walk-duration', 'controls/push-duration', 'controls/initial-energy', 'controls/energy-capacity', 'controls/push-cost'], measures: ['measures/elapsed-time', 'measures/completion-time', 'measures/route-complete', 'measures/remaining-energy'], expectations: ['expectations/route-time'], mechanics: ['mechanics/grid-walking', 'mechanics/crate-pushing'], program: null, inputs: null, results: null }, '# Question\n\nWhat is route completion time under assumed delays?\n\n## Proposed method and local assumptions\nFour walks then three successful pushes. Assume route legality and correct decisions, not human puzzle solving. Independent uniform 0–1 second delay per action is an experiment-local assumption, not measured player behavior.\n\nAnalytical reference: base time 5 s, continuous time range 5–12 s, probability of completion by 8 s is 1312/5040 ≈ 0.2603. This is mathematics, NOT executed simulation output.\n\n## Availability\nModel has not been generated or run. This release captures question/data only. Later runtime must prepare inputs, checkpoint with approval, and resume frozen recipe. Historical models never follow current controls automatically.', 'proposed');
 add('decisions', 'no-pulling', 'Rejected pulling alternative', { record_kind: 'proposal', alternative_group: 'crate-actions', subjects: ['mechanics/crate-pushing'] }, '# Pulling proposal\n\n## Disposition and rationale\nRejected to retain irreversible-push planning. Surface this reason before suggesting pulling again. Current pushing rule owns unavailable-pulling fact.', 'rejected');
 add('decisions', 'crate-color', 'Unchosen crate color alternative', { record_kind: 'proposal', alternative_group: 'crate-feedback', subjects: ['nouns/crate'] }, '# Proposal\n\nUse crate color to communicate whether next push leaves a recovery option. Not adopted; rule and accessibility implications remain open.', 'proposed');
-for (const record of records.filter(r => ['nouns', 'verbs', 'skills'].includes(r.role))) add('glossary', `${record.role}-${record.name}`, record.desc, { term: record.desc, aliases: record.role === 'nouns' && record.name === 'crate' ? ['box'] : record.role === 'verbs' && record.name === 'push' ? ['shove'] : [], documentation: `game-design/${record.role}/${record.name}.md` }, `# ${record.desc}\n\nDefinition: [canonical document](../${record.role}/${record.name}.md).`);
+for (const record of records.filter(r => ['nouns', 'verbs', 'skill-atoms'].includes(r.role))) add('glossary', `${record.role}-${record.name}`, record.desc, { term: record.desc, aliases: record.role === 'nouns' && record.name === 'crate' ? ['box'] : record.role === 'verbs' && record.name === 'push' ? ['shove'] : [], documentation: `game-design/${record.role}/${record.name}.md` }, `# ${record.desc}\n\nDefinition: [canonical document](../${record.role}/${record.name}.md).`);
 add('glossary', 'deadlock', 'Deadlock', { term: 'deadlock', aliases: [], documentation: null }, '# Inline meaning\n\nA puzzle state from which current challenge goal cannot be reached using permitted moves. This definition has no separate concept page.');
+
+// Fixed tutorial identities survive collection/path renames.
+export const fixtureIdentities = {
+  "glossary/skill-atoms-coordinate": "01a15175-3c00-7682-81b8-f7b6a961dcbe",
+  "glossary/skill-atoms-move": "01a15175-3c00-7b3c-80c9-0af3abacbb96",
+  "glossary/skill-atoms-plan-push": "01a15175-3c00-7b9e-817c-004dab7daa1a",
+  "glossary/skill-atoms-push": "01a15175-3c00-7e07-86ac-7a0a480737d6",
+  "glossary/skill-atoms-read-switch": "01a15175-3c00-7989-8c22-05b3ba64f4e7",
+  "glossary/skill-atoms-route-switch": "01a15175-3c00-7ddf-8c9f-b02435debe4a",
+  "skill-atoms/coordinate": "01a15175-3c00-7529-8fb6-09255d506737",
+  "skill-atoms/move": "01a15175-3c00-777e-855c-987fa865b813",
+  "skill-atoms/plan-push": "01a15175-3c00-7a40-8f53-9c4c85b75580",
+  "skill-atoms/push": "01a15175-3c00-7303-8cf3-e90e862ee1cd",
+  "skill-atoms/read-switch": "01a15175-3c00-717b-88e9-4a9793fea527",
+  "skill-atoms/route-switch": "01a15175-3c00-7769-8d3b-09be0d6c31b8"
+};

@@ -170,13 +170,13 @@ A review request must not silently become a repair operation. Explicit design in
 - User can request skill atom chains and prerequisite relationships.
 - Each skill atom defines its prerequisites; all listed prerequisites are required (AND semantics). Use `prerequisites`, not `dependencies`, for this skill relationship.
 - Missing, null, and empty prerequisite lists mean the same empty set of declared relationships. Do not invent a separate unknown-prerequisite state or warning based only on YAML representation. Root means no declared prerequisites, not easy or required first.
-- Skill prerequisites define the order in which skills must be acquired. Derived prerequisite depth does not determine when a skill appears in game progression.
+- Skill-atom prerequisites define the order in which skill atoms must be acquired. Derived prerequisite depth does not determine when a skill appears in game progression.
 - Track conceptual first-required placement in nullable integer `rank`. Keep separate from acquisition prerequisites, prerequisite depth, and physical level layout.
-- Root skills need not appear or be acquired in first level. Show late-appearing roots and parallel chains at their intended progression points.
+- Root skill atoms need not appear or be acquired in first level. Show late-appearing roots and parallel chains at their intended progression points.
 - Lay out all skill chains through their prerequisites. User can additionally request rank-ordered layout to show chains relative to designed progression.
 - User can edit a selected skill's authored rank; recompute descendant display positions without overwriting their authored ranks. Show conflicts rather than fix them, visually and in JSON. See [Rank edit behavior](#rank-edit-behavior) for exact examples.
 - Keep prerequisite order and designed progression placement distinct; make prerequisite/placement conflicts visible.
-- Challenges explicitly distinguish introducing, practising, requiring, and demonstrating mastery of skills. A challenge may serve multiple roles; appearance alone is not evidence of learning, and declared roles do not prove observed understanding.
+- Challenges explicitly distinguish introducing, practising, requiring, and demonstrating mastery of skill atoms. A challenge may serve multiple roles; appearance alone is not evidence of learning, and declared roles do not prove observed understanding.
 - Do not demand earlier teaching. When a challenge introduces a skill and requires it immediately, scaffolding review identifies a single-shot learn-and-demonstrate situation that may need attention, not an automatic missing-teaching error.
 - A required skill without documented learning support raises an unresolved scaffolding question, not proof of impossibility. Support explicit intentional discovery or assumed prior knowledge with rationale; show that context with relevant findings. Repeated warnings are acceptable.
 - Check every declared progression route to a challenge. Distinguish learning support guaranteed on all routes from support present on only some routes; identify routes lacking support.
@@ -306,7 +306,7 @@ Absence alone is not a defect. Check applicability and project expectations befo
 - **Skill scaffolding:** a challenge requires crate planning, but declared prior progression establishes only movement and pushing. Tool reports the unsupported prerequisite with challenge and skill sources. It does not claim the player cannot discover the skill independently.
 - **Experience support:** design intends tension, but no documented dynamic supports it. Report an unsupported design hypothesis, not proof that play lacks tension.
 - **Progression experiment:** target names rank and time bound. Simulation reports time-to-rank distribution under stated assumptions. Separately requested analysis compares distribution with criterion; designer/agent interprets design significance. Missing assumptions block supported conclusions, not invite guessed player behavior.
-- **Change impact:** removing pushing exposes dependent interactions, skills, challenges, and experiments. Separate known dependency reach from speculative experiential effects.
+- **Change impact:** removing pushing exposes dependent interactions, skill atoms, challenges, and experiments. Separate known dependency reach from speculative experiential effects.
 
 ## Capability boundaries
 
@@ -349,8 +349,8 @@ Install these supported table sets; records need not populate every set:
 - `systems`: membership/grouping of mechanics and constructed rule arrangements.
 - `dynamics`: intended/predicted/observed behavior, supporting mechanics/systems, assumptions and evidence.
 - `aesthetics`: natural-language intended player experience and supporting dynamics. Capture initial experience description here; do not require controlled aesthetic vocabulary before starting.
-- `skills`: prerequisite AND set, conceptual rank, related mechanics, and descriptions of understanding/expression.
-- `challenges`: introduced/practised/required/mastery-demonstration skills, entry marker, possible next challenges, and relevant mechanic/context links.
+- `skill-atoms`: prerequisite AND set, conceptual rank, related mechanics, and descriptions of understanding/expression.
+- `challenges`: introduced/practised/required/mastery-demonstration skill atoms, entry marker, possible next challenges, and relevant mechanic/context links.
 - `levels`: optional challenge grouping and design context. No initial physical-layout mapping or second route authority.
 - `controls`: typed integer/continuous/boolean/enum settings, literal value or relative formula, units, optional declared bounds/allowed values. One authoritative setting per control.
 - `measures`: named output quantities, meaning, type, and units shared by experiments, observations, and expectations.
@@ -373,7 +373,7 @@ Core typed fields:
 - Interactions: `nouns` → nouns array; `verb` → verb; `context_nouns` → nouns array; `mechanics` → mechanics array; `controls` → controls array; `resources` → resources array; `coverage` = unknown/defined/excluded/not_applicable. Conditional rules/consequences stay in body.
 - Mechanics: relevant noun/verb/control/resource reference arrays. Body owns reusable rule, assumptions, and open questions; no structured consumes/produces fields initially.
 - Systems: `mechanics` membership array. Dynamics: supporting `mechanics`/`systems`, related `hypotheses`, `experiments`, `observations` arrays. Aesthetics: supporting `dynamics`, related `hypotheses`/`observations` arrays.
-- Skills: `prerequisites` → skills array; `rank` → nullable integer; `mechanics` → mechanics array. Body sections: learning loop, understanding, expression, evidence sought, open questions. Evidence sought is not an observation.
+- Skill atoms: `prerequisites` → skill-atoms array; `rank` → nullable integer; `mechanics` → mechanics array. Body sections: learning loop, understanding, expression, evidence sought, open questions. Evidence sought is not an observation.
 - Challenges: `introduces`, `practises`, `requires`, `tests_mastery` → skill arrays; `entry` boolean; `next` → challenge array; optional `mechanics`, `interactions`, `nouns`, `verbs`, `resources` reference arrays for declared use/context. Body records goals, assistance, intentional discovery/prior-knowledge context, and route-gate prose. Mentioning a mechanic does not prove every case is reachable in that challenge. Teaching/mastery roles describe design intent, not measured achievement.
 - Levels: `challenges` membership array. No competing next-level route graph or physical map field in initial model.
 - Controls: `value_type` = unspecified/integer/number/boolean/enum; `value` nullable scalar; `expression` string; `unit` string; `allowed_values` string array; nullable numeric `minimum`/`maximum`. Define literal or expression, not two active values. Empty fields preserve incompleteness; numeric unit `1` explicitly means dimensionless.
@@ -395,19 +395,19 @@ Body templates need only relevant sections; do not demand every optional annotat
 
 All 18 packs ship as attributed, independently authored guidance in first slice, with necessary collection templates and query helpers. Reuse Attendant queries or direct record inspection where sufficient; add C99 helpers when needed and justify `.mjs` exceptions. Each pack declares scope, useful source records, original questions, available queries, evidence limits, and missing-data behavior. Empty optional tables do not block conceptual discussion; reports identify unavailable data/checks. Do not add one collection per theory or require framework labels on every record.
 
-Initial mapping uses core collections below. Collections such as skills, resources, and observations already supply framework-specific data. Add a supplemental collection only for a distinct source fact without an adequate existing owner; common framework vocabulary alone does not justify one.
+Initial mapping uses core collections below. Collections such as skill-atoms, resources, and observations already supply framework-specific data. Add a supplemental collection only for a distinct source fact without an adequate existing owner; common framework vocabulary alone does not justify one.
 
 - `mda`: mechanics/systems → dynamics → aesthetics, plus hypotheses/experiments/observations. Queries expose declared forward/reverse links and disconnected records. Agent asks which behavior and experience each rule supports. Missing links are documentation questions; links do not prove emotional outcomes.
 - `game-grammar`: nouns, verbs, interactions, mechanics, challenges. Matrix/connectivity queries expose declared cases, exclusions, unknown cells, and contextual links. Agent examines conditions, consequences, discernible feedback, and inconsistent prose. Templates include case-specific feedback with consequences; shared feedback rules remain in mechanics.
 - `resource-economy`: resources, controls, mechanics/interactions, measures, expectations, experiments. Queries resolve controls and inspect declared involvement; agent interprets prose flows/feedback loops. Explicit simulation requests can investigate distributions/sensitivity. No deterministic flow graph or automatic execution.
 - `gameplay-patterns`: mechanics, systems, dynamics, linked proposals/decisions, and cited external pattern references in relevant bodies. Agent compares structures, alternatives, and applicability. No bundled exhaustive pattern database, automatic pattern identification, or copied catalog.
-- `skill-atoms`: skills, challenges, optional levels, and related mechanics. Shared prerequisite/rank/route checks expose cycles, intent conflicts, and declared learning opportunities. Agent examines learning loop, understanding, expression, feedback, combination, and transfer; opportunity is not acquired mastery.
-- `theory-of-fun`: skills, challenge progression, mechanics, and evidence. Reuse chains/role views; ask whether progression introduces patterns, combinations, or only numerical repetition. Do not compute fun or equate repeated actions with lack of learning.
-- `flow`: challenges, skills, goals/feedback in source bodies, and relevant evidence. Original qualitative questions examine challenge, capability, clarity, and feedback. No required cohort data, estimated capability curve, or computed flow/anxiety/boredom score.
+- `skill-atoms`: skill atoms, challenges, optional levels, and related mechanics. Shared prerequisite/rank/route checks expose cycles, intent conflicts, and declared learning opportunities. Agent examines learning loop, understanding, expression, feedback, combination, and transfer; opportunity is not acquired mastery.
+- `theory-of-fun`: skill atoms, challenge progression, mechanics, and evidence. Reuse chains/role views; ask whether progression introduces patterns, combinations, or only numerical repetition. Do not compute fun or equate repeated actions with lack of learning.
+- `flow`: challenges, skill atoms, goals/feedback in source bodies, and relevant evidence. Original qualitative questions examine challenge, capability, clarity, and feedback. No required cohort data, estimated capability curve, or computed flow/anxiety/boredom score.
 - `gameflow`: scoped mechanics/challenges, goals, controls, feedback, and observations. Original evaluative questions cover applicable enjoyment conditions; social criteria can be inapplicable. Keep distinct from Flow; do not reproduce a proprietary questionnaire or aggregate score.
-- `cognitive-load`: declared required skills, prerequisite combinations, challenge context, information/feedback, and support. Queries show declared relationships; agent asks what must be coordinated concurrently and what remains unfamiliar. A required-skills list does not prove simultaneous demand or calibrated cognitive load.
-- `working-memory`: same relevant skills/challenges and source descriptions of cues, memory demands, and learned combinations. Original chunking/external-memory questions; no fixed four/seven-item failure threshold or player-capacity dataset.
-- `zpd-scaffolding`: skills/challenges, route opportunities, documented assistance, and observations. Reuse route/role queries; ask about demonstrations, hints, safe practice, intermediate combinations, and withdrawal of support. No teaching prerequisite, player diagnosis, or claim that unsupported skills make success impossible.
+- `cognitive-load`: declared required skill atoms, prerequisite combinations, challenge context, information/feedback, and support. Queries show declared relationships; agent asks what must be coordinated concurrently and what remains unfamiliar. A required skill-atom list does not prove simultaneous demand or calibrated cognitive load.
+- `working-memory`: same relevant skill-atoms/challenges and source descriptions of cues, memory demands, and learned combinations. Original chunking/external-memory questions; no fixed four/seven-item failure threshold or player-capacity dataset.
+- `zpd-scaffolding`: skill-atoms/challenges, route opportunities, documented assistance, and observations. Reuse route/role queries; ask about demonstrations, hints, safe practice, intermediate combinations, and withdrawal of support. No teaching prerequisite, player diagnosis, or claim that unsupported skill atoms make success impossible.
 - `self-determination`: aesthetics, mechanics/dynamics, choices/constraints, challenges, hypotheses, and observations. Ask about autonomy, competence, and relatedness as common concepts. No personality profiles or inferred psychological measurements.
 - `quantic-foundry`: intended experiences, mechanics/dynamics, rewards, and evidence. Use attributed published motivation vocabulary in original support questions. No audience/cohort collection, questionnaire reproduction, preference scoring, or single player type.
 - `four-keys`: dynamics, aesthetics, interactions, and observations. Original questions explore challenge/triumph, curiosity, meaning, and social amusement. Keep distinct from MDA vocabulary and Koster's account; category links remain interpretations.
@@ -529,8 +529,8 @@ gd lenses
 gd inspect nouns/crate --json
 gd matrix --json
 gd connectivity --json
-gd skills --json
-gd skills set-rank skills/coordinate --rank 3 --json
+gd skill-atoms --json
+gd skill-atoms set-rank skill-atoms/coordinate --rank 3 --json
 gd impact mechanics/crate-pushing --json
 gd gaps --lens skill-atoms --scope challenges/combined-room --json
 gd controls --json
@@ -547,7 +547,7 @@ gd sweep prepare experiments/route-cost --param walk-speed=1:3:0.5 --seed 42
 gd sweep run <recipe-id>
 gd replay <run-id>
 gd view matrix
-gd view skills --layout rank
+gd view skill-atoms --layout rank
 gd report <run-id> --json
 ```
 
@@ -560,20 +560,20 @@ Structured envelope version 1:
   "schema_version": 1,
   "ok": true,
   "data": {
-    "changed": [{"record": "skills/b", "rank_before": 2, "rank_after": 4}],
-    "affected": [{"record": "skills/c", "authored_rank": 3, "minimum_rank": 4, "display_rank": 4}],
+    "changed": [{"record": "skill-atoms/b", "rank_before": 2, "rank_after": 4}],
+    "affected": [{"record": "skill-atoms/c", "authored_rank": 3, "minimum_rank": 4, "display_rank": 4}],
     "findings": [{
       "code": "skill.rank_conflict",
       "origin": "deterministic",
       "kind": "conflicting_claims",
       "severity": "warning",
-      "records": ["skills/b", "skills/c"],
-      "sources": [{"path": "game-design/skills/c.md", "field": "rank"}],
+      "records": ["skill-atoms/b", "skill-atoms/c"],
+      "sources": [{"path": "game-design/skill-atoms/c.md", "field": "rank"}],
       "reason": "Authored rank 3 precedes prerequisite constraint 4.",
       "suggested_investigation": "Review intended first requirement or prerequisite relationship."
     }]
   },
-  "coverage": {"status": "complete", "operation": "skills.set-rank"},
+  "coverage": {"status": "complete", "operation": "skill-atoms.set-rank"},
   "errors": []
 }
 ```
@@ -588,7 +588,7 @@ First slice delivers usable guided work, not a claim that later native tools exi
 2. **Direct capture:** supply “Crates can be pushed into free cells; wall-blocked pushes cost no energy.” Resolve declared box/shove aliases if used; capture canonical case/mechanic facts as accepted. Do not invent an energy amount, interview for experience first, or run a lens review. Return changed paths and unresolved material questions only.
 3. **Generation:** request “Suggest alternatives to make blocked pushes interesting.” Retain each idea as a proposed decision with context/group/subject links. Surface rejected pulling rationale if relevant. Choosing one adopts only selected facts; siblings remain proposed and rules retain one canonical home.
 4. **Scoped review:** request “Review combined-room scaffolding using skill atoms.” Load that pack and relevant challenge/prerequisite/route context; save dated structured and readable findings. Report missing planning opportunity, route-dependent switch support, single-shot roles, and rank conflict only to extent established by inspected data. No automatic Flow or other-lens review; no silent repair or invented player incapability.
-5. **Change impact:** request “What would removing pushing affect?” Trace declared references to cases, skills, challenges, and experiments. Return paths/link kinds and uncertain consequences; do not remove records or reinterpret historical simulations.
+5. **Change impact:** request “What would removing pushing affect?” Trace declared references to cases, skill atoms, challenges, and experiments. Return paths/link kinds and uncertain consequences; do not remove records or reinterpret historical simulations.
 6. **Resolve:** explicitly change `coordinate` authored rank from 2 to 3 in baseline example. Rerun same skill review; rank conflict clears while missing/route-dependent learning questions remain. First slice may perform authorized source edit through Attendant; later GUI/CLI rank operation must produce same source outcome.
 7. **Other packs:** exercise one explicit selected-pack request per pack against example or relevant partial source. Original questions and limitations remain useful with empty observations. Bartle can report limited applicability; Flow/cognitive/motivation packs do not demand cohort records. No all-lenses review command or aggregate score.
 8. **Simulation handoff:** first slice documents question/control/assumption/expectation capture and prepare/checkpoint/resume contract. Do not claim executable simulation until its delivery slice passes tests. If an essential first-slice pack query needs a helper, deliver and test that helper rather than label an unavailable operation supported.
@@ -790,6 +790,14 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Added reusable `scripts/check-workbench-export.mjs`; use `--help` for staged-export workflow. Verified JSON/text success, usage failure, and missing-dependency failure. No stage/commit/install side effects; private export removed.
 - Offline report/browser checks pass again: six sections, zero HTTP requests/errors, desktop/mobile, history/progress/theme/focus, reduced motion, no-JS, print generation. Eight original citation-access warnings retained, not relabeled as a new URL check.
 - Correction commits: `d2d028d` dependency boundary; `b755438` expanded guides. No merge/push/publication. Original worktree remains `dev` with its original untracked files.
+
+## Collection naming correction
+
+- Rename domain collection/role/query to `skill-atoms`, including paths, schemas, references, glossary documents, templates, examples, model contracts, and selected-framework guidance. No old query alias.
+- Preserve agent-skill install paths and published GameFlow theme name. Keep frozen reports/baselines unchanged; old paths remain historical evidence, not active configuration.
+- Preserve all 68 record UUIDs. Explicit fixture identities keep regenerated records stable after collection and glossary-path renames.
+- Source verification: 27/27 tests pass; 231 local links pass; all 18 generated packs current; all 68 UUIDs match pre-rename commit. Fixture regeneration preserves complete UUID set. Old query is rejected; legacy manifests stop with `COLLECTION_RENAME_REQUIRED` rather than creating duplicate source.
+- Maintainer rename tool is idempotent. Guarded example update reuses all 19 collections, with zero final changes/conflicts. Handoff evidence refresh remains.
 
 ## Comments
 

@@ -5,7 +5,7 @@ game-design/mechanics as mechanics
 game-design/systems as systems
 game-design/dynamics as dynamics
 game-design/aesthetics as aesthetics
-game-design/skills as skills
+game-design/skill-atoms as skill-atoms
 game-design/challenges as challenges
 game-design/levels as levels
 game-design/controls as controls

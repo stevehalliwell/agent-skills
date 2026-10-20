@@ -29,7 +29,7 @@ Run bundled helper; resolve `<workbench>` to this skill folder or installed proj
 
 ```sh
 node <workbench>/scripts/workbench.mjs capabilities --project <project> --json
-node <workbench>/scripts/workbench.mjs query skills --project <project> --json
+node <workbench>/scripts/workbench.mjs query skill-atoms --project <project> --json
 ```
 
 Requires installed `attendant` skill and Node.js `>=24.10.0`; no npm dependency or running service. Missing Attendant configuration fails `ATTENDANT_REQUIRED` before source writes. Query helpers use temporary Attendant projections; source Markdown remains authoritative. Execute documented command rather than guessing tool availability. On failure, retain sources and report actionable error/code.

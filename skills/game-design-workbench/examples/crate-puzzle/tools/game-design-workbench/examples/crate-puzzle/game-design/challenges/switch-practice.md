@@ -6,12 +6,12 @@ desc: Optional switch practice
 tags: []
 status: accepted
 introduces:
-  - skills/read-switch
-  - skills/route-switch
+  - skill-atoms/read-switch
+  - skill-atoms/route-switch
 practises:
-  - skills/push
+  - skill-atoms/push
 requires:
-  - skills/push
+  - skill-atoms/push
 tests_mastery: []
 entry: false
 next:

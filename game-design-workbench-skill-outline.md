@@ -34,7 +34,7 @@ game-design/
   systems/            # groups of interacting mechanics
   dynamics/           # expected behaviours emerging from mechanics
   aesthetics/         # intended player responses/experiences
-  skills/             # skill atoms and prerequisite structure
+  skill-atoms/             # skill atoms and prerequisite structure
   challenges/         # encounters, puzzles, teaching moments
   levels/             # progression/placement of challenges
   controls/           # tunable values and assumptions
@@ -47,7 +47,7 @@ These are **candidate categories**, not a mandatory hierarchy. Start with the mi
 
 Each collection can carry Attendant's `.schema.md`, `.usage.md` and optional `.template.md`, configured through `.pi/attendant.tables`. Keep Attendant's `.attendant/` projection disposable. The workbench may build its own **in-memory** indexes, which are likewise not authoritative.
 
-Structured links should use Attendant-compatible collection-qualified references where feasible (`skills/basic-movement`, `mechanics/pushing`, etc.). Make reverse links and transitive dependencies derived, not manually duplicated. Stable reference identity should survive a file being moved where possible; confirm exactly what Attendant currently guarantees before locking this in.
+Structured links should use Attendant-compatible collection-qualified references where feasible (`skill-atoms/basic-movement`, `mechanics/pushing`, etc.). Make reverse links and transitive dependencies derived, not manually duplicated. Stable reference identity should survive a file being moved where possible; confirm exactly what Attendant currently guarantees before locking this in.
 
 Prefer **flat fields and arrays** in frontmatter. Put explanations in the Markdown body. Put elaborate numeric tables, executable rules, or large datasets in referenced sidecar files rather than inventing deeply nested YAML.
 
@@ -55,7 +55,7 @@ Prefer **flat fields and arrays** in frontmatter. Put explanations in the Markdo
 
 ```yaml
 ---
-requires: [skills/basic-movement, skills/push-crate]
+requires: [skill-atoms/basic-movement, skill-atoms/push-crate]
 mechanics: [mechanics/crate-pushing]
 introduced_in: levels/02
 ---
@@ -111,9 +111,9 @@ Indicative CLI commands (names and flags are placeholders to refine):
 gd validate                  # local model semantics, on top of Attendant validation
 gd gaps                      # unresolved questions and structural findings
 gd matrix nouns verbs       # inspect noun–verb coverage
-gd skills                    # dependencies, missing prerequisites, progression
+gd skill-atoms                    # dependencies, missing prerequisites, progression
 gd impact mechanics/pushing # relationships affected by a design change
-gd inspect skills/crate-plan # direct/reverse references and source paths
+gd inspect skill-atoms/crate-plan # direct/reverse references and source paths
 gd expectations             # targets and their dependencies
 gd simulate rank3 --runs 1000 --seed 42
 gd sweep rank3 --param spawn_rate=0.2:0.8:0.1

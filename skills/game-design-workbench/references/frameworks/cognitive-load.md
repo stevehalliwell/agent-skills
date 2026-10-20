@@ -24,9 +24,9 @@ Use only when this lens is selected. Follow [review operation](../review.md); do
 
 ## Inputs and query support
 
-Roles: `skills`, `challenges`, `mechanics`, `observations`. Read actual role mapping and live schema/usage before writing.
+Roles: `skill-atoms`, `challenges`, `mechanics`, `observations`. Read actual role mapping and live schema/usage before writing.
 
-Available recipes: `query skills`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
+Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`. These are declared-data projections, not automated framework verdicts. Inspect linked bodies for conditions and evidence.
 
 ## Working concepts
 
@@ -67,7 +67,7 @@ Available recipes: `query skills`; `query routes`; `query records --collection <
 
 ## Common traps
 
-- Two linked skills do not imply two simultaneous mental items. Inspect the actual sequence and context.
+- Two linked skill atoms do not imply two simultaneous mental items. Inspect the actual sequence and context.
 - Harder is not automatically worse. Remove only work that conflicts with the intended experience or learning question.
 - Do not present laboratory findings as universal maximum mechanic counts for game encounters.
 
@@ -75,7 +75,7 @@ Available recipes: `query skills`; `query routes`; `query records --collection <
 
 Ask about concurrent demand and familiarity when absent. Preserve them as assumptions rather than inventing player capability data.
 
-A required-skills list does not establish simultaneous demand. No count-based cognitive-load score or diagnosis. Game-design application is a hypothesis; original laboratory findings are not calibrated mechanic-count limits.
+A required skill-atom list does not establish simultaneous demand. No count-based cognitive-load score or diagnosis. Game-design application is a hypothesis; original laboratory findings are not calibrated mechanic-count limits.
 
 ## Sources
 

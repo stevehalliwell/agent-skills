@@ -71,7 +71,7 @@ export const packs = [
   {
     id: 'skill-atoms', title: 'Skill atoms and learning chains', attribution: 'Daniel Cook, The Chemistry of Game Design (original article; 2021 repost)',
     scope: 'Inspect a selected learned interaction, its prerequisite chain, authored progression rank, feedback, and challenge opportunities.',
-    roles: ['skills', 'challenges', 'levels', 'mechanics'], queries: ['skills', 'routes', 'records'],
+    roles: ['skill-atoms', 'challenges', 'levels', 'mechanics'], queries: ['skill-atoms', 'routes', 'records'],
     questions: [
       'What choice or action expresses the skill, and what feedback lets the learner update a mental model?',
       'What would distinguish understanding from merely succeeding once?',
@@ -88,7 +88,7 @@ export const packs = [
   {
     id: 'theory-of-fun', title: 'Learning, patterns, and fun', attribution: 'Raph Koster, A Theory of Fun for Game Design; 2003 presentation and book',
     scope: 'Ask what understanding a selected progression invites and whether repetition serves its intended experience.',
-    roles: ['skills', 'challenges', 'mechanics', 'hypotheses', 'observations'], queries: ['skills', 'routes', 'evidence'],
+    roles: ['skill-atoms', 'challenges', 'mechanics', 'hypotheses', 'observations'], queries: ['skill-atoms', 'routes', 'evidence'],
     questions: [
       'What new pattern could the player discover here rather than merely execute faster?',
       'Does the next challenge combine familiar ideas in a new way or only change a number?',
@@ -105,7 +105,7 @@ export const packs = [
   {
     id: 'flow', title: 'Flow: challenge and capability', attribution: 'Mihaly Csikszentmihalyi, Flow: The Psychology of Optimal Experience (1990)',
     scope: 'Explore challenge relative to assumed capability, clear goals, feedback, and conditions for sustained attention in a selected encounter.',
-    roles: ['skills', 'challenges', 'mechanics', 'hypotheses', 'observations'], queries: ['skills', 'routes', 'evidence'],
+    roles: ['skill-atoms', 'challenges', 'mechanics', 'hypotheses', 'observations'], queries: ['skill-atoms', 'routes', 'evidence'],
     questions: [
       'What makes the immediate goal understandable before the player commits to an action?',
       'What feedback lets the player judge progress while there is still time to adapt?',
@@ -139,7 +139,7 @@ export const packs = [
   {
     id: 'cognitive-load', title: 'Cognitive load and unfamiliar coordination', attribution: 'John Sweller, Cognitive Load During Problem Solving: Effects on Learning (1988)',
     scope: 'Examine unfamiliar operations, concurrent coordination, problem-solving effort, and information presentation in a selected challenge.',
-    roles: ['skills', 'challenges', 'mechanics', 'observations'], queries: ['skills', 'routes', 'records'],
+    roles: ['skill-atoms', 'challenges', 'mechanics', 'observations'], queries: ['skill-atoms', 'routes', 'records'],
     questions: [
       'What must be coordinated at the same time, rather than merely appearing somewhere in the challenge?',
       'Which parts are assumed familiar, and what source or observation supports that assumption?',
@@ -148,7 +148,7 @@ export const packs = [
       'Would a demonstration, reduced task, or stable cue expose the relationship without removing the intended decision?',
       'What observation would tell us whether assistance supports learning rather than only helping complete this instance?'
     ],
-    limits: 'A required-skills list does not establish simultaneous demand. No count-based cognitive-load score or diagnosis. Game-design application is a hypothesis; original laboratory findings are not calibrated mechanic-count limits.',
+    limits: 'A required skill-atom list does not establish simultaneous demand. No count-based cognitive-load score or diagnosis. Game-design application is a hypothesis; original laboratory findings are not calibrated mechanic-count limits.',
     missing: 'Ask about concurrent demand and familiarity when absent. Preserve them as assumptions rather than inventing player capability data.',
     access: 'Wiley/ScienceDirect requests blocked. Bibliography and abstract argument about problem solving/schema acquisition checked through source-linked search; full study not read.',
     sources: [['Cognitive Load During Problem Solving: Effects on Learning', 'https://doi.org/10.1207/s15516709cog1202_4']]
@@ -156,7 +156,7 @@ export const packs = [
   {
     id: 'working-memory', title: 'Working memory and chunking', attribution: 'George A. Miller (1956); Nelson Cowan (2001, later reassessments)',
     scope: 'Explore what must be remembered, what is visible, and how familiarity might combine elements into learned chunks.',
-    roles: ['skills', 'challenges', 'mechanics', 'observations'], queries: ['skills', 'routes', 'records'],
+    roles: ['skill-atoms', 'challenges', 'mechanics', 'observations'], queries: ['skill-atoms', 'routes', 'records'],
     questions: [
       'Which state must the player remember after it disappears from view?',
       'Could a stable cue externalize that memory without solving the intended puzzle?',
@@ -166,14 +166,14 @@ export const packs = [
       'What would compare a memory-support variant with the original while preserving the intended reasoning?'
     ],
     limits: 'Never use four, seven, or another item count as universal failure/capacity threshold. Chunk size depends on learning and task. No player-capacity dataset or computed memory score.',
-    missing: 'Unspecified visibility and familiarity remain unknown. Do not equate number of skills with number of active memory chunks.',
+    missing: 'Unspecified visibility and familiarity remain unknown. Do not equate number of skill atoms with number of active memory chunks.',
     access: 'Miller full-text mirror inspected for chunking/recoding. Cowan PubMed extraction incomplete; abstract claims checked through source-linked search. No universal threshold inferred.',
     sources: [['The Magical Number Seven, Plus or Minus Two', 'https://psychclassics.yorku.ca/Miller/'], ['The Magical Number 4 in Short-Term Memory', 'https://pubmed.ncbi.nlm.nih.gov/11515286/']]
   },
   {
     id: 'zpd-scaffolding', title: 'Supported challenge and scaffolding', attribution: 'Lev Vygotsky: zone of proximal development; David Wood, Jerome Bruner, Gail Ross: scaffolding/tutoring (1976)',
     scope: 'Explore temporary support, independent performance, demonstrations, practice, and withdrawal of help in a selected learning path.',
-    roles: ['skills', 'challenges', 'levels', 'observations'], queries: ['skills', 'routes', 'records'],
+    roles: ['skill-atoms', 'challenges', 'levels', 'observations'], queries: ['skill-atoms', 'routes', 'records'],
     questions: [
       'What could the learner attempt independently, and what currently needs support? Which part is only an assumption?',
       'Could a hint reveal a relevant feature without choosing the whole solution?',
