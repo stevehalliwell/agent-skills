@@ -20,7 +20,7 @@ Templates: [all 14 collection contracts](../templates/). Each has `.schema.md`, 
 
 Each experiment owns its measure names, types, units, and start/stop/undefined-value boundaries. No independent measures collection. Headings keep claims, criteria, actual observations, simulated outputs, and interpretation distinct within one investigation. Observations retain source/date/context and data links. Expectations retain measure, statistic, operator, thresholds, units, and pass-rate assumptions when supplied; currently body data, not executable threshold fields. No observation means no recorded evidence, not a rejected claim. Accepted hypothesis is still unverified without supporting evidence.
 
-Extend headings/fields as experiment implementation develops. Changed rules require a new simulation against its own snapshot; historical results never follow live control variables. Do not fabricate executed trials, participants, results, or player observations.
+Extend headings/fields as experiment implementation develops. Changed rules require a new simulation against committed code/inputs; historical results never follow live control variables. Do not fabricate executed trials, participants, results, or player observations.
 
 ## Partial design and lifecycle
 
@@ -34,7 +34,7 @@ At most one accepted resource extension per noun. Flow direction remains rule pr
 
 ## Types and unavailable semantics
 
-Attendant schemas are flat. `null` declarations are optional/untyped, not invented integer markers. Intended rank/control-variable scalar subtypes need manual inspection in this release; generic `validate` **does not enforce these semantic types**. It reports performed checks and deferred C99 coverage. No fake `ref:any` field exists; generic documentation/subject strings require deliberate source interpretation.
+Attendant schemas are flat. `null` declarations are optional/untyped, not invented integer markers. Intended rank/control-variable scalar subtypes need manual inspection in this release; generic `validate` **does not enforce these semantic types**. State performed checks and deferred C99 coverage separately from Attendant output. No fake `ref:any` field exists; generic documentation/subject strings require deliberate source interpretation.
 
 Intended numeric contract: binary64 numbers; exact integers within ±9,007,199,254,740,991. Control variables use integer/number/boolean/enum. Formula notation examples are authored data only: `${control-vars/walk-duration}` references, opaque case-sensitive unit symbols, explicit conversions, fixed functions. Do not `eval` formula strings, send them to a shell, or pretend this release resolves them. Ambiguous/invalid declarations stay unresolved until authorized correction.
 

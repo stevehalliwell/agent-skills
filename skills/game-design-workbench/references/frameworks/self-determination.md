@@ -24,7 +24,7 @@ Question support for autonomy, competence, and relatedness in a selected activit
 
 Roles: `aesthetics`, `mechanics`, `dynamics`, `challenges`, `experiments`.
 
-Available recipes: `query mda`; `query routes`; `query evidence`; `query records --collection <mapped-alias>`.
+Inspection topics: MDA relationships, challenge routes, experiment evidence, and relevant source records.
 
 ## Working concepts
 

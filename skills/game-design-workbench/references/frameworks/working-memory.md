@@ -24,7 +24,7 @@ Explore what must be remembered, what is visible, and how familiarity might comb
 
 Roles: `skill-atoms`, `challenges`, `mechanics`, `experiments`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`.
+Inspection topics: skill atoms, challenge routes, and relevant source records.
 
 ## Working concepts
 

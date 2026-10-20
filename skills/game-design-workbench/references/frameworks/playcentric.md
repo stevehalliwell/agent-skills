@@ -24,7 +24,7 @@ Connect intended player experience with a testable question, prototype, observat
 
 Roles: `aesthetics`, `experiments`.
 
-Available recipes: `query evidence`; `query records --collection <mapped-alias>`.
+Inspection topics: experiment evidence and relevant source records.
 
 ## Working concepts
 

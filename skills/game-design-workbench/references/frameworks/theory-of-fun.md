@@ -24,7 +24,7 @@ Ask what understanding a selected progression invites and whether repetition ser
 
 Roles: `skill-atoms`, `challenges`, `mechanics`, `experiments`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query evidence`.
+Inspection topics: skill atoms, challenge routes, and experiment evidence.
 
 ## Working concepts
 

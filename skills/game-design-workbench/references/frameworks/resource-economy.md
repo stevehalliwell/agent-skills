@@ -24,7 +24,7 @@ Examine a selected resource and the rules that create, spend, transform, or limi
 
 Roles: `nouns`, `resources`, `control-vars`, `mechanics`, `interactions`, `experiments`.
 
-Available recipes: `query control-vars`; `query matrix`; `query records --collection <mapped-alias>`.
+Inspection topics: control variables, interaction cases, and relevant source records.
 
 ## Working concepts
 

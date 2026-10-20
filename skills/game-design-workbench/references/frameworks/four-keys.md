@@ -24,7 +24,7 @@ Explore possible routes to emotion through challenge/triumph, curiosity, meaning
 
 Roles: `dynamics`, `aesthetics`, `interactions`, `experiments`.
 
-Available recipes: `query mda`; `query matrix`; `query evidence`; `query records --collection <mapped-alias>`.
+Inspection topics: MDA relationships, interaction cases, experiment evidence, and relevant source records.
 
 ## Working concepts
 

@@ -24,7 +24,7 @@ Use historically situated player/world and acting/interacting distinctions to qu
 
 Roles: `mechanics`, `dynamics`, `challenges`, `experiments`.
 
-Available recipes: `query mda`; `query evidence`; `query records --collection <mapped-alias>`.
+Inspection topics: MDA relationships, experiment evidence, and relevant source records.
 
 ## Working concepts
 

@@ -1,65 +1,34 @@
-# Setup, binding, and updates
+# Setup and updates
 
-## Plan before apply
+## Establish source owners
 
+1. Inspect project instructions, `.pi/attendant.tables`, live schemas/usages, and existing design documents. Read loaded Attendant skill's collection workflow. Existing Markdown stays in place. Done: existing collections and possible migration sources are known.
+2. Identify one live concept owner; default `game-design/concept.md`, or explicitly bind an existing document, including README. Identify current project mode from that document. Ask only when mode or ownership is unresolved. Done: concept location and mode are explicit.
+3. Propose concrete collection paths/aliases and source changes. Default is `game-design/<role>` as `<role>` for the 14 roles in distribution templates. Reuse compatible existing collections after reading their contracts. Existing records require Attendant's migration workflow, not blank setup over them. Done: user can see additions, conflicts, and preserved sources.
+4. Follow Attendant's confirmation and empty-collection workflow. Author approved schemas/usages/templates afterward from distribution templates; adapt references to actual aliases. No tutorial facts enter live design. Done: approved collections exist and match the proposed contracts.
+5. Link concept near README's beginning without replacing existing navigation. In project `AGENTS.md`, identify concept path, any non-default role aliases, and use of installed `game-design-workbench` and `attendant` skills. Keep `.pi/attendant.tables` authoritative for collection discovery. Done: another agent can find actual owners without a manifest.
+6. Inspect diff and use non-correcting Attendant validation. Commit completed authorized concept changes under project Git policy. Report unresolved contracts and checks not implemented. Done: changes are reviewable and no unrelated source was altered.
 
+Partial models remain useful without setup. Empty optional collections are valid. Missing/incompatible contracts are not empty query results.
 
-1. Request existing concept/intention material. Establish whether it is live intent or reference only. Offer shipped concept template if absent; do not require completed intent in explorer mode. Ask for one current project mode when not already explicit. Preserve supplied answers; no repeated interview. Inspect target root, existing registry/schemas/usages, manifest, and unconfigured Markdown. Read required Attendant skill's `references/collections.md`. Existing source stays in place.
-2. Resolve `<workbench>` to supplied skill folder. Prepare combined proposal:
+## Copying and updating
 
-   ```sh
-   node <workbench>/scripts/workbench.mjs setup plan --project <project> --mode game-explorer --json
-   ```
+Use installed skill directly. If project needs local copies, copy only wanted guidance/templates and actual domain-tool sources; record their location in project instructions. Do not create a second configured tutorial model, automatic package installer, or hash manifest.
 
-   Example explicitly chooses explorer mode; use supplied choice, not this example as default. Bind existing owner with `--concept <project-relative.md>`; otherwise default path is used. Existing body is preserved; explicit `--mode` adds/changes only header. Once bound/configured, omit both options to retain state. Plan lists concept/navigation changes and commit obligation, new collections, role mapping, exact file changes, dependency checks, conflicts, and candidate sources needing migration. Plan itself writes nothing. Default mapping: `game-design/<role>` configured as `<role>`.
-3. Present scope: empty role collections; live schema/usage/body templates; project-local `tools/game-design-workbench/` snapshot; manifest; managed `AGENTS.md` block; generated-cache ignore rules. No tutorial records are added. Ask for combined proposal approval using focused choice. Approval must include any source migration/fresh decision.
-4. Apply same options with returned content-derived plan ID:
+For an update, compare existing project files with new skill material and available Git history. Merge useful changes with agent judgment. Preserve local schemas, usages, records, unknown files, and project-specific edits. Present material conflicts rather than silently resolving them. Source migration and deletion need their own authorized scope; a skill update does not authorize either.
 
-   ```sh
-   node <workbench>/scripts/workbench.mjs setup apply --project <project> --mode game-explorer --approve <plan-id> --json
-   ```
+Review exact diff, validate affected records, and make a scoped commit when authorized. On partial failure, inspect actual files and Git diff before continuing. Do not reset unrelated work or copy a stale whole-file version over new edits.
 
-   Stale approval fails before writes. CLI never prompts; an ID is a mechanical guard, not independent proof of human consent. Agent must obtain the actual approval first.
-5. Commit completed concept changes through scoped ordinary Git workflow from concept instructions; helper itself does not commit. If Git/history or mixed edits block commit, report that limit; do not claim recoverable original intent. Inspect returned paths and registry. Run installed read-only `validate` and one appropriate empty query. Report unknown/unsupported semantic checks. Stop on source conflicts; do not overwrite or silently widen schema.
+## Older workbench installations
 
-## Existing collections
+Earlier releases installed `tools/game-design-workbench/` with a CLI and manifest. This layer is retired; use Attendant and Git directly. Before removing an old copy, inspect it for project-specific edits, unique data/code, and references from instructions. Merge or relocate wanted content first. Remove only identified obsolete files within authorized scope. Preserve reports, experiment evidence, and unrelated project tools.
 
-Default reuse occurs when a role already has a collection alias matching its role name. For other aliases, prepare JSON mapping with only known roles:
+Earlier model changes still require deliberate data migration:
 
-```json
-{"skill-atoms":"abilities","challenges":"encounters"}
-```
+- `skills` became `skill-atoms`.
+- Hypotheses, expectations, and observations became headings in owning experiments.
+- `controls` became `control-vars`; update field names, schema references, record references, and formula text together.
+- Measure definitions/provenance belong in owning experiments; no separate measures collection.
+- No workbench decisions collection. Retain wanted alternatives in domain records or existing project decisions, or delete only when requested.
 
-Pass `--mapping <map.json>` to both plan and apply. Existing aliases must already be configured; new aliases are created at `game-design/<alias>`. Role aliases must be distinct. Existing collection contracts must include compatible required fields; extra fields/local usage/templates remain untouched. Query helpers read installed mapping, not guessed directory names.
-
-Unconfigured frontmatter candidates block apply until migration or an explicit fresh-design choice, including root notes alongside an existing registry. Candidate scan descends at most two directories and skips hidden paths, dependencies, tools/vendor/build, and configured collections; inspect supplied deeper source paths separately. No candidates is not proof no prior design exists. Use required Attendant skill's `references/migration.md` for migration; review/adopt its plan separately. To intentionally create empty workbench collections while preserving old notes unchanged, include `--fresh` in both approved setup commands. This is an explicit acknowledgment, not a default.
-
-An existing partial model can still be discussed without setup. Helpers needing absent/incompatible contracts return a named blocker. Empty optional collections are valid; absent core collection configuration is not treated as an empty query result.
-
-## Legacy collection name
-
-Earlier snapshots used `skills` for game-design skill atoms. Current role/default alias, directory, and query are `skill-atoms`; no old query alias remains. Existing legacy manifests fail `COLLECTION_RENAME_REQUIRED` before setup can create a duplicate collection.
-
-Explicitly migrate collection directory/config, schema references, record references, glossary targets, role mapping, and managed guidance together. Preserve record UUIDs and frozen reports/baselines; old evidence remains historical/stale. Do not bypass local-edit guards by changing hashes. Canonical repository maintainer tool `scripts/rename-workbench-skill-atoms.mjs --help` handles only its fixture/source, not arbitrary user projects.
-
-## Experiment consolidation
-
-Model version 2 replaces separate hypotheses, expectations, and observations collections with experiment headings and frontmatter `stage`. Old installed roles fail `EXPERIMENT_MIGRATION_REQUIRED` before setup writes. Explicitly migrate records/references/schema/registry and retain source identities, criteria, provenance, and authored unknowns. Do not merely remove roles from manifest or delete collections to bypass this gate.
-
-Canonical maintainer migration `scripts/consolidate-workbench-experiments.mjs` operates only on this repository's pristine fixture; not arbitrary user projects. Older saved reports remain historical/stale. Native execution and structured expectation analysis contracts need refinement before implementation.
-
-## Collection cleanup
-
-Model 3 renames `controls` to `control-vars`, puts measured-output definitions inside experiments, and removes workbench-owned decisions. Legacy manifest roles fail `COLLECTION_CLEANUP_REQUIRED` before writes. Migrate role bindings, field names, reference values, formula references, and schemas/registry explicitly. Do not delete user content to bypass gate. Move measure definitions/provenance into owning experiments. Existing decisions use user-chosen project decisions/domain records or explicitly requested deletion; no automatic new archive. Status templates now accept free text.
-
-Canonical tutorial only: execute `node scripts/cleanup-workbench-collections.mjs --check`, then `--apply`. Helper guards affected files against `82a97f6`, embeds four measures, preserves 63 record UUIDs, and moves pulling/crate-color proposals into domain records. It does not migrate arbitrary projects, stage/commit, write reports, or update installed tools. Run guarded setup update afterward. Local edits/unknown retired files block cleanup; partial failures list applied paths for recovery.
-
-## Update and local edits
-
-Run newer supplied package's `setup plan` against project; inspect changes before approval/apply. Installed helper alone has no newer upstream bytes and cannot update itself to an unseen version.
-
-Manifest records role mapping, capabilities, source-package hashes, and distribution hash. Existing config and records are preserved. Generated schema/usage/templates are not silently replaced. Locally edited installed tool/guidance files block replacement, including apparently compatible local modifications. Retired managed files are proposed as explicit deletions only when their hashes still match prior manifest. Modified retired files block update; unknown local files remain. This also removes legacy vendored Attendant copies. Reconcile deliberately; do not change stored hashes merely to bypass conflict detection.
-
-Apply is ordered and per-file guarded, **not a cross-file transaction**. On partial failure, inspect reported applied paths, registry, and manifest. Do not delete user sources or blindly retry previous approval. Re-plan actual state; preserve incomplete installation evidence. Manifest is written after its planned dependencies; retry remains subject to reviewed conflict handling.
-
-Only rebuildable `.attendant/` and `game-design-results/**/artifacts/` are ignored. Review metadata/findings are not automatically ignored or force-added to Git. No setup command commits, merges, pushes, or executes a simulation.
+Preserve UUIDs, authored nulls, rationale, and historical evidence. Follow live schema/usage and Attendant's migration workflow. Do not re-run historical fixture-conversion scripts against user projects.

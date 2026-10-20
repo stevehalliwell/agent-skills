@@ -1,4 +1,4 @@
-// Distribution authoring data. Installed project schemas remain authoritative.
+// Distribution authoring data. Live project schemas remain authoritative.
 // Used by build-example.mjs and template generation; no analysis engine lives here.
 const refs = name => `?ref[]:${name}`;
 const ref = name => `?ref:${name}`;

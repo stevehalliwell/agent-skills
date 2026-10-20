@@ -24,7 +24,7 @@ Trace a selected rule or intended experience through authored mechanics, runtime
 
 Roles: `mechanics`, `systems`, `dynamics`, `aesthetics`, `experiments`.
 
-Available recipes: `query mda`; `query evidence`; `query records --collection <mapped-alias>`.
+Inspection topics: MDA relationships, experiment evidence, and relevant source records.
 
 ## Working concepts
 
@@ -73,7 +73,7 @@ Available recipes: `query mda`; `query evidence`; `query records --collection <m
 
 Discuss intention without complete links. Mark disconnected records as unknown/unresolved, not failed experiences. Distinguish empty observations from evidence against a claim.
 
-A declared mechanic–dynamic–aesthetic chain is not causal proof or emotional measurement. The mda recipe inventories declared links; disconnected-path interpretation remains agent work. Do not demand all eight familiar aesthetic labels.
+A declared mechanic–dynamic–aesthetic chain is not causal proof or emotional measurement. Declared-link inventories show relationships; disconnected-path interpretation remains agent work. Do not demand all eight familiar aesthetic labels.
 
 ## Sources
 

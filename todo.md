@@ -7,7 +7,7 @@ Implementation context:
 - Branch: `feat/game-design-workbench`.
 - Worktree: `D:/Repos/agent-skills-game-design-workbench`.
 - Base: `99f0879c316377faf162841362310dc8b024b1e0`.
-- Scope: first usable skill release, all 18 packs, collection templates, project-local generic/query tools, populated crate-puzzle example, tests, and offline decision report. No native viewer or simulation execution claimed.
+- Scope: first usable agent skill, 18 provisional packs, collection templates, populated crate-puzzle example, and authoring checks. Use Attendant/Git directly; retire generic/query/report lifecycle layer. No native viewer or simulation execution claimed.
 - Step commits: (1) plan/spec baseline; (2) model/templates/example; (3) local setup/query/report tools; (4) researched packs/entrypoint/docs; (5) integrated verification/corrections; (6) offline review report.
 - Per step: update evidence here, stage only assigned paths, commit before next step. No merge/push. Original worktree's unrelated files remain untouched.
 
@@ -58,21 +58,20 @@ Workbench supports repeated, non-linear design work. Enter at current state, est
 
 Two explicit entry situations:
 
-- **New repository:** install and configure all supported table sets, their templates, and required scripts so designer can enter information in any domain without another collection-setup step. Empty collections are valid; do not require records in every table.
+- **New repository:** install and configure supported table contracts and required domain-tool sources so designer can enter information in any domain without another collection-setup step. Empty collections are valid; do not require records in every table.
 - Guide designer to provide core elements; progressively flesh them out rather than requiring a complete design upfront.
 - **Existing workbench project:** inspect existing design data and guidance, recover current state, and continue refining, exploring, or elaborating the design. Do not restart setup or repeat settled questions.
 
-Setup copies required tool sources/scripts into project as a versioned snapshot. Project tools work without installed skill; updates are explicit and preserve local changes rather than silently inherit global skill changes. Git captures tool version alongside design data.
+Use installed skill, existing Attendant operations, and ordinary Git. Copy wanted guidance/templates or actual domain-tool source only when needed; agent merges updates with project-specific content and reviews diff. Git records reviewed versions. No workbench installer, manifest, or hash inventory.
 
 Setup/update/resume contract:
 
-- Propose one concrete combined setup plan before applying Attendant collection creation. Show project root, role-to-collection mapping, all new/changed files, required runtimes, and collisions. Reuse compatible existing collections only after reading their schema/usage; stop for incompatible contracts rather than silently overwrite or migrate.
-- Install all 19 core table sets listed below, each with `.schema.md`, `.usage.md`, and `.template.md`; empty tables are valid. Add any justified pack-specific collection/query requirements. Setup alone does not copy the tutorial game into designer's live records or invent initial game facts.
-- Copy project-local references, all 18 pack documents, templates, available query/tool sources, launchers, licenses, and quickstart under `tools/game-design-workbench/`. Include Attendant runner dependencies when local generic operations depend on them: inspected runner imports sibling `yaml.mjs`, not a standalone single file. Document Node.js >=24.10.0 for Attendant.
-- Keep `tools/game-design-workbench/manifest.json` as snapshot metadata: distribution revision, model/report versions, installed capabilities, role-to-collection mapping, dependency versions/licenses, and shipped-file hashes. Existing `.pi/attendant.tables` still owns collection discovery; manifest does not become a second record index. Model/role conflicts require resolution, not guessed remapping.
-- Explicit update compares installed base hashes, current local files, and new distribution. Show additions, safe replacements, local edits, removals, and schema/data migrations separately. Preserve local edits; stop for conflicts. Never delete local extras or migrate records as an implicit tool update. Record new manifest version only after successful apply/validation; report exact partial state if a write fails.
-- Resume reads manifest/capabilities, Attendant configuration/schema/usage, requested source records and relevant linked rationale/evidence. Resolve current scope from request; inspect old reports as historical context, not current findings. Do not load every pack, reread every record, repeat settled questions, or use a previous report's lens as standing permission.
-- If source is usable but a tool/dependency is absent, continue available record/guided operations and state unsupported checks. Do not auto-install dependencies, upgrade snapshots, execute simulations, or run a broad review on resume.
+- Present concrete paths/aliases and changes; honor Attendant confirmation/migration workflows. Read existing contracts and preserve incompatible source until resolved.
+- Current model has 14 role contracts with schema/usage/body template. Empty collections are valid. Setup creates no tutorial facts; migrate existing records deliberately.
+- Registry owns collection discovery; project instructions identify concept owner and non-default role aliases. No parallel manifest.
+- Agent merges useful upstream changes, preserving local edits/unknown files. Migration/deletion is not an implicit update. Inspect actual partial state and Git diff after failure.
+- Resume reads project instructions, schemas/usages, concept/mode, relevant records/evidence. No automatic lens sweep, setup, installation, or execution.
+- Retired local tool copies need reconciliation before removal. Preserve unique content and historical evidence.
 
 ### Core elements and input routing
 
@@ -109,7 +108,7 @@ Setup/update/resume contract:
 - Initially support bundled framework documents only. Project-supplied/custom framework conventions are future scope, not part of initial delivery.
 - Load and apply only selected bundled lens/framework guidance; keep catalog discoverable without loading every lens into context. Do not imply an executable plugin system.
 - Audience, player capability, and motivation terminology are common framework concepts, not a requirement to model particular cohorts or derive player profiles from project records. Do not add audience/cohort collections, capability scores, personality scoring, or mandatory challenge-versus-capability curves. Apply these concepts through original framework guidance; existing design records and supplied evidence can inform discussion without turning conceptual vocabulary into measured player data.
-- Explicit lens/framework analysis requests create dated reports identifying selected framework and coverage. Routine consistency/impact checks do not automatically create a full review report.
+- Explicit lens/framework requests return sourced findings and coverage. Save dated reports when requested; routine consistency/impact checks do not create a report automatically.
 
 ### Per-operation discipline
 
@@ -140,7 +139,7 @@ A review request must not silently become a repair operation. Explicit design in
 
 ### Outputs by operation
 
-- **Setup:** selected collections, schemas, usage guidance, body templates, and a small initial set of connected records. Explain what each collection contributes.
+- **Setup:** approved empty collections/contracts and concept/navigation. Create connected records only from explicitly supplied capture, not setup itself.
 - **Generation:** concrete candidate mechanics, relationships, challenges, or alternatives tied to design intent. Identify assumptions, consequences, and questions each candidate introduces.
 - **Review:** scoped findings with source records, reason, evidence class, and suggested investigation. State coverage and checks not performed.
 - **Analysis:** matrices, prerequisite/progression views, focused relationship views, or change-impact results derived from the same records.
@@ -294,10 +293,10 @@ Absence alone is not a defect. Check applicability and project expectations befo
 ### Result freshness
 
 - Distinguish old analysis results from newly generated results. Do not present a saved historical report as a current check.
-- Save a dated report for each requested analysis/review run, with run identity, scope, generation time, and inspected source-state context. Reruns create new reports rather than overwrite previous results.
+- When storage is requested, save a new dated report with scope, time, and source-state context. Do not overwrite earlier results or mandate duplicate formats.
 - Repeated warnings may appear in successive reports. Source changes make older reports historical; do not imply an old result was revalidated.
 - Normal gap exploration succeeds when analysis completes, even with findings. Invalid input/runtime failures still fail. Explicit severity thresholds enable nonzero exits for automation; validation fails on broken data. Review/validation does not automatically fix source; use nonmutating Attendant validation when reviewing.
-- [Reports and provenance](#reports-and-provenance) defines timestamps, source-state capture, and historical presentation. Findings stay in run reports unless designer requests a source question/decision/hypothesis; do not create an issue record for every warning. Concrete generated design alternatives still follow retained-proposal policy.
+- [Reports and provenance](#reports-and-provenance) defines timestamps, source-state capture, and historical presentation. Findings stay in run reports unless designer requests a source question/decision/hypothesis; do not create an issue record for every warning. Generated alternatives follow user-owned retention policy.
 - Recorded design intent and rationale remain useful even when a warning repeats; do not confuse repetition with a new design defect.
 
 ### Representative use cases
@@ -374,13 +373,13 @@ Section E perspectives are cross-cutting prompts attached to relevant packs, not
 ### Reports and provenance
 
 - Give each run a UTC timestamp and collision-safe suffix. Directory form: `YYYYMMDDTHHMMSSmmmZ-<suffix>`; metadata date/time uses RFC3339 UTC. Never overwrite an existing run directory.
-- Run directory keeps reproduction/source-state metadata separate from bulk derived artifacts. Save structured findings and readable report with links to evidence. Place rebuildable matrices/traces/plots/binaries under ignored `artifacts/`; retain metadata/recipes and non-rebuildable agent/playtest evidence. Do not apply an ignore rule that hides all authored reports. Supporting queries within one requested review need not create separate review runs.
-- Source records live under configured `game-design/` collections, project-local tool snapshot under `tools/game-design-workbench/`, and generated reports/results under `game-design-results/`. Run recipes, simulation source, and non-rebuildable evidence are tracked; rebuildable artifacts are ignored. Keep generated reports out of record discovery.
-- Record requested lens/framework, scope, source paths/SHA-256 fingerprints, relevant schema/usage/guidance hashes, tool/pack versions, baseline Git commit, and dirty-state information where applicable. Derive stable finding identity from rule code, canonical record keys, field/section, and trigger discriminator, not generation time or prose wording.
+- Run directory keeps reproduction/source-state metadata separate from bulk derived artifacts. Save readable findings with evidence links; add structured data when useful or required by a consumer. Place rebuildable matrices/traces/plots/binaries under ignored `artifacts/`; retain metadata/recipes and non-rebuildable agent/playtest evidence. Do not apply an ignore rule that hides all authored reports. Supporting queries within one requested review need not create separate review runs.
+- Source records live in configured collections; requested reports/results stay outside them under `game-design-results/`. Track recipes, simulation source, and non-rebuildable evidence; ignore rebuildable artifacts.
+- Record lens/framework, scope, cited paths/fields, source commit, relevant drafts/untracked paths, and selected intent comparison commit/path. Use recognizable labels and stable record IDs. No automatic fingerprints, frozen review snapshot, or generated-ID service.
 - Reports distinguish completed checks, unsupported/unperformed checks, missing data, and incomplete scope. No findings is not completeness evidence.
 - Each finding includes stable rule code/identity, kind, severity, evidence class, involved records, source field/section, trigger/evidence, consequence/question, and suggested investigation.
-- Agent findings use same machine-readable report structure but remain marked agent interpretation. C tools do not claim to perform unavailable agent-only reviews.
-- Reopen a saved report as historical unless inspected source/tool state still matches; never relabel it as newly run. Source changes during a run must be visible, not silently mix snapshots.
+- Chat or Markdown suffices for agent reviews. Structured findings are optional when useful, required only by an actual consumer. C tools do not claim agent-only interpretation.
+- Reopen reports as historical. Inspect relevant Git changes/current source before claiming applicability; never label old reports newly run. State reconstruction limits for uncommitted reviewed text.
 - Explicitly requested multiple frameworks may be compared; preserve disagreements and evidence limits. No implicit all-framework execution or aggregate design score.
 
 ### Controls and experiments
@@ -402,9 +401,9 @@ Section E perspectives are cross-cutting prompts attached to relevant packs, not
 - Bound runs, steps, and elapsed execution; persist partial/error/limit status rather than label a stopped run successful. Incomplete evidence cannot establish a satisfied target.
 - Initial defaults: 1000 batch runs, at most 1,000,000 steps per run, 30-second execution timeout. Expose positive explicit overrides; record effective limits. Compile/startup failures are distinct from simulated outcomes; verify these defaults against fixture workload before claiming usability.
 - Seed random runs through a specified shared generator, not compiler-specific `rand()`. Save generator/model version, seed, effective controls/overrides, and checkpoint commit. Historical reproduction loads recorded source/inputs; a new answer about current rules gets a new simulation.
-- Use prepare/checkpoint/resume flow. Prepare freezes generated code/dependency identities, effective inputs/overrides, assumptions, seed, requested trials, and limits into a tracked run recipe. Return recipe ID, prepared source paths, and checkpoint requirements without executing simulation.
-- Agent or human obtains approval and makes Git checkpoint through ordinary Git operations. C tools do not automatically commit. Resume references same recipe ID; retry must not regenerate inputs or timestamps into a different recipe and create another dirty-state loop.
-- Resume verifies recipe integrity, relevant source fingerprints, committed recipe/code/input state, and required clean working tree. Ignored/untracked relevant sources do not count as checkpointed; report them and never silently force-add ignored/private files. Whole-tree pending scope uses ordinary Git status; ignored unrelated private files are not staged. Keep approved rebuildable outputs ignored. Changed material inputs require a new preparation/checkpoint rather than silently updating frozen recipe. Declined approval blocks execution.
+- Agent prepares an ordinary tracked recipe identifying code/dependencies, inputs/overrides, assumptions, seed, trials, and limits. Preparation does not execute simulation or require a lifecycle program.
+- Agent/human obtains approval under project policy and commits with Git. Reuse committed recipe for retries; do not rewrite timestamps/inputs into a dirty-state loop.
+- Agent inspects Git status/diff and checkpoints reviewed recipe/code/inputs under project policy. Execute from exact committed state, using ordinary checkout/worktree if needed. Identify external inputs/dependencies. No custom Git/checkpoint/hash subsystem. Do not force-add private/ignored files; changed inputs need a new reviewed checkpoint. Declined approval blocks execution.
 - Record actual checkpoint commit in run result metadata after checkpoint; do not rewrite the committed recipe to contain its own future commit hash. A prepared recipe is not an executed result. Opening it or viewing results does not authorize execution.
 - Support stepping, batch runs, distributions/percentiles, numeric parameter sweeps, and selection of an unusual run. Sweep `start:end:step` uses inclusive start and includes end only when reached; reject zero/wrong-direction step, non-finite values, or nonintegral points for integer controls. Compute points from index rather than cumulative addition; record effective points in prepared recipe. Initial maximum is 100 sweep points, overridable explicitly; trial/output/time limits still apply across whole prepared sweep. A deterministic model may have zero spread; do not invent randomness.
 - Generated visualizations and headless outputs read same measures/results. A simulated prediction remains conditional on stated assumptions, not observed player behavior.
@@ -412,7 +411,7 @@ Section E perspectives are cross-cutting prompts attached to relevant packs, not
 ### Simulation program and measurement contract
 
 - Run prepared model as a separate local process, not a dynamically loaded viewer plugin. Generated C99 program accepts `--input <frozen-input.json>` and emits versioned NDJSON on stdout; diagnostics go to stderr. Shared C helpers handle typed inputs, PCG32, step accounting, and event encoding. Conventional compiler and CJIT builds use same helper sources.
-- Inputs contain recipe/experiment identity, effective typed controls with units, experiment-local assumptions, frozen measure/expectation definitions, trial count, seed, and limits. Model reads this snapshot, not current design files. Record code/helper/dependency hashes and build invocation/toolchain in provenance. No arbitrary expression or shell evaluation.
+- Inputs contain recipe/experiment identity, effective typed controls with units, experiment-local assumptions, frozen measure/expectation definitions, trial count, seed, and limits. Model reads this snapshot, not current design files. Record source commit, code/helper/dependency versions, and actual build invocation/toolchain in provenance. No arbitrary expression or shell evaluation.
 - Output begins with a header identifying protocol/model/recipe, emits trial results and optional step records, and ends with explicit completion/count/status. Each trial has configuration ID, stable zero-based trial index, and measurements keyed by canonical measure identity. Combined sweep trial identity is configuration ID plus trial index; repeated indices across distinct configurations are valid. Step records name trial, monotonically increasing step, and inspectable state/measurements. Validate identities, declared measurement types/units, duplicate indices, non-finite values, and missing/invalid completion; malformed output is not successful simulation.
 - Default stores per-trial results; detailed trace is requested for selected trial(s). Viewer may step through saved trace without executing code. New trace generation or historical resimulation is an explicit execution with checkpoint/limits, not an automatic effect of opening a chart.
 - Use PCG32 XSH-RR with explicit state initialization, algorithm/version recorded as `pcg32-xsh-rr-v1`. Master seed is uint64, serialized losslessly as a hexadecimal string; trial index selects stream with same master seed. Corresponding sweep trials reuse streams, with divergent model paths potentially consuming different draws. Uniform helper uses `ldexp(draw, -32)` on [0,1); bounded integers use rejection, not biased modulo. No compiler-specific `rand()` or cryptographic claims.
@@ -441,13 +440,13 @@ Section E perspectives are cross-cutting prompts attached to relevant packs, not
 - Skill graph supports rank editing as specified. Other views are exploratory initially.
 - Direct-source and structured-output parity applies to every deterministic visible finding; agent-only interpretations must be saved as structured findings before a viewer can display them.
 - Viewer refresh must detect externally edited Markdown; keep last-good results clearly stale if current source cannot load. Do not save against a stale model.
-- Project-local tool snapshot includes required sources, licenses, scripts, and explicit dependency/version information. Resolve paths relative to project/tool location, not current shell directory assumptions.
-- Upgrades are explicit. Compare local snapshot changes; stop/report conflicts rather than overwrite local tool or template edits.
+- Copy actual domain-tool sources/licenses/dependency information when needed. Agent merges explicit updates with local versions and reviews diff. No generic bundle/update program or manifest. Resolve execution paths explicitly.
 
-### CLI contract requirements
+### Future domain-tool CLI contract requirements
 
-- Commands cover source inspection, validation, selected-lens gaps, interaction matrix/graph, skill chains/rank updates, connectivity, impact, control-vars/import/export, expectations, simulations/sweeps, views, and report inspection.
-- `gaps` requires explicit framework selection unless calling context already supplies it. Framework catalog/listing is discovery, not execution of every pack.
+Only computation/visualization belongs in executable tools. Setup, merge updates, framework interpretation, report writing, and Git checkpoints remain agent workflows. Examples below are planned, not installed interfaces.
+
+- Domain commands cover source parsing/semantic checks, matrix/graph, skill placement, connectivity, impact, control-variable resolution/import/export, numerical expectations, simulations/sweeps, and views. Agent reads catalog/guides and interprets framework findings; no general framework evaluator or report lifecycle command.
 - stdout contains result data; diagnostics/progress/display tables use stderr. Explicit output format wins; piped/agent paths emit JSON without interactive prompts. Support field selection for large structured results.
 - Version structured schema; include data, provenance/coverage, and structured errors. Empty successful results are empty data, not failures.
 - Completed exploratory gaps succeed with findings. Explicit failure threshold can fail automation; invalid input/runtime failure and broken-data validation fail nonzero. Preserve partial results with explicit incomplete/error status where safe.
@@ -455,36 +454,31 @@ Section E perspectives are cross-cutting prompts attached to relevant packs, not
 - Use `gd` command name through project-local Windows launcher, with explicit `--project <path>` when not running from target project. Human instructions show launcher path rather than assume global installation.
 - Common flags: `--json`, `--format <format>`, `--fields <comma-separated-fields>`, and `--output <path>` where supported. Explicit incompatible format flags fail rather than silently choose one. `GD_AGENT=1` selects noninteractive JSON mode.
 - Exit codes: `0` completed success; `1` validation/finding threshold failed; `2` invalid input, missing prerequisite/approval, or runtime failure. Include partial data with explicit incomplete status when safe.
-- `gd simulate`/`sweep` enforce clean checkpoint and tracked run sources. Skill uses ordinary Git commands and user confirmation to satisfy checkpoint requirement; C tool does not become an automatic Git commit/recovery subsystem.
+- Agent verifies checkpoint/execution location using ordinary Git before simulation/sweep. Domain executable consumes declared committed inputs and enforces numerical/resource limits, not a custom Git/approval lifecycle.
 
 Representative commands (planned contract, not installed commands):
 
 ```text
 gd validate
-gd lenses
 gd inspect nouns/crate --json
 gd matrix --json
 gd connectivity --json
 gd skill-atoms --json
 gd skill-atoms set-rank skill-atoms/coordinate --rank 3 --json
 gd impact mechanics/crate-pushing --json
-gd gaps --lens skill-atoms --scope challenges/combined-room --json
 gd controls --json
 gd controls export --format csv --output controls.csv
 gd controls export --format ini --output controls.ini
 gd controls export --format json --output controls.json
 gd expectations --json
 gd expectations --run <run-id> --json
-gd simulate prepare experiments/route-cost --runs 1000 --seed 42
-# Review pending files and obtain required approval; make ordinary Git checkpoint.
-gd simulate run <recipe-id>
-gd sweep prepare experiments/route-cost --param walk-speed=1:3:0.5 --seed 42
-# Checkpoint prepared sweep inputs before execution.
-gd sweep run <recipe-id>
+# Agent prepares recipe/code/resolved inputs, reviews diff, and checkpoints with Git.
+# Execute from committed state; exact flags remain subject to delivery refinement.
+gd simulate --input <committed-input.json>
+gd sweep --input <committed-sweep-input.json>
 gd replay <run-id>
 gd view matrix
 gd view skill-atoms --layout rank
-gd report <run-id> --json
 ```
 
 Framework IDs and any rule-specific flags are documented in bundled catalog; no `--all` framework selector. Prose review findings are agent-generated report data, not a claim that C performs every framework interpretation.
@@ -520,10 +514,10 @@ Example shows expected shape, not executed result. Read/report commands include 
 
 First slice delivers usable guided work, not a claim that later native tools exist. Record installed capabilities and use Attendant for available generic queries/validation. Preserve evidence origin when agent inspects relationships manually.
 
-1. **Setup:** request “Set up game-design workbench here.” Return combined file/collection/dependency proposal. After approval, install empty configured collections and local snapshot. Existing Markdown and custom configuration remain unchanged outside approved plan; no tutorial facts appear in live design.
+1. **Setup:** request “Set up game-design workbench here.” Return combined file/collection/dependency proposal. After approval, follow Attendant collection workflow and author approved contracts; no local runtime snapshot. Existing Markdown and custom configuration remain unchanged outside approved plan; no tutorial facts appear in live design.
 2. **Direct capture:** supply “Crates can be pushed into free cells; wall-blocked pushes cost no energy.” Resolve declared box/shove aliases if used; capture canonical case/mechanic facts as accepted. Do not invent an energy amount, interview for experience first, or run a lens review. Return changed paths and unresolved material questions only.
 3. **Generation:** request “Suggest alternatives to make blocked pushes interesting.” Keep ideas proposed; persist wanted ideas in domain records or existing project decisions according to user choice. Surface rejected pulling rationale if relevant. Choosing one adopts only selected facts; siblings remain proposed and rules retain one canonical home.
-4. **Scoped review:** request “Review combined-room scaffolding using skill atoms.” Load that pack and relevant challenge/prerequisite/route context; save dated structured and readable findings. Report missing planning opportunity, route-dependent switch support, single-shot roles, and rank conflict only to extent established by inspected data. No automatic Flow or other-lens review; no silent repair or invented player incapability.
+4. **Scoped review:** request “Review combined-room scaffolding using skill atoms.” Load that pack and relevant challenge/prerequisite/route context; return sourced findings; save dated Markdown/structured output when requested. Report missing planning opportunity, route-dependent switch support, single-shot roles, and rank conflict only to extent established by inspected data. No automatic Flow or other-lens review; no silent repair or invented player incapability.
 5. **Change impact:** request “What would removing pushing affect?” Trace declared references to cases, skill atoms, challenges, and experiments. Return paths/link kinds and uncertain consequences; do not remove records or reinterpret historical simulations.
 6. **Resolve:** explicitly change `coordinate` authored rank from 2 to 3 in baseline example. Rerun same skill review; rank conflict clears while missing/route-dependent learning questions remain. First slice may perform authorized source edit through Attendant; later GUI/CLI rank operation must produce same source outcome.
 7. **Other packs:** exercise one explicit selected-pack request per pack against example or relevant partial source. Original questions and limitations remain useful with empty observations. Bartle can report limited applicability; Flow/cognitive/motivation packs do not demand cohort records. No all-lenses review command or aggregate score.
@@ -531,9 +525,9 @@ First slice delivers usable guided work, not a claim that later native tools exi
 
 First-slice acceptance:
 
-- All 19 core collection schemas/usages/templates validate with Attendant; representative empty, incomplete, accepted, proposed, excluded, and conflicting records have documented meaning. Required pack-specific additions follow same ownership rules.
+- All 14 current collection schemas/usages/templates validate with Attendant; representative empty, incomplete, accepted, proposed, excluded, and conflicting records have documented meaning. Required pack-specific additions follow same ownership rules.
 - All 18 packs have citations, original actionable prompts, declared inputs/queries, evidence limits, and selected-pack walkthrough evidence. Research source materials before authoring; report inaccessible evidence and avoid unsupported claims.
-- Local workbench helpers require separately installed `attendant` skill. Load that skill and point `GD_ATTENDANT_SKILL` to its directory. Do not vendor/copy Attendant or import its internal modules. Test missing-dependency failure without writes. No Node-free claim for these commands.
+- Use separately installed Attendant/public runner and matching workflows. No vendored files/private imports or runtime wrapper. Maintainer tests may locate dependency through `GD_ATTENDANT_SKILL`; normal use needs no such variable.
 - Tests cover direct capture without unsolicited review, alias resolution/collision, retained alternatives/adoption, review without repair, current/historical reports, and supplied versus invented facts.
 - Validate skill frontmatter, links, conditional reference discovery, and repository index entry. No workbench implementation, workflow execution, or pack-source research is implied by this specification alone.
 
@@ -624,7 +618,7 @@ Static inspection of `skills/attendant/scripts/attendant.mjs` and `references/co
 ### Slice 1 — usable skill, model, and all framework packs
 
 - [x] Create `skills/game-design-workbench/SKILL.md`, conditionally loaded operation references, 18 pack documents, source citations, and original prompts. Each pack records actual source-access limits, including abstract/search-only evidence.
-- [x] Implement 19 core schema/usage/body-template sets, shared query support, setup/update/resume instructions, snapshot manifest, and local quickstart/dependencies. No supplemental theory datasets needed.
+- [x] Current model has 14 schema/usage/body-template sets. Setup/update/resume and relationship inspection use agent instructions, Attendant, and Git. Initial wrapper/manifest retired; no supplemental theory datasets.
 - [x] Build bundled crate-and-switch source fixture and retained proposals, glossary, resource/control/formula examples, explicit case classifications, skill/challenge graph, and expected findings. No simulation execution claimed.
 - [x] Test setup against empty/preconfigured temporary projects, preservation, approval gates, query/report/rank-edit walkthroughs, partial source, and unsupported-check disclosure. Selected-pack routing/agent authority checked statically; no autonomous-agent benchmark claimed.
 - [x] Add identity/reference/alias tests with actual schemas; verify populated copied example and local Attendant rank update without global skill. Validate entrypoint/frontmatter/links and update repository skill index.
@@ -645,22 +639,28 @@ Confirmed behavior:
 Implemented delivery shape:
 - One live concept document, default `game-design/concept.md`, prominently linked from README; no new collections merely for concept sections. Preserve an explicitly designated existing owner rather than creating duplicate live intent.
 - Concise template based on supplied outline: razor/purpose, intended player/appeal, platform/context, core features, intended experience/player story, second/minute/hour play, hook, risks, and open questions. Related products/commercial material optional. Detailed rules/tuning and tests belong in existing collections; concept links to canonical definitions.
-- Working mode and relevant concept revision accompany saved review context and freshness checks. Context must be available through progressive disclosure before framework interpretation, without repeating concept content in each guide.
+- Working mode, concept path/revision, and relevant drafts accompany saved review context. Read context before framework interpretation; do not repeat concept content in each guide.
 
-- [x] Add concept template and shared concept/mode instructions before model/operation interpretation. Tutorial explicitly chooses explorer mode; overall intent remains unknown.
-- [x] Implement guarded setup binding, header-only mode changes, README navigation, and mode-required first setup. Existing concept body/frontmatter stays intact; edited managed navigation conflicts rather than overwrites.
-- [x] Add read-only context/history command, exact-commit snapshot comparison, concept-aware freshness, historical citations, and optional intent-relation labels. No Git writes/fetches, frozen historical text copies, implicit mode overrides, or invented original baseline.
-- [x] Test existing/fresh/self-README setup, stale approval, local edits, incomplete explorer intent, malformed/duplicate/encoded headers, nested Unicode Git paths, working drafts, support/contradiction/drift labels, explicit switches, original-history recovery after rename, and historical viewing without comparison Git objects.
+- [x] Ship concept template and shared mode/intent instructions. Tutorial uses explorer mode with authored candidate brief and hypothetical player story, not observed evidence.
+- [x] Agent preserves existing owner/body/navigation during setup and explicit header changes. Project instructions record binding; no managed-link installer.
+- [x] Use ordinary Git log/show/diff for selected intent comparison and historical citations. No custom context/history/snapshot service. Earlier scripted tests remain historical evidence, not current interfaces.
 
-Current source/CLI contract: [concept and working mode](skills/game-design-workbench/references/concept.md). Implementation verification recorded after checks below. Framework packs remain provisional; framework completeness pass and Slice 2 have not started.
+Current source/workflow contract: [concept and working mode](skills/game-design-workbench/references/concept.md). Implementation verification recorded after checks below. Framework packs remain provisional; framework completeness pass and Slice 2 have not started.
 
 ### Collection cleanup — before further review
 
 - Implemented: rename `controls` to `control-vars`. Own named game configuration values, not only tuning inputs. Documentation and simulations reference names instead of repeating magic numbers. Later exports support experiments, game consumption, and CSV/spreadsheets. Keep runtime resource state and experiment-local assumptions distinct.
 - Implemented: remove independent `measures` collection. Define measured outputs, units, and measurement boundaries inside owning experiment; no independent reuse requirement.
 - Implemented: remove workbench-owned `decisions` collection and compulsory alternative archive. Existing project-level Attendant decisions may serve that role; do not create/require another. Users may retain ignored alternatives through their chosen statuses or delete them. This supersedes mandatory retention policy; do not automatically delete or discard existing content while removing collection support.
-- Keep `challenges` as concrete gameplay tasks/situations with optional learning/route annotations. Current consumers versus planned checks: route query and selected framework reviews now; deterministic all-route scaffolding/prerequisite checks in Slice 3; progression/graph views in Slice 4. Declared opportunity is not observed learning or game-state reachability.
+- Keep `challenges` as concrete gameplay tasks/situations with optional learning/route annotations. Current consumers versus planned checks: direct route inspection/Attendant queries and selected framework reviews now; deterministic all-route scaffolding/prerequisite checks in Slice 3; progression/graph views in Slice 4. Declared opportunity is not observed learning or game-state reachability.
 - Import/export belongs in Slice 3 control-variable delivery. Export resolves JSON/INI/CSV through same value resolver used by experiments. Import formats, validation, and merge/overwrite behavior remain unresolved until refinement.
+
+### Agent-led workflow correction
+
+- [x] Remove generic lifecycle/query/report runtime and installed example copy; use Attendant, agent-guided merge, and ordinary Git instead.
+- [x] Remove completed fixture migration programs and legacy wrapper export checker. Keep old evidence unchanged; Git retains deleted code.
+- [x] Edit framework guides/catalog directly; remove JavaScript content mirrors/generator. Keep only deterministic fixture/template authoring modules and artifact/integration tests.
+- [x] Update setup, capture, inspection, review, intent comparison, experiment checkpoint instructions, example, and repository index. No normal-use custom environment/manifest requirement.
 
 ### Framework completeness pass — before Slice 2
 
@@ -672,7 +672,7 @@ Current source/CLI contract: [concept and working mode](skills/game-design-workb
 ### Slice 2 — C99 source core and structured inspection
 
 - [ ] Vendor reviewed/pinned LibYAML subset with license; implement bounded flat source/config/schema loading, typed scalar semantics, identity/term lookup, declared relationships, and reverse indexes. No database fork.
-- [ ] Deliver launcher and headless `inspect`, `validate`, `impact`, catalog/report operations with versioned JSON, structured errors/coverage, source fingerprints, and dated reports.
+- [ ] Deliver domain source inspection/semantic validation/impact with versioned JSON and coverage/errors. Catalog reading, framework interpretation, report writing, and Git history remain agent workflows.
 - [ ] Verify supported flat YAML against Attendant; reject unsupported syntax, duplicate keys, invalid references/types, unsafe numbers, and malformed input explicitly. Document/test finite input/expression/graph/output limits; no silent truncation.
 - [ ] Run without Node, raylib, display, agent, or `.attendant/` projection. Test paths with spaces/non-ASCII text, external edits, source changes during checks, malformed/oversized input, and Windows/CJIT build; test conventional compiler separately before claiming support.
 
@@ -697,7 +697,7 @@ Acceptance: human can inspect multi-case cell and parallel/late-root chains, nav
 
 ### Slice 5 — explicit one-shot experiments and result views
 
-- [ ] Deliver shared C input/measurement/PCG32 helpers, generated-model instructions, recipe preparation, checkpoint verification/resume, compilation/supervision, batch/sweep/replay, and experiment trace/distribution/sensitivity views.
+- [ ] Deliver C input/measurement/PCG32 helpers, generated-model instructions, compilation/supervision, batch/sweep/replay, and result views. Recipe preparation/checkpoints use agent and ordinary Git workflows, not a custom lifecycle program.
 - [ ] Implement fixture question and PCG golden tests; verify actual seeded distribution against analytical reference without inventing sample counts. Test energy override 2, speed sweep, formula propagation, separate requested expectation analysis, and unusual-trial trace. Verify simulation reports measurements without design verdicts or expectation-based command failure.
 - [ ] Test missing approvals/declined commits, dirty/untracked relevant source, unchanged recipe retry, stale recipe, compile/protocol/runtime/timeout/step/output failures, undefined measurements, missing historical dependencies, and replay without current controls or overwritten user files.
 - [ ] Verify dated results, tracked reproduction provenance versus ignored rebuildable output, no auto-run on open/preview, CLI/view parity, and new simulation after rule changes. Use temporary Git repositories; never checkpoint this skills repo as a test.
@@ -725,7 +725,11 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Generate a small C99 interaction simulation from supplied prose, recording assumptions and using current controls.
 - Demonstrate authorized Git checkpoint and comparison/recovery workflow without a document-level edit log or loss of unrelated changes.
 
-## Initial implementation checks — dependency packaging superseded
+## Historical implementation evidence
+
+These checks describe earlier deliveries, including retired runtime. They are not current commands or requirements. Git retains deleted code; historical reports/baselines remain unchanged. Current checks belong to workflow simplification section below.
+
+### Initial implementation checks — dependency packaging superseded
 
 - Plan checkpoint: `2a69e10`.
 - Step 2: generated 19 schema/usage/body-template sets and 68 tutorial records; `attendant validate --strict` returned zero diagnostics/corrections. Observation collection intentionally empty; analytical timing reference is not executed evidence.
@@ -752,7 +756,7 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Fresh Git-index export passes setup idempotency and saved-review source matching. Fixed source vendor index/working CRLF mismatch by preserving existing bytes; no vendor logic changed. Strict owned-file whitespace check passes; default check's vendor CRLF warnings are not silently rewritten.
 - Slice 1 complete for review. Slices 2–5 remain unimplemented. No merge/push/publication performed.
 
-## Dependency correction
+### Dependency correction
 
 - User correction: Attendant is another required skill, not vendored infrastructure. Revision authorized; previous standalone-without-Attendant claims are superseded.
 - Remove canonical/example Attendant copies. Require loaded skill directory via `GD_ATTENDANT_SKILL`; fail before writes when absent. Call public runner only; compare schemas through public API. Fixture generator uses JSON-compatible YAML without private parser imports.
@@ -765,7 +769,7 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Offline report/browser checks pass again: six sections, zero HTTP requests/errors, desktop/mobile, history/progress/theme/focus, reduced motion, no-JS, print generation. Eight original citation-access warnings retained, not relabeled as a new URL check.
 - Correction commits: `d2d028d` dependency boundary; `b755438` expanded guides. No merge/push/publication. Original worktree remains `dev` with its original untracked files.
 
-## Collection naming correction
+### Collection naming correction
 
 - Rename domain collection/role/query to `skill-atoms`, including paths, schemas, references, glossary documents, templates, examples, model contracts, and selected-framework guidance. No old query alias.
 - Preserve agent-skill install paths and published GameFlow theme name. Keep frozen reports/baselines unchanged; old paths remain historical evidence, not active configuration.
@@ -776,7 +780,7 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Current offline static checks pass: six section anchors, no remote resources, unchanged script/style bytes. Headed-browser recheck blocked because agent-browser CDP discovery exceeded 100-second and 90-second command limits. Prior browser results remain explicitly historical, not relabeled as current.
 - Source rename committed as `0f7f433`; no merge/push/publication.
 
-## Model/documentation feedback pass
+### Model/documentation feedback pass
 
 - Model 2: consolidate hypotheses, expectations, and observations into experiments; current templates and fixture migrated. Record stage is extensible text, not a prematurely fixed transition engine.
 - Preserve original planning-hypothesis UUID as experiment; embed timing criterion with original UUID, threshold, rate, and authored nulls. Do not conflate human-planning investigation with assumed-delay timing model. Current fixture has 67 records across 16 collections.
@@ -785,7 +789,7 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Verification: 27/27 tests pass; 219 local links pass; frontmatter and pack generation checks pass. Staged export verifies 16 collections, two proposed-stage investigations, six skill atoms, unchanged setup, and historical/stale reviews with stable finding IDs. 67 original UUIDs retained; merged criterion UUID/values/nulls preserved in experiment provenance.
 - Current implementation commit: `087021c`. Fresh evidence lives in `reports/game-design-workbench-model-2-*`; earlier handoff/report evidence remains unchanged and historical. No new framework review, experiment execution, viewer, or browser audit performed.
 
-## Concept/mode verification
+### Concept/mode verification
 
 - 30/30 tests pass on Windows / Node.js 24.16.0. Existing/new concept setup, mode switches, drafts, exact historical citations, and read-only review behavior covered.
 - Staged export passes: 61 local file-link targets, 16 collections, six skill atoms, two proposed investigations, explorer context, no inferred original intent, and zero setup changes/conflicts. Installed snapshot has 205 files. No domain records changed.
@@ -793,17 +797,24 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Evidence: [verification](reports/game-design-workbench-concept-verification.json), [tests](reports/game-design-workbench-concept-tests.txt), [staged export](reports/game-design-workbench-concept-export.json). Supplied root concept documents remain unchanged/untracked; not adopted or committed.
 - Next: framework-by-framework completeness review before Slice 2.
 
-## Collection cleanup verification
+### Collection cleanup verification
 
 - Model 3: 14 collections, 63 records, 189 installed files. `control-vars` replaces controls in roles, fields, references, formulas, queries, templates, and fixture. No old query alias. Local measures live in experiments; no workbench decisions collection or mandatory archive.
 - Existing pulling/crate-color proposals moved to rejected verb/proposed mechanic records with identity, rationale, and provenance intact. All 63 surviving UUIDs match `82a97f6`; four measure UUIDs retained beside embedded definitions. No new game facts or executed evidence.
 - 31/31 tests pass, including custom ignored statuses, independent project decisions preservation, legacy update gates, hyphenated field selection, and refreshed installed example. 223 local links/anchors and skill frontmatter pass; all 18 generated packs current. Framework completeness remains provisional.
 - Canonical cleanup helper ran guarded apply, then no-op check. Both earlier migration helpers remain no-ops. Updated example setup and staged export have zero pending changes/conflicts. Export verifies 14 collections, seven control variables, six skill atoms, two proposed investigations, and unchanged/stale historical findings. No new report files generated; existing reports/baselines remain historical and unchanged.
 
-### Example concept follow-up
+#### Example concept follow-up
 
 - Filled tutorial concept with candidate purpose, player/appeal, intended experience, hypothetical player story, play over time, linked features, constraints, and open questions. Kept `game-explorer`; no platform, market, or playtest evidence invented.
 - Generator now copies this authored concept instead of blank setup template. Updated MDA relationship and installed snapshot; no new modules or reports. Generator/installed-example tests pass (2/2), 11 local links pass, setup remains idempotent. No full-suite rerun for this follow-up.
+
+## Workflow simplification verification
+
+- Removed six runtime modules including `lib.mjs`, wrapper CLI/projections/report storage/Git parser, installed seven-module example copy, three completed migration programs, legacy export checker, and document generator/content mirrors. Removed tests of retired interfaces.
+- Retained three authoring modules: `build-example.mjs` emits deterministic test/tutorial assets; `model.mjs` owns generated template data; `fixture-data.mjs` owns fixture records/UUIDs. `test/authoring.test.mjs` checks artifacts and public Attendant integration. Repository `check-offline-report.mjs` remains historical HTML verification, not skill runtime.
+- Checked installed copy before removal: all 189 files matched manifest; no local extras/edits. Canonical 63 records, 14 contracts, authored concept, and all reports/baselines unchanged.
+- Current checks: 4/4 authoring/integration tests pass, including canonical/generated field equality, strict external Attendant validation, direct query examples, null ranks, custom ignored proposal, and rank-only update preservation. Skill frontmatter and 230 local links/anchors pass. Ordinary Git index export passes same 4 tests; missing-dependency test run explicitly skips integration (3 pass, 1 skip). No new report generation, framework review, autonomous-agent merge benchmark, or native execution claimed.
 
 ## Comments
 

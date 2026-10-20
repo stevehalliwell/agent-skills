@@ -1,37 +1,50 @@
 # Inspection and change questions
 
-Use scoped recipes for declared relationships and change questions.
+Read live schemas/usages before querying collection fields. Use Attendant directly; write SQL suited to actual aliases and the question, not a workbench query wrapper. Validate with `--no-correct` first: if preparation would correct source, inspect Markdown directly or use an ordinary temporary copy when SQL is necessary. Do not authorize collateral edits merely to obtain a projection.
 
-```sh
-node <workbench>/scripts/workbench.mjs query matrix --project <project> --json
-node <workbench>/scripts/workbench.mjs query skill-atoms --project <project> --fields name,rank,prerequisites --json
-node <workbench>/scripts/workbench.mjs query routes --project <project> --json
-node <workbench>/scripts/workbench.mjs query mda --project <project> --json
-node <workbench>/scripts/workbench.mjs query control-vars --project <project> --json
-node <workbench>/scripts/workbench.mjs resolve --term "box" --project <project> --json
+## Inspection topics
+
+- **Matrix:** accepted interaction cases grouped by applicable noun and verb. Preserve multiple cases and contextual nouns. Coverage distinguishes defined, unknown, excluded, and not applicable; read prose to distinguish no effect from unknown effect. Empty Cartesian cells are not automatically defects.
+- **Skill atoms:** authored ranks, prerequisite AND sets, and mechanic links. Preserve null/negative/zero ranks. Inventory does not compute placement, detect all cycles, or estimate capability.
+- **Routes:** entry/next and introduction/practice/required/mastery links. Edges are declared opportunities, not physical or game-state reachability. List order is not a route.
+- **MDA:** inspect aesthetics, dynamics, systems, and mechanics; follow/reverse their declared links. Systems are not dynamics; links do not prove emotion.
+- **Control variables:** named configuration types, literal values, units, and formula text. Resolver/import/export remain deferred; do not evaluate expressions using shell or arbitrary code.
+- **Glossary:** canonical terms/aliases, definition targets, and status, including inactive records.
+- **Evidence:** experiment stage/kind and source; read local measures, hypotheses, expectations, method, observations, results, and provenance. Proposed is not executed.
+- **Records:** inspect all relevant fields/dispositions, including resources, experiment-local measurements, existing project decisions, and case context omitted by a narrow inventory.
+
+SQLite array cells are JSON text. Inspect complete arrays; do not infer missing relationships from truncated rows. Narrow query or increase limit and disclose incomplete coverage. Invalid/missing configuration is not zero results.
+
+## Example SQL
+
+After confirming default aliases and fields, these can be sent to Attendant's public `query --sql` command:
+
+```sql
+SELECT name, rank, prerequisites, mechanics, source_path
+FROM "skill-atoms" WHERE status = 'accepted' ORDER BY name;
 ```
 
-## Query semantics
+```sql
+SELECT name, nouns, verb, context_nouns, coverage, mechanics, source_path
+FROM interactions WHERE status = 'accepted' ORDER BY name;
+```
 
-- `matrix`: accepted explicit cases expanded per applicable noun. Multiple cases per pair remain separate; contextual nouns stay in source. Empty Cartesian cells are not generated. `coverage` distinguishes defined, unknown, excluded, not_applicable; inspect prose to distinguish no effect from unknown effect.
-- `skill-atoms`: accepted authored ranks/prerequisites/mechanic links. No computed rank placement, cycle detection, descendant rewrite, capability estimate, or graph layout.
-- `routes`: accepted entry/next links and introduction/practice/required/mastery lists. Every next edge is declared structural opportunity, not geometry or game-state reachability. Do not assume list order is a route.
-- `mda`: accepted aesthetics/dynamics/systems/mechanics inventory with `link_kind` and declared links; one dynamics row per relationship kind. Agent can follow/reverse links or notice disconnected inventory records. No emotional inference.
-- `control-vars`: accepted named game configuration, declared types, literal values, units, and formula text. No evaluation, conversion, bound validation, temporary overrides, import, or export yet.
-- `glossary`: all canonical terms/aliases/definition targets with disposition.
-- `evidence`: experiment inventory with stage, kind, disposition, and source path. Read hypothesis/expectation/observation/result headings for evidence and provenance.
-- `query records --collection <alias>`: all fields/all dispositions for configured collection. Use for resources, experiments (including local measures), existing project decisions, context links, and other details not selected by a recipe.
+```sql
+SELECT name, entry, next, introduces, practises, requires, tests_mastery, source_path
+FROM challenges WHERE status = 'accepted' ORDER BY name;
+```
 
-SQLite link arrays remain JSON text in query cells. This is a projection format, not a second source schema. Respect `truncated`/coverage; increase limit or narrow source inspection before drawing completeness conclusions. Missing config/contracts fail; invalid source is never disguised as zero rows.
+```sql
+SELECT name, value_type, value, expression, unit, source_path
+FROM "control-vars" WHERE status = 'accepted' ORDER BY name;
+```
 
-## Source-safe projections
-
-Helpers copy source into a temporary project and call installed Attendant skill's public runner against that copy. No Attendant files are copied. Any mechanical corrections occur only in that copy and are disclosed as `projection_corrections`. Sources are hashed before/after; intervening changes abort. No live `.attendant/` is required or created by workbench query/validate. Raw Attendant query preparation can mechanically correct live records; do not substitute it for read-only review.
+Use ordinary SELECTs for other relevant collections after inspecting their fields. Quoted identifiers matter for aliases containing hyphens. These inventories are source retrieval, not design judgments or native semantic checks.
 
 ## Term resolution
 
-`resolve` trims/collapses whitespace and compares case-insensitively. It preserves punctuation/plural distinctions and reports unknown terms instead of guessing. Multiple matching identities return ambiguous with `term.collision`; do not choose one automatically. Resolved inactive records retain their disposition and are not reactivated. A collision elsewhere in glossary is returned even if the selected term itself resolves.
+Compare declared canonical terms/aliases after trimming/collapsing whitespace and case-insensitive comparison only. Preserve punctuation and plural distinctions. Inspect full relevant glossary; if matching identities conflict, report ambiguity and do not pick one. Unknown is not permission to invent a synonym. Expose inactive status rather than silently reactivating a term. Do not claim a global uniqueness check from a partial lookup.
 
 ## Scoped impact
 
-For `What changes if pushing costs two energy?`, inspect control, resource, mechanic/case references, affected challenge descriptions, and experiment expectations. Explain declared dependencies and conditional hypotheses. Do not adopt proposed value or execute a model. No transitive impact checker is installed; use complete scoped source inspection and report its limits. Request explicit revision or experiment authority only if needed to continue beyond inspection.
+For `What changes if pushing costs two energy?`, inspect variable, resource, mechanic/case references, affected challenges, and experiment expectations. Explain declared dependencies and conditional hypotheses. Do not adopt value or execute a model. No transitive/game-state impact engine exists yet; inspect scoped source and state limits.

@@ -24,7 +24,7 @@ Compare an intended experience with activities that might support interests desc
 
 Roles: `aesthetics`, `mechanics`, `dynamics`, `challenges`, `experiments`.
 
-Available recipes: `query mda`; `query evidence`; `query records --collection <mapped-alias>`.
+Inspection topics: MDA relationships, experiment evidence, and relevant source records.
 
 ## Working concepts
 

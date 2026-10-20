@@ -2,38 +2,32 @@
 
 ## Review
 
-1. Use requested lens and scope. If selection remains material, ask one focused question; no all-lenses sweep. Read selected provisional guide; identify relevant coverage gaps before using it. Done: relevant questions/limits are known.
-2. Establish current project mode and read concept plus prior alternatives/rationale. In design mode, relate findings to supplied player/experience goals; in explorer mode, investigate generated behavior and leads without treating absent destination as a defect. Do not switch mode or adopt goals during review. Select meaningful committed original intent when comparison is requested; no original intention is inferred from template existence. Inspect actual source/usage. Capture snapshot **before** review; include relevant unconfigured documents explicitly:
+1. Establish requested framework and scope. Read only selected provisional guide; note relevant coverage gaps. Done: questions and evidence limits are known.
+2. Read current concept/mode, relevant schemas/usages, records, and retained rationale. In design mode compare with supplied intent; in explorer mode investigate behavior/leads without treating absent destination as a defect. Do not switch mode or adopt goals. Done: interpretations use actual source owners.
+3. Inspect Git status and relevant diff. Record source commit and any relevant draft/untracked paths. If original-intent comparison is requested, read explicitly selected commit/path. No automatic source snapshot or hash inventory is required. Do not commit drafts merely to review them. Done: reviewed source state and limitations are stated.
+4. Inspect relevant relationships using source and, when useful, Attendant queries. Separate broken data, missing required relationships, unknowns, opportunities, conflicts, unverified hypotheses, and deliberate exclusions. Missing optional data is not invalid. Done: findings cite exact source field/section and distinguish fact from interpretation.
+5. Keep computed checks separate from agent judgments. SQL inventories are not framework evaluators. Do not label manual rank/route interpretation as a native check. Before returning, inspect whether relevant source changed during review; reconcile changed portions or state mixed-state limits. Done: reasons, evidence, and coverage are explicit.
+6. Return useful findings/questions and limitations. Save dated report only when requested. Done: scope, sources, unsupported checks, and missing inputs remain visible.
 
-   ```sh
-   node <workbench>/scripts/workbench.mjs snapshot --project <project> --include design-notes.md --intent-ref <full-intent-commit> --output <new-snapshot.json> --json
-   ```
+## Findings and saved reviews
 
-   Omit `--intent-ref` when no comparison is selected; use `--intent-path` for former filename. Bound concept is captured automatically; `--include` adds other relevant documents only. Capture before interpreting both current and selected historical text. Output file must be new and outside canonical collections/config/tools. Snapshot inventories source/schema/usage/templates, registry, project instructions, installed manifest, tool/guidance hashes, and installed Attendant skill fingerprint. Dependency changes make old reviews stale even when workbench files are unchanged. Done: review has frozen hash inventory; this is not a frozen copy of file content or a Git checkpoint.
-3. Run only useful available queries, then inspect source bodies. Separate malformed/broken data, required missing relationships, unknowns, opportunities, conflicts, unverified hypotheses, and deliberate exclusions. Missing optional data is not invalid. Done: findings cite exact source field/section and distinguish fact from interpretation.
-4. Keep deterministic findings separate from agent judgments. A bootstrap recipe is a data projection, not a framework evaluator. Do not label manually derived rank/route observations deterministic C99 findings. Done: reasons/evidence/coverage are explicit.
-5. Present useful questions and limitations. Save dated report when requested using [finding input](../templates/review-input.json), or return concise review in chat. Done: reviewed scope, findings, missing inputs, and unsupported checks remain visible.
+Chat or ordinary Markdown is sufficient. Optional [structured example](../templates/review-input.json) illustrates fields; no saver, schema engine, or custom report command is required.
 
-## Save and reopen
+Each actionable finding includes:
 
-```sh
-node <workbench>/scripts/workbench.mjs report save --project <project> --lens skill-atoms --input <findings.json> --snapshot <snapshot.json> --json
-node <workbench>/scripts/workbench.mjs report show <run-id> --project <project> --json
-```
+- Recognizable finding label/code, kind, severity, and origin (`agent` or actually computed check).
+- Stable record IDs when available, source paths plus fields/sections, and revision where relevant.
+- Trigger/evidence, consequence or design question, and suggested investigation.
+- Coverage, assumptions, and limitations. No findings does not establish completeness.
 
-Submit plain input JSON; snapshot may be raw metadata or CLI envelope. A lens must match one catalog ID. Fields:
+Kinds: invalid/broken, missing required relationship, unknown/unresolved, possible opportunity, conflicting claims, unverified hypothesis, deliberately excluded.
 
-- `scope`: string array naming reviewed records/questions.
-- `findings`: array with `code`, `origin` (`agent` or `deterministic`), `kind`, `severity` (`error`, `warning`, `info`), `records` (stable lowercase UUID IDs, not mutable terms/names), `sources`, `reason`, `suggested_investigation`; optional stable `trigger_key` separates distinct triggers for same rule/records/fields.
-- Optional finding `intent_relation`: supports, contradicts, tension, unknown, outside_intent, possible_goal_drift. Cite concept section; labels remain agent interpretation, not empirical proof.
-- `sources`: project-relative captured path plus `field` or `section`; optional `revision` must exactly match selected historical concept commit/path. Include external-to-collections documents in pre-review snapshot; uncaptured sources are rejected.
-- `kind`: `invalid_broken`, `missing_required_relationship`, `unknown_unresolved`, `possible_opportunity`, `conflicting_claims`, `unverified_hypothesis`, `deliberately_excluded`.
-- `coverage`: object with `status: partial|complete` **within declared scope**, performed/omitted checks and assumptions. `limitations`: string array. No finding is not completeness evidence.
+Optional intent relation: supports, contradicts, tension, unknown, outside intent, possible goal drift. Cite concept section and selected historical revision when used. These labels are interpretations, not empirical proof.
 
-`origin` is a declaration, not certification. Use deterministic only with actual repeatable tool evidence; cite tool/check and output in reason. Native semantic checks are unavailable in this release regardless of input labeling. Saver validates structure/source match, not design truth or evidentiary adequacy.
+If saving is requested, write a new dated Markdown report under `game-design-results/` outside collections. Include framework, scope, date, source commit/draft context, comparison commit/path, performed checks, findings, and limitations. Keep structured data too when useful or requested; do not mandate duplicate formats or generated IDs. Reuse recognizable labels for recurring findings without rewriting old reports.
 
-Results: `game-design-results/YYYYMMDDTHHMMSSmmmZ-<suffix>/run.json`, `review.json`, `review.md`. Exclusive directories prevent overwriting older runs; incomplete writes retain `writing` metadata and cannot be reopened as complete reviews. Historical findings and timestamps are never rewritten during freshness checks.
+## Reopening history
 
-Finding IDs hash rule code, stable record IDs, source field/section keys, and optional trigger key—not timestamp, severity, prose, or file path. Retain stable trigger keys. Reports record source hashes and package fingerprint, pack version, creation time, and available Git context. Git context is not a reproducibility checkpoint and saving never commits.
+Read old reports as historical. Use Git log/diff and cited paths to inspect changes since review; if relevant drafts were uncommitted, exact reconstruction may be unavailable. Say so. Changed inputs, rules, or guidance require fresh inspection before claiming current applicability. Even unchanged source does not make an old interpretation newly run.
 
-`report show` returns original report with separate `historical`, `matches_current_source`, and `freshly_run: false`. A hash match does not turn old interpretation into a new review. Edited source/guidance makes comparison false. Saving against changed baseline fails; re-inspect rather than relabel stale findings. Hash inventory alone cannot reconstruct deleted source; use ordinary Git or an explicitly approved snapshot-copy workflow for reproducibility.
+Preserve old reports and evidence; no automatic repair, adoption, rerun, or commit follows reopening. Historical hash metadata from retired tooling can remain untouched, but does not require retaining that tooling. Missing revisions/data are explicit reproduction limits.

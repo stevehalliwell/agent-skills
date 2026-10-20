@@ -24,7 +24,7 @@ Reframe a selected design question through concrete player experience, rules, al
 
 Roles: `mechanics`, `aesthetics`, `challenges`, `experiments`.
 
-Available recipes: `query mda`; `query records --collection <mapped-alias>`.
+Inspection topics: MDA relationships and relevant source records.
 
 ## Working concepts
 

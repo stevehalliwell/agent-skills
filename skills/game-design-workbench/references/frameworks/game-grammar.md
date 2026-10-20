@@ -24,7 +24,7 @@ Inspect a selected noun/action pair, its conditional cases, consequences, feedba
 
 Roles: `nouns`, `verbs`, `interactions`, `mechanics`, `challenges`.
 
-Available recipes: `query matrix`; `query records --collection <mapped-alias>`.
+Inspection topics: interaction cases and relevant source records.
 
 ## Working concepts
 

@@ -24,7 +24,7 @@ Explore temporary support, independent performance, demonstrations, practice, an
 
 Roles: `skill-atoms`, `challenges`, `levels`, `experiments`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`.
+Inspection topics: skill atoms, challenge routes, and relevant source records.
 
 ## Working concepts
 

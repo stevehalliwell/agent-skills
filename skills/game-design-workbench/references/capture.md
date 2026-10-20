@@ -31,7 +31,7 @@ For a compatible existing collection, create/update one or a reviewed batch thro
 
 ```sh
 node <attendant-skill>/scripts/attendant.mjs update --collection <skill-atoms-alias> --items @rank-update.json --project <project>
-node <workbench>/scripts/workbench.mjs validate --project <project> --json
+node <attendant-skill>/scripts/attendant.mjs validate --no-correct --project <project>
 ```
 
 Attendant preserves body and immutable identity metadata. It may reserialize frontmatter; inspect semantic diff and any unrelated byte changes. Batch writes are not a cross-file transaction. On failure, inspect actual state before retrying. Never overwrite concurrent source changes using a stale whole-file copy.
@@ -40,7 +40,7 @@ Attendant preserves body and immutable identity metadata. It may reserialize fro
 
 - Edit selected authored `rank` only; preserve `id`, `name`, `created_at`, body, unrelated metadata, and all descendants' authored ranks.
 - Explain remaining conflicts rather than repairing them. Derived display movement is not source mutation; native display/resolver is deferred.
-- For tutorial coordinate 2 → 3, use exact update above. Compare selected record and every other source file before/after; query skill-atoms again. Do not claim prerequisite conflict detection is automated in this release.
+- For tutorial coordinate 2 → 3, use exact update above. Compare selected record and every other source file before/after; inspect skill-atom rows again through Attendant or source. Do not claim prerequisite conflict detection is automated in this release.
 
 ## Definition changes
 

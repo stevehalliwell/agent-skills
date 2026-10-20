@@ -24,7 +24,7 @@ Explore competition, chance, make-believe, vertigo, and movement between free im
 
 Roles: `mechanics`, `dynamics`, `challenges`, `aesthetics`.
 
-Available recipes: `query mda`; `query routes`; `query records --collection <mapped-alias>`.
+Inspection topics: MDA relationships, challenge routes, and relevant source records.
 
 ## Working concepts
 

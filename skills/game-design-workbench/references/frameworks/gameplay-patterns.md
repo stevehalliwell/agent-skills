@@ -24,7 +24,7 @@ Compare a selected structure with a cited pattern or contrasting configuration. 
 
 Roles: `mechanics`, `systems`, `dynamics`.
 
-Available recipes: `query mda`; `query records --collection <mapped-alias>`.
+Inspection topics: MDA relationships and relevant source records.
 
 ## Working concepts
 

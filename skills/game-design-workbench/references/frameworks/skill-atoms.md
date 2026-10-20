@@ -24,7 +24,7 @@ Inspect a selected learned interaction, its prerequisite chain, authored progres
 
 Roles: `skill-atoms`, `challenges`, `levels`, `mechanics`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query records --collection <mapped-alias>`.
+Inspection topics: skill atoms, challenge routes, and relevant source records.
 
 ## Working concepts
 

@@ -24,7 +24,7 @@ Explore challenge relative to assumed capability, clear goals, feedback, and con
 
 Roles: `skill-atoms`, `challenges`, `mechanics`, `experiments`.
 
-Available recipes: `query skill-atoms`; `query routes`; `query evidence`.
+Inspection topics: skill atoms, challenge routes, and experiment evidence.
 
 ## Working concepts
 

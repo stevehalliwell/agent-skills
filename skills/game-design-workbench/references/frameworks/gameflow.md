@@ -24,7 +24,7 @@ Use applicable enjoyment conditions to question a selected mechanic, encounter, 
 
 Roles: `mechanics`, `challenges`, `control-vars`, `experiments`.
 
-Available recipes: `query routes`; `query control-vars`; `query evidence`; `query records --collection <mapped-alias>`.
+Inspection topics: challenge routes, control variables, experiment evidence, and relevant source records.
 
 ## Working concepts
 
