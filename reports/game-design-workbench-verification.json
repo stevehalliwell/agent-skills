@@ -1,29 +1,136 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-10-20T03:13:39.225Z",
-  "implementation_commit": "1b6a00e",
+  "verified_at": "2026-10-20T09:21:49.980Z",
+  "implementation_commit": "b755438",
   "branch": "feat/game-design-workbench",
   "platform": "win32",
   "node": "24.16.0",
   "tests": {
-    "workbench": 16,
+    "workbench": 20,
     "attendant": 7,
-    "total": 23,
-    "passed": 23,
+    "total": 27,
+    "passed": 27,
     "failed": 0,
     "log": "reports/game-design-workbench-tests.txt"
   },
   "static": {
     "frontmatter": "pass",
-    "local_links": 61,
+    "entrypoint_words": 797,
+    "local_links": 231,
     "packs": 18,
+    "framework_words": {
+      "min": 803,
+      "max": 925,
+      "counts": [
+        {
+          "id": "mda",
+          "words": 909
+        },
+        {
+          "id": "game-grammar",
+          "words": 902
+        },
+        {
+          "id": "resource-economy",
+          "words": 925
+        },
+        {
+          "id": "gameplay-patterns",
+          "words": 860
+        },
+        {
+          "id": "skill-atoms",
+          "words": 872
+        },
+        {
+          "id": "theory-of-fun",
+          "words": 834
+        },
+        {
+          "id": "flow",
+          "words": 836
+        },
+        {
+          "id": "gameflow",
+          "words": 851
+        },
+        {
+          "id": "cognitive-load",
+          "words": 834
+        },
+        {
+          "id": "working-memory",
+          "words": 854
+        },
+        {
+          "id": "zpd-scaffolding",
+          "words": 842
+        },
+        {
+          "id": "self-determination",
+          "words": 803
+        },
+        {
+          "id": "quantic-foundry",
+          "words": 844
+        },
+        {
+          "id": "four-keys",
+          "words": 822
+        },
+        {
+          "id": "bartle",
+          "words": 833
+        },
+        {
+          "id": "caillois",
+          "words": 819
+        },
+        {
+          "id": "schell",
+          "words": 809
+        },
+        {
+          "id": "playcentric",
+          "words": 884
+        }
+      ]
+    },
     "external_http_403": 8,
+    "external_url_recheck": "Not repeated; original source URLs and dated access limitations retained.",
     "offline_report": "pass"
   },
+  "attendant_dependency": {
+    "required": "separately installed skill; GD_ATTENDANT_SKILL",
+    "vendored_files": 0,
+    "api": "public runner only; no internal YAML imports",
+    "fingerprint": "7a516c4d7002594d1617fe0e5b1ad60c13767418d7beee383a3b17330a0a206a"
+  },
   "fresh_index_export": {
+    "base_commit": "b755438bd563e9636d8e3c53f53bfb6e879c1612",
+    "index_workbench_inventory_sha256": "f55320cea0a8a8ed69f3943e0a5daf717c4398f571e4ce796341ea6207777db9",
+    "platform": "win32",
+    "node": "24.16.0",
     "setup_changes": 0,
     "conflicts": 0,
-    "saved_review_source_match": true
+    "skill_rows": 6,
+    "saved_review": "20261020T091047165Z-8da3234e",
+    "saved_review_source_match": true,
+    "historical": true,
+    "freshly_run": false,
+    "previous_review_source_match": false,
+    "stable_finding_ids": true,
+    "dependency_fingerprint": "7a516c4d7002594d1617fe0e5b1ad60c13767418d7beee383a3b17330a0a206a"
+  },
+  "export_checker": {
+    "report": "reports/game-design-workbench-index-export.json",
+    "checks": [
+      "explicit JSON success",
+      "explicit text success",
+      "usage failure exit 2",
+      "missing dependency exit 1"
+    ],
+    "interactive_tty_default": "not directly observed; explicit text tested"
   },
   "browser": {
     "ok": true,
@@ -43,19 +150,27 @@
       "JavaScript disabled",
       "print PDF"
     ],
-    "artifacts": "C:\\Users\\steve\\AppData\\Local\\Temp\\offline-report-check-slluJT"
+    "artifacts": "C:\\Users\\steve\\AppData\\Local\\Temp\\offline-report-check-XbO5Zv"
   },
   "sha256": {
-    "report": "c6b01f78f9d6bc7d7ec7b77eaa21a0ea72790fbe8e23c74996bb54f07fb42eea",
-    "tests": "0d0dd6dd48fcd4f4a70cc48f4b245322d16ab10bf40e45255e30e373d822e7b6",
-    "test_log": "dcaf3763683f8399f7afd03db4c0e174a848c8558f602aefba712f51a75a6d9a",
-    "browser_checker": "5afa7e407f07585f4e383ab4ec96c273685533cd6d6008fe9066a317580e7357"
+    "report": "c0431674a81aa738467d8e7c22ad59d90694c33a0a4fc39b8c3b9af0d7fa6d43",
+    "tests": "277b63585d7377dac5c20a69fd016aa7ddae73d408d12b55d36b8327228b392d",
+    "test_log": "383f156a39f3fb9789a37d8709ef6b69d232b7d3ae477bb4ca273f6183db889a",
+    "browser_checker": "5afa7e407f07585f4e383ab4ec96c273685533cd6d6008fe9066a317580e7357",
+    "export_checker": "94463e3a042880d1486f3c6953b29fcf4b3ab9e8cc989dd0b195afc88960f37d",
+    "index_export_report": "4c91103f5d9348e8cbf28b22dd9a5617186854be5fb7245b3080e606ef20f484"
   },
   "tutorial": {
     "collections": 19,
     "records": 68,
-    "tool_files": 227,
-    "distribution_revision": "b0f33651e6c7c02358cb6219caa49a7b0df8589f2d38f79412bf35bc9b03e29b",
-    "saved_review": "20261020T030047047Z-3af7318c"
+    "tool_files": 219,
+    "distribution_revision": "c8e18ef64a9212923dcaf400b3d061e95f8b8f4706d3e2e507b5b14499c98edd",
+    "saved_review": "20261020T091047165Z-8da3234e",
+    "previous_review": "20261020T030047047Z-3af7318c",
+    "previous_review_unchanged": true,
+    "previous_review_source_match": false,
+    "stable_finding_ids": true,
+    "setup_plan": "reports/example-required-skill-setup-plan.json",
+    "original_setup_plan": "reports/example-setup-plan.json (historical, superseded dependency packaging)"
   }
 }

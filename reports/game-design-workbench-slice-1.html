@@ -138,13 +138,13 @@
       <header class="report-header">
         <p class="eyebrow">Independent delivery · Review handoff</p>
         <h1>Game Design Workbench<br>Slice 1</h1>
-        <p class="lead">A usable Markdown design workbench, 18 selected framework packs, and a standalone crate-puzzle tutorial. Native analysis and simulation are not delivered in this slice.</p>
-        <p class="metadata">2026-10-20 UTC · Branch: feat/game-design-workbench · Tested implementation: 1b6a00e · Windows / Node.js 24.16.0</p>
+        <p class="lead">A Markdown design workbench, 18 expanded framework guides, and a crate-puzzle tutorial requiring the separately installed Attendant skill. Native analysis and simulation are not delivered in this slice.</p>
+        <p class="metadata">2026-10-20 UTC · Branch: feat/game-design-workbench · Tested implementation: b755438 · Windows / Node.js 24.16.0</p>
       </header>
       <section data-report-section id="summary" aria-labelledby="summary-heading">
         <h2 id="summary-heading">Result: Slice 1 is ready for review</h2>
-        <p>Delivered narrow skill routing, non-linear capture/revision guidance, retained alternatives, canonical terminology, 19 Attendant-compatible collection contracts, all 18 original attributed packs, local setup/query/report tools, and a populated example with its own tools. No global skill installation or running service is needed to inspect the example.</p>
-        <p><strong>23 automated tests pass:</strong> 16 workbench tests and 7 existing Attendant tests. A copied populated example runs its local helpers, preserves source during queries, and changes only the selected record during a requested rank update.</p>
+        <p>Delivered narrow skill routing, non-linear capture/revision guidance, retained alternatives, canonical terminology, 19 Attendant-compatible collection contracts, all 18 original attributed packs, local setup/query/report tools, and a populated example with its own tools. Attendant is a required, separately installed skill. Load it and set <code>GD_ATTENDANT_SKILL</code> to its absolute directory. No Attendant code or guidance is vendored; no running service is required.</p>
+        <p><strong>27 automated tests pass:</strong> 20 workbench tests and 7 existing Attendant tests. Dependency absence fails before writes; external dependency changes invalidate review fingerprints. Legacy managed-file removal preserves local edits and unknown files. A copied populated example runs its local helpers, preserves source during queries, and changes only the selected record during a requested rank update.</p>
         <div class="callout warning">
           <strong>This is not the full native workbench</strong>
           <p>C99 semantic checks, formula evaluation/control exports, raylib views, and simulation/sweep/replay are deferred. Generic validation does not enforce scalar subtypes declared as null in Attendant schemas. Framework conclusions remain attributed agent interpretations, not computed design verdicts.</p>
@@ -158,18 +158,19 @@
             <caption>Engineering verification, not a game-quality score</caption>
             <thead><tr><th scope="col">Check</th><th scope="col">Result</th><th scope="col">Evidence boundary</th></tr></thead>
             <tbody>
-              <tr><th scope="row">Workbench tests</th><td>16 / 16 pass</td><td>Setup gates, idempotency, local edit preservation, custom bindings, source-safe queries, aliases, limits/fields, snapshots, reports, portable example, rank edits, oversized files, junction rejection.</td></tr>
+              <tr><th scope="row">Workbench tests</th><td>20 / 20 pass</td><td>Setup gates, idempotency, local edit preservation, custom bindings, source-safe queries, aliases, limits/fields, snapshots, reports, portable example, rank edits, oversized files, junction rejection.</td></tr>
               <tr><th scope="row">Existing Attendant tests</th><td>7 / 7 pass</td><td>Collection setup, schema/usage, record batches, validation, transport/query containment, reviewed migration.</td></tr>
-              <tr><th scope="row">Skill structure</th><td>Frontmatter pass; 61 local links pass</td><td>769 entrypoint body words. Routing/authority rules reviewed statically; no autonomous-agent benchmark.</td></tr>
-              <tr><th scope="row">Pack generation</th><td>18 / 18 current</td><td>Catalog IDs, queries, required roles, selected entrypoint links, original prompts, citations, and access limits checked.</td></tr>
-              <tr><th scope="row">Example</th><td>19 collections; 68 records; 227 local tool/reference files</td><td>Six skills, three crate/push cases, retained alternatives, explicit unknown/exclusion, empty observations. No simulated trials.</td></tr>
-              <tr><th scope="row">Checkout and reuse</th><td>Windows Git checkout test and fresh-index export pass</td><td>Owned text pinned LF; vendor bytes preserved. Fresh export re-plan has zero changes/conflicts; saved review still matches source. Managed guidance handles CRLF.</td></tr>
+              <tr><th scope="row">Skill structure</th><td>Frontmatter pass; 231 local links pass</td><td>797 entrypoint body words. Routing/authority rules reviewed statically; no autonomous-agent benchmark.</td></tr>
+              <tr><th scope="row">Pack generation</th><td>18 / 18 current</td><td>All 18 guides expanded to 803–925 words each: working concepts, scoped procedures, worked examples, evidence/counterchecks, and common traps. Catalog, generation, discovery links, and source limits checked.</td></tr>
+              <tr><th scope="row">Example</th><td>19 collections; 68 records; 219 local workbench tool/reference files</td><td>Six skills, three crate/push cases, retained alternatives, explicit unknown/exclusion, empty observations. No simulated trials.</td></tr>
+              <tr><th scope="row">Checkout and reuse</th><td>Windows Git checkout test and fresh-index export pass</td><td>Owned text pinned LF; Attendant stays external. Fresh export re-plan has zero changes/conflicts; corrected review matches source, while original review remains stale. Managed guidance handles CRLF.</td></tr>
               <tr><th scope="row">External citation requests</th><td>8 HTTP 403 warnings</td><td>Canonical references retained. Each pack distinguishes inspected text/abstracts from search-only or inaccessible material.</td></tr>
             </tbody>
           </table>
         </div>
-        <pre><code>node --test skills/game-design-workbench/test/workbench.test.mjs skills/attendant/test/attendant.test.js
-# tests 23; pass 23; fail 0</code></pre>
+        <pre><code># Set GD_ATTENDANT_SKILL to loaded Attendant skill directory first.
+node --test skills/game-design-workbench/test/workbench.test.mjs skills/attendant/test/attendant.test.js
+# tests 27; pass 27; fail 0</code></pre>
         <details><summary>All 18 packs, without an all-lenses command</summary>
           <p><strong>Structure:</strong> MDA; game grammar; resource economy; gameplay patterns.</p>
           <p><strong>Learning:</strong> skill atoms; Theory of Fun; Flow; GameFlow; cognitive load; working memory; ZPD/scaffolding.</p>
@@ -181,27 +182,30 @@
       <section data-report-section id="decisions" aria-labelledby="decisions-heading">
         <h2 id="decisions-heading">Decisions and rejected alternatives</h2>
         <ul>
-          <li><strong>Reuse Attendant, not a database fork.</strong> Node is the documented bootstrap dependency. SQL recipes expose authored data; substantive native analysis stays in later C99 slices. Rejected duplicating that analysis in JavaScript.</li>
+          <li><strong>Require Attendant; do not vendor it.</strong> Initial packaging was corrected after review. Helpers call the installed skill’s public runner; setup compares public schema output instead of importing internal YAML code. Node and the loaded skill directory are explicit dependencies. SQL recipes expose authored data; native analysis stays in later C99 slices.</li>
           <li><strong>Temporary projections, not live query corrections.</strong> Attendant preparation may mechanically correct built-in metadata. Workbench queries copy source, disclose temporary corrections, and compare source hashes afterward. Rejected calling a potentially mutating live query “read-only.”</li>
           <li><strong>One model, selected lenses.</strong> All packs use existing core roles. No per-theory database, mandatory audience profiles, psychological score, copied deck/questionnaire, or automatic 18-lens sweep.</li>
           <li><strong>Explicit facts and retained proposals.</strong> Direct supplied facts bypass interview. Generated options stay proposed; choosing one does not reject siblings. Adopted behavior belongs in canonical domain source, not only a decision log.</li>
           <li><strong>Guarded setup and immutable history.</strong> Exact plan approval, local edit conflicts, and per-file optimistic writes replace silent repair. Reports retain source/tool hashes, stable finding identities, and separate historical/freshness flags. No cross-file transaction or editor lock is claimed.</li>
           <li><strong>Honest partial state.</strong> Unknown, excluded, not applicable, and defined no effect differ. Null rank is not zero. Missing teaching is a question, not incapability. A declared experience link is not observed emotion.</li>
-          <li><strong>Portable packaging.</strong> Tutorial copies omit recursive tools/results. Local snapshot includes documentation, contracts, runner/YAML, license notices, and reference tutorial source. Vendored logic is unchanged; CRLF bytes are preserved in Git rather than silently normalized away from recorded hashes.</li>
+          <li><strong>Separate dependency, portable workbench.</strong> Tutorial copies omit recursive tools/results and all Attendant files. Local snapshot contains workbench documentation, contracts, helpers, and tutorial source. Missing dependency never triggers installation. Approved updates remove unchanged retired managed copies; edited copies block update and unknown local files remain.</li>
         </ul>
         <p>Only Slice 1 is implemented. The retained five-slice plan remains the delivery boundary: C99 core, deterministic semantics/exports, native projections, then explicit one-shot simulations.</p>
       </section>
       <section data-report-section id="example" aria-labelledby="example-heading">
-        <h2 id="example-heading">Try the standalone tutorial</h2>
-        <p>Open or copy <code>skills/game-design-workbench/examples/crate-puzzle/</code>. Load its local <code>tools/game-design-workbench/SKILL.md</code> in an agent, or run from that folder:</p>
-        <pre><code>node tools/game-design-workbench/scripts/workbench.mjs validate --json
+        <h2 id="example-heading">Try the tutorial with required Attendant skill</h2>
+        <p>Open or copy <code>skills/game-design-workbench/examples/crate-puzzle/</code>. Load installed <code>attendant</code> skill, follow its operation guidance, and set <code>GD_ATTENDANT_SKILL</code> to that skill’s absolute directory. Then load local <code>tools/game-design-workbench/SKILL.md</code>, or run from that folder:</p>
+        <pre><code># Bash; replace with actual installed skill directory:
+export GD_ATTENDANT_SKILL="/absolute/path/to/attendant"
+# PowerShell: $env:GD_ATTENDANT_SKILL = 'C:/absolute/path/to/attendant'
+node tools/game-design-workbench/scripts/workbench.mjs validate --json
 node tools/game-design-workbench/scripts/workbench.mjs query skills --fields name,rank --json
 node tools/game-design-workbench/scripts/workbench.mjs query matrix --json
 node tools/game-design-workbench/scripts/workbench.mjs resolve --term "BOX" --json</code></pre>
         <p>Expected source: coordinate rank 2; plan-push unranked; move rank 0; two switch-chain skills at rank 3. Three conditional crate/push cases remain separate. Wall activation is explicitly not applicable; closed-exit walking remains unknown. Pulling stays rejected with rationale; crate color stays proposed.</p>
-        <p>Saved tutorial run: <code>20261020T030047047Z-3af7318c</code>. It contains one scoped <strong>agent</strong> skill-atoms interpretation about authored order, with partial coverage and no source repair. Baseline and input JSON are supplied beside the tutorial. Reopening reports matching source, <code>historical: true</code>, and <code>freshly_run: false</code>.</p>
-        <pre><code>node tools/game-design-workbench/scripts/workbench.mjs report show 20261020T030047047Z-3af7318c --json</code></pre>
-        <p>For a deliberate edit, request coordinate rank 3 and preserve every other field/rank. Tests verify the local Attendant update changes only selected record, preserves body/identity, and leaves plan-push null. The historical report should then become stale rather than being rewritten.</p>
+        <p>Corrected tutorial run: <code>20261020T091047165Z-8da3234e</code>. It contains one scoped <strong>agent</strong> skill-atoms interpretation about authored order, with partial coverage and no source repair. Corrected baseline is <code>review-baseline-installed-attendant.json</code>; input JSON is supplied beside it. Original run <code>20261020T030047047Z-3af7318c</code> remains unchanged and stale. Finding identity is stable across both runs. Reopening reports matching source, <code>historical: true</code>, and <code>freshly_run: false</code>.</p>
+        <pre><code>node tools/game-design-workbench/scripts/workbench.mjs report show 20261020T091047165Z-8da3234e --json</code></pre>
+        <p>For a deliberate edit, request coordinate rank 3 and preserve every other field/rank. Tests verify the required Attendant skill’s update changes only selected record, preserves body/identity, and leaves plan-push null. The historical report should then become stale rather than being rewritten.</p>
         <p>Timing reference is analytical only: 4 walks + 3 pushes, base 5 s, assumed independent 0–1 s delay per action, range 5–12 s, probability of at most 8 s = 1312/5040 ≈ 0.2603. There are no executed trials or play observations.</p>
       </section>
       <section data-report-section id="limits" aria-labelledby="limits-heading">
@@ -225,14 +229,17 @@ node tools/game-design-workbench/scripts/workbench.mjs resolve --term "BOX" --js
           <li><code>910c43b</code> — model/templates and 68-record fixture.</li>
           <li><code>fa21c11</code> — guarded local setup/query/report bootstrap; initial 8 tests passed.</li>
           <li><code>f7a56ce</code> — all 18 packs, entrypoint, operation guidance; expanded tests and source-access limitations.</li>
-          <li><code>1b6a00e</code> — verified standalone tutorial, field-selector fix, 23-test regression, preserved vendor/index bytes, saved scoped review.</li>
+          <li><code>1b6a00e</code> — initial tutorial verification and scoped review; dependency packaging later superseded.</li>
+          <li><code>a536ba1</code> — initial offline handoff, retained in history.</li>
+          <li><code>d2d028d</code> — remove vendored Attendant, require separate skill/public runner, guard retired-file deletion, and verify 27 tests.</li>
+          <li><code>b755438</code> — review and expand all 18 framework guides; regenerate, validate links, and rerun all 27 tests.</li>
         </ol>
-        <p>Specification and decisions: <code>todo.md</code>, starting brief, and framework reference at repository root. Runtime contracts: <code>skills/game-design-workbench/references/</code>. Original pack data/citations: <code>scripts/pack-data.mjs</code> and generated <code>references/frameworks/</code>. Automated evidence: <code>test/workbench.test.mjs</code> and existing Attendant tests.</p>
-        <p>Installed package fingerprint: <code>b0f33651e6c7c02358cb6219caa49a7b0df8589f2d38f79412bf35bc9b03e29b</code>. Manifest records per-file hashes, role mapping, capabilities, and dependencies. Saved review retains the actual Git context at save time; it is historical, not a clean reproducibility checkpoint.</p>
+        <p>Specification and decisions: <code>todo.md</code>, starting brief, and framework reference at repository root. Runtime contracts: <code>skills/game-design-workbench/references/</code>. Pack data/citations: <code>scripts/pack-data.mjs</code>; expanded guidance: <code>scripts/pack-guidance.mjs</code>; generated docs: <code>references/frameworks/</code>. Source access limits are retained; this expansion adds no new bibliography or source-fetch claims. Automated evidence: <code>test/workbench.test.mjs</code> and existing Attendant tests. Repeat staged-export verification with <code>node scripts/check-workbench-export.mjs --help</code>; it never stages, commits, or installs dependencies.</p>
+        <p>Installed package fingerprint: <code>c8e18ef64a9212923dcaf400b3d061e95f8b8f4706d3e2e507b5b14499c98edd</code>. Manifest records per-file hashes, role mapping, capabilities, and dependencies. Saved review retains the actual Git context at save time; it is historical, not a clean reproducibility checkpoint.</p>
         <p>This file contains its own styles, runtime, navigation, and unmodified licensed Chart.js library. No remote resource or sibling data file is needed to read it. Source locators are supplied for review, not loaded at runtime.</p>
       </section>
       <footer>
-        <p><strong>Provenance:</strong> implementation and observed local checks through 1b6a00e, dated 2026-10-20 UTC. Single offline HTML file derived from bundled offline-html-report template. Engineering results are not game-design verdicts.</p>
+        <p><strong>Provenance:</strong> implementation and observed local checks through b755438, dated 2026-10-20 UTC. Single offline HTML file derived from bundled offline-html-report template. Engineering results are not game-design verdicts.</p>
         <details class="vendor-notice">
           <summary>Included library license: Chart.js 4.5.1</summary>
           <pre id="chartjs-license">The MIT License (MIT)

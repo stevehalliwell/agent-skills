@@ -786,7 +786,10 @@ Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show me
 - Dependency regression: 27/27 tests pass (20 workbench, 7 Attendant). Package contains 219 files, no vendored Attendant. Report refresh remains.
 - [x] Final documentation step: reviewed/expanded all 18 framework docs to 803–925 words each. Added working concepts, scoped procedures, worked examples, evidence/counterchecks, and traps. Preserved original prompts, source-access limits, selected-lens routing, and no-instrument/no-score boundaries. Maintainer generator validates coverage; retired one-line fixture fields removed.
 - Final source/package checks: 27/27 tests pass; 18/18 generated packs current; frontmatter passes; 231 local links pass; entrypoint 797 words; 219 installed files; zero setup changes/conflicts after update. No new source fetches; eight original HTTP 403 warnings retained.
-- Remaining: refresh scoped review and offline report, verify fresh-index export/browser, commit handoff.
+- Handoff refreshed: corrected scoped review `20261020T091047165Z-8da3234e` matches current source. Original run remains unchanged/stale; finding IDs stay stable. Fresh-index export passes setup idempotency and current/stale review checks.
+- Added reusable `scripts/check-workbench-export.mjs`; use `--help` for staged-export workflow. Verified JSON/text success, usage failure, and missing-dependency failure. No stage/commit/install side effects; private export removed.
+- Offline report/browser checks pass again: six sections, zero HTTP requests/errors, desktop/mobile, history/progress/theme/focus, reduced motion, no-JS, print generation. Eight original citation-access warnings retained, not relabeled as a new URL check.
+- Correction commits: `d2d028d` dependency boundary; `b755438` expanded guides. No merge/push/publication. Original worktree remains `dev` with its original untracked files.
 
 ## Comments
 
