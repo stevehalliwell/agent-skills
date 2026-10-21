@@ -1,0 +1,24 @@
+{
+  "image": "quay.io/docling-project/docling-serve-cpu@sha256:061d35c03611bc15b73d024c8e8387bcf0624279f8b57c16c1567326f214ba56",
+  "endpoint": "http://127.0.0.1:5001",
+  "sources": [
+    {
+      "source": "chaiklin-2003",
+      "url": "https://blogs.ubc.ca/vygotsky/files/2013/11/chaiklin.zpd_.pdf",
+      "date": "2026-10-21",
+      "download_sha256": "b95fb5fea127541b25d163b93f87605075383890df8d09b2823f2e5ed8e2664c",
+      "pdf_signature": "%PDF-1.4",
+      "pdf_retained": false,
+      "result": "chaiklin-2003/conversion.json"
+    },
+    {
+      "source": "van-de-pol-2010",
+      "url": "https://link.springer.com/content/pdf/10.1007/s10648-010-9127-6.pdf",
+      "date": "2026-10-21",
+      "download_sha256": "aca275c33eb858828ff5f57efb172ce9227a8f0e23afa731e522995734d32f34",
+      "pdf_signature": "%PDF-1.3",
+      "pdf_retained": false,
+      "result": "van-de-pol-2010/conversion.json"
+    }
+  ]
+}

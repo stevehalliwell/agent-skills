@@ -1,0 +1,22 @@
+Server: nginx
+Date: Wed, 21 Oct 2026 00:13:10 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: close
+Strict-Transport-Security: max-age=31536000
+Vary: Accept-Encoding
+X-hacker: Want root?  Visit join.a8c.com and mention this header.
+Host-Header: WordPress.com
+X-Pingback: https://lostgarden.com/xmlrpc.php
+Link: <https://lostgarden.com/wp-json/>; rel="https://api.w.org/"
+Link: <https://lostgarden.com/wp-json/wp/v2/posts/1301>; rel="alternate"; title="JSON"; type="application/json"
+Link: <https://wp.me/pffaLZ-kZ>; rel=shortlink
+Vary: accept, content-type, cookie
+Last-Modified: Wed, 21 Oct 2026 00:13:10 GMT
+Cache-Control: max-age=300, must-revalidate
+X-nananana: Batcache-Set
+X-ac: 1.syd _atomic_bur MISS
+X-Remembering: Eric Binnion <https://friendsofericbinnion.wordpress.com/>
+Alt-Svc: clear
+Server-Timing: a8c-cdn, dc;desc=syd, cache;desc=MISS;dur=779.0
+

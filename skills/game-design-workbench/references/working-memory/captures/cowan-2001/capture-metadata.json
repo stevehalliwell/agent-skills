@@ -1,0 +1,16 @@
+{
+  "captured_at_utc": "2026-10-21T00:16:29.356169+00:00",
+  "source_url": "https://memory.psych.missouri.edu/assets/doc/articles/2001/cowan-bbs-2001.pdf",
+  "pdf_sha256": "c8aa97780cd00ad100f55f6fcc1ad1bb22e65dcd63bcd91bf4ceeb379dc84c0c",
+  "pdf_page_objects": 99,
+  "method": "Local Docling Serve v1.30.0; born-digital no OCR; figures enabled; no image OCR; no remote enrichment",
+  "image": "quay.io/docling-project/docling-serve-cpu@sha256:061d35c03611bc15b73d024c8e8387bcf0624279f8b57c16c1567326f214ba56",
+  "task_id": "79b89c73-6f49-486c-95dc-9f61abb3fa9c",
+  "recovery": "Original async task recovered through curl status/result after Windows client WinError 10048. No resubmission or service restart. Existing client save_images used on returned Markdown.",
+  "status": "success",
+  "errors": [],
+  "exported_figures": 21,
+  "rights": "Cambridge University Press copyright; no redistribution license established; LOCAL-ONLY / NOT PUBLICATION-CLEARED",
+  "pdf_retained": false,
+  "normalization": "Existing Docling client localized embedded image links; one formula square-bracket pair escaped to prevent a false Markdown hyperlink. Original conversion result unchanged."
+}

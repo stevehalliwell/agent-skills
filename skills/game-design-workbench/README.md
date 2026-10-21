@@ -19,8 +19,8 @@ One Markdown game-design model, selected framework reviews, and agent workflows 
 ## Layout
 
 - `workflows/`: agent procedures and shared model/intent contracts.
-- `frameworks/`: selected framework guides and discovery catalog.
-- `references/<framework>/`: supporting source material, separate from application guidance. Thirteen folders are reserved; `.gitkeep` retains empty targets in Git. No local source copies supplied yet.
+- [Framework index](frameworks/index.md): when to use each lens; `frameworks/` contains selected application guides.
+- [Reference index](references/README.md): supporting source captures, readable Markdown, and provenance separate from application guidance. Includes 13 source-backed framework folders and supplied Schell deck data. Follow per-source rights limits; local retention/checkpoint does not authorize publication.
 - `templates/`: authoritative starting collection files.
 - `examples/`: authored game-design example and historical evidence.
 

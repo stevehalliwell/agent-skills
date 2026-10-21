@@ -1,6 +1,6 @@
 # Game Design Workbench
 
-Status: implementing Slice 1 for review. Later slices remain unstarted. User authorized dedicated branch/worktree and commits per independent-developer step.
+Status: Slice 1 delivered; framework reference acquisition and guide expansion in review. Schell card-table task complete. Later implementation slices remain unstarted. User authorized dedicated branch/worktree and commits per independent-developer step.
 
 Implementation context:
 
@@ -645,7 +645,7 @@ Implemented delivery shape:
 - [x] Agent preserves existing owner/body/navigation during setup and explicit header changes. Project instructions record binding; no managed-link installer.
 - [x] Use ordinary Git log/show/diff for selected intent comparison and historical citations. No custom context/history/snapshot service. Earlier scripted tests remain historical evidence, not current interfaces.
 
-Current source/workflow contract: [concept and working mode](skills/game-design-workbench/workflows/concept.md). Implementation verification recorded after checks below. Framework packs remain provisional; framework completeness pass and Slice 2 have not started.
+Current source/workflow contract: [concept and working mode](skills/game-design-workbench/workflows/concept.md). Implementation verification recorded after checks below. Framework guides remain provisional; source acquisition and 13 guide expansions are delivered for review. Slice 2 remains unstarted.
 
 ### Collection cleanup — before further review
 
@@ -664,10 +664,12 @@ Current source/workflow contract: [concept and working mode](skills/game-design-
 
 ### Framework completeness pass — before Slice 2
 
-- [x] Separate `workflows/`, `frameworks/`, and supporting `references/<framework>/`. All 18 guides end with References. Reserve 13 non-book/mixed-source folders, including Flow and Theory of Fun; `.gitkeep` only, no source text or reuse permission implied. Updated links/catalog/tests; 3/3 tests, frontmatter, local links, and exact folder/marker checks pass. No reference acquisition or framework completeness review performed.
-- [ ] Review one framework at a time after current model/documentation cleanup. Catalog status tracks provisional coverage; word count and file generation are not completeness evidence.
-- [ ] For each framework, establish purpose, actual concepts/categories/lenses, required/optional data, application procedure, revealed outputs, limits, worked example, and inspected sources. Resolve missing inputs before native data contracts are frozen.
-- [ ] For Schell, resolve missing lens catalog and individual lens application guidance; generic reflective questions are not equivalent coverage. Research attribution/access/reproduction limits before promising completeness.
+- [x] Separate `workflows/`, `frameworks/`, and supporting `references/<framework>/`. All 18 guides end with References. Markdown `frameworks/index.md` replaces JSON catalog and explains when each guide is useful. Tests validate actual index and guides.
+- [x] Retain actual source text/figures/captions and separate provenance/notes for 13 non-book/mixed-source frameworks. Preferred Markdown reading copies are indexed; HTML remains evidence. Record access, conversion, and rights limits per source; acquisition does not establish redistribution clearance.
+- [x] Expand 13 source-backed guides with actual concepts, selected-slice application, output artifacts, worked examples, and counterchecks. Guides remain provisional for human review; word count and generation are not completeness evidence.
+- [ ] Complete human review and remaining book-based guide work. Establish purpose, actual concepts/categories/lenses, required/optional data, application procedure, revealed outputs, limits, worked example, and inspected sources before freezing native data contracts. Book-based guides: game grammar, resource economy, Caillois, Schell, playcentric.
+- [x] Resolve Schell web-deck catalog: retain supplied raw JSON and searchable five-column table for all 116 English cards/451 questions. Preserve existing functional use notes; map descriptions/questions by internal index. Local-only/not-publication-cleared; local Git checkpoint explicitly approved, no push/publication.
+- [ ] Expand Schell application guide using retained individual lenses; generic reflective questions and a complete card table do not by themselves establish application-guide completeness.
 - [ ] Preserve overall player experience/player story and MDA A aspects as distinct lenses; do not treat one as canonical translation of the other.
 
 ### Slice 2 — C99 source core and structured inspection
@@ -816,6 +818,16 @@ These checks describe earlier deliveries, including retired runtime. They are no
 - Removed remaining template/example generator and both JavaScript data mirrors. Shipped templates and example Markdown own their respective content. No `scripts/` directory remains in skill; `test/authoring.test.mjs` validates real assets through public Attendant. Repository `check-offline-report.mjs` remains historical HTML verification, not skill runtime.
 - Checked installed copy before removal: all 189 files matched manifest; no local extras/edits. Canonical 63 records, authored concept, contract field definitions, and reports/baselines preserved. Removed obsolete generator notices from 28 schema bodies; frontmatter unchanged.
 - Current checks: 3/3 tests pass against real assets and ordinary temporary copies. External Attendant validates all 14 copied empty template collections and 63 example records/unique UUIDs; tests cover null rank, proposals, and rank-only update preservation. Ordinary Git index export passes same 3 tests. Without dependency, 2 pass/1 integration skip. Skill frontmatter and local links pass, including this record. No active generator imports/commands/notices remain. Earlier 4-test generator-based results are historical. No new report generation or framework review.
+
+## Framework references and card-table checkpoint
+
+- 13 framework source folders retain full reading copies alongside independent notes, source metadata, and documented rights/conversion gaps. Root reference index maps HTML originals to readable Markdown.
+- 13 framework guides expanded; five book-based guides remain provisional without equivalent expansion. No claim of completed manual framework review or release readiness.
+- Schell adds `references/schell/deck-en.json`, exact raw JSON supplied by user, and `deck-table.md`: internal index, exact title, functional use note, description, question list. All 116 titles/indices/notes and 451 ordered questions checked. Table flattens layout whitespace; raw JSON preserves supplied strings/formatting. No new fetch needed for conversion.
+- Added Git attributes to preserve reference bytes and treat current PDF/image formats as binary. All 381 reference files match staged blobs byte-for-byte; no automatic newline conversion of raw evidence or supplied JSON.
+- Validation: 3/3 authoring/public-Attendant tests pass; skill frontmatter and local entrypoint/guide/workflow/reference-index/task links pass. Authored-change whitespace checks pass. Full-source whitespace check reports 22,348 formatting findings in preserved capture/reference material; do not rewrite original evidence merely to satisfy whitespace lint.
+- User explicitly selected complete local checkpoint including references, about 74 MB, after scope/rights review. Retain local-only/not-publication-cleared warnings. No merge, push, or publication. Exclude unrelated root `Concept - Template.md` and `High Concept Doc.md`.
+- Schell card-reference task complete. Framework guide review/deeper book-based application work remains; then Slice 2 C99 source core. Control-variable import formats and merge/overwrite behavior remain unresolved Slice 3 scope.
 
 ## Comments
 

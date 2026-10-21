@@ -1,0 +1,12 @@
+{
+  "urls": [
+    "https://quanticfoundry.com/2015/06/18/how-we-created-the-gamer-motivation-profile/",
+    "https://quanticfoundry.com/2015/07/20/how-we-developed-the-gamer-motivation-profile-v2/",
+    "https://quanticfoundry.com/gamer-motivation-model/"
+  ],
+  "crawler_config": {
+    "cache_mode": "BYPASS",
+    "check_robots_txt": true,
+    "wait_for_images": true
+  }
+}

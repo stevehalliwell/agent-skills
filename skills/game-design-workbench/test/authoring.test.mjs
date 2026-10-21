@@ -31,16 +31,16 @@ test('shipped templates and example contain readable collection contracts and co
   assert.match(concept, /Hypothetical player voice/);
 });
 
-test('manual framework catalog indexes all 18 provisional guides', async () => {
-  const catalog = JSON.parse(await text(join(home, 'frameworks/catalog.json')));
-  assert.equal(catalog.length, 18);
-  assert.equal(new Set(catalog.map(item => item.id)).size, 18);
-  assert.deepEqual((await readdir(join(home, 'frameworks'))).filter(name => name.endsWith('.md')).sort(), catalog.map(item => `${item.id}.md`).sort());
-  for (const item of catalog) {
-    assert.equal(item.path, `frameworks/${item.id}.md`);
-    assert.equal(item.status, 'provisional');
-    const guide = await text(join(home, item.path));
-    assert.ok(guide.startsWith(`# ${item.title}\n`));
+test('Markdown framework index links all 18 provisional guides', async () => {
+  const index = await text(join(home, 'frameworks/index.md'));
+  const guides = [...index.matchAll(/\[[^\]]+\]\(([a-z0-9-]+\.md)\)/g)].map(match => match[1]);
+  assert.equal(guides.length, 18);
+  assert.equal(new Set(guides).size, 18);
+  assert.match(index, /provisional/);
+  assert.deepEqual((await readdir(join(home, 'frameworks'))).filter(name => name.endsWith('.md') && name !== 'index.md').sort(), [...guides].sort());
+  for (const name of guides) {
+    const guide = await text(join(home, 'frameworks', name));
+    assert.match(guide, /^# [^\n]+\n/);
     assert.equal(guide.match(/^## References$/gm)?.length, 1);
     assert.equal([...guide.matchAll(/^## (.+)$/gm)].at(-1)?.[1], 'References');
     assert.match(guide, /Inspection topics:/);

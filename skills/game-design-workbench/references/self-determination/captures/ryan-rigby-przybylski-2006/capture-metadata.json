@@ -1,0 +1,19 @@
+{
+  "title": "The Motivational Pull of Video Games: A Self-Determination Theory Approach",
+  "authors_or_institution": [
+    "Richard M. Ryan",
+    "C. Scott Rigby",
+    "Andrew Przybylski"
+  ],
+  "source_url": "https://selfdeterminationtheory.org/SDT/documents/2006_RyanRigbyPrzybylski_MandE.pdf",
+  "acquisition_date": "2026-10-21",
+  "rights": "Springer Science + Business Media, LLC, 2006",
+  "retention": "LOCAL-ONLY / NOT PUBLICATION-CLEARED",
+  "license": "No permissive republication license verified",
+  "method": "Local Docling v1.30.0, OCR disabled, image export enabled, image OCR disabled; raw conversion.json retained",
+  "coverage": "Full article through references; see ../../README.md for fidelity limits",
+  "markdown_sha256": {
+    "ryan-rigby-przybylski-2006.md": "b10ba3fa4cc9f28bbbae1c0a5ae90b7715b5d07882168b7c15d56271c8110367"
+  },
+  "supplement": "Original PDF page 11 rendered at scale 2 using existing pypdfium2 in Docling container; both undecoded equations retained visually. No OCR or enrichment."
+}

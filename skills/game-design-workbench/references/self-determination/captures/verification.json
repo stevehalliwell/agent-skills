@@ -1,0 +1,693 @@
+{
+  "checked_at": "2026-10-21T11:18:15.936973+11:00",
+  "checks": {
+    "ryan-deci-2000": {
+      "status": "success",
+      "errors": [],
+      "pdf_sha256": "e14779081a999b49dfdde8fe7078fcef65a282d4e6374a037269083d063a1ec3",
+      "pdf_pages": 11,
+      "page_text_checks": [
+        {
+          "page": 1,
+          "samples": [
+            {
+              "sample": "and mental health and when thwarted lead to diminished",
+              "found": true
+            },
+            {
+              "sample": "is worthy of our most intense scientific investigation. Specifically,",
+              "found": true
+            },
+            {
+              "sample": "1968; Deci, 1975)--that appear to be essential for facilitating",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 2,
+          "samples": [
+            {
+              "sample": "processes and behavioral manifestations. The use of experimental paradigms",
+              "found": true
+            },
+            {
+              "sample": "involve mobilizing others to act. Although motivation is often",
+              "found": true
+            },
+            {
+              "sample": "(Deci & Ryan, 1995), and general well-being (Ryan, Deci,",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 3,
+          "samples": [
+            {
+              "sample": "life (Csikszentmihalyi & Rathunde, 1993; Ryan, 1995). Yet, despite",
+              "found": true
+            },
+            {
+              "sample": "rewards) that conduce toward feelings of competence during action",
+              "found": true
+            },
+            {
+              "sample": "can undermine intrinsic motivation. Deci (1975) interpreted these results",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 4,
+          "samples": [
+            {
+              "sample": "In infancy, intrinsic motivation is readily observable as exploratory",
+              "found": true
+            },
+            {
+              "sample": "deeply into the nature and dynamics of extrinsic motivation.",
+              "found": true
+            },
+            {
+              "sample": "(b) the ways in which the social environment influences",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 5,
+          "samples": [
+            {
+              "sample": "subtheory, called organismic integration theory (OIT), to detail the",
+              "found": true
+            },
+            {
+              "sample": "the continuum between amotivation and intrinsic motivation, varying in",
+              "found": true
+            },
+            {
+              "sample": "which people are motivated to demonstrate ability (or avoid",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 6,
+          "samples": [
+            {
+              "sample": "a particular regulation. Rather, they can relatively readily internalize",
+              "found": true
+            },
+            {
+              "sample": "loss among morbidly obese patients (Williams et al., 1996),",
+              "found": true
+            },
+            {
+              "sample": "were those who felt securely connected to, and cared",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 7,
+          "samples": [
+            {
+              "sample": "introjected. Using parent interviews, Grolnick and Ryan (1989) found",
+              "found": true
+            },
+            {
+              "sample": "prevalent in our society and in others. Accordingly, we",
+              "found": true
+            },
+            {
+              "sample": "and ill-being. The fact that psychological-need deprivation appears to",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 8,
+          "samples": [
+            {
+              "sample": "universal and developmentally persistent does not imply that their",
+              "found": true
+            },
+            {
+              "sample": "was pos- itively associated with well-being indicators such as",
+              "found": true
+            },
+            {
+              "sample": "controlling maternal care (as assessed with ratings by the",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 9,
+          "samples": [
+            {
+              "sample": "the view that basic psychological needs are determinative with",
+              "found": true
+            },
+            {
+              "sample": "active, assimilative, and integrated nature can ascend. Excessive control,",
+              "found": true
+            },
+            {
+              "sample": "couple happiness. Journal of Personality and Social Psychology, 59,",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 10,
+          "samples": [
+            {
+              "sample": "myth? American Psychologist, 51, 1153-1166. Fisher, C. D. (1978).",
+              "found": true
+            },
+            {
+              "sample": "(in press). The relation of psychological needs for autonomy",
+              "found": true
+            },
+            {
+              "sample": "Personality, 63, 397-427. Ryan, R. M., Chirkov, V. I.,",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 11,
+          "samples": [
+            {
+              "sample": "K. M., Kasser, T., & Deci, E. L. (1996).",
+              "found": true
+            },
+            {
+              "sample": "Steinberg, L., & Silverberg, S. (1986). The vicissitudes of",
+              "found": true
+            },
+            {
+              "sample": "G. C., & Deci, E. L. (1996). Internalization of",
+              "found": true
+            }
+          ]
+        }
+      ],
+      "image_links": {
+        "images/ryan-deci-2000-001.png": true,
+        "images/ryan-deci-2000-002.png": true,
+        "images/ryan-deci-2000-003.png": true
+      },
+      "headings": [
+        "## Self-Determination Theory  and  the Facilitation of Intrinsic Motivation, Social  Development, and  Well-Being",
+        "## Self-Determination Theory",
+        "## The Nature  of  Motivation",
+        "## Intrinsic Motivation",
+        "## Self-Regulation of  Extrinsic Motivation",
+        "## Figure 1",
+        "## Facilitating Integration of  Extrinsic Motivation",
+        "## Alienation and  Its  Prevention",
+        "## Psychologic.a! Needs  and Mental  Health",
+        "## Conclusions",
+        "## REFERENCES"
+      ],
+      "end_reference_present": true
+    },
+    "ryan-rigby-przybylski-2006": {
+      "status": "success",
+      "errors": [],
+      "pdf_sha256": "3541204dae640596f6ba3cd4b662302c5d1dfb626780d39198818c320aef87a1",
+      "pdf_pages": 17,
+      "page_text_checks": [
+        {
+          "page": 1,
+          "samples": [
+            {
+              "sample": "associated with game enjoyment, preferences, and changes in well-being",
+              "found": true
+            },
+            {
+              "sample": "birth to numerous gaming environments and \"virtual worlds,\" that",
+              "found": true
+            },
+            {
+              "sample": "number of negative effects, including increased tendencies toward violence,",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 2,
+          "samples": [
+            {
+              "sample": "game developers themselves to opine that game designs \"need(s)",
+              "found": true
+            },
+            {
+              "sample": "date there has been little basic research on game",
+              "found": true
+            },
+            {
+              "sample": "sought to identify different player motivations via factor analysis.",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 3,
+          "samples": [
+            {
+              "sample": "employ a new measure of need satisfaction in play,",
+              "found": true
+            },
+            {
+              "sample": "they are seeking \"fun.\" Autonomy and competence One mini-theory",
+              "found": true
+            },
+            {
+              "sample": "autonomy to be enhanced by game designs that provide",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 4,
+          "samples": [
+            {
+              "sample": "presence (Lombard & Ditton, 1997; Rigby, 2004), or the",
+              "found": true
+            },
+            {
+              "sample": "of games we expect it to be mediated by",
+              "found": true
+            },
+            {
+              "sample": "particularly within multiplayer games, which allow for interactions between",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 5,
+          "samples": [
+            {
+              "sample": "across four distinct games. Finally, study 4 surveys an",
+              "found": true
+            },
+            {
+              "sample": "of presence, or a sense of immersion in the",
+              "found": true
+            },
+            {
+              "sample": "overwhelmingly difficult experience and enhanced efficacy. Items included: \"I",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 6,
+          "samples": [
+            {
+              "sample": "fitting (e.g., \"I feel energized right now\"). The alpha,",
+              "found": true
+            },
+            {
+              "sample": "= 5.60, p < .05), with women scoring lower",
+              "found": true
+            },
+            {
+              "sample": "competence predicted whether people chose to continue with the",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 7,
+          "samples": [
+            {
+              "sample": "n = 89. p < .05, p < 01.",
+              "found": true
+            },
+            {
+              "sample": "(F(1, 83) = 7.32, p < .01). Table 2",
+              "found": true
+            },
+            {
+              "sample": "intuitive controls and motivational outcomes as mediated by in-game",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 8,
+          "samples": [
+            {
+              "sample": "controls were related to both competence and autonomy, which",
+              "found": true
+            },
+            {
+              "sample": "procedure Participants were 50 undergraduates (36 female, 14 male)",
+              "found": true
+            },
+            {
+              "sample": "in retrospect due to the simple controls involved in",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 9,
+          "samples": [
+            {
+              "sample": "in terms of preference for future play, enjoyment and",
+              "found": true
+            },
+            {
+              "sample": "that, on average, people's vitality dropped from baseline to",
+              "found": true
+            },
+            {
+              "sample": "not predict outcomes in the less preferred game suggests",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 10,
+          "samples": [
+            {
+              "sample": "and how within-person variations in game preferences could be",
+              "found": true
+            },
+            {
+              "sample": "to win increasingly fast cars and enter more challenging",
+              "found": true
+            },
+            {
+              "sample": "on self-esteem were also negative, with significant decreases in",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 11,
+          "samples": [
+            {
+              "sample": "Vi j = oj + 1 X1i j +",
+              "found": false
+            },
+            {
+              "sample": "only with perceived competence. ( = .57, p <",
+              "found": true
+            },
+            {
+              "sample": "where they experienced competence satisfactions they also experienced increased",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 12,
+          "samples": [
+            {
+              "sample": ".66 .13 -.04 .19 .85 .18 .23 .22 .60",
+              "found": true
+            },
+            {
+              "sample": "completed forms, but no such duplicates were identified. Measures",
+              "found": true
+            },
+            {
+              "sample": "example, \"I thought the game was boring (reversed)\" with",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 13,
+          "samples": [
+            {
+              "sample": "score (alpha = .84). The Social Component was made",
+              "found": true
+            },
+            {
+              "sample": "motive (r = - .15, p < .01). Given",
+              "found": true
+            },
+            {
+              "sample": "relatedness also emerges as an important satisfaction that promotes",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 14,
+          "samples": [
+            {
+              "sample": "SD = .99 Autonomy Competence Relatedness Yee achievement Yee",
+              "found": true
+            },
+            {
+              "sample": "applied standpoint) will be those that address fundamental psychological",
+              "found": true
+            },
+            {
+              "sample": "< .01. Step 1 Step2 Independent variables Gender Competence",
+              "found": false
+            }
+          ]
+        },
+        {
+          "page": 15,
+          "samples": [
+            {
+              "sample": "When all of the motive measures competed for variance,",
+              "found": true
+            },
+            {
+              "sample": "can satisfy psychological needs when engaged in the game.",
+              "found": true
+            },
+            {
+              "sample": "them engaged. Future studies might focus more on regular",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 16,
+          "samples": [
+            {
+              "sample": "who suit MUDs. Journal of MUD Research, 1 (1).",
+              "found": true
+            },
+            {
+              "sample": "model. Journal of Educational Psychology, 95, 784­795. Healy, J.",
+              "found": true
+            },
+            {
+              "sample": "needs and the facilitation of integrative processes. Journal of",
+              "found": true
+            }
+          ]
+        },
+        {
+          "page": 17,
+          "samples": [
+            {
+              "sample": "2006, from http://www. ime.usp.br/ vwsetzer/video-g-risks.html Vallerand, R. J., &",
+              "found": true
+            },
+            {
+              "sample": "297­333. Yee, N. (2005, March 15). A model of",
+              "found": true
+            },
+            {
+              "sample": "game: Stacks of new releases for hungry video enthusiasts",
+              "found": true
+            }
+          ]
+        }
+      ],
+      "image_links": {
+        "images/ryan-rigby-przybylski-2006-001.png": true,
+        "images/ryan-rigby-przybylski-2006-002.png": true,
+        "images/ryan-rigby-przybylski-2006-003.png": true,
+        "images/ryan-rigby-przybylski-2006-004.png": true,
+        "images/ryan-rigby-przybylski-2006-005.png": true,
+        "images/ryan-rigby-przybylski-2006-006.png": true,
+        "images/ryan-rigby-przybylski-2006-007.png": true,
+        "images/ryan-rigby-przybylski-2006-008.png": true,
+        "images/ryan-rigby-przybylski-2006-009.png": true,
+        "images/ryan-rigby-przybylski-2006-010.png": true,
+        "images/source-page-11.png": true
+      },
+      "headings": [
+        "## ORIGINAL PAPER",
+        "## The Motivational Pull of Video Games: A Self-Determination Theory Approach",
+        "## Gaming motivation",
+        "## Self-determination theory",
+        "## Autonomy and competence",
+        "## Presence",
+        "## Intuitive controls",
+        "## Summary and overview",
+        "## Study 1",
+        "## Methods",
+        "## Participants and procedure",
+        "## Measures",
+        "## Results",
+        "## Preliminary analyses",
+        "## Primary analyses",
+        "## Brief discussion",
+        "## Study 2",
+        "## Methods",
+        "## Participants and procedure",
+        "## Measures",
+        "## Results",
+        "## Preliminary analyses",
+        "## Primary analyses",
+        "## Brief discussion",
+        "## Study 3",
+        "## Method",
+        "## Participants and procedures",
+        "## Measures",
+        "## Results",
+        "## Preliminary analyses",
+        "## Primary analyses",
+        "## Brief discussion",
+        "## Study 4",
+        "## Method",
+        "## Participants and procedure",
+        "## Measures",
+        "## Results",
+        "## Preliminary analyses",
+        "## Primary analyses",
+        "## Brief discussion",
+        "## General discussion",
+        "## References"
+      ],
+      "end_reference_present": true,
+      "equation_recovery": {
+        "page": 11,
+        "artifact": "ryan-rigby-przybylski-2006/images/source-page-11.png",
+        "method": "Existing pypdfium2 local render, scale 2; inspected original image; linked at both undecoded equations",
+        "machine_readable_math": false
+      }
+    },
+    "official-theory-overview": {
+      "method": "fetch_content readable, responseId mvhcyni1d8kg9w; independently retained raw HTML via curl",
+      "article_blocks": [
+        {
+          "text": "The Theory",
+          "found": true
+        },
+        {
+          "text": "Self-Determination Theory  (SDT) represents a broad framework for understanding why we do what we do…and what leads to flourishing (opposed to degradation) in human life.",
+          "found": true
+        },
+        {
+          "text": "SDT is an evidence-based theory of human motivation, personality development, and wellness.",
+          "found": true
+        },
+        {
+          "text": "SDT articulates a meta-theory for framing motivational studies, a formal theory that defines intrinsic and varied extrinsic sources of motivation, and a description of the respective roles of intrinsic and types of extrinsic motivation in cognitive and social development and in individual differences. Perhaps more importantly, SDT propositions also focus on how social and cultural factors facilitate or undermine people’s sense of volition and initiative, in addition to their well-being and the quality of their performance. Conditions supporting the individual’s experience of autonomy, competence, and relatedness are argued to foster the most volitional and high quality forms of motivation and engagement for activities, including enhanced performance, persistence, and creativity. In addition, SDT proposes that the degree to which any of these three psychological needs is unsupported or thwarted within a social context will have a robust detrimental impact on wellness in that setting.",
+          "found": true
+        },
+        {
+          "text": "The dynamics of psychological need support and need thwarting have been studied within families, classrooms, teams, organizations, clinics, and cultures using specific propositions detailed within SDT. The SDT framework thus has both broad and behavior-specific implications for understanding practices and structures that enhance versus diminish need satisfaction and the full functioning that follows from it. These many implications are best revealed by the varied papers listed on this website, which range from basic research on motivational micro-processes to applied clinical trials aiming at population outcomes.",
+          "found": true
+        },
+        {
+          "text": "Meta-Theory: The Organismic Viewpoint",
+          "found": true
+        },
+        {
+          "text": "SDT is an organismic dialectical approach. It begins with the assumption that people are active organisms, with evolved tendencies toward growing, mastering ambient challenges, and integrating new experiences into a coherent sense of self. These natural developmental tendencies do not, however, operate automatically, but instead require ongoing social nutriments and supports. That is, the social context can either support or thwart the natural tendencies toward active engagement and psychological growth, or it can catalyze lack of integration, defense, and fulfillment of need-substitutes. Thus, it is the dialectic between the active organism and the social context that is the basis for SDT’s predictions about behavior, experience, and development.",
+          "found": true
+        },
+        {
+          "text": "Within SDT, the nutriments for healthy development and functioning are specified using the concept of basic psychological needs for autonomy, competence, and relatedness. To the extent that the needs are ongoingly satisfied, people will develop and function effectively and experience wellness, but to the extent that they are thwarted, people will more likely evidence ill-being and non-optimal functioning. The darker sides of human behavior and experience, such as certain types of psychopathology, prejudice, and aggression are understood in terms of reactions to basic needs having been thwarted, either developmentally or proximally.",
+          "found": true
+        },
+        {
+          "text": "SDT’s Six Mini-Theories",
+          "found": true
+        },
+        {
+          "text": "SDT comprises six mini-theories, each of which was developed to explain a set of motivationally based phenomena that emerged from laboratory and field research. Each, therefore, addresses one facet of motivation or personality functioning.",
+          "found": true
+        },
+        {
+          "text": "1 . Cognitive Evaluation Theory (CET)  concerns  intrinsic motivation , motivation that is based on the satisfactions of behaving “for its own sake.”  Prototypes of intrinsic motivation are children’s exploration and play, but intrinsic motivation is a lifelong creative wellspring. CET specifically addresses the effects of social contexts on intrinsic motivation, or how factors such as rewards, interpersonal controls, and ego-involvements impact intrinsic motivation and interest. CET highlights the critical roles played by competence and autonomy supports in fostering intrinsic motivation, which is critical in education, arts, sport, and many other domains.",
+          "found": true
+        },
+        {
+          "text": "2.  Organismic Integration Theory (OIT),  the second mini-theory, addresses the topic of extrinsic motivation in its various forms, with their properties, determinants, and consequences. Broadly speaking, extrinsic motivation is behavior that is instrumental—that aims toward outcomes extrinsic to the behavior itself. Yet, there are distinct forms of instrumentality, which include external regulation, introjection, identification, and integration. These subtypes of extrinsic motivation are seen as falling along a continuum of  internalization . The more internalized the extrinsic motivation, the more autonomous the person will be when enacting the behaviors. OIT is further concerned with social contexts that enhance or forestall internalization—that is, with what conduces toward people either resisting, partially adopting, or deeply internalizing values, goals, or belief systems. OIT particularly highlights supports for autonomy and relatedness as critical to internalization.",
+          "found": true
+        },
+        {
+          "text": "3.  Causality Orientations Theory (COT) , the third mini-theory, describes individual differences in people’s tendencies to orient toward environments and regulate behavior in various ways. COT describes and assesses three types of causality orientations: the autonomy orientation in which persons act out of interest in and valuing of what is occurring; the control orientation in which the focus is on rewards, gains, and approval; and the impersonal or amotivated orientation characterized by anxiety concerning competence.",
+          "found": true
+        },
+        {
+          "text": "4.   Basic Psychological Needs Theory (BPNT)  is the fourth mini-theory and elaborates the concept of evolved psychological needs and their relations to psychological health and well-being. BPNT argues that psychological well-being and optimal functioning is predicated on autonomy, competence, and relatedness.  Therefore, contexts that support versus thwart these needs should invariantly impact wellness. The theory argues that all three needs are essential and that if any is thwarted there will be distinct functional costs. Because basic needs are universal aspects of functioning, BPNT looks at cross-developmental and cross-cultural settings for validation and refinements.",
+          "found": true
+        },
+        {
+          "text": "5.  Goal Contents Theory (GCT),  the fifth mini-theory, grows out of the distinctions between intrinsic and extrinsic goals and their impact on motivation and wellness. Goals are seen as differentially affording basic need satisfactions and are thus differentially associated with well-being. Extrinsic goals such as financial success, appearance, and popularity/fame have been specifically contrasted with intrinsic goals such as community, close relationships, and personal growth, with the former more likely associated with lower wellness and greater ill-being.",
+          "found": true
+        },
+        {
+          "text": "6. Relatedness, which has to do with the development and maintenance of close personal relationships such as best friends and romantic partners as well as belonging to groups, is one of the three basic psychological needs.  Relationships Motivation Theory (RMT),  the sixth mini-theory,  is concerned with these and other relationships, and posits that some amount of such interactions is not only desirable for most people but is in fact essential for their adjustment and well-being because the relationships provide satisfaction of the need for relatedness. However, research shows that not only is the relatedness need satisfied in high-quality relationships, but the autonomy need and to a lesser degree the competence need are also satisfied. Indeed, the highest quality personal relationships are ones in which each partner supports the autonomy, competence, and relatedness needs of the other.",
+          "found": true
+        },
+        {
+          "text": "Other Topics of Interest",
+          "found": true
+        },
+        {
+          "text": "As SDT has expanded, both theoretical developments and empirical findings have led SDT researchers to examine a plethora of processes and phenomena integral to personality growth, effective functioning, and wellness. For example, SDT research has focused on the role of mindfulness as a foundation for autonomous regulation of behavior, leading to both refined measurement and theorizing about awareness. The study of facilitating conditions for intrinsic motivation led to a theory and measurement strategy regarding vitality, an indicator of both mental and physical wellness. Work on vitality also uncovered the remarkable positive impact of the experience of nature on well-being. Some research within SDT has more closely examined the forms personal passions can take, with individuals being obsessive or harmonious as a function of internalization processes. Cross-cultural tests of SDT have led to an increased understanding of how economic and cultural forms impact the invariant aspects of human nature. Research on wellness has also led to new theory and research on the assessment of well-being itself, including the distinction between hedonic and eudaimonic forms of living. Specific topics such as autonomy versus controlled motivation has led to greater understanding of internalized control such as ego-involvement and contingent self-esteem and of the differences between them and autonomous self-regulation. Indeed these few examples supply just a taste of how the generative framework of SDT has enhanced research on a variety of processes of interest to the field.",
+          "found": true
+        },
+        {
+          "text": "Applications",
+          "found": true
+        },
+        {
+          "text": "In addition to formal theory development, research has applied SDT in many domains including education, organizations, sport and physical activity, religion, health and medicine, parenting, virtual environments and media, close relationships, and psychotherapy. Across these domains research has looked at how controlling versus autonomy-supportive environments impact functioning and wellness, as well as performance and persistence. In addition, supports for relatedness and competence are seen as interactive with volitional supports in fostering engagement and value within specific settings, and within domains of activity. This body of applied research has led to considerable specification of techniques, including goal structures and ways of communicating that have proven effective at promoting maintained, volitional motivation.",
+          "found": true
+        },
+        {
+          "text": "The varied articles on this website demonstrate the many types of inquiry associated with the SDT framework, as well as its generative capacity with respect to practical issues in human organizations of all kinds. Relevant research reports and theoretical discussion are listed in the  Publications  section, organized by topic.",
+          "found": true
+        },
+        {
+          "text": "By focusing on the fundamental psychological tendencies toward intrinsic motivation and integration, SDT occupies a unique position in psychology, as it addresses not only the central questions of why people do what they do, but also the costs and benefits of various ways of socially regulating or promoting behavior. Overviews of the theory can be found in Ryan and Deci (2000) and in Deci and Ryan (1985, 2000), as well as numerous other articles and chapters identified here on our website.",
+          "found": true
+        },
+        {
+          "text": "References",
+          "found": true
+        },
+        {
+          "text": "Ryan, R. M., & Deci, E. L. (2017).  Self-determination theory: Basic psychological needs in motivation, development, and wellness . New York: Guilford Publishing.",
+          "found": true
+        },
+        {
+          "text": "Ryan, R. M., & Deci, E. L. (2000). Self-determination theory and the facilitation of intrinsic motivation, social development, and well-being.  American Psychologist, 55 , 68-78.",
+          "found": true
+        },
+        {
+          "text": "Deci, E. L., & Ryan, R. M. (2000). The “what” and “why” of goal pursuits: Human needs and the self-determination of behavior.  Psychological Inquiry, 11 , 227-268.",
+          "found": true
+        },
+        {
+          "text": "Deci, E. L., & Ryan, R. M. (1985).  Intrinsic motivation and self-determination in human behavior . New York, NY: Plenum.",
+          "found": true
+        }
+      ]
+    }
+  }
+}

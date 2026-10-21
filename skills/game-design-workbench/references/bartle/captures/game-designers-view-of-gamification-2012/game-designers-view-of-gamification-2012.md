@@ -1,0 +1,113 @@
+## A game designer's view of gamification
+
+## Gamification sumMit
+
+19 th June 2012
+
+dr Richard A. Bartle University of essex, uk
+
+## introduction
+
+- imagine you're a novelist who has developed a way to write better fiction
+- Now Suppose journalists have adopted it for writing better factual stories
+- you might be moderately surprised to Â· you might be moderately surprised to learn that it works
+- This is my situation with gamification
+- I developed a method for designing better games that seems to work for purposes expressly not games
+
+![Image](images/figure-001.png)
+
+## Where else?
+
+- And here's a picture of a goth
+- Taken from gothsuptrees.net
+
+![Image](images/figure-002.png)
+
+![Image](images/figure-003.png)
+
+![Image](images/figure-004.png)
+
+## utility
+
+- New partition #1 tells you nothing you didn't already know
+- it's not useful for game design
+- Unless your game has physical implications involving wombs and age
+- New partition #2 has more interesting things to say
+- You could vaguely use it in games
+- -Minecraft /artists, mass effect /connoiseurs, angry birds /customers, the sims /designers
+
+![Image](images/figure-005.png)
+
+## works
+
+- That one actually works for mmorpgs
+- Solo play versus group play
+- Sandbox versus theme park
+- It Could be used in gamification, too
+- Also, there are plenty of existing Â· Also, there are plenty of existing psychometric profiling systems
+- Minnesota multiphasic personality inventory
+- Five factor model
+- it's not hard to take one, give it cool labels and describe it as 'player types
+
+![Image](images/figure-006.png)
+
+## 15 th september 1967
+
+- From my primary school mathematics book
+
+![Image](images/figure-007.png)
+
+## Player types
+
+- Given all these posSibilities , why did gamification go with mMo player types?
+- The answer seems to be that they strike a chord
+- Other typologies look at personality , Â· Other typologies look at personality , or activity , or world view
+- All of which are perfectly reasonable
+- Player type theory is the only one aimed at what different people find fun
+- Fun is what gamification wishes to mine
+
+## alternatives
+
+- The alternatives aren't fun-centric
+- Formal approaches tend to be too broad-brush to jive with gamification's requirements
+- Reiss desire profile: 16 intrinsic motivators, including eating, romance, vengeance , ...
+- Informal approaches rely heavily on stereotypes and folk wisdom
+- 'women like &lt;whatever&gt;', 'young people dislike &lt;whatever&gt;', '&lt;whatever&gt; attracts students'
+
+## utility
+
+- Player types give gamification a way to marry up rewards with activity
+- If you only give 'points' for an activity, you only reward achievers
+- If you want to reward explorers , give them more information , not points
+- It's obvious There must be much betTer partitions you can use
+- A game designer would actually be loOking for these - for fun !
+
+## A confession
+
+- i didn't formulate player type theory to say ' these are the difFerent things mmo players find fun'
+- I did it to say 'mmo players find different things fun'
+- Prior to this, designers only created mmos that they, personalLy found fun
+- today , they create mmos that people find fun
+- Game designers treat people as people
+
+## gamification
+
+- I see the same thing with gamification
+- In my school, gold stars were best, then silver , then stars in block colour
+- yet Some kids didn't want gold or silver
+- They wanted the same block colour as Â· They wanted the same block colour as their friends
+- Extrinsic rewards meant for achievers could have been used to reward socialisers, but they weren't
+
+## contribution
+
+- Player type theory's main contribution to gamification isn't that the latter now accounts for achievers, explorers, socialisers and killers
+- It's the mere fact that it now accounts for different users at all
+
+## conclusion
+
+- Game designers find gamification weird
+- We would be apPaLled if our games were so bad we had to bribe people to play them
+- However, we do have much in coMmon
+- The first question game designers ask is: Who do you want to play this game?
+- For those here , it's: Who do you want to engage with your gamification ?
+- Player types is an answer, but the answer has yet to be found

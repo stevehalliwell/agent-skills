@@ -1,0 +1,16 @@
+{
+  "title": "The Theory",
+  "authors_or_institution": [
+    "Self-Determination Theory website; no individual byline established"
+  ],
+  "source_url": "https://selfdeterminationtheory.org/the-theory/",
+  "acquisition_date": "2026-10-21",
+  "rights": "No permissive license established; individual byline/date unknown",
+  "retention": "LOCAL-ONLY / NOT PUBLICATION-CLEARED",
+  "license": "No permissive republication license verified",
+  "method": "Built-in fetch_content readable response mvhcyni1d8kg9w; raw HTML and response headers retained via curl",
+  "coverage": "Full article through references; see ../../README.md for fidelity limits",
+  "markdown_sha256": {
+    "the-theory.md": "e0931fb131a36218f1e59964801809b03f873e4270dcc14f017d6af91c025d5c"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "sources": [
+    {
+      "source": "gamer-motivation-model",
+      "status": "verified",
+      "beginning_middle_end_anchors": [
+        "Take the Gamer Motivation Profile",
+        "The Bigger Picture",
+        "For every game we have in our data set"
+      ],
+      "article_matches_raw_main_body_after_image_localization": true,
+      "sha256": "b8749179720fc2ec3609a0fc9403a5fdf28ffabe12f69c21d7e6424e903d54cd"
+    },
+    {
+      "source": "how-we-created-the-gamer-motivation-profile",
+      "status": "verified",
+      "beginning_middle_end_anchors": [
+        "People play video games for different reasons.",
+        "Our Gamer Motivations Framework",
+        "companion article"
+      ],
+      "article_matches_raw_main_body_after_image_localization": true,
+      "sha256": "81ce2fb279051f0a0e728ad6234712487cfcaf97590e332e68f5230ee5348bf9"
+    },
+    {
+      "source": "how-we-developed-the-gamer-motivation-profile-v2",
+      "status": "verified",
+      "beginning_middle_end_anchors": [
+        "We developed the Gamer Motivation Profile",
+        "Visualizing How The Factors are Related",
+        "All new users will simply see a link"
+      ],
+      "article_matches_raw_main_body_after_image_localization": true,
+      "sha256": "498765796552c62fcedd94cde052cc56b16b116e1fcfedc4fbdefe71c643ba58"
+    }
+  ],
+  "local_markdown_paths": "all resolved",
+  "figures": "7 PNG signatures/dimensions verified; all 7 opened for visual inspection",
+  "rights": "LOCAL ONLY / NOT PUBLICATION CLEARED"
+}

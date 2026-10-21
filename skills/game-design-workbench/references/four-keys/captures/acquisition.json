@@ -1,0 +1,40 @@
+{
+  "capture_date": "2026-10-21",
+  "purpose": "Private offline LLM reference; local-only, not-publication-cleared",
+  "scope": "Two substantive sources in existing README and notes; no bibliography, books, linked poster or new framework research",
+  "sources": [
+    {
+      "title": "Why We Play Games: Four Keys to More Emotion in Player Experiences",
+      "author": "Nicole Lazzaro / XEODesign, Inc.",
+      "year": 2004,
+      "url": "https://media.gdcvault.com/gdc04/slides/why_we_play_games.pdf",
+      "pdf_sha256": "ea098c22cf2ea68ddf11ed2915dde249ce407b5fb289547827fc06a9dcb19d49",
+      "markdown": "why-we-play-games/why_we_play_games.md",
+      "method": "curl public PDF to temporary scratch; bundled Docling client async, --images --no-image-ocr --no-ocr; after WinError 10048, recovered same task using curl bounded slow polling and /v1/result; existing client save_images extracted embedded images",
+      "endpoint": "http://127.0.0.1:5001",
+      "image": "quay.io/docling-project/docling-serve-cpu:v1.30.0",
+      "resolved_digest": "quay.io/docling-project/docling-serve-cpu@sha256:061d35c03611bc15b73d024c8e8387bcf0624279f8b57c16c1567326f214ba56",
+      "task_id": "8b88cf37-ea35-4b6c-bbf3-b65f4a82f7e4",
+      "status": "success",
+      "errors": [],
+      "images": 66,
+      "rights": "Copyright 2004 XEODesign, Inc., All Rights Reserved; player photos separately All Rights Reserved; trademarks belong to their holders; no redistribution grant established",
+      "fidelity": "Full-document automated conversion through references, acknowledgements and closing rights notice; figures exported; reading order/table layout and special-character encoding imperfect; no OCR, image OCR, visual interpretation or page-perfect audit",
+      "binary_retention": "Original PDF temporary only; online source remains above"
+    },
+    {
+      "title": "The 4 Keys 2 Fun",
+      "author": "Nicole Lazzaro / XEODesign, Inc.",
+      "url": "https://www.nicolelazzaro.com/the4-keys-to-fun/",
+      "publication_date": null,
+      "markdown": "author-overview/the-4-keys-2-fun.md",
+      "method": "Built-in fetch_content readable extraction (responseId mvhcyqjfye34x9); complete article text saved with title; whitespace/list formatting normalized; curl retained raw HTML and HTTP headers; source thumbnail downloaded over HTTPS and its image link localized",
+      "thumbnail_url": "https://www.nicolelazzaro.com/wp-content/uploads/2012/03/4_keys_thumb.png",
+      "rights": "No reuse license established; copyrighted author/site content; local-only, not-publication-cleared",
+      "fidelity": "Complete readable article body through final contact line, checked against raw HTML; site navigation, sidebar unrelated blog excerpts, scripts and styles excluded; thumbnail retained, linked full-size poster not acquired; raw HTML contains replacement glyphs where readable extraction preserved punctuation",
+      "status": "captured"
+    }
+  ],
+  "blockers": [],
+  "service_lifecycle": "Shared Docling reused unchanged, not restarted/stopped/reconfigured; no new containers, dependencies, models, OCR or LLM enrichment"
+}

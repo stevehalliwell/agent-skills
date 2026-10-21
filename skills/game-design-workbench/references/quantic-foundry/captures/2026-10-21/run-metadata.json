@@ -1,0 +1,7 @@
+{
+  "captured_utc": "2026-10-21T00:13:13.493988+00:00",
+  "image": "unclecode/crawl4ai@sha256:bd36741e7bdd35ddc1a05d9183e1d6d8cefb61dd640d944a25d026b76e917690",
+  "bounds": "Exactly three inventoried source URLs; no link following.",
+  "rights": "Copyright Quantic Foundry, LLC. No open license established. LOCAL ONLY / NOT PUBLICATION CLEARED.",
+  "method": "Built-in fetch returned HTTP 403 for all three; isolated local Crawl4AI, robots checking enabled, no LLM/OCR."
+}

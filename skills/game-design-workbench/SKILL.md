@@ -34,6 +34,10 @@ On explicit invocation without operation, inspect project registry if present, t
 
 ## Selected framework reads
 
+Choosing a lens: [framework index](frameworks/index.md) explains what each framework is best for.
+
+Local source text: [Markdown capture index](references/README.md). Source cards and independent notes remain separate from actual captures.
+
 Guides are provisional pending individual source/completeness review. Load only selected framework; clear user selection needs no reconfirmation. If selection remains consequentially ambiguous, ask focused choice. No automatic sequence or `all` selector.
 
 - Rule/experience trace: [MDA](frameworks/mda.md).

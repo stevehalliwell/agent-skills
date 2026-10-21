@@ -1,0 +1,5 @@
+{
+  "task_id": "5ba07656-8c41-4d8c-a4e4-a9cc949c2a70",
+  "task_status": "success",
+  "recovery": "Same task recovered with curl after Windows client WinError 10048; no resubmission."
+}

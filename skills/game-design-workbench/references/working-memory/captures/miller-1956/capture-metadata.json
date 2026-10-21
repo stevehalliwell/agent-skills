@@ -1,0 +1,17 @@
+{
+  "captured_at_utc": "2026-10-21T00:16:29.358936+00:00",
+  "source_url": "https://psychclassics.yorku.ca/Miller/",
+  "method": "Built-in fetch confirmed full text; bounded Crawl4AI single-URL capture for local raw HTML/JSON and Markdown retention; no link following or enrichment",
+  "image": "unclecode/crawl4ai@sha256:bd36741e7bdd35ddc1a05d9183e1d6d8cefb61dd640d944a25d026b76e917690",
+  "crawler_config": {
+    "cache_mode": "BYPASS",
+    "check_robots_txt": true,
+    "wait_for_images": true
+  },
+  "status": "success",
+  "http_status": 200,
+  "images": 10,
+  "image_method": "Downloaded only 9 linked figures and Table 1 GIF; robots.txt HTTP 404 (no published rules); all GIF signatures checked",
+  "normalization": "Corrected reversible Latin-1/UTF-8 mojibake for K\u00fclpe and \u00fcber; promoted exact section labels to Markdown headings; localized image links. Raw HTML and response JSON unchanged.",
+  "rights": "George A. Miller (1956), Psychological Review 63, 81\u201397; HTML edition Christopher D. Green, York University. No general redistribution license established; LOCAL-ONLY / NOT PUBLICATION-CLEARED"
+}

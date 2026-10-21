@@ -1,0 +1,22 @@
+HTTP/1.1 200 OK
+Date: Wed, 21 Oct 2026 00:12:55 GMT
+Content-Type: application/pdf
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: cloudflare
+last-modified: Tue, 23 Aug 2022 12:15:17 GMT
+x-amz-version-id: p4H4FcJ2y1OejRBuggqQi_crTt2hCSo2
+etag: W/"c79bf165e6e14f8c99514c25ecbd7474"
+vary: Accept-Encoding
+x-cache: Miss from cloudfront
+via: 1.1 88aa2a8fcc18abe4d5dff69c501356ba.cloudfront.net (CloudFront)
+x-amz-cf-pop: LAX53-P5
+x-amz-cf-id: 6ZJNHjZEc3zZQimRmQsM4da86H53LCpDX5O-tu0boJCFvTUji6zP-Q==
+set-cookie: __cf_bm=ZOFDfBi7VaebauMNwST_Q.CIA8N6WFXE.vbo.bOY020-1792541575.4706929-1.0.1.1-yK5tvigmp9RtM2hRXOvNl4IoJfAHDJikw6m6QWuHLa0UKQXKXsp8AOa2dP.05Q.PWRYxODkfmZCYhCgQT.vGFfIKf6ybqu8xeQG93Cx2s7MfzKrHOmljiAdLJIzzeNno; HttpOnly; SameSite=None; Secure; Path=/; Domain=gdcvault.com; Expires=Wed, 21 Oct 2026 00:42:55 GMT
+Age: 1429
+expires: Wed, 21 Oct 2026 04:12:55 GMT
+Cache-Control: public, max-age=14400
+cf-cache-status: HIT
+CF-RAY: a4dc0daeae2a6c9e-MEL
+alt-svc: h3=":443"; ma=86400
+

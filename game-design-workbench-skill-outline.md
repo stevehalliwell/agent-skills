@@ -169,7 +169,7 @@ skills/game-design-workbench/
     commands.md           # existing tools and experiment checkpoint workflow
     ...                   # setup, capture, inspection, review, intent
   frameworks/
-    catalog.json          # discovery index
+    index.md              # framework selection by design question
     ...                   # one application guide per framework
   references/
     <framework>/          # supporting material; not workflow/application guidance

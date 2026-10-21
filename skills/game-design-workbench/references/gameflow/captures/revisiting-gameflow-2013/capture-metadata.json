@@ -1,0 +1,21 @@
+{
+  "source_pdf_url": "https://ojs.aut.ac.nz/journal-of-creative-technologies/index.php/JCT/article/download/16/14/",
+  "authors": "Penelope Sweetser; Daniel Johnson; Peta Wyeth",
+  "capture_date": "2026-10-21",
+  "input_sha256": "7ec76539380412e4a4882a6ff870ddf7075e034e6c765a3caa90189e1aa07d9f",
+  "method": "curl public PDF; existing shared loopback Docling v1.30.0, async, do_ocr=false, do_table_structure=true, include_images=true, embedded images, no image OCR, no page images",
+  "docling_image": "quay.io/docling-project/docling-serve-cpu@sha256:061d35c03611bc15b73d024c8e8387bcf0624279f8b57c16c1567326f214ba56",
+  "status": "success",
+  "errors": [],
+  "exported_images": 0,
+  "coverage": "Full article conversion through references; beginning/middle/end read; see ../../README.md for layout/encoding and image limits",
+  "checked_sections": [
+    "Abstract",
+    "Detailed Heuristics for RTS Games",
+    "Discussion",
+    "References",
+    "List of Tables"
+  ],
+  "rights": "CC BY-NC-ND 4.0; copyright 2013 authors & Colab",
+  "retention": "Local-only offline reference; not-publication-cleared; original PDF temporary only"
+}

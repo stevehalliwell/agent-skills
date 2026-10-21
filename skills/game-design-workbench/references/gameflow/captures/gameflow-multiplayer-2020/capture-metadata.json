@@ -1,0 +1,22 @@
+{
+  "source_pdf_url": "https://openresearch-repository.anu.edu.au/bitstreams/230a1d79-5ffd-4572-aee0-e26e50ed435f/download",
+  "authors": "Penny Sweetser; Daniel Johnson; Jay Kyburz",
+  "capture_date": "2026-10-21",
+  "input_sha256": "da085a0941a42d05f1bc658db09be609f143a7d06874ab947a1d5a6b5c494e8d",
+  "method": "curl public PDF; existing shared loopback Docling v1.30.0, async, do_ocr=false, do_table_structure=true, include_images=true, embedded images, no image OCR, no page images",
+  "docling_image": "quay.io/docling-project/docling-serve-cpu@sha256:061d35c03611bc15b73d024c8e8387bcf0624279f8b57c16c1567326f214ba56",
+  "status": "success",
+  "errors": [],
+  "exported_images": 2,
+  "coverage": "Full article conversion through references; beginning/middle/end read; see ../../README.md for layout/encoding and image limits",
+  "checked_sections": [
+    "ABSTRACT",
+    "3 Method",
+    "5.1 Interview with Developer",
+    "8 Conclusions",
+    "REFERENCES",
+    "[33]"
+  ],
+  "rights": "Copyright 2020 owner/authors; publication rights licensed to ACM; qualified personal/classroom notice, no broad reuse license established",
+  "retention": "Local-only offline reference; not-publication-cleared; original PDF temporary only"
+}

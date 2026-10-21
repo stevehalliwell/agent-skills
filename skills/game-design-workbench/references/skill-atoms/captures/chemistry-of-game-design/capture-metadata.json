@@ -1,0 +1,117 @@
+{
+  "source": "https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/",
+  "captured_utc": "2026-10-21T00:14:14.721617+00:00",
+  "method": "Built-in fetch_content readable; direct urllib public HTML retained; installed Defuddle parse --markdown --json; article text copied without paraphrase; embedded image downloads only",
+  "rights": "Copyright author/rightsholders; no license established; local-only/not-publication-cleared",
+  "images": [
+    {
+      "url": "https://lh5.googleusercontent.com/-oAleFyn0Kf9DzcE_UZdFKUdJgckZhsmWLa9e-r1vu8riBb04EeZwyvGlt9U1UWyvy54A5MA6S4cYGJikWgP2xo_qAOJZzZLHoxXwWzppnHTGZaPNQcaghrjMfkPN2K-5eHYl4c",
+      "local": "images/01.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "990cdb0ba1846735aa2b3d8c396880b43fd6bdecac63f9c2e4f9af2c9ae71c49",
+      "bytes": 184854
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/wyZpMbbsvjv5s4eOhoWo2dflL1XEb78onEtrmjtk2AMqSIRaMj18ZltvErdlkhQJng6ah92ELfmSSIxVs-9odia8GCGqiiPbCWffM8T7csTrYzZBNEgHmLR0Hyj47UC2itaofN0",
+      "local": "images/02.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "ceb2e11c5240182709b12c3db8d4fb1cc69b5e2e9646508075b0e532ad20b1a4",
+      "bytes": 50225
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/X5oSIR5p5YH31zpsA7Sq5f6BTXDMGrfFHCtTNPsLcGtsDL0VsgD5N2nLgjOuUDWXa2Vh1TcdcqcgMjDbHDdnAJqMYygfCRAhfwulvVIsYPpsiGvyuK4jnmDQeDVJiDSGtTzBpDU",
+      "local": "images/03.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "51437ee29c0f48150b5c292757c58224952e56e6673544dfb6be788d49b53e85",
+      "bytes": 78768
+    },
+    {
+      "url": "https://lh4.googleusercontent.com/qO5sgLN60rA7R0DZ2AmibPegfXaTJvvY-n28Em0KGCy4uE5Y5jtpkpSEfhq1AzxWhroCDu1UZQ9bBPXztMAxEby9kU3JDmMfaYt9C7xIIJDZdrwa-YIgxfKTz2wbFfiBBgocqLku",
+      "local": "images/04.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "9ad38b7e5237d6fa0b26b44d9cf262c0724b3ef9c59d360793fec4810604c67b",
+      "bytes": 130534
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/XEEgNrvaIhBmKYbRIegEFNzED7vfJPhfphv3dSTdDagZW7IdU0YdY0oxAM0Y9h4sc0G8i3nwzN9EWygdVkB8LTcWTxcNApk3yImkixTbyfCivJae7uCKhlgXryDIEZ-Itmb8eXL8",
+      "local": "images/05.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "b6e313dfd6ac3e15d0cfb8821f728ee7e589bcdb4b11a638b849549e93c04dfc",
+      "bytes": 40436
+    },
+    {
+      "url": "https://lh5.googleusercontent.com/U8_m6PetoqtELQAjlTei5R6PTuiGLjEqqGP2mrNwLT4wkPO_Zt8oZNNcMO70rMWVG9ZwVeFC3ujl3-rUo1fpQaVbcMRiNGqtyHeE4smhXA-gFziTeaR1YK9Zj2LzOYp0u4USNp9q",
+      "local": "images/06.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "5d5ef58fec55c941f2da50d5af7c40cf788ead45b4794c01dd725dc069e9981c",
+      "bytes": 42060
+    },
+    {
+      "url": "https://lh6.googleusercontent.com/QjBbZTmRDJKGi6oAfFkzdxk9PyfEweNhBWfoRPcyRg0yCazSJRql-isKQ-FR0Dsr8sEQVvSK4sho96iZ0XxCOONYcwma5uk-LKAF4W6YsjZxCoZ9H_lW-4LYqYXTdoatDjBJIn4",
+      "local": "images/07.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "e29b2a8820484b490a6276338dcc42f5688d6cb251c9373d401788d2f89b818e",
+      "bytes": 73019
+    },
+    {
+      "url": "https://lh6.googleusercontent.com/iN-HKwUUWkd0pLY1meMzOhfMApMp_8hxYHTrXmi8DNepkuZyC7CdJzVlPswV1jFsWVqBaN8vNI5dNy54FqIG1TSWRu5H1D5k5ek-bsIhJHFGF8-QC1UaSiBSZUdk1UoZ-F-7VxA",
+      "local": "images/08.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "0bcdcea921ec40cda2d247ae436daee72cf2e3df7c85f862c9394835b7e8f942",
+      "bytes": 123977
+    },
+    {
+      "url": "https://lh4.googleusercontent.com/8BZwqfvxGWAjXB_mX3n3P_FWipNObdf6dAiBC57dP07-lKaAyq1aS5YobcjdlksyTwkNRf7RiLBCnm3y3ELmD42hABei5QDxGm5rspPDpLUpJn9CT4GAc-n1CeyswBNUeu3C1yM",
+      "local": "images/09.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "5b588d122a8854bb80ae34f5449fe7f634def8d71b9f35a628cc70e592e29f24",
+      "bytes": 73511
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/0LdKqmXG9O2gJjJ1zD4jddOToG0WKgmRHdy6_p1M6XXpi5SYTYOBl-BOXsVLdEC1rPPF4USE1Q8PuAdWprPGzd46W6YVbXJjmjN9Q-WOLfiyZvI7jgiY7BaDcTODhKhyC20X9lk",
+      "local": "images/10.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "e888a31c5ba426890a741fda59181e566f802b781bd2a08350dfb52a7c3a9aae",
+      "bytes": 39839
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/6ar90ySqQnibteR7Ubh_7V4M28b8Oa3OwUWdZTAVEZnd7rQhzQ5ynBLwN-Z3QMaf5bkaqtKdnMzy1jB2a0gqFrls_qchPlOQVpe6D9Pq_RMzLiVu56BVK5Wi6pJ0clmuDOQAT3Y",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/N6XfVSgw5byhsham9aK97liw6SgPBApRJHD3qjZeGMvZRGE0uMJZIAjz25PVU2YWPjOizHJ9CjDy5nAvTy1iC1tgf0c9ad9sMmnlA8sqj1TAU_cBCB-gEP5MyX3HgZg_oJTsIKs",
+      "local": "images/12.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "77f959e011b46fe94307fc66b3620343aa6f0aa9d850b118366406ebc643507d",
+      "bytes": 71881
+    },
+    {
+      "url": "https://lh4.googleusercontent.com/551tBhelWpofryst61MgD64BZ8bK1jpU-GSyexoJUYY1OOpMcqbQBhI5GYmgm5Ozf9Ho5-nVUuFvgBjA3tma8AatHIeQDN1obCeixxIy7eqZxl0eljXGdXwc2CBF6f5LMPXdvAE",
+      "local": "images/13.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "62a3d6b7294f895fa4606cd7fc748e4f6136f50b97b01848d960efff94eebc12",
+      "bytes": 72294
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/CN9Y4r5U4M1oH1kb_VOrNC28NrdCw9Cu0TViuMAUeE8yJcwvPQZs5F7dH5Wpt4H_Mzv0myA3XsgLGVIeTckswl4dQHQ-WeZ7gZaY8XGsJ_66tp3awZog5wjh7DCO9Igz00ZTDJE",
+      "local": "images/14.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "753296717dd8a97fe03f8766a230834316d668b430b5039e5ee68842e67d2653",
+      "bytes": 72365
+    },
+    {
+      "url": "https://lh6.googleusercontent.com/XAwXSBPBowouvRjuNBpeEcH_ZGC3iAuywFaqqNS0xHhkr9-zDsT1M4FtK7lK_cCfncg8WukDLXfFgwbNJxc2f8ixwqYnnKj4LlyCor8lcbgbvuU8a5e88Novl4BuuYNdZWOPsBE",
+      "local": "images/15.jpg",
+      "content_type": "image/jpeg",
+      "sha256": "9a07c2f5b10153017f4056271805d143204640a8da4a3974b64aa6ed50934ef8",
+      "bytes": 53378
+    }
+  ],
+  "defuddle_metadata": {
+    "title": "The Chemistry of Game Design",
+    "author": "",
+    "published": "2021-03-13T02:29:29+00:00",
+    "wordCount": 5051
+  },
+  "fetch_error": null
+}

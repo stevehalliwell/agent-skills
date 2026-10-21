@@ -1,0 +1,122 @@
+{
+  "captured_at": "2026-10-21T00:18:49.858587+00:00",
+  "purpose": "Private offline LLM reference. Local-only / not-publication-cleared. No redistribution license inferred.",
+  "scope": "Three substantive sources from pre-existing notes; attribution-only main page, bibliographic leads, and books excluded.",
+  "sources": [
+    {
+      "title": "Game Design Patterns",
+      "authors": [
+        "Staffan Björk",
+        "Sus Lundgren",
+        "Jussi Holopainen"
+      ],
+      "year": 2003,
+      "url": "https://dl.digra.org/index.php/dl/article/download/60/60",
+      "markdown": "game-design-patterns-2003.docling/game-design-patterns-2003.md",
+      "method": "Public PDF downloaded to temporary scratch, converted by existing loopback Docling Serve",
+      "options": [
+        "--no-ocr",
+        "--images",
+        "--no-image-ocr",
+        "--async",
+        "--poll-interval 15"
+      ],
+      "image": "quay.io/docling-project/docling-serve-cpu:v1.30.0",
+      "image_digest": "quay.io/docling-project/docling-serve-cpu@sha256:061d35c03611bc15b73d024c8e8387bcf0624279f8b57c16c1567326f214ba56",
+      "task_id": "7df1fa89-fbf9-4be9-af18-41a08ffae47e",
+      "recovery": "Same task recovered using curl after Windows client WinError 10048. No resubmission, restart, or reconfiguration.",
+      "status": "success",
+      "errors": [],
+      "pdf_pages": 15,
+      "images_exported": 0,
+      "checks": [
+        "Read full Markdown from copyright to final reference 48",
+        "Inspected beginning/middle/end and all major sections",
+        "Independent temporary pdftotext layout extraction checked all 15 page boundaries; not retained as replacement",
+        "Local links checked"
+      ],
+      "limits": [
+        "Not facsimile; two-column spacing/page furniture, entity escapes and broken source URLs remain",
+        "No page images or diagram interpretation; no substantive figure identified",
+        "PDF removed from scratch after checks; original public URL retained"
+      ],
+      "rights": "Copyright 2003 authors, Utrecht University, DiGRA; all rights reserved. Local-only / not-publication-cleared."
+    },
+    {
+      "title": "Pattern-Based Methods",
+      "attribution": "Gameplay Design Patterns wiki, maintained by Staffan Björk and Jussi Holopainen; individual authorship not established",
+      "url": "https://gdp.cse.chalmers.se/index.php?title=Pattern-Based_Methods",
+      "markdown": "pattern-based-methods.md",
+      "revision": 91,
+      "method": "Built-in fetch_content readable extraction saved directly from stored result; curl raw HTML retention",
+      "fidelity": "Full article body from opening sentence through orthodoxy; original placeholders retained; navigation omitted",
+      "checks": {
+        "article_headings_checked": [
+          "Using Patterns for Analysis",
+          "Using Patterns for Designing",
+          "Ideation",
+          "Conceptualization",
+          "Prototyping",
+          "Testing",
+          "Using Patterns for Becoming Aware of Ones own Knowledge",
+          "The Question of Orthodoxy"
+        ],
+        "missing_headings": [],
+        "revision_id": "91",
+        "substantive_images": 0
+      },
+      "rights": "Content license not established. Local-only / not-publication-cleared."
+    },
+    {
+      "title": "Save-Load Cycles",
+      "attribution": "Gameplay Design Patterns wiki, maintained by Staffan Björk and Jussi Holopainen; individual authorship not established",
+      "url": "https://gdp.cse.chalmers.se/index.php?title=Save-Load_Cycles&oldid=26347",
+      "markdown": "save-load-cycles-revision-26347.md",
+      "revision": 26347,
+      "method": "Built-in fetch_content readable extraction saved directly from stored result; curl raw HTML retention",
+      "fidelity": "Full article body through references and acknowledgements; source raw ref markup/typos/redlinks retained; navigation omitted",
+      "checks": {
+        "article_headings_checked": [
+          "Examples",
+          "Using the pattern",
+          "Diegetic Aspects",
+          "Interface Aspects",
+          "Narration Aspects",
+          "Consequences",
+          "Relations",
+          "Can Instantiate",
+          "with Single-Player Games",
+          "Can Modulate",
+          "Can Be Instantiated By",
+          "Can Be Modulated By",
+          "Possible Closure Effects",
+          "Potentially Conflicting With",
+          "History",
+          "References",
+          "Acknowledgements"
+        ],
+        "missing_headings": [],
+        "revision_id": "26347",
+        "substantive_images": 0
+      },
+      "rights": "Content license not established. Local-only / not-publication-cleared."
+    }
+  ],
+  "html_transformations": [
+    "Added page title heading",
+    "Removed navigation/search jump links from methods page",
+    "Expanded /index.php Markdown links to original host; source prose unchanged"
+  ],
+  "local_links_checked": 19,
+  "sha256": {
+    "pattern-based-methods.html": "610617153b55eaf5fd154df9b3b9916da5ffc096bd657a501967a44c7b8e2eac",
+    "pattern-based-methods.md": "048f979d5511433d20be90c64686ea38444c462a4708e3c398a07153b738ca72",
+    "save-load-cycles-revision-26347.html": "9fefc719686c58f441ef2a862fc9ff10b4a732e9dd3d91887b938ca8aba46fe3",
+    "save-load-cycles-revision-26347.md": "e4808cc6f8ac1a3dbf1ddcedd687848ecdcdd653545b0b29a8f1460baf1ea6cb",
+    "wiki-fetch-result.json": "a466074c3907ff52f0fb8424dddba524942c93ff63c2c5f7e77c7af95106b40f",
+    "game-design-patterns-2003.docling\\async-task.json": "9135b4298630f47d27244fdb80571e586fd5481e2dfc3cb6efa753fa13abcc58",
+    "game-design-patterns-2003.docling\\conversion.json": "dd228f7f026ac1cacf74bd2595ee183b209958b073805d6987dcf80863c94acb",
+    "game-design-patterns-2003.docling\\game-design-patterns-2003.md": "84f219247a79f252b28503c218775933e99bffc6a69cb5432652389be6457c33"
+  },
+  "blockers": []
+}

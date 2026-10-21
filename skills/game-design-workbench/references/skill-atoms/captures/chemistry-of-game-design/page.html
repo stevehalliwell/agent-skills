@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name='robots' content='max-image-preview:large' />
+<title>The Chemistry of Game Design &#8211; Lostgarden</title>
+<link rel='dns-prefetch' href='//secure.gravatar.com' />
+<link rel='dns-prefetch' href='//widgets.wp.com' />
+<link rel='dns-prefetch' href='//s0.wp.com' />
+<link rel='dns-prefetch' href='//0.gravatar.com' />
+<link rel='dns-prefetch' href='//1.gravatar.com' />
+<link rel='dns-prefetch' href='//2.gravatar.com' />
+<link rel='preconnect' href='//i0.wp.com' />
+<link rel='preconnect' href='//c0.wp.com' />
+<link rel="alternate" type="application/rss+xml" title="Lostgarden &raquo; Feed" href="https://lostgarden.com/feed/" />
+<link rel="alternate" type="application/rss+xml" title="Lostgarden &raquo; Comments Feed" href="https://lostgarden.com/comments/feed/" />
+<link rel="alternate" type="application/rss+xml" title="Lostgarden &raquo; The Chemistry of Game Design Comments Feed" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/feed/" />
+<link rel="alternate" title="oEmbed (JSON)" type="application/json+oembed" href="https://lostgarden.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Flostgarden.com%2F2021%2F03%2F13%2Fthe-chemistry-of-game-design-2%2F" />
+<link rel="alternate" title="oEmbed (XML)" type="text/xml+oembed" href="https://lostgarden.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Flostgarden.com%2F2021%2F03%2F13%2Fthe-chemistry-of-game-design-2%2F&#038;format=xml" />
+<style id="wp-img-auto-sizes-contain-inline-css">
+img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */
+</style>
+<link rel='stylesheet' id='all-css-8b51b22887038bf981d4aa9e1f0ee2ac' href='https://lostgarden.com/wp-content/plugins/jetpack/modules/related-posts/related-posts.css?m=1771329624' type='text/css' media='all' />
+<style id="wp-block-site-logo-inline-css">
+.wp-block-site-logo{box-sizing:border-box;line-height:0}.wp-block-site-logo a{display:inline-block;line-height:0}.wp-block-site-logo.is-default-size img{height:auto;width:120px}.wp-block-site-logo img{height:auto;max-width:100%}.wp-block-site-logo a,.wp-block-site-logo img{border-radius:inherit}.wp-block-site-logo.aligncenter{margin-left:auto;margin-right:auto;text-align:center}:root :where(.wp-block-site-logo.is-style-rounded){border-radius:9999px}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/site-logo/style.min.css */
+</style>
+<style id="wp-block-site-title-inline-css">
+.wp-block-site-title{box-sizing:border-box}.wp-block-site-title :where(a){color:inherit;font-family:inherit;font-size:inherit;font-style:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;text-decoration:inherit}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/site-title/style.min.css */
+</style>
+<style id="wp-block-group-inline-css">
+.wp-block-group{box-sizing:border-box}:where(.wp-block-group.wp-block-group-is-layout-constrained){position:relative}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/group/style.min.css */
+</style>
+<style id="wp-block-navigation-link-inline-css">
+.wp-block-navigation .wp-block-navigation-item__label{overflow-wrap:break-word}.wp-block-navigation .wp-block-navigation-item__description{display:none}.link-ui-tools{outline:1px solid #f0f0f0;padding:8px}.link-ui-block-inserter{padding-top:8px}.link-ui-block-inserter__back{margin-left:8px;text-transform:uppercase}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/navigation-link/style.min.css */
+</style>
+<link rel='stylesheet' id='all-css-c3ab4dca780e743e6725c2200dd8c9d7' href='https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/navigation/style.min.css?m=1792404887' type='text/css' media='all' />
+<style id="wp-block-post-date-inline-css">
+.wp-block-post-date{box-sizing:border-box}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/post-date/style.min.css */
+</style>
+<style id="wp-block-post-title-inline-css">
+.wp-block-post-title{box-sizing:border-box;overflow-wrap:anywhere;word-break:normal}.wp-block-post-title :where(a){font-family:inherit;font-size:inherit;font-style:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;text-decoration:inherit}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/post-title/style.min.css */
+</style>
+<style id="wp-block-paragraph-inline-css">
+.is-small-text{font-size:.875em}.is-regular-text{font-size:1em}.is-large-text{font-size:2.25em}.is-larger-text{font-size:3em}.has-drop-cap:not(:focus):first-letter{float:left;font-size:8.4em;font-style:normal;font-weight:100;line-height:.68;margin:.05em .1em 0 0;text-transform:uppercase}body.rtl .has-drop-cap:not(:focus):first-letter{float:none;margin-left:.1em}p.has-drop-cap.has-background{overflow:hidden}:root :where(p.has-background){padding:var(--wp--style--block-background-padding,1.25em 2.375em)}:where(p.has-text-color:not(.has-link-color)) a{color:inherit}p.has-text-align-left[style*="writing-mode:vertical-lr"],p.has-text-align-right[style*="writing-mode:vertical-rl"]{rotate:180deg}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/paragraph/style.min.css */
+</style>
+<style id="wp-block-heading-inline-css">
+h1:where(.wp-block-heading).has-background,h2:where(.wp-block-heading).has-background,h3:where(.wp-block-heading).has-background,h4:where(.wp-block-heading).has-background,h5:where(.wp-block-heading).has-background,h6:where(.wp-block-heading).has-background{padding:var(--wp--style--block-background-padding,1.25em 2.375em)}h1.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h1.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h2.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h2.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h3.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h3.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h4.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h4.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h5.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h5.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]),h6.has-text-align-left[style*=writing-mode]:where([style*=vertical-lr]),h6.has-text-align-right[style*=writing-mode]:where([style*=vertical-rl]){rotate:180deg}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/heading/style.min.css */
+</style>
+<link rel='stylesheet' id='all-css-f9864f0afcadcc7c7070ba2b58fb7060' href='https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/image/style.min.css?m=1792404887' type='text/css' media='all' />
+<style id="wp-block-list-inline-css">
+ol,ul{box-sizing:border-box}:root :where(.wp-block-list.has-background){padding:var(--wp--style--block-background-padding,1.25em 2.375em)}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/list/style.min.css */
+</style>
+<style id="wp-block-file-inline-css">
+.wp-block-file{box-sizing:border-box}.wp-block-file:not(.wp-element-button){font-size:.8em}.wp-block-file.aligncenter{text-align:center}.wp-block-file.alignright{text-align:right}.wp-block-file *+.wp-block-file__button{margin-left:.75em}:where(.wp-block-file){margin-bottom:1.5em}.wp-block-file__embed{margin-bottom:1em}:where(.wp-block-file__button){border-radius:2em;display:inline-block;padding:.5em 1em}:where(.wp-block-file__button):where(a):active,:where(.wp-block-file__button):where(a):focus,:where(.wp-block-file__button):where(a):hover,:where(.wp-block-file__button):where(a):visited{box-shadow:none;color:#fff;opacity:.85;text-decoration:none}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/file/style.min.css */
+</style>
+<style id="wp-block-post-content-inline-css">
+.wp-block-post-content{display:flow-root}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/post-content/style.min.css */
+</style>
+<style id="wp-block-avatar-inline-css">
+.wp-block-avatar{line-height:0}.wp-block-avatar,.wp-block-avatar img{box-sizing:border-box}.wp-block-avatar.aligncenter{text-align:center}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/avatar/style.min.css */
+</style>
+<style id="wp-block-post-author-inline-css">
+.wp-block-post-author{box-sizing:border-box;display:flex;flex-wrap:wrap}.wp-block-post-author__byline{font-size:.5em;margin-bottom:0;margin-top:0;width:100%}.wp-block-post-author__avatar{margin-right:1em}.wp-block-post-author__bio{font-size:.7em;margin-bottom:.7em}.wp-block-post-author__content{flex-basis:0;flex-grow:1}.wp-block-post-author__name{margin:0}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/post-author/style.min.css */
+</style>
+<style id="wp-block-comment-author-name-inline-css">
+.wp-block-comment-author-name{box-sizing:border-box}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/comment-author-name/style.min.css */
+</style>
+<style id="wp-block-comment-date-inline-css">
+.wp-block-comment-date{box-sizing:border-box}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/comment-date/style.min.css */
+</style>
+<style id="wp-block-comment-content-inline-css">
+.comment-awaiting-moderation{display:block;font-size:.875em;line-height:1.5}.wp-block-comment-content{box-sizing:border-box}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/comment-content/style.min.css */
+</style>
+<style id="wp-block-comment-reply-link-inline-css">
+.wp-block-comment-reply-link{box-sizing:border-box}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/comment-reply-link/style.min.css */
+</style>
+<style id="wp-block-comment-template-inline-css">
+.wp-block-comment-template{box-sizing:border-box;list-style:none;margin-bottom:0;max-width:100%;padding:0}.wp-block-comment-template li{clear:both}.wp-block-comment-template ol{list-style:none;margin-bottom:0;max-width:100%;padding-left:2rem}.wp-block-comment-template.alignleft{float:left}.wp-block-comment-template.aligncenter{margin-left:auto;margin-right:auto;width:fit-content}.wp-block-comment-template.alignright{float:right}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/comment-template/style.min.css */
+</style>
+<link rel='stylesheet' id='all-css-37dc470d64612b385da95cdf88d09d1a' href='https://lostgarden.com/wp-content/mu-plugins/wpcomsh/jetpack_vendor/automattic/jetpack-comments/build/comments.css?m=1792522224' type='text/css' media='all' />
+<style id="wp-block-post-comments-form-inline-css">
+:where(.wp-block-post-comments-form input:not([type=submit])),:where(.wp-block-post-comments-form textarea){border:1px solid #949494;font-family:inherit;font-size:1em}:where(.wp-block-post-comments-form input:where(:not([type=submit]):not([type=checkbox]))),:where(.wp-block-post-comments-form textarea){padding:calc(.667em + 2px)}.wp-block-post-comments-form{box-sizing:border-box}.wp-block-post-comments-form[style*=font-weight] :where(.comment-reply-title){font-weight:inherit}.wp-block-post-comments-form[style*=font-family] :where(.comment-reply-title){font-family:inherit}.wp-block-post-comments-form[class*=-font-size] :where(.comment-reply-title),.wp-block-post-comments-form[style*=font-size] :where(.comment-reply-title){font-size:inherit}.wp-block-post-comments-form[style*=line-height] :where(.comment-reply-title){line-height:inherit}.wp-block-post-comments-form[style*=font-style] :where(.comment-reply-title){font-style:inherit}.wp-block-post-comments-form[style*=letter-spacing] :where(.comment-reply-title){letter-spacing:inherit}.wp-block-post-comments-form :where(input[type=submit]){box-shadow:none;cursor:pointer;display:inline-block;overflow-wrap:break-word;text-align:center}.wp-block-post-comments-form .comment-form input:not([type=submit]):not([type=checkbox]):not([type=hidden]),.wp-block-post-comments-form .comment-form textarea{box-sizing:border-box;display:block;width:100%}.wp-block-post-comments-form .comment-form-cookies-consent{display:flex;gap:.25em}.wp-block-post-comments-form .comment-form-cookies-consent #wp-comment-cookies-consent{margin-top:.35em}.wp-block-post-comments-form .comment-reply-title{margin-bottom:0}.wp-block-post-comments-form .comment-reply-title :where(small){font-size:var(--wp--preset--font-size--medium,smaller);margin-left:.5em}:where(.wp-block-post-comments-form .comment-form-author label),:where(.wp-block-post-comments-form .comment-form-email label),:where(.wp-block-post-comments-form .comment-form-url label){display:block;margin-bottom:.25em}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/post-comments-form/style.min.css */
+</style>
+<style id="wp-block-buttons-inline-css">
+.wp-block-buttons{box-sizing:border-box}.wp-block-buttons.is-vertical{flex-direction:column}.wp-block-buttons.is-vertical>.wp-block-button:last-child{margin-bottom:0}.wp-block-buttons>.wp-block-button{display:inline-block;margin:0}.wp-block-buttons.is-content-justification-left{justify-content:flex-start}.wp-block-buttons.is-content-justification-left.is-vertical{align-items:flex-start}.wp-block-buttons.is-content-justification-center{justify-content:center}.wp-block-buttons.is-content-justification-center.is-vertical{align-items:center}.wp-block-buttons.is-content-justification-right{justify-content:flex-end}.wp-block-buttons.is-content-justification-right.is-vertical{align-items:flex-end}.wp-block-buttons.is-content-justification-space-between{justify-content:space-between}.wp-block-buttons.aligncenter{text-align:center}.wp-block-buttons:not(.is-content-justification-space-between,.is-content-justification-right,.is-content-justification-left,.is-content-justification-center) .wp-block-button.aligncenter{margin-left:auto;margin-right:auto;width:100%}.wp-block-buttons[style*=text-decoration] .wp-block-button,.wp-block-buttons[style*=text-decoration] .wp-block-button__link{text-decoration:inherit}.wp-block-buttons.has-custom-font-size .wp-block-button__link{font-size:inherit}.wp-block-buttons .wp-block-button__link{width:100%}.wp-block-button.aligncenter{text-align:center}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/buttons/style.min.css */
+</style>
+<style id="wp-block-button-inline-css">
+.wp-block-button__link{align-content:center;box-sizing:border-box;cursor:pointer;display:inline-block;height:100%;overflow-wrap:anywhere;text-align:center;word-break:normal}.wp-block-button__link.aligncenter{text-align:center}.wp-block-button__link.alignright{text-align:right}:where(.wp-block-button__link){border-radius:9999px;box-shadow:none;padding:calc(.667em + 2px) calc(1.333em + 2px);text-decoration:none}.wp-block-button[style*=text-decoration] .wp-block-button__link{text-decoration:inherit}.wp-block-buttons>.wp-block-button.has-custom-width{max-width:none}.wp-block-buttons>.wp-block-button.has-custom-width .wp-block-button__link{width:100%}.wp-block-buttons>.wp-block-button.has-custom-font-size .wp-block-button__link{font-size:inherit}.wp-block-buttons>.wp-block-button[class*=wp-block-button__width]{width:calc(var(--wp--block-button--width)*1% - var(--wp--style--block-gap, .5em)*(1 - var(--wp--block-button--width)/100))}.wp-block-buttons>.wp-block-button.wp-block-button__width-25{width:calc(25% - var(--wp--style--block-gap, .5em)*.75)}.wp-block-buttons>.wp-block-button.wp-block-button__width-50{width:calc(50% - var(--wp--style--block-gap, .5em)*.5)}.wp-block-buttons>.wp-block-button.wp-block-button__width-75{width:calc(75% - var(--wp--style--block-gap, .5em)*.25)}.wp-block-buttons>.wp-block-button.wp-block-button__width-100{flex-basis:100%;width:100%}.wp-block-buttons.is-vertical>.wp-block-button[class*=wp-block-button__width]{width:calc(var(--wp--block-button--width)*1%)}.wp-block-buttons.is-vertical>.wp-block-button.wp-block-button__width-25{width:25%}.wp-block-buttons.is-vertical>.wp-block-button.wp-block-button__width-50{width:50%}.wp-block-buttons.is-vertical>.wp-block-button.wp-block-button__width-75{width:75%}.wp-block-button.is-style-squared,.wp-block-button__link.wp-block-button.is-style-squared{border-radius:0}.wp-block-button.no-border-radius,.wp-block-button__link.no-border-radius{border-radius:0!important}:root :where(.wp-block-button .wp-block-button__link.is-style-outline),:root :where(.wp-block-button.is-style-outline>.wp-block-button__link){border:2px solid;padding:.667em 1.333em}:root :where(.wp-block-button .wp-block-button__link.is-style-outline:not(.has-text-color)),:root :where(.wp-block-button.is-style-outline>.wp-block-button__link:not(.has-text-color)){color:currentColor}:root :where(.wp-block-button .wp-block-button__link.is-style-outline:not(.has-background)),:root :where(.wp-block-button.is-style-outline>.wp-block-button__link:not(.has-background)){background-color:transparent;background-image:none}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/button/style.min.css */
+</style>
+<style id="wp-block-comments-inline-css">
+.wp-block-post-comments{box-sizing:border-box}.wp-block-post-comments .alignleft{float:left}.wp-block-post-comments .alignright{float:right}.wp-block-post-comments .navigation:after{clear:both;content:"";display:table}.wp-block-post-comments .commentlist{clear:both;list-style:none;margin:0;padding:0}.wp-block-post-comments .commentlist .comment{min-height:2.25em;padding-left:3.25em}.wp-block-post-comments .commentlist .comment p{font-size:1em;line-height:1.8;margin:1em 0}.wp-block-post-comments .commentlist .children{list-style:none;margin:0;padding:0}.wp-block-post-comments .comment-author{line-height:1.5}.wp-block-post-comments .comment-author .avatar{border-radius:1.5em;display:block;float:left;height:2.5em;margin-right:.75em;margin-top:.5em;width:2.5em}.wp-block-post-comments .comment-author cite{font-style:normal}.wp-block-post-comments .comment-meta{font-size:.875em;line-height:1.5}.wp-block-post-comments .comment-meta b{font-weight:400}.wp-block-post-comments .comment-meta .comment-awaiting-moderation{display:block;margin-bottom:1em;margin-top:1em}.wp-block-post-comments .comment-body .commentmetadata{font-size:.875em}.wp-block-post-comments .comment-form input:not([type=submit]):not([type=checkbox]),.wp-block-post-comments .comment-form textarea{box-sizing:border-box;display:block;width:100%}.wp-block-post-comments .comment-form-cookies-consent{display:flex;gap:.25em}.wp-block-post-comments .comment-form-cookies-consent #wp-comment-cookies-consent{margin-top:.35em}.wp-block-post-comments .comment-reply-title{margin-bottom:0}.wp-block-post-comments .comment-reply-title :where(small){font-size:var(--wp--preset--font-size--medium,smaller);margin-left:.5em}.wp-block-post-comments .reply{font-size:.875em;margin-bottom:1.4em}.wp-block-post-comments input:not([type=submit]),.wp-block-post-comments textarea{border:1px solid #949494;font-family:inherit;font-size:1em}.wp-block-post-comments input:not([type=submit]):not([type=checkbox]),.wp-block-post-comments textarea{padding:calc(.667em + 2px)}:where(.wp-block-post-comments .comment-form-author label),:where(.wp-block-post-comments .comment-form-comment label),:where(.wp-block-post-comments .comment-form-email label),:where(.wp-block-post-comments .comment-form-url label){display:block;margin-bottom:.25em}:where(.wp-block-post-comments input[type=submit]){border:none}.wp-block-comments{box-sizing:border-box}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/comments/style.min.css */
+</style>
+<style id="wpsp-dynamic-table-of-contents-style-inline-css">
+.wp-block-post-content h1,.wp-block-post-content h2,.wp-block-post-content h3,.wp-block-post-content h4,.wp-block-post-content h5,.wp-block-post-content h6{scroll-margin-top:2rem}.wp-block-wpsp-dynamic-table-of-contents{font-family:var(--wp--preset--font-family--sans-serif);max-width:312px}.wp-block-wpsp-dynamic-table-of-contents.is-position-sticky{top:2rem}.admin-bar .wp-block-wpsp-dynamic-table-of-contents.is-position-sticky{top:calc(2rem + 32px)}.wp-block-wpsp-dynamic-table-of-contents>:first-child{margin-top:0}.wp-block-wpsp-dynamic-table-of-contents>:last-child{margin-bottom:0}.wp-block-wpsp-dynamic-table-of-contents h2{color:inherit;font-size:var(--wp--preset--font-size--medium);margin-bottom:1.5rem}.wp-block-wpsp-dynamic-table-of-contents ul{border-top:1px solid var(--wp--preset--color--light-gray);list-style:none;margin:0;padding:.5rem 0 0}.wp-block-wpsp-dynamic-table-of-contents ul li{margin-bottom:0;padding-top:1rem}.wp-block-wpsp-dynamic-table-of-contents ul li a:not(.active){color:var(--wp--preset--color--black)}.wp-block-wpsp-dynamic-table-of-contents ul li a:hover{text-decoration:underline}.wp-block-wpsp-dynamic-table-of-contents ul li a.active{font-weight:700}
+
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/dynamic-table-of-contents/build/style-index.css */
+</style>
+<style id="wp-block-columns-inline-css">
+.wp-block-columns{box-sizing:border-box;display:flex;flex-wrap:wrap!important}@media (min-width:782px){.wp-block-columns{flex-wrap:nowrap!important}}.wp-block-columns{align-items:normal!important}.wp-block-columns.are-vertically-aligned-top{align-items:flex-start}.wp-block-columns.are-vertically-aligned-center{align-items:center}.wp-block-columns.are-vertically-aligned-bottom{align-items:flex-end}@media (max-width:781px){.wp-block-columns:not(.is-not-stacked-on-mobile)>.wp-block-column{flex-basis:100%!important}}@media (min-width:782px){.wp-block-columns:not(.is-not-stacked-on-mobile)>.wp-block-column{flex-basis:0;flex-grow:1}.wp-block-columns:not(.is-not-stacked-on-mobile)>.wp-block-column[style*=flex-basis]{flex-grow:0}}.wp-block-columns.is-not-stacked-on-mobile{flex-wrap:nowrap!important}.wp-block-columns.is-not-stacked-on-mobile>.wp-block-column{flex-basis:0;flex-grow:1}.wp-block-columns.is-not-stacked-on-mobile>.wp-block-column[style*=flex-basis]{flex-grow:0}:where(.wp-block-columns){margin-bottom:1.75em}:where(.wp-block-columns.has-background){padding:var(--wp--style--block-background-padding,1.25em 2.375em)}.wp-block-column{flex-grow:1;min-width:0;overflow-wrap:break-word;word-break:normal}.wp-block-column.is-vertically-aligned-top{align-self:flex-start}.wp-block-column.is-vertically-aligned-center{align-self:center}.wp-block-column.is-vertically-aligned-bottom{align-self:flex-end}.wp-block-column.is-vertically-aligned-stretch{align-self:stretch}.wp-block-column.is-vertically-aligned-bottom,.wp-block-column.is-vertically-aligned-center,.wp-block-column.is-vertically-aligned-top{width:100%}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/gutenberg/build/styles/block-library/columns/style.min.css */
+</style>
+<style id="jetpack-block-subscriptions-inline-css">
+.is-style-compact .is-not-subscriber :is(.wp-block-button__link,.wp-block-jetpack-subscriptions__button){border-end-start-radius:0!important;border-start-start-radius:0!important;margin-inline-start:0!important}.is-style-compact .is-not-subscriber .components-text-control__input,.is-style-compact .is-not-subscriber p#subscribe-email input[type=email]{border-end-end-radius:0!important;border-start-end-radius:0!important}.is-style-compact:not(.wp-block-jetpack-subscriptions__use-newline) .components-text-control__input{border-inline-end-width:0!important}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form-container{display:flex;flex-direction:column}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline:not(.wp-block-jetpack-subscriptions__use-newline) .is-not-subscriber .wp-block-jetpack-subscriptions__form-elements{align-items:flex-start;display:flex}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline:not(.wp-block-jetpack-subscriptions__use-newline) p#subscribe-submit{display:flex;justify-content:center}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form .wp-block-jetpack-subscriptions__button,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form .wp-block-jetpack-subscriptions__textfield .components-text-control__input,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form button,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form input[type=email],.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form .wp-block-jetpack-subscriptions__button,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form .wp-block-jetpack-subscriptions__textfield .components-text-control__input,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form button,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form input[type=email]{box-sizing:border-box;cursor:pointer;line-height:1.3;min-width:auto!important;white-space:nowrap!important}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form input[type=email]::placeholder,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form input[type=email]:disabled,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form input[type=email]::placeholder,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form input[type=email]:disabled{color:currentColor;opacity:.5}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form .wp-block-jetpack-subscriptions__button,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form button,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form .wp-block-jetpack-subscriptions__button,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form button{border-color:#0000;border-style:solid}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form .wp-block-jetpack-subscriptions__textfield,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form p#subscribe-email,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form .wp-block-jetpack-subscriptions__textfield,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form p#subscribe-email{background:#0000;flex-grow:1}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form .wp-block-jetpack-subscriptions__textfield .components-base-control__field,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form .wp-block-jetpack-subscriptions__textfield .components-text-control__input,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form .wp-block-jetpack-subscriptions__textfield input[type=email],.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form p#subscribe-email .components-base-control__field,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form p#subscribe-email .components-text-control__input,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form p#subscribe-email input[type=email],.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form .wp-block-jetpack-subscriptions__textfield .components-base-control__field,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form .wp-block-jetpack-subscriptions__textfield .components-text-control__input,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form .wp-block-jetpack-subscriptions__textfield input[type=email],.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form p#subscribe-email .components-base-control__field,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form p#subscribe-email .components-text-control__input,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form p#subscribe-email input[type=email]{height:auto;margin:0;width:100%}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form p#subscribe-email,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline .wp-block-jetpack-subscriptions__form p#subscribe-submit,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form p#subscribe-email,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline form p#subscribe-submit{line-height:0;margin:0;padding:0}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline.wp-block-jetpack-subscriptions__show-subs .wp-block-jetpack-subscriptions__subscount{font-size:16px;margin:8px 0;text-align:end}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline.wp-block-jetpack-subscriptions__use-newline .wp-block-jetpack-subscriptions__form-elements{display:block}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline.wp-block-jetpack-subscriptions__use-newline .wp-block-jetpack-subscriptions__button,.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline.wp-block-jetpack-subscriptions__use-newline button{display:inline-block;max-width:100%}.wp-block-jetpack-subscriptions.wp-block-jetpack-subscriptions__supports-newline.wp-block-jetpack-subscriptions__use-newline .wp-block-jetpack-subscriptions__subscount{text-align:start}#subscribe-submit.is-link{text-align:center;width:auto!important}#subscribe-submit.is-link a{margin-left:0!important;margin-top:0!important;width:auto!important}@keyframes jetpack-memberships_button__spinner-animation{to{transform:rotate(1turn)}}.jetpack-memberships-spinner{display:none;height:1em;margin:0 0 0 5px;width:1em}.jetpack-memberships-spinner svg{height:100%;margin-bottom:-2px;width:100%}.jetpack-memberships-spinner-rotating{animation:jetpack-memberships_button__spinner-animation .75s linear infinite;transform-origin:center}.is-loading .jetpack-memberships-spinner{display:inline-block}body.jetpack-memberships-modal-open{overflow:hidden}dialog.jetpack-memberships-modal{opacity:1}dialog.jetpack-memberships-modal,dialog.jetpack-memberships-modal iframe{background:#0000;border:0;bottom:0;box-shadow:none;height:100%;left:0;margin:0;padding:0;position:fixed;right:0;top:0;width:100%}dialog.jetpack-memberships-modal::backdrop{background-color:#000;opacity:.7;transition:opacity .2s ease-out}dialog.jetpack-memberships-modal.is-loading,dialog.jetpack-memberships-modal.is-loading::backdrop{opacity:0}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/jetpack/_inc/blocks/subscriptions/view.css?minify=false */
+</style>
+<style id="wp-emoji-styles-inline-css">
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+/*# sourceURL=wp-emoji-styles-inline-css */
+</style>
+<style id="wp-block-library-inline-css">
+:root{--wp-block-synced-color:#7a00df;--wp-block-synced-color--rgb:122,0,223;--wp-bound-block-color:var(--wp-block-synced-color);--wp-editor-canvas-background:#ddd;--wp-admin-theme-color:#3858e9;--wp-admin-theme-color--rgb:56,88,233;--wp-admin-theme-color-darker-10:#2145e6;--wp-admin-theme-color-darker-10--rgb:33.0384615385,68.7307692308,230.4615384615;--wp-admin-theme-color-darker-20:#183ad6;--wp-admin-theme-color-darker-20--rgb:23.6923076923,58.1538461538,214.3076923077;--wp-admin-border-width-focus:2px}@media (min-resolution:192dpi){:root{--wp-admin-border-width-focus:1.5px}}body.admin-color-fresh{--wp-admin-theme-color:#007cba;--wp-admin-theme-color--rgb:0,124,186;--wp-admin-theme-color-darker-10:#006ba1;--wp-admin-theme-color-darker-10--rgb:0,107,160.5;--wp-admin-theme-color-darker-20:#005a87;--wp-admin-theme-color-darker-20--rgb:0,90,135;--wp-admin-border-width-focus:2px}@media (min-resolution:192dpi){body.admin-color-fresh{--wp-admin-border-width-focus:1.5px}}.wp-element-button{cursor:pointer}:root .has-very-light-gray-background-color{background-color:#eee}:root .has-very-dark-gray-background-color{background-color:#313131}:root .has-very-light-gray-color{color:#eee}:root .has-very-dark-gray-color{color:#313131}:root .has-vivid-green-cyan-to-vivid-cyan-blue-gradient-background{background:linear-gradient(135deg,#00d084,#0693e3)}:root .has-purple-crush-gradient-background{background:linear-gradient(135deg,#34e2e4,#4721fb 50%,#ab1dfe)}:root .has-hazy-dawn-gradient-background{background:linear-gradient(135deg,#faaca8,#dad0ec)}:root .has-subdued-olive-gradient-background{background:linear-gradient(135deg,#fafae1,#67a671)}:root .has-atomic-cream-gradient-background{background:linear-gradient(135deg,#fdd79a,#004a59)}:root .has-nightshade-gradient-background{background:linear-gradient(135deg,#330968,#31cdcf)}:root .has-midnight-gradient-background{background:linear-gradient(135deg,#020381,#2874fc)}:root{--wp--preset--font-size--normal:16px;--wp--preset--font-size--huge:42px}.has-regular-font-size{font-size:1em}.has-larger-font-size{font-size:2.625em}.has-normal-font-size{font-size:var(--wp--preset--font-size--normal)}.has-huge-font-size{font-size:var(--wp--preset--font-size--huge)}:root .has-text-align-center{text-align:center}:root .has-text-align-left{text-align:left}:root .has-text-align-right{text-align:right}.has-fit-text{white-space:nowrap!important}#end-resizable-editor-section{display:none}.aligncenter{clear:both}.items-justified-left{justify-content:flex-start}.items-justified-center{justify-content:center}.items-justified-right{justify-content:flex-end}.items-justified-space-between{justify-content:space-between}.screen-reader-text{border:0;clip-path:inset(50%);height:1px;margin:-1px;overflow:hidden;overflow-wrap:normal!important;padding:0;position:absolute;width:1px;word-break:normal!important}.screen-reader-text:focus{background-color:#ddd;clip-path:none;color:#444;display:block;font-size:1em;height:auto;left:5px;line-height:normal;padding:15px 23px 14px;text-decoration:none;top:5px;width:auto;z-index:100000}html :where(.has-border-color){border-style:solid}html :where([style^=border-color],[style*=";border-color"],[style*="; border-color"]){border-style:solid}html :where([style^=border-top-color],[style*=";border-top-color"],[style*="; border-top-color"]){border-top-style:solid}html :where([style^=border-right-color],[style*=";border-right-color"],[style*="; border-right-color"]){border-right-style:solid}html :where([style^=border-bottom-color],[style*=";border-bottom-color"],[style*="; border-bottom-color"]){border-bottom-style:solid}html :where([style^=border-left-color],[style*=";border-left-color"],[style*="; border-left-color"]){border-left-style:solid}html :where([style^=border-width],[style*=";border-width"],[style*="; border-width"]){border-style:solid}html :where([style^=border-top-width],[style*=";border-top-width"],[style*="; border-top-width"]){border-top-style:solid}html :where([style^=border-right-width],[style*=";border-right-width"],[style*="; border-right-width"]){border-right-style:solid}html :where([style^=border-bottom-width],[style*=";border-bottom-width"],[style*="; border-bottom-width"]){border-bottom-style:solid}html :where([style^=border-left-width],[style*=";border-left-width"],[style*="; border-left-width"]){border-left-style:solid}html :where(img[class*=wp-image-]){height:auto;max-width:100%}:where(figure){margin:0 0 1em}html :where(.is-position-sticky){--wp-admin--admin-bar--position-offset:var(--wp-admin--admin-bar--height,0px)}@media screen and (max-width:600px){html :where(.is-position-sticky){--wp-admin--admin-bar--position-offset:0px}}@supports (not (-webkit-backdrop-filter:blur(1px))) and (not (-moz-appearance:none)){mtd[columnalign=right]{text-align:-webkit-right}mtd[columnalign=left]{text-align:-webkit-left}menclose[notation~=top]{border-top:.065em solid;padding-top:.1em}menclose[notation~=bottom]{border-bottom:.065em solid;padding-bottom:.1em}}
+.has-text-align-justify{text-align:justify;}
+/*# sourceURL=wp-block-library-inline-css */
+</style>
+<style id="wp-block-template-skip-link-inline-css">
+/*! This file is auto-generated */
+.skip-link.screen-reader-text{border:0;clip-path:inset(50%);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute!important;width:1px;word-wrap:normal!important;word-break:normal!important}.skip-link.screen-reader-text:focus{background-color:#eee;clip-path:none;color:#444;display:block;font-size:1em;height:auto;left:5px;line-height:normal;padding:15px 23px 14px;text-decoration:none;top:5px;width:auto;z-index:100000}
+/*# sourceURL=/wp-includes/css/wp-block-template-skip-link.min.css */
+</style>
+<style id="global-styles-inline-css">
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--color--subtle-gray: #f7f7f7;--wp--preset--color--light-gray: #eaecf0;--wp--preset--color--mid-gray: #999999;--wp--preset--color--dark-gray: #333333;--wp--preset--color--accent: #b34100;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgb(6,147,227) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgb(252,185,0) 0%,rgb(255,105,0) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgb(255,105,0) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 0.875rem;--wp--preset--font-size--medium: 1rem;--wp--preset--font-size--large: 1.25rem;--wp--preset--font-size--x-large: 1.5rem;--wp--preset--font-size--huge: 2rem;--wp--preset--font-size--gigantic: 3rem;--wp--preset--font-family--albert-sans: 'Albert Sans', sans-serif;--wp--preset--font-family--alegreya: Alegreya, serif;--wp--preset--font-family--arvo: Arvo, serif;--wp--preset--font-family--bodoni-moda: 'Bodoni Moda', serif;--wp--preset--font-family--bricolage-grotesque: 'Bricolage Grotesque', sans-serif;--wp--preset--font-family--cabin: Cabin, sans-serif;--wp--preset--font-family--chivo: Chivo, sans-serif;--wp--preset--font-family--commissioner: Commissioner, sans-serif;--wp--preset--font-family--cormorant: Cormorant, serif;--wp--preset--font-family--courier-prime: 'Courier Prime', monospace;--wp--preset--font-family--crimson-pro: 'Crimson Pro', serif;--wp--preset--font-family--dm-mono: 'DM Mono', monospace;--wp--preset--font-family--dm-sans: 'DM Sans', sans-serif;--wp--preset--font-family--dm-serif-display: 'DM Serif Display', serif;--wp--preset--font-family--domine: Domine, serif;--wp--preset--font-family--eb-garamond: 'EB Garamond', serif;--wp--preset--font-family--epilogue: Epilogue, sans-serif;--wp--preset--font-family--fahkwang: Fahkwang, sans-serif;--wp--preset--font-family--figtree: Figtree, sans-serif;--wp--preset--font-family--fira-sans: 'Fira Sans', sans-serif;--wp--preset--font-family--fjalla-one: 'Fjalla One', sans-serif;--wp--preset--font-family--fraunces: Fraunces, serif;--wp--preset--font-family--gabarito: Gabarito, system-ui;--wp--preset--font-family--ibm-plex-mono: 'IBM Plex Mono', monospace;--wp--preset--font-family--ibm-plex-sans: 'IBM Plex Sans', sans-serif;--wp--preset--font-family--ibarra-real-nova: 'Ibarra Real Nova', serif;--wp--preset--font-family--instrument-serif: 'Instrument Serif', serif;--wp--preset--font-family--inter: Inter, sans-serif;--wp--preset--font-family--josefin-sans: 'Josefin Sans', sans-serif;--wp--preset--font-family--jost: Jost, sans-serif;--wp--preset--font-family--libre-baskerville: 'Libre Baskerville', serif;--wp--preset--font-family--libre-franklin: 'Libre Franklin', sans-serif;--wp--preset--font-family--literata: Literata, serif;--wp--preset--font-family--lora: Lora, serif;--wp--preset--font-family--merriweather: Merriweather, serif;--wp--preset--font-family--montserrat: Montserrat, sans-serif;--wp--preset--font-family--newsreader: Newsreader, serif;--wp--preset--font-family--noto-sans-mono: 'Noto Sans Mono', sans-serif;--wp--preset--font-family--nunito: Nunito, sans-serif;--wp--preset--font-family--open-sans: 'Open Sans', sans-serif;--wp--preset--font-family--overpass: Overpass, sans-serif;--wp--preset--font-family--pt-serif: 'PT Serif', serif;--wp--preset--font-family--petrona: Petrona, serif;--wp--preset--font-family--piazzolla: Piazzolla, serif;--wp--preset--font-family--playfair-display: 'Playfair Display', serif;--wp--preset--font-family--plus-jakarta-sans: 'Plus Jakarta Sans', sans-serif;--wp--preset--font-family--poppins: Poppins, sans-serif;--wp--preset--font-family--raleway: Raleway, sans-serif;--wp--preset--font-family--roboto: Roboto, sans-serif;--wp--preset--font-family--roboto-slab: 'Roboto Slab', serif;--wp--preset--font-family--rubik: Rubik, sans-serif;--wp--preset--font-family--rufina: Rufina, serif;--wp--preset--font-family--sora: Sora, sans-serif;--wp--preset--font-family--source-sans-3: 'Source Sans 3', sans-serif;--wp--preset--font-family--source-serif-4: 'Source Serif 4', serif;--wp--preset--font-family--space-mono: 'Space Mono', monospace;--wp--preset--font-family--syne: Syne, sans-serif;--wp--preset--font-family--texturina: Texturina, serif;--wp--preset--font-family--urbanist: Urbanist, sans-serif;--wp--preset--font-family--work-sans: 'Work Sans', sans-serif;--wp--preset--font-family--sans-serif: "Inter", sans-serif;--wp--preset--font-family--serif: "Libre Baskerville", serif;--wp--preset--text-shadow--light: 0.05em 0.05em 0.1em rgba(0, 0, 0, 0.3);--wp--preset--text-shadow--strong: 0.1em 0.1em 0.25em rgba(0, 0, 0, 0.5);--wp--preset--spacing--20: 0.5rem;--wp--preset--spacing--30: 0.75rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2rem;--wp--preset--spacing--70: 3rem;--wp--preset--spacing--80: 4rem;--wp--preset--spacing--90: 6rem;--wp--preset--spacing--100: 8rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgb(255, 255, 255), 6px 6px rgb(0, 0, 0);--wp--preset--shadow--crisp: 6px 6px 0px rgb(0, 0, 0);}.wp-block-button{--wp--preset--dimension--25: 25%;--wp--preset--dimension--50: 50%;--wp--preset--dimension--75: 75%;--wp--preset--dimension--100: 100%;}:root { --wp--style--global--content-size: 1216px;--wp--style--global--wide-size: 1216px; }:where(body) { margin: 0; }.wp-site-blocks { padding-top: var(--wp--style--root--padding-top); padding-bottom: var(--wp--style--root--padding-bottom); }.has-global-padding { padding-right: var(--wp--style--root--padding-right); padding-left: var(--wp--style--root--padding-left); }.has-global-padding > .alignfull { margin-right: calc(var(--wp--style--root--padding-right) * -1); margin-left: calc(var(--wp--style--root--padding-left) * -1); }.has-global-padding :where(:not(.alignfull.is-layout-flow) > .has-global-padding:not(.wp-block-block, .alignfull)) { padding-right: 0; padding-left: 0; }.has-global-padding :where(:not(.alignfull.is-layout-flow) > .has-global-padding:not(.wp-block-block, .alignfull)) > .alignfull { margin-left: 0; margin-right: 0; }.wp-site-blocks > .alignleft { float: left; margin-right: 2em; }.wp-site-blocks > .alignright { float: right; margin-left: 2em; }.wp-site-blocks > .aligncenter { justify-content: center; margin-left: auto; margin-right: auto; }:where(.wp-site-blocks) > * { margin-block-start: var(--wp--preset--spacing--60); margin-block-end: 0; }:where(.wp-site-blocks) > :first-child { margin-block-start: 0; }:where(.wp-site-blocks) > :last-child { margin-block-end: 0; }:root { --wp--style--block-gap: var(--wp--preset--spacing--60); }:root :where(.is-layout-flow) > :first-child{margin-block-start: 0;}:root :where(.is-layout-flow) > :last-child{margin-block-end: 0;}:root :where(.is-layout-flow) > *{margin-block-start: var(--wp--preset--spacing--60);margin-block-end: 0;}:root :where(.is-layout-constrained) > :first-child{margin-block-start: 0;}:root :where(.is-layout-constrained) > :last-child{margin-block-end: 0;}:root :where(.is-layout-constrained) > *{margin-block-start: var(--wp--preset--spacing--60);margin-block-end: 0;}:root :where(.is-layout-flex){gap: var(--wp--preset--spacing--60);}:root :where(.is-layout-grid){gap: var(--wp--preset--spacing--60);}.is-layout-flow > .alignleft{float: left;margin-inline-start: 0;margin-inline-end: 2em;}.is-layout-flow > .alignright{float: right;margin-inline-start: 2em;margin-inline-end: 0;}.is-layout-flow > .aligncenter{margin-left: auto !important;margin-right: auto !important;}.is-layout-constrained > .alignleft{float: left;margin-inline-start: 0;margin-inline-end: 2em;}.is-layout-constrained > .alignright{float: right;margin-inline-start: 2em;margin-inline-end: 0;}.is-layout-constrained > .aligncenter{margin-left: auto !important;margin-right: auto !important;}.is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)){max-width: var(--wp--style--global--content-size);margin-left: auto !important;margin-right: auto !important;}.is-layout-constrained > .alignwide{max-width: var(--wp--style--global--wide-size);}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}body{background-color: var(--wp--preset--color--white);color: var(--wp--preset--color--black);font-family: var(--wp--preset--font-family--serif);font-size: 16px;line-height: 1.6;--wp--style--root--padding-top: 0px;--wp--style--root--padding-right: var(--wp--preset--spacing--50);--wp--style--root--padding-bottom: 0px;--wp--style--root--padding-left: var(--wp--preset--spacing--50);}a:where(:not(.wp-element-button)){color: var(--wp--preset--color--accent);text-decoration: none;}:root :where(a:where(:not(.wp-element-button)):hover){color: var(--wp--preset--color--dark-gray);}h1, h2, h3, h4, h5, h6{font-weight: 700;line-height: 1.2;}h1{color: var(--wp--preset--color--accent);font-family: var(--wp--preset--font-family--sans-serif);font-size: var(--wp--preset--font-size--gigantic);letter-spacing: -0.03em;}h2{color: var(--wp--preset--color--accent);font-family: var(--wp--preset--font-family--sans-serif);font-size: var(--wp--preset--font-size--huge);letter-spacing: -0.02em;}h3{font-family: var(--wp--preset--font-family--sans-serif);font-size: var(--wp--preset--font-size--x-large);letter-spacing: -0.02em;}h4{font-family: var(--wp--preset--font-family--serif);font-size: var(--wp--preset--font-size--medium);}h5{font-family: var(--wp--preset--font-family--serif);font-size: var(--wp--preset--font-size--medium);}h6{font-family: var(--wp--preset--font-family--serif);font-size: var(--wp--preset--font-size--medium);}:root :where(.wp-element-button, .wp-block-button__link){background-color: var(--wp--preset--color--dark-gray);border-radius: 0.25rem;border-width: 0;color: var(--wp--preset--color--white);font-family: inherit;font-size: inherit;font-style: inherit;font-weight: inherit;letter-spacing: inherit;line-height: inherit;padding-top: calc(0.667em + 2px);padding-right: calc(1.333em + 2px);padding-bottom: calc(0.667em + 2px);padding-left: calc(1.333em + 2px);text-decoration: none;text-transform: inherit;}:root :where(.wp-element-button:hover, .wp-block-button__link:hover){background-color: var(--wp--preset--color--black);color: var(--wp--preset--color--white);}:root :where(.wp-element-button:focus, .wp-block-button__link:focus){background-color: var(--wp--preset--color--dark-gray);color: var(--wp--preset--color--white);outline-color: var(--wp--preset--color--dark-gray);outline-offset: 2px;outline-style: dotted;outline-width: 1px;}:root :where(.wp-element-button:active, .wp-block-button__link:active){background-color: var(--wp--preset--color--dark-gray);color: var(--wp--preset--color--white);}:root :where(.wp-element-caption, .wp-block-audio figcaption, .wp-block-embed figcaption, .wp-block-gallery figcaption, .wp-block-image figcaption, .wp-block-table figcaption, .wp-block-video figcaption){color: var(--wp--preset--color--black);}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-subtle-gray-color{color: var(--wp--preset--color--subtle-gray) !important;}.has-light-gray-color{color: var(--wp--preset--color--light-gray) !important;}.has-mid-gray-color{color: var(--wp--preset--color--mid-gray) !important;}.has-dark-gray-color{color: var(--wp--preset--color--dark-gray) !important;}.has-accent-color{color: var(--wp--preset--color--accent) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-subtle-gray-background-color{background-color: var(--wp--preset--color--subtle-gray) !important;}.has-light-gray-background-color{background-color: var(--wp--preset--color--light-gray) !important;}.has-mid-gray-background-color{background-color: var(--wp--preset--color--mid-gray) !important;}.has-dark-gray-background-color{background-color: var(--wp--preset--color--dark-gray) !important;}.has-accent-background-color{background-color: var(--wp--preset--color--accent) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-subtle-gray-border-color{border-color: var(--wp--preset--color--subtle-gray) !important;}.has-light-gray-border-color{border-color: var(--wp--preset--color--light-gray) !important;}.has-mid-gray-border-color{border-color: var(--wp--preset--color--mid-gray) !important;}.has-dark-gray-border-color{border-color: var(--wp--preset--color--dark-gray) !important;}.has-accent-border-color{border-color: var(--wp--preset--color--accent) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}.has-huge-font-size{font-size: var(--wp--preset--font-size--huge) !important;}.has-gigantic-font-size{font-size: var(--wp--preset--font-size--gigantic) !important;}.has-albert-sans-font-family{font-family: var(--wp--preset--font-family--albert-sans) !important;}.has-alegreya-font-family{font-family: var(--wp--preset--font-family--alegreya) !important;}.has-arvo-font-family{font-family: var(--wp--preset--font-family--arvo) !important;}.has-bodoni-moda-font-family{font-family: var(--wp--preset--font-family--bodoni-moda) !important;}.has-bricolage-grotesque-font-family{font-family: var(--wp--preset--font-family--bricolage-grotesque) !important;}.has-cabin-font-family{font-family: var(--wp--preset--font-family--cabin) !important;}.has-chivo-font-family{font-family: var(--wp--preset--font-family--chivo) !important;}.has-commissioner-font-family{font-family: var(--wp--preset--font-family--commissioner) !important;}.has-cormorant-font-family{font-family: var(--wp--preset--font-family--cormorant) !important;}.has-courier-prime-font-family{font-family: var(--wp--preset--font-family--courier-prime) !important;}.has-crimson-pro-font-family{font-family: var(--wp--preset--font-family--crimson-pro) !important;}.has-dm-mono-font-family{font-family: var(--wp--preset--font-family--dm-mono) !important;}.has-dm-sans-font-family{font-family: var(--wp--preset--font-family--dm-sans) !important;}.has-dm-serif-display-font-family{font-family: var(--wp--preset--font-family--dm-serif-display) !important;}.has-domine-font-family{font-family: var(--wp--preset--font-family--domine) !important;}.has-eb-garamond-font-family{font-family: var(--wp--preset--font-family--eb-garamond) !important;}.has-epilogue-font-family{font-family: var(--wp--preset--font-family--epilogue) !important;}.has-fahkwang-font-family{font-family: var(--wp--preset--font-family--fahkwang) !important;}.has-figtree-font-family{font-family: var(--wp--preset--font-family--figtree) !important;}.has-fira-sans-font-family{font-family: var(--wp--preset--font-family--fira-sans) !important;}.has-fjalla-one-font-family{font-family: var(--wp--preset--font-family--fjalla-one) !important;}.has-fraunces-font-family{font-family: var(--wp--preset--font-family--fraunces) !important;}.has-gabarito-font-family{font-family: var(--wp--preset--font-family--gabarito) !important;}.has-ibm-plex-mono-font-family{font-family: var(--wp--preset--font-family--ibm-plex-mono) !important;}.has-ibm-plex-sans-font-family{font-family: var(--wp--preset--font-family--ibm-plex-sans) !important;}.has-ibarra-real-nova-font-family{font-family: var(--wp--preset--font-family--ibarra-real-nova) !important;}.has-instrument-serif-font-family{font-family: var(--wp--preset--font-family--instrument-serif) !important;}.has-inter-font-family{font-family: var(--wp--preset--font-family--inter) !important;}.has-josefin-sans-font-family{font-family: var(--wp--preset--font-family--josefin-sans) !important;}.has-jost-font-family{font-family: var(--wp--preset--font-family--jost) !important;}.has-libre-baskerville-font-family{font-family: var(--wp--preset--font-family--libre-baskerville) !important;}.has-libre-franklin-font-family{font-family: var(--wp--preset--font-family--libre-franklin) !important;}.has-literata-font-family{font-family: var(--wp--preset--font-family--literata) !important;}.has-lora-font-family{font-family: var(--wp--preset--font-family--lora) !important;}.has-merriweather-font-family{font-family: var(--wp--preset--font-family--merriweather) !important;}.has-montserrat-font-family{font-family: var(--wp--preset--font-family--montserrat) !important;}.has-newsreader-font-family{font-family: var(--wp--preset--font-family--newsreader) !important;}.has-noto-sans-mono-font-family{font-family: var(--wp--preset--font-family--noto-sans-mono) !important;}.has-nunito-font-family{font-family: var(--wp--preset--font-family--nunito) !important;}.has-open-sans-font-family{font-family: var(--wp--preset--font-family--open-sans) !important;}.has-overpass-font-family{font-family: var(--wp--preset--font-family--overpass) !important;}.has-pt-serif-font-family{font-family: var(--wp--preset--font-family--pt-serif) !important;}.has-petrona-font-family{font-family: var(--wp--preset--font-family--petrona) !important;}.has-piazzolla-font-family{font-family: var(--wp--preset--font-family--piazzolla) !important;}.has-playfair-display-font-family{font-family: var(--wp--preset--font-family--playfair-display) !important;}.has-plus-jakarta-sans-font-family{font-family: var(--wp--preset--font-family--plus-jakarta-sans) !important;}.has-poppins-font-family{font-family: var(--wp--preset--font-family--poppins) !important;}.has-raleway-font-family{font-family: var(--wp--preset--font-family--raleway) !important;}.has-roboto-font-family{font-family: var(--wp--preset--font-family--roboto) !important;}.has-roboto-slab-font-family{font-family: var(--wp--preset--font-family--roboto-slab) !important;}.has-rubik-font-family{font-family: var(--wp--preset--font-family--rubik) !important;}.has-rufina-font-family{font-family: var(--wp--preset--font-family--rufina) !important;}.has-sora-font-family{font-family: var(--wp--preset--font-family--sora) !important;}.has-source-sans-3-font-family{font-family: var(--wp--preset--font-family--source-sans-3) !important;}.has-source-serif-4-font-family{font-family: var(--wp--preset--font-family--source-serif-4) !important;}.has-space-mono-font-family{font-family: var(--wp--preset--font-family--space-mono) !important;}.has-syne-font-family{font-family: var(--wp--preset--font-family--syne) !important;}.has-texturina-font-family{font-family: var(--wp--preset--font-family--texturina) !important;}.has-urbanist-font-family{font-family: var(--wp--preset--font-family--urbanist) !important;}.has-work-sans-font-family{font-family: var(--wp--preset--font-family--work-sans) !important;}.has-sans-serif-font-family{font-family: var(--wp--preset--font-family--sans-serif) !important;}.has-serif-font-family{font-family: var(--wp--preset--font-family--serif) !important;}.has-light-text-shadow{text-shadow: var(--wp--preset--text-shadow--light) !important;}.has-strong-text-shadow{text-shadow: var(--wp--preset--text-shadow--strong) !important;}
+:root :where(.wp-block-button .wp-block-button__link){background-color: var(--wp--preset--color--accent);color: var(--wp--preset--color--white);}
+:root :where(.wp-block-group){margin-top: 2rem;margin-bottom: 4rem;}
+:root :where(.wp-block-list){padding-left: var(--wp--preset--spacing--50);}
+:root :where(.wp-block-navigation-link){margin-bottom: 0;}
+:root :where(.wp-block-navigation-link a:where(:not(.wp-element-button)):hover){text-decoration: underline;}
+:root :where(.wp-block-post-date){font-weight: 700;}
+:root :where(.wp-block-post-title){margin-top: 0.5rem;margin-bottom: 0.75rem;}
+:root :where(.wp-block-site-title){font-size: 1.25rem;font-weight: 700;letter-spacing: -0.01em;text-transform: uppercase;}
+/*# sourceURL=global-styles-inline-css */
+</style>
+<style id="core-block-supports-inline-css">
+.wp-container-core-group-is-layout-7628b28e{gap:0.75rem;}.wp-container-content-9cfa9a5a{flex-grow:1;}.wp-container-core-navigation-is-layout-11a75b20{justify-content:flex-start;}.wp-container-core-group-is-layout-e1a7945b{gap:var(--wp--preset--spacing--80);justify-content:space-between;}.wp-container-core-post-content-is-layout-346627ba > *{margin-block-start:0;margin-block-end:0;}.wp-container-core-post-content-is-layout-346627ba > * + *{margin-block-start:var(--wp--preset--spacing--40);margin-block-end:0;}.wp-container-core-group-is-layout-42e9c677{gap:2px;flex-direction:column;align-items:flex-start;}.wp-container-core-group-is-layout-5676d2e8{flex-wrap:nowrap;}.wp-container-core-group-is-layout-d178cda2{gap:0.5em;}.wp-container-core-group-is-layout-12dd3699 > :where(:not(.alignleft):not(.alignright):not(.alignfull)){margin-left:0 !important;}.wp-container-core-group-is-layout-c395439e{flex-wrap:nowrap;gap:var(--wp--preset--spacing--40);align-items:flex-start;}.wp-container-2{top:calc(0px + var(--wp-admin--admin-bar--position-offset, 0px));position:sticky;z-index:10;}.wp-container-core-columns-is-layout-28f84493{flex-wrap:nowrap;}.wp-elements-1 a:where(:not(.wp-element-button)){color:var(--wp--preset--color--black);}.wp-elements-2 a:where(:not(.wp-element-button)){color:var(--wp--preset--color--white);}.wp-elements-3 a:where(:not(.wp-element-button)){color:var(--wp--preset--color--white);}.wp-container-core-group-is-layout-5c904990 > .alignfull{margin-right:calc(var(--wp--preset--spacing--50) * -1);margin-left:calc(var(--wp--preset--spacing--50) * -1);}.wp-container-core-group-is-layout-5c904990 > *{margin-block-start:0;margin-block-end:0;}.wp-container-core-group-is-layout-5c904990 > * + *{margin-block-start:var(--wp--preset--spacing--40);margin-block-end:0;}.wp-container-core-columns-is-layout-c47336c3{flex-wrap:nowrap;}
+/*# sourceURL=core-block-supports-inline-css */
+</style>
+<link rel='stylesheet' id='all-css-f74a051c2db71eb81cc05769ac271777' href='https://lostgarden.com/wp-content/plugins/jetpack/jetpack_vendor/automattic/jetpack-search/build/instant-search/jp-search.chunk-main-payload.css?m=1779720660' type='text/css' media='all' />
+<style id="jetpack-stats-inline-css">
+img#wpstats{display:none}
+/*# sourceURL=jetpack-stats-inline-css */
+</style>
+<link rel='stylesheet' id='all-css-7dbe3abce309e81de605c859c32b1480' href='https://lostgarden.com/wp-content/plugins/jetpack/modules/comments/subscription-modal-on-comment/subscription-modal.css?m=1764003632' type='text/css' media='all' />
+<style id="jetpack_likes-inline-css">
+#jp-post-flair{padding-top:.5em}#content div.sharedaddy,#main div.sharedaddy,div.sharedaddy{clear:both}div.sharedaddy h3.sd-title{display:inline-block;font-size:9pt;font-weight:700;line-height:1.2;margin:0 0 1em}div.sharedaddy h3.sd-title:before{border-top:1px solid #dcdcde;content:"";display:block;margin-bottom:1em;min-width:30px;width:100%}div.jetpack-likes-widget-wrapper{min-height:50px;position:relative;width:100%}div.jetpack-likes-widget-wrapper .sd-link-color{font-size:12px}div.jetpack-comment-likes-widget-wrapper{min-height:31px;position:relative;width:100%}div.jetpack-comment-likes-widget-wrapper iframe{margin-bottom:0}#likes-other-gravatars{background-color:#fff;border:1px solid #dcdcde;border-radius:4px;box-shadow:none;display:none;height:auto;max-height:240px;min-width:220px;overflow:auto;padding:9px 12px 10px;position:absolute;z-index:1000}#likes-other-gravatars *{line-height:normal}#likes-other-gravatars .likes-text{color:#101517;font-size:12px;font-weight:500;padding-bottom:8px}#likes-other-gravatars :is(li,ul){list-style-type:none;margin:0;padding:0;text-indent:0}#likes-other-gravatars li:before{content:""}#likes-other-gravatars ul.wpl-avatars{display:block;max-height:190px;overflow:auto}#likes-other-gravatars ul.wpl-avatars li{float:none;height:28px;margin:0 0 4px;width:196px}#likes-other-gravatars ul.wpl-avatars li a{align-items:center;border-bottom:none!important;display:flex;gap:8px;margin:0 2px 0 0;text-decoration:none}#likes-other-gravatars ul.wpl-avatars li a span{color:#2c3338;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#likes-other-gravatars ul.wpl-avatars li a img{background:none;border:none;border-radius:50%;box-sizing:border-box;margin:0!important;padding:1px!important;position:static}div.sd-box{border-top:1px solid #00000021}.jetpack-likes-widget-loaded iframe,.jetpack-likes-widget-loading .likes-widget-placeholder,.jetpack-likes-widget-unloaded .likes-widget-placeholder{display:block}.jetpack-likes-widget-loaded .likes-widget-placeholder,.jetpack-likes-widget-loading iframe,.jetpack-likes-widget-unloaded iframe{display:none}.comment-likes-widget,.entry-content .post-likes-widget,.post-likes-widget{border-width:0;margin:0}.comment-likes-widget-placeholder,.post-likes-widget-placeholder{border-width:0;margin:0;position:relative}.comment-likes-widget-placeholder{display:flex;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif;height:18px;position:absolute}.comment-likes-widget-placeholder:before{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath fill='%232ea2cc' d='m12 2 2.582 6.953L22 9.257l-5.822 4.602L18.18 21 12 16.89 5.82 21l2.002-7.14L2 9.256l7.418-.304'/%3E%3C/svg%3E");background-repeat:no-repeat;background-size:16px 16px;color:#2ea2cc;content:"";display:inline-block;height:16px;padding-right:5px;position:relative;top:3px;width:16px}.post-likes-widget-placeholder .button{display:none}:is(.comment-likes-widget-placeholder,.post-likes-widget-placeholder) .loading{color:#999;font-size:12px}.comment-likes-widget-placeholder .loading{align-self:center;color:#4e4e4e;margin-top:4px;padding-left:5px}div.sharedaddy.sd-like-enabled .sd-like h3{display:none}div.sharedaddy.sd-like-enabled .sd-like .post-likes-widget{float:none;position:absolute;top:0;width:100%}.comment-likes-widget{width:100%}.cs-rating,.pd-rating{display:block!important}.sd-gplus .sd-title{display:none}@media print{.jetpack-likes-widget-wrapper{display:none}}
+/*# sourceURL=https://lostgarden.com/wp-content/plugins/jetpack/_inc/build/likes/style.min.css */
+</style>
+<link rel='stylesheet' id='lostgarden-style-css' href='https://lostgarden.com/wp-content/themes/lostgarden/style.css?ver=1709812833' media='all' />
+<style id="jetpack-global-styles-frontend-style-inline-css">
+:root { --font-headings: unset; --font-base: unset; --font-headings-default: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif; --font-base-default: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;}
+/*# sourceURL=jetpack-global-styles-frontend-style-inline-css */
+</style>
+<link rel='stylesheet' id='all-css-415c7e6106405dfdc3a341f1bf1b21ec' href='https://lostgarden.com/_static/??wp-content/plugins/jetpack/modules/sharedaddy/sharing.css,wp-content/plugins/jetpack/_inc/build/social-logos/social-logos.css?m=1784576016-c98a684783c5eff9a0dd' type='text/css' media='all' />
+<script id="jetpack-blocks-assets-base-url-js-before">
+var Jetpack_Block_Assets_Base_Url="https://lostgarden.com/wp-content/plugins/jetpack/_inc/blocks/";
+//# sourceURL=jetpack-blocks-assets-base-url-js-before
+</script>
+<script id="jetpack-mu-wpcom-settings-js-before">
+var JETPACK_MU_WPCOM_SETTINGS = {"assetsUrl":"https://lostgarden.com/wp-content/mu-plugins/wpcomsh/jetpack_vendor/automattic/jetpack-mu-wpcom/src/build/"};
+//# sourceURL=jetpack-mu-wpcom-settings-js-before
+</script>
+<script id="jquery-core-js" src="https://lostgarden.com/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"></script>
+<script type='text/javascript'  src='https://lostgarden.com/wp-includes/js/jquery/jquery-migrate.min.js?m=1686289764'></script>
+<link rel="https://api.w.org/" href="https://lostgarden.com/wp-json/" /><link rel="alternate" title="JSON" type="application/json" href="https://lostgarden.com/wp-json/wp/v2/posts/1301" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://lostgarden.com/xmlrpc.php?rsd" />
+
+<link rel="canonical" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/" />
+<link rel='shortlink' href='https://wp.me/pffaLZ-kZ' />
+<script id="wp-importmap" type="importmap">
+{"imports":{"@wordpress/interactivity":"https://lostgarden.com/wp-content/plugins/gutenberg/build/modules/interactivity/index.min.js?ver=2c5ac406b0272485700e"}}
+</script>
+<link rel="modulepreload" href="https://lostgarden.com/wp-content/plugins/gutenberg/build/modules/interactivity/index.min.js?ver=2c5ac406b0272485700e" id="@wordpress/interactivity-js-modulepreload" fetchpriority="low">
+<meta name="description" content="(Note: This essay was originally published on Gamasutra.com in 2007. To help prevent link rot, I’m reposting it here with minor edits and fixed links. I’ve also included a workshop presentation on the topic if folks want to teach these ideas in their classes.) 1. Moving Beyond Alchemy “…it was clear to the alchemists that&hellip;" />
+<noscript><style>.jetpack-comments{visibility:visible!important}</style></noscript>
+<!-- Jetpack Open Graph Tags -->
+<meta property="og:type" content="article" />
+<meta property="og:title" content="The Chemistry of Game Design" />
+<meta property="og:url" content="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/" />
+<meta property="og:description" content="(Note: This essay was originally published on Gamasutra.com in 2007. To help prevent link rot, I’m reposting it here with minor edits and fixed links. I’ve also included a workshop presentation on …" />
+<meta property="article:published_time" content="2021-03-13T02:29:29+00:00" />
+<meta property="article:modified_time" content="2024-03-28T20:01:47+00:00" />
+<meta property="og:site_name" content="Lostgarden" />
+<meta property="og:image" content="https://s0.wp.com/_si/?t=eyJpbWciOiJodHRwczpcL1wvczAud3AuY29tXC9pXC9ibGFuay5qcGciLCJ0eHQiOiJMb3N0Z2FyZGVuIiwidGVtcGxhdGUiOiJoaWdod2F5IiwiZm9udCI6IiIsImJsb2dfaWQiOjIyNTI2MTM3NX0.cg_ZbEdNww3Am_CxLikUXDsXMbCuIz9gChsFROTsBWIMQ" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="" />
+<meta property="og:locale" content="en_US" />
+<meta name="twitter:text:title" content="The Chemistry of Game Design" />
+<meta name="twitter:image" content="https://i0.wp.com/lostgarden.com/wp-content/uploads/2024/02/cropped-icon.webp?fit=192%2C192&amp;ssl=1" />
+<meta name="twitter:card" content="summary" />
+
+<!-- End Jetpack Open Graph Tags -->
+<style class="wp-fonts-local">
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:fallback;src:url('https://lostgarden.com/wp-content/themes/lostgarden/assets/fonts/inter/inter-v13-latin-regular.woff2') format('woff2');font-stretch:normal;}
+@font-face{font-family:Inter;font-style:normal;font-weight:700;font-display:fallback;src:url('https://lostgarden.com/wp-content/themes/lostgarden/assets/fonts/inter/inter-v13-latin-700.woff2') format('woff2');font-stretch:normal;}
+@font-face{font-family:"Libre Baskerville";font-style:normal;font-weight:400;font-display:fallback;src:url('https://lostgarden.com/wp-content/themes/lostgarden/assets/fonts/libre-baskerville/libre-baskerville-v14-latin-regular.woff2') format('woff2');font-stretch:normal;}
+@font-face{font-family:"Libre Baskerville";font-style:italic;font-weight:400;font-display:fallback;src:url('https://lostgarden.com/wp-content/themes/lostgarden/assets/fonts/libre-baskerville/libre-baskerville-v14-latin-italic.woff2') format('woff2');font-stretch:normal;}
+@font-face{font-family:"Libre Baskerville";font-style:normal;font-weight:700;font-display:fallback;src:url('https://lostgarden.com/wp-content/themes/lostgarden/assets/fonts/libre-baskerville/libre-baskerville-v14-latin-700.woff2') format('woff2');font-stretch:normal;}
+</style>
+<style class="wp-fonts-local">
+@font-face{font-family:Inter;font-style:normal;font-weight:100;font-display:fallback;src:url('https://fonts.wp.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyeMZ1rib2Bg-4.woff2') format('woff2');}
+@font-face{font-family:Inter;font-style:normal;font-weight:200;font-display:fallback;src:url('https://fonts.wp.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuDyfMZ1rib2Bg-4.woff2') format('woff2');}
+@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:fallback;src:url('https://fonts.wp.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuOKfMZ1rib2Bg-4.woff2') format('woff2');}
+@font-face{font-family:Inter;font-style:normal;font-weight:500;font-display:fallback;src:url('https://fonts.wp.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fMZ1rib2Bg-4.woff2') format('woff2');}
+@font-face{font-family:Inter;font-style:normal;font-weight:600;font-display:fallback;src:url('https://fonts.wp.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYMZ1rib2Bg-4.woff2') format('woff2');}
+@font-face{font-family:Inter;font-style:normal;font-weight:800;font-display:fallback;src:url('https://fonts.wp.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuDyYMZ1rib2Bg-4.woff2') format('woff2');}
+@font-face{font-family:Inter;font-style:normal;font-weight:900;font-display:fallback;src:url('https://fonts.wp.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuBWYMZ1rib2Bg-4.woff2') format('woff2');}
+</style>
+<link rel="icon" href="https://i0.wp.com/lostgarden.com/wp-content/uploads/2024/02/cropped-icon.webp?fit=32%2C32&#038;ssl=1" sizes="32x32" />
+<link rel="icon" href="https://i0.wp.com/lostgarden.com/wp-content/uploads/2024/02/cropped-icon.webp?fit=192%2C192&#038;ssl=1" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://i0.wp.com/lostgarden.com/wp-content/uploads/2024/02/cropped-icon.webp?fit=180%2C180&#038;ssl=1" />
+<meta name="msapplication-TileImage" content="https://i0.wp.com/lostgarden.com/wp-content/uploads/2024/02/cropped-icon.webp?fit=192%2C192&#038;ssl=1" />
+</head>
+
+<body class="wp-singular post-template-default single single-post postid-1301 single-format-standard wp-custom-logo wp-embed-responsive wp-theme-blockbase wp-child-theme-lostgarden jps-theme-lostgarden is-block-theme">
+<script id='jetpack-search-theme-token-sampler'>(function(){try{var c=getComputedStyle(document.body),r=document.documentElement,ink=c.color,bg=c.backgroundColor;if(ink){r.style.setProperty('--jp-search-page-ink',ink);}if(bg&&bg!==ink&&bg!=='rgba(0, 0, 0, 0)'&&bg!=='transparent'){r.style.setProperty('--jp-search-page-surface',bg);}}catch(e){}})();</script>
+<a class="skip-link screen-reader-text" id="wp-skip-link" href="#wp--skip-link--target">Skip to content</a><div class="wp-site-blocks"><header class="wp-block-template-part">
+<div class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained" style="margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0">
+<div class="wp-block-group is-content-justification-space-between is-layout-flex wp-container-core-group-is-layout-e1a7945b wp-block-group-is-layout-flex" style="padding-top:var(--wp--preset--spacing--60);padding-right:0;padding-bottom:var(--wp--preset--spacing--60);padding-left:0">
+<div class="wp-block-group is-layout-flex wp-container-core-group-is-layout-7628b28e wp-block-group-is-layout-flex"><div class="wp-block-site-logo"><a href="https://lostgarden.com/" class="custom-logo-link" rel="home"><img width="34" height="23" src="https://i0.wp.com/lostgarden.com/wp-content/uploads/2023/12/image-4.png?fit=137%2C96&amp;ssl=1" class="custom-logo" alt="Lostgarden" decoding="async" data-attachment-id="66" data-permalink="https://lostgarden.com/home/image-4/" data-orig-file="https://i0.wp.com/lostgarden.com/wp-content/uploads/2023/12/image-4.png?fit=137%2C96&amp;ssl=1" data-orig-size="137,96" data-comments-opened="1" data-image-title="image-4" data-image-description="" data-image-caption="" data-large-file="https://i0.wp.com/lostgarden.com/wp-content/uploads/2023/12/image-4.png?fit=137%2C96&amp;ssl=1" /></a></div>
+
+<h1 class="wp-block-site-title"><a href="https://lostgarden.com" target="_self" rel="home">Lostgarden</a></h1></div>
+
+
+<nav class="is-responsive items-justified-left header-navigation wp-block-navigation wp-container-content-9cfa9a5a is-horizontal is-content-justification-left is-layout-flex wp-container-core-navigation-is-layout-11a75b20 wp-block-navigation-is-layout-flex" aria-label="Header navigation" 
+		 data-wp-interactive="core/navigation" data-wp-context='{"overlayOpenedBy":{"click":false,"hover":false,"focus":false},"type":"overlay","roleAttribute":"","ariaLabel":"Menu"}'><button aria-haspopup="dialog" aria-label="Open menu" class="wp-block-navigation__responsive-container-open" 
+				data-wp-on--click="actions.openMenuOnClick"
+				data-wp-on--keydown="actions.handleMenuKeydown"
+			><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 5v1.5h14V5H5z"></path><path d="M5 12.8h14v-1.5H5v1.5z"></path><path d="M5 19h14v-1.5H5V19z"></path></svg></button>
+				<div class="wp-block-navigation__responsive-container"  id="modal-1" 
+				data-wp-class--has-modal-open="state.isMenuOpen"
+				data-wp-class--is-menu-open="state.isMenuOpen"
+				data-wp-watch="callbacks.initMenu"
+				data-wp-on--keydown="actions.handleMenuKeydown"
+				data-wp-on--focusout="actions.handleMenuFocusout"
+				tabindex="-1"
+			>
+					<div class="wp-block-navigation__responsive-close" tabindex="-1">
+						<div class="wp-block-navigation__responsive-dialog" 
+				data-wp-bind--aria-modal="state.ariaModal"
+				data-wp-bind--aria-label="state.ariaLabel"
+				data-wp-bind--role="state.roleAttribute"
+			>
+							<button aria-label="Close menu" class="wp-block-navigation__responsive-container-close" 
+				data-wp-on--click="actions.closeMenuOnClick"
+			><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="m13.06 12 6.47-6.47-1.06-1.06L12 10.94 5.53 4.47 4.47 5.53 10.94 12l-6.47 6.47 1.06 1.06L12 13.06l6.47 6.47 1.06-1.06L13.06 12Z"></path></svg></button>
+							<div class="wp-block-navigation__responsive-container-content" 
+				data-wp-watch="callbacks.focusFirstElement"
+			 id="modal-1-content">
+								<ul class="wp-block-navigation__container is-responsive items-justified-left header-navigation wp-block-navigation"><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content"  href="https://lostgarden.com/"><span class="wp-block-navigation-item__label">Home</span></a></li><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content"  href="https://lostgarden.com/?page_id=41"><span class="wp-block-navigation-item__label">Worth reading</span></a></li><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content"  href="https://lostgarden.com/?page_id=42"><span class="wp-block-navigation-item__label">Blog archive</span></a></li><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content"  href="?s"><span class="wp-block-navigation-item__label">Search</span></a></li><li class="wp-block-navigation-item wp-block-navigation-link"><a class="wp-block-navigation-item__content"  href="#subscribe"><span class="wp-block-navigation-item__label">Subscribe</span></a></li></ul>
+								
+							</div>
+						</div>
+					</div>
+				</div></nav></div>
+</div>
+</header>
+
+
+<div class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained" style="margin-bottom:0"><div class="wp-block-post-date"><time datetime="2021-03-13T02:29:29+00:00">March 13, 2021</time></div>
+
+<h1 style="margin-top:var(--wp--preset--spacing--40);margin-bottom:var(--wp--preset--spacing--60)" class="wp-block-post-title">The Chemistry of Game Design</h1></div>
+
+
+
+<main id="wp--skip-link--target" class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained">
+<div class="wp-block-columns is-layout-flex wp-container-core-columns-is-layout-28f84493 wp-block-columns-is-layout-flex">
+<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow" style="flex-basis:67.5%">
+
+<div class="entry-content wp-block-post-content has-global-padding is-layout-constrained wp-container-core-post-content-is-layout-346627ba wp-block-post-content-is-layout-constrained">
+<p class="wp-block-paragraph"><em>(Note: This essay was originally published on </em><a href="https://www.gamasutra.com/view/feature/129948/the_chemistry_of_game_design.php"><em>Gamasutra.com</em></a><em> in 2007. To help prevent link rot, I’m reposting it here with minor edits and fixed links. I’ve also included a </em><a href="https://drive.google.com/file/d/1MscwnQIrsz2EWnPU4dtk_Oj16IegIaeJ/view?usp=sharing"><em>workshop presentation</em></a><em> on the topic if folks want to teach these ideas in their classes.)</em></p>
+
+
+
+<h1 ID="1-moving-beyond-alchemy" class="wp-block-heading"><strong>1. Moving Beyond Alchemy</strong></h1>
+
+
+
+<p class="wp-block-paragraph"><em>“…it was clear to the alchemists that &#8220;something&#8221; was generally being conserved in chemical processes, even in the most dramatic changes of physical state and appearance; that is, that substances contained some &#8220;principles&#8221; that could be hidden under many outer forms, and revealed by proper manipulation.”</em></p>
+
+
+
+<p class="wp-block-paragraph">I recently happened across a description of alchemy, that delightful pseudo-science of the last millennium that evolved into modern chemistry. For a moment I thought the authors were describing the current state of the art in game design.</p>
+
+
+
+<p class="wp-block-paragraph">Every time I sit down with a finely crafted title such as Tetris or Super Mario Brothers, I catch hints of a concise and clearly defined structure behind the gameplay. It is my belief that a highly mechanical and predictable heart, built on the foundation of basic human psychology, beats at the core of every single successful game.</p>
+
+
+
+<p class="wp-block-paragraph">What would happen if we codified those systems and turned them into a practical technique for designing games?</p>
+
+
+
+<h2 ID="in-a-time-before-science" class="wp-block-heading"><strong>In a Time Before Science</strong></h2>
+
+
+
+<p class="wp-block-paragraph"><em>“Throughout the history of the discipline, alchemists struggled to understand the nature of these principles, and find some order and sense in the results of their chemical experiments—which were often undermined by impure or poorly characterized reagents, the lack of quantitative measurements, and confusing and inconsistent nomenclature.”</em></p>
+
+
+
+<p class="wp-block-paragraph">Historically, the process of understanding games has been limited by numerous factors ranging from messy experimental practices, spiritual reliance on untested theories of play, and confused terminology. We are still alchemists of our trade, mixing two-parts impure story with one-part polluted game play with three-parts market voodoo.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh5.googleusercontent.com/-oAleFyn0Kf9DzcE_UZdFKUdJgckZhsmWLa9e-r1vu8riBb04EeZwyvGlt9U1UWyvy54A5MA6S4cYGJikWgP2xo_qAOJZzZLHoxXwWzppnHTGZaPNQcaghrjMfkPN2K-5eHYl4c" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph">As an industry, we need to go beyond the mystical hand waving that defines modern game design. It is now possible to craft, test and refine practical models of game design built from observable patterns of play. We can describe what the player does and how the game reacts. Recently, we’ve begun to crack open why players react to certain stimuli and are able to create models that predict pleasure and frustration.</p>
+
+
+
+<p class="wp-block-paragraph">This essay will describe one such model.</p>
+
+
+
+<h2 ID="fundamental-science-forms-the-future" class="wp-block-heading"><strong>Fundamental Science Forms The Future</strong></h2>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh3.googleusercontent.com/wyZpMbbsvjv5s4eOhoWo2dflL1XEb78onEtrmjtk2AMqSIRaMj18ZltvErdlkhQJng6ah92ELfmSSIxVs-9odia8GCGqiiPbCWffM8T7csTrYzZBNEgHmLR0Hyj47UC2itaofN0" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 2: Condensation polymerization of Nylon, (a substance not available to alchemists)</em></p>
+
+
+
+<p class="wp-block-paragraph">The bigger hope is to move our alchemical craft towards the founding of a science of game design. We currently build games through habit, guesswork and slavish devotion to pre-existing form. Building a testable model of game mechanics opens up new opportunities for game balancing, original game design and the broader application of game design to other fields.</p>
+
+
+
+<p class="wp-block-paragraph">The advent of basic chemistry gave us tools to build a new world of technologies far beyond that imagined by our alchemist forefathers. Plastics, engines, fabrics, power sources revolutionized our lives. It is a worthy effort to crack the fundamental scientific principles behind the creation of games.</p>
+
+
+
+<h1 ID="2-the-foundations-of-a-model-of-game-design" class="wp-block-heading"><strong>2. The Foundations Of A Model Of Game Design</strong></h1>
+
+
+
+<p class="wp-block-paragraph">Where chemistry separated itself from alchemy by building testable models of physical atoms, a science of game design concerns itself with testable models of human psychology.</p>
+
+
+
+<p class="wp-block-paragraph">Many of the attempts to define games have focused on the mechanistic elements of the game, such as the primitive actions that the system allows the player to perform or the tokens that the player manipulates. The approach has been to treat games as self contained logical systems.</p>
+
+
+
+<p class="wp-block-paragraph">Mechanics and aesthetics are certainly important pieces of any model of game design, but in the end, such analysis provides little insight into what makes a game enjoyable. You end up with a set of fragmented pieces that tell you almost nothing about the meaningful interactions between the game as a simulation and the player as an active and evolving participant. Games are not mathematical systems.They are systems that always have a human being, full of desires, excitement and immense cleverness, sitting smack dab in the center. To accurately describe games, we need a working psychological model of the player.</p>
+
+
+
+<h2 ID="player-model" class="wp-block-heading"><strong>Player Model</strong></h2>
+
+
+
+<p class="wp-block-paragraph">Our player model is simple: The player is an entity that is <strong>driven</strong>, consciously or subconsciously, to learn new <strong>skills </strong>high in <strong>perceived value</strong>. They gain pleasure from successfully acquiring skills.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh3.googleusercontent.com/X5oSIR5p5YH31zpsA7Sq5f6BTXDMGrfFHCtTNPsLcGtsDL0VsgD5N2nLgjOuUDWXa2Vh1TcdcqcgMjDbHDdnAJqMYygfCRAhfwulvVIsYPpsiGvyuK4jnmDQeDVJiDSGtTzBpDU" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 3: The player follows clues to the acquisition of a new skill</em></p>
+
+
+
+<p class="wp-block-paragraph">Let’s dig into three key concepts in our player model.</p>
+
+
+
+<ul class="wp-block-list"><li>Skills</li><li>Driven to learn</li><li>Perceived value</li></ul>
+
+
+
+<h2 ID="skill" class="wp-block-heading"><strong>Skill</strong></h2>
+
+
+
+<p class="wp-block-paragraph">A skill is a behavior that the player uses to <em>manipulate the world</em>. Some skills are conceptual, such as navigating a map while others are quite physical, such as pounding in a nail with a hammer. This ties into an intrinsic motivation towards <a href="https://en.wikipedia.org/wiki/Self-determination_theory">self-determination</a>. “I want to do what I want to do. And skills help me get there.”&nbsp;</p>
+
+
+
+<h2 ID="driven-to-learn" class="wp-block-heading"><strong>Driven To Learn</strong></h2>
+
+
+
+<p class="wp-block-paragraph">Play is instinctual. In low stimulation environments where we are not actively pursuing activities related to food and shelter, people will begin playing by default. Strong feedback mechanisms in the form boredom or frustration prod us into action. Given a spare moment, we throw ourselves into playing with blocks or dolls as children and more intricate hobbies as adults. It is a sign of our need for meaningful stimulation that solitary confinement remains a <a href="https://openscholarship.wustl.edu/cgi/viewcontent.cgi?article=1362&amp;context=law_journal_law_policy">vicious punishment</a> for the most hardened criminals.</p>
+
+
+
+<p class="wp-block-paragraph">The flip side is that we are rewarded for learning. The sensation that gamers term ‘fun’ is derived from the act of mastering knowledge, skills and tools. When you learn something new, when you understand it so fully you can use that knowledge to manipulate your environment for the better, you experience joy.</p>
+
+
+
+<p class="wp-block-paragraph">There is a reasonable amount of neuroscience available to support this claim. Edward A Vessel, a cognitive neuroscientist at the NYU Center for Neural Science writes:</p>
+
+
+
+<p class="wp-block-paragraph"><em>“These “aha” moments, when a concept or message is fully interpreted and understood, lead to a flood of chemicals in the brain and body that we experience as pleasurable. It feels good to “get” it. The deeper the concept is, the better it feels when we are finally able to wrap our head around it.”</em></p>
+
+
+
+<p class="wp-block-paragraph">Upon the click of comprehension, a natural opiate called endomorphin, a messaging chemical in the brain similar in structure to morphine, is released. As humans, we are wired to crave new information constantly. In some sense, what you and I term curiosity can be interpreted as our brain looking for its next fix of deliciously fascinating information.</p>
+
+
+
+<p class="wp-block-paragraph">As game designers, we deal with the fun, boredom and frustration on a regular basis. It is good to recognize that these are biological phenomena, not some mystical or mysterious sensation. For more thoughts on the topic, I encourage you to have a quick read through Raph Koster’s book “<a href="https://www.amazon.com/Theory-Game-Design-Raph-Koster/dp/1449363210">A Theory of Fun for Game Design</a>”</p>
+
+
+
+<h2 ID="perceived-value" class="wp-block-heading"><strong>Perceived Value</strong></h2>
+
+
+
+<p class="wp-block-paragraph">Players pursue skills with high perceived value over skills with low perceived value</p>
+
+
+
+<p class="wp-block-paragraph">Play is, perhaps counter intuitively, a deeply pragmatic activity. Our impulses to engage in play are instinctual, selected for by evolution because it provides us with the safe opportunity to learn behaviors that improve our lot in life without the threat of life threatening failure. We play because we are built to expect the eventual harvesting of utility from our apparently useless actions. We stop playing when we fail to find that utility.</p>
+
+
+
+<p class="wp-block-paragraph">The perception of value is more important than an objective measurement value. Humans are not creatures of pure logic. We know people exhibit consistent biases in how they weigh their actions. For example, they’ll often undertake bizarre risks because they are unable to properly evaluate statistical odds. We’ve also realized that people have substantial limits on how much information they can take into account when making any one decision. Many decisions are made based on highly predictable ‘gut’ reactions that have their own subconscious rules.</p>
+
+
+
+<h1 ID="3-interaction-loops" class="wp-block-heading"><strong>3: Interaction Loops</strong></h1>
+
+
+
+<p class="wp-block-paragraph">With our player model in hand, we can describe how the player interacts with the game.</p>
+
+
+
+<p class="wp-block-paragraph">The basic ingredients of a game are, if not standardized, at least well described in a variety of books and rambling by designers across the past decade or two. I’ve taken the basic ingredients of tokens, verbs, rules, aesthetics, etc and remixed them into a self contained atomic feedback loop called an interaction loop. Each unit describes how the player gains a new skill.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh4.googleusercontent.com/qO5sgLN60rA7R0DZ2AmibPegfXaTJvvY-n28Em0KGCy4uE5Y5jtpkpSEfhq1AzxWhroCDu1UZQ9bBPXztMAxEby9kU3JDmMfaYt9C7xIIJDZdrwa-YIgxfKTz2wbFfiBBgocqLku" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 4: The player follows clues to the acquisition of a new skill</em></p>
+
+
+
+<p class="wp-block-paragraph">An interaction loop feedback loop is composed of five main elements:</p>
+
+
+
+<ul class="wp-block-list"><li><strong>Decision: </strong>The player observes any known affordances and weighs possible outcomes.&nbsp;</li><li><strong>Action</strong>:The player performs an action. For an interaction loop encounter by a new player, the action might involve pressing a button. More advanced atoms might instead require the player execute a batched set of actions such as navigating a complex maze.</li><li><strong>Simulation</strong>: Based off the action, an ongoing simulation is updated. A door might open.</li><li><strong>Feedback</strong>:The game provides some form of feedback to the player to let them know how the simulation has changed state. This feedback can be auditory, visual, or tactile. It can be visceral in the form of an exploding corpse or it can be symbolic in the form of a block of text.</li><li><strong>Modeling</strong>: As the final step, the player absorbs the feedback and updates their mental models on the success of their action. If they feel that they have made progress, they feel pleasure. If they master a new skill or other tool, they experience an even greater burst of joy. If they feel that their action has been in vain, they feel boredom or frustration.</li></ul>
+
+
+
+<p class="wp-block-paragraph">A shorthand diagram that I find useful for recording atoms is as follows:</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh3.googleusercontent.com/XEEgNrvaIhBmKYbRIegEFNzED7vfJPhfphv3dSTdDagZW7IdU0YdY0oxAM0Y9h4sc0G8i3nwzN9EWygdVkB8LTcWTxcNApk3yImkixTbyfCivJae7uCKhlgXryDIEZ-Itmb8eXL8" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 5: Our canonical interaction loop</em></p>
+
+
+
+<p class="wp-block-paragraph">For example, let’s dissect the act of jumping in Mario</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh5.googleusercontent.com/U8_m6PetoqtELQAjlTei5R6PTuiGLjEqqGP2mrNwLT4wkPO_Zt8oZNNcMO70rMWVG9ZwVeFC3ujl3-rUo1fpQaVbcMRiNGqtyHeE4smhXA-gFziTeaR1YK9Zj2LzOYp0u4USNp9q" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 6: The interaction loop of the player learning how to make Mario jump</em></p>
+
+
+
+<ul class="wp-block-list"><li><strong>Decision</strong>: A player notices a button on the controller. They know from past experience, it is pressable.&nbsp;</li><li><strong>Action</strong>: An inexperienced player pushes a button.</li><li><strong>Simulation</strong>: The simulation notes the action and starts the avatar of Mario on the screen moving in an arc.</li><li><strong>Feedback</strong>: The screen shows the user an animation of Mario jumping.</li><li><strong>Modeling</strong>: The user forms a causal mental model that pressing the button results in jumping.</li></ul>
+
+
+
+<p class="wp-block-paragraph">Implicit in this model is that the atom is often looped through multiple times before the user understands what it teaches. The first pass may only clue the user that something vaguely interesting happened. The user then presses the button again to test their theory and Mario once again bounces up into the air. At this point, the player smiles since they realize they’ve acquired an interesting skill that may be of use later on.</p>
+
+
+
+<h2 ID="this-thing-we-call-play" class="wp-block-heading"><strong>This Thing We Call Play</strong></h2>
+
+
+
+<p class="wp-block-paragraph"><em>“Man is a Tool-using Animal … Nowhere do you find him without Tools; without Tools he is nothing, with Tools he is all.”</em> – 19<sup>th</sup> century essayist Thomas Carlyle</p>
+
+
+
+<p class="wp-block-paragraph">Upon the acquisition of a shiny new skill from a skill atom, players experiment with it. They try it out in different environments and see if it does anything useful. This semi-random exploration is the classic ‘play’ activity that we see children perform. For example, when a new player masters how to jump, you’ll notice they’ll almost immediately start happily hopping about the level. On the surface, it is a silly frivolous activity. In reality, we are observing humanity&#8217;s instinctual process of learning in action.</p>
+
+
+
+<p class="wp-block-paragraph">In the course of experimenting, the player will occasionally stumble across something in the environment that gives them interesting information that might lead to the mastery of a new skill. At this point, you’ll see the behavior of the player become more deliberate. A mental model begins coalescing in their minds. In our jumping example, the player starts bumping against a platform. They may even reach the top of a platform. It is very common that skills acquisition requires multiple passes through the new skill atom before mastery is achieved.</p>
+
+
+
+<p class="wp-block-paragraph">Eventually, the player uses an existing skill to grok another skill. They experience a wash of pleasure and start the process all over again.</p>
+
+
+
+<h2 ID="chaining-of-game-mechanics" class="wp-block-heading"><strong>Chaining Of Game Mechanics</strong></h2>
+
+
+
+<p class="wp-block-paragraph">We can visually represent how players learn by linking our basic interaction loops together to create a directed graph of atoms called a skill chain.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh6.googleusercontent.com/QjBbZTmRDJKGi6oAfFkzdxk9PyfEweNhBWfoRPcyRg0yCazSJRql-isKQ-FR0Dsr8sEQVvSK4sho96iZ0XxCOONYcwma5uk-LKAF4W6YsjZxCoZ9H_lW-4LYqYXTdoatDjBJIn4" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 7: Two linked atoms</em></p>
+
+
+
+<p class="wp-block-paragraph">The skill from one atom feeds into the actions of another atom further down the chain. By linking more and more atoms in, you build a network that describes the entire game. Every expected skill, every successful action, every predicted outcome of a simulation, every bit of required feedback can be included in a simple, yet functional fashion.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh6.googleusercontent.com/iN-HKwUUWkd0pLY1meMzOhfMApMp_8hxYHTrXmi8DNepkuZyC7CdJzVlPswV1jFsWVqBaN8vNI5dNy54FqIG1TSWRu5H1D5k5ek-bsIhJHFGF8-QC1UaSiBSZUdk1UoZ-F-7VxA" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 8: Sample skill chain for Tetris</em></p>
+
+
+
+<div class="wp-block-file"><a href="https://lostgardenhome.files.wordpress.com/2021/03/tetris-skill-chain.pdf">Tetris Skill Chain.pdf</a><a href="https://lostgarden.com/wp-content/uploads/2021/03/tetris-skill-chain.pdf" class="wp-block-file__button" download>Download</a></div>
+
+
+
+<p class="wp-block-paragraph">A skill chain is a general notation that can be used to model pretty much any game imaginable. Your design can be broken down into dozens of simple atoms that link together to form a clear and easily readable map of how the game plays. The skill chain, with its ability to describe the player experience instead of the mere mechanics of the game, provides a far richer description of the meaningful moments that occur during gameplay.</p>
+
+
+
+<h2 ID="how-players-interact-with-a-skill-chain" class="wp-block-heading"><strong>How Players Interact With A Skill Chain</strong></h2>
+
+
+
+<p class="wp-block-paragraph">Players will travel from atom to atom like Pac-Man following a trail of dots towards the power pellet. They move from one skill to the next even when they have only a vague concept of the ultimate destination.Chomping up those dots is good.</p>
+
+
+
+<p class="wp-block-paragraph">One of our peculiarly human limitations comes into play at this point. Players are unable to predict the value of a new skill more than a couple atoms down the chain. As long as there is a new skill with potential value within our prediction horizon, players will pursue it. There may be no actual long term payoff other than the pleasure of the experience, but we don’t care. As long as there is a <em>promise </em>of a long term payoff and the short term rewards keep coming, we assume that there will be some final benefit from our efforts.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh4.googleusercontent.com/8BZwqfvxGWAjXB_mX3n3P_FWipNObdf6dAiBC57dP07-lKaAyq1aS5YobcjdlksyTwkNRf7RiLBCnm3y3ELmD42hABei5QDxGm5rspPDpLUpJn9CT4GAc-n1CeyswBNUeu3C1yM" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 9: Players have limited foresight</em></p>
+
+
+
+<p class="wp-block-paragraph">If you look at this from an evolutionary perspective, our behavior makes quite a bit of sense. Many useful skills take upwards of five to 10 years to master. During those early days of our education, the basic playful activities such as gossiping about which kids have cooties seem rather silly. Later on however, our mastery of politics, science, or in the case of the cooties, mating rituals, yields a hugely positive impact on our well being.</p>
+
+
+
+<p class="wp-block-paragraph">The just-so story here is that playful folks that instinctually engaged in long term learning with no immediate benefit were the ones that mastered agriculture, hunting and language. These folks thrived. Those that did not died off.</p>
+
+
+
+<p class="wp-block-paragraph">However, our brains never evolved to deal with modern games. The existence of a set of interaction loops that are tuned just to entertain us and that never actually lead up to a real world skill is something new to the world. At their most puerile, games are a grand hack. The minute by minute experience fits all our biological heuristics and sounds all the right bells. So we keep on playing. And we wonder why so many games have such horrible endings.</p>
+
+
+
+<h1 ID="4-status-of-atoms-in-the-skill-chain" class="wp-block-heading"><strong>4. Status Of Atoms In The Skill Chain</strong></h1>
+
+
+
+<p class="wp-block-paragraph">A skill chain provides some rather useful information about the state of the player as they engage the game. Imagine that the skill chain is the instrumented dashboard that lights up with the player’s progress. At any point in time you can tell the following information</p>
+
+
+
+<ul class="wp-block-list"><li><strong>Mastered skills</strong>: Skills that have been recently mastered.</li><li><strong>Partially mastered skills</strong>: Skills that the player is toying with, but has not yet mastered.</li><li><strong>Unexercised skills</strong>: Skills the player has yet to attempt.</li><li><strong>Active skills</strong>: Skills that the player is actively using. (aka the Grind)</li><li><strong>Burned out skills</strong>: interaction loops that the player has lost interest in exercising.</li></ul>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh3.googleusercontent.com/0LdKqmXG9O2gJjJ1zD4jddOToG0WKgmRHdy6_p1M6XXpi5SYTYOBl-BOXsVLdEC1rPPF4USE1Q8PuAdWprPGzd46W6YVbXJjmjN9Q-WOLfiyZvI7jgiY7BaDcTODhKhyC20X9lk" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 10: Icons for skill status</em></p>
+
+
+
+<p class="wp-block-paragraph">We’ve talked a little bit about mastered and partially mastered skills. Unexercised skills are pretty self explanatory. If a player can’t perform the actions necessary to understand a skill, that atom will never be exercised or mastered. Mastery flows down the chain and if players are blocked early on, they’ll never reach the further atoms.</p>
+
+
+
+<p class="wp-block-paragraph">The two states that are worth a bit more explanation are active skills and burned out skills.</p>
+
+
+
+<h2 ID="active-skills" class="wp-block-heading"><strong>Active Skills</strong></h2>
+
+
+
+<p class="wp-block-paragraph">The player only experiences the joy of mastery for an atom only once. After the moment of mastery, a biological feedback system kicks in that dampens the pleasure response to exercising those same pathways again. What was once exciting becomes boring.</p>
+
+
+
+<p class="wp-block-paragraph">However, players will continue exercising an already mastered atom as a new tool for manipulating their world. A mastered atom is as good as a shiny new hammer hanging from a workman’s belt. When a new opportunity comes up, typically in the form of an atom further down the skill chain, the player makes use of their new skill to advance their knowledge.</p>
+
+
+
+<p class="wp-block-paragraph">Players have enormous patience. They are willing to exercise a basic interaction loop thousands of times in order to achieve mastery of a higher order atom. Players jump innumerable times in Super Mario Brothers in order to reach more powerful skill sets further down the chain.</p>
+
+
+
+<p class="wp-block-paragraph">A skill that has been mastered and is now simply being used to activate other icons is represented by the lit light icon.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh3.googleusercontent.com/6ar90ySqQnibteR7Ubh_7V4M28b8Oa3OwUWdZTAVEZnd7rQhzQ5ynBLwN-Z3QMaf5bkaqtKdnMzy1jB2a0gqFrls_qchPlOQVpe6D9Pq_RMzLiVu56BVK5Wi6pJ0clmuDOQAT3Y" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 11: Active Icon</em></p>
+
+
+
+<h2 ID="burnout" class="wp-block-heading"><strong>Burnout</strong></h2>
+
+
+
+<p class="wp-block-paragraph">Players don’t always bridge the gap between one atom and the next. They master a new skill, they play with it but fail to find any interesting use for it. This is known as burnout.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh3.googleusercontent.com/N6XfVSgw5byhsham9aK97liw6SgPBApRJHD3qjZeGMvZRGE0uMJZIAjz25PVU2YWPjOizHJ9CjDy5nAvTy1iC1tgf0c9ad9sMmnlA8sqj1TAU_cBCB-gEP5MyX3HgZg_oJTsIKs" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 12: Burned out icon</em></p>
+
+
+
+<p class="wp-block-paragraph">For example, suppose our player pressed the jump button. They performed the jump and we recorded their mastery of the skill. However, this particular player never figured out how the jump might be useful. Perhaps they didn’t jump near the platform and receive interesting feedback on the next atom.After a short period of experimentation with no interesting results, the player stopped pressing the jump button entirely.</p>
+
+
+
+<p class="wp-block-paragraph">When a player burns out on a particular atom, the consequences ripples up and down the chain.</p>
+
+
+
+<h3 ID="early-stage-burnout" class="wp-block-heading"><strong>Early Stage Burnout</strong></h3>
+
+
+
+<p class="wp-block-paragraph">In the example above, the Reach Platform atom will never be mastered. The foundational skills are not in place. In a deeply linked skill chain, a burnout early on can chop off huge sections of the player’s potential experience. You can think of learning curves in terms of managing early stage burnout.</p>
+
+
+
+<h3 ID="later-stage-burnout" class="wp-block-heading"><strong>Later Stage Burnout</strong></h3>
+
+
+
+<p class="wp-block-paragraph">On the other hand, a burnout later on down the chain can devalue active skills.</p>
+
+
+
+<p class="wp-block-paragraph">For example, assume we have a single platform in our jumping game and there is really nothing on it. The player jumps on the platform, discovers no interesting new activities and so stops jumping on platforms. This, in turn, atrophies the Jump skill, because if the player doesn’t need to jump on platforms, why would he bother jumping?</p>
+
+
+
+<h3 ID="burnout-is-our-gateway-to-testability" class="wp-block-heading"><strong>Burnout Is Our Gateway To Testability</strong></h3>
+
+
+
+<p class="wp-block-paragraph">Burnout is a very clear signal that our game design is failing to keep the players attention. As you watch burnout creep across a game’s skill chain, it is a signal that players will soon stop playing the game.They are becoming bored, frustrated and perhaps even angry.</p>
+
+
+
+<p class="wp-block-paragraph">Perhaps most importantly, we can measure when burnout occurs for an individual atom. This gives us, as game designers, unprecedented qualitative insight into how a particular design is performing with play testers. When you start tracking burnout along with the other skill states, you can visualize the problematic areas with great clarity and accuracy. The entire topic of measuring performance of a game through instrumentation of its skill chain is a rich topic for further exploration.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh4.googleusercontent.com/551tBhelWpofryst61MgD64BZ8bK1jpU-GSyexoJUYY1OOpMcqbQBhI5GYmgm5Ozf9Ho5-nVUuFvgBjA3tma8AatHIeQDN1obCeixxIy7eqZxl0eljXGdXwc2CBF6f5LMPXdvAE" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 13: Skill atrophy due to later stage burnout</em></p>
+
+
+
+<h1 ID="5-advanced-elements-of-a-skill-chain" class="wp-block-heading"><strong>5. Advanced Elements Of A Skill Chain</strong></h1>
+
+
+
+<p class="wp-block-paragraph">We’ve covered the basic elements of a skill chain and how to record that status of the player’s progress.There are only a few more pieces we need so that you can start building your own skill chains.</p>
+
+
+
+<ul class="wp-block-list"><li><strong>Pre-existing skills</strong>: How the skill chain is jump started.</li><li><strong>Evocative Stimuli</strong>: How we represent story and other aesthetic aspects of modern game design.</li></ul>
+
+
+
+<h2 ID="pre-existing-skills" class="wp-block-heading"><strong>Pre-existing Skills</strong></h2>
+
+
+
+<p class="wp-block-paragraph">Players bring an initial set of skills to a game. These skills always form the starting nodes of a skill chain. Accurately predicting the player’s existing skill set has a big impact on the player’s enjoyment of the rest of the game.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh3.googleusercontent.com/CN9Y4r5U4M1oH1kb_VOrNC28NrdCw9Cu0TViuMAUeE8yJcwvPQZs5F7dH5Wpt4H_Mzv0myA3XsgLGVIeTckswl4dQHQ-WeZ7gZaY8XGsJ_66tp3awZog5wjh7DCO9Igz00ZTDJE" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph"><em>Diagram 14: How pre-existing skill feed into initial interaction loops</em></p>
+
+
+
+<h2 ID="lack-of-the-correct-initial-skills" class="wp-block-heading"><strong>Lack Of The Correct Initial Skills</strong></h2>
+
+
+
+<p class="wp-block-paragraph">If the player lacks expected skills, they will be unable to engage the initial atoms in the game. In our example about jumping, imagine a player that didn’t realize that you need to push the button on the joystick in order to do something. Such an example may seem ludicrous, but it is one faced by many non-gamers whenever they are faced with a freakishly complex modern controller. Many game designs automatically assume the ability to navigate a 3D space using two fiddly little analog stick and a plethora of obscure buttons. Users without this skill give up in frustration without ever seeing the vast majority of the content.</p>
+
+
+
+<p class="wp-block-paragraph">It is very important to realize that such users aren’t stupid. They merely have a different initial skill set. One of our jobs as designers is to ensure that the people who play our game are able to master the game’s early interaction loops. Ultimately this means making an accurate list of pre-existing skills for the target demographic and building our early experience around those skills. Don’t assume skills that may not be there.</p>
+
+
+
+<h2 ID="pre-mastery-of-skills-taught-in-the-game" class="wp-block-heading"><strong>Pre-mastery Of Skills Taught In The Game</strong></h2>
+
+
+
+<p class="wp-block-paragraph">The flip side of all this is that if players have already mastered existing skills, the process of mastering early atoms is likely to be quite boring. When a player, who has completed a dozen hardcore titles, plays a game sporting a 10-minutes navigational tutorial they become bored. All the reward notes are sour because their jaded brain doesn’t react at the appropriate points. If a game doesn’t teach the player anything new, the player is very likely to experience burnout on the early atoms.</p>
+
+
+
+<p class="wp-block-paragraph">Targeting the correct set pre-existing skills is a balancing act. If you choose correctly, you’ll end up with an ‘intuitive’ game that players enjoy. If you choose incorrectly, you risk frustration, boredom and inevitable burnout.</p>
+
+
+
+<h2 ID="evocative-stimuli-using-arcs" class="wp-block-heading"><strong>Evocative Stimuli using Arcs</strong></h2>
+
+
+
+<p class="wp-block-paragraph">Games are laden with story, setting, and imagery intended to evoke a particular mood and other intriguing but mostly non-functional elements. Gamers derive great pleasure from this feedback. We can represent much of this mélange of artistry with the use of a special type of atom known as an arc.</p>
+
+
+
+<p class="wp-block-paragraph">Arcs are atoms that the designer knows will never result in a useful in-game skill, but that still evokes the past experiences or mental schema. When the player experiences the information cues, existing player memories are activated and the brain greedily sucks up the clues. For example, many players have pre-existing associations with mushrooms. If you are of a certain age and a certain liberal background, you may even own a rainbow colored T-shirt that sports a mushroom or two. When such a person plays Super Mario Brothers for the first time, they are quite likely to perk up at the sight of magic mushrooms. An interaction loop in their brain is activated, they start activating ideas about mushrooms, and begin free associating why might dear Miyamoto have placed such a counter culture reference in the game.</p>
+
+
+
+<figure class="wp-block-image"><img decoding="async" src="https://lh6.googleusercontent.com/XAwXSBPBowouvRjuNBpeEcH_ZGC3iAuywFaqqNS0xHhkr9-zDsT1M4FtK7lK_cCfncg8WukDLXfFgwbNJxc2f8ixwqYnnKj4LlyCor8lcbgbvuU8a5e88Novl4BuuYNdZWOPsBE" alt="" /></figure>
+
+
+
+<p class="wp-block-paragraph">Of course, the reality is that for the psychedelically minded, the mushroom imagery is flavor only.&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">Now these evocative arcs can be useful! If the player had read Alice in Wonderland, they might associate mushrooms with changing in size. In this case, the fact the mushroom makes you bigger already has a pre-existing mental pathway and when the player experiences it again, they are essentially reinforcing that path. So evocative arcs can influence what mental schema (existing skills) players tap into when forming models of cause and effect.&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">The downside of evocative stimuli is that most players rapidly burnout on such sleights of hand. The first time you see the mushroom, you might think it’s ‘mushroom-y-ness’ interesting. The second time, you see it as its utilitarian nature: An icon representing access to a tool (growing larger) that helps you navigate the world more efficiently.&nbsp;</p>
+
+
+
+<h1 ID="6-conclusion" class="wp-block-heading"><strong>6. Conclusion</strong></h1>
+
+
+
+<p class="wp-block-paragraph">We’ve covered a lot of ground in this essay. Hopefully, the diagrams give you a good understanding of how to describe a game using skill chains.</p>
+
+
+
+<h2 ID="using-skill-chains" class="wp-block-heading"><strong>Using Skill Chains</strong></h2>
+
+
+
+<p class="wp-block-paragraph">As a tool, I’ve found that skill chain diagrams dramatically improve my understanding of how a game works, where it fails and where there are clear opportunities for improvement.</p>
+
+
+
+<p class="wp-block-paragraph">Creating a skill chain provides you with the following information:</p>
+
+
+
+<ul class="wp-block-list"><li>Clearly identify the pre-existing skills that the player needs to begin the game</li><li>Clearly identify the skills that the player needs to complete the game</li><li>Identify which skills need feedback mechanisms.</li><li>Identify where the player experiences pleasure in your game</li><li>Alert the team when and where players are experiencing burnout during play</li><li>Provide a conceptual framework for analyzing why players are experiencing burnout.</li></ul>
+
+
+
+<p class="wp-block-paragraph">Though it takes a little practice, interaction loops aren’t all that complicated to define and are really no more of a burden than writing unit tests for a chunk of code.</p>
+
+
+
+<h2 ID="future-topics" class="wp-block-heading"><strong>Future Topics</strong></h2>
+
+
+
+<p class="wp-block-paragraph">Skill chains are a deep topic and we’ve described only the most basics aspects of how they function.Further topics of inquire include:</p>
+
+
+
+<ul class="wp-block-list"><li>Breaking apart a game into interaction loops</li><li>Using interaction loops to identify root causes</li></ul>
+
+
+
+<p class="wp-block-paragraph">If you are interested in more on interaction loops and skill chains, here’s a workshop I’ve given on the topic with exercises: <a href="https://drive.google.com/file/d/1MscwnQIrsz2EWnPU4dtk_Oj16IegIaeJ/view?usp=sharing">https://drive.google.com/file/d/1MscwnQIrsz2EWnPU4dtk_Oj16IegIaeJ/view?usp=sharing</a></p>
+
+
+
+<h2 ID="from-alchemy-to-chemistry" class="wp-block-heading"><strong>From Alchemy To Chemistry</strong></h2>
+
+
+
+<p class="wp-block-paragraph">I like to imagine that models like skill chains will help raise the level of intent and predictability in modern game design. With the concepts in this essay, you can start integrating this model into your current games and collecting your own data. We’ve got some immensely bright people in our little market and it is almost certain that they can improve upon this foundational starting point. By sharing what you’ve learned, we can begin to improve our models of design. What happens if game designers embrace the scientific process and start to build a science of game design?</p>
+
+
+
+<p class="wp-block-paragraph">The alchemists of ages past dreamt of turning lead into gold. They performed mad experiments with imprecise equipment and questionable theories of how the universe worked. Modern game designers are not really so different. Those not simply here for the sake of profit instead rally around equally fantastical dreams such as creating a game that makes the user cry or enlightening the world with games of politics or hunger. We crib cryptic notes from past successes and chortle merrily when our haphazard experiments manage to mildly entertain our audience. We are on the leading cusp of deep human / software interaction and yet we know so little.</p>
+
+
+
+<p class="wp-block-paragraph">It is only by gaining a deeper understanding of the fundamental building blocks of design that game designers will gain the power to break free from the accidental successes of the past. With practical techniques gained from controlled experiments, we will create radically effective new applications. When we have our basic chemistry, our basic systems of measurement and our basic atomic theory, perhaps then we can consistently build games that tap into the heart of human psychology.</p>
+
+
+
+<p class="wp-block-paragraph">The reproducible application of psychological manipulation of individuals and groups using software is big heady stuff. In the short term, I would hope that a deep understanding of models like skill chains help us crack open the rigid craftsmanship of existing genres so that we can build better, more potent games. Long term, it will be interesting to see what world changing uses we can find for our ever improving psychological technology.</p>
+
+
+
+<h1 ID="references-and-notes" class="wp-block-heading"><strong>References And Notes</strong></h1>
+
+
+
+<h3 ID="workshop-on-using-interaction-loops-and-skill-chains" class="wp-block-heading"><strong>Workshop on using interaction loops and skill chains</strong></h3>
+
+
+
+<p class="wp-block-paragraph"><a href="https://drive.google.com/file/d/1MscwnQIrsz2EWnPU4dtk_Oj16IegIaeJ/view?usp=sharing">https://drive.google.com/file/d/1MscwnQIrsz2EWnPU4dtk_Oj16IegIaeJ/view?usp=sharing</a></p>
+
+
+
+<h3 ID="the-original-essay-on-interaction-loops" class="wp-block-heading"><strong>The original essay on interaction loops</strong></h3>
+
+
+
+<p class="wp-block-paragraph"><a href="https://lostgarden.home.blog/2006/10/24/what-are-game-mechanics/">https://lostgarden.home.blog/2006/10/24/what-are-game-mechanics/</a></p>
+
+
+
+<h3 ID="effects-of-solitary-confinement-on-prisoners" class="wp-block-heading"><strong>Effects of solitary confinement on prisoners</strong></h3>
+
+
+
+<p class="wp-block-paragraph"><a href="https://openscholarship.wustl.edu/cgi/viewcontent.cgi?article=1362&amp;context=law_journal_law_policy">https://openscholarship.wustl.edu/cgi/viewcontent.cgi?article=1362&amp;context=law_journal_law_policy</a></p>
+
+
+
+<h3 ID="perceptual-pleasure-and-the-brain" class="wp-block-heading"><strong>Perceptual pleasure and the Brain</strong></h3>
+
+
+
+<p class="wp-block-paragraph">Irving Biederman and Edward Vessel, American Scientist, May-June 2006</p>
+
+
+
+<p class="wp-block-paragraph">Abstract: “<em>From hand-held DVD players to hundred-inch plasma screens, much of today&#8217;s technology is driven by the human appetite for pleasure through visual and auditory stimulation. What creates this appetite? Neuropsychologists have found that visual input activates receptors in the parts of the brain associated with pleasure and reward, and that the brain associates new images with old while also responding strongly to new ones. Using functional MRI imaging and other findings, they are exploring how human beings are &#8220;infovores&#8221; whose brains love to learn. Children may enjoy Sesame Street&#8217;s fast pace because they get a &#8220;click of comprehension&#8221; from each brief scene.</em>”&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">Press release: <a href="http://www.usc.edu/uscnews/stories/12543.html">http://www.usc.edu/uscnews/stories/12543.html</a></p>
+
+
+
+<h3 ID="six-sinister-things-about-super-mario" class="wp-block-heading"><strong>Six sinister things about Super Mario</strong></h3>
+
+
+
+<p class="wp-block-paragraph"><a href="http://www.destructoid.com/six-sinister-things-about-super-mario-28654.phtml">http://www.destructoid.com/six-sinister-things-about-super-mario-28654.phtml</a></p>
+
+
+
+<h3 ID="an-example-of-game-chemistry-in-action" class="wp-block-heading"><strong>An example of game chemistry in action</strong></h3>
+
+
+
+<p class="wp-block-paragraph">Here is a rough draft of a skill chain for Tetris. It is interesting to note that a game that is mechanically quite simple can possess an expansive skill chain.</p>
+
+
+
+<ul class="wp-block-list"><li><a href="http://www.lostgarden.com/files/Tetris%20Skill%20Chain.pdf">PDF</a> (800k)</li><li><a href="https://www.tetrisconcept.com/p/start.html">Description of expert level Tetris skills</a></li></ul>
+
+
+
+<h3 ID="relationship-of-skill-chains-to-mda-mechanics-dynamics-aesthetics" class="wp-block-heading"><strong>Relationship of Skill Chains to MDA (Mechanics, Dynamics, Aesthetics)</strong></h3>
+
+
+
+<p class="wp-block-paragraph">This is a question that has been posed on occasion. MDA is a game analysis framework put forth by Robin Hunicke, Marc LeBlanc and Robert Zubek. It is one of many descriptive techniques that categorize&nbsp; the elements of a game. MDA is particularly useful to new design students because it has the key insight that the player experience (what they call Aesthetics) is a second order effect derived from playing the rules of the game.&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">The major difference between the two approaches is that MDA stops there. There is little attempt to model <em>how</em> rules and feedback produce the actual player experience with the game. There’s just these fluffy, conceptual categorical buckets. Since there’s no casualty, MDA analysis also fails to provide any objectively testable structure. With skill chains, you can always hook up logging software and observe where atoms light up and where they burn out.</p>
+
+
+
+<p class="wp-block-paragraph">You can read more on MDA <a href="http://www.cs.northwestern.edu/~hunicke/MDA.pdf">here</a>.</p>
+
+
+
+<h3 ID="a-quick-overview-of-alchemy-from-a-reliably-alchemical-web-2-0-source" class="wp-block-heading"><strong>A quick overview of alchemy, from a reliably alchemical web 2.0 source</strong></h3>
+
+
+
+<p class="wp-block-paragraph"><a href="http://en.wikipedia.org/wiki/Alchemy">http://en.wikipedia.org/wiki/Alchemy</a></p>
+
+
+
+<h3 ID="oddly-enough-there-are-research-papers-referencing-skill-chains" class="wp-block-heading">Oddly enough there are research papers referencing skill chains</h3>
+
+
+
+<p class="wp-block-paragraph"><a href="http://eprints.whiterose.ac.uk/120653/1/Horn_Cooper_Deterding_CTAGAMES.pdf">http://eprints.whiterose.ac.uk/120653/1/Horn_Cooper_Deterding_CTAGAMES.pdf</a></p>
+<div class="sharedaddy sd-sharing-enabled"><div class="robots-nocontent sd-block sd-social sd-social-icon-text sd-sharing"><h3 class="sd-title">Share this:</h3><div class="sd-content"><ul><li class="share-facebook"><a rel="nofollow noopener noreferrer"
+				data-shared="sharing-facebook-1301"
+				class="share-facebook sd-button share-icon"
+				href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/?share=facebook"
+				target="_blank"
+				aria-labelledby="sharing-facebook-1301"
+				>
+				<span id="sharing-facebook-1301" hidden>Share on Facebook (Opens in new window)</span>
+				<span>Facebook</span>
+			</a></li><li class="share-x"><a rel="nofollow noopener noreferrer"
+				data-shared="sharing-x-1301"
+				class="share-x sd-button share-icon"
+				href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/?share=x"
+				target="_blank"
+				aria-labelledby="sharing-x-1301"
+				>
+				<span id="sharing-x-1301" hidden>Share on X (Opens in new window)</span>
+				<span>X</span>
+			</a></li><li class="share-end"></li></ul></div></div></div><div class='sharedaddy sd-block sd-like jetpack-likes-widget-wrapper jetpack-likes-widget-unloaded' id='like-post-wrapper-225261375-1301-6ad80395dc580' data-src='https://widgets.wp.com/likes/?ver=16.4-a.3#blog_id=225261375&amp;post_id=1301&amp;origin=lostgarden.com&amp;obj_id=225261375-1301-6ad80395dc580' data-name='like-post-frame-225261375-1301-6ad80395dc580' data-title='Like or Reblog'><h3 class="sd-title">Like this:</h3><div class='likes-widget-placeholder post-likes-widget-placeholder' style='height: 55px;'><span class='button'><span>Like</span></span> <span class="loading"><svg class="jetpack-spinner" width="18" height="18" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><circle cx="50" cy="50" r="46" fill="none" stroke="#ddd" stroke-width="8"/><path d="M 50 4 A 46 46 0 0 1 96 50" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" dur="1.4s" from="0 50 50" to="360 50 50" repeatCount="indefinite"/></path></svg><span class="screen-reader-text">Loading…</span></span></div><span class='sd-text-color'></span><a class='sd-link-color'></a></div></div>
+
+
+<div class="wp-block-group is-nowrap is-layout-flex wp-container-core-group-is-layout-5676d2e8 wp-block-group-is-layout-flex" style="border-top-color:var(--wp--preset--color--light-gray);border-top-width:1px;border-right-style:none;border-right-width:0px;border-bottom-style:none;border-bottom-width:0px;border-left-style:none;border-left-width:0px;padding-top:var(--wp--preset--spacing--50)"><div class="wp-block-avatar"><img alt='Daniel Cook Avatar' src='https://secure.gravatar.com/avatar/e64e7b7c3c4ef51a11f17d61de442ab11e77125a9e8b6dea67b38064c2acd69a?s=56&#038;d=mm&#038;r=g' srcset='https://secure.gravatar.com/avatar/e64e7b7c3c4ef51a11f17d61de442ab11e77125a9e8b6dea67b38064c2acd69a?s=112&#038;d=mm&#038;r=g 2x' class='avatar avatar-56 photo wp-block-avatar__image' height='56' width='56'  style="border-radius:99px;" decoding='async'/></div>
+
+
+<div class="wp-block-group is-vertical is-layout-flex wp-container-core-group-is-layout-42e9c677 wp-block-group-is-layout-flex"><div class="wp-block-post-author"><div class="wp-block-post-author__content"><p class="wp-block-post-author__name">Daniel Cook</p></div></div>
+
+<div style="margin-top:0px;margin-bottom:0px" class="wp-block-post-date"><time datetime="2021-03-13T02:29:29+00:00">March 13, 2021</time></div></div>
+</div>
+
+
+
+<div class="wp-block-comments wp-block-comments-query-loop"><h3 id="comments" class="wp-block-comments-title">7 responses to &#8220;The Chemistry of Game Design&#8221;</h3>
+
+<ol class="wp-block-comment-template"><li id="comment-32" class="comment even thread-even depth-1">
+
+<div class="wp-block-group is-nowrap is-layout-flex wp-container-core-group-is-layout-c395439e wp-block-group-is-layout-flex" style="margin-top:0;margin-bottom:0"><div style="margin-top:0em" class="wp-block-avatar"><img alt='jenniferdaviskorn Avatar' src='https://secure.gravatar.com/avatar/e98b9280dea86c4786b14d7bc600f47373aebf72ed2d930e1e7fd2d2f3f5a040?s=50&#038;d=mm&#038;r=g' srcset='https://secure.gravatar.com/avatar/e98b9280dea86c4786b14d7bc600f47373aebf72ed2d930e1e7fd2d2f3f5a040?s=100&#038;d=mm&#038;r=g 2x' class='avatar avatar-50 photo wp-block-avatar__image' height='50' width='50'  style="border-radius:99px;" decoding='async'/></div>
+
+
+<div class="wp-block-group has-global-padding is-content-justification-left is-layout-constrained wp-container-core-group-is-layout-12dd3699 wp-block-group-is-layout-constrained"><div style="margin-bottom:0" class="wp-block-comment-author-name"><a rel="external nofollow ugc" href="http://jenniferdaviskorn.wordpress.com" target="_self" >jenniferdaviskorn</a></div>
+
+
+<div class="wp-block-group is-layout-flex wp-container-core-group-is-layout-d178cda2 wp-block-group-is-layout-flex" style="margin-top:0px;margin-bottom:0px"><div style="font-style:normal;font-weight:700" class="wp-block-comment-date"><time datetime="2021-04-14T17:55:39+00:00"><a href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/#comment-32">April 14, 2021 at 5:55 pm</a></time></div>
+
+</div>
+</div>
+</div>
+
+
+<div class="wp-block-comment-content"><p>This is a really interesting essay and does begin to define one of the basic reasons we play games and how we derive joy from learning and mastering those game skills. I think you&#8217;re writing from the perspective of video game design, but do you think this is applicable to table top game design and development?<br />
+I&#8217;ve spent a lot of time thinking about the barriers that keep people from picking up and playing most games and I think that your paragraphs about Pre-Mastery of skills and designers either not considering this at all or poorly under or over estimating the skills their audience might initially bring to the table is the biggest reason a lot of games fail to even get played. A lot of video games today do a great job of creating tutorial levels that teach skills (or rules) while simultaneously advancing the game&#8217;s story or an arc. But very few table top games do this. And instead, table top games often have 15-30 page rule books that involve varying terminology or the rulebook itself conforms to no structure and they rely heavily on presuming the players have pre-mastered skills or will transfer their knowledge of related game mechanics to this new game. It&#8217;s no fun to sit and read rulebooks and it&#8217;s really not fun when you have to completely learn new terminology or mechanics with poor explanation or no examples. Video games don&#8217;t suffer from the rule book problem. And video game mechanics are usually easily learned because of on-screen text, symbols followed by reward. Not to mention, the controller stays the same from game to game. (Table top games do have similar components from game to game, ie dice, cards, tokens, etc. So that is comparable to a controller remaining constant.)</p>
+<p>There is also some continuity of mechanics and game states from video game to video game that table top games don&#8217;t quite achieve amongst themselves. I&#8217;ll often get a new table top game and watch a play through video or rules video on YouTube after I read the rule book because I still can&#8217;t understand the rule book after reading. And when I watch these YouTube videos, very experienced table top gamers often interpret the game&#8217;s rules wrong and correct certain points of their play through in the comments section once the designer chimes in or another player. Again, video games don&#8217;t suffer from this problem.<br />
+Certainly video games have rules, but they are largely hidden and they are written in code that the player does not see. If you can&#8217;t perform an action in a video game, there&#8217;s no button to press or controller to move to do it. Or, if an action you perform is not desirable by the game goals, you will receive instant feedback, like falling off a cliff, losing life points or whatever unit the game measures in. </p>
+<p>But all of this leaves me wondering, are written rules themselves the problem in table top games? And is there a better solution for table top game designers to get their games played and players enjoying the skill acquisition more quickly and effortlessly? And is there a way table top game designers can begin to conform the language they use to describe certain game mechanics and conform to ways to structure rule books, so that prospective players can begin to enter their games with a little more mastery and be able to transfer more knowledge from game to game?<br />
+You&#8217;ve certainly given me a lot to think about. Thank you and I definitely enjoy your analysis.</p>
+<div class='jetpack-comment-likes-widget-wrapper jetpack-likes-widget-unloaded' id='like-comment-wrapper-225261375-32-6ad80395e0298' data-src='https://widgets.wp.com/likes/#blog_id=225261375&amp;comment_id=32&amp;origin=lostgarden.com&amp;obj_id=225261375-32-6ad80395e0298' data-name='like-comment-frame-225261375-32-6ad80395e0298'>
+<div class='likes-widget-placeholder comment-likes-widget-placeholder comment-likes'><span class='loading'>Loading&#8230;</span></div>
+<div class='comment-likes-widget jetpack-likes-widget comment-likes'><span class='comment-like-feedback'></span><span class='sd-text-color'></span><a class='sd-link-color'></a></div>
+</div>
+</div>
+
+<div style="margin-bottom:var(--wp--preset--spacing--50)" class="wp-block-comment-reply-link"><a rel="nofollow" class="comment-reply-link" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/?replytocom=32#respond" data-commentid="32" data-postid="1301" data-belowelement="comment-32" data-respondelement="respond" data-replyto="Reply to jenniferdaviskorn" aria-label="Reply to jenniferdaviskorn">Reply</a></div>
+</li><li id="comment-30" class="comment odd alt thread-odd thread-alt depth-1">
+
+<div class="wp-block-group is-nowrap is-layout-flex wp-container-core-group-is-layout-c395439e wp-block-group-is-layout-flex" style="margin-top:0;margin-bottom:0"><div style="margin-top:0em" class="wp-block-avatar"><img alt='Daniel Cook Avatar' src='https://secure.gravatar.com/avatar/e64e7b7c3c4ef51a11f17d61de442ab11e77125a9e8b6dea67b38064c2acd69a?s=50&#038;d=mm&#038;r=g' srcset='https://secure.gravatar.com/avatar/e64e7b7c3c4ef51a11f17d61de442ab11e77125a9e8b6dea67b38064c2acd69a?s=100&#038;d=mm&#038;r=g 2x' class='avatar avatar-50 photo wp-block-avatar__image' height='50' width='50'  style="border-radius:99px;" loading='lazy' decoding='async'/></div>
+
+
+<div class="wp-block-group has-global-padding is-content-justification-left is-layout-constrained wp-container-core-group-is-layout-12dd3699 wp-block-group-is-layout-constrained"><div style="margin-bottom:0" class="wp-block-comment-author-name"><a rel="external nofollow ugc" href="http://lostgardenhome.wordpress.com" target="_self" >Daniel Cook</a></div>
+
+
+<div class="wp-block-group is-layout-flex wp-container-core-group-is-layout-d178cda2 wp-block-group-is-layout-flex" style="margin-top:0px;margin-bottom:0px"><div style="font-style:normal;font-weight:700" class="wp-block-comment-date"><time datetime="2021-04-15T04:05:11+00:00"><a href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/#comment-30">April 15, 2021 at 4:05 am</a></time></div>
+
+</div>
+</div>
+</div>
+
+
+<div class="wp-block-comment-content"><p>Excellent thoughts. Board games do have the same structural interaction loops and skill chains. However there&#8217;s a couple key differences</p>
+<p>First, the rules must run on player wetware. As you say, table top gamers need to interpret and execute the rules. This is an inherently fuzzy process. Whereas a computer is an exacting executor of the rules of the game. And has the super power of being able to enforce and limit rule execution to a degree very few table top games can manage. Knowing how to write rules that will successfully execute in a human brains is a unique design practice. </p>
+<p>Second, since table top games aren&#8217;t mediated by the very explicit and artificial sandbox of the computer, they rely on a lot of implicit skills and affordance present in &#8220;real life&#8221; we just assume. The ability to move and manipulate physical pieces. Long learned cultural skills around dice, cards and token. The table talk communication between players. These are all deeply nested and rich interaction loops with associated skills. </p>
+<p>A challenge here is that the designer doesn&#8217;t have full control over these elements. Dice are dice and have been for a very long time. There&#8217;s no direct equivalent of adding a pop up to let players know the result in some clear, crisp, responsive fashion. We hack around it with info cards and carefully labeled game boards, but there are limits. Knowing how to give feedback within the world of physical board games is also its own unique design practice. </p>
+<p>So in practice, though the interaction loops are the same across all games, the nuts and bolts craft of creating board games seem to diverge a bit. 🙂</p>
+<div class='jetpack-comment-likes-widget-wrapper jetpack-likes-widget-unloaded' id='like-comment-wrapper-225261375-30-6ad80395e103a' data-src='https://widgets.wp.com/likes/#blog_id=225261375&amp;comment_id=30&amp;origin=lostgarden.com&amp;obj_id=225261375-30-6ad80395e103a' data-name='like-comment-frame-225261375-30-6ad80395e103a'>
+<div class='likes-widget-placeholder comment-likes-widget-placeholder comment-likes'><span class='loading'>Loading&#8230;</span></div>
+<div class='comment-likes-widget jetpack-likes-widget comment-likes'><span class='comment-like-feedback'></span><span class='sd-text-color'></span><a class='sd-link-color'></a></div>
+</div>
+</div>
+
+<div style="margin-bottom:var(--wp--preset--spacing--50)" class="wp-block-comment-reply-link"><a rel="nofollow" class="comment-reply-link" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/?replytocom=30#respond" data-commentid="30" data-postid="1301" data-belowelement="comment-30" data-respondelement="respond" data-replyto="Reply to Daniel Cook" aria-label="Reply to Daniel Cook">Reply</a></div>
+</li><li id="comment-31" class="comment even thread-even depth-1">
+
+<div class="wp-block-group is-nowrap is-layout-flex wp-container-core-group-is-layout-c395439e wp-block-group-is-layout-flex" style="margin-top:0;margin-bottom:0"><div style="margin-top:0em" class="wp-block-avatar"><img alt='nicoladau Avatar' src='https://secure.gravatar.com/avatar/80a05917545883e799ec1b6302aae48013e7a96267187602a128a620848cc506?s=50&#038;d=mm&#038;r=g' srcset='https://secure.gravatar.com/avatar/80a05917545883e799ec1b6302aae48013e7a96267187602a128a620848cc506?s=100&#038;d=mm&#038;r=g 2x' class='avatar avatar-50 photo wp-block-avatar__image' height='50' width='50'  style="border-radius:99px;" loading='lazy' decoding='async'/></div>
+
+
+<div class="wp-block-group has-global-padding is-content-justification-left is-layout-constrained wp-container-core-group-is-layout-12dd3699 wp-block-group-is-layout-constrained"><div style="margin-bottom:0" class="wp-block-comment-author-name"><a rel="external nofollow ugc" href="http://thegameplace178913537.wordpress.com" target="_self" >nicoladau</a></div>
+
+
+<div class="wp-block-group is-layout-flex wp-container-core-group-is-layout-d178cda2 wp-block-group-is-layout-flex" style="margin-top:0px;margin-bottom:0px"><div style="font-style:normal;font-weight:700" class="wp-block-comment-date"><time datetime="2021-05-22T10:54:02+00:00"><a href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/#comment-31">May 22, 2021 at 10:54 am</a></time></div>
+
+</div>
+</div>
+</div>
+
+
+<div class="wp-block-comment-content"><p>Thank you for re-posting this historic essay with the updated links!</p>
+<div class='jetpack-comment-likes-widget-wrapper jetpack-likes-widget-unloaded' id='like-comment-wrapper-225261375-31-6ad80395e1c54' data-src='https://widgets.wp.com/likes/#blog_id=225261375&amp;comment_id=31&amp;origin=lostgarden.com&amp;obj_id=225261375-31-6ad80395e1c54' data-name='like-comment-frame-225261375-31-6ad80395e1c54'>
+<div class='likes-widget-placeholder comment-likes-widget-placeholder comment-likes'><span class='loading'>Loading&#8230;</span></div>
+<div class='comment-likes-widget jetpack-likes-widget comment-likes'><span class='comment-like-feedback'></span><span class='sd-text-color'></span><a class='sd-link-color'></a></div>
+</div>
+</div>
+
+<div style="margin-bottom:var(--wp--preset--spacing--50)" class="wp-block-comment-reply-link"><a rel="nofollow" class="comment-reply-link" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/?replytocom=31#respond" data-commentid="31" data-postid="1301" data-belowelement="comment-31" data-respondelement="respond" data-replyto="Reply to nicoladau" aria-label="Reply to nicoladau">Reply</a></div>
+</li><li id="comment-33" class="comment odd alt thread-odd thread-alt depth-1">
+
+<div class="wp-block-group is-nowrap is-layout-flex wp-container-core-group-is-layout-c395439e wp-block-group-is-layout-flex" style="margin-top:0;margin-bottom:0"><div style="margin-top:0em" class="wp-block-avatar"><img alt='Isabelle Avatar' src='https://secure.gravatar.com/avatar/47087e09e91a7f93ad0c12ff8f7bac82716dbbab68ff01450e3b4ad5432b8e8e?s=50&#038;d=mm&#038;r=g' srcset='https://secure.gravatar.com/avatar/47087e09e91a7f93ad0c12ff8f7bac82716dbbab68ff01450e3b4ad5432b8e8e?s=100&#038;d=mm&#038;r=g 2x' class='avatar avatar-50 photo wp-block-avatar__image' height='50' width='50'  style="border-radius:99px;" loading='lazy' decoding='async'/></div>
+
+
+<div class="wp-block-group has-global-padding is-content-justification-left is-layout-constrained wp-container-core-group-is-layout-12dd3699 wp-block-group-is-layout-constrained"><div style="margin-bottom:0" class="wp-block-comment-author-name">Isabelle</div>
+
+
+<div class="wp-block-group is-layout-flex wp-container-core-group-is-layout-d178cda2 wp-block-group-is-layout-flex" style="margin-top:0px;margin-bottom:0px"><div style="font-style:normal;font-weight:700" class="wp-block-comment-date"><time datetime="2021-08-08T12:03:44+00:00"><a href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/#comment-33">August 8, 2021 at 12:03 pm</a></time></div>
+
+</div>
+</div>
+</div>
+
+
+<div class="wp-block-comment-content"><p>The content of this article is quite reminiscent of the book &#8220;Elements of Game Design&#8221;  by R. Zubek (MIT Press).<br />
+These efforts to break down and rationalize the gaming process are interesting. But I find they can obscure the holistic nature a game has to attain to be qualified &#8220;good&#8221;. A game solely built on these rationalized pieces of mechanics and loops will feel hollow, like a machine you can see the clogs running. If the game is only a set of mechanics and systems, it will not be better than the sum of its parts.</p>
+<p>In my experience, the &#8220;alchemy&#8221; you talk about is not something to run from but to embrace. Art sure needs technique, skill, rationalized crafting abilities, etc. but it isn&#8217;t just that (or you have a soulless painting like thousand others). Art is not only applying a recipe. Same for game design : it is an art, in the sense the best game designs cannot be explained by only listing out their mechanical parts (like you can&#8217;t explain a Van Gogh painting by listing his tools and techniques).</p>
+<p>New game design is often too much focused on these &#8220;science&#8221; talks and forget it is more an art than a science. It makes me think about the design of the last world of warcraft extension : a lot of systems, all extra-diegetic (menus popping out of thin air) and all very abstract (points you grind to put in boxes, etc). This design is intellectually good, but is failing to grab players (engagement is dropping). Because it is a design so mechanical you can see the clogs ticking, you can see its a machine (and not a game world), so it cannot achieve this undefined feeling good art gives you.</p>
+<div class='jetpack-comment-likes-widget-wrapper jetpack-likes-widget-unloaded' id='like-comment-wrapper-225261375-33-6ad80395e2816' data-src='https://widgets.wp.com/likes/#blog_id=225261375&amp;comment_id=33&amp;origin=lostgarden.com&amp;obj_id=225261375-33-6ad80395e2816' data-name='like-comment-frame-225261375-33-6ad80395e2816'>
+<div class='likes-widget-placeholder comment-likes-widget-placeholder comment-likes'><span class='loading'>Loading&#8230;</span></div>
+<div class='comment-likes-widget jetpack-likes-widget comment-likes'><span class='comment-like-feedback'></span><span class='sd-text-color'></span><a class='sd-link-color'></a></div>
+</div>
+</div>
+
+<div style="margin-bottom:var(--wp--preset--spacing--50)" class="wp-block-comment-reply-link"><a rel="nofollow" class="comment-reply-link" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/?replytocom=33#respond" data-commentid="33" data-postid="1301" data-belowelement="comment-33" data-respondelement="respond" data-replyto="Reply to Isabelle" aria-label="Reply to Isabelle">Reply</a></div>
+</li><li id="comment-4357" class="pingback even thread-even depth-1">
+
+<div class="wp-block-group is-nowrap is-layout-flex wp-container-core-group-is-layout-c395439e wp-block-group-is-layout-flex" style="margin-top:0;margin-bottom:0"><div style="margin-top:0em" class="wp-block-avatar"></div>
+
+
+<div class="wp-block-group has-global-padding is-content-justification-left is-layout-constrained wp-container-core-group-is-layout-12dd3699 wp-block-group-is-layout-constrained"><div style="margin-bottom:0" class="wp-block-comment-author-name"><a rel="external nofollow ugc" href="http://lostgarden.home.blog/2012/04/30/loops-and-arcs/" target="_self" >Loops and Arcs &#8211; LOSTGARDEN</a></div>
+
+
+<div class="wp-block-group is-layout-flex wp-container-core-group-is-layout-d178cda2 wp-block-group-is-layout-flex" style="margin-top:0px;margin-bottom:0px"><div style="font-style:normal;font-weight:700" class="wp-block-comment-date"><time datetime="2023-03-01T18:14:17+00:00"><a href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/#comment-4357">March 1, 2023 at 6:14 pm</a></time></div>
+
+</div>
+</div>
+</div>
+
+
+<div class="wp-block-comment-content"><p>[&#8230;]  The first is the loop, a structure that should be very familiar to those who have looked into skill atoms.  The second is the [&#8230;]</p>
+<div class='jetpack-comment-likes-widget-wrapper jetpack-likes-widget-unloaded' id='like-comment-wrapper-225261375-4357-6ad80395e3345' data-src='https://widgets.wp.com/likes/#blog_id=225261375&amp;comment_id=4357&amp;origin=lostgarden.com&amp;obj_id=225261375-4357-6ad80395e3345' data-name='like-comment-frame-225261375-4357-6ad80395e3345'>
+<div class='likes-widget-placeholder comment-likes-widget-placeholder comment-likes'><span class='loading'>Loading&#8230;</span></div>
+<div class='comment-likes-widget jetpack-likes-widget comment-likes'><span class='comment-like-feedback'></span><span class='sd-text-color'></span><a class='sd-link-color'></a></div>
+</div>
+</div>
+
+<div style="margin-bottom:var(--wp--preset--spacing--50)" class="wp-block-comment-reply-link"><a rel="nofollow" class="comment-reply-link" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/?replytocom=4357#respond" data-commentid="4357" data-postid="1301" data-belowelement="comment-4357" data-respondelement="respond" data-replyto="Reply to Loops and Arcs &#8211; LOSTGARDEN" aria-label="Reply to Loops and Arcs &#8211; LOSTGARDEN">Reply</a></div>
+</li><li id="comment-4358" class="pingback odd alt thread-odd thread-alt depth-1">
+
+<div class="wp-block-group is-nowrap is-layout-flex wp-container-core-group-is-layout-c395439e wp-block-group-is-layout-flex" style="margin-top:0;margin-bottom:0"><div style="margin-top:0em" class="wp-block-avatar"></div>
+
+
+<div class="wp-block-group has-global-padding is-content-justification-left is-layout-constrained wp-container-core-group-is-layout-12dd3699 wp-block-group-is-layout-constrained"><div style="margin-bottom:0" class="wp-block-comment-author-name"><a rel="external nofollow ugc" href="https://the-last-song-game.com/devlog-7-rethinking-vision/" target="_self" >Devlog 7: Rethinking Vision &#8211; The Last Song Devlog</a></div>
+
+
+<div class="wp-block-group is-layout-flex wp-container-core-group-is-layout-d178cda2 wp-block-group-is-layout-flex" style="margin-top:0px;margin-bottom:0px"><div style="font-style:normal;font-weight:700" class="wp-block-comment-date"><time datetime="2023-05-14T09:53:47+00:00"><a href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/#comment-4358">May 14, 2023 at 9:53 am</a></time></div>
+
+</div>
+</div>
+</div>
+
+
+<div class="wp-block-comment-content"><p>[&#8230;] Skill Atoms are one of these tools I found. The concept is pretty simple but very eye-opening once you think about it. I will not go into detail, but if you want to look into it, here is a link to Daniel Cooks Skill Atoms. [&#8230;]</p>
+<div class='jetpack-comment-likes-widget-wrapper jetpack-likes-widget-unloaded' id='like-comment-wrapper-225261375-4358-6ad80395e3ebe' data-src='https://widgets.wp.com/likes/#blog_id=225261375&amp;comment_id=4358&amp;origin=lostgarden.com&amp;obj_id=225261375-4358-6ad80395e3ebe' data-name='like-comment-frame-225261375-4358-6ad80395e3ebe'>
+<div class='likes-widget-placeholder comment-likes-widget-placeholder comment-likes'><span class='loading'>Loading&#8230;</span></div>
+<div class='comment-likes-widget jetpack-likes-widget comment-likes'><span class='comment-like-feedback'></span><span class='sd-text-color'></span><a class='sd-link-color'></a></div>
+</div>
+</div>
+
+<div style="margin-bottom:var(--wp--preset--spacing--50)" class="wp-block-comment-reply-link"><a rel="nofollow" class="comment-reply-link" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/?replytocom=4358#respond" data-commentid="4358" data-postid="1301" data-belowelement="comment-4358" data-respondelement="respond" data-replyto="Reply to Devlog 7: Rethinking Vision - The Last Song Devlog" aria-label="Reply to Devlog 7: Rethinking Vision - The Last Song Devlog">Reply</a></div>
+</li><li id="comment-4361" class="pingback even thread-even depth-1">
+
+<div class="wp-block-group is-nowrap is-layout-flex wp-container-core-group-is-layout-c395439e wp-block-group-is-layout-flex" style="margin-top:0;margin-bottom:0"><div style="margin-top:0em" class="wp-block-avatar"></div>
+
+
+<div class="wp-block-group has-global-padding is-content-justification-left is-layout-constrained wp-container-core-group-is-layout-12dd3699 wp-block-group-is-layout-constrained"><div style="margin-bottom:0" class="wp-block-comment-author-name"><a rel="external nofollow ugc" href="https://nicolaluigidau.wordpress.com/2024/02/06/the-dynamics-of-stress-in-darkest-dungeon/" target="_self" >The Dynamics of Stress in Darkest Dungeon &#8211; Nicola Dau</a></div>
+
+
+<div class="wp-block-group is-layout-flex wp-container-core-group-is-layout-d178cda2 wp-block-group-is-layout-flex" style="margin-top:0px;margin-bottom:0px"><div style="font-style:normal;font-weight:700" class="wp-block-comment-date"><time datetime="2024-02-06T06:16:08+00:00"><a href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/#comment-4361">February 6, 2024 at 6:16 am</a></time></div>
+
+</div>
+</div>
+</div>
+
+
+<div class="wp-block-comment-content"><p>[&#8230;] D. (2021). The Chemistry Of Game Design [Online]. Available at: https://lostgarden.home.blog/2021/03/13/the-chemistry-of-game-design-2/ (Accessed: 22 May [&#8230;]</p>
+<div class='jetpack-comment-likes-widget-wrapper jetpack-likes-widget-unloaded' id='like-comment-wrapper-225261375-4361-6ad80395e49c6' data-src='https://widgets.wp.com/likes/#blog_id=225261375&amp;comment_id=4361&amp;origin=lostgarden.com&amp;obj_id=225261375-4361-6ad80395e49c6' data-name='like-comment-frame-225261375-4361-6ad80395e49c6'>
+<div class='likes-widget-placeholder comment-likes-widget-placeholder comment-likes'><span class='loading'>Loading&#8230;</span></div>
+<div class='comment-likes-widget jetpack-likes-widget comment-likes'><span class='comment-like-feedback'></span><span class='sd-text-color'></span><a class='sd-link-color'></a></div>
+</div>
+</div>
+
+<div style="margin-bottom:var(--wp--preset--spacing--50)" class="wp-block-comment-reply-link"><a rel="nofollow" class="comment-reply-link" href="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/comment-page-1/?replytocom=4361#respond" data-commentid="4361" data-postid="1301" data-belowelement="comment-4361" data-respondelement="respond" data-replyto="Reply to The Dynamics of Stress in Darkest Dungeon &#8211; Nicola Dau" aria-label="Reply to The Dynamics of Stress in Darkest Dungeon &#8211; Nicola Dau">Reply</a></div>
+</li></ol>
+
+
+
+	<div id="respond" class="comment-respond wp-block-post-comments-form">
+		<h3 id="reply-title" class="comment-reply-title">Leave a Reply <small><a rel="nofollow" id="cancel-comment-reply-link" href="/2021/03/13/the-chemistry-of-game-design-2/#respond" style="display:none;">Cancel reply</a></small></h3><form action="https://lostgarden.com/wp-comments-post.php" method="post" id="commentform" class="comment-form"><div class="jetpack-comments" data-jetpack-comments="{&quot;postId&quot;:1301,&quot;loginUrl&quot;:&quot;https://lostgarden.com/wp-login.php?redirect_to=https%3A%2F%2Flostgarden.com%2F2021%2F03%2F13%2Fthe-chemistry-of-game-design-2%2F&quot;,&quot;logoutUrl&quot;:&quot;&quot;,&quot;submit&quot;:{&quot;id&quot;:&quot;submit&quot;,&quot;name&quot;:&quot;submit&quot;,&quot;class&quot;:&quot;wp-block-button__link wp-element-button&quot;,&quot;wrapClass&quot;:&quot;wp-block-button&quot;,&quot;label&quot;:&quot;Comment&quot;},&quot;subscriptions&quot;:[{&quot;name&quot;:&quot;subscribe_comments&quot;,&quot;label&quot;:&quot;Notify me of new comments by email.&quot;,&quot;checked&quot;:false},{&quot;name&quot;:&quot;subscribe_blog&quot;,&quot;label&quot;:&quot;Subscribe to keep up with Lostgarden.&quot;,&quot;checked&quot;:false}]}"><p class="comment-form-comment"><label for="comment">Comment</label><textarea id="comment" name="comment" rows="4" required></textarea></p><p class="comment-form-author"><label for="author">Name</label><input id="author" name="author" type="text" value="" required /></p><p class="comment-form-email"><label for="email">Email</label><input id="email" name="email" type="email" value="" required /></p><p class="comment-form-url"><label for="url">Website</label><input id="url" name="url" type="text" value="" maxlength="200" /></p><p class="form-submit wp-block-button"><input name="submit" type="submit" id="submit" class="wp-block-button__link wp-element-button" value="Comment" /> </p></div><noscript><style>.jetpack-comments{display:none!important}</style><p>Turn on JavaScript to leave a comment.</p></noscript><input type='hidden' name='comment_post_ID' value='1301' id='comment_post_ID' />
+<input type='hidden' name='comment_parent' id='comment_parent' value='0' />
+<p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="8d02b9c977" /></p><p style="display: none !important;" class="akismet-fields-container" data-prefix="ak_"><label>&#916;<textarea name="ak_hp_textarea" cols="45" rows="8" maxlength="100"></textarea></label><input type="hidden" id="ak_js_1" name="ak_js" value="153"/><script>
+document.getElementById( "ak_js_1" ).setAttribute( "value", ( new Date() ).getTime() );
+</script>
+</p></form>	</div><!-- #respond -->
+	</div>
+</div>
+
+
+
+<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow" style="flex-basis:32.5%">
+<div style="border-radius:0.5rem;padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60);padding-left:var(--wp--preset--spacing--60);padding-right:var(--wp--preset--spacing--60)" class="wp-block-wpsp-dynamic-table-of-contents has-background has-subtle-gray-background-color wp-container-2 is-position-sticky">
+	<h2>Table of Contents</h2>	<ul></ul>
+</div></div>
+</div>
+</main>
+
+
+
+<div class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained">
+<h2 ID="related-posts" class="wp-block-heading has-black-color has-text-color has-link-color wp-elements-1">Related Posts</h2>
+
+
+<nav class="jp-relatedposts-i2 wp-block-jetpack-related-posts" data-layout="grid" aria-label="Related Posts"><ul class="jp-related-posts-i2__list" role="list" data-post-count="3"><li id="related-posts-item-6ad80395e8851" class="jp-related-posts-i2__post"><a id="related-posts-item-6ad80395e8851-label" href="https://lostgarden.com/2005/06/26/paper-nintendo-characters/" class="jp-related-posts-i2__post-link" >Paper Nintendo characters</a><dl class="jp-related-posts-i2__post-defs"><dt>Date</dt><dd class="jp-related-posts-i2__post-date">June 26, 2005</dd></dl></li><li id="related-posts-item-6ad80395e8867" class="jp-related-posts-i2__post"><a id="related-posts-item-6ad80395e8867-label" href="https://lostgarden.com/2005/06/24/article-usability-testing/" class="jp-related-posts-i2__post-link" >Article: Usability Testing</a><dl class="jp-related-posts-i2__post-defs"><dt>Date</dt><dd class="jp-related-posts-i2__post-date">June 24, 2005</dd></dl></li><li id="related-posts-item-6ad80395e8871" class="jp-related-posts-i2__post"><a id="related-posts-item-6ad80395e8871-label" href="https://lostgarden.com/2009/06/08/my-top-secret-reading-list/" class="jp-related-posts-i2__post-link" >My top secret reading list</a><dl class="jp-related-posts-i2__post-defs"><dt>Date</dt><dd class="jp-related-posts-i2__post-date">June 8, 2009</dd></dl></li></ul></nav></div>
+
+
+<footer class="wp-block-template-part">
+<div class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained" style="margin-top:var(--wp--preset--spacing--90);margin-bottom:0;padding-bottom:0">
+<div id="subscribe" class="wp-block-group has-accent-background-color has-background has-global-padding is-layout-constrained wp-container-core-group-is-layout-5c904990 wp-block-group-is-layout-constrained" style="border-radius:8px;margin-bottom:var(--wp--preset--spacing--70);padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--50)">
+<h3 ID="youve-found-a-rare-treasure-trove-of-readable-thoughtful-essays-on-game-design-theory-art-and-the-business-of-design" class="wp-block-heading has-text-align-center has-white-color has-text-color has-link-color wp-elements-2">You’ve found a rare treasure trove of readable, thoughtful essays on game design theory, art and the business of design.</h3>
+
+
+
+<p class="has-text-align-center has-white-color has-text-color has-link-color wp-elements-3 wp-block-paragraph" style="margin-top:var(--wp--preset--spacing--50)">Sign up to the Lost Garden newsletter for exciting updates and never miss a new article again.</p>
+
+
+	<div class="wp-block-jetpack-subscriptions__supports-newline wp-block-jetpack-subscriptions">
+		<div class="wp-block-jetpack-subscriptions__container is-not-subscriber">
+							<form
+					action="https://wordpress.com/email-subscriptions"
+					method="post"
+					accept-charset="utf-8"
+					data-blog="225261375"
+					data-post_access_level="everybody"
+					data-subscriber_email=""
+					id="subscribe-blog"
+				>
+					<div class="wp-block-jetpack-subscriptions__form-elements">
+												<p id="subscribe-email">
+							<label
+								id="subscribe-field-label"
+								for="subscribe-field"
+								class="screen-reader-text"
+							>
+								Type your email…							</label>
+							<input
+									required="required"
+									type="email"
+									name="email"
+									autocomplete="email"
+									
+									style="font-size: 16px;padding: 16px 24px 16px 24px;border-radius: 4px;border-width: 1px;"
+									placeholder="Type your email…"
+									value=""
+									id="subscribe-field"
+									title="Please fill in this field."
+								/>						</p>
+												<p id="subscribe-submit"
+													>
+							<input type="hidden" name="action" value="subscribe"/>
+							<input type="hidden" name="blog_id" value="225261375"/>
+							<input type="hidden" name="source" value="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/"/>
+							<input type="hidden" name="sub-type" value="subscribe-block"/>
+							<input type="hidden" name="app_source" value=""/>
+							<input type="hidden" name="redirect_fragment" value="subscribe-blog"/>
+							<input type="hidden" name="lang" value="en_US"/>
+							<input type="hidden" id="_wpnonce" name="_wpnonce" value="8501f9ab51" /><input type="hidden" name="_wp_http_referer" value="/2021/03/13/the-chemistry-of-game-design-2/" /><input type="hidden" name="post_id" value="1301"/>							<button type="submit"
+																	class="wp-block-button__link"
+																									style="font-size: 16px;padding: 16px 24px 16px 24px;margin: 0; margin-left: 10px;border-radius: 4px;border-width: 1px;"
+																name="jetpack_subscriptions_widget"
+							>
+								Subscribe							</button>
+						</p>
+					</div>
+				</form>
+								</div>
+	</div>
+	</div>
+
+
+
+<div class="wp-block-columns are-vertically-aligned-center is-not-stacked-on-mobile is-layout-flex wp-container-core-columns-is-layout-c47336c3 wp-block-columns-is-layout-flex" style="border-top-color:var(--wp--preset--color--light-gray);border-top-width:1px;border-right-style:none;border-right-width:0px;border-bottom-style:none;border-bottom-width:0px;border-left-style:none;border-left-width:0px;margin-top:0;margin-bottom:0;padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
+<div class="wp-block-column is-vertically-aligned-center is-layout-flow wp-block-column-is-layout-flow" style="flex-basis:35px"><div class="wp-block-site-logo"><a href="https://lostgarden.com/" class="custom-logo-link" rel="home"><img loading="lazy" width="35" height="24" src="https://i0.wp.com/lostgarden.com/wp-content/uploads/2023/12/image-4.png?fit=137%2C96&amp;ssl=1" class="custom-logo" alt="Lostgarden" decoding="async" data-attachment-id="66" data-permalink="https://lostgarden.com/home/image-4/" data-orig-file="https://i0.wp.com/lostgarden.com/wp-content/uploads/2023/12/image-4.png?fit=137%2C96&amp;ssl=1" data-orig-size="137,96" data-comments-opened="1" data-image-title="image-4" data-image-description="" data-image-caption="" data-large-file="https://i0.wp.com/lostgarden.com/wp-content/uploads/2023/12/image-4.png?fit=137%2C96&amp;ssl=1" /></a></div></div>
+
+
+
+<div class="wp-block-column is-vertically-aligned-center has-text-align-right is-layout-flow wp-block-column-is-layout-flow"><p><a href="https://wordpress.com/website-builder/?partner_domain=lostgarden.com&#038;utm_source=Automattic&#038;utm_medium=colophon&#038;utm_campaign=Concierge%20Referral&#038;utm_term=lostgarden.com" class="imprint" target="_blank" rel="nofollow">Designed with WordPress.</a></p>
+</div>
+</div>
+</div>
+</footer></div>
+<!-- wpcom_wp_footer -->
+<script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/wp-*.php","/wp-admin/*","/wp-content/uploads/*","/wp-content/*","/wp-content/plugins/*","/wp-content/themes/lostgarden/*","/wp-content/themes/blockbase/*","/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+<meta id="bilmur" property="bilmur:data" content="" data-customproperties="{&quot;wpcomsp&quot;:&quot;1&quot;,&quot;woo_active&quot;:&quot;0&quot;,&quot;logged_in&quot;:&quot;0&quot;,&quot;wptheme&quot;:&quot;lostgarden&quot;,&quot;wptheme_is_block&quot;:&quot;1&quot;}" data-provider="wordpress.com" data-service="atomic"  data-site-tz="Etc/GMT-0" data-site-v="fefaa29b5354765e659c7513b2eb6250" >
+<script defer src="https://s0.wp.com/wp-content/js/bilmur.min.js?m=202643"></script>
+		<div class="jetpack-instant-search__widget-area" style="display: none">
+							<div id="jetpack-search-filters-1" class="widget jetpack-filters widget_search">			<div id="jetpack-search-filters-1-wrapper" class="jetpack-instant-search-wrapper">
+		</div></div>					</div>
+							<div class="jetpack-subscription-modal">
+						<div class="jetpack-subscription-modal__modal-content">
+								
+	<div class="wp-block-group has-border-color jetpack-subscription-modal__modal-content-form is-layout-flow wp-block-group-is-layout-flow" style="border-color:#dddddd;border-width:1px;margin-top:0;margin-bottom:0;padding:32px">
+
+		
+		<h2 ID="discover-more-from-lostgarden" class="wp-block-heading has-text-align-center" style="margin-top:4px;margin-bottom:10px;font-size:26px;font-style:normal;font-weight:600">Discover more from Lostgarden</h2>
+		
+
+		
+		<p class="has-text-align-center wp-block-paragraph" style='margin-top:4px;margin-bottom:0px;font-size:15px'>Subscribe now to keep reading and get access to the full archive.</p>
+		
+
+			<div class="wp-block-jetpack-subscriptions__supports-newline is-style-compact wp-block-jetpack-subscriptions">
+		<div class="wp-block-jetpack-subscriptions__container is-not-subscriber">
+							<form
+					action="https://wordpress.com/email-subscriptions"
+					method="post"
+					accept-charset="utf-8"
+					data-blog="225261375"
+					data-post_access_level="everybody"
+					data-subscriber_email=""
+					id="subscribe-blog-2"
+				>
+					<div class="wp-block-jetpack-subscriptions__form-elements">
+												<p id="subscribe-email">
+							<label
+								id="subscribe-field-2-label"
+								for="subscribe-field-2"
+								class="screen-reader-text"
+							>
+								Type your email…							</label>
+							<input
+									required="required"
+									type="email"
+									name="email"
+									autocomplete="email"
+									
+									style="font-size: 16px;padding: 15px 23px 15px 23px;border-radius: 50px;border-width: 1px;"
+									placeholder="Type your email…"
+									value=""
+									id="subscribe-field-2"
+									title="Please fill in this field."
+								/>						</p>
+												<p id="subscribe-submit"
+													>
+							<input type="hidden" name="action" value="subscribe"/>
+							<input type="hidden" name="blog_id" value="225261375"/>
+							<input type="hidden" name="source" value="https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/"/>
+							<input type="hidden" name="sub-type" value="subscribe-block"/>
+							<input type="hidden" name="app_source" value="atomic-subscription-modal-lo"/>
+							<input type="hidden" name="redirect_fragment" value="subscribe-blog-2"/>
+							<input type="hidden" name="lang" value="en_US"/>
+							<input type="hidden" id="_wpnonce" name="_wpnonce" value="8501f9ab51" /><input type="hidden" name="_wp_http_referer" value="/2021/03/13/the-chemistry-of-game-design-2/" /><input type="hidden" name="post_id" value="1301"/>							<button type="submit"
+																	class="wp-block-button__link"
+																									style="font-size: 16px;padding: 15px 23px 15px 23px;margin: 0; margin-left: 10px;border-radius: 50px;border-width: 1px;"
+																name="jetpack_subscriptions_widget"
+							>
+								Subscribe							</button>
+						</p>
+					</div>
+				</form>
+								</div>
+	</div>
+	
+
+		
+		<p class="has-text-align-center jetpack-subscription-modal__close wp-block-paragraph" style="margin-top:20px;font-size:14px"><a href="#">Continue reading</a></p>
+		
+	</div>
+							</div>
+					</div>
+				<div style="display:none">
+			<div class="grofile-hash-map-1a2b9259e3beaeeb231eb58e2b59a225">
+		</div>
+		<div class="grofile-hash-map-53a5cc0dc07b32c7097fd1721ee819aa">
+		</div>
+		<div class="grofile-hash-map-1a2b9259e3beaeeb231eb58e2b59a225">
+		</div>
+		<div class="grofile-hash-map-627816abc2af7a262e8bff9d636fcf52">
+		</div>
+		<div class="grofile-hash-map-abec6621a2e506d691f516ba471f2a0a">
+		</div>
+		</div>
+		<script data-wp-router-options="{&quot;loadOnClientNavigation&quot;:true}" fetchpriority="low" id="@wordpress/block-library/navigation/view-js-module" src="https://lostgarden.com/wp-content/plugins/gutenberg/build/modules/block-library/navigation/view.min.js?ver=5381c0a3642be76565c7" type="module"></script>
+<script id="wp-script-module-data-@wordpress/interactivity" type="application/json">
+{"state":{"jetpack-search":{"siteId":225261375,"apiRoot":"https://lostgarden.com/wp-json/","nonce":"0a32ab8af7","isPrivateSite":false,"isWpcom":false,"isPhotonEnabled":true,"disableTracking":false,"isWooCommerceBlocksEnabled":false,"homeUrl":"https://lostgarden.com","locale":"en-US","dateFormat":"F j, Y","searchQuery":"","hasSearchParam":false,"searchParamName":"q","sortOrder":"relevance","activeFilters":[],"filterLogic":[],"priceRange":null,"staticFilterSelections":{},"filterConfigs":[],"results":[],"aggregations":{},"retainedFilterOptions":{},"totalResults":0,"pageHandle":null,"isLoading":false,"isLoadingMore":false,"hasError":false,"resultsCountText":"","strings":{"searching":"Searching…","resultsCountSingle":"Found %d result","resultsCountPlural":"Found %d results","removeFilter":"Remove %s","ratingStarsTop":"5 stars","ratingStarsAndUpSingle":"%d star and up","ratingStarsAndUpPlural":"%d stars and up","priceRangeFromTo":"%1$s – %2$s","priceRangeFrom":"%s+","priceRangeUpTo":"Under %s","priceLabel":"Price","suggestionLabelQuery":"Suggestions","suggestionLabelTaxonomy":"Popular Filters","suggestionLabelPost":"Articles","aiErrorMessage":"Sorry, an error occurred while generating an answer.","aiErrorCode":"Error code: %s"},"priceCurrencySymbol":"$","aiExtendedLoadingHints":["Searching harder","Looking deeper into this","Finding a more complete answer","Analyzing additional sources","Gathering more details","Pulling in more context","Expanding the search","Rolling up my virtual sleeves","Digging through the archives","Putting on my reading glasses","Checking under the digital couch cushions","Consulting the oracle","Asking a smarter algorithm","Brewing a fresh batch of insights","Unleashing the full power of search"],"wcStockStatusLabels":{"instock":"In stock"},"highlightPhraseOnly":false,"highlightFilterStopwords":[],"highlightFields":null,"additionalBlogIds":[],"adminQueryFilter":null,"customResults":[]}}}
+</script>
+
+	<script type="text/javascript">
+		window.WPCOM_sharing_counts = {"https://lostgarden.com/2021/03/13/the-chemistry-of-game-design-2/":1301};
+	</script>
+				<script type='text/javascript'  src='https://lostgarden.com/wp-includes/js/dist/vendor/wp-polyfill.min.js?m=1784059681'></script>
+<script id="jetpack-comments-js-before">
+window.JetpackComments = {"version":"0.8.0-alpha","styleUrl":"https://lostgarden.com/wp-content/mu-plugins/wpcomsh/jetpack_vendor/automattic/jetpack-comments/build/comments.css?minify=false\u0026ver=c09d4760795d0b5783dc-1792522224","requireNameEmail":true,"mustLogIn":false,"site":{"name":"Lostgarden","iconUrl":"https://i0.wp.com/lostgarden.com/wp-content/uploads/2024/02/cropped-icon.webp?fit=64%2C64\u0026ssl=1"},"manageSubscriptionsUrl":"https://subscribe.wordpress.com/?site=lostgarden.com","tracks":{"platform":"atomic"},"strings":{"reply":"Reply","commentLabel":"Comment","replyLabel":"Reply","placeholder":"Write a comment...","replyPlaceholder":"Write a reply...","name":"Name","email":"Email","emailHint":"Address never made public","emailHasAccount":"That email belongs to a WordPress.com account. Log in with WordPress.com to use it, or enter a different email.","website":"Website (optional)","intro":"Enter your name and email to comment.","continueAsGuest":"Continue as a guest","postWithoutSaving":"No, thanks. I just want to post a comment","save":"Save","saveDetails":"Save my name, email, and website in this browser for the next time I comment.","close":"Close","manageSubscriptions":"Manage subscription","mustLogIn":"You must be logged in to post a comment.","logIn":"Log in","logInWithWordPress":"Log in with WordPress.com","logOut":"Log out","change":"Change","editProfile":"Edit profile","addYourName":"Add your name","cancel":"Cancel","signInFailed":"We could not sign you in. Please try again.","tooLong":"This comment is too long to post. Shorten it to send it.","signInRateLimited":"Too many sign-in attempts. Please wait a moment and try again."},"assetsUrl":"https://lostgarden.com/wp-content/mu-plugins/wpcomsh/jetpack_vendor/automattic/jetpack-comments/build/","loaderUrl":"https://lostgarden.com/wp-content/mu-plugins/wpcomsh/jetpack_vendor/automattic/jetpack-comments/build/editor-loader.js?minify=false\u0026ver=7bd39f6cc6d4dcdcec6e","maxLength":65525,"blocks":true,"editorLocale":{},"editor":{"blockTools":"Block tools","addBlock":"Add block","embedUrl":"https://lostgarden.com/wp-json/wpcom/v2/comments/embed","images":true,"imageError":"This image could not be loaded. Check its URL and try again."},"isLoggedIn":false,"avatarUrl":"https://secure.gravatar.com/avatar/?s=80\u0026d=mm\u0026f=y\u0026r=g","commenter":{"author":"","email":"","url":""},"user":null,"identity":{"blogId":225261375,"canSignIn":true,"connect":{"url":"https://public-api.wordpress.com/connect/?comment_identity=1\u0026blog_id=225261375\u0026challenge=RDsAywYEdHk5DEns6jdvd8_erGkgPj0BTiMoo0IZ2hs\u0026origin=https%3A%2F%2Flostgarden.com\u0026expires=1792544589\u0026signature=83a5f72e032649095af3955949aee2a9bac9576067784261e38f225f22278f4a","expires":1792544589,"challenge":"RDsAywYEdHk5DEns6jdvd8_erGkgPj0BTiMoo0IZ2hs"},"connectUrl":"https://lostgarden.com/wp-json/wpcom/v2/comments/identity/connect","emailUrl":"","origin":"https://public-api.wordpress.com","codeField":"jetpack_comment_identity_code","passportField":"jetpack_comment_identity_passport","displayCookie":"jetpack_comment_identity_display","cookieHash":"c70027f104eeb9ff5448ff99529a8f21","cookiePath":"/","cookieDomain":"","defaultAvatar":"https://secure.gravatar.com/avatar/?s=80\u0026d=mm\u0026f=y\u0026r=g","logoutUrl":"/wp-admin/admin-ajax.php","logoutAction":"jetpack_comments_identity_logout"}};(function(){function n(){Array.prototype.forEach.call(document.forms,function(f){var i;if(f.querySelector(".jetpack-comments")&&!f.querySelector('[name="jetpack_comments_form_nonce"]')){i=document.createElement("input");i.type="hidden";i.name="jetpack_comments_form_nonce";i.value="13a58e6ccc";f.appendChild(i);}});}n();document.addEventListener("DOMContentLoaded",n);})();window.addEventListener("load",function(){Array.prototype.forEach.call(document.querySelectorAll(".jetpack-comments"),function(e){if(!/\bis-(mounted|plain)\b/.test(e.className)){e.className+=" is-plain";}});});
+//# sourceURL=jetpack-comments-js-before
+</script>
+<script data-wp-strategy="defer" defer id="jetpack-comments-js" src="https://lostgarden.com/wp-content/mu-plugins/wpcomsh/jetpack_vendor/automattic/jetpack-comments/build/comments.js?minify=false&#038;ver=c09d4760795d0b5783dc-1792522224"></script>
+<script defer id="akismet-frontend-js" src="https://lostgarden.com/wp-content/plugins/akismet/_inc/akismet-frontend.js?ver=1785900794"></script>
+<script async data-wp-strategy="async" fetchpriority="low" id="comment-reply-js" src="https://lostgarden.com/wp-includes/js/comment-reply.min.js?ver=7.1.3"></script>
+<script type='text/javascript'  src='https://lostgarden.com/wp-content/plugins/dynamic-table-of-contents/build/view.js?m=1706268803'></script>
+<script id="wp-dom-ready-js" src="https://lostgarden.com/wp-content/plugins/gutenberg/build/scripts/dom-ready/index.min.js?ver=3fe927cab37bf38d6a23"></script>
+<script data-wp-strategy="defer" defer id="jetpack-block-subscriptions-js" src="https://lostgarden.com/wp-content/plugins/jetpack/_inc/blocks/subscriptions/view.js?minify=false&#038;ver=16.4-a.3"></script>
+<script type='text/javascript'  src='https://lostgarden.com/wp-content/mu-plugins/lostgarden-features//assets/js/front-end/build/index.js?m=1717534682'></script>
+<script id="wp-hooks-js" src="https://lostgarden.com/wp-content/plugins/gutenberg/build/scripts/hooks/index.min.js?ver=f0f188028580e8dc1255"></script>
+<script id="wp-i18n-js" src="https://lostgarden.com/wp-content/plugins/gutenberg/build/scripts/i18n/index.min.js?ver=1dfe7db3940c23ea9216"></script>
+<script id="wp-i18n-js-after">
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+//# sourceURL=wp-i18n-js-after
+</script>
+<script id="wp-jp-i18n-loader-js" src="https://lostgarden.com/wp-content/mu-plugins/wpcomsh/jetpack_vendor/automattic/jetpack-assets/build/i18n-loader.js?minify=true&#038;ver=f04e415567eda21fe93b"></script>
+<script id="wp-jp-i18n-loader-js-after">
+wp.jpI18nLoader.state = {"baseUrl":"https://lostgarden.com/wp-content/languages/","locale":"en_US","domainMap":{"jetpack-account-protection":"plugins/jetpack","jetpack-activity-log":"plugins/jetpack","jetpack-admin-ui":"plugins/jetpack","jetpack-ads-pkg":"plugins/jetpack","jetpack-agents-manager":"plugins/jetpack","jetpack-assets":"plugins/jetpack","jetpack-backup-pkg":"plugins/jetpack","jetpack-blaze":"plugins/jetpack","jetpack-block-delimiter":"plugins/jetpack","jetpack-boost-core":"plugins/jetpack","jetpack-boost-speed-score":"plugins/jetpack","jetpack-classic-theme-helper":"plugins/jetpack","jetpack-comments":"plugins/jetpack","jetpack-compat":"plugins/jetpack","jetpack-config":"plugins/jetpack","jetpack-connection":"plugins/jetpack","jetpack-explat":"plugins/jetpack","jetpack-external-connections":"plugins/jetpack","jetpack-external-media":"plugins/jetpack","jetpack-feature-flags":"plugins/jetpack","jetpack-forms":"plugins/jetpack","jetpack-image-cdn":"plugins/jetpack","jetpack-import":"plugins/jetpack","jetpack-ip":"plugins/jetpack","jetpack-jitm":"plugins/jetpack","jetpack-jwt":"plugins/jetpack","jetpack-knowledge":"plugins/jetpack","jetpack-licensing":"plugins/jetpack","jetpack-masterbar":"plugins/jetpack","jetpack-menu-badges":"plugins/jetpack","jetpack-my-jetpack":"plugins/jetpack","jetpack-newsletter":"plugins/jetpack","jetpack-password-checker":"plugins/jetpack","jetpack-paypal-payments":"plugins/jetpack","jetpack-plugins-installer":"plugins/jetpack","jetpack-podcast":"plugins/jetpack","jetpack-post-list":"plugins/jetpack","jetpack-post-media":"plugins/jetpack","jetpack-premium-analytics-pkg":"plugins/jetpack","jetpack-protect-models":"plugins/jetpack","jetpack-protect-pkg":"plugins/jetpack","jetpack-protect-status":"plugins/jetpack","jetpack-publicize-pkg":"plugins/jetpack","jetpack-scan-page":"plugins/jetpack","jetpack-search-pkg":"plugins/jetpack","jetpack-seo":"plugins/jetpack","jetpack-sharing-likes":"plugins/jetpack","jetpack-stats-admin":"plugins/jetpack","jetpack-stats-pkg":"plugins/jetpack","jetpack-sync":"plugins/jetpack","jetpack-videopress-pkg":"plugins/jetpack","jetpack-waf":"plugins/jetpack","jetpack-woocommerce-stats-pkg":"plugins/jetpack","jetpack-wp-abilities":"plugins/jetpack","jetpack-wp-build-polyfills":"plugins/jetpack"},"domainPaths":{"jetpack-account-protection":"jetpack_vendor/automattic/jetpack-account-protection/","jetpack-activity-log":"jetpack_vendor/automattic/jetpack-activity-log/","jetpack-admin-ui":"jetpack_vendor/automattic/jetpack-admin-ui/","jetpack-ads-pkg":"jetpack_vendor/automattic/jetpack-ads/","jetpack-agents-manager":"jetpack_vendor/automattic/jetpack-agents-manager/","jetpack-assets":"jetpack_vendor/automattic/jetpack-assets/","jetpack-backup-pkg":"jetpack_vendor/automattic/jetpack-backup/","jetpack-blaze":"jetpack_vendor/automattic/jetpack-blaze/","jetpack-block-delimiter":"jetpack_vendor/automattic/block-delimiter/","jetpack-boost-core":"jetpack_vendor/automattic/jetpack-boost-core/","jetpack-boost-speed-score":"jetpack_vendor/automattic/jetpack-boost-speed-score/","jetpack-classic-theme-helper":"jetpack_vendor/automattic/jetpack-classic-theme-helper/","jetpack-comments":"jetpack_vendor/automattic/jetpack-comments/","jetpack-compat":"jetpack_vendor/automattic/jetpack-compat/","jetpack-config":"jetpack_vendor/automattic/jetpack-config/","jetpack-connection":"jetpack_vendor/automattic/jetpack-connection/","jetpack-explat":"jetpack_vendor/automattic/jetpack-explat/","jetpack-external-connections":"jetpack_vendor/automattic/jetpack-external-connections/","jetpack-external-media":"jetpack_vendor/automattic/jetpack-external-media/","jetpack-feature-flags":"jetpack_vendor/automattic/jetpack-feature-flags/","jetpack-forms":"jetpack_vendor/automattic/jetpack-forms/","jetpack-image-cdn":"jetpack_vendor/automattic/jetpack-image-cdn/","jetpack-import":"jetpack_vendor/automattic/jetpack-import/","jetpack-ip":"jetpack_vendor/automattic/jetpack-ip/","jetpack-jitm":"jetpack_vendor/automattic/jetpack-jitm/","jetpack-jwt":"jetpack_vendor/automattic/jetpack-jwt/","jetpack-knowledge":"jetpack_vendor/automattic/jetpack-knowledge/","jetpack-licensing":"jetpack_vendor/automattic/jetpack-licensing/","jetpack-masterbar":"jetpack_vendor/automattic/jetpack-masterbar/","jetpack-menu-badges":"jetpack_vendor/automattic/jetpack-menu-badges/","jetpack-my-jetpack":"jetpack_vendor/automattic/jetpack-my-jetpack/","jetpack-newsletter":"jetpack_vendor/automattic/jetpack-newsletter/","jetpack-password-checker":"jetpack_vendor/automattic/jetpack-password-checker/","jetpack-paypal-payments":"jetpack_vendor/automattic/jetpack-paypal-payments/","jetpack-plugins-installer":"jetpack_vendor/automattic/jetpack-plugins-installer/","jetpack-podcast":"jetpack_vendor/automattic/jetpack-podcast/","jetpack-post-list":"jetpack_vendor/automattic/jetpack-post-list/","jetpack-post-media":"jetpack_vendor/automattic/jetpack-post-media/","jetpack-premium-analytics-pkg":"jetpack_vendor/automattic/jetpack-premium-analytics/","jetpack-protect-models":"jetpack_vendor/automattic/jetpack-protect-models/","jetpack-protect-pkg":"jetpack_vendor/automattic/jetpack-protect/","jetpack-protect-status":"jetpack_vendor/automattic/jetpack-protect-status/","jetpack-publicize-pkg":"jetpack_vendor/automattic/jetpack-publicize/","jetpack-scan-page":"jetpack_vendor/automattic/jetpack-scan-page/","jetpack-search-pkg":"jetpack_vendor/automattic/jetpack-search/","jetpack-seo":"jetpack_vendor/automattic/jetpack-seo/","jetpack-sharing-likes":"jetpack_vendor/automattic/jetpack-sharing-likes/","jetpack-stats-admin":"jetpack_vendor/automattic/jetpack-stats-admin/","jetpack-stats-pkg":"jetpack_vendor/automattic/jetpack-stats/","jetpack-sync":"jetpack_vendor/automattic/jetpack-sync/","jetpack-videopress-pkg":"jetpack_vendor/automattic/jetpack-videopress/","jetpack-waf":"jetpack_vendor/automattic/jetpack-waf/","jetpack-woocommerce-stats-pkg":"jetpack_vendor/automattic/jetpack-woocommerce-stats/","jetpack-wp-abilities":"jetpack_vendor/automattic/jetpack-wp-abilities/","jetpack-wp-build-polyfills":"jetpack_vendor/automattic/jetpack-wp-build-polyfills/"}};
+//# sourceURL=wp-jp-i18n-loader-js-after
+</script>
+<script id="wp-url-js" src="https://lostgarden.com/wp-content/plugins/gutenberg/build/scripts/url/index.min.js?ver=65e1ab123ef3bf825dea"></script>
+<script id="jetpack-instant-search-js-before">
+var JetpackInstantSearchOptions={"overlayOptions":{"colorTheme":"light","enableInfScroll":true,"enableFilteringOpensOverlay":true,"enablePostDate":true,"enableProductPrice":true,"enableSort":true,"highlightColor":"#FFC","overlayTrigger":"submit","resultFormat":"expanded","showPoweredBy":true,"defaultSort":"relevance","excludedPostTypes":[],"fallbackImageUrl":"","enableFallbackImage":false},"homeUrl":"https://lostgarden.com","locale":"en-US","postsPerPage":10,"siteId":225261375,"searchSuggestionsEnabled":false,"postTypes":{"post":{"singular_name":"Post","name":"Posts"},"page":{"singular_name":"Page","name":"Pages"},"attachment":{"singular_name":"Media","name":"Media"}},"webpackPublicPath":"https://lostgarden.com/wp-content/plugins/jetpack/jetpack_vendor/automattic/jetpack-search/build/instant-search/","isPhotonEnabled":true,"isFreePlan":false,"apiRoot":"https://lostgarden.com/wp-json/","apiNonce":"0a32ab8af7","isPrivateSite":false,"isWpcom":false,"hasOverlayWidgets":true,"widgets":[{"filters":[{"name":"Categories","type":"taxonomy","taxonomy":"category","count":5,"widget_id":"jetpack-search-filters-1","filter_id":"taxonomy_0"},{"name":"Tags","type":"taxonomy","taxonomy":"post_tag","count":5,"widget_id":"jetpack-search-filters-1","filter_id":"taxonomy_1"},{"name":"Year","type":"date_histogram","count":5,"field":"post_date","interval":"year","widget_id":"jetpack-search-filters-1","filter_id":"date_histogram_2"}],"widget_id":"jetpack-search-filters-1"}],"widgetsOutsideOverlay":[],"hasNonSearchWidgets":false,"preventTrackingCookiesReset":false,"disableTracking":false,"aiAnswersEnabled":false,"aiMasterEnabled":true};
+//# sourceURL=jetpack-instant-search-js-before
+</script>
+<script id="jetpack-instant-search-js" src="https://lostgarden.com/wp-content/plugins/jetpack/jetpack_vendor/automattic/jetpack-search/build/instant-search/jp-search.js?minify=false&#038;ver=d03ec9f0ac110a671db7"></script>
+<script id="jp-tracks-js" src="//stats.wp.com/w.js?ver=202643"></script>
+<script id="subscription-modal-js-js-extra">
+var subscriptionData = {"homeUrl":"lostgarden.com"};
+//# sourceURL=subscription-modal-js-js-extra
+</script>
+<script type='text/javascript'  src='https://lostgarden.com/_static/??-eJx1zUEOgyAQBdALFUeNobJoepQGmWk7CgMKxOuXRZftrH7y8v+cSbkohaRA8vXFkmGlkqzbIESsnjK4GELzDLku2R2cCkdRTa1XLXz5h3Zrvpz/9x8sDpbKHsHz1h7tlSq9raCnowssrX8Pt+E6m8lMWs8KHfW91TjosZ3R+MTxA0WKRpM='></script>
+<script id="grofiles-cards-js" src="https://secure.gravatar.com/js/gprofiles.js?ver=202643"></script>
+<script id="wpgroho-js-extra">
+var WPGroHo = {"my_hash":""};
+//# sourceURL=wpgroho-js-extra
+</script>
+<script type='text/javascript'  src='https://lostgarden.com/wp-content/plugins/jetpack/modules/wpgroho.js?m=1791307592'></script>
+<script id="jetpack-stats-js-before">
+_stq = window._stq || [];
+_stq.push([ "view", {"v":"ext","blog":"225261375","post":"1301","tz":"0","srv":"lostgarden.com","hp":"atomic","ac":"2","amp":"0","j":"1:16.4-a.3"} ]);
+_stq.push([ "clickTrackerInit", "225261375", "1301" ]);
+//# sourceURL=jetpack-stats-js-before
+</script>
+<script data-wp-strategy="defer" defer fetchpriority="low" id="jetpack-stats-js" src="https://stats.wp.com/e-202643.js"></script>
+<script id="sharing-js-js-extra">
+var sharing_js_options = {"lang":"en","counts":"1","is_stats_active":"1"};
+//# sourceURL=sharing-js-js-extra
+</script>
+<script id="sharing-js-js" src="https://lostgarden.com/wp-content/plugins/jetpack/_inc/build/sharedaddy/sharing.min.js?ver=16.4-a.3"></script>
+<script id="sharing-js-js-after">
+window.WPCOM_sharing_popups = window.WPCOM_sharing_popups || {};
+window.WPCOM_sharing_popups[ "facebook" ] = "menubar=1,resizable=1,width=600,height=400";
+window.WPCOM_sharing_popups = window.WPCOM_sharing_popups || {};
+window.WPCOM_sharing_popups[ "x" ] = "menubar=1,resizable=1,width=600,height=350";
+//# sourceURL=sharing-js-js-after
+</script>
+<script id="wp-emoji-settings" type="application/json">
+{"baseUrl":"https://s.w.org/images/core/emoji/17.0.2/72x72/","ext":".png","svgUrl":"https://s.w.org/images/core/emoji/17.0.2/svg/","svgExt":".svg","source":{"concatemoji":"https://lostgarden.com/wp-includes/js/wp-emoji-release.min.js?ver=7.1.3"}}
+</script>
+<script type="module">
+/*! This file is auto-generated */
+var e="script#wp-emoji-settings",t=document.querySelector(e);if(!(t instanceof HTMLScriptElement))throw new Error("Element missing: "+e);const r=JSON.parse(t.text),s=(window._wpemojiSettings=r,"wpEmojiSettingsSupports"),o=["flag","emoji"];function i(e){try{var t={supportTests:e,timestamp:(new Date).valueOf()};sessionStorage.setItem(s,JSON.stringify(t))}catch(e){}}function c(e,t,n){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);t=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data);e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(n,0,0);const r=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data);return t.every((e,t)=>e===r[t])}function p(e,t){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);var n=e.getImageData(16,16,1,1);for(let e=0;e<n.data.length;e++)if(0!==n.data[e])return!1;return!0}function u(e,t,n,r){switch(t){case"flag":return n(e,"\ud83c\udff3\ufe0f\u200d\u26a7\ufe0f","\ud83c\udff3\ufe0f\u200b\u26a7\ufe0f")?!1:!n(e,"\ud83c\udde8\ud83c\uddf6","\ud83c\udde8\u200b\ud83c\uddf6")&&!n(e,"\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f","\ud83c\udff4\u200b\udb40\udc67\u200b\udb40\udc62\u200b\udb40\udc65\u200b\udb40\udc6e\u200b\udb40\udc67\u200b\udb40\udc7f");case"emoji":return!r(e,"\ud83e\u1fac8")}return!1}function f(e,t,n,r){let a;const s=(a="undefined"!=typeof WorkerGlobalScope&&self instanceof WorkerGlobalScope?new OffscreenCanvas(300,150):document.createElement("canvas")).getContext("2d",{willReadFrequently:!0}),o=(s.textBaseline="top",s.font="600 32px Arial",{});return e.forEach(e=>{o[e]=t(s,e,n,r)}),o}function a(e){var t=document.createElement("script");t.src=e,t.defer=!0,document.head.appendChild(t)}r.supports={everything:!0,everythingExceptFlag:!0},new Promise(t=>{let n=function(){try{var e=JSON.parse(sessionStorage.getItem(s));if("object"==typeof e&&"number"==typeof e.timestamp&&(new Date).valueOf()<e.timestamp+604800&&"object"==typeof e.supportTests)return e.supportTests}catch(e){}return null}();if(!n){if("undefined"!=typeof Worker&&"undefined"!=typeof OffscreenCanvas&&"undefined"!=typeof URL&&URL.createObjectURL&&"undefined"!=typeof Blob)try{var e="postMessage("+f.toString()+"("+[JSON.stringify(o),u.toString(),c.toString(),p.toString()].join(",")+"));",r=new Blob([e],{type:"text/javascript"});const a=new Worker(URL.createObjectURL(r),{name:"wpTestEmojiSupports"});return void(a.onmessage=e=>{i(n=e.data),a.terminate(),t(n)})}catch(e){}i(n=f(o,u,c,p))}t(n)}).then(e=>{for(const n in e)r.supports[n]=e[n],r.supports.everything=r.supports.everything&&r.supports[n],"flag"!==n&&(r.supports.everythingExceptFlag=r.supports.everythingExceptFlag&&r.supports[n]);var t;r.supports.everythingExceptFlag=r.supports.everythingExceptFlag&&!r.supports.flag,r.supports.everything||((t=r.source||{}).concatemoji?a(t.concatemoji):t.wpemoji&&t.twemoji&&(a(t.twemoji),a(t.wpemoji)))});
+//# sourceURL=https://lostgarden.com/wp-includes/js/wp-emoji-loader.min.js
+</script>
+	<iframe src='https://widgets.wp.com/likes/master.html?ver=20261021#ver=20261021' scrolling='no' id='likes-master' name='likes-master' style='display:none;'></iframe>
+	<div id='likes-other-gravatars' role="dialog" aria-hidden="true" tabindex="-1"><div class="likes-text"><span>%d</span></div><ul class="wpl-avatars sd-like-gravatars"></ul></div>
+	</body>
+</html>
+<!--
+	generated in 0.569 seconds
+	198650 bytes batcached for 300 seconds
+-->

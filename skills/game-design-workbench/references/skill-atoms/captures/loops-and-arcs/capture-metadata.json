@@ -1,0 +1,31 @@
+{
+  "source": "https://lostgarden.com/2012/04/30/loops-and-arcs/",
+  "captured_utc": "2026-10-21T00:14:15.561273+00:00",
+  "method": "Built-in fetch_content readable; direct urllib public HTML retained; installed Defuddle parse --markdown --json; article text copied without paraphrase; embedded image downloads only",
+  "rights": "Copyright author/rightsholders; no license established; local-only/not-publication-cleared",
+  "images": [
+    {
+      "url": "https://i0.wp.com/lostgarden.com/wp-content/uploads/2019/09/20148-gameatoms_loop.png?resize=330%2C400&ssl=1",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://i0.wp.com/lostgarden.com/wp-content/uploads/2019/09/13541-gameatoms_arc.png?resize=400%2C178&ssl=1",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://i0.wp.com/lostgarden.com/wp-content/uploads/2019/09/841bb-gameatoms_sequenceofarcs.png?resize=400%2C126&ssl=1",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://i0.wp.com/lostgarden.com/wp-content/uploads/2019/09/26b49-gameatoms_arcloopsandwich.png?resize=400%2C145&ssl=1",
+      "error": "HTTP Error 404: Not Found"
+    }
+  ],
+  "defuddle_metadata": {
+    "title": "Loops and Arcs",
+    "author": "",
+    "published": "2012-04-30T00:15:00+00:00",
+    "wordCount": 2484
+  },
+  "fetch_error": null
+}

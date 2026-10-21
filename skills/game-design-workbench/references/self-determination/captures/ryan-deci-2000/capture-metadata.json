@@ -1,0 +1,17 @@
+{
+  "title": "Self-Determination Theory and the Facilitation of Intrinsic Motivation, Social Development, and Well-Being",
+  "authors_or_institution": [
+    "Richard M. Ryan",
+    "Edward L. Deci"
+  ],
+  "source_url": "https://www.selfdeterminationtheory.org/SDT/documents/2000_RyanDeci_SDT.pdf",
+  "acquisition_date": "2026-10-21",
+  "rights": "American Psychological Association, 2000",
+  "retention": "LOCAL-ONLY / NOT PUBLICATION-CLEARED",
+  "license": "No permissive republication license verified",
+  "method": "Local Docling v1.30.0, OCR disabled, image export enabled, image OCR disabled; raw conversion.json retained",
+  "coverage": "Full article through references; see ../../README.md for fidelity limits",
+  "markdown_sha256": {
+    "ryan-deci-2000.md": "8c1a346f439476b20a3353988a9db42d6b5ab97295f6620f4e07872600e346b9"
+  }
+}

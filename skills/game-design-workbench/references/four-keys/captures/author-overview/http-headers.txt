@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+Date: Wed, 21 Oct 2026 00:12:54 GMT
+Server: Apache
+X-Pingback: https://www.nicolelazzaro.com/xmlrpc.php
+Link: <https://www.nicolelazzaro.com/wp-json/>; rel="https://api.w.org/", <https://www.nicolelazzaro.com/wp-json/wp/v2/pages/98>; rel="alternate"; title="JSON"; type="application/json", <https://www.nicolelazzaro.com/?p=98>; rel=shortlink
+Upgrade: h2,h2c
+Connection: Upgrade
+Vary: Accept-Encoding
+host-header: c2hhcmVkLmJsdWVob3N0LmNvbQ==
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+

@@ -1,0 +1,31 @@
+{
+  "captured_at_utc": "2026-10-21T00:14:33.995823+00:00",
+  "sources": [
+    {
+      "title": "Hearts, Clubs, Diamonds, Spades: Players Who Suit MUDs",
+      "author": "Richard A. Bartle",
+      "url": "https://mud.co.uk/richard/hcds.htm",
+      "method": "Built-in fetch readable extraction inspected; Crawl4AI raw Markdown retained with raw HTML and response JSON; image URLs localized and source endnote figure restored as local image link. No paraphrase.",
+      "image": "unclecode/crawl4ai@sha256:bd36741e7bdd35ddc1a05d9183e1d6d8cefb61dd640d944a25d026b76e917690",
+      "bounds": "one article; no link following; five directly embedded GIFs only",
+      "robots": "check_robots_txt=true; robots.txt returned HTTP 404; crawl success=true, status_code=200",
+      "rights": "Copyright Richard A. Bartle. Academic-only redistribution permission in endnote 1. Local-only; not publication-cleared.",
+      "checks": "Opening abstract/preface; interest graph and all 16 interaction subsections; Dynamics/Overbalancing/Summary; endnotes and references through Whitlock 1994b; source copyright footer. ASCII graph preserved. Endnote 2 graphical figure restored from source HTML."
+    },
+    {
+      "title": "A Game Designer\u2019s View of Gamification",
+      "author": "Richard A. Bartle",
+      "date": "2012-06-19",
+      "url": "https://mud.co.uk/richard/GamificationSummit.pdf",
+      "method": "Public PDF downloaded to temporary scratch; existing loopback Docling async API, born-digital do_ocr=false, embedded images=true, page images=false. No image OCR, LLM enrichment, remote services or downloads. pdftotext -layout companion provides text hidden inside Docling figure regions.",
+      "image": "quay.io/docling-project/docling-serve-cpu@sha256:061d35c03611bc15b73d024c8e8387bcf0624279f8b57c16c1567326f214ba56",
+      "source_pdf_sha256": "94116caed81b3130821c78994ad541f54ff483b2fc890880a7691ea3e7049d44",
+      "source_pdf_bytes": 331216,
+      "status": "success",
+      "errors": [],
+      "checks": "18 PDF text-layer pages; title/date/author, middle partitions and utility, closing conclusion; seven Docling images saved and relative paths validated. Figure 3 inspected: full New partition #1 slide retained.",
+      "limits": "Docling groups some complete slides into figures, leaving their words out of extracted text. Companion text-layer Markdown retains 18 slide texts but has replacement bullet glyphs; raster diagram labels require viewing images. No speech/audio/captions or speaker notes.",
+      "rights": "No open license or general redistribution permission established; attributed to Richard A. Bartle. Third-party goth photograph credited on slide to gothsuptrees.net. Local-only; not publication-cleared."
+    }
+  ]
+}

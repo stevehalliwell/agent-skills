@@ -1,0 +1,25 @@
+HTTP/1.1 200 OK
+Date: Wed, 21 Oct 2026 00:12:56 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: cloudflare
+Vary: Accept-Encoding
+Vary: Accept-Encoding,Cookie
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Last-Modified: Fri, 06 Dec 2024 21:42:00 GMT
+Link: <https://selfdeterminationtheory.org/wp-json/>; rel="https://api.w.org/"
+Link: <https://selfdeterminationtheory.org/wp-json/wp/v2/pages/6306>; rel="alternate"; title="JSON"; type="application/json"
+Link: <https://selfdeterminationtheory.org/?p=6306>; rel=shortlink
+Pragma: no-cache
+X-Powered-By: WP Engine
+X-Cacheable: SHORT
+Cache-Control: max-age=600, must-revalidate
+X-Cache: HIT: 2
+X-Cache-Group: normal
+X-Orig-Cache-Control: no-store, no-cache, must-revalidate
+cf-cache-status: DYNAMIC
+set-cookie: __cf_bm=vmrA2nLLhCmTqYY_YmANrgjqZORJEKwCdgWz2GiJpDs-1792541575.9990811-1.0.1.1-OjSnO5BDbvJfpefTrmRNssgf4.Ko_4dv0OlYqa3jKK.RHRoHujuSAhU0JQIIkp6ccKg9UhrXsbGLOPjeCbw3eSe3Q7OlsxwvRsS9_Vqkie38Yk43gpStoN6jLxPmJSHt; HttpOnly; SameSite=None; Secure; Path=/; Domain=selfdeterminationtheory.org; Expires=Wed, 21 Oct 2026 00:42:56 GMT
+CF-RAY: a4dc0db1fcf806a2-MEL
+alt-svc: h3=":443"; ma=86400
+

@@ -1,0 +1,336 @@
+## Revisiting the GameFlow Model with Detailed Heuristics
+
+Penelope Sweetser, Daniel Johnson, and Peta Wyeth
+
+## Abstract
+
+The GameFlow model strives to be a general model of player enjoyment, applicable to  all  game  genres  and  platforms.  Derived  from  a  general  set  of  heuristics  for creating enjoyable player experiences, the GameFlow model has been widely used in evaluating many types of games, as well as non-game applications. However, we recognize  that  more  specific,  low-level,  and  implementable  criteria  are  potentially more useful for designing and evaluating video games. Consequently, the research reported in this paper aims to provide detailed heuristics for designing and evaluating one  specific  game  genre,  real-time  strategy  games.  In  order  to  develop  these heuristics,  we  conducted  a  grounded  theoretical  analysis  on  a  set  of  professional game reviews and structured the resulting heuristics using the GameFlow model. A selection  of  the  resulting  165  heuristics  are  presented  in  this  paper  and  discussed with respect to key evaluations of the GameFlow model.
+
+## Introduction
+
+GameFlow (Sweetser &amp; Wyeth, 2005) is a model of player enjoyment, comprised of a set of criteria derived from games user experience literature and structured into eight elements that can be mapped to Csikszentmihalyi's (1990) concept of flow. Since the original publication of the GameFlow model (Sweetser &amp; Wyeth, 2005), it has seen extensive use throughout the games research and development communities, as well as a number of related areas. Several additional models have been derived from the original GameFlow model, such as EGameFlow (Fu, Su &amp; Yu, 2009) and Pervasive GameFlow  (Jegers,  2007).  The  GameFlow  model  has  been  used  to  evaluate  a variety of games and applications, including mobile games (e.g., Omar &amp; Ali, 2011), educational games (e.g., Brown, Ceccarini &amp; Eisenhower, 2007), virtual/augmented/mixed reality games (e.g., Khoo, Cheok, Nguyen &amp; Pan, 2008), as well as non-game applications (e.g., Faber &amp; van den Hoven, 2011).
+
+The GameFlow model has been extensively evaluated in the literature. Researchers have discussed and examined the GameFlow model's connection to flow (Cowley, Charles, Black &amp; Hickey, 2008; Poels, de Kort &amp; Ijsselsteijn, 2007), the inclusion of the Social Interaction element (Cowley et al., 2008), and the conceptualisation and measurement  of  immersion  (Bleumers,  Jacobs  &amp;  Lier,  2010;  Ijsselsteijn,  de  Kort, Poels, Jurgelionis &amp; Bellotti, 2007; Tijs, 2006). Previous research has also suggested that  it  would  be  useful  to  indicate  what  could  promote  or  inhibit  the  various GameFlow elements,  particularly  immersion,  in  video  games  (Bleumers,  Jacobs  &amp; Lier, 2010).
+
+In a preliminary application of the GameFlow model (Sweetser &amp; Wyeth, 2005), two real-time strategy (RTS) games, one high-rating and one low-rating, were evaluated with the GameFlow criteria, to provide insight into how the criteria manifest in RTS games,  what  makes  RTS  games  enjoyable,  and  the  relative  importance  of  each GameFlow  element  to  RTS  games.  The  result  was  a  set  of  insights  into  how GameFlow  presents  in  RTS  games.  However,  in  order  to  provide  actionable heuristics  for  design  and  evaluation,  a  more  detailed  and  specific  set  of  guidelines need  to  be  created.  Consequently,  in  this  study,  we  have  aimed  to  generate  a detailed  set  of  heuristics  specifically  for  designing  and  evaluating  RTS  games.  In order  to  do  this,  we  conducted  a  grounded  theoretical  analysis  on  a  set  of professional game  reviews and structured the resulting heuristics using the GameFlow elements. A selection of the resulting 165 heuristics are presented in this paper  and  discussed  with  respect  to  key  evaluations  of  the  GameFlow  model, including  social  interaction,  immersion,  group  versus  individual  experience,  and challenge versus player skills.
+
+## GameFlow
+
+Sweetser and Wyeth (2005) conducted a comprehensive review of the literature on usability  and  user-experience  in  games  to  determine  the  key  elements  of  player enjoyment in video games. The result was the identification of eight core elements of player  enjoyment  in  games  -  concentration,  challenge,  skills,  control,  clear  goals, feedback,  immersion,  and  social  interaction.  It  was  observed  that  these  core elements overlapped closely with the elements of flow (Csikszentmihalyi, 1990) and subsequently the core elements of player enjoyment were mapped to the elements of flow. The resulting structure, based on flow, formed the foundation of Sweetser and Wyeth's (2005) model of player enjoyment in games, called GameFlow.
+
+The first element of flow, a task that can be completed, is not represented directly in the  GameFlow  elements,  since  it  is  the  game  itself.  The  remaining  GameFlow elements are all closely  interrelated  and  interdependent.  In  summary,  games  must keep  the  player's  concentration  through  a  high  workload,  with  tasks  that  are sufficiently  challenging  to  be  enjoyable.  The  challenging  tasks  must  match  the player's skill level, the tasks must have clear goals so that the player can complete the tasks, and the player must receive feedback on progress towards completing the tasks. If the tasks match the player's skill level and have clear goals and feedback, then the player will feel a sense of control over the task. The resulting feeling for the player is total immersion or absorption in the game, which causes the player to lose awareness of everyday life, concern for themselves, and alters their sense of time. The  final  element  of  player  enjoyment,  social  interaction,  does  not  map  to  the elements of flow, but is highly featured in the literature on user-experience in games. People play games to interact with other people, regardless of the task, and will even play games they do not like or even when they don't like games at all (Sweetser &amp; Wyeth,  2005;  de  Kort  &amp;  Ijsselsteijn,  2008;  Bond  &amp;  Beale,  2009).  Recent  research conducted with a large Australian sample shows that 70% of people who play games enjoy doing so with others (Brand, 2012).
+
+Each element of the GameFlow model consists of an overall goal and a set of central criteria  that  can  be  used  to  design  and  evaluate  games  with  respect  to  player enjoyment  (see  Sweetser  and  Wyeth  (2005)  for  the  full  model).  In  the  original research,  expert  reviews  of  two  RTS  games  were  conducted  with  the  GameFlow criteria to investigate the utility and validity of the GameFlow model in designing and evaluating games with respect to player enjoyment (Sweetser &amp; Wyeth, 2005). From these expert reviews, it was concluded that some of the criteria are more relevant to different  types  of  games  and  that  some  of  the  criteria  are  difficult  to  evaluate  via expert review and require player testing. It was also suggested that the GameFlow model, in its original form, was suitable as a set of heuristics for conducting expert reviews, but that it  would  require  further  development  to  be  used  as  an  evaluation tool.
+
+## Social Interaction
+
+It has been suggested that the Social Interaction element does not belong in a model of flow, as it is implicit in 'the task' that is undertaken, as well as not being desirable in every game (Cowley et al., 2008). While GameFlow is often referred to as a model of  flow  in  games  (Cowley  et  al.,  2008;  Poels  et  al.,  2007;  Tychsen,  2008),  strictly speaking,  it  is  a  model  of  enjoyment  in  games  that  incorporates  flow.  Though  the concepts of flow and enjoyment are similar, and often used interchangeably in the games  literature,  we  believe  that  this  is  an  important  distinction  to  make.  The GameFlow model is based on the assumption that enjoyment is a broader concept than flow, which is an assumption that is supported in the player experience literature (Poels et al., 2007).
+
+There is substantial support in the literature for the centrality of Social Interaction as an element of player enjoyment (de Kort &amp; Ijsselsteijn, 2008; Bond &amp; Beale, 2009). Players will engage in and enjoy games socially, even if they would not play or enjoy the same games as a solo experience (Sweetser &amp; Wyeth, 2005). Additionally, not all of the GameFlow criteria need to be achieved for a game to be enjoyable and not all of  the  criteria  are  appropriate  to  all  games  or  players.  Consequently,  Social Interaction  remains  a  GameFlow  element,  despite  the  fact  that  it  is  unlikely  to  be experienced by every player during every play session for all games.
+
+## Evaluation Immersion
+
+One key issue with the GameFlow model in its current form is that some criteria in the Immersion element are difficult to assess (Sweetser &amp; Wyeth, 2005; Bleumers et al., 2010), as they are attributes of the player experience, rather than the game. The definition  and  classification  of  the  Immersion  element  and  criteria  have  also  been brought into question. Criticism include that the Immersion element is defined as the characteristic  flow  experience  (Ijsselsteijn  et  al.,  2007),  that  the  GameFlow  model considers Immersion to be on the same level as the other elements (Tijs, 2006), and that it would be more useful to show how the elements are related (Bleumers et al., 2010).
+
+From a design and evaluation perspective it might be more useful to identify game elements that promote or inhibit Immersion, rather than describing what the player should  experience  (Bleumers  et  al.,  2010).  While  Sweetser  and  Wyeth  (2005) suggested that immersive games draw players into the game through elements such as  audio  and  narrative,  there  are  many  ways  in  which  games  can  create  an immersive experience. The effect of game elements on a player's state seem likely to vary by game type. Identifying these elements and the influence that they have on the player experience is a focus of our current research.
+
+## Groups versus Individual Experience
+
+The GameFlow model focuses on the individual experience, as opposed to the group experience. However, elements such as Challenge and Control can vary considerably  in  a  group  situation.  In  particular,  it  has  been  suggested  that  the Challenge  criteria  do  not  accommodate  cooperative  situations  and  that  GameFlow focuses  on  individual,  rather  than  group,  control  (Bleumers  et  al.,  2010).  The GameFlow model is designed to model an individual player's enjoyment. However, we agree with the suggestions made by Bleumers et al. (2010) and intend that the majority of the criteria should be flexible enough to support individual or multiplayer games.
+
+## Player Skills and Challenge
+
+Bleumers  et  al.  (2010)  suggested  the  division  between  the  Player  Skills  and Challenge  criteria  in  the  GameFlow  model  is  artificial.  These  elements  are  tightly intertwined and interrelated, as one of the key precursors to an enjoyable (and flow) experience is a match between skills and challenge. While the self-report flow scale used by Csikszentmihalyi (1990) measures perceived skills and challenge with single items, recent research  has  highlighted the need  to  consider  these  concepts separately. This distinction is important as the extent to which challenge and skill are related  to  each  other  differs  from  person  to  person  (Engeser  &amp;  Rheinberg,  2008). The division between these elements in the GameFlow model is that the Player Skills criteria  relate  to  supporting  the  player  in  developing  skills,  whereas  the  Challenge criteria relate to providing the player with appropriate challenges.
+
+## Detailed Heuristics for RTS Games
+
+In order to validate and further extend the findings of the original paper (Sweetser &amp; Wyeth, 2005), we conducted a grounded theoretical analysis on a set of professional game reviews and structured the resulting heuristics using the GameFlow elements. Previous research has involved conducting grounded theoretical analyses on game reviews  to  develop  models  of  the  play  experience  of  video  games.  A  grounded theoretical  analysis  of  game  reviews  was  conducted  to  characterise  good  and  bad games (Bond &amp; Beale, 2009), using reviews from GameSpot UK (2011). Similarly, grounded theory was used to analyse game reviews as data, alongside interviews, to construct  the  Core  Elements  of  the  Gaming  Experience  (CEGE)  model  (CalvilloGámez, Cairns &amp; Cox, 2010). According to Calvillo-Gámez et al., game reviews are appropriate for analysing as data to capture the play experience because:
+
+Game reviews are aimed at telling the general player the reasons that certain games should be played. They do not tell the ending of the game, but just try to describe what it is like to be playing. Game reviews, in some sense, convey the experience of playing video-games. (p. 54)
+
+In  our  study,  four  RTS  games,  which  were  comparable  in  platform  (PC),  genre (fantasy),  and  technology/year  of  release  (2002-2003),  were  selected  for  analysis. The  main  difference  between  the  selected  games  was  their  review  scores,  as indicated  by  their  aggregate  professional  review  scores  on  the  website  Metacritic (2011). Two high scoring and two lower scoring games were selected for analysis. The  selected  games,  along  with  year  of  release  and  Metacritic  (2011)  aggregate review score were:
+
+- WarCraft III: released 2002, aggregate score 92% based on 40 professional reviews;
+- Age of Mythology: released 2002, aggregate score 89% based on 31 professional reviews;
+- The Lord of the Rings: War  of the Ring: released 2003, aggregate score 67% based on 25 professional reviews.
+- Lords  of  EverQuest:  released  2003,  aggregate  score 62% based  on  25 professional reviews.
+
+For each game, 10 professional reviews were analysed, drawn from key game critic websites and magazines (see Table 1). Each distinct comment in each review was coded  into  content  categories  (e.g.,  campaign,  missions,  races)  using  grounded theoretic analysis. An initial set of heuristics was extracted for each content category. Each heuristic  was  then  coded  into  GameFlow  elements  (e.g.,  Control,  Challenge, Immersion). Both positive and negative comments were coded and incorporated into the  heuristics.  Positive  comments  (i.e.,  game  strengths)  were  added  as  a  heuristic and  negative  comments  (i.e.,  game  weaknesses)  were  reversed  and  added.  The resulting initial set of heuristics for all games was compiled into a single list, sorted by GameFlow  element  and  then  content  category.  A  second  iteration  was  then conducted on the combined list of heuristics, in which redundancies were removed and remaining heuristics were combined and refined. Finally, the list was examined by three games design and evaluation experts and further refined. The full list of 165 heuristics can be found in Sweetser, Johnson, Wyeth, and Ozdowska (2012).
+
+Table 1. Professional Review Sources for Selected Games
+
+| Professional Review Sources by Game    | Professional Review Sources by Game                                                                                          |
+|----------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| WarCraft III                           | GameSpy, GameSpot, IGN, PC Gamer, UGO, The Next Level, GameRankings, Cinescape Online, Game Chronicles Magazine, GameBlitz   |
+| Age of Mythology                       | IGN, GameSpy, GameSpot, GamePro, Avault, PC Zone, Game Planet, Game Zone, GameBiz, Game Blitz                                |
+| The Lord of the Rings: War of the Ring | Gamespy, GameSpot, IGN, GamePro, Worth Playing, Game Raiders, Game Over Online, 3D Avenue, Game Revolution, Game Zone        |
+| Lords of EverQuest                     | IGN, Gamespy, GameSpot, GamePro, Worth Playing, Gaming Illustrated, Game Revolution, Videogame City, PC Gameworld, Game Zone |
+
+## Examining the GameFlow Elements
+
+Our  grounded  theoretical  analysis  resulted  in  165  heuristics  for  designing  and evaluating RTS games. In this section, we report the heuristics that relate to the key issues of the GameFlow model, including heuristics for social interaction, immersion, player  skills,  and  challenge.  The  full  list  of  165  heuristics,  including  those  for concentration,  control,  clear  goals,  and  feedback  can  be  found  in  Sweetser  et  al. (2012).
+
+## Social Interaction
+
+The  importance  of  social  interaction  as  an  element  of  enjoyment  in  games  was reinforced by the grounded theoretical analysis. The analysis resulted in 12 heuristics for the GameFlow element of Social Interaction, which fell into the content categories of: multiplayer, help, and editor (see Table 2).
+
+Table 2.
+
+Heuristics for Social Interaction
+
+## Multiplayer
+
+- The game should provide an online service for playing multiplayer games
+- The game should make it easy to connect to multiplayer games and start playing
+- The online server should match opponents automatically based on skill level or gametype preference
+
+- Teams of players should be able to play against other teams
+- The online server should include features such as rank ladders, auto-handicap, ladder statistics, a chat client, and facilities for tracking friends
+- The online play mode should be integrated into the game
+- The online server should run smoothly and stably
+- The game should include multiplayer support in-game, such as the ability to vote on the course of action if one player drops out and the ability to talk to other players
+- The game should support cooperative gaming, so that players can effectively play as a team (e.g., the ability to build walled-in cities next to each other)
+- Multiplayer games should require team work to achieve victory
+
+## Help
+
+- Players should be able to record matches to replay them to recount the events of the game and learn from their previous experiences
+
+## Editor
+
+- Players should be able to create custom maps to share online
+
+## Immersion
+
+The  analysis  resulted  in  17  heuristics  for  the  GameFlow  element  of  Immersion. These heuristics provide specific details on how to achieve the GameFlow criteria for RTS games, including how to promote immersion through narrative, graphics, sound, and  gameplay  (see  Table  3).  Moreover,  these  17  heuristics  form  attributes  of  the game, rather than the player.
+
+Table 3.
+
+Heuristics for Immersion
+
+## Narrative
+
+- The opening cinematic should draw the player into the game
+- The campaign should include cinematics that advance the storyline, ground the player in the game world, and add depth to the game world and characters
+- The campaign should tell an entertaining, involving, and memorable story and progressively add depth to the story
+- The player should become attached to the game world, characters, and story
+- The game should provide additional background information for the races and story through manuals or other sources
+
+## Graphics
+
+- Detailed graphics should be used to give life and personality to the game world, structures, and characters
+- The terrain, structures, and units should be used to set the atmosphere and capture the feel of the game world
+- The structures, terrain, and units of different races should have a distinctive look and
+
+feel that clearly captures the feel of the race they represent
+
+- Different types of units should have a distinctive look and feel (not the same unit with different clothes and weapons)
+- Animations and special effects should be used to give life to the game world and units
+- Animations should not detract from the believability of characters and situations (e.g., repetitive nodding and awkward arm movements)
+- Cinematography (e.g., camera manipulation) should be used to enhance believability in cutscenes and in-game
+- The interface should be themed to the game world and race
+
+## Sound
+
+- Voices should be used to give units distinct and vivid personalities
+- Sound effects and voice responses should be varied and not repetitive
+- Music should be themed for each race and help set the mood of the game
+
+## Gameplay
+
+- The game elements should build up a rich and detailed world that is more like visiting a fully realised location than a constructed map
+
+## Group versus Individual Enjoyment
+
+The  analysis resulted in 12 heuristics for the  GameFlow  element  of  Social Interaction,  10  of  which  fell  into  the  content  category  of  multiplayer  (see  Table  2). These heuristics focus on supporting players in joining and interacting in multiplayer matches. Additionally, four of the heuristics in the GameFlow element of Challenge fell into the content category of multiplayer (see Table 4). These heuristics related to pacing and challenge from other players in multiplayer matches.
+
+## Table 4.
+
+Heuristics for Challenge
+
+## Campaign
+
+- The campaign should provide many hours of play
+- The early stages of the campaign should provide a good match for the skill level of new players
+- The campaign should start slow and ease the player into the game
+- The player should be required to change races during the campaign, so as to challenge them to adapt and learn new strategies
+- As the player progresses through the campaign and their skills improve, the missions should ramp up in difficulty to match their skills, without becoming too difficult
+
+## Missions
+
+- The campaign should include a range of mission objectives and not just typical RTS 'build up and destroy' objectives
+- The missions in the campaign should vary in complexity
+
+## AI
+
+- The missions in the campaign should have normal and hard difficulty settings
+- There should always be a way for the player to finish a mission, so that they don't experience feelings of hopelessness
+- The missions in the campaign should not be easier or harder than most RTS games
+- Missions should be sufficiently challenging to force the player to explore different strategies
+- Finishing missions should require tactics, strategy, and skill, rather than just superior firepower
+
+## Races
+
+- Each race should necessitate its own style of play
+- Different races should be different to play, but evenly matched and balanced
+- Each race should include units that are specific to that race, with functional and strategic differences
+- Each race should have units that counter the units in the other races
+- Different races should not include units that are functionally the same
+- Hero units shouldn't become so powerful that other units become worthless
+- The player should never know exactly what they will be facing, even though they know the race of their opponent
+- Races should include enough strategic variation that each game is a different experience
+- The opponent AI should use varied strategies, not just rush tactics
+- The opponent AI should maintain a balance between expanding, defending, and building an economy
+- The opponent AI should be unrelenting, but not overwhelming
+- The opponent AI should not attack with small, intermittent groups of units that are easy to dispatch
+- The opponent AI should not be overly aggressive and crush the player
+- The opponent AI should not make obvious mistakes (e.g., leaving armies idle while its base is attacked)
+- The opponent AI should be robust and flexible and not rely on preset conditions and scripted sequences
+- The game should have multiple difficulty settings that accommodate for all player skill levels, by adjusting the aggressiveness and efficiency of the opponent AI
+
+## Gameplay
+
+- Units and structures should have sufficient health, so as to focus gameplay more on combat than production
+- Gameplay should maintain a fast pace, by not having lengthy troughs for unit production or research
+- Upgrading units should have a significant impact on unit effectiveness
+- Combat should focus more on unit manipulation than on controlling large numbers of units
+- The game should rely more on management than on overwhelming the opponent with large waves of units
+- The pace of the game should be fast enough to be exciting and should increase as
+
+the game progresses, ending in all-out tactical combat
+
+- The game should provide new and unique twists on conventional RTS gameplay, to provide new challenges to experienced RTS players and to give the game appeal, depth, and lasting value
+- The game should include numerous diverse maps that provide the player with varied challenges
+- Small population limits should be used to force players to make hard decisions about what kinds of units to use
+- Players should be discouraged from overly defensive play and forced outside of their comfort zones, by making defensive structures weaker, siege weapons more powerful, and by not starting with enough resources to win the game
+- Map terrain should be varied and setup for tactical gameplay by including choke points and high ground
+- As the player progresses through the game, new structures, units, and technologies should become available
+- The economic aspects of the game should be compelling
+- The game should use the classic RTS rock-paper-scissors format for combat between different categories of units (e.g., infantry, archers, and cavalry)
+- The game should be accessible to inexperienced RTS players, who should be able to play without being overwhelmed
+- The game should not have overpowered units that make all other units redundant
+- The game must be sufficiently complex and challenging for experienced RTS players
+
+## Multiplayer
+
+- Multiplayer games should be accessible to new players
+- Players in multiplayer games should be allowed time to build up a base before they are rushed by other players
+- Multiplayer games should not be too slow before hostilities erupt
+- The game should have a skirmish mode that allows a large number of players on a single map (e.g., 12 players)
+
+## Editor
+
+- The game should include an editor that allows players to create and share missions, which extends the replayability and life of the game
+
+## Player Skills and Challenge
+
+The analysis resulted in 50 heuristics for the GameFlow element of Challenge and 26 heuristics  for  the  GameFlow  element  of  Player  Skills.  The  Challenge  heuristics, which focus on testing the player and providing a match for their skill level, fell into the content categories of: campaign, missions, races, AI, gameplay, multiplayer, and editor (see Table 4). The Player Skills heuristics, which focus on making the game accessible to new players and supporting players in developing their skills, fell into the  content  categories  of:  campaign,  races,  gameplay,  interface  and  controls,  and help (see Table 5).
+
+Table 5.
+
+Heuristics for Player Skills
+
+## Campaign
+
+- The campaign should include an optional, introductory mission to teach new players about the controls and basics of the game (e.g., movement, combat, base building, gathering resources)
+- The game should provide opportunities for the player to learn about and experiment with the game concepts contextually through the campaign, including units, structures, technologies, and races (for later use in the skirmish mode)
+- The campaign should gradually introduce new units, structures, technologies, and races so the player learns a little at a time
+- The campaign should consistently reward the player for their effort and achievements and motivate them to keep playing, through cinematics and story developments
+
+## Races
+
+- Races should have some level of commonality, in terms of types of buildings, technology, and units, to allow players to easily learn how to use new races and switch between different races
+- Races should vary in function (beyond the surface level), to challenge the player to develop new skills and strategies
+
+## Gameplay
+
+- The game should conform to RTS conventions (e.g., resource gathering, base building, unit capacity, unit control, technology advances, building tree, managing defenses, forming an army, attacking the enemy) to allow the player to have an inherent understanding of the game
+- The gameplay should conform to the traditional RTS model (e.g., building a base, collecting resources, producing units, upgrading and researching, amassing an army, attacking the enemy, defend own base) to meet the benchmarks of the genre
+- The hierarchy of structures, units, technology, and special abilities should be kept simple
+- The game should indicate which unit types are best suited to attack other unit types
+- The gameplay should be easy to pickup for new players
+
+## Interface and Controls
+
+- The game's interface should be uncomplicated and uncluttered
+- The game's interface should be intuitive and easy to use
+- The game's controls should be straightforward
+- The game's controls should conform to RTS conventions (e.g., point and click with mouse, hotkeys, command icons, drag boxes around units to select)
+- The game's interface should use RTS conventions (e.g., bottom-heavy menu)
+- Detailed tool tips (i.e., descriptions of what it is, what it does, what it's good for) should appear when the player mouses over items
+
+## Help
+
+- The player should be able to record and watch matches to learn from previous games
+- The game should have a manual that covers the basics and allows novices to establish
+
+the essentials quickly and start playing
+
+- The game should include a technology tree to give an overview of some of the strategic avenues
+- The game should have a comprehensive in-game help system that includes detailed information on technology, structures, and units
+- The player should be able to click a button to view detailed information on a selected unit (e.g., combat statistics and interesting information)
+- The player should be able to click on most things in the game to access well laid-out help and information screens
+- The player should be able to access the technology tree in-game, with hyperlinks to detailed information on each element in the tree
+- The game should have a tutorial, so that many of the more unique in-game features do not go unnoticed by the player
+- The game should have a tutorial that explains the basics (e.g., building and combat)
+
+## Discussion
+
+In Sweetser et al. (2012), we developed a concrete set of heuristics for achieving the high-level GameFlow criteria in one specific game genre, real-time strategy games. The resulting heuristics were considerably more detailed than the original criteria or Sweetser and Wyeth's (2005) analysis of how the GameFlow criteria apply to RTS games. In this paper, these detailed heuristics have enabled us to revisit and probe deeper into some of the weaknesses and uncertainties of the GameFlow model, as well as identifying some key areas for future work.
+
+It  has  been  suggested  that  social  interaction  doesn't  belong  in  a  model  of  flow (Cowley  et  al.,  2008).  In  this  paper,  we  clarified  that  GameFlow  is  a  model  of enjoyment, rather than flow, and that social interaction is central to player enjoyment (de Kort &amp; Ijsselsteijn, 2008; Bond &amp; Beale, 2009). Additionally, we found that in RTS games  it  is  important  for  the  game  to  facilitate  and  support  players  in  joining, interacting,  cooperating,  and  competing  in  multiplayer  games,  as  well  as  creating, sharing, and recounting content and experiences.
+
+The  original  GameFlow  criteria  for  immersion  are  difficult  to  assess  (Sweetser  &amp; Wyeth, 2005; Bleumers et al., 2010), as they are attributes of the player experience, rather than the game. As such, the immersion element overlaps closely with the flow experience (Ijsselsteijn et al., 2007) and can be considered at a different level to the other elements (Tijs, 2006). It has been suggested that it would be more useful to indicate  what  could  promote  or  inhibit  immersion,  rather  than  describing  what  the player  should  experience  (Bleumers  et  al.,  2010).  In  this  paper,  we  presented  17 heuristics that provide specific details on how to achieve the GameFlow criteria for RTS games, including how to promote immersion in RTS games through narrative, graphics, sound, and gameplay. Our ongoing work on GameFlow, player enjoyment, and  immersion  aims  to  reveal  more  insights  and  measurable  results  on  the relationships between the various GameFlow elements and player enjoyment, as well as how these relationships vary across game genres.
+
+It  has been suggested that the Challenge criteria do not accommodate cooperative situations  and  that  GameFlow  focuses  on  individual,  rather  than  group,  control (Bleumers  et  al.  2010).  The  heuristics  reported  in  the  paper  still  focus  on  the individual  player  experience,  rather  than  the  group  experience.  However,  some insight  was  provided  into  the  multiplayer  experience  through  heuristics  for  social interaction, as previously discussed, as well as heuristics for challenge in multiplayer games. Interesting future work lies in investigating the manifestation and suitability of the criteria in individual versus group experiences.
+
+It  has  been  suggested  that  the  division  between  the  Player  Skills  and  Challenge criteria  in  the  GameFlow  model  is  artificial  (Bleumers  et  al.,  2010).  The  challenge heuristics we presented in this paper focused on testing the player and providing a match for their skill level, whereas the player skills heuristics focused on making the game  accessible  to  new  players  and  supporting  players  in  developing  their  skills. Though we believe that this is a useful distinction in conceptualising guidelines for design and evaluation, future work in validating the model will reveal whether, and under what conditions, these elements are, in fact, separate.
+
+Finally, we found that by analysing a set of professional game reviews, alongside the GameFlow model, we were able to develop a set of detailed heuristics for designing and  evaluating  RTS  games.  Future  work  will  allow  us  to  assess  the  usefulness, validity,  and  potential  applications  of  these  heuristics  in  designing  and  evaluating video games.
+
+## References
+
+- Bleumers, L., Jacobs, A., &amp; Lier, T.V. (2010). Criminal cities and enchanted forests: a user-centred assessment of the applicability of the Pervasive GameFlow model. Proceedings of the 3rd International Conference on Fun and Games (pp. 38-47). Leuven, Belgium: ACM. doi:10.1145/1823818.1823822
+- Bond, M., &amp; Beale, R. (2009). What makes a good game?: Using reviews to inform design. Proceedings of the 23rd British HCI Group Annual Conference on People and Computers: Celebrating People and Technology (pp. 418-422). Cambridge, United Kingdom: British Computer Society.
+- Brand, J. (2012). Digital Australia 12 : National research prepared by Bond University for the Interactive Games &amp; Entertainment Association . Australia; Bond University. http://www.igea.net/wpcontent/uploads/2011/10/DA12FinalLinkVideo.pdf
+- Brown, A., Ceccarini, P., &amp; Eisenhower, C. (2007). Muckrakers: Engaging students in the research process through an online game. Sailing into the future: Charting our destiny, proceedings of the thirteenth national conference of the association of college and research libraries (pp. 226-236). Baltimore, USA.
+- Calvillo-Gámez, E.H., Cairns, P., &amp; Cox, A.L. (2010). Assessing the core elements of the gaming experience. In R. Bernhaupt (Ed.), Evaluating user Experience in Games (pp. 47-71). London: Springer London. doi:10.1007/978-1-84882-9633
+- Cowley, B., Charles, D., Black, M., &amp; Hickey, R. (2008). Toward an understanding of flow in video games. Computers in Entertainment , 6 (2), 1-27. doi:10.1145/1371216.1371223
+- Csikszentmihalyi, M. (1990). Flow: The Psychology of Optimal Experience . Harper Perennial, New York.
+- de Kort, Y.A.W., &amp; Ijsselsteijn, W.A. (2008). People, places, and play: Player experience in a socio-spatial context. Computers in Entertainment (CIE) , 6 (2), 18. doi=10.1145/1371216.1371221
+- Engeser, S., &amp; Rheinberg, F. (2008). Flow, Performance and Moderators of Challenge-Skill balance. Motivation and Emotion , 32, 158-172.
+- Faber, J. P., &amp; van den Hoven, E. (2011). MARBOWL: Increasing the fun experience of shooting marbles. Personal and Ubiquitous Computing , 16 (4), 391-404. doi:10.1007/s00779-011-0405-1
+- Fu, F.-L., Su, R.-C., &amp; Yu, S.-C. (2009). EGameFlow: A scale to measure learners' enjoyment of e-learning games. Computers &amp; Education , 52 (1), 101-112. doi:10.1016/j.compedu.2008.07.004
+- Gamespot UK. (2011). Gamespot UK. http://www.gamespot.com
+
+- Ijsselsteijn, W., Kort, Y.D., Poels, K., Jurgelionis, A., &amp; Bellotti, F. (2007). Characterising and measuring user experiences in digital games. ACE 2007 International Conference on Advances in Computer Entertainment Technology (pp. 1-4). Salzberg, Austria: ACM.
+- Jegers, K. (2007). Pervasive game flow: understanding player enjoyment in pervasive gaming . Computers in Entertainment, 5 (1), 9.
+- Khoo, E.T., Cheok, A.D., Nguyen, T.H.D., &amp; Pan, Z. (2008). Age invaders: Social and physical inter-generational mixed reality family entertainment. Virtual Reality , 12 (1), 3-16. doi:10.1007/s10055-008-0083-0
+- Metacritic. (2011). Metacritic. http://www.metacritic.com
+- Omar, A., &amp; Ali, N. M. (2011). Measuring flow in gaming platforms. International Conference on Semantic Technology and Information Retrieval (pp. 302-305). Putrajaya, Malaysia. doi:10.1109/STAIR.2011.5995806
+- Poels, K., de Kort, Y., &amp; Ijsselsteijn, W. (2007). 'It is always a lot of fun!' Exploring dimensions of digital game experience using focus group methodology. Proceedings of the 2007 conference on Future Play (pp. 8389). Toronto, ON: ACM. doi:10.1145/1328202.1328218
+- Sweetser, P., Johnson, D., Wyeth, P., &amp; Ozdowska, A. (2012). GameFlow heuristics for designing and evaluating real-time strategy games. Proceedings of the 8th Australasian Conference on Interactive Entertainment: Playing the System . Auckland, New Zealand: ACM Press. doi:10.1145/2336727.2336728
+- Sweetser, P., &amp; Wyeth, P. (2005). GameFlow: a model for evaluating player enjoyment in games. Computers in Entertainment, 3( 3 ) , 1-24. doi:10.1145/1077246.1077253
+- Tijs, T. J. W. (2006). Quantifying immersion in games by analyzing eye movements . Stockholm, Sweden: Royal Institute of Technology.
+- Tychsen, A. (2008). Crafting user experience via game metrics analysis. Proceedings of the Workshop 'Research Goals and Strategies for Studying User Experience and Emotion' NordiCHI2008 (pp. 20-22). Lund, Sweden: NordiCHI.
+
+## List of Tables
+
+| Table 1. Professional Review Sources for Selected Games                                                          | ....................................... 6                                          |
+|------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
+| Table 2. Heuristics for Social Interaction ..................................................................... | 6                                                                                  |
+| Table 3. Heuristics for Immersion                                                                                | ................................................................................ 7 |
+| Table 4. Heuristics for Challenge                                                                                | ................................................................................ 8 |
+| Table 5. Heuristics for Player Skills                                                                            | ........................................................................... 10     |
+
+## The Journal of Creative Technologies (JCT) Issue 3: Interactivity, 2013
+
+ISSN: 2230-2115
+
+Colab, Auckland University of Technology, New Zealand
+
+Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)
+
+is  a  research  communication platform published by Colab at the Faculty of Design and Creative
+
+JCT Technologies, Auckland University of Technology. https://ctechjournal.aut.ac.nz

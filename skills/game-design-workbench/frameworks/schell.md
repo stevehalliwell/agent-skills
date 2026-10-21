@@ -77,6 +77,7 @@ No copied lens-card wording, numbering, complete deck, or claim of comprehensive
 
 ## References
 
+- [English deck reference table](../references/schell/deck-table.md): 116 internal indices, exact titles, independent use notes, descriptions, and 451 questions from user-supplied JSON. [Raw supplied JSON](../references/schell/deck-en.json) preserves original data. Read [coverage and rights](../references/schell/README.md) before acquisition or redistribution; supplied deck content is local-only/not-publication-cleared.
 - [The Art of Game Design — official page](https://schellgames.com/art-of-game-design)
 
 Access checked 2026-10-19: Official Art of Game Design page inspected; book/deck content not reproduced or reviewed in full.

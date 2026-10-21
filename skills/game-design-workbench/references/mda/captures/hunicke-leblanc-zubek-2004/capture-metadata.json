@@ -1,0 +1,19 @@
+{
+  "source_title": "MDA: A Formal Approach to Game Design and Game Research",
+  "authors": ["Robin Hunicke", "Marc LeBlanc", "Robert Zubek"],
+  "publication_year": 2004,
+  "source_url": "https://www.cs.northwestern.edu/~hunicke/MDA.pdf",
+  "publication_record": "https://aaai.org/papers/ws04-04-001-mda-a-formal-approach-to-game-design-and-game-research/",
+  "capture_date": "2026-10-21",
+  "source_pdf_sha256": "f024c53fde7d44d340fc34a29edb96c1524d806dd56d74449f9e33ae28251773",
+  "source_pdf_retention": "Temporary download only; original online URL retained instead of redundant local PDF",
+  "method": "curl -fL download; existing docling-local convert.py; shared http://127.0.0.1:5001; --images --no-ocr --no-image-ocr --async",
+  "service_image": "quay.io/docling-project/docling-serve-cpu@sha256:061d35c03611bc15b73d024c8e8387bcf0624279f8b57c16c1567326f214ba56",
+  "conversion_status": "success",
+  "errors": [],
+  "markdown": "MDA.md",
+  "exported_figures": 7,
+  "checks": "Read complete Markdown, including abstract/introduction, dynamics/mechanics/tuning, three AI passes, conclusions and all five reference entries; all seven image paths resolve; inspected designer/player and Monopoly feedback figures",
+  "limits": "Automated PDF reading order and spacing; some apostrophes/quotation marks missing, references may retain line-break spaces; figure text retained in images, not separately OCRed; no page-layout facsimile",
+  "rights": "Attributed author-hosted public source. No explicit redistribution license established; copyright remains with respective rights holders. Local-only retention; not publication-cleared."
+}

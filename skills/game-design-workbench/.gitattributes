@@ -1,1 +1,7 @@
 * text eol=lf
+# Preserve reference evidence and supplied JSON byte-for-byte.
+references/** -text
+*.pdf binary
+*.png binary
+*.jpg binary
+*.gif binary
