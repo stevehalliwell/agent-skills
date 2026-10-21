@@ -23,6 +23,8 @@ Keep original intent, current goals, working draft, and framework interpretation
 
 ## Player experience and MDA
 
+For explicit emotional targets or arcs, use [shared emotional-experience guidance](emotional-experience.md): precise meaning, experiencer, target, possible elicitor, and transition when useful. Support simple plain-language briefs and highly specific feelings without requiring a taxonomy, dictionary recognition, or an emotion interview. Audience labels do not establish capability or preference.
+
 Overall intent/player story and individual MDA A aspects are different lenses. An aesthetic record does not replace or translate the entire brief. Compare support, contradiction/tension, missing evidence, discovery outside intent, and possible goal drift. A conflict prompts discussion; it does not authorize revising design or goals. Declared links alone do not prove player experience.
 
 ## Git history and comparisons

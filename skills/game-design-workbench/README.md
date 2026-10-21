@@ -12,6 +12,7 @@ One Markdown game-design model, selected framework reviews, and agent workflows 
 ## Delivery status
 
 - Available: guided setup/update, direct record/relationship inspection, declared term matching, selected agent review, ordinary dated review documents when requested.
+- Emotional intent: optional [shared framing](workflows/emotional-experience.md) and [working vocabulary](references/emotional-experience/emotions.md), from plain goals to precise relational feelings and rapid transitions. No compulsory taxonomy or new framework.
 - Deferred: C99 semantics/control-variable import/export (Slice 3), graphical model inspection (Slice 4), simulation and result views (Slice 5).
 - No custom setup, query, snapshot, report, or Git lifecycle subsystem. Skill instructions use existing tools.
 - Historical offline delivery report remains evidence of an older version, not a current model viewer or verification run.

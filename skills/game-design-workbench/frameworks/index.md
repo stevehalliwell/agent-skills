@@ -2,7 +2,9 @@
 
 Choose a lens by the question you need to answer. Read only the selected guide; overlapping entries offer different explanations, not a sequence to run through.
 
-Guides remain provisional. Each guide states its source coverage and limits; the five book-based guides have not received the fuller local-source expansion yet. Source text and provenance live in the separate [reference capture index](../references/README.md).
+Guides remain provisional. Each guide states its source coverage and limits; four book-based guides still await fuller source-backed expansion. Schell's guide now uses the retained English deck, not a full-book reading. Source text and provenance live in the separate [reference capture index](../references/README.md).
+
+For precise emotional meanings or sequences, use [shared framing](../workflows/emotional-experience.md) and [working emotion vocabulary](../references/emotional-experience/emotions.md). These support the existing frameworks; they are not a nineteenth entry, required intake, or exhaustive taxonomy.
 
 ## Rules, systems, and consequences
 
@@ -34,5 +36,5 @@ Guides remain provisional. Each guide states its source coverage and limits; the
 
 ## Reflection and evidence
 
-- **[Schell-inspired reflection](schell.md):** Best for reframing a concrete player moment, exposing a consequential assumption, and comparing alternatives through their wider effects. Current guide offers original reflective questions; it does not contain Schell's lens catalog or reproduce the deck.
+- **[Schell — selected deck lenses](schell.md):** Best for reframing a concrete design question through relevant cards, separating source facts from interpretation, and comparing consequences and evidence gaps. Use the retained 116-card reference to select actual lenses; guide includes a worked comparison using Feedback, Punishment, and Emotion rather than a whole-deck review.
 - **[Playcentric design](playcentric.md):** Best for turning an intended experience and an unresolved decision into a focused prototype or playtest question. Use it to choose what evidence would distinguish competing explanations and what a result could change, without treating a proposed test as executed evidence.

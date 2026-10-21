@@ -4,7 +4,7 @@ Read source Markdown linked below. HTML files are retained capture evidence, not
 
 ## HTML sources: readable Markdown
 
-All 16 retained HTML files map to 14 source-text Markdown captures. Bartle's raw/rendered HTML pair and LeBlanc's raw/view HTML pair each represent one source. Some Markdown files have different names or sit above their HTML capture directory.
+All 17 retained HTML files map to 15 source-text Markdown captures. Bartle's raw/rendered HTML pair and LeBlanc's raw/view HTML pair each represent one source. Some Markdown files have different names or sit above their HTML capture directory.
 
 | Source | Readable source Markdown | Retained HTML |
 | --- | --- | --- |
@@ -21,6 +21,7 @@ All 16 retained HTML files map to 14 source-text Markdown captures. Bartle's raw
 | Cook — Loops and Arcs | [Full article](skill-atoms/captures/loops-and-arcs/article.md) | [HTML](skill-atoms/captures/loops-and-arcs/page.html) |
 | Koster — Geek Fun Isn't Frivolous | [Full article](theory-of-fun/koster-2005-geek-fun-full-text.md) | [HTML](theory-of-fun/captures/2026-10-21/geek-fun.html) |
 | Koster — Fun in class, in sex? | [Full article](theory-of-fun/koster-2008-fun-in-class-full-text.md) | [HTML](theory-of-fun/captures/2026-10-21/fun-in-class.html) |
+| Desmet — Faces of Product Pleasure | [Full article](emotional-experience/sources/desmet-2012/article.md) | [HTML](emotional-experience/sources/desmet-2012/article.html) |
 | Miller — The Magical Number Seven, Plus or Minus Two | [Full article](working-memory/captures/miller-1956/miller-1956.md) | [HTML](working-memory/captures/miller-1956/page.html) |
 
 ## Framework indexes
@@ -42,9 +43,15 @@ Each index separates actual captures from cards and records source editions, met
 - [Theory of Fun](theory-of-fun/README.md)
 - [Schell deck](schell/README.md): 116-card table with independent use notes, descriptions, and 451 questions from user-supplied JSON; original JSON retained locally. Not publication-cleared.
 
+## Shared references
+
+- [Emotional experience: source scope, rights, and research lineage](emotional-experience/README.md); [working vocabulary](emotional-experience/emotions.md). Supports the existing 18 frameworks, not an additional framework or mandatory taxonomy.
+
 ## Conversion check
 
-All 16 retained HTML files successfully passed local HTML-to-Markdown extraction with existing Defuddle 0.19.2. Each already had a source-text Markdown counterpart; no HTML-only source gap remained. Kept existing reading copies rather than overwrite their checked text, restored references, and localized figures with fresh automatic output. Did not add duplicate source copies, reusable tools, or network dependencies.
+The earlier 16 retained HTML files successfully passed local HTML-to-Markdown extraction with existing Defuddle 0.19.2. Each already had a source-text Markdown counterpart; no HTML-only source gap remained. Kept existing reading copies rather than overwrite their checked text, restored references, and localized figures with fresh automatic output. Did not add duplicate source copies, reusable tools, or network dependencies.
+
+Desmet's later article capture also passed Defuddle 0.19.2 extraction; its reading copy localizes retained Figure 1 and records conversion/rights limits separately.
 
 Extraction success does not prove word-perfect transcription. Use each framework index for coverage and known conversion defects. Original HTML, source cards, and figures remain unchanged by this check.
 

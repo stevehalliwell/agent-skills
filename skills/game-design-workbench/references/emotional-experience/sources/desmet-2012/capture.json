@@ -1,0 +1,21 @@
+{
+  "captured_at": "2026-10-21T03:37:19.300274+00:00",
+  "method": "bounded explicit-URL HTTP capture; existing Defuddle 0.19.2 local readable conversion",
+  "rights": "Article-specific notice states CC BY-NC-ND 2.5; site footer states CC BY 4.0. Discrepancy unresolved; retain conservative local-only/not-publication-cleared disposition for reading conversion; no licence for unrelated workbench assets implied",
+  "artifacts": [
+    {
+      "url": "https://ijdesign.org/index.php/IJDesign/article/view/1190/459",
+      "file": "article.html",
+      "bytes": 86419,
+      "sha256": "99321c56784eb38a37e284e7476ef8a58d79b8a96988fed1ff7c402b0b8e452c",
+      "status": 200
+    },
+    {
+      "url": "https://ijdesign.org/public/journals/1/1190/Figure1.png",
+      "file": "Figure1.png",
+      "bytes": 172409,
+      "sha256": "d03035f7f8071ba7e6702dce72b3511e349bdec28477ac2cafd674ea6ea0df81",
+      "status": 200
+    }
+  ]
+}

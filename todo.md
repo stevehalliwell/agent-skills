@@ -645,7 +645,7 @@ Implemented delivery shape:
 - [x] Agent preserves existing owner/body/navigation during setup and explicit header changes. Project instructions record binding; no managed-link installer.
 - [x] Use ordinary Git log/show/diff for selected intent comparison and historical citations. No custom context/history/snapshot service. Earlier scripted tests remain historical evidence, not current interfaces.
 
-Current source/workflow contract: [concept and working mode](skills/game-design-workbench/workflows/concept.md). Implementation verification recorded after checks below. Framework guides remain provisional; source acquisition and 13 guide expansions are delivered for review. Slice 2 remains unstarted.
+Current source/workflow contract: [concept and working mode](skills/game-design-workbench/workflows/concept.md). Implementation verification recorded after checks below. Framework guides remain provisional; source acquisition and 14 guide expansions are delivered for review. Slice 2 remains unstarted.
 
 ### Collection cleanup — before further review
 
@@ -667,9 +667,10 @@ Current source/workflow contract: [concept and working mode](skills/game-design-
 - [x] Separate `workflows/`, `frameworks/`, and supporting `references/<framework>/`. All 18 guides end with References. Markdown `frameworks/index.md` replaces JSON catalog and explains when each guide is useful. Tests validate actual index and guides.
 - [x] Retain actual source text/figures/captions and separate provenance/notes for 13 non-book/mixed-source frameworks. Preferred Markdown reading copies are indexed; HTML remains evidence. Record access, conversion, and rights limits per source; acquisition does not establish redistribution clearance.
 - [x] Expand 13 source-backed guides with actual concepts, selected-slice application, output artifacts, worked examples, and counterchecks. Guides remain provisional for human review; word count and generation are not completeness evidence.
-- [ ] Complete human review and remaining book-based guide work. Establish purpose, actual concepts/categories/lenses, required/optional data, application procedure, revealed outputs, limits, worked example, and inspected sources before freezing native data contracts. Book-based guides: game grammar, resource economy, Caillois, Schell, playcentric.
+- [ ] Complete human review and remaining book-based guide work. Establish purpose, actual concepts/categories/lenses, required/optional data, application procedure, revealed outputs, limits, worked example, and inspected sources before freezing native data contracts. Still awaiting fuller source-backed expansion: game grammar, resource economy, Caillois, playcentric. Schell's deck-backed expansion is delivered for human review, not full-book coverage.
 - [x] Resolve Schell web-deck catalog: retain supplied raw JSON and searchable five-column table for all 116 English cards/451 questions. Preserve existing functional use notes; map descriptions/questions by internal index. Local-only/not-publication-cleared; local Git checkpoint explicitly approved, no push/publication.
-- [ ] Expand Schell application guide using retained individual lenses; generic reflective questions and a complete card table do not by themselves establish application-guide completeness.
+- [x] Expand Schell application guide using retained individual lenses. Read supplied instructions and 17 selected cards; add question-led selection, scoped application, explicit artifacts/counterchecks, and failed-push example using Feedback (63), Punishment (47), and Emotion (1). Guide remains provisional pending human review; no whole-deck application or full-book coverage claimed.
+- [x] Add shared emotional-experience procedure and non-exhaustive vocabulary: 64 primary working entries plus nine neighboring experiences/expressions, with meanings, targets, possible elicitors, source support, and explicit editorial/user-supplied senses. Support plain goals, specific relational feelings, mixtures, and rapid transitions; no dictionary gate or audience stereotypes. Retain Desmet source/figure and rights limits. Aesthetics authoring directly uses the vocabulary; templates, model guidance, and MDA surface naming feelings, targets, and experiential qualities. Rules–Behaviours–Feelings is an informal workbench bridge, not a renamed schema or claim about MDA's original terminology. Still 18 frameworks, no extra collections or compulsory taxonomy; provisional for human review.
 - [ ] Preserve overall player experience/player story and MDA A aspects as distinct lenses; do not treat one as canonical translation of the other.
 
 ### Slice 2 — C99 source core and structured inspection
@@ -706,6 +707,12 @@ Acceptance: human can inspect multi-case cell and parallel/late-root chains, nav
 - [ ] Verify dated results, tracked reproduction provenance versus ignored rebuildable output, no auto-run on open/preview, CLI/view parity, and new simulation after rule changes. Use temporary Git repositories; never checkpoint this skills repo as a test.
 
 Acceptance: reproduce recorded trials with frozen code/inputs/toolchain, show measurements/spread/percentiles and limits, inspect a selected run, and distinguish simulated predictions from observed play. Separately requested analysis can compare declared expectations; simulation does not decide design meaning. Full workbench scope is delivered across slices; current implementation covers Slice 1 only.
+
+### Final gate — review committed branch assets before push/completion
+
+- [ ] Review all assets committed on `feat/game-design-workbench` before any push or declaring this task complete. Cover full committed branch state and branch history, not only the last commit or current working diff.
+- [ ] Check code/tests, instructions/guides, templates/examples, source captures/data, reports, and other committed files for relevance, correctness, provenance, rights/publication limits, and accidental private or unrelated content. Validate the final committed snapshot; report coverage and unresolved findings.
+- [ ] Resolve blockers or obtain explicit acceptance of remaining limits before completion. Local-only/not-publication-cleared references need a publication disposition before push. Removing a file from the final tree does not remove it from earlier commits; any history rewrite requires separate approval. Push still requires explicit user approval.
 
 ## Acceptance approach
 

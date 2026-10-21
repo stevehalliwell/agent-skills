@@ -1,6 +1,6 @@
 ---
 name: game-design-workbench
-description: "Use for game-design-workbench requests, structured game-design records, concept/intent work, project game-design/game-explorer mode, noun–verb case exploration, skill/challenge-chain inspection, or an explicitly selected game-design framework review. Organize and question one Markdown design model with user-owned retention of alternatives and evidence. Skip ordinary game implementation, generic brainstorming, and unsolicited framework reviews."
+description: "Use for game-design-workbench requests, structured game-design records, concept/intent work, emotional-experience targets or arcs, project game-design/game-explorer mode, noun–verb case exploration, skill/challenge-chain inspection, or an explicitly selected game-design framework review. Organize and question one Markdown design model with user-owned retention of alternatives and evidence. Skip ordinary game implementation, generic brainstorming, and unsolicited framework reviews."
 ---
 
 # Game Design Workbench
@@ -30,6 +30,8 @@ On explicit invocation without operation, inspect project registry if present, t
 - Inspect relationships, terms, or change impact: [Inspection](workflows/inspect.md).
 - Review or store/read review: [Review](workflows/review.md), then selected framework below.
 - Use direct record commands, prepare an experiment checkpoint, or maintain shipped assets: [Existing tools](workflows/commands.md).
+- Author/refine aesthetics, name emotional intent, compare feelings, or trace an emotional arc: [Emotional experience](workflows/emotional-experience.md). Optional depth; plain goals and unfamiliar terms are valid.
+- Name what play should feel like, including within `aesthetics`, or need emotion meanings, relational targets, or possible eliciting situations: [Working emotion vocabulary](references/emotional-experience/emotions.md). Consult relevant entries only; not a new framework or required taxonomy.
 - Try tutorial: [Walkthrough](examples/crate-puzzle/README.md).
 
 ## Selected framework reads
@@ -56,7 +58,7 @@ Guides are provisional pending individual source/completeness review. Load only 
 - Routes to emotion: [Four Keys](frameworks/four-keys.md).
 - Historical multiplayer participation: [Bartle](frameworks/bartle.md).
 - Forms/freedoms of play: [Caillois](frameworks/caillois.md).
-- Contextual reflection; lens catalog missing: [Schell](frameworks/schell.md).
+- Contextual reflection using selected retained deck cards: [Schell](frameworks/schell.md).
 - Goals, prototypes, play evidence: [Playcentric](frameworks/playcentric.md).
 
 ## Authority

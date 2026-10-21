@@ -7,7 +7,7 @@ Live schemas and usage are authoritative for actual fields. Shipped template fil
 - `nouns`, `verbs`: entity/action identity and meaning.
 - `interactions`: one conditional case; applicable `nouns`, one `verb`, separate `context_nouns`, coverage, shared-rule links, case consequences/feedback in body.
 - `mechanics`: shared rules/state transitions; refer to control variables for configuration values and resources for pools.
-- `systems`: constructed mechanic arrangements. `dynamics`: intended/predicted/observed behavior with explicit evidence status. `aesthetics`: individual MDA aesthetic intentions.
+- `systems`: constructed mechanic arrangements. `dynamics`: intended/predicted/observed behavior with explicit evidence status. `aesthetics`: individual intended feelings/experiential qualities at MDA's aesthetics layer. Name these directly; MDA category labels are optional. Use [shared emotion vocabulary](../references/emotional-experience/emotions.md) and [framing guidance](emotional-experience.md) when useful.
 - `skill-atoms`: prerequisite AND sets, nullable signed authored rank, learning loop/understanding/expression/evidence sought.
 - `challenges`: `entry`, `next`, `introduces`, `practises`, `requires`, `tests_mastery`, applicable design links, assistance/route context. `levels`: optional grouping only.
 - `control-vars`: named game configuration; `value_type`, literal `value` or formula `expression`, units, enum values/bounds. Documentation/simulations reference names rather than copying magic numbers. Import/export remains Slice 3, not implemented.
