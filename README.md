@@ -20,6 +20,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`delegate-tasks`](skills/delegate-tasks/) — Hands off self-contained asides while main work continues; uses Herdr when available, otherwise bundled job runner.
 - [`herdr`](skills/herdr/) — Controls Herdr panes and agents through explicit session-scoped targets.
 - [`herdr-open-in-vscode`](skills/herdr-open-in-vscode/) — Opens requested local files in VS Code with their project context when working in Herdr.
+- [`herdr-open-in-fork`](skills/herdr-open-in-fork/) — Opens requested repositories or worktrees in Fork when working in Herdr.
 - [`herdr-needs-attention`](skills/herdr-needs-attention/) — Keeps current pane blocked on an open question until user responds to pending review, decision, or external work.
 - [`herdr-docker-agents`](skills/herdr-docker-agents/) — Isolates parallel Herdr children needing full-box control or risky filesystem operations; bundles Pi image and runtime credential handoff.
 - [`herdr-parallel-work`](skills/herdr-parallel-work/) — Coordinates parallel implementation from a human-reviewed base, with worktree-isolated workers, dedicated orchestrator, and explicit integration ownership.
