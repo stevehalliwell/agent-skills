@@ -128,7 +128,8 @@ Before changing a boundary, check:
 
 - Extract repeated values, values with domain meaning, and values defined by a specification into descriptive constants or enums. Use the named protocol/specification constant when one exists.
 - Keep a self-explanatory one-off literal inline when a named constant adds indirection without meaning. A constant is not configuration: do not create mutable configuration for a value that never varies.
-- Use guard clauses, early returns, and `continue` to keep the main path shallow. Do not force early exits where they obscure resource cleanup, transaction boundaries, or normal flow.
+- Prefer independent guard clauses over compound wrapper conditions to keep the main path shallow. Keep value returns and cleanup explicit; do not force early exits where they obscure cleanup, transaction boundaries, or normal flow.
+- Name operations by their actual behavior; reserve threading-coordination terms for real synchronization, not immutable commitment or publication.
 - Prefer an enum or equivalent named mode when a parameter selects behavior. Avoid boolean parameters whose `true`/`false` meaning is unclear at the call site; retain a boolean for a clear predicate or binary state.
 - Separate logical blocks with a blank line: setup, validation, main work, and result/cleanup. Do not add whitespace mechanically between every statement.
 
