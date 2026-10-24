@@ -1,0 +1,2 @@
+# Preserve copied dependency bytes and provenance hashes.
+vendor/** -text

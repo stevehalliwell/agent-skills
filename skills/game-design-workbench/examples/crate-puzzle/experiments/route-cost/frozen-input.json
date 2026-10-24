@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "recipe_id": "crate-route-cost-baseline-v1",
+  "model_id": "crate-route-timing-v1",
+  "configuration_id": "baseline-speed-2",
+  "experiment": {
+    "reference": "experiments/route-cost",
+    "id": "01a15175-3c00-7e68-8f3b-b760984a9a2d",
+    "source": "game-design/experiments/route-cost.md",
+    "source_status": "proposed"
+  },
+  "controls": {
+    "energy-capacity": {
+      "reference": "control-vars/energy-capacity",
+      "id": "01a15175-3c00-738e-87f3-304b36ccd7e6",
+      "status": "accepted",
+      "source_path": "game-design/control-vars/energy-capacity.md",
+      "type": "integer",
+      "unit": "energy",
+      "expression": "",
+      "requested": true,
+      "resolved": true,
+      "overridden": false,
+      "value": 3,
+      "authored_value": 3,
+      "minimum": null,
+      "maximum": null,
+      "dependencies": [],
+      "allowed_values": [],
+      "expression_line": 11,
+      "value_line": 10
+    },
+    "initial-energy": {
+      "reference": "control-vars/initial-energy",
+      "id": "01a15175-3c00-7d7a-8353-86da6f757cb1",
+      "status": "accepted",
+      "source_path": "game-design/control-vars/initial-energy.md",
+      "type": "integer",
+      "unit": "energy",
+      "expression": "${control-vars/energy-capacity}",
+      "requested": true,
+      "resolved": true,
+      "overridden": false,
+      "value": 3,
+      "authored_value": null,
+      "minimum": null,
+      "maximum": null,
+      "dependencies": [
+        {
+          "reference": "control-vars/energy-capacity",
+          "offset": 0
+        }
+      ],
+      "allowed_values": [],
+      "expression_line": 11,
+      "value_line": 10
+    },
+    "push-cost": {
+      "reference": "control-vars/push-cost",
+      "id": "01a15175-3c00-72ad-808a-b7c373aecfc9",
+      "status": "accepted",
+      "source_path": "game-design/control-vars/push-cost.md",
+      "type": "integer",
+      "unit": "energy",
+      "expression": "",
+      "requested": true,
+      "resolved": true,
+      "overridden": false,
+      "value": 1,
+      "authored_value": 1,
+      "minimum": null,
+      "maximum": null,
+      "dependencies": [],
+      "allowed_values": [],
+      "expression_line": 11,
+      "value_line": 10
+    },
+    "push-duration": {
+      "reference": "control-vars/push-duration",
+      "id": "01a15175-3c00-7113-8d87-01613e443afe",
+      "status": "accepted",
+      "source_path": "game-design/control-vars/push-duration.md",
+      "type": "number",
+      "unit": "s",
+      "expression": "2 * ${control-vars/walk-duration}",
+      "requested": true,
+      "resolved": true,
+      "overridden": false,
+      "value": 1,
+      "authored_value": null,
+      "minimum": null,
+      "maximum": null,
+      "dependencies": [
+        {
+          "reference": "control-vars/walk-duration",
+          "offset": 4
+        }
+      ],
+      "allowed_values": [],
+      "expression_line": 11,
+      "value_line": 10
+    },
+    "tile-distance": {
+      "reference": "control-vars/tile-distance",
+      "id": "01a15175-3c00-7670-8968-add9210667d7",
+      "status": "accepted",
+      "source_path": "game-design/control-vars/tile-distance.md",
+      "type": "number",
+      "unit": "m",
+      "expression": "",
+      "requested": true,
+      "resolved": true,
+      "overridden": false,
+      "value": 1,
+      "authored_value": 1,
+      "minimum": null,
+      "maximum": null,
+      "dependencies": [],
+      "allowed_values": [],
+      "expression_line": 11,
+      "value_line": 10
+    },
+    "walk-duration": {
+      "reference": "control-vars/walk-duration",
+      "id": "01a15175-3c00-7c99-832e-6d989799721c",
+      "status": "accepted",
+      "source_path": "game-design/control-vars/walk-duration.md",
+      "type": "number",
+      "unit": "s",
+      "expression": "${control-vars/tile-distance} / ${control-vars/walk-speed}",
+      "requested": true,
+      "resolved": true,
+      "overridden": false,
+      "value": 0.5,
+      "authored_value": null,
+      "minimum": null,
+      "maximum": null,
+      "dependencies": [
+        {
+          "reference": "control-vars/tile-distance",
+          "offset": 0
+        },
+        {
+          "reference": "control-vars/walk-speed",
+          "offset": 32
+        }
+      ],
+      "allowed_values": [],
+      "expression_line": 11,
+      "value_line": 10
+    },
+    "walk-speed": {
+      "reference": "control-vars/walk-speed",
+      "id": "01a15175-3c00-7f89-8e3d-bc20a588f219",
+      "status": "accepted",
+      "source_path": "game-design/control-vars/walk-speed.md",
+      "type": "number",
+      "unit": "m/s",
+      "expression": "",
+      "requested": true,
+      "resolved": true,
+      "overridden": false,
+      "value": 2,
+      "authored_value": 2,
+      "minimum": null,
+      "maximum": null,
+      "dependencies": [],
+      "allowed_values": [],
+      "expression_line": 11,
+      "value_line": 10
+    }
+  },
+  "assumptions": {
+    "action_sequence": [
+      "walk",
+      "walk",
+      "walk",
+      "walk",
+      "push",
+      "push",
+      "push"
+    ],
+    "route_legal": true,
+    "decisions_correct": true,
+    "delay_distribution": "uniform-independent",
+    "delay_min_seconds": 0,
+    "delay_max_seconds": 1,
+    "clock_start": "before-first-delay",
+    "clock_stop": "after-final-push",
+    "energy_policy": "require-sufficient-energy-successful-pushes-only"
+  },
+  "measures": {
+    "elapsed-time": {
+      "identity": "01a15175-3c00-7e68-8f3b-b760984a9a2d#elapsed-time",
+      "value_type": "number",
+      "unit": "s",
+      "boundary": "Before first action delay through final successful push completion; includes all seven independent delays and action durations.",
+      "undefined": "Not produced as a completed trial if execution is interrupted; incomplete execution cannot establish criterion satisfaction."
+    },
+    "completion-time": {
+      "identity": "01a15175-3c00-7e68-8f3b-b760984a9a2d#completion-time",
+      "value_type": "number",
+      "unit": "s",
+      "boundary": "Before first action delay through final successful push completion; includes all seven independent delays and action durations.",
+      "undefined": "Not produced as a completed trial if execution is interrupted; incomplete execution cannot establish criterion satisfaction."
+    },
+    "route-complete": {
+      "identity": "01a15175-3c00-7e68-8f3b-b760984a9a2d#route-complete",
+      "value_type": "boolean",
+      "unit": "",
+      "boundary": "At trial termination",
+      "undefined": "Not produced as a completed trial if execution is interrupted; incomplete execution cannot establish criterion satisfaction."
+    },
+    "remaining-energy": {
+      "identity": "01a15175-3c00-7e68-8f3b-b760984a9a2d#remaining-energy",
+      "value_type": "integer",
+      "unit": "energy",
+      "boundary": "At trial termination",
+      "undefined": "Not produced as a completed trial if execution is interrupted; incomplete execution cannot establish criterion satisfaction."
+    }
+  },
+  "expectation": {
+    "measure": "completion-time",
+    "operator": "le",
+    "target": 8,
+    "unit": "s",
+    "minimum_pass_rate": 0.9,
+    "interpretation": "Agent-side only; model emits measurements, not criterion verdicts."
+  },
+  "random_generator": "pcg32-xsh-rr-v1",
+  "seed": "0x000000000000002a",
+  "trials": 1000,
+  "trace_trial": null,
+  "limits": {
+    "steps_per_trial": 1000000,
+    "wall_seconds": 30,
+    "output_bytes": 67108864
+  },
+  "preparation": {
+    "status": "prepared-not-executed",
+    "clock_boundary_agreed": true,
+    "controls_origin": "Native gd controls --control-vars control-vars=game-design/control-vars --json; no overrides; source paths made example-relative.",
+    "checkpoint_policy": "Actual future commit supplied at execution; this file does not name its own future commit.",
+    "coverage": "One prescribed successful route; no insufficient-energy behavior, physical reachability, player performance or design verdict."
+  }
+}
