@@ -16,6 +16,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 
 - [`attendant`](skills/attendant/) — cli tools to generate sqlite dbs from schema light md collections. E.g. keeping a backlog of tasks in the repository.
 - [`agent-browser`](skills/agent-browser/) — Drives a visible shared browser for interactive web tasks.
+- [`github-image-attachments`](skills/github-image-attachments/) — Uploads local images into GitHub PRs, issues, and comments through GitHub CLI.
 - [`crawl4ai`](skills/crawl4ai/) — Crawls public pages with Dockerized Crawl4AI when ordinary fetches fall short.
 - [`delegate-tasks`](skills/delegate-tasks/) — Hands off self-contained asides while main work continues; uses Herdr when available, otherwise bundled job runner.
 - [`herdr`](skills/herdr/) — Controls Herdr panes and agents through explicit session-scoped targets.
