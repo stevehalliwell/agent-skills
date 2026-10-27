@@ -19,3 +19,13 @@ Hero is unsupported when another jump press occurs.
 ## Consequences and feedback
 
 No second launch. Preserve current motion apart from other active rules. This is explicitly defined no-effect behavior, not an absent jump case.
+
+```gd-rule
+case no-second-launch:
+    unknown_conditions: Repeat jump press while unsupported.
+    unknown_effects: No second launch; preserve current motion against this action only. Other active gravity/collision/movement continue; exact continuing quantities not configured.
+    Hero:
+        noun: nouns/hero
+        requires: unsupported
+        preserve: Motion
+```

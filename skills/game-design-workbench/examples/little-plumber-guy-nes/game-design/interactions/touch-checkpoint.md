@@ -13,6 +13,8 @@ context_nouns:
   - nouns/hero
 mechanics:
   - mechanics/checkpoint-save
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -21,3 +23,15 @@ Alive hero crosses checkpoint-strip's progress trigger.
 ## Consequences and feedback
 
 Store retry anchor for current game. No immediate time, power or life refill. Trigger visibility/acknowledgement is unresolved; storing state does not prove player noticed it.
+
+```gd-rule
+case cross-trigger:
+    context: Hero crossesTrigger Checkpoint
+    unknown_conditions: checkpoint-strip progress trigger, not arbitrary placement.
+    unknown_effects: Store current-game retry anchor; no immediate Clock/power/life refill. Visibility/HUD acknowledgement unresolved, not proof player noticed.
+    Hero:
+        noun: nouns/hero
+        requires: alive
+    Checkpoint:
+        noun: nouns/checkpoint
+```

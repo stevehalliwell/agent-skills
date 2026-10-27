@@ -10,6 +10,8 @@ nouns:
   - nouns/hero
 verbs:
   - verbs/touch
+context_axes:
+  - axes/Contact
 ---
 ## Rule
 
@@ -18,3 +20,20 @@ Crossing checkpoint-strip changes the current game's retry anchor. Crossing alon
 ## Feedback
 
 Trigger is invisible in the world. Whether to add a HUD acknowledgement is open, so the data does not promise that players notice it.
+
+```gd-rule
+case cross-checkpoint:
+    context: Hero crossesTrigger Checkpoint
+    unknown_conditions: checkpoint-strip progress trigger in current game, not every arbitrary checkpoint placement.
+    unknown_effects: Store retry anchor; no life/Clock/power grant. Future death uses anchor with separate retry reset. Invisible trigger; HUD acknowledgement open.
+    Hero:
+        noun: nouns/hero
+    Checkpoint:
+        noun: nouns/checkpoint
+
+case new-game:
+    unknown_conditions: New-game occurrence, not a retry.
+    unknown_effects: Clear retry anchor; no persistent save file.
+    Checkpoint:
+        noun: nouns/checkpoint
+```

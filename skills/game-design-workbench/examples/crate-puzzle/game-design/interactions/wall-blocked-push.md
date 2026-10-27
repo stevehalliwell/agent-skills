@@ -29,3 +29,18 @@ Wall occupies destination.
 
 ## Consequences and feedback
 Apply shared blocked-push rule: no movement or spending. Additional blocked-action feedback remains unspecified.
+
+```gd-rule
+case wall-blocked:
+    unknown_conditions: Wall occupies attempted push destination; destination and spatial bindings unencoded.
+    unknown_effects: Shared blocked-push rule: no movement or spending. Additional feedback unspecified.
+    Player:
+        noun: nouns/player
+    Crate:
+        noun: nouns/crate
+    Wall:
+        noun: nouns/wall
+    Energy:
+        noun: nouns/energy
+        preserve: Amount
+```

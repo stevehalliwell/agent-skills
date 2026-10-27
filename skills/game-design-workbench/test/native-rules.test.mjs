@@ -25,7 +25,7 @@ function structured(args, expected = 0) {
   return value;
 }
 
-test('native rule CLI exposes approved specimen without implying completed migration or semantics',
+test('native rule CLI exposes full live migration and preserves approved specimen and unresolved design scope',
   { skip: !executable && 'Set GD_NATIVE_EXE' }, async () => {
     const folder = join(home, 'examples/little-plumber-guy-nes/game-design');
     const binding = role => `${role}=${join(folder, role)}`;
@@ -34,20 +34,21 @@ test('native rule CLI exposes approved specimen without implying completed migra
     const value = structured(args);
     assert.equal(value.coverage.operation, 'rules');
     assert.equal(value.coverage.source_record_count, 73);
-    assert.equal(value.coverage.records_with_cases, 1);
-    assert.equal(value.coverage.axis_count, 9);
-    assert.equal(value.coverage.context_count, 1);
+    assert.equal(value.coverage.records_with_cases, 73);
+    assert.equal(value.coverage.axis_count, 20);
+    assert.equal(value.coverage.context_count, 87);
     assert.equal(value.coverage.context_bindings_complete, true);
-    assert.equal(value.data.cases[0].skip_if_count, 0);
+    const item = value.data.cases.find(row => row.record === 'interactions/touch-walker-powered');
+    assert.ok(item);
+    assert.equal(item.skip_if_count, 0);
     assert.equal(value.coverage.limits.evaluation_work, 16 * 1024 * 1024);
-    assert.deepEqual([value.data.cases[0].ordered_context.left, value.data.cases[0].ordered_context.right], ['Player', 'Walker']);
-    assert.equal(value.data.cases[0].ordered_context.target.axis, 'axes/Contact');
-    assert.equal(value.data.cases[0].ordered_context.target.state, 'sideContacts');
+    assert.deepEqual([item.ordered_context.left, item.ordered_context.right], ['Player', 'Walker']);
+    assert.equal(item.ordered_context.target.axis, 'axes/Contact');
+    assert.equal(item.ordered_context.target.state, 'sideContacts');
     assert.equal(value.coverage.axis_definitions_complete, true);
     assert.equal(value.coverage.bindings_complete, false); // Remaining inventories stay explicitly unknown.
-    assert.equal(value.data.records.filter(row => row.rule_block === 'absent').length, 72);
-    assert.equal(value.data.cases.length, 1);
-    const item = value.data.cases[0];
+    assert.equal(value.data.records.filter(row => row.rule_block === 'absent').length, 0);
+    assert.equal(value.data.cases.length, 164);
     assert.equal(item.record, 'interactions/touch-walker-powered');
     assert.equal(item.case, 'powered-side-contact');
     assert.equal(item.status, 'accepted');
@@ -58,9 +59,9 @@ test('native rule CLI exposes approved specimen without implying completed migra
     assert.deepEqual(item.participants.map(row => row.name), ['Player', 'Walker', 'Lives']);
     assert.ok(item.participants.every(row => row.noun_resolution === 'resolved' && row.applicable_axes_complete));
     assert.deepEqual(value.data.actors.find(row => row.record === 'nouns/hero').axes.map(row => row.reference),
-      ['axes/Life', 'axes/Form', 'axes/Protection', 'axes/ProtectionTime']);
+      ['axes/Life', 'axes/Form', 'axes/Protection', 'axes/ProtectionTime', 'axes/Support', 'axes/Motion', 'axes/Stance', 'axes/TargetSpeed', 'axes/LiveSparks']);
     assert.equal(item.participants[0].requires, 'alive AND (tall OR spark) AND NOT protected');
-    assert.equal(value.coverage.condition_count, 3);
+    assert.equal(value.coverage.condition_count, 162);
     assert.equal(value.coverage.condition_bindings_complete, true);
     assert.equal(item.participants[0].requires_condition.state, 'parsed');
     assert.deepEqual(item.participants[0].requires_condition.program.map(row => row.op),
@@ -74,7 +75,7 @@ test('native rule CLI exposes approved specimen without implying completed migra
     assert.equal(item.participants[0].preserve, 'OTHER');
     assert.equal(item.participants[0].set[0].expression, '{control-vars/safety-window}');
     assert.equal(value.coverage.effect_bindings_complete, true);
-    assert.equal(value.coverage.state_effect_count, 2);
+    assert.equal(value.coverage.state_effect_count, 94);
     assert.deepEqual(item.participants[0].state_effects.map(row => row.target), [
       { resolution: 'resolved', axis: 'axes/Form', state: 'small' },
       { resolution: 'resolved', axis: 'axes/Protection', state: 'protected' },
@@ -88,11 +89,27 @@ test('native rule CLI exposes approved specimen without implying completed migra
     const lines = (await readFile(join(folder, 'interactions/touch-walker-powered.md'), 'utf8')).split('\n');
     assert.equal(lines[item.line - 1].trim(), `case ${item.case}:`);
     assert.equal(lines[item.participants[0].set[0].line - 1].trim(), 'ProtectionTime: {control-vars/safety-window}');
-    assert.match(value.coverage.scope, /not resolved or evaluated/);
+    assert.match(value.coverage.scope, /no actor starting values/);
+    assert.equal(item.participants[0].set[0].quantity.inspection.number, 1);
     const selected = structured([...args, '--fields', 'cases']);
     assert.deepEqual(Object.keys(selected.data), ['cases']);
     assert.equal(selected.coverage.source_record_count, 73);
     assert.match(invoke([...args, '--format', 'text']).stdout, /Declarations only/);
+    const analyzed = structured([...args, '--analyze', '--fields', 'analysis']).data.analysis;
+    assert.equal(analyzed.calls.length, 6);
+    assert.ok(analyzed.calls.every(row => row.resolution === 'resolved'));
+    assert.ok(analyzed.compared_pairs > 0 && analyzed.pairs_unexamined > 0);
+    assert.equal(analyzed.comparison_limited, true); // Partial bounded scope, not a universal verdict.
+    const crateFolder = join(home, 'examples/crate-puzzle/game-design');
+    const crateArgs = ['rules'];
+    for (const role of ['interactions', 'mechanics', 'nouns', 'verbs', 'control-vars', 'axes'])
+      crateArgs.push(`--${role}`, `${role}=${join(crateFolder, role)}`);
+    const crate = structured(crateArgs);
+    assert.equal(crate.coverage.source_record_count, 12);
+    assert.equal(crate.coverage.records_with_cases, 12);
+    assert.equal(crate.coverage.case_count, 16);
+    assert.equal(crate.coverage.axis_count, 4);
+    assert.ok(crate.data.records.every(row => row.rule_block === 'parsed'));
   });
 
 test('native rule CLI handles empty, partial and invalid requests without source writes',
@@ -373,10 +390,12 @@ test('native condition grammar resolves grouped scoped predicates without flatte
     result = await check('Time.active', 2);
     assert.equal(result.value.errors[0].code, 'rules.condition_type');
     result = await check('Time > 0[s]');
-    assert.equal(result.actor.requires_condition.state, 'unsupported');
-    assert.deepEqual(result.actor.requires_condition.program, []);
-    assert.equal(result.value.coverage.condition_bindings_complete, false);
-    assert.ok(result.value.data.findings.some(row => row.code === 'rules.condition_unsupported'));
+    assert.equal(result.actor.requires_condition.state, 'parsed');
+    assert.equal(result.actor.requires_condition.program[0].op, 'compare');
+    assert.equal(result.actor.requires_condition.program[0].comparison, '>');
+    assert.equal(result.actor.requires_condition.program[0].quantity.inspection.number, 0);
+    assert.equal(result.value.coverage.condition_bindings_complete, true);
+    assert.ok(!result.value.data.findings.some(row => row.code === 'rules.condition_unsupported'));
     result = await check('ANY', 2, '        other_axes: NONE');
     assert.equal(result.actor.other_axes_mode, 'invalid');
     assert.equal(result.value.errors[0].code, 'rules.other_axes');

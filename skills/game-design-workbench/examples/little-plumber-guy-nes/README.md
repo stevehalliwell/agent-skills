@@ -6,10 +6,10 @@ Not a reconstruction of a published game. No ROM, copied map, screenshots, sprit
 
 ## What is here
 
-211 records across 15 collections:
+222 records across 15 collections:
 
 - 26 nouns and 12 verbs establish vocabulary and actions. Noun inventories explicitly reference known axes or remain null when unmodeled.
-- 9 provisional axes: 8 cover actor life, form, protection/duration and existing pool quantities; Contact supplies only the accepted specimen's ordered context vocabulary. This begins actor/state migration; most interaction/mechanic bodies remain prose, not structured rule coverage.
+- 20 provisional axes cover explicit actor dimensions, pool quantities and ordered context vocabulary. All 73 interaction/mechanic records have readable `gd-rule` blocks with 164 named cases. Shell remains a state of the same shellback; spent block remains a state of supply-block. Original descriptor nouns, flat links and prose remain. No initial scene, physics, event timing or missing outcomes inferred.
 - 49 conditional interactions retain different outcomes within the same noun–verb cell.
 - 24 mechanics and 6 systems own reusable behavior and arrangements.
 - 16 skill atoms and 19 challenges describe intended opportunities, demands, alternatives and joins.

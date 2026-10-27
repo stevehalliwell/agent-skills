@@ -18,9 +18,9 @@ case contact:
 - Resolve bare states through that participant's explicit noun axes. Use `AXIS.STATE` for ambiguous names; optional canonical `ALIAS/AXIS.STATE` selects a loaded definition explicitly. Same-type participants remain distinct local bindings.
 - `ANY` is an explicit unrestricted predicate. Missing `requires` or `skip_if` stays `unspecified`, not ANY, false or an inherited actor-wide guard. Qualify a state literally named `ANY`, `AND`, `OR` or `NOT`.
 - State atoms are literal spans, not quoted strings or function calls. Whitespace, parentheses and logical symbols delimit atoms. Named values containing those separators are outside this condition fragment; their axis declarations remain intact.
-- Numeric comparisons containing `<`, `>` or `=` remain `unsupported`: raw condition retained, no compiled program or Boolean result inferred. Numeric expressions/units need shared quantity-expression work, not a second evaluator.
+- Numeric comparisons compile through [shared quantity math](quantities.md), including arithmetic groups and fractional thresholds. Typed boolean control references may form atoms. No second evaluator or truth coercion.
 - `other_axes: ANY` explicitly leaves other dimensions unrestricted. Omission stays `unspecified`; other values produce a sourced error. Neither form changes axis values or proves reachable combinations. ANY here does not fill a missing `requires`.
-- True `skip_if` means exclude its owning case when applicability analysis is implemented. It is not a positive requirement, actor-wide inheritance or another case's guard. This slice compiles the guard separately; it does not return combined case applicability.
+- True `skip_if` excludes its owning case, not another case or actor-wide interaction. It is not a positive requirement. [Optional outcome analysis](outcomes.md) combines local exclusions with positive predicates and ordered context.
 
 ## Headless facts
 
@@ -30,16 +30,16 @@ Each participant keeps raw `requires`, `skip_if`, `other_axes` and field lines, 
 
 - `requires_condition`, `skip_if_condition`: `state`, source `line`, `bindings_complete`, derived postfix `program`.
 - Condition states: `unspecified`, `parsed`, `invalid`, `unsupported`, `limited`. Parsed syntax is not an applicable-case verdict or proof that all state names resolve.
-- Program tokens: `op` (`state`, `any`, `not`, `and`, `or`), original `text`, byte `offset` within raw field value. State operands also retain canonical target/state and resolution. Operators never mutate actors.
+- Program tokens: `op` (`state`, `any`, `not`, `and`, `or`, `compare`, `control`), original `text`, byte `offset` within raw field value. State operands also retain canonical target/state and resolution. Operators never mutate actors.
 - `other_axes_mode`: `unspecified`, `any`, `invalid`. Preserve omitted versus authored scope without representing omission as false.
 
 Coverage adds `condition_count`, `condition_token_count`, `condition_bindings_complete`. Readiness covers authored supported predicates and `other_axes` declarations in retained cases only. It does not cover absent rules, unspecified other dimensions, context, reachability, effects, composition or complete migration. Zero authored conditions does not imply an unrestricted design.
 
-Ambiguous names, closed-missing values, incompatible types, malformed logic and limits produce sourced errors. Open/incomplete names remain undetermined with informational findings. Unsupported numeric predicates remain informational partial coverage, not false. Invalid/limited fields return no valid-looking partial program; earlier complete fields stay inspectable.
+Ambiguous names, closed-missing values, incompatible types, malformed logic and limits produce sourced errors. Open/incomplete names remain undetermined with informational findings. Unresolved numeric inputs remain unknown, not false. Malformed/limited numeric syntax rolls back its entire Boolean field. Invalid/limited fields return no valid-looking partial program; earlier complete fields stay inspectable.
 
 ## Read-only C99 truth
 
-`gd_rule_condition_value` evaluates one compiled predicate under explicit `GD_RulePredicateFact` inputs. Facts key snapshot participant index, axis-record index and exact named state. These are logical assumptions supplied by an analysis caller, not gameplay observations or proof of a realizable scene.
+`gd_rule_condition_value` evaluates one compiled predicate under explicit `GD_RulePredicateFact` inputs. Facts key snapshot participant index, axis-record index and `value`: exact named state or typed numeric literal. Numeric/conflicting-fact rules are in [quantity contract](quantities.md). These are logical assumptions supplied by an analysis caller, not gameplay observations or proof of a realizable scene.
 
 - Three values: `GD_RULE_TRUTH_UNKNOWN`, `GD_RULE_TRUTH_FALSE`, `GD_RULE_TRUTH_TRUE`. Compare enum values explicitly; result is not a C Boolean.
 - Missing facts, conflicting facts for one key, unresolved state operands and unparsed conditions remain unknown. Same-noun facts for another participant do not match. Invalid fact counts return unknown without reading outside supplied storage.
@@ -59,7 +59,7 @@ GD_RuleTruth value = gd_rule_condition_value(
     rules, &rules->participants[player_index].required_condition, &fact, 1);
 ```
 
-A true expression does not establish case applicability: other participants, unspecified axes, ordered context and local exclusions still matter. No input facts supplied by CLI yet; CLI exposes declarations/programs, not fabricated truth values. No tick, state transition, effect execution, sequence or independent corroboration is inferred.
+A true expression does not establish case applicability: other participants, unspecified axes, ordered context and local exclusions still matter. CLI `--case`, `--assume` and ordered context options provide explicit hypothetical inputs for separate outcome analysis; declaration inspection still fabricates no truth. No tick, state transition, effect execution, sequence or independent corroboration is inferred.
 
 ## Case-local early-outs
 
@@ -67,7 +67,7 @@ Omitted `skip_if` means no guard declared. Do not evaluate absence, invent a fal
 
 `gd_rule_case_exclusions` checks only authored local guards under explicit predicate facts. Return `GD_EXCLUSION_ABSENT` for no guards, `GD_EXCLUSION_NOT_EXCLUDED` when all authored guards are false, `GD_EXCLUSION_EXCLUDED` when any is true, or `GD_EXCLUSION_UNKNOWN` when remaining guards are unknown/unexamined. A known true guard excludes its case even if another guard is unknown; it does not exclude other cases.
 
-Result retains `guard_count`, `checked_count`, snapshot `excluded_by` participant index (`-1` without witness), charged `work` and `limited`. A witness may end the check early; this is not priority or an interaction winner. CLI exposes authored `skip_if_count` only; no scenario facts or fabricated truth supplied.
+Result retains `guard_count`, `checked_count`, snapshot `excluded_by` participant index (`-1` without witness), charged `work` and `limited`. A witness may end the check early; this is not priority or an interaction winner. Declaration output exposes authored `skip_if_count`; optional scenario output separately reports supplied assumptions and exclusion checks.
 
 Each check reserves conservative token/byte-comparison upper bounds against a separate 16,777,216 evaluation-work budget. A guard that does not fit stays unexamined; no partial false result. Inputs remain limited to 256 facts and existing bounded case/program storage. No-guard result needs no predicate evaluation. This checks exclusions only: absent/false guards do not prove positive requirements, context, complete axis scope, valid scene, applicable effects or a consistent transition.
 

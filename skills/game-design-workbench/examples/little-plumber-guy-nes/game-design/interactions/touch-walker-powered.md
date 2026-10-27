@@ -22,6 +22,8 @@ context_axes:
 ---
 ## Rule
 
+### Original declaration checkpoint
+
 Accepted authoring specimen. Native `gd rules` reads this block as declarations. Typed axes, explicit noun/axis bindings, grouped state predicates, effect names and the quantity target now resolve. Ordered context binds local participants through explicit `context_axes` without establishing actual contact. Concrete applicability, resulting quantities, preservation and composition remain pending; compiled predicates do not execute or validate gameplay meaning.
 
 ```gd-rule
@@ -47,6 +49,10 @@ case powered-side-contact:
         requires: ANY
         preserve: ALL
 ```
+
+### Current inspection
+
+Declaration-only limitations above describe the historical authoring checkpoint. Native `rules --case` now evaluates explicitly supplied hypotheses and simultaneous proposals; `--analyze` adds bounded comparison. No gameplay execution, scene inference or missing Walker outcome supplied. Original specimen and prose retained.
 
 ## Feedback and boundaries
 

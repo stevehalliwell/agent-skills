@@ -10,6 +10,11 @@ axes:
   - axes/Form
   - axes/Protection
   - axes/ProtectionTime
+  - axes/Support
+  - axes/Motion
+  - axes/Stance
+  - axes/TargetSpeed
+  - axes/LiveSparks
 ---
 ## Definition
 

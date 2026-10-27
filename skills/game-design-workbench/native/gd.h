@@ -183,10 +183,10 @@ typedef struct {
 } GD_ControlValue;
 typedef struct { const char *reference, *value; } GD_ControlOverride;
 typedef struct {
-    int operation, target, source, offset; /* Private bytecode; target>=0 only for references. */
+    int operation, target, source, offset; /* Private bytecode; target>=0 loaded reference, -2 unloaded reference, -1 other. */
     double number;
     const char *unit;
-    int unit_length;
+    int unit_length, rounded_fraction;
 } GD_ControlToken;
 typedef struct {
     GD_Allocator allocator;
@@ -196,6 +196,21 @@ typedef struct {
     int first[GD_MAX_RECORDS], count[GD_MAX_RECORDS];
     GD_ControlToken tokens[GD_MAX_CONTROL_TOKENS];
 } GD_Controls;
+/* Caller-owned span; compiled tokens borrow immutable expression text. */
+#define GD_EXPRESSION_UNLOADED_REFERENCE (-2)
+typedef struct { GD_ControlToken *tokens; int count, capacity; } GD_Expression;
+typedef enum { GD_EXPRESSION_CONTROL, GD_EXPRESSION_PREDICATE, GD_EXPRESSION_ASSIGNMENT } GD_ExpressionMode;
+typedef struct { int record, line; GD_ExpressionMode mode; } GD_ExpressionSite;
+typedef enum { GD_EXPRESSION_UNKNOWN, GD_EXPRESSION_VALUE, GD_EXPRESSION_UNIT_ERROR, GD_EXPRESSION_ARITHMETIC_ERROR } GD_ExpressionState;
+typedef struct { GD_ControlValue value; int known, unit_known; } GD_ExpressionInput;
+int gd_compile_expression(GD_Model *model, GD_Expression *expression, const char *text, size_t length, GD_ExpressionSite site);
+GD_ExpressionState gd_expression_value(const GD_ControlToken *tokens, int count, const GD_Controls *controls,
+                                      const GD_ExpressionInput *starting, int integer, GD_ExpressionInput *result);
+int gd_units_equal(const GD_Unit *a, const GD_Unit *b);
+/* Structural bytecode equality/identity, not algebraic or domain-validity proof. */
+int gd_expressions_equal(const GD_ControlToken *a, int count_a, const GD_ControlToken *b, int count_b);
+int gd_expression_is_starting_value(const GD_ControlToken *tokens, int count);
+int gd_expression_has_unknown(const GD_ControlToken *tokens, int count);
 /* Unit symbols are opaque. No implicit scale conversions. Errors return 0. */
 int gd_control_unit(const char *text, size_t length, GD_Unit *unit);
 int gd_control_number(const char *text, double *value, int integer);
@@ -251,11 +266,17 @@ int gd_write_control_import(FILE *output, const GD_Model *model, const GD_Contro
 #define GD_MAX_RULE_PARTICIPANTS 8192
 #define GD_MAX_RULE_ASSIGNMENTS 8192
 #define GD_MAX_RULE_STATE_EFFECTS 8192
+#define GD_MAX_RULE_PRESERVATIONS 8192
+#define GD_MAX_RULE_QUANTITIES 16384
+#define GD_MAX_RULE_QUANTITY_TOKENS 32768
 #define GD_MAX_RULE_CONDITION_TOKENS 65536
 #define GD_MAX_RULE_CONDITION_ITEMS 256
 #define GD_MAX_RULE_CONDITION_DEPTH 64
 #define GD_RULE_SYMBOL_WORK_LIMIT (16 * 1024 * 1024)
 #define GD_RULE_EVALUATION_WORK_LIMIT (16 * 1024 * 1024)
+#define GD_RULE_QUANTITY_WORK_LIMIT (64 * 1024 * 1024)
+#define GD_RULE_NUMERIC_TOKEN_WORK 32768 /* Conservative bounded unit/byte work. */
+#define GD_RULE_NUMERIC_FACT_WORK 4096
 #define GD_RULE_TEXT_CAPACITY (4 * 1024 * 1024)
 #define GD_MAX_RULE_LINE 8192
 typedef enum { GD_RULE_ABSENT, GD_RULE_PARSED, GD_RULE_EMPTY, GD_RULE_INVALID } GD_RuleSourceState;
@@ -268,7 +289,7 @@ typedef enum { GD_AXIS_UNSPECIFIED, GD_AXIS_ENUM, GD_AXIS_INTEGER, GD_AXIS_NUMBE
 typedef struct { GD_AxisType type; int valid, unit_known; } GD_RuleAxis;
 typedef enum { GD_CONDITION_UNSPECIFIED, GD_CONDITION_PARSED, GD_CONDITION_INVALID,
                GD_CONDITION_UNSUPPORTED, GD_CONDITION_LIMITED } GD_RuleConditionState;
-typedef enum { GD_RULE_OP_STATE, GD_RULE_OP_ANY, GD_RULE_OP_NOT, GD_RULE_OP_AND, GD_RULE_OP_OR } GD_RuleConditionOp;
+typedef enum { GD_RULE_OP_STATE, GD_RULE_OP_ANY, GD_RULE_OP_NOT, GD_RULE_OP_AND, GD_RULE_OP_OR, GD_RULE_OP_COMPARE, GD_RULE_OP_CONTROL } GD_RuleConditionOp;
 typedef enum { GD_RULE_TRUTH_UNKNOWN, GD_RULE_TRUTH_FALSE, GD_RULE_TRUTH_TRUE } GD_RuleTruth;
 typedef enum { GD_RULE_OTHER_UNSPECIFIED, GD_RULE_OTHER_ANY, GD_RULE_OTHER_INVALID } GD_RuleOtherAxes;
 typedef struct {
@@ -281,8 +302,21 @@ typedef struct {
     size_t length;
     int offset; /* Byte offset within the raw condition, not Markdown column. */
     GD_RuleTarget target;
+    int axis_length, rhs_offset, comparison, quantity, control_record; /* Numeric atom spans and derived program index. */
 } GD_RuleConditionToken;
-typedef struct { int participant, axis_record; const char *state; GD_RuleTruth truth; } GD_RulePredicateFact;
+/* Numeric facts assert a literal in the declared axis unit, never an initial value
+   inferred from controls. TRUE asserts it; false/unknown alone cannot supply a value. */
+typedef struct { int participant, axis_record; const char *value; GD_RuleTruth truth; } GD_RulePredicateFact;
+typedef enum { GD_RULE_EQUAL, GD_RULE_NOT_EQUAL, GD_RULE_LESS, GD_RULE_LESS_EQUAL, GD_RULE_GREATER, GD_RULE_GREATER_EQUAL } GD_RuleComparison;
+typedef enum { GD_BOUNDS_UNKNOWN, GD_BOUNDS_UNDECLARED, GD_BOUNDS_WITHIN, GD_BOUNDS_OUTSIDE } GD_RuleBounds;
+typedef struct { GD_ExpressionState state; double number; int known, checks_complete; GD_RuleBounds bounds; } GD_RuleQuantityValue;
+typedef struct {
+    const char *text; size_t length;
+    int first_token, token_count, participant, axis_record, record, line, bindings_complete;
+    GD_RuleConditionState state;
+    GD_ExpressionMode mode;
+    GD_RuleQuantityValue inspection; /* No supplied starting values, not a gameplay result. */
+} GD_RuleQuantity;
 typedef struct {
     GD_RuleConditionState state;
     int unrestricted, left, right, operator_offset, bindings_complete;
@@ -291,28 +325,37 @@ typedef struct {
     GD_RuleTarget target;
 } GD_RuleContext;
 typedef struct {
-    const char *name, *context;
+    const char *name, *context, *unknown_conditions, *unknown_effects;
     int source, line, context_line, first_participant, participant_count, skip_if_count;
+    int unknown_conditions_line, unknown_effects_line;
     GD_RuleContext ordered_context;
 } GD_RuleCase;
 typedef struct {
     const char *name, *noun, *requires, *skip_if, *other_axes, *becomes, *preserve, *causes;
     int line, lines[8], first_assignment, assignment_count, noun_record;
-    int first_state_effect, state_effect_count;
+    int first_state_effect, state_effect_count, first_preservation, preservation_count;
     GD_RuleCondition required_condition, skip_condition;
     GD_RuleOtherAxes other_axes_mode;
     GD_RuleResolution noun_resolution;
     unsigned fields;
 } GD_RuleParticipant;
-typedef struct { const char *axis, *expression; int line; GD_RuleTarget target; } GD_RuleAssignment;
-typedef struct { const char *text; size_t length; int line; GD_RuleTarget target; } GD_RuleStateEffect;
+typedef struct { const char *axis, *expression; int line, quantity; GD_RuleTarget target; } GD_RuleAssignment;
+typedef struct { const char *text; size_t length; int line, control_record; GD_RuleTarget target; } GD_RuleStateEffect;
+typedef enum { GD_PRESERVE_AXIS, GD_PRESERVE_ALL, GD_PRESERVE_OTHER } GD_RulePreserveKind;
+typedef struct { const char *text; size_t length; int line; GD_RulePreserveKind kind; GD_RuleTarget target; } GD_RulePreservation;
 typedef struct {
     GD_Allocator allocator;
     int source_count, case_count, participant_count, assignment_count;
     int axis_count, actor_count, axis_definitions_complete, bindings_complete, finding_count, findings_omitted;
     int state_effect_count, effect_bindings_complete, symbol_work;
+    int preservation_count, preservation_bindings_complete;
     int condition_count, condition_token_count, condition_bindings_complete;
     int context_count, context_bindings_complete;
+    const GD_Model *model;
+    GD_Controls *controls; /* Owned, selected expression dependencies only. */
+    int quantity_count, quantity_token_count, quantity_bindings_complete, quantity_work, quantity_limited;
+    GD_RuleQuantity quantities[GD_MAX_RULE_QUANTITIES];
+    GD_ControlToken quantity_tokens[GD_MAX_RULE_QUANTITY_TOKENS];
     GD_RuleAxis axes[GD_MAX_RECORDS]; /* Indexed by model record, not compact axis index. */
     int actor_first[GD_MAX_RECORDS], next_axis[GD_MAX_EDGES];
     unsigned char actor_axes_complete[GD_MAX_RECORDS];
@@ -325,6 +368,7 @@ typedef struct {
     GD_RuleParticipant participants[GD_MAX_RULE_PARTICIPANTS];
     GD_RuleAssignment assignments[GD_MAX_RULE_ASSIGNMENTS];
     GD_RuleStateEffect state_effects[GD_MAX_RULE_STATE_EFFECTS];
+    GD_RulePreservation preservations[GD_MAX_RULE_PRESERVATIONS];
     GD_RuleConditionToken condition_tokens[GD_MAX_RULE_CONDITION_TOKENS];
     size_t text_used;
     char text[GD_RULE_TEXT_CAPACITY];
@@ -333,8 +377,17 @@ GD_Rules *gd_read_rules(GD_Model *model);
 /* Internal phase: call once per fresh rule result; diagnostics append to model. */
 void gd_resolve_rule_axes(GD_Model *model, GD_Rules *rules);
 void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules);
+void gd_resolve_rule_quantities(GD_Model *model, GD_Rules *rules);
+void gd_resolve_rule_controls(GD_Model *model, GD_Rules *rules);
+GD_ExpressionInput gd_rule_starting_quantity(const GD_Rules *rules, int participant, int axis,
+                                            const GD_RulePredicateFact *facts, int count);
+GD_RuleBounds gd_rule_quantity_bounds(const GD_Rules *rules, int axis, double number);
+GD_RuleQuantityValue gd_rule_quantity_value(const GD_Rules *rules, int quantity,
+                                           const GD_RulePredicateFact *facts, int count);
+const char *gd_rule_comparison_name(int comparison);
 /* Pure predicate evaluation. Missing, conflicting or unresolved facts remain unknown.
    Facts use snapshot participant/axis indices. This does not establish case applicability. */
+size_t gd_rule_condition_work(const GD_Rules *rules, const GD_RuleCondition *condition, int fact_count);
 GD_RuleTruth gd_rule_condition_value(const GD_Rules *rules, const GD_RuleCondition *condition,
                                     const GD_RulePredicateFact *facts, int count);
 typedef enum { GD_EXCLUSION_UNKNOWN, GD_EXCLUSION_ABSENT, GD_EXCLUSION_NOT_EXCLUDED, GD_EXCLUSION_EXCLUDED } GD_RuleExclusion;

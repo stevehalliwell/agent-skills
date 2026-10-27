@@ -14,6 +14,8 @@ context_nouns:
   - nouns/power-state
 mechanics:
   - mechanics/growth
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -22,3 +24,17 @@ Small hero overlaps an available grow-cap.
 ## Consequences and feedback
 
 Consume pickup and become tall. No life or safety window granted. Clearance handling if growth occurs under a ceiling remains open in growth mechanic.
+
+```gd-rule
+case collect:
+    context: Hero overlaps Cap
+    unknown_effects: Consume pickup; no life or safety-window grant. Growth under inadequate ceiling clearance unresolved; exact geometry unconfigured.
+    Hero:
+        noun: nouns/hero
+        requires: small
+        becomes: tall
+    Cap:
+        noun: nouns/grow-cap
+        requires: available
+        becomes: consumed
+```

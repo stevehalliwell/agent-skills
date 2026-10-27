@@ -13,6 +13,8 @@ context_nouns:
   - nouns/shell
 mechanics:
   - mechanics/shell-travel
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -21,3 +23,15 @@ Two sliding shells contact each other.
 ## Open question
 
 Stopping, reversal, destruction and pass-through are not selected. Coverage remains unknown. Do not borrow a familiar game's response or turn a missing rule into a probabilistic simulation assumption.
+
+```gd-rule
+case two-sliding-shells:
+    context: First touches Second
+    unknown_effects: Stopping, reversal, destruction and pass-through not selected.
+    First:
+        noun: nouns/shellback
+        requires: sliding
+    Second:
+        noun: nouns/shellback
+        requires: sliding
+```

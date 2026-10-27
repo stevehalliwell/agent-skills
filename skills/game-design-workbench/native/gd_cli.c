@@ -2,6 +2,7 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include "gd.h"
+#include "gd_rule_analysis.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
@@ -41,7 +42,12 @@ static void help(void) {
          "                         Enum VALUE is raw text; booleans true/false; numeric unit from definition\n"
          "Rules require --interactions and/or --mechanics ALIAS=FOLDER\n"
          "  Optional --axes, --nouns, --verbs, --control-vars, --related; explicit applicability\n"
-         "  Compiles state predicates; binds ordered context/effects; no resulting quantities, consistency or gameplay verdict\n"
+         "  Shared typed state/quantity logic; declaration inspection by default, no fabricated scene\n"
+         "  --analyze              Compile explicit calls and compare bounded declared enum branches\n"
+         "  --case ALIAS/NAME#CASE  Inspect conditional proposals under supplied assumptions\n"
+         "  --assume LOCAL:ALIAS/AXIS=VALUE  Current value in declared axis unit; repeatable\n"
+         "  --context \"A ALIAS/AXIS.STATE B\"  Explicit ordered relation assumption; repeatable\n"
+         "  --context-not TRIPLE   Explicit false relation; reverse order never implies false\n"
          "MDA requires --mechanics, --dynamics, --aesthetics ALIAS=FOLDER; optional --systems\n"
          "  --from ALIAS/NAME       MDA/control root (default all), or Relationships root\n"
          "                         Relationships defaults first loaded skill, then other record\n"
@@ -56,7 +62,7 @@ static void help(void) {
          "                         skill-atoms: skills,links,components,findings\n"
          "                         scaffolding: challenges,skills,checks,witnesses,findings\n"
          "                         mda: nodes,links,paths,gaps,findings; controls: controls\n"
-         "                         rules: records,cases,axes,actors,findings\n"
+         "                         rules: records,cases,axes,actors,findings,analysis\n"
          "                         controls import: changes,derived,items (flags/errors retained)\n"
          "                         MDA view: columns (default) or graph; source read-only\n"
          "  --layout table|graph|columns  View layout; graph settles dynamically\n"
@@ -85,7 +91,7 @@ static int fields_valid(const char *fields, int operation) {
         const char *end = strchr(p, ','); size_t n = end ? (size_t)(end-p) : strlen(p);
         if (operation == 7) {
             if (!((n==7 && !memcmp(p,"records",n)) || (n==5 && !memcmp(p,"cases",n)) ||
-                  (n==4 && !memcmp(p,"axes",n)) || (n==6 && !memcmp(p,"actors",n)) || (n==8 && !memcmp(p,"findings",n)))) return 0;
+                  (n==4 && !memcmp(p,"axes",n)) || (n==6 && !memcmp(p,"actors",n)) || (n==8 && (!memcmp(p,"findings",n) || !memcmp(p,"analysis",n))))) return 0;
         } else if (operation == 6) {
             if (!((n==7 && !memcmp(p,"changes",n)) || (n==7 && !memcmp(p,"derived",n)) || (n==5 && !memcmp(p,"items",n)))) return 0;
         } else if (operation == 5) {
@@ -144,6 +150,11 @@ static int application(int argc, char **argv) {
     GD_Controls *controls = NULL;
     GD_ControlImport *import_plan = NULL;
     GD_Rules *rules = NULL;
+    GD_RuleAnalysis *rule_analysis=NULL;
+    GD_RuleScenario scenario={0};
+    const char *case_name=NULL, *assumptions[64], *context_assumptions[64];
+    GD_RuleTruth context_truths[64];
+    int analyze=0, assumption_count=0, context_assumption_count=0;
     const char *input_path = NULL, *input_format = "json";
     int import_option = 0;
     GD_ControlOverride overrides[64]; char override_names[64][258];
@@ -244,6 +255,18 @@ static int application(int argc, char **argv) {
             as_supplied = 1;
             if (++i == argc || (strcmp(argv[i],"json") && strcmp(argv[i],"csv") && strcmp(argv[i],"ini"))) { error = "--as requires json, csv, or ini"; break; }
             export_format = argv[i];
+        } else if (!strcmp(argv[i],"--analyze")) {
+            analyze=1;
+        } else if (!strcmp(argv[i],"--case")) {
+            if (++i==argc || case_name || !argv[i][0] || strlen(argv[i])>386) { error="--case needs one ALIAS/NAME#CASE, at most 386 bytes"; break; }
+            case_name=argv[i];
+        } else if (!strcmp(argv[i],"--assume")) {
+            if (++i==argc || !argv[i][0] || strlen(argv[i])>GD_MAX_RULE_LINE || assumption_count==64) { error="--assume needs LOCAL:ALIAS/AXIS=VALUE, at most 64 bounded inputs"; break; }
+            assumptions[assumption_count++]=argv[i];
+        } else if (!strcmp(argv[i],"--context") || !strcmp(argv[i],"--context-not")) {
+            GD_RuleTruth truth=!strcmp(argv[i],"--context") ? GD_RULE_TRUTH_TRUE:GD_RULE_TRUTH_FALSE;
+            if (++i==argc || !argv[i][0] || strlen(argv[i])>GD_MAX_RULE_LINE || context_assumption_count==64) { error="Context option needs one bounded ordered triple, at most 64 inputs"; break; }
+            context_assumptions[context_assumption_count]=argv[i]; context_truths[context_assumption_count++]=truth;
         } else if (!strcmp(argv[i], "--json")) {
             if (explicit_format == 0) error = "Conflicting output formats";
             explicit_format = 1; json = 1;
@@ -309,6 +332,9 @@ static int application(int argc, char **argv) {
         int permitted = roots | (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS);
         if (!(roles & roots) || (roles & ~permitted)) error = "Rules require --interactions and/or --mechanics, optional --axes, --nouns, --verbs, --control-vars and --related";
     }
+    if (!error && !rule_command && (analyze || case_name || assumption_count || context_assumption_count)) error="--analyze, --case, --assume and context options apply only to rules";
+    if (!error && (assumption_count || context_assumption_count) && !case_name) error="Rule assumptions require an explicit --case; no implicit scene or case selection";
+    if (!error && rule_command && fields && strstr(fields,"analysis") && !analyze && !case_name) error="analysis field requires --analyze and/or --case";
     if (!error && control_command && roles != (1 << GD_CONTROL)) error = "Controls require --control-vars ALIAS=FOLDER, plus optional --related";
     if (!error && explorer_mode_supplied && command != 4) error = "--mode applies only to view skill-atoms";
     if (!error && command == 4 && explorer_mode == GD_EXPLORE_CHALLENGES && !(roles & (1 << GD_CHALLENGE))) error = "Challenges mode requires explicit --challenges ALIAS=FOLDER";
@@ -342,7 +368,27 @@ static int application(int argc, char **argv) {
     if (!model) { fputs("gd: cannot allocate bounded model storage\n", stderr); return 2; }
     if (error) gd_error(model, "cli.arguments", error, NULL, 0);
     else gd_load(model, collections, count);
-    if (rule_command && !error) rules = gd_read_rules(model);
+    if (rule_command && !error) {
+        rules=gd_read_rules(model);
+        if (rules && (analyze || case_name)) {
+            rule_analysis=gd_analyze_rules(model,rules);
+            if (rule_analysis && case_name) {
+                int selected_case=gd_rule_case_find(model,rules,case_name), valid=1;
+                if (selected_case<0) gd_error(model,"rules.case","--case must identify one parsed ALIAS/NAME#CASE; local name may be omitted only when unique",NULL,0);
+                else {
+                    rule_analysis->requested_case=selected_case; rule_analysis->scenario.root_case=selected_case; rule_analysis->scenario.exclusion.excluded_by=-1;
+                    for (i=0;i<assumption_count;++i) if (!gd_rule_assume(model,rules,selected_case,assumptions[i],&scenario)) valid=0;
+                    for (i=0;i<context_assumption_count;++i) if (!gd_rule_assume_context(model,rules,selected_case,context_assumptions[i],context_truths[i],&scenario)) valid=0;
+                    if (valid) {
+                        GD_RuleAssumptions inputs={scenario.facts,scenario.fact_count,scenario.contexts,scenario.context_count};
+                        gd_rule_evaluate(rule_analysis,selected_case,inputs,&rule_analysis->scenario);
+                        if (rule_analysis->scenario.input_valid==0) gd_error(model,"rules.scenario","Contradictory/invalid typed assumptions; no case applicability claim",NULL,0);
+                    }
+                }
+            }
+            if (rule_analysis && analyze) gd_rule_compare(rule_analysis);
+        }
+    }
     if (route_command && !error) routes = gd_analyze_routes(model);
     if (mda_command && !error) {
         mda = gd_analyze_mda(model);
@@ -380,7 +426,7 @@ static int application(int argc, char **argv) {
 #endif
     }
     if (!view_command || model->error_count) {
-        int written = rule_command ? gd_write_rules_result(stdout,model,rules,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
+        int written = rule_command ? gd_write_rule_report(stdout,model,rules,rule_analysis,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
             gd_write_result(stdout, model, skill_command ? 2 : command == 1, json, error ? NULL : fields);
         if (!written || fflush(stdout)) {
             fputs("gd: cannot write result\n", stderr); status = 2;
@@ -391,7 +437,7 @@ static int application(int argc, char **argv) {
         fprintf(stderr, "gd: %s: %s%s%s\n", e->code, e->message, e->path ? " — " : "", e->path ? e->path : "");
     }
     if (model->error_count || model->errors_omitted) status = 2;
-    gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
+    gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
 }
 int main(int argc, char **argv) {
 #ifdef _WIN32

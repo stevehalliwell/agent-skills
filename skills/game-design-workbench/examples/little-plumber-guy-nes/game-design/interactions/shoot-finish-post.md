@@ -15,3 +15,11 @@ mechanics:
 ## Scope exclusion
 
 Remote projectile activation of finish-post is deliberately outside this design. Hero must reach the marker. Coverage excluded expresses chosen scope, not a missing rule to invent or a general claim that every object ignores projectiles.
+
+```gd-rule
+case excluded-remote-activation:
+    unknown_conditions: Coverage excluded: remote projectile activation deliberately outside design, not gameplay applicability.
+    unknown_effects: Hero must reach marker; no universal projectile-ignore collision behavior declared.
+    Finish:
+        noun: nouns/finish-post
+```

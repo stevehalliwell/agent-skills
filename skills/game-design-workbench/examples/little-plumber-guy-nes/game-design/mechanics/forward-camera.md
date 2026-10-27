@@ -18,3 +18,25 @@ Follow forward progress without scrolling backward. Left viewport boundary preve
 ## Open design
 
 Scroll lead, offscreen enemy activation and pickup persistence remain unspecified.
+
+```gd-rule
+case forward-follow:
+    unknown_conditions: Forward progress; follow threshold/coordinates unencoded.
+    unknown_effects: Follow without backward scrolling; left viewport boundary constrains retreat. Scroll lead, offscreen enemy activation and pickup persistence unspecified.
+    Hero:
+        noun: nouns/hero
+    Camera:
+        noun: nouns/camera
+
+case room-transfer-anchor:
+    unknown_conditions: Authored room-transfer occurrence.
+    unknown_effects: Set new Camera anchor; coordinates unspecified.
+    Camera:
+        noun: nouns/camera
+
+case retry-anchor:
+    unknown_conditions: Later retry occurrence, not ordinary challenge next arrow.
+    unknown_effects: Restore safe Camera anchor; coordinates unspecified.
+    Camera:
+        noun: nouns/camera
+```

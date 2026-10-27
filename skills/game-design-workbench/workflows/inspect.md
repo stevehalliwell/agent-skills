@@ -8,7 +8,8 @@ Read live schemas/usages before querying collection fields. Use Attendant direct
 - **Skill atoms:** authored ranks, prerequisite AND sets, and mechanic links. Preserve null/negative/zero ranks. SQL inventory alone does not compute placement or detect cycles. Native skill operation below computes declared prerequisite/rank consistency, not player capability.
 - **Routes:** entry/next and introduction/practice/required/mastery links. Edges are declared opportunities, not physical or game-state reachability. List order is not a route.
 - **MDA:** inspect aesthetics, dynamics, systems, and mechanics; follow/reverse their declared links. Systems are not dynamics; links do not prove emotion.
-- **Control variables:** named configuration types, literal values, units, and formula text. Resolver/import/export remain deferred; do not evaluate expressions using shell or arbitrary code.
+- **Control variables:** named configuration types, literal values, units and formula text. Use shared native resolution/import/export below; never shell/eval expressions.
+- **Actor/state rules:** readable `gd-rule` cases, explicit noun/axis applicability, predicates, quantities, preservation and mapped calls. Use conditional analysis below; no inferred scene, inherited outcome or file winner.
 - **Glossary:** canonical terms/aliases, definition targets, and status, including inactive records.
 - **Evidence:** experiment stage/kind and source; read local measures, hypotheses, expectations, method, observations, results, and provenance. Proposed is not executed.
 - **Records:** inspect all relevant fields/dispositions, including resources, experiment-local measurements, existing project decisions, and case context omitted by a narrow inventory.
@@ -20,6 +21,12 @@ SQLite array cells are JSON text. Inspect complete arrays; do not infer missing 
 Read [native tools](../native/README.md) to build/run `matrix`, `connectivity`, or `view matrix`. Resolve actual role aliases/folders through project instructions and Attendant, then pass every mapping explicitly. Native commands do not discover collections or interpret schemas. Use `view matrix --layout graph` for force-directed connected groups, or `--layout columns` for stable noun/verb columns. Headless matrix `components` exposes the same active grouping, including isolated nodes. Other-pair overlay does not merge groups. No record writes, automatic framework review, or repair.
 
 Matrix includes all dispositions and multiple cases; active connectivity counts accepted, defined pairs only. Context nouns stay separate. JSON coverage concerns supplied source loading/computation, not schema validity or exhaustive design coverage. Omitted related folders leave links visible but not loaded. Use `--related` only for wanted context.
+
+## Native actor/state hypotheses
+
+Read [rule contract](../native/rules.md) and [conditional outcome/comparison contract](../native/outcomes.md). Run `rules` with explicit interactions/mechanics and optional noun/axis/control/verb/related mappings. Default inspects declarations; `--case ALIAS/NAME#CASE` plus `--assume LOCAL:ALIAS/AXIS=VALUE` and ordered `--context`/`--context-not` supplies hypothetical current facts. Never infer actor initialization from configuration, context from geometry/links, or omitted predicates/effects as ANY/preserved.
+
+`--analyze` expands explicit calls and compares bounded known enum products. Inspect `--fields analysis` for conditional proposals, simultaneous-write checks, source paths, witnesses, limits and unknown/unexamined scope. Keep mechanics/interactions as separate sources; reference-derived agreement is not independent corroboration. No priority, automatic merge/repair, numeric algebra proof, physical reachability, gameplay simulation or fun score. All supplied statuses/dispositions remain visible; do not label proposed alternatives as adopted active behavior.
 
 ## Native control resolution
 

@@ -14,6 +14,8 @@ context_nouns:
 mechanics:
   - mechanics/shell-travel
   - mechanics/score-awards
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -22,3 +24,22 @@ Sliding shell contacts a living walker.
 ## Consequences and feedback
 
 Remove walker, award its configured points once and let shell continue. No chain multiplier or shell ownership-based safety is implied.
+
+```gd-rule
+case sliding-defeat:
+    context: Shell touches Walker
+    unknown_conditions: Credit original defeat once; event identity/deduplication unencoded.
+    unknown_effects: Remove Walker; Shell continues sliding. No chain multiplier or ownership safety; continued motion magnitude unknown.
+    Shell:
+        noun: nouns/shellback
+        requires: sliding
+        preserve: ShellState
+    Walker:
+        noun: nouns/walker
+        requires: alive
+        becomes: dead
+    Score:
+        noun: nouns/score
+        set:
+            ScoreAmount: this + {control-vars/walker-points}
+```

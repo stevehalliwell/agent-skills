@@ -22,3 +22,16 @@ Hero remains on safe floor while course is active.
 ## Consequences and feedback
 
 No displacement from input; clock and enemies continue. Clock expiry can still end an attempt. Waiting is not equivalent to pausing or completing a room.
+
+```gd-rule
+case active-wait:
+    unknown_conditions: Hero waits on safe floor while course active; elapsed interval unspecified.
+    unknown_effects: No input displacement; Clock and enemies continue, expiry may kill. Waiting not pause/completion; no fixed drain or enemy update fabricated.
+    Hero:
+        noun: nouns/hero
+        requires: supported
+    Ground:
+        noun: nouns/ground
+    Clock:
+        noun: nouns/clock
+```

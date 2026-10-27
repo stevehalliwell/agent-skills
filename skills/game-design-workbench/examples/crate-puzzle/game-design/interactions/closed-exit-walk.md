@@ -25,3 +25,16 @@
 # Unresolved case
 
 What occurs when player attempts to enter a closed exit? Leave consequence unknown.
+
+```gd-rule
+case closed-entry:
+    unknown_conditions: Player attempts entry into closed Exit; input and geometry unencoded.
+    unknown_effects: No consequence selected for closed-exit walking.
+    Player:
+        noun: nouns/player
+    Exit:
+        noun: nouns/exit
+        requires: closed
+    Switch:
+        noun: nouns/switch
+```

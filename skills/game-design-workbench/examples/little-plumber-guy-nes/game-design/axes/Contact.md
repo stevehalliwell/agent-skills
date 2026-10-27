@@ -2,13 +2,18 @@
 id: 01a17c6d-284b-7741-b0f1-fc237a3aaa1c
 name: Contact
 created_at: 2026-10-27T08:14:50.955Z
-desc: Ordered contact vocabulary used by the powered walker-contact rule; not
-  actor state or observed geometry.
+desc: Ordered contact vocabulary used by the powered walker-contact rule; not actor state or observed geometry.
 tags: []
 status: proposed
 value_type: enum
 allowed_values:
   - sideContacts
+  - topContacts
+  - undersideContacts
+  - touches
+  - overlaps
+  - crossesTrigger
+  - crossesLowerBoundary
 unit: ""
 minimum: null
 maximum: null

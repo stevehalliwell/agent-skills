@@ -19,3 +19,13 @@ Jump is released after ascent has ended.
 ## Consequences and feedback
 
 Do not alter descent through jump-cut. Gravity and collision continue. This alternative shares the same noun–verb cell as rising release while preserving a different condition and consequence.
+
+```gd-rule
+case unchanged-descent:
+    unknown_conditions: Jump released after ascent has ended.
+    unknown_effects: Jump-cut does not alter descent; gravity/collision continue. No frozen velocity/time or broad preservation inferred.
+    Hero:
+        noun: nouns/hero
+        requires: falling
+        preserve: Motion
+```

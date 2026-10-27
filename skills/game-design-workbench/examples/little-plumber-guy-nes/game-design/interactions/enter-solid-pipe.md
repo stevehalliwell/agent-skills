@@ -21,3 +21,13 @@ Hero presses down on a pipe without an authored entrance connection.
 ## Consequences and feedback
 
 No transfer; pipe remains solid support. Correct alignment does not create a missing connection. This is defined blocked entry rather than unknown destination data.
+
+```gd-rule
+case no-connection:
+    unknown_conditions: Down pressed on Pipe without authored entrance; correct alignment cannot create connection.
+    unknown_effects: No transfer; Pipe remains solid support. No invented destination.
+    Hero:
+        noun: nouns/hero
+    Pipe:
+        noun: nouns/pipe
+```

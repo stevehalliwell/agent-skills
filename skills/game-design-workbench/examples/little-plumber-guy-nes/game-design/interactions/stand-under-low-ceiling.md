@@ -22,3 +22,14 @@ Tall or spark hero releases crouch without enough standing clearance.
 ## Open question
 
 Choose whether stance remains low, motion is constrained, or another safe response applies. No consequence has been adopted. Coverage is unknown, not a defined no-effect action or an exclusion.
+
+```gd-rule
+case release-without-clearance:
+    unknown_conditions: Tall/spark Hero releases crouch without enough standing clearance; geometry/predicate unencoded.
+    unknown_effects: No response adopted; remain low, constrain motion or another response unselected.
+    Hero:
+        noun: nouns/hero
+        requires: tall OR spark
+    Ceiling:
+        noun: nouns/ceiling
+```

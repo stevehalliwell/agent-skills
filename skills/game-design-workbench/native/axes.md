@@ -78,7 +78,7 @@ Actor intent and remaining unknowns.
 - References need explicit `--axes` and `--nouns` roles to resolve. Aliases need not match role names. Loading nouns through `--related` preserves text, not noun-role authority.
 - Rule participant labels remain case-local bindings. Two labels can independently bind the same noun type. No binding guessed from spelling, type similarity or implicit inheritance.
 
-Effect state names and numeric assignment targets now resolve through explicit applicability; see [effect bindings](rules.md#effect-bindings). State `requires`/`skip_if` now compile through the same lookup with [unknown truth preserved](conditions.md). Ordered context endpoints/operators now bind separately. Numeric comparisons/expressions, concrete applicability, preservation and rule invocation remain pending. State/quantity mentions never synthesize missing definitions.
+Effect state names and numeric assignment targets now resolve through explicit applicability; see [effect bindings](rules.md#effect-bindings). State `requires`/`skip_if` now compile through the same lookup with [unknown truth preserved](conditions.md). Ordered context endpoints/operators now bind separately. [Numeric expressions](quantities.md) share control math; [conditional outcomes](outcomes.md) combine supplied assumptions, explicit invocation and preservation without executing gameplay. State/quantity mentions never synthesize missing definitions.
 
 ## Headless facts
 

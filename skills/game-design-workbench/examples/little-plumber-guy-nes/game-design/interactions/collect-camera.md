@@ -13,3 +13,11 @@ verb: verbs/touch
 ## Not applicable
 
 Camera is viewport state, not a world pickup, so hero overlap does not form a meaningful collection interaction. This example distinguishes inapplicable semantics from an unknown response or an intentionally excluded feature.
+
+```gd-rule
+case not-applicable:
+    unknown_conditions: Coverage not_applicable: Camera is viewport state, not a world pickup; collection overlap not meaningful. This is not a gameplay applicability case.
+    unknown_effects: No collectible outcome declared; not unknown response, exclusion or a defined no-effect pickup.
+    Camera:
+        noun: nouns/camera
+```

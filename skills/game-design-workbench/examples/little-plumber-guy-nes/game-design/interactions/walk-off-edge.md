@@ -22,3 +22,14 @@ Hero's horizontal movement passes beyond floor support without an active jump.
 ## Consequences and feedback
 
 Begin unsupported fall. Death occurs only at lower boundary, not at the instant support ends. No automatic rescue jump is implied.
+
+```gd-rule
+case lose-support:
+    unknown_conditions: Horizontal movement passes beyond support without active jump; geometry unencoded.
+    unknown_effects: Begin unsupported fall; death only at lower boundary, not instant support loss. No automatic rescue jump or physical trajectory.
+    Hero:
+        noun: nouns/hero
+        becomes: unsupported, falling
+    Gap:
+        noun: nouns/gap
+```

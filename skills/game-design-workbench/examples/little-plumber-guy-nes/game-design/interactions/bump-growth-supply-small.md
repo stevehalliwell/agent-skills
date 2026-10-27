@@ -14,6 +14,8 @@ context_nouns:
   - nouns/power-state
 mechanics:
   - mechanics/supply-release
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -22,3 +24,17 @@ Small hero hits an unspent growth supply from below.
 ## Consequences and feedback
 
 Release one moving grow-cap above the block; turn block spent. Reward can move away and be missed. Touching the released object, not bumping alone, changes hero form.
+
+```gd-rule
+case release-cap:
+    context: Hero undersideContacts Block
+    unknown_conditions: Valid underside hit on authored unspent growth supply.
+    unknown_effects: Release one moving Grow-cap above Block; reward can move away/miss. Keep spent Block solid. Bump alone does not change Hero form; collection later. Spawn geometry/motion unconfigured.
+    Hero:
+        noun: nouns/hero
+        requires: small
+    Block:
+        noun: nouns/supply-block
+        requires: unspent AND SupplyContent.growth
+        becomes: spent
+```

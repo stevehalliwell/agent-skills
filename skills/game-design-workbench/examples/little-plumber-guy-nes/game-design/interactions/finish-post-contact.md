@@ -13,6 +13,8 @@ context_nouns:
   - nouns/hero
 mechanics:
   - mechanics/course-finish
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -21,3 +23,17 @@ Alive course-active hero contacts finish-post beyond final-gap.
 ## Consequences and feedback
 
 Commit course completion, stop clock and disable later hazards. Show clear end feedback. Same-frame death/finish priority remains an explicit unresolved ordering question.
+
+```gd-rule
+case finish:
+    context: Hero touches Finish
+    unknown_conditions: Course active; marker beyond final-gap. Same-frame death/finish priority unresolved.
+    unknown_effects: Commit completion, stop Clock spending and disable later hazards. Clear end acknowledgement; exact animation and simultaneous ordering unspecified.
+    Hero:
+        noun: nouns/hero
+        requires: alive
+    Finish:
+        noun: nouns/finish-post
+    Clock:
+        noun: nouns/clock
+```

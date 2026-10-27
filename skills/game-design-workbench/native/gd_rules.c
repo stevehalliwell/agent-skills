@@ -1,4 +1,5 @@
 #include "gd.h"
+#include "gd_rule_analysis.h"
 #include <assert.h>
 #include <string.h>
 
@@ -90,6 +91,15 @@ static int declaration(GD_Model *model, GD_Rules *rules, GD_RuleSource *source,
             item->context = retain(model,rules,record,value,value_size,line); item->context_line = line;
             return item->context != NULL;
         }
+        if (same(key,key_size,"unknown_conditions") || same(key,key_size,"unknown_effects")) {
+            int conditions=same(key,key_size,"unknown_conditions");
+            const char **destination=conditions ? &item->unknown_conditions:&item->unknown_effects;
+            if (*destination) return fail(model,record,"rules.duplicate_field","Duplicate case unknown coverage declaration",line);
+            if (!value_size) return fail(model,record,"rules.value","Unknown coverage needs a readable reason, not an empty claim",line);
+            *destination=retain(model,rules,record,value,value_size,line);
+            if (conditions) item->unknown_conditions_line=line; else item->unknown_effects_line=line;
+            return *destination!=NULL;
+        }
         if (value_size || !label(key,key_size))
             return fail(model,record,"rules.participant","Expected participant NAME: or context: VALUE at four spaces",line);
         for (i = item->first_participant; i < rules->participant_count; ++i)
@@ -179,7 +189,7 @@ GD_Rules *gd_read_rules(GD_Model *model) {
     assert(model && model->allocator.allocate && model->allocator.release);
     rules = model->allocator.allocate(model->allocator.context,sizeof(*rules));
     if (!rules) { gd_error(model,"rules.memory","Cannot allocate bounded rule declarations",NULL,0); return NULL; }
-    memset(rules,0,sizeof(*rules)); rules->allocator = model->allocator;
+    memset(rules,0,sizeof(*rules)); rules->allocator = model->allocator; rules->model=model;
     for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_RULE) {
         int participants = rules->participant_count, assignments = rules->assignment_count;
         size_t text_used = rules->text_used;
@@ -194,10 +204,12 @@ GD_Rules *gd_read_rules(GD_Model *model) {
     }
     gd_resolve_rule_axes(model,rules);
     gd_resolve_rule_logic(model,rules);
+    gd_resolve_rule_quantities(model,rules);
+    gd_resolve_rule_controls(model,rules);
     return rules;
 }
 void gd_rules_destroy(GD_Rules *rules) {
-    if (rules) rules->allocator.release(rules->allocator.context,rules);
+    if (rules) { gd_controls_destroy(rules->controls); rules->allocator.release(rules->allocator.context,rules); }
 }
 static void member(FILE *output, const char *key, const char *value) {
     fputc(',',output); gd_json_string(output,key); fputc(':',output); gd_json_string(output,value);
@@ -227,6 +239,23 @@ static void effect_target(FILE *output, const GD_Model *model, GD_RuleTarget tar
     member(output,"axis",target.axis_record >= 0 ? model->records[target.axis_record].reference:NULL);
     member(output,"state",target.state); fputc('}',output);
 }
+static void quantity_result(FILE *output, const GD_Rules *rules, int index) {
+    const GD_RuleQuantity *quantity;
+    const GD_RuleQuantityValue *value;
+    fputs(",\"quantity\":",output);
+    if (index<0 || index>=rules->quantity_count) { fputs("null",output); return; }
+    quantity=&rules->quantities[index]; value=&quantity->inspection;
+    fputs("{\"state\":",output); gd_json_string(output,gd_rule_condition_state_name(quantity->state));
+    fputs(",\"text\":",output); gd_json_string_n(output,quantity->text,quantity->length);
+    fprintf(output,",\"token_count\":%d,\"bindings_complete\":%s,\"inspection\":{\"state\":",quantity->token_count,quantity->bindings_complete ? "true":"false");
+    gd_json_string(output,value->state==GD_EXPRESSION_VALUE ? "resolved":value->state==GD_EXPRESSION_UNIT_ERROR ? "unit_error":
+                   value->state==GD_EXPRESSION_ARITHMETIC_ERROR ? "arithmetic_error":"unknown");
+    fprintf(output,",\"checks_complete\":%s,\"number\":",value->checks_complete ? "true":"false");
+    if (value->known) fprintf(output,"%.17g",value->number); else fputs("null",output);
+    fputs(",\"bounds\":",output); gd_json_string(output,value->bounds==GD_BOUNDS_WITHIN ? "within_declared":
+        value->bounds==GD_BOUNDS_OUTSIDE ? "outside_declared":value->bounds==GD_BOUNDS_UNDECLARED ? "not_declared":"unknown");
+    fputs("}}",output);
+}
 static void condition_result(FILE *output, const GD_Model *model, const GD_Rules *rules,
                              const char *key, const GD_RuleCondition *condition, int line) {
     int i;
@@ -238,7 +267,14 @@ static void condition_result(FILE *output, const GD_Model *model, const GD_Rules
         if (i) fputc(',',output); fputs("{\"op\":",output); gd_json_string(output,gd_rule_condition_op_name(token->operation));
         fputs(",\"text\":",output); gd_json_string_n(output,token->text,token->length);
         fprintf(output,",\"offset\":%d",token->offset);
-        if (token->operation == GD_RULE_OP_STATE) effect_target(output,model,token->target);
+        if (token->operation == GD_RULE_OP_STATE || token->operation == GD_RULE_OP_COMPARE) effect_target(output,model,token->target);
+        if (token->operation==GD_RULE_OP_CONTROL) {
+            member(output,"control",token->control_record>=0 ? model->records[token->control_record].reference:NULL);
+            member(output,"control_resolution",token->control_record>=0 ? "resolved":token->control_record==GD_EXPRESSION_UNLOADED_REFERENCE ? "unloaded":"invalid");
+        }
+        if (token->operation == GD_RULE_OP_COMPARE) {
+            member(output,"comparison",gd_rule_comparison_name(token->comparison)); quantity_result(output,rules,token->quantity);
+        }
         fputc('}',output);
     }
     fputs("]}",output);
@@ -253,7 +289,7 @@ static void context_result(FILE *output, const GD_Model *model, const GD_Rules *
     fprintf(output,",\"operator_offset\":%d",context->operator_offset);
     effect_target(output,model,context->target); fputc('}',output);
 }
-int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *rules, int json, const char *fields) {
+int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *rules, const GD_RuleAnalysis *analysis, int json, const char *fields) {
     int i, j, k, comma = 0, parsed = 0;
     int complete = rules && !model->error_count && !model->errors_omitted;
     if (rules) for (i = 0; i < rules->source_count; ++i) parsed += rules->sources[i].state == GD_RULE_PARSED;
@@ -261,11 +297,11 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
         fprintf(output,"Rules: %d source records; %d with cases; %d cases; %d participants; %d assignments. Declaration checks %s.\n",
                 rules ? rules->source_count:0,parsed,rules ? rules->case_count:0,rules ? rules->participant_count:0,
                 rules ? rules->assignment_count:0,complete ? "complete":"incomplete");
-        fputs("Declarations only: explicit applicability, state predicate logic and effect bindings resolved where known; ordered context binds local participants and declared operator vocabulary only; numeric comparisons, resulting quantities and composition are not resolved or evaluated. No consistency or gameplay claims.\n",output);
+        fputs("Declarations only: explicit applicability, state predicate logic and effect bindings resolved where known; ordered context binds local participants and declared operator vocabulary only. Shared numeric math inspects constants and typed inputs; no actor starting values or gameplay transition inferred. Optional analysis reports separate bounded hypothetical checks.\n",output);
         fprintf(output,"Typed axes: %d; actors: %d; axis definitions %s; explicit bindings %s; findings: %d (+%d omitted).\n",
                 rules ? rules->axis_count:0,rules ? rules->actor_count:0,rules && rules->axis_definitions_complete ? "complete":"incomplete",
                 rules && rules->bindings_complete ? "complete":"incomplete",rules ? rules->finding_count:0,rules ? rules->findings_omitted:0);
-        fprintf(output,"Effect bindings: %d state declarations; %s for authored targets; symbol work %d/%d. No resulting quantities evaluated.\n",
+        fprintf(output,"Effect bindings: %d state declarations; %s for authored targets; symbol work %d/%d. Quantity inspection is not a gameplay transition.\n",
                 rules ? rules->state_effect_count:0,rules && rules->effect_bindings_complete ? "complete":"incomplete",
                 rules ? rules->symbol_work:0,GD_RULE_SYMBOL_WORK_LIMIT);
         fprintf(output,"Conditions: %d authored; %d compiled tokens; bindings %s. Omitted predicates remain unspecified.\n",
@@ -284,6 +320,20 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
             const GD_RuleCase *item = &rules->cases[i];
             fprintf(output,"%s#%s — %s:%d\n",model->records[rules->sources[item->source].record].reference,
                     item->name,model->records[rules->sources[item->source].record].source_path,item->line);
+        }
+        if (analysis) {
+            fprintf(output,"Rule analysis: %d explicit calls; %d compared pairs; %d pairs unexamined. No physical scene or universal gameplay claim.\n",analysis->call_count,analysis->pair_count,analysis->pairs_unexamined);
+            if (analysis->requested_case>=0) {
+                const GD_RuleEvaluation *result=&analysis->scenario;
+                fprintf(output,"Scenario: applicability=%s; %d proposals; %d conflicts; %d uncertain overlap pairs; constraints=%s; limited=%s.\n",
+                    gd_rule_truth_name(result->applicability),result->write_count,result->conflict_count,result->uncertain_write_pairs,result->constraints_complete ? "complete":"incomplete",result->limited ? "yes":"no");
+                for (i=0;i<result->write_count;++i) {
+                    const GD_RuleWrite *write=&result->writes[i];
+                    fprintf(output,"  %s %s: %s",write->actor>=0 ? rules->participants[write->actor].name:"unknown actor",write->axis>=0 ? model->records[write->axis].reference:"unknown axis",write->state ? write->state:write->kind==GD_WRITE_PRESERVE ? "preserve starting value":"numeric proposal");
+                    if (write->value.known) fprintf(output," %.17g",write->value.number);
+                    fprintf(output,"; %s; %s#%s:%d\n",write->conditional ? "conditional":"under supplied assumptions",model->records[rules->sources[rules->cases[write->origin_case].source].record].reference,rules->cases[write->origin_case].name,write->line);
+                }
+            }
         }
         return !ferror(output);
     }
@@ -319,6 +369,8 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
             const GD_RuleCase *item = &rules->cases[i]; if (i) fputc(',',output);
             provenance(output,&model->records[rules->sources[item->source].record],item->line);
             member(output,"case",item->name); member(output,"context",item->context);
+            member(output,"unknown_conditions",item->unknown_conditions); member(output,"unknown_effects",item->unknown_effects);
+            fprintf(output,",\"unknown_conditions_line\":%d,\"unknown_effects_line\":%d",item->unknown_conditions_line,item->unknown_effects_line);
             context_result(output,model,rules,&item->ordered_context);
             fprintf(output,",\"context_line\":%d,\"skip_if_count\":%d,\"participants\":[",item->context_line,item->skip_if_count);
             for (j = 0; j < item->participant_count; ++j) {
@@ -343,13 +395,21 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
                     const GD_RuleAssignment *assignment = &rules->assignments[participant->first_assignment+k];
                     if (k) fputc(',',output); fputs("{\"axis\":",output); gd_json_string(output,assignment->axis);
                     member(output,"expression",assignment->expression); fprintf(output,",\"line\":%d",assignment->line);
-                    effect_target(output,model,assignment->target); fputc('}',output);
+                    effect_target(output,model,assignment->target); quantity_result(output,rules,assignment->quantity); fputc('}',output);
                 }
                 fputs("],\"state_effects\":[",output);
                 for (k = 0; k < participant->state_effect_count; ++k) {
                     const GD_RuleStateEffect *effect = &rules->state_effects[participant->first_state_effect+k];
                     if (k) fputc(',',output); fputs("{\"text\":",output); gd_json_string_n(output,effect->text,effect->length);
-                    fprintf(output,",\"line\":%d",effect->line); effect_target(output,model,effect->target); fputc('}',output);
+                    fprintf(output,",\"line\":%d",effect->line); effect_target(output,model,effect->target);
+                    member(output,"control",effect->control_record>=0 ? model->records[effect->control_record].reference:NULL); fputc('}',output);
+                }
+                fputs("],\"preservations\":[",output);
+                for (k=0;k<participant->preservation_count;++k) {
+                    const GD_RulePreservation *promise=&rules->preservations[participant->first_preservation+k];
+                    if (k) fputc(',',output); fputs("{\"text\":",output); gd_json_string_n(output,promise->text,promise->length);
+                    member(output,"kind",promise->kind==GD_PRESERVE_ALL ? "all":promise->kind==GD_PRESERVE_OTHER ? "other":"axis");
+                    fprintf(output,",\"line\":%d",promise->line); effect_target(output,model,promise->target); fputc('}',output);
                 }
                 fputs("]}",output);
             }
@@ -409,19 +469,24 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
         }
         fputc(']',output);
     }
+    if (analysis && selected(fields,"analysis")) { if (comma++) fputc(',',output); fputs("\"analysis\":",output); gd_write_rule_analysis(output,analysis); }
     fprintf(output,"},\"coverage\":{\"operation\":\"rules\",\"complete\":%s,\"source_record_count\":%d,\"records_with_cases\":%d,\"case_count\":%d,\"participant_count\":%d,\"assignment_count\":%d,",
             complete ? "true":"false",rules ? rules->source_count:0,parsed,rules ? rules->case_count:0,
             rules ? rules->participant_count:0,rules ? rules->assignment_count:0);
     fprintf(output,"\"axis_count\":%d,\"actor_count\":%d,\"axis_definitions_complete\":%s,\"bindings_complete\":%s,\"findings_omitted\":%d,",
             rules ? rules->axis_count:0,rules ? rules->actor_count:0,rules && rules->axis_definitions_complete ? "true":"false",
             rules && rules->bindings_complete ? "true":"false",rules ? rules->findings_omitted:0);
+    fprintf(output,"\"preservation_count\":%d,\"preservation_bindings_complete\":%s,",rules ? rules->preservation_count:0,rules && rules->preservation_bindings_complete ? "true":"false");
     fprintf(output,"\"state_effect_count\":%d,\"effect_bindings_complete\":%s,\"symbol_work\":%d,",
             rules ? rules->state_effect_count:0,rules && rules->effect_bindings_complete ? "true":"false",rules ? rules->symbol_work:0);
     fprintf(output,"\"condition_count\":%d,\"condition_token_count\":%d,\"condition_bindings_complete\":%s,",
             rules ? rules->condition_count:0,rules ? rules->condition_token_count:0,rules && rules->condition_bindings_complete ? "true":"false");
     fprintf(output,"\"context_count\":%d,\"context_bindings_complete\":%s,",rules ? rules->context_count:0,
             rules && rules->context_bindings_complete ? "true":"false");
-    fputs("\"scope\":\"Declaration scan, explicit applicability, state predicate logic, ordered context bindings and effect bindings, all supplied statuses/dispositions. Missing rules remain absent; omitted fields remain null, not ANY or preserved. State conditions compile to derived Boolean programs, not an applicability verdict. Ordered context binds case-local endpoints and explicit context_axes vocabulary; no contact, symmetry, reachability or scene truth inferred. Numeric comparisons, resulting quantity values, preservation and composition are not resolved or evaluated. Effect bindings do not establish consistency or an applicable transition. Open vocabularies do not prove complete state sets or reachable combinations. No equivalence, consistency or gameplay claims.\",\"collections\":[",output);
+    fprintf(output,"\"quantity_count\":%d,\"quantity_token_count\":%d,\"quantity_bindings_complete\":%s,\"quantity_work\":%d,\"quantity_limited\":%s,",
+        rules ? rules->quantity_count:0,rules ? rules->quantity_token_count:0,rules && rules->quantity_bindings_complete ? "true":"false",
+        rules ? rules->quantity_work:0,rules && rules->quantity_limited ? "true":"false");
+    fputs("\"scope\":\"Declaration scan, explicit applicability, state predicate logic, ordered context bindings and effect bindings, all supplied statuses/dispositions. Missing rules remain absent; omitted fields remain null, not ANY or preserved. State conditions compile to derived Boolean programs, not an applicability verdict. Ordered context binds case-local endpoints and explicit context_axes vocabulary; no contact, symmetry, reachability or scene truth inferred. Numeric comparisons and assignment expressions use the shared bounded numeric compiler/evaluator. Inspection supplies no actor starting values: this remains unknown, constants are not a gameplay transition, and bounds never clamp/wrap/reject behavior. Preservation promises bind without inventing missing results; optional analysis expands explicit composition and checks conditional proposals. Effect bindings do not establish consistency or an applicable transition. Open vocabularies do not prove complete state sets or reachable combinations. Declaration inspection alone makes no equivalence, consistency or gameplay claim; optional analysis reports separate bounded logical checks.\",\"collections\":[",output);
     for (i = 0; i < model->collection_count; ++i) {
         if (i) fputc(',',output); fputs("{\"alias\":",output); gd_json_string(output,model->collections[i].alias);
         member(output,"directory",model->collections[i].directory);
@@ -429,9 +494,9 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
                model->collections[i].role == GD_VERB ? "verbs":model->collections[i].role == GD_CONTROL ? "control-vars":model->collections[i].role == GD_AXIS ? "axes":"related");
         fputc('}',output);
     }
-    fprintf(output,"],\"limits\":{\"cases\":%d,\"participants\":%d,\"assignments\":%d,\"text_bytes\":%d,\"line_bytes\":%d,\"axis_values\":%d,\"findings\":%d,\"records\":%d,\"axis_references\":%d,\"state_effects\":%d,\"symbol_work\":%d,\"condition_tokens\":%d,\"condition_items\":%d,\"condition_depth\":%d,\"evaluation_work\":%d}},\"errors\":[",
+    fprintf(output,"],\"limits\":{\"cases\":%d,\"participants\":%d,\"assignments\":%d,\"text_bytes\":%d,\"line_bytes\":%d,\"axis_values\":%d,\"findings\":%d,\"records\":%d,\"axis_references\":%d,\"state_effects\":%d,\"symbol_work\":%d,\"condition_tokens\":%d,\"condition_items\":%d,\"condition_depth\":%d,\"evaluation_work\":%d,\"quantities\":%d,\"quantity_tokens\":%d,\"quantity_work\":%d,\"preservations\":%d}},\"errors\":[",
             GD_MAX_RULE_CASES,GD_MAX_RULE_PARTICIPANTS,GD_MAX_RULE_ASSIGNMENTS,GD_RULE_TEXT_CAPACITY,GD_MAX_RULE_LINE,
-            GD_MAX_ENUM_VALUES,GD_MAX_ERRORS,GD_MAX_RECORDS,GD_MAX_EDGES,GD_MAX_RULE_STATE_EFFECTS,GD_RULE_SYMBOL_WORK_LIMIT,GD_MAX_RULE_CONDITION_TOKENS,GD_MAX_RULE_CONDITION_ITEMS,GD_MAX_RULE_CONDITION_DEPTH,GD_RULE_EVALUATION_WORK_LIMIT);
+            GD_MAX_ENUM_VALUES,GD_MAX_ERRORS,GD_MAX_RECORDS,GD_MAX_EDGES,GD_MAX_RULE_STATE_EFFECTS,GD_RULE_SYMBOL_WORK_LIMIT,GD_MAX_RULE_CONDITION_TOKENS,GD_MAX_RULE_CONDITION_ITEMS,GD_MAX_RULE_CONDITION_DEPTH,GD_RULE_EVALUATION_WORK_LIMIT,GD_MAX_RULE_QUANTITIES,GD_MAX_RULE_QUANTITY_TOKENS,GD_RULE_QUANTITY_WORK_LIMIT,GD_MAX_RULE_PRESERVATIONS);
     for (i = 0; i < model->error_count; ++i) {
         const GD_Error *error = &model->errors[i]; if (i) fputc(',',output);
         fputs("{\"code\":",output); gd_json_string(output,error->code); member(output,"message",error->message);
@@ -439,4 +504,7 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
     }
     fprintf(output,"],\"errors_omitted\":%d,\"breadcrumbs\":[\"Edit the authoritative gd-rule block in source Markdown; rerun with the same explicit mappings.\"]}\n",model->errors_omitted);
     return !ferror(output);
+}
+int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *rules, int json, const char *fields) {
+    return gd_write_rule_report(output,model,rules,NULL,json,fields);
 }

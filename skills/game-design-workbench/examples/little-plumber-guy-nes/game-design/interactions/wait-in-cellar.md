@@ -25,3 +25,16 @@ Hero explores or waits in coin-cellar with current clock-runs-in-cellar policy t
 ## Consequences and feedback
 
 Spend the shared active clock. Coins are not free of time cost. If policy is changed to false, spending stops in that room; changing policy requires explicit design adoption.
+
+```gd-rule
+case active-cellar:
+    unknown_conditions: Hero explores or waits in coin-cellar; room identity and elapsed active interval unencoded.
+    unknown_effects: Spend shared active Clock for elapsed active play, not fixed tick. False cellar policy stops room spending; changing policy needs explicit adoption. Coins not free of time cost.
+    Hero:
+        noun: nouns/hero
+        requires: {control-vars/clock-runs-in-cellar}
+    Clock:
+        noun: nouns/clock
+    Exit:
+        noun: nouns/exit-pipe
+```

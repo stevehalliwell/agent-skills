@@ -2,11 +2,12 @@
 #include <assert.h>
 #include <string.h>
 
-typedef enum { BIND_EFFECT, BIND_CONDITION, BIND_CONTEXT } BindingKind;
+typedef enum { BIND_EFFECT, BIND_CONDITION, BIND_CONTEXT, BIND_PRESERVE } BindingKind;
+typedef enum { LOOKUP_QUANTITY_AXIS, LOOKUP_ENUM_STATE, LOOKUP_ANY_AXIS } LookupKind;
 typedef struct {
     GD_Model *model;
     GD_Rules *rules;
-    int seen[GD_MAX_RECORDS], generation, exhausted, effects_limit, condition_limit;
+    int seen[GD_MAX_RECORDS], generation, exhausted, effects_limit, condition_limit, preservation_limit;
     int record, line;
 } RuleReader;
 
@@ -40,7 +41,8 @@ static const char *named_state(RuleReader *reader, int axis, const char *text, s
     return NULL;
 }
 static GD_RuleTarget lookup(RuleReader *reader, int owner, GD_Field inventory,
-                            const char *text, size_t size, int state) {
+                            const char *text, size_t size, LookupKind kind) {
+    int state=kind==LOOKUP_ENUM_STATE;
     GD_RuleTarget target = {GD_RULE_UNDETERMINED,-1,NULL};
     const char *dot = state ? memchr(text,'.',size):NULL;
     size_t axis_size = dot ? (size_t)(dot-text):size;
@@ -52,7 +54,7 @@ static GD_RuleTarget lookup(RuleReader *reader, int owner, GD_Field inventory,
     assert(owner < reader->model->record_count && (inventory == GD_AXES || inventory == GD_CONTEXT_AXES));
     if (!(inventory == GD_AXES ? reader->rules->actor_axes_complete[owner]:reader->rules->context_axes_complete[owner])) uncertain = 1;
     ++reader->generation;
-    assert(reader->generation <= GD_MAX_RULE_STATE_EFFECTS + GD_MAX_RULE_ASSIGNMENTS + GD_MAX_RULE_CONDITION_TOKENS + GD_MAX_RULE_CASES);
+    assert(reader->generation <= GD_MAX_RULE_STATE_EFFECTS + GD_MAX_RULE_ASSIGNMENTS + GD_MAX_RULE_CONDITION_TOKENS + GD_MAX_RULE_CASES + GD_MAX_RULE_PRESERVATIONS);
     for (edge = inventory == GD_AXES ? reader->rules->actor_first[owner]:reader->rules->context_first[owner]; edge >= 0; edge = reader->rules->next_axis[edge]) {
         int axis = reader->model->edges[edge].target;
         const GD_RuleAxis *definition;
@@ -88,6 +90,7 @@ static GD_RuleTarget lookup(RuleReader *reader, int owner, GD_Field inventory,
     }
     target.axis_record = found;
     if (!reader->rules->axes[found].valid) { target.resolution = GD_RULE_INVALID_DEFINITION; return target; }
+    if (kind==LOOKUP_ANY_AXIS) { target.resolution=GD_RULE_RESOLVED; return target; }
     if (reader->rules->axes[found].type == GD_AXIS_UNSPECIFIED) return target;
     if ((state && reader->rules->axes[found].type != GD_AXIS_ENUM) ||
         (!state && reader->rules->axes[found].type != GD_AXIS_INTEGER && reader->rules->axes[found].type != GD_AXIS_NUMBER)) {
@@ -105,8 +108,8 @@ static GD_RuleTarget lookup(RuleReader *reader, int owner, GD_Field inventory,
     return target;
 }
 static GD_RuleTarget actor_target(RuleReader *reader, const GD_RuleParticipant *participant,
-                                  const char *text, size_t size, int state) {
-    return lookup(reader,participant->noun_resolution == GD_RULE_RESOLVED ? participant->noun_record:-1,GD_AXES,text,size,state);
+                                  const char *text, size_t size, LookupKind kind) {
+    return lookup(reader,participant->noun_resolution == GD_RULE_RESOLVED ? participant->noun_record:-1,GD_AXES,text,size,kind);
 }
 static void diagnose(RuleReader *reader, GD_RuleTarget target, const char *field,
                      const char *text, BindingKind kind) {
@@ -115,26 +118,38 @@ static void diagnose(RuleReader *reader, GD_RuleTarget target, const char *field
     if (target.resolution == GD_RULE_RESOLVED) return;
     if (kind == BIND_CONDITION) reader->rules->condition_bindings_complete = 0;
     else if (kind == BIND_CONTEXT) reader->rules->context_bindings_complete = 0;
+    else if (kind == BIND_PRESERVE) reader->rules->preservation_bindings_complete=0;
     else reader->rules->effect_bindings_complete = 0;
     if (target.resolution == GD_RULE_UNAVAILABLE) return; /* Budget diagnostic already retained. */
     if (target.resolution == GD_RULE_UNDETERMINED) {
         if (reader->rules->finding_count == GD_MAX_ERRORS) { ++reader->rules->findings_omitted; return; }
         finding = &reader->rules->findings[reader->rules->finding_count++];
         finding->record = reader->record; finding->line = reader->line;
-        finding->code = kind == BIND_CONTEXT ? "rules.context_undetermined":kind == BIND_CONDITION ? "rules.condition_undetermined":"rules.effect_undetermined";
+        finding->code = kind == BIND_PRESERVE ? "rules.preserve_undetermined":kind == BIND_CONTEXT ? "rules.context_undetermined":kind == BIND_CONDITION ? "rules.condition_undetermined":"rules.effect_undetermined";
         finding->field = field; finding->reference = text;
         finding->message = "State/target remains undetermined; incomplete or open definitions do not infer a binding";
         return;
     }
-    code = target.resolution == GD_RULE_AMBIGUOUS ? (kind == BIND_CONTEXT ? "rules.context_ambiguous":kind == BIND_CONDITION ? "rules.condition_ambiguous":"rules.effect_ambiguous") :
-           target.resolution == GD_RULE_WRONG_TYPE ? (kind == BIND_CONTEXT ? "rules.context_type":kind == BIND_CONDITION ? "rules.condition_type":"rules.effect_type") :
-           target.resolution == GD_RULE_INVALID_DEFINITION ? (kind == BIND_CONTEXT ? "rules.context_definition":kind == BIND_CONDITION ? "rules.condition_definition":"rules.effect_definition") :
-           kind == BIND_CONTEXT ? "rules.context_missing":kind == BIND_CONDITION ? "rules.condition_missing":"rules.effect_missing";
+    code = target.resolution == GD_RULE_AMBIGUOUS ? (kind == BIND_PRESERVE ? "rules.preserve_ambiguous":kind == BIND_CONTEXT ? "rules.context_ambiguous":kind == BIND_CONDITION ? "rules.condition_ambiguous":"rules.effect_ambiguous") :
+           target.resolution == GD_RULE_WRONG_TYPE ? (kind == BIND_PRESERVE ? "rules.preserve_type":kind == BIND_CONTEXT ? "rules.context_type":kind == BIND_CONDITION ? "rules.condition_type":"rules.effect_type") :
+           target.resolution == GD_RULE_INVALID_DEFINITION ? (kind == BIND_PRESERVE ? "rules.preserve_definition":kind == BIND_CONTEXT ? "rules.context_definition":kind == BIND_CONDITION ? "rules.condition_definition":"rules.effect_definition") :
+           kind == BIND_PRESERVE ? "rules.preserve_missing":kind == BIND_CONTEXT ? "rules.context_missing":kind == BIND_CONDITION ? "rules.condition_missing":"rules.effect_missing";
     message = target.resolution == GD_RULE_AMBIGUOUS ? "Name has multiple declared matches; qualify the target, never guess" :
-              target.resolution == GD_RULE_WRONG_TYPE ? "State predicates/becomes require enum axes; set requires integer or number" :
+              target.resolution == GD_RULE_WRONG_TYPE ? "Named predicates/becomes require enum axes; numeric predicates/set require integer or number" :
               target.resolution == GD_RULE_INVALID_DEFINITION ? "Name targets an invalid axis definition" :
               "Name is absent from the declared axis inventory or closed vocabulary";
     gd_error(reader->model,code,message,reader->model->records[reader->record].source_path,reader->line);
+}
+static int control_reference(RuleReader *reader, const char *text, size_t length, int *record) {
+    GD_ControlToken token;
+    GD_Expression expression={&token,0,1};
+    GD_ExpressionSite site={reader->record,reader->line,GD_EXPRESSION_PREDICATE};
+    if (!length || (text[0]!='{' && !(length>1 && text[0]=='$' && text[1]=='{'))) return 0;
+    *record=-1;
+    if (!charge(reader,(length+1)*32)) return 1;
+    if (gd_compile_expression(reader->model,&expression,text,length,site) && expression.count==1)
+        *record=token.target;
+    return 1;
 }
 static void states(RuleReader *reader, GD_RuleParticipant *participant) {
     const char *start = participant->becomes, *cursor;
@@ -163,13 +178,16 @@ static void states(RuleReader *reader, GD_RuleParticipant *participant) {
             return;
         }
         effect = &reader->rules->state_effects[reader->rules->state_effect_count++];
-        effect->text = start; effect->length = (size_t)(end-start); effect->line = reader->line;
+        effect->text = start; effect->length = (size_t)(end-start); effect->line = reader->line; effect->control_record=-1;
         if (!*cursor) break;
         start = cursor+1;
     }
     participant->state_effect_count = reader->rules->state_effect_count-before;
     for (before = participant->first_state_effect; before < reader->rules->state_effect_count; ++before) {
         GD_RuleStateEffect *effect = &reader->rules->state_effects[before];
+        if (control_reference(reader,effect->text,effect->length,&effect->control_record)) {
+            effect->target=(GD_RuleTarget){GD_RULE_UNDETERMINED,-1,NULL}; continue;
+        }
         effect->target = actor_target(reader,participant,effect->text,effect->length,1);
         diagnose(reader,effect->target,"becomes",participant->becomes,BIND_EFFECT);
     }
@@ -184,6 +202,41 @@ static int word(const char *text, size_t size, const char *keyword) {
         if (c != (unsigned char)keyword[i]) return 0;
     }
     return 1;
+}
+static void preservation(RuleReader *reader, GD_RuleParticipant *participant) {
+    const char *cursor=participant->preserve;
+    int before=reader->rules->preservation_count, i;
+    participant->first_preservation=before;
+    if (!cursor) return;
+    if (reader->preservation_limit) { reader->rules->preservation_bindings_complete=0; return; }
+    while (*cursor) {
+        const char *start,*end;
+        GD_RulePreservation *item;
+        while (*cursor==' ' || *cursor=='\t') ++cursor;
+        start=cursor; while (*cursor && *cursor!=',') ++cursor; end=cursor;
+        while (end>start && (end[-1]==' ' || end[-1]=='\t')) --end;
+        if (end==start || (*cursor==',' && !cursor[1])) {
+            reader->rules->preservation_count=before; reader->rules->preservation_bindings_complete=0;
+            gd_error(reader->model,"rules.preserve_list","preserve requires nonempty comma-separated axis names, ALL or OTHER",reader->model->records[reader->record].source_path,reader->line);
+            return;
+        }
+        if (reader->rules->preservation_count==GD_MAX_RULE_PRESERVATIONS) {
+            reader->rules->preservation_count=before; reader->rules->preservation_bindings_complete=0; reader->preservation_limit=1;
+            gd_error(reader->model,"rules.preserve_limit","8192 preservation declaration limit exceeded; current and later lists unavailable",reader->model->records[reader->record].source_path,reader->line);
+            return;
+        }
+        item=&reader->rules->preservations[reader->rules->preservation_count++]; memset(item,0,sizeof(*item));
+        item->text=start; item->length=(size_t)(end-start); item->line=reader->line;
+        item->kind=word(start,item->length,"all") ? GD_PRESERVE_ALL:word(start,item->length,"other") ? GD_PRESERVE_OTHER:GD_PRESERVE_AXIS;
+        if (*cursor==',') ++cursor;
+    }
+    participant->preservation_count=reader->rules->preservation_count-before;
+    for (i=before;i<reader->rules->preservation_count;++i) {
+        GD_RulePreservation *item=&reader->rules->preservations[i];
+        if (item->kind==GD_PRESERVE_AXIS) item->target=actor_target(reader,participant,item->text,item->length,LOOKUP_ANY_AXIS);
+        else item->target=(GD_RuleTarget){participant->noun_resolution==GD_RULE_RESOLVED && reader->rules->actor_axes_complete[participant->noun_record] ? GD_RULE_RESOLVED:GD_RULE_UNDETERMINED,-1,NULL};
+        diagnose(reader,item->target,"preserve",participant->preserve,BIND_PRESERVE);
+    }
 }
 static int context_participant(RuleReader *reader, const GD_RuleCase *item, const char *text, size_t length) {
     int i;
@@ -239,9 +292,39 @@ static int emit(RuleReader *reader, ConditionOperator item) {
     }
     token = &reader->rules->condition_tokens[reader->rules->condition_token_count++];
     memset(token,0,sizeof(*token)); token->target.axis_record = -1;
+    token->quantity = token->control_record = -1;
     token->operation = (GD_RuleConditionOp)item.operation; token->offset = item.offset;
     token->text = item.text; token->length = item.length;
     return 1;
+}
+const char *gd_rule_comparison_name(int comparison) {
+    static const char *names[]={"==","!=","<","<=",">",">="};
+    return comparison>=GD_RULE_EQUAL && comparison<=GD_RULE_GREATER_EQUAL ? names[comparison]:"unknown";
+}
+/* Arithmetic parentheses/functions belong to a numeric atom. Stop at a Boolean
+   boundary outside those parentheses, never inside a unit or control reference. */
+static const char *quantity_end(const char *cursor) {
+    const char *start=cursor;
+    int depth=0;
+    while (*cursor) {
+        if (*cursor=='[' || *cursor=='{') {
+            char close=*cursor=='[' ? ']':'}'; ++cursor;
+            while (*cursor && *cursor!=close) ++cursor;
+            if (*cursor) ++cursor;
+            continue;
+        }
+        if (*cursor=='(') ++depth;
+        else if (*cursor==')') { if (!depth) break; --depth; }
+        if (!depth && (*cursor=='&' || *cursor=='|')) break;
+        if (!depth && (cursor==start || cursor[-1]==' ' || cursor[-1]=='\t')) {
+            const char *end=cursor;
+            while ((*end>='A' && *end<='Z') || (*end>='a' && *end<='z')) ++end;
+            if ((!*end || *end==' ' || *end=='\t' || *end==')') &&
+                (word(cursor,(size_t)(end-cursor),"and") || word(cursor,(size_t)(end-cursor),"or"))) break;
+        }
+        ++cursor;
+    }
+    return cursor;
 }
 static void condition_failure(RuleReader *reader, GD_RuleCondition *condition,
                               GD_RuleConditionState state, const char *code, const char *message) {
@@ -261,16 +344,6 @@ static void condition(RuleReader *reader, GD_RuleParticipant *participant, const
     ++reader->rules->condition_count;
     if (reader->condition_limit) {
         result->state = GD_CONDITION_LIMITED; reader->rules->condition_bindings_complete = 0; return;
-    }
-    if (strpbrk(text,"<>=") != NULL) {
-        GD_Finding *finding;
-        result->state = GD_CONDITION_UNSUPPORTED; reader->rules->condition_bindings_complete = 0;
-        if (reader->rules->finding_count == GD_MAX_ERRORS) { ++reader->rules->findings_omitted; return; }
-        finding = &reader->rules->findings[reader->rules->finding_count++];
-        finding->record = reader->record; finding->line = reader->line;
-        finding->code = "rules.condition_unsupported"; finding->field = field; finding->reference = text;
-        finding->message = "Numeric comparisons are not compiled yet; condition retained and truth remains unknown";
-        return;
     }
     while (*cursor) {
         ConditionOperator item;
@@ -299,16 +372,46 @@ static void condition(RuleReader *reader, GD_RuleParticipant *participant, const
             ++cursor;
         } else {
             const char *dot;
-            while (*cursor && *cursor != ' ' && *cursor != '\t' && !strchr("()!&|",*cursor)) ++cursor;
+            while (*cursor && *cursor != ' ' && *cursor != '\t' && !strchr("()!&|<>=",*cursor)) ++cursor;
             item.length = (size_t)(cursor-start);
             item.operation = word(start,item.length,"not") ? GD_RULE_OP_NOT:word(start,item.length,"and") ? GD_RULE_OP_AND:
                              word(start,item.length,"or") ? GD_RULE_OP_OR:word(start,item.length,"any") ? GD_RULE_OP_ANY:GD_RULE_OP_STATE;
             dot = memchr(start,'.',item.length);
-            if (item.operation == GD_RULE_OP_STATE && dot && (dot == start || dot == cursor-1)) goto syntax;
+            if (!item.length || (item.operation == GD_RULE_OP_STATE && dot && (dot == start || dot == cursor-1))) goto syntax;
+            {
+                const char *operator=cursor;
+                while (*operator==' ' || *operator=='\t') ++operator;
+                if (*operator=='<' || *operator=='>' || *operator=='=' || (*operator=='!' && operator[1]=='=')) {
+                    const char *rhs,*end,*trim;
+                    GD_RuleConditionToken *token;
+                    int comparison=*operator=='<' ? GD_RULE_LESS:*operator=='>' ? GD_RULE_GREATER:*operator=='!' ? GD_RULE_NOT_EQUAL:GD_RULE_EQUAL;
+                    if (!operand || item.operation!=GD_RULE_OP_STATE) goto syntax;
+                    rhs=operator+1;
+                    if (*rhs=='=') { if (comparison==GD_RULE_LESS || comparison==GD_RULE_GREATER) ++comparison; ++rhs; }
+                    while (*rhs==' ' || *rhs=='\t') ++rhs;
+                    end=quantity_end(rhs); trim=end;
+                    while (trim>rhs && (trim[-1]==' ' || trim[-1]=='\t')) --trim;
+                    if (trim==rhs) goto syntax;
+                    item.operation=GD_RULE_OP_COMPARE;
+                    if (!emit(reader,item)) goto token_limit;
+                    token=&reader->rules->condition_tokens[reader->rules->condition_token_count-1];
+                    token->axis_length=(int)item.length; token->rhs_offset=(int)(rhs-start); token->comparison=comparison;
+                    token->length=(size_t)(trim-start);
+                    cursor=end; operand=0; continue;
+                }
+            }
         }
         if (item.operation == GD_RULE_OP_STATE || item.operation == GD_RULE_OP_ANY) {
+            int control=-1, reference=item.operation==GD_RULE_OP_STATE && control_reference(reader,item.text,item.length,&control);
             if (!operand) goto syntax;
+            if (reference && control==-1) {
+                condition_failure(reader,result,reader->exhausted ? GD_CONDITION_LIMITED:GD_CONDITION_INVALID,
+                    "rules.condition_control","Invalid/unavailable boolean control reference; see sourced lookup/compiler error");
+                return;
+            }
+            if (reference) item.operation=GD_RULE_OP_CONTROL;
             if (!emit(reader,item)) goto token_limit;
+            if (reference) reader->rules->condition_tokens[reader->rules->condition_token_count-1].control_record=control;
             operand = 0;
         } else if (item.operation == GD_RULE_OP_NOT) {
             if (!operand) goto syntax;
@@ -326,8 +429,10 @@ static void condition(RuleReader *reader, GD_RuleParticipant *participant, const
     result->token_count = reader->rules->condition_token_count-result->first_token;
     for (i = result->first_token; i < reader->rules->condition_token_count; ++i) {
         GD_RuleConditionToken *token = &reader->rules->condition_tokens[i];
-        if (token->operation != GD_RULE_OP_STATE) continue;
-        token->target = actor_target(reader,participant,token->text,token->length,1);
+        if (token->operation==GD_RULE_OP_CONTROL) { if (token->control_record<0) result->bindings_complete=0; continue; }
+        if (token->operation != GD_RULE_OP_STATE && token->operation != GD_RULE_OP_COMPARE) continue;
+        token->target = actor_target(reader,participant,token->text,token->operation==GD_RULE_OP_COMPARE ? (size_t)token->axis_length:token->length,
+                                     token->operation==GD_RULE_OP_STATE);
         if (token->target.resolution != GD_RULE_RESOLVED) result->bindings_complete = 0;
         diagnose(reader,token->target,field,text,BIND_CONDITION);
     }
@@ -343,7 +448,7 @@ const char *gd_rule_condition_state_name(GD_RuleConditionState state) {
 }
 const char *gd_rule_condition_op_name(GD_RuleConditionOp operation) {
     return operation == GD_RULE_OP_STATE ? "state":operation == GD_RULE_OP_ANY ? "any":operation == GD_RULE_OP_NOT ? "not":
-           operation == GD_RULE_OP_AND ? "and":operation == GD_RULE_OP_OR ? "or":"unknown";
+           operation == GD_RULE_OP_AND ? "and":operation == GD_RULE_OP_OR ? "or":operation == GD_RULE_OP_COMPARE ? "compare":operation == GD_RULE_OP_CONTROL ? "control":"unknown";
 }
 static GD_RuleTruth negate(GD_RuleTruth value) {
     return value == GD_RULE_TRUTH_TRUE ? GD_RULE_TRUTH_FALSE:value == GD_RULE_TRUTH_FALSE ? GD_RULE_TRUTH_TRUE:GD_RULE_TRUTH_UNKNOWN;
@@ -356,12 +461,29 @@ static GD_RuleTruth predicate(const GD_RuleCondition *condition, GD_RuleTarget t
     for (i = 0; i < count; ++i) {
         GD_RuleTruth next;
         if (facts[i].participant != condition->participant || facts[i].axis_record != target.axis_record ||
-            !facts[i].state || strcmp(facts[i].state,target.state)) continue;
+            !facts[i].value || strcmp(facts[i].value,target.state)) continue;
         next = facts[i].truth >= GD_RULE_TRUTH_UNKNOWN && facts[i].truth <= GD_RULE_TRUTH_TRUE ? facts[i].truth:GD_RULE_TRUTH_UNKNOWN;
         if (found && next != value) conflict = 1;
         value = next; found = 1;
     }
     return conflict ? GD_RULE_TRUTH_UNKNOWN:value;
+}
+static GD_RuleTruth numeric_predicate(const GD_Rules *rules, const GD_RuleCondition *condition,
+                                      const GD_RuleConditionToken *token, const GD_RulePredicateFact *facts, int count) {
+    GD_ExpressionInput left=gd_rule_starting_quantity(rules,condition->participant,token->target.axis_record,facts,count);
+    GD_RuleQuantityValue right=gd_rule_quantity_value(rules,token->quantity,facts,count);
+    int value;
+    if (!left.known || !left.unit_known || right.state!=GD_EXPRESSION_VALUE || !right.known || !right.checks_complete) return GD_RULE_TRUTH_UNKNOWN;
+    switch (token->comparison) {
+        case GD_RULE_EQUAL: value=left.value.number==right.number; break;
+        case GD_RULE_NOT_EQUAL: value=left.value.number!=right.number; break;
+        case GD_RULE_LESS: value=left.value.number<right.number; break;
+        case GD_RULE_LESS_EQUAL: value=left.value.number<=right.number; break;
+        case GD_RULE_GREATER: value=left.value.number>right.number; break;
+        case GD_RULE_GREATER_EQUAL: value=left.value.number>=right.number; break;
+        default: return GD_RULE_TRUTH_UNKNOWN;
+    }
+    return value ? GD_RULE_TRUTH_TRUE:GD_RULE_TRUTH_FALSE;
 }
 static int compiled_condition(const GD_Rules *rules, const GD_RuleCondition *condition) {
     return rules && condition && rules->condition_token_count >= 0 && rules->condition_token_count <= GD_MAX_RULE_CONDITION_TOKENS &&
@@ -372,13 +494,20 @@ GD_RuleTruth gd_rule_condition_value(const GD_Rules *rules, const GD_RuleConditi
                                     const GD_RulePredicateFact *facts, int count) {
     GD_RuleTruth stack[GD_MAX_RULE_CONDITION_ITEMS];
     int i, used = 0;
-    if (!compiled_condition(rules,condition) || count < 0 || count > GD_MAX_RULE_CONDITION_ITEMS || (count && !facts))
+    if (!compiled_condition(rules,condition) || count < 0 || count > GD_MAX_RULE_CONDITION_ITEMS || (count && !facts) ||
+        gd_rule_condition_work(rules,condition,count)>GD_RULE_EVALUATION_WORK_LIMIT)
         return GD_RULE_TRUTH_UNKNOWN;
     for (i = 0; i < condition->token_count; ++i) {
         const GD_RuleConditionToken *token = &rules->condition_tokens[condition->first_token+i];
         GD_RuleTruth a, b;
         switch (token->operation) {
             case GD_RULE_OP_STATE: stack[used++] = predicate(condition,token->target,facts,count); break;
+            case GD_RULE_OP_COMPARE: stack[used++] = numeric_predicate(rules,condition,token,facts,count); break;
+            case GD_RULE_OP_CONTROL:
+                stack[used++]=rules->controls && token->control_record>=0 && token->control_record<GD_MAX_RECORDS && rules->controls->state[token->control_record]==1 &&
+                    rules->controls->values[token->control_record].kind==GD_LITERAL_BOOLEAN ?
+                    (rules->controls->values[token->control_record].number ? GD_RULE_TRUTH_TRUE:GD_RULE_TRUTH_FALSE):GD_RULE_TRUTH_UNKNOWN;
+                break;
             case GD_RULE_OP_ANY: stack[used++] = GD_RULE_TRUTH_TRUE; break;
             case GD_RULE_OP_NOT:
                 if (!used) return GD_RULE_TRUTH_UNKNOWN;
@@ -399,9 +528,10 @@ GD_RuleTruth gd_rule_condition_value(const GD_Rules *rules, const GD_RuleConditi
 }
 /* Reserve byte-comparison upper bounds before evaluating a whole guard. A
    budget failure leaves that guard unexamined, not partially false. */
-static size_t condition_cost(const GD_Rules *rules, const GD_RuleCondition *condition, int count) {
+size_t gd_rule_condition_work(const GD_Rules *rules, const GD_RuleCondition *condition, int count) {
     size_t cost = 1;
     int i;
+    if (count<0 || count>GD_MAX_RULE_CONDITION_ITEMS) return GD_RULE_EVALUATION_WORK_LIMIT+1u;
     if (!compiled_condition(rules,condition)) return cost;
     for (i = 0; i < condition->token_count; ++i) {
         const GD_RuleConditionToken *token = &rules->condition_tokens[condition->first_token+i];
@@ -409,6 +539,10 @@ static size_t condition_cost(const GD_Rules *rules, const GD_RuleCondition *cond
         ++cost;
         if (token->operation == GD_RULE_OP_STATE && token->target.resolution == GD_RULE_RESOLVED && token->target.state)
             cost += (size_t)count*(token->length+2); /* Fact-key check plus bounded spelling comparison. */
+        if (token->operation==GD_RULE_OP_COMPARE) {
+            int tokens=token->quantity>=0 && token->quantity<rules->quantity_count ? rules->quantities[token->quantity].token_count:0;
+            cost += (size_t)(tokens+1)*GD_RULE_NUMERIC_TOKEN_WORK+(size_t)count*GD_RULE_NUMERIC_FACT_WORK;
+        }
     }
     return cost;
 }
@@ -428,7 +562,7 @@ GD_RuleExclusionCheck gd_rule_case_exclusions(const GD_Rules *rules, int case_in
     for (i = item->first_participant; i < item->first_participant+item->participant_count; ++i) {
         const GD_RuleParticipant *participant = &rules->participants[i];
         GD_RuleTruth value;
-        size_t cost = participant->skip_if ? condition_cost(rules,&participant->skip_condition,count):1;
+        size_t cost = participant->skip_if ? gd_rule_condition_work(rules,&participant->skip_condition,count):1;
         if (cost > (size_t)(GD_RULE_EVALUATION_WORK_LIMIT-result.work)) { result.limited = 1; return result; }
         result.work += (int)cost;
         if (!participant->skip_if) continue; /* Absence is no authored guard, never a fabricated false fact. */
@@ -440,12 +574,52 @@ GD_RuleExclusionCheck gd_rule_case_exclusions(const GD_Rules *rules, int case_in
     result.state = unknown ? GD_EXCLUSION_UNKNOWN:GD_EXCLUSION_NOT_EXCLUDED;
     return result;
 }
+void gd_resolve_rule_controls(GD_Model *model, GD_Rules *rules) {
+    RuleReader reader;
+    int c,p,i,k;
+    memset(&reader,0,sizeof(reader)); reader.model=model; reader.rules=rules;
+    for (c=0;c<rules->case_count;++c) {
+        const GD_RuleCase *item=&rules->cases[c]; reader.record=rules->sources[item->source].record;
+        for (p=item->first_participant;p<item->first_participant+item->participant_count;++p) {
+            GD_RuleParticipant *participant=&rules->participants[p];
+            for (i=participant->first_state_effect;i<participant->first_state_effect+participant->state_effect_count;++i) {
+                GD_RuleStateEffect *effect=&rules->state_effects[i];
+                const GD_ControlValue *value;
+                if (effect->text[0]!='{' && !(effect->length>1 && effect->text[0]=='$' && effect->text[1]=='{')) continue;
+                reader.line=effect->line;
+                value=rules->controls && effect->control_record>=0 && rules->controls->state[effect->control_record]==1 ? &rules->controls->values[effect->control_record]:NULL;
+                if (value && value->kind!=GD_LITERAL_STRING) {
+                    effect->target.resolution=GD_RULE_WRONG_TYPE; rules->effect_bindings_complete=0;
+                    gd_error(model,"rules.effect_control_type","becomes control reference requires an enum value; no numeric/boolean coercion",model->records[reader.record].source_path,reader.line);
+                    continue;
+                }
+                if (value) effect->target=actor_target(&reader,participant,value->string,strlen(value->string),1);
+                diagnose(&reader,effect->target,"becomes",participant->becomes,BIND_EFFECT);
+            }
+            for (k=0;k<2;++k) {
+                GD_RuleCondition *condition=k ? &participant->skip_condition:&participant->required_condition;
+                for (i=condition->first_token;i<condition->first_token+condition->token_count;++i) {
+                    const GD_RuleConditionToken *token=&rules->condition_tokens[i];
+                    const GD_ControlValue *value;
+                    if (token->operation!=GD_RULE_OP_CONTROL) continue;
+                    reader.line=participant->lines[k ? 2:1];
+                    value=rules->controls && token->control_record>=0 && rules->controls->state[token->control_record]==1 ? &rules->controls->values[token->control_record]:NULL;
+                    if (!value || value->kind!=GD_LITERAL_BOOLEAN) {
+                        condition->bindings_complete=0; rules->condition_bindings_complete=0;
+                        if (value) gd_error(model,"rules.condition_control_type","Control predicate requires a boolean; no numeric/enum truth coercion",model->records[reader.record].source_path,reader.line);
+                    }
+                }
+            }
+        }
+    }
+}
 void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules) {
     RuleReader reader;
     int i, j, k;
     assert(model && rules);
     memset(&reader,0,sizeof(reader)); reader.model = model; reader.rules = rules;
     rules->effect_bindings_complete = 1; rules->condition_bindings_complete = 1; rules->context_bindings_complete = 1;
+    rules->preservation_bindings_complete=1;
     for (i = 0; i < rules->case_count; ++i) {
         GD_RuleCase *item = &rules->cases[i];
         reader.record = rules->sources[item->source].record;
@@ -472,6 +646,7 @@ void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules) {
                 assignment->target = actor_target(&reader,participant,assignment->axis,strlen(assignment->axis),0);
                 diagnose(&reader,assignment->target,"set",assignment->axis,BIND_EFFECT);
             }
+            reader.line=participant->lines[5]; preservation(&reader,participant);
         }
     }
 }

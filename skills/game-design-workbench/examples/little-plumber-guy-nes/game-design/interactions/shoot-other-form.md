@@ -21,3 +21,13 @@ Small or tall form receives shoot input.
 ## Consequences and feedback
 
 No projectile and no resource cost. Preserve form. This is defined no effect, not evidence that shooting behavior was forgotten.
+
+```gd-rule
+case other-form:
+    unknown_conditions: Shoot input received.
+    unknown_effects: No projectile and no resource cost; not a blanket unchanged-actor result.
+    Hero:
+        noun: nouns/hero
+        requires: small OR tall
+        preserve: Form
+```

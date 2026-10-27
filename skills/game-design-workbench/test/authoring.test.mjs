@@ -37,7 +37,7 @@ test('shipped templates and example contain readable collection contracts and co
 });
 
 test('axis records retain readable definitions and valid local rule sources', async () => {
-  for (const [project, expected] of [[example, 3], [plumber, 9]]) {
+  for (const [project, expected] of [[example, 4], [plumber, 20]]) {
     const folder = join(project, 'game-design/axes');
     const records = (await readdir(folder)).filter(name => !name.startsWith('.') && name.endsWith('.md'));
     assert.equal(records.length, expected);
@@ -52,7 +52,7 @@ test('axis records retain readable definitions and valid local rule sources', as
 });
 
 test('large plumber example contains authored records rather than copied tutorial or empty bodies', async () => {
-  const expected = { axes: 9, nouns: 26, verbs: 12, interactions: 49, mechanics: 24, systems: 6, dynamics: 8,
+  const expected = { axes: 20, nouns: 26, verbs: 12, interactions: 49, mechanics: 24, systems: 6, dynamics: 8,
     aesthetics: 6, 'skill-atoms': 16, challenges: 19, levels: 2, 'control-vars': 20, resources: 4,
     experiments: 3, glossary: 7 };
   let count = 0;
@@ -68,7 +68,7 @@ test('large plumber example contains authored records rather than copied tutoria
     }
     count += records.length;
   }
-  assert.equal(count, 211);
+  assert.equal(count, 222);
   assert.match(await text(join(plumber, 'game-design/concept.md')), /^Working mode: game-design$/m);
   assert.match(await text(join(plumber, 'README.md')), /Approximate instruction/);
 });
@@ -81,7 +81,7 @@ test('public Attendant and native consumers read the large plumber example', { s
   const result = spawnSync(process.execPath, [runner, 'validate', '--strict', '--project', root], { encoding: 'utf8', timeout: 30000, maxBuffer: 4*1024*1024, windowsHide: true });
   assert.equal(result.status, 0, result.stderr);
   const validation = JSON.parse(result.stdout);
-  assert.equal(validation.records, 211);
+  assert.equal(validation.records, 222);
   assert.deepEqual(validation.diagnostics, []);
   assert.deepEqual(validation.corrections, []);
   if (!process.env.GD_NATIVE_EXE) return;
@@ -159,8 +159,8 @@ test('external Attendant validates copied templates/example and preserves rank-o
     assert.deepEqual(query(`SELECT id FROM "${role}"`, empty), []);
     return query(`SELECT id FROM "${role}"`).map(row => row.id);
   });
-  assert.equal(identities.length, 66);
-  assert.equal(new Set(identities).size, 66);
+  assert.equal(identities.length, 67);
+  assert.equal(new Set(identities).size, 67);
   for (const id of identities) assert.match(id, /^[a-f0-9]{8}-[a-f0-9]{4}-7[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
   const atoms = query('SELECT id, name, rank FROM "skill-atoms" ORDER BY name');
   assert.equal(atoms.length, 6);

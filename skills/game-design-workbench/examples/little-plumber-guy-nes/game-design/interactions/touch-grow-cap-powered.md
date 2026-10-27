@@ -14,6 +14,8 @@ context_nouns:
   - nouns/power-state
 mechanics:
   - mechanics/growth
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -22,3 +24,16 @@ Tall or spark hero overlaps grow-cap.
 ## Consequences and feedback
 
 Consume pickup while preserving form. No extra life, damage protection or invented score award. This is a defined consumed-without-upgrade outcome.
+
+```gd-rule
+case collect-powered:
+    context: Hero overlaps Cap
+    unknown_effects: Consume pickup; no extra life, protection or invented score.
+    Hero:
+        noun: nouns/hero
+        requires: tall OR spark
+        preserve: Form
+    Cap:
+        noun: nouns/grow-cap
+        becomes: consumed
+```

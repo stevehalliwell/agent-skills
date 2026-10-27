@@ -11,6 +11,8 @@ nouns:
   - nouns/power-state
 verbs:
   - verbs/touch
+context_axes:
+  - axes/Contact
 ---
 ## Rule
 
@@ -19,3 +21,33 @@ Touching grow-cap consumes pickup. Small becomes tall; tall and spark preserve c
 ## Open design
 
 Growth while standing under a low ceiling is unresolved; choose clearance behavior before implementing a collision model.
+
+```gd-rule
+case small-collection:
+    context: Hero overlaps Cap
+    unknown_effects: Consume pickup; no life/protection window. Low-ceiling growth handling unresolved, no automatic correction.
+    Hero:
+        noun: nouns/hero
+        requires: small
+        becomes: tall
+    Cap:
+        noun: nouns/grow-cap
+        becomes: consumed
+
+case powered-collection:
+    context: Hero overlaps Cap
+    unknown_effects: Consume pickup; no life/protection window or invented score.
+    Hero:
+        noun: nouns/hero
+        requires: tall OR spark
+        preserve: Form
+    Cap:
+        noun: nouns/grow-cap
+        becomes: consumed
+
+case pickup-travel:
+    unknown_conditions: Moving Grow-cap on support; wall/edge geometry and active instance unencoded.
+    unknown_effects: Travel on support, reverse at walls, can fall/loss over edge. No speed, trajectory or initial position supplied.
+    Cap:
+        noun: nouns/grow-cap
+```

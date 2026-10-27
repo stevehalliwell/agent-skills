@@ -21,3 +21,12 @@ Spark hero already has spark-capacity live projectiles.
 ## Consequences and feedback
 
 Create nothing and queue nothing. Releasing a slot later does not retroactively fire. Zero configured capacity deliberately makes every shot request take this no-effect path.
+
+```gd-rule
+case full-cap:
+    unknown_conditions: Shoot request while already at live cap; event timing unencoded.
+    unknown_effects: Create nothing, queue nothing; later slot release does not retroactively fire. Zero configured capacity deliberately disables requests.
+    Hero:
+        noun: nouns/hero
+        requires: spark AND LiveSparks == {control-vars/spark-capacity}
+```

@@ -18,3 +18,20 @@ Releasing jump during ascent reduces remaining upward travel. Releasing during d
 ## Feedback and limits
 
 Arc change should be visible. Exact cutoff law and attainable heights remain open; no native graph analysis can derive them from these links.
+
+```gd-rule
+case ascending-release:
+    unknown_conditions: Jump released during ascent.
+    unknown_effects: Reduce remaining upward travel, visibly lower arc; not new jump type. Exact cutoff law/heights unspecified.
+    Hero:
+        noun: nouns/hero
+        requires: rising
+
+case descending-release:
+    unknown_conditions: Jump released during descent.
+    unknown_effects: Jump-cut leaves descent unchanged against release; gravity/collision continue, not frozen motion.
+    Hero:
+        noun: nouns/hero
+        requires: falling
+        preserve: Motion
+```

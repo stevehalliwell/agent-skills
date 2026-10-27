@@ -14,6 +14,8 @@ context_nouns:
   - nouns/power-state
 mechanics:
   - mechanics/spark-upgrade
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -22,3 +24,28 @@ Tall hero overlaps an available flower.
 ## Consequences and feedback
 
 Consume flower and become spark. Current live-shot count still gates shooting. A hero already in spark form keeps that form when collecting another flower.
+
+```gd-rule
+case collect-tall:
+    context: Hero overlaps Flower
+    unknown_effects: Consume Flower and gain spark capability; current live-shot count still gates shooting.
+    Hero:
+        noun: nouns/hero
+        requires: tall
+        becomes: spark
+    Flower:
+        noun: nouns/spark-flower
+        requires: available
+        becomes: consumed
+
+case collect-already-spark:
+    context: Hero overlaps Flower
+    unknown_effects: Consume another Flower without further form change; live-shot cap still applies.
+    Hero:
+        noun: nouns/hero
+        requires: spark
+        preserve: Form
+    Flower:
+        noun: nouns/spark-flower
+        becomes: consumed
+```

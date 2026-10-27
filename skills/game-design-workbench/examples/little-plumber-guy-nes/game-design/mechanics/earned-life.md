@@ -18,6 +18,8 @@ control-vars:
 resources:
   - resources/coin-progress
   - resources/retry-budget
+context_axes:
+  - axes/Contact
 ---
 ## Rule
 
@@ -26,3 +28,35 @@ On coin threshold, subtract coins-for-life and add a life, clamped at life-capac
 ## Feedback
 
 Show life count change when one occurs; capacity must not wrap to zero.
+
+```gd-rule
+case coin-threshold:
+    unknown_conditions: Threshold-conversion occurrence, not repeated application to same original event. Multiple thresholds from unstable bank state unspecified.
+    unknown_effects: Convert coins even at life cap; capped award lost there. Show life count change when any; no score-based life rule or wrapping lives.
+    Bank:
+        noun: nouns/coin-bank
+        requires: CoinAmount >= {control-vars/coins-for-life}
+        set:
+            CoinAmount: this - {control-vars/coins-for-life}
+    Lives:
+        noun: nouns/lives
+        set:
+            Amount: min(this + 1[life], {control-vars/life-capacity})
+
+case life-cap:
+    context: Hero overlaps Cap
+    unknown_conditions: Original Life-cap collection once; instance identity unencoded.
+    unknown_effects: Consume even at cap; award lost there without bank change. No score-based life or wrap; show count change when any.
+    Hero:
+        noun: nouns/hero
+    Cap:
+        noun: nouns/life-cap
+        becomes: consumed
+    Bank:
+        noun: nouns/coin-bank
+        preserve: CoinAmount
+    Lives:
+        noun: nouns/lives
+        set:
+            Amount: min(this + 1[life], {control-vars/life-capacity})
+```

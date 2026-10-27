@@ -28,3 +28,18 @@ Destination is free; energy satisfies the shared pushing rule.
 
 ## Consequences and feedback
 Apply [crate pushing](../mechanics/crate-pushing.md). Crate movement makes displacement visible.
+
+```gd-rule
+case free-push:
+    unknown_conditions: Push request into free destination; spatial placement, direction and destination binding unencoded.
+    unknown_effects: Apply crate-pushing: move Crate one cell into free destination; visible displacement. Player-follow movement unspecified.
+    Player:
+        noun: nouns/player
+    Crate:
+        noun: nouns/crate
+    Energy:
+        noun: nouns/energy
+        requires: Amount >= {control-vars/push-cost}
+        set:
+            Amount: this - {control-vars/push-cost}
+```

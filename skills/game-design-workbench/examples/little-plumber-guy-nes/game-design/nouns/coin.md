@@ -5,7 +5,8 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Collectible token contributing to coin bank and score.
 tags: []
 status: accepted
-axes: null
+axes:
+  - axes/Availability
 ---
 ## Definition
 

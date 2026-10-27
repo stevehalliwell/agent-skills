@@ -19,3 +19,12 @@ Jump is released while hero still ascends.
 ## Consequences and feedback
 
 Reduce remaining rise and produce a visibly lower arc. Exact cutoff is open in jump-cut; do not invent a numeric trajectory or new ground support.
+
+```gd-rule
+case cut-rise:
+    unknown_conditions: Jump released during ascent.
+    unknown_effects: Reduce remaining upward travel, produce visibly lower arc. Exact cutoff law/magnitude unknown; do not invent trajectory or ground support.
+    Hero:
+        noun: nouns/hero
+        requires: rising
+```

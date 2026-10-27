@@ -29,3 +29,17 @@ Energy is below push-cost.
 
 ## Consequences
 Shared pushing rule prevents displacement and spending. Walking remains governed by grid walking.
+
+```gd-rule
+case insufficient-energy:
+    unknown_conditions: Push attempted; action/placement unencoded.
+    unknown_effects: No displacement or spending for this push; walking remains independently governed by grid-walking.
+    Player:
+        noun: nouns/player
+    Crate:
+        noun: nouns/crate
+    Energy:
+        noun: nouns/energy
+        requires: Amount < {control-vars/push-cost}
+        preserve: Amount
+```

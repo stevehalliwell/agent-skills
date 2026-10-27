@@ -15,3 +15,9 @@
 # Challenge restart
 
 Restarting a challenge reconstructs its starting arrangement. No challenge or dynamic currently links this documented rule. This is a documentation question, not proof restarting is unavailable.
+
+```gd-rule
+case restart:
+    unknown_conditions: Challenge restart occurrence; no canonical Challenge noun, input binding or concrete arrangement authored.
+    unknown_effects: Reconstruct starting arrangement; exact reset inventory and geometry unspecified. No challenge/dynamic currently links rule.
+```

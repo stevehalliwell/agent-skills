@@ -20,3 +20,11 @@
 # Not applicable
 
 Walls have no activation operation. This exclusion is not a defined no-effect activation rule.
+
+```gd-rule
+case not-applicable:
+    unknown_conditions: Coverage not_applicable: Wall has no activation operation; this is a disposition declaration, not gameplay applicability.
+    unknown_effects: No activation outcome is declared. Do not reinterpret as a defined no-effect activation rule.
+    Wall:
+        noun: nouns/wall
+```

@@ -20,3 +20,11 @@ Use crate color to communicate whether next push leaves a recovery option. Not a
 
 ## Migration provenance
 Former decisions/crate-color; record_kind proposal; alternative_group crate-feedback; related_decisions []; subjects [nouns/crate].
+
+```gd-rule
+case proposal-only:
+    unknown_conditions: Proposed, not adopted: whether next push leaves a recovery option; test undefined.
+    unknown_effects: Crate color could communicate recovery availability; no color mapping or accessibility behavior selected.
+    Crate:
+        noun: nouns/crate
+```

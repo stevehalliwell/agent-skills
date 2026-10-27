@@ -1,5 +1,6 @@
 /* Native domain checks. Build/run through test.ps1. Fixtures stay in ignored build/. */
 #include "gd.h"
+#include "gd_rule_analysis.h"
 #include "gd_layout.h"
 #include "gd_diagnostics.h"
 #include <limits.h>
@@ -51,6 +52,136 @@ static int has_error(GD_Model *model, const char *code) {
     for (i = 0; i < model->error_count; ++i) if (!strcmp(model->errors[i].code, code)) return 1;
     return 0;
 }
+TEST(rule_outcomes,
+    GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis;
+    GD_RuleEvaluation *result; GD_RulePredicateFact facts[4]; GD_RuleContextFact context;
+    GD_RuleAssumptions inputs={facts,3,NULL,0}; int root_case,life,form,amount,hero,budget,i,found;
+    TEST_ASSERT(model && setup("rule-outcomes")); collections[1].role=GD_AXIS; collections[2].role=GD_RULE;
+    TEST_ASSERT(write_record(1,"Life","---\nvalue_type: enum\nallowed_values: [alive, dead]\nclosed: true\n---\nLife."));
+    TEST_ASSERT(write_record(1,"Form","---\nvalue_type: enum\nallowed_values: [small, tall]\nclosed: true\n---\nForm."));
+    TEST_ASSERT(write_record(1,"Amount","---\nvalue_type: integer\nunit: life\nminimum: 0\nmaximum: 9\n---\nBudget."));
+    TEST_ASSERT(write_record(1,"Contact","---\nvalue_type: enum\nallowed_values: [sideContacts]\nclosed: true\n---\nOperator vocabulary."));
+    TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Life, actions/Form]\n---\nActor."));
+    TEST_ASSERT(write_record(0,"lives","---\naxes: [actions/Amount]\n---\nActor."));
+    TEST_ASSERT(write_record(0,"walker","---\naxes: [actions/Life]\n---\nActor."));
+    TEST_ASSERT(write_record(2,"helper","```gd-rule\ncase small:\n    context: ANY\n    Victim:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: dead\n        preserve: OTHER\n    Reserve:\n        noun: things/lives\n        requires: ANY\n        set:\n            Amount: this - 1[life]\n        preserve: OTHER\ncase named:\n    context: ANY\n    Victim:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: dead\n        preserve: Form, OTHER\n    Reserve:\n        noun: things/lives\n        requires: ANY\n        set:\n            Amount: this - 1[life]\ncase loop:\n    context: ANY\n    Again:\n        noun: things/hero\n        requires: ANY\n        causes: cases/helper#loop\n        preserve: ALL\n```"));
+    TEST_ASSERT(write_record(2,"root","---\ncontext_axes: [actions/Contact]\n---\n```gd-rule\ncase direct:\n    context: ANY\n    Hero:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: dead, tall\n        preserve: OTHER\n    Budget:\n        noun: things/lives\n        requires: ANY\n        set:\n            Amount: this - 1[life]\n        preserve: OTHER\ncase composed:\n    context: ANY\n    Hero:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: tall\n        causes: cases/helper#small with Victim=Hero, Reserve=Budget\n        preserve: OTHER\n    Budget:\n        noun: things/lives\n        requires: ANY\n        preserve: OTHER\ncase named-conflict:\n    context: ANY\n    Hero:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: tall\n        causes: cases/helper#named with Victim=Hero, Reserve=Budget\n        preserve: OTHER\n    Budget:\n        noun: things/lives\n        requires: ANY\ncase guard:\n    Hero:\n        noun: things/hero\n        skip_if: ANY\ncase context:\n    context: Hero sideContacts Target\n    Hero:\n        noun: things/hero\n        requires: ANY\n        preserve: ALL\n    Target:\n        noun: things/walker\n        requires: ANY\n        preserve: ALL\n```"));
+    gd_load(model,collections,3); rules=gd_read_rules(model); TEST_ASSERT(rules && !model->error_count);
+    analysis=gd_analyze_rules(model,rules); TEST_ASSERT(analysis && !model->error_count && analysis->call_count==3);
+    life=find_record(model,"actions/Life"); form=find_record(model,"actions/Form"); amount=find_record(model,"actions/Amount");
+    root_case=gd_rule_case_find(model,rules,"cases/root#composed"); TEST_ASSERT(root_case>=0);
+    hero=rules->cases[root_case].first_participant; budget=hero+1;
+    facts[0]=(GD_RulePredicateFact){hero,life,"alive",GD_RULE_TRUTH_TRUE}; facts[1]=(GD_RulePredicateFact){hero,form,"small",GD_RULE_TRUTH_TRUE};
+    facts[2]=(GD_RulePredicateFact){budget,amount,"3",GD_RULE_TRUTH_TRUE};
+    result=&analysis->scenario; gd_rule_evaluate(analysis,root_case,inputs,result);
+    TEST_ASSERT(result->input_valid==1 && result->applicability==GD_RULE_TRUTH_TRUE && !result->limited);
+    TEST_ASSERT(result->constraints_complete && result->values_complete && result->expansions==2 && result->write_count==3 && !result->conflict_count);
+    found=0; for (i=0;i<result->write_count;++i) if (result->writes[i].axis==amount) { ++found; TEST_ASSERT(result->writes[i].value.number==2 && result->writes[i].value.known); }
+    TEST_ASSERT(found==1 && !strcmp(facts[0].value,"alive") && !strcmp(facts[1].value,"small") && !strcmp(facts[2].value,"3"));
+    root_case=gd_rule_case_find(model,rules,"cases/root#named-conflict"); hero=rules->cases[root_case].first_participant;
+    facts[0].participant=facts[1].participant=hero; facts[2].participant=hero+1;
+    gd_rule_evaluate(analysis,root_case,inputs,result);
+    TEST_ASSERT(result->applicability==GD_RULE_TRUTH_TRUE && result->conflict_count==1 && !result->constraints_complete);
+    root_case=gd_rule_case_find(model,rules,"cases/root#guard"); inputs.fact_count=0;
+    gd_rule_evaluate(analysis,root_case,inputs,result);
+    TEST_ASSERT(result->applicability==GD_RULE_TRUTH_FALSE && result->exclusion.state==GD_EXCLUSION_EXCLUDED && result->write_count==0);
+    root_case=gd_rule_case_find(model,rules,"cases/root#context"); hero=rules->cases[root_case].first_participant;
+    context=(GD_RuleContextFact){hero+1,hero,find_record(model,"actions/Contact"),"sideContacts",GD_RULE_TRUTH_TRUE}; inputs.contexts=&context; inputs.context_count=1;
+    gd_rule_evaluate(analysis,root_case,inputs,result); TEST_ASSERT(result->context==GD_RULE_TRUTH_UNKNOWN && result->applicability==GD_RULE_TRUTH_UNKNOWN);
+    context.left=hero; context.right=hero+1;
+    gd_rule_evaluate(analysis,root_case,inputs,result); TEST_ASSERT(result->context==GD_RULE_TRUTH_TRUE && result->applicability==GD_RULE_TRUTH_TRUE);
+    context.truth=GD_RULE_TRUTH_FALSE;
+    gd_rule_evaluate(analysis,root_case,inputs,result); TEST_ASSERT(result->applicability==GD_RULE_TRUTH_FALSE);
+    root_case=gd_rule_case_find(model,rules,"cases/helper#loop"); hero=rules->cases[root_case].first_participant; inputs.context_count=0;
+    gd_rule_evaluate(analysis,root_case,inputs,result); TEST_ASSERT(result->cycle_count==1 && !result->constraints_complete && result->expansions==1);
+    facts[0]=(GD_RulePredicateFact){hero,life,"alive",GD_RULE_TRUTH_TRUE}; facts[1]=(GD_RulePredicateFact){hero,life,"dead",GD_RULE_TRUTH_TRUE}; inputs.fact_count=2;
+    gd_rule_evaluate(analysis,root_case,inputs,result); TEST_ASSERT(result->input_valid==0 && result->applicability==GD_RULE_TRUTH_UNKNOWN);
+    facts[0]=(GD_RulePredicateFact){hero,amount,"3",GD_RULE_TRUTH_TRUE}; inputs.fact_count=1;
+    gd_rule_evaluate(analysis,root_case,inputs,result); TEST_ASSERT(result->input_valid==0); /* Axis not owned by Hero. */
+    facts[0].participant=0;
+    gd_rule_evaluate(analysis,root_case,inputs,result); TEST_ASSERT(result->input_valid==0); /* Participant outside root case. */
+    root_case=gd_rule_case_find(model,rules,"cases/root#context"); hero=rules->cases[root_case].first_participant;
+    context=(GD_RuleContextFact){hero,hero+1,find_record(model,"actions/Contact"),"unlisted",GD_RULE_TRUTH_TRUE}; inputs.fact_count=0; inputs.context_count=1;
+    gd_rule_evaluate(analysis,root_case,inputs,result); TEST_ASSERT(result->input_valid==0); /* Closed context vocabulary. */
+    gd_rule_analysis_destroy(analysis); gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rule_quantities,
+    GD_Model *model=model_create(); GD_Rules *rules;
+    GD_Collection domains[4]; char directory[GD_MAX_PATH], path[GD_MAX_PATH];
+    GD_RulePredicateFact facts[5]; GD_RuleQuantityValue value;
+    int amount,life, first,second,other;
+    const char *control="---\nvalue_type: integer\nvalue: 1\nunit: energy\n---\nConfigured cost, not starting energy.";
+    TEST_ASSERT(model && setup("rule-quantities")); collections[1].role=GD_AXIS; collections[2].role=GD_RULE;
+    TEST_ASSERT(write_record(1,"Amount","---\nvalue_type: integer\nunit: energy\nminimum: 0\nmaximum: 3\n---\nEnergy."));
+    TEST_ASSERT(write_record(1,"Life","---\nvalue_type: enum\nallowed_values: [alive, dead]\nclosed: true\n---\nLife."));
+    TEST_ASSERT(write_record(1,"Form","---\nvalue_type: enum\nallowed_values: [small, tall]\nclosed: true\n---\nForm."));
+    TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Amount, actions/Life, actions/Form]\n---\nActor."));
+    TEST_ASSERT(write_record(2,"numeric","```gd-rule\ncase numeric:\n    Actor:\n        noun: things/hero\n"
+        "        requires: alive AND (Amount >= (1[energy] + 1[energy]) AND Amount < 4[energy]) AND Amount > 0.5[energy] AND {controls/policy}\n"
+        "        skip_if: Amount <= 0[energy]\n        becomes: {controls/form}\n        set:\n            Amount: this - {controls/cost}\n"
+        "            Amount: this + 1[energy]\n            Amount: -1[energy]\n"
+        "    Other:\n        noun: things/hero\n        requires: ANY\n        set:\n            Amount: this + 1[energy]\n```\n"));
+    TEST_ASSERT(snprintf(directory,sizeof(directory),"%s/numeric-controls",root)<(int)sizeof(directory) && file_directory_create(directory,1));
+    TEST_ASSERT(snprintf(path,sizeof(path),"%s/cost.md",directory)<(int)sizeof(path));
+    TEST_ASSERT(file_write_bytes(cstring_from_raw(path),control,strlen(control))==file_error_ok);
+    TEST_ASSERT(snprintf(path,sizeof(path),"%s/policy.md",directory)<(int)sizeof(path));
+    { const char *text="---\nvalue_type: boolean\nvalue: true\n---\nPolicy.";
+      TEST_ASSERT(file_write_bytes(cstring_from_raw(path),text,strlen(text))==file_error_ok); }
+    TEST_ASSERT(snprintf(path,sizeof(path),"%s/form.md",directory)<(int)sizeof(path));
+    { const char *text="---\nvalue_type: enum\nvalue: small\nallowed_values: [small, tall]\n---\nConfigured form, not an actor initialization.";
+      TEST_ASSERT(file_write_bytes(cstring_from_raw(path),text,strlen(text))==file_error_ok); }
+    memcpy(domains,collections,sizeof(collections)); domains[3]=(GD_Collection){"controls",directory,GD_CONTROL};
+    TEST_ASSERT(gd_load(model,domains,4)); rules=gd_read_rules(model);
+    TEST_ASSERT(rules && !model->error_count && rules->quantity_bindings_complete && rules->controls && rules->controls->resolved_count==3 && rules->effect_bindings_complete);
+    TEST_ASSERT(rules->assignment_count==4 && rules->quantity_count==8);
+    TEST_ASSERT(rules->state_effect_count==1 && !strcmp(rules->state_effects[0].target.state,"small"));
+    TEST_ASSERT(rules->state_effects[0].target.axis_record==find_record(model,"actions/Form"));
+    amount=find_record(model,"actions/Amount"); life=find_record(model,"actions/Life");
+    facts[0]=(GD_RulePredicateFact){0,amount,"3",GD_RULE_TRUTH_TRUE};
+    facts[1]=(GD_RulePredicateFact){0,life,"alive",GD_RULE_TRUTH_TRUE};
+    first=rules->assignments[0].quantity; second=rules->assignments[1].quantity; other=rules->assignments[3].quantity;
+    TEST_ASSERT(gd_rule_quantity_value(rules,first,NULL,0).state==GD_EXPRESSION_UNKNOWN);
+    value=gd_rule_quantity_value(rules,second,facts,2);
+    TEST_ASSERT(value.state==GD_EXPRESSION_VALUE && value.known && value.number==4 && value.bounds==GD_BOUNDS_OUTSIDE);
+    value=gd_rule_quantity_value(rules,first,facts,2);
+    TEST_ASSERT(value.state==GD_EXPRESSION_VALUE && value.number==2 && value.bounds==GD_BOUNDS_WITHIN);
+    TEST_ASSERT(gd_rule_quantity_value(rules,other,facts,2).state==GD_EXPRESSION_UNKNOWN);
+    TEST_ASSERT(rules->quantities[rules->assignments[2].quantity].inspection.number==-1);
+    TEST_ASSERT(rules->quantities[rules->assignments[2].quantity].inspection.bounds==GD_BOUNDS_OUTSIDE);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].required_condition,facts,2)==GD_RULE_TRUTH_TRUE);
+    TEST_ASSERT(gd_rule_case_exclusions(rules,0,facts,2).state==GD_EXCLUSION_NOT_EXCLUDED);
+    facts[2]=(GD_RulePredicateFact){0,amount,"2",GD_RULE_TRUTH_TRUE};
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].required_condition,facts,3)==GD_RULE_TRUTH_UNKNOWN);
+    facts[0].value="0";
+    TEST_ASSERT(gd_rule_case_exclusions(rules,0,facts,2).state==GD_EXCLUSION_EXCLUDED);
+    facts[0].value="2.5";
+    TEST_ASSERT(gd_rule_quantity_value(rules,first,facts,2).state==GD_EXPRESSION_UNKNOWN);
+    facts[0].value="3"; facts[0].participant=1;
+    TEST_ASSERT(gd_rule_quantity_value(rules,other,facts,2).number==4 && !gd_sources_changed(model));
+    gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rule_numeric_comparisons,
+    const char *operators[]={"==","!=","<","<=",">",">="}, *values[]={"2","3","4"};
+    const GD_RuleTruth expected[6][3]={{1,2,1},{2,1,2},{2,1,1},{2,2,1},{1,1,2},{1,2,2}};
+    int i,j;
+    for (i=0;i<6;++i) {
+        GD_Model *model=model_create(); GD_Rules *rules; GD_RulePredicateFact fact;
+        char name[64],body[512];
+        snprintf(name,sizeof(name),"rule-numeric-comparison-%d",i);
+        TEST_ASSERT(model && setup(name)); collections[1].role=GD_AXIS; collections[2].role=GD_RULE;
+        TEST_ASSERT(write_record(1,"Amount","---\nvalue_type: integer\nunit: life\nmaximum: 1\n---\nBound does not constrain comparison thresholds."));
+        TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Amount]\n---\nActor."));
+        snprintf(body,sizeof(body),"```gd-rule\ncase test:\n    A:\n        noun: things/hero\n        requires: Amount %s 3[life]\n```\n",operators[i]);
+        TEST_ASSERT(write_record(2,"comparison",body) && gd_load(model,collections,3)); rules=gd_read_rules(model);
+        TEST_ASSERT(rules && !model->error_count && rules->condition_bindings_complete);
+        for (j=0;j<3;++j) {
+            fact=(GD_RulePredicateFact){0,find_record(model,"actions/Amount"),values[j],GD_RULE_TRUTH_TRUE};
+            TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].required_condition,&fact,1)==expected[i][j]);
+        }
+        TEST_ASSERT(rules->quantities[0].inspection.bounds==GD_BOUNDS_UNKNOWN);
+        gd_rules_destroy(rules); gd_destroy(model);
+    }
+)
 TEST(rule_condition_logic,
     GD_Model *model = model_create(); GD_Rules *rules; int life, protection, a, b, owner;
     GD_RulePredicateFact facts[5]; GD_RuleExclusionCheck exclusion;
@@ -326,7 +457,7 @@ TEST(rules_declarations,
         "            Amount: this + 2[life]\n        preserve: OTHER\n"
         "    Walker:\n        noun: things/hero\n        requires: alive\n"
         "    Lives:\n        requires: ANY\n        preserve: ALL\n"
-        "case unknown-result:\n    Player:\n        skip_if: dead OR (hidden AND NOT revealed)\n"
+        "case unknown-result:\n    unknown_conditions: Unspecified placement predicate.\n    unknown_effects: Missing rebound magnitude.\n    Player:\n        skip_if: dead OR (hidden AND NOT revealed)\n"
         "        causes: mechanics/power-loss\n```\n"));
     TEST_ASSERT(write_record(2,"legacy","Legacy prose remains unknown."));
     TEST_ASSERT(write_record(2,"empty","```gd-rule\n# Design not filled in.\n```\n"));
@@ -351,6 +482,8 @@ TEST(rules_declarations,
     TEST_ASSERT(!rules->participants[2].noun && !strcmp(rules->participants[2].requires,"ANY"));
     TEST_ASSERT(!rules->cases[1].context && !rules->participants[3].requires && !rules->participants[3].noun);
     TEST_ASSERT(!strcmp(rules->participants[3].causes,"mechanics/power-loss"));
+    TEST_ASSERT(!strcmp(rules->cases[1].unknown_conditions,"Unspecified placement predicate.") && !strcmp(rules->cases[1].unknown_effects,"Missing rebound magnitude."));
+    TEST_ASSERT(rules->cases[1].unknown_conditions_line>rules->cases[1].line && rules->cases[1].unknown_effects_line>rules->cases[1].unknown_conditions_line);
     gd_rules_destroy(rules); gd_destroy(model);
 )
 TEST(rules_fence_scope,
@@ -445,7 +578,9 @@ TEST(rules_limits,
             strcpy(model->input+used,"```\n"); TEST_ASSERT(write_record(2,name,model->input));
         }
         TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
-        TEST_ASSERT(rules && has_error(model,"rules.text_limit") && model->error_count == 2);
+        /* Reader retains the four complete records. Their deliberate 7500-byte
+           nonsense RHS also receives independent quantity-syntax diagnostics. */
+        TEST_ASSERT(rules && has_error(model,"rules.text_limit") && has_error(model,"rules.quantity_syntax"));
         TEST_ASSERT(rules->source_count == 6 && rules->case_count == 4 && rules->assignment_count == 480);
         TEST_ASSERT(rules->sources[4].state == GD_RULE_INVALID && rules->sources[5].state == GD_RULE_INVALID);
         TEST_ASSERT(rules->text_used < GD_RULE_TEXT_CAPACITY && strlen(rules->assignments[479].expression) == 7500);
@@ -1649,7 +1784,15 @@ TEST(rules_allocation_failure,
     failure.parent = allocator; failure.remaining = 0;
     model->allocator.context = &failure; model->allocator.allocate = route_allocate; model->allocator.release = route_release;
     TEST_ASSERT(!gd_read_rules(model) && has_error(model,"rules.memory"));
-    model->allocator = allocator; gd_destroy(model);
+    model->allocator = allocator;
+    {
+        GD_Rules *rules=gd_read_rules(model);
+        TEST_ASSERT(rules);
+        model->allocator.context=&failure; model->allocator.allocate=route_allocate; model->allocator.release=route_release;
+        TEST_ASSERT(!gd_analyze_rules(model,rules) && has_error(model,"rules.analysis_memory"));
+        model->allocator=allocator; gd_rules_destroy(rules);
+    }
+    gd_destroy(model);
 )
 int main(int argc, char **argv) {
     int failed = 0;
@@ -1659,6 +1802,8 @@ int main(int argc, char **argv) {
     if (!file_directory_create(root, 1)) { fputs("Fixture directory must be new\n", stderr); return 2; }
     storage = free_list_from_buffer(backing, sizeof(backing));
     if (!storage) return 2;
+    failed += test_rule_outcomes();
+    failed += test_rule_quantities(); failed += test_rule_numeric_comparisons();
     failed += test_rule_condition_logic(); failed += test_rule_exclusion_limits(); failed += test_rule_effect_bindings();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
     failed += test_rules_declarations(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
@@ -1676,6 +1821,6 @@ int main(int argc, char **argv) {
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/58 passed\n", 58-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/61 passed\n", 61-failed);
     return failed ? 1 : 0;
 }

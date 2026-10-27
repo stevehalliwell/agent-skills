@@ -5,7 +5,9 @@ created_at: 2026-10-24T20:07:20.546Z
 desc: Armored walking enemy that retracts when stomped.
 tags: []
 status: accepted
-axes: null
+axes:
+  - axes/Life
+  - axes/ShellState
 ---
 ## Definition
 

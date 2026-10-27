@@ -14,6 +14,8 @@ context_nouns:
 mechanics:
   - mechanics/supply-release
   - mechanics/earned-life
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -22,3 +24,17 @@ Valid rising head hit on authored concealed life supply near brick-canopy.
 ## Consequences and feedback
 
 Reveal block, release life-cap and mark spent. Discovery is optional, not required for finish. The record does not claim every hidden location is encoded as geometry.
+
+```gd-rule
+case reveal-life:
+    context: Hero undersideContacts Block
+    unknown_conditions: Valid rising head hit on authored concealed life supply near brick-canopy; location/valid-hit predicate unencoded.
+    unknown_effects: Release Life-cap, not immediate life award; reveal spent solid Block. Discovery optional; not every hidden location encoded.
+    Hero:
+        noun: nouns/hero
+        requires: rising
+    Block:
+        noun: nouns/supply-block
+        requires: unspent AND SupplyContent.life AND concealed
+        becomes: spent, revealed
+```

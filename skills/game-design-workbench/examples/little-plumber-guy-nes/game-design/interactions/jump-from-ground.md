@@ -21,3 +21,15 @@ New jump press while hero is supported and course-active.
 ## Consequences and feedback
 
 Launch upward; horizontal input can influence travel. Physical impulse and timing tolerances are not configured. An authored jump opportunity is not proof a particular gap can be cleared.
+
+```gd-rule
+case launch:
+    unknown_conditions: New jump press while course-active; input timing and support geometry unencoded.
+    unknown_effects: Launch upward; horizontal input may influence travel. No impulse/tolerance/trajectory supplied; opportunity not proof of gap clearance.
+    Hero:
+        noun: nouns/hero
+        requires: supported
+        becomes: rising
+    Ground:
+        noun: nouns/ground
+```

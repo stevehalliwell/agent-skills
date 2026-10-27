@@ -17,6 +17,8 @@ mechanics:
   - mechanics/score-awards
 control-vars:
   - control-vars/brick-points
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -25,3 +27,20 @@ Rising tall or spark hero hits brick underside.
 ## Consequences and feedback
 
 Remove brick, award configured brick-points once and show break feedback. New empty space is no longer landing support. No hidden item drops.
+
+```gd-rule
+case powered-break:
+    context: Hero undersideContacts Brick
+    unknown_conditions: Credit original destruction once; event identity/deduplication unencoded.
+    unknown_effects: Remove Brick geometry/landing support, show break feedback; no hidden item.
+    Hero:
+        noun: nouns/hero
+        requires: rising AND (tall OR spark)
+    Brick:
+        noun: nouns/brick
+        becomes: destroyed
+    Score:
+        noun: nouns/score
+        set:
+            ScoreAmount: this + {control-vars/brick-points}
+```

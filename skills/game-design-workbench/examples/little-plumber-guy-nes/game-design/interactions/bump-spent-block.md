@@ -12,6 +12,8 @@ verb: verbs/bump
 mechanics:
   - mechanics/solid-collision
   - mechanics/supply-release
+context_axes:
+  - axes/Contact
 ---
 ## Conditions
 
@@ -20,3 +22,15 @@ Hero hits underside of a block already spent.
 ## Consequences and feedback
 
 Block remains solid and pays nothing. Brick-breaking rule does not apply to this state. Defined no payout must not be reported as missing behavior.
+
+```gd-rule
+case spent-solid:
+    context: Hero undersideContacts Block
+    unknown_effects: Remain solid and pay nothing; brick-breaking does not apply. Solid-collision response has no numeric geometry.
+    Hero:
+        noun: nouns/hero
+    Block:
+        noun: nouns/supply-block
+        requires: spent
+        preserve: SupplyState
+```

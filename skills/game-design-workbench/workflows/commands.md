@@ -28,6 +28,12 @@ When an explicitly authorized experiment has executable implementation:
 
 Git and agent workflow provide copying, merge updates, history, and checkpoints. Do not add custom lifecycle programs for these steps. Keep executable code for domain computation and tests. Copying/editing existing Markdown assets is agent work; do not add code mirrors to regenerate them.
 
+## Review 01 repository migration maintenance
+
+Repository-only `scripts/migrate-workbench-actor-rules.mjs` adopts a temporary reviewed proposal through public Attendant metadata operations and readable fence replacement. It is not an installed authoring command, content generator or evaluator. Original Markdown remains authoritative.
+
+Run `node scripts/migrate-workbench-actor-rules.mjs --help` for required explicit repository/proposal/Attendant/native paths. Default plans only; `--stage NEW_DIR` copies and validates both examples before authorized `--apply`. Exact rule coverage, inside-project mutation collections, strict Attendant validation and native checks are required. Safe rerun skips unchanged fields/fences. Failure reports completed operations and whether partial changes are possible; batches are not transactions. No deletion, automatic repair, frozen-evidence rewrite or experiment execution.
+
 ## Repository asset checks
 
 Edit shipped templates, example Markdown, framework guides, and catalog directly. Templates are authoritative starting assets copied into approved destinations; each live project's schema/usage then owns its contract. Example owns its design data. No generator or JavaScript content mirror.
