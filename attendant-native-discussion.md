@@ -118,13 +118,13 @@ Check steps only when completed. Complete the first slice through user review be
 
 ### First slice through user review
 
-- [ ] Prepare isolated copied fixtures and expected results from existing Attendant; freeze source and record hashes after any fixture normalization.
-- [ ] Trace the current projection contract and build a reference database for comparison; document required layout, hashes, paths, cache metadata, and FTS behavior.
-- [ ] Establish reproducible Windows native builds with vendored SQLite, YAML reading, and required JSON support; verify CJIT and `zig cc` or report blockers.
-- [ ] Implement full projection generation from frozen fixture source without editing Markdown. Match existing projection contract rather than redesign it.
-- [ ] Run end-to-end acceptance: `.mjs sync` reuses native output; schema/query/search give expected results; frozen source stays unchanged. Compare native and runner-built logical results.
-- [ ] Prepare concise review evidence and demo commands; report limitations and compiler-path results.
-- [ ] User reviews the slice. Stop here pending review; do not proceed into writes, CLI replacement, or viewer work.
+- [x] Prepare isolated copied fixtures and expected results from existing Attendant; freeze source and record hashes after any fixture normalization.
+- [x] Trace the current projection contract and build a reference database for comparison; document required layout, hashes, paths, cache metadata, and FTS behavior.
+- [x] Establish reproducible Windows native builds with vendored SQLite, YAML reading, and required JSON support; verify CJIT and `zig cc` or report blockers.
+- [x] Implement full projection generation from frozen fixture source without editing Markdown. Match existing projection contract rather than redesign it.
+- [x] Run end-to-end acceptance: `.mjs sync` reuses native output; schema/query/search give expected results; frozen source stays unchanged. Compare native and runner-built logical results.
+- [x] Prepare concise review evidence and demo commands; report limitations and compiler-path results. See `exploration/attendant-native/README.md`; four compiler/configuration scenarios passed and existing runner's 7 tests passed. Build outputs and machine-readable check results remain under ignored `exploration/attendant-native/build/`.
+- [x] User reviewed the native-generation/existing-CLI result and requested committing this slice. Further implementation scope remains a separate decision.
 
 ### Remaining refinement and parity work
 

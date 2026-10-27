@@ -1,0 +1,3 @@
+# Preserve vendored source bytes and Bash portability on Windows.
+vendor/** -text
+*.sh text eol=lf
