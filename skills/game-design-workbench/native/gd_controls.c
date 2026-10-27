@@ -117,6 +117,32 @@ int gd_expression_has_unknown(const GD_ControlToken *tokens, int count) {
 int gd_expression_is_starting_value(const GD_ControlToken *tokens, int count) {
     return tokens && count==1 && tokens[0].operation==OP_THIS;
 }
+GD_ExpressionState gd_expression_delta(const GD_ControlToken *tokens, int count, const GD_Controls *controls,
+                                       const GD_ExpressionInput *starting, int integer,
+                                       int *recognized, GD_ExpressionInput *delta) {
+    GD_ExpressionInput zero;
+    int i, depth=0;
+    if (!recognized || !delta) return GD_EXPRESSION_ARITHMETIC_ERROR;
+    *recognized=0; memset(delta,0,sizeof(*delta));
+    if (!tokens || count<1 || count>GD_MAX_EXPRESSION_TOKENS || !starting || tokens[0].operation!=OP_THIS)
+        return GD_EXPRESSION_UNKNOWN;
+    if (count>1) {
+        if (count<3 || (tokens[count-1].operation!=OP_ADD && tokens[count-1].operation!=OP_SUBTRACT)) return GD_EXPRESSION_UNKNOWN;
+        for (i=1;i<count-1;++i) {
+            int operation=tokens[i].operation, arguments;
+            if (operation==OP_NUMBER || operation==OP_REFERENCE) { ++depth; continue; }
+            if (operation==OP_THIS || operation==OP_UNKNOWN || operation<OP_ADD || operation>OP_ROUND) return GD_EXPRESSION_UNKNOWN;
+            arguments=operation==OP_CLAMP ? 3 : operation==OP_NEGATE || operation==OP_POSITIVE ||
+                operation==OP_ABS || operation==OP_FLOOR || operation==OP_CEIL || operation==OP_ROUND ? 1:2;
+            if (depth<arguments) return GD_EXPRESSION_UNKNOWN;
+            depth-=arguments-1;
+        }
+        if (depth!=1) return GD_EXPRESSION_UNKNOWN;
+    }
+    *recognized=1; zero=*starting; zero.value.number=0; zero.known=1;
+    if (zero.value.kind!=GD_LITERAL_NUMBER) return GD_EXPRESSION_ARITHMETIC_ERROR;
+    return gd_expression_value(tokens,count,controls,&zero,integer,delta);
+}
 int gd_expressions_equal(const GD_ControlToken *a, int count_a, const GD_ControlToken *b, int count_b) {
     int i;
     if (!a || !b || count_a<1 || count_a>GD_MAX_EXPRESSION_TOKENS || count_a!=count_b) return 0;

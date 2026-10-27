@@ -67,6 +67,31 @@ GD_RuleQuantityValue gd_rule_quantity_value(const GD_Rules *rules, int index,
     if (result.known && quantity->mode==GD_EXPRESSION_ASSIGNMENT) result.bounds=gd_rule_quantity_bounds(rules,quantity->axis_record,result.number);
     return result;
 }
+GD_RuleQuantityValue gd_rule_quantity_delta(const GD_Rules *rules, int index, int *recognized) {
+    GD_RuleQuantityValue result={GD_EXPRESSION_UNKNOWN,0,0,0,GD_BOUNDS_UNKNOWN};
+    GD_ExpressionInput starting,value;
+    const GD_RuleQuantity *quantity;
+    int integer;
+    if (!recognized) return result;
+    *recognized=0;
+    if (!rules || !rules->model || index<0 || index>=rules->quantity_count) return result;
+    quantity=&rules->quantities[index];
+    if (quantity->mode!=GD_EXPRESSION_ASSIGNMENT || quantity->state!=GD_CONDITION_PARSED || quantity->axis_record<0 ||
+        quantity->axis_record>=rules->model->record_count || quantity->first_token<0 || quantity->token_count<1 ||
+        quantity->token_count>GD_MAX_EXPRESSION_TOKENS || quantity->first_token>rules->quantity_token_count-quantity->token_count) return result;
+    starting=gd_rule_starting_quantity(rules,quantity->participant,quantity->axis_record,NULL,0);
+    if (starting.value.kind!=GD_LITERAL_NUMBER) return result;
+    integer=rules->axes[quantity->axis_record].type==GD_AXIS_INTEGER;
+    result.state=gd_expression_delta(rules->quantity_tokens+quantity->first_token,quantity->token_count,rules->controls,&starting,integer,recognized,&value);
+    if (!*recognized || result.state==GD_EXPRESSION_UNIT_ERROR || result.state==GD_EXPRESSION_ARITHMETIC_ERROR) return result;
+    result.checks_complete=quantity->bindings_complete && starting.unit_known && value.unit_known;
+    if (starting.unit_known && value.unit_known && !gd_units_equal(&starting.value.unit,&value.value.unit)) {
+        result.state=GD_EXPRESSION_UNIT_ERROR; result.checks_complete=0; return result;
+    }
+    result.number=value.value.number; result.known=value.known && result.checks_complete;
+    if (!result.known) result.state=GD_EXPRESSION_UNKNOWN;
+    return result;
+}
 static void quantity_finding(GD_Rules *rules, const GD_RuleQuantity *quantity, const char *code, const char *message) {
     GD_Finding *finding;
     if (rules->finding_count==GD_MAX_ERRORS) { ++rules->findings_omitted; return; }

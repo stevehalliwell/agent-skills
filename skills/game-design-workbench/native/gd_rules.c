@@ -112,11 +112,28 @@ static int declaration(GD_Model *model, GD_Rules *rules, GD_RuleSource *source,
         participant->name = retain(model,rules,record,key,key_size,line);
         if (!participant->name) return 0;
         participant->line = line; participant->first_assignment = rules->assignment_count;
+        participant->first_pool = rules->pool_count;
         *current_participant = rules->participant_count++; ++item->participant_count; return 1;
     }
     if (*current_participant < 0) return fail(model,record,"rules.participant","Declare a participant before its fields",line);
     participant = &rules->participants[*current_participant];
-    if (indent == 12 && *in_set) {
+    if (indent == 12 && *in_set == 2) {
+        GD_RulePool *pool;
+        const char *slash = memchr(value,'/',value_size);
+        if (!key_size || !slash || !label(value,(size_t)(slash-value)) ||
+            !label(slash+1,value_size-(size_t)(slash+1-value)))
+            return fail(model,record,"rules.pool","pools needs AXIS: ALIAS/NAME entries",line);
+        if (rules->pool_count == GD_MAX_RULE_POOLS)
+            return fail(model,record,"rules.pool_limit","8192 rule-pool binding limit exceeded",line);
+        pool = &rules->pools[rules->pool_count];
+        pool->axis = retain(model,rules,record,key,key_size,line);
+        pool->reference = retain(model,rules,record,value,value_size,line);
+        pool->line = line;
+        if (!pool->axis || !pool->reference) return 0;
+        ++rules->pool_count; ++participant->pool_count;
+        return 1;
+    }
+    if (indent == 12 && *in_set == 1) {
         GD_RuleAssignment *assignment;
         /* Axis qualification is retained for later target/axis resolution. */
         if (!key_size || !value_size) return fail(model,record,"rules.assignment","set needs AXIS: EXPRESSION entries",line);
@@ -133,23 +150,24 @@ static int declaration(GD_Model *model, GD_Rules *rules, GD_RuleSource *source,
         return 1;
     }
     if (indent == 8) {
-        static const char *keys[] = {"noun","requires","skip_if","other_axes","becomes","preserve","causes","set"};
+        static const char *keys[] = {"noun","requires","skip_if","other_axes","becomes","preserve","causes","set","pools"};
         const char **destination;
         *in_set = 0;
-        for (i = 0; i < 8; ++i) if (same(key,key_size,keys[i])) break;
-        if (i == 8) return fail(model,record,"rules.field","Unknown participant field",line);
+        for (i = 0; i < 9; ++i) if (same(key,key_size,keys[i])) break;
+        if (i == 9) return fail(model,record,"rules.field","Unknown participant field",line);
         if (participant->fields & (1u << i)) return fail(model,record,"rules.duplicate_field","Duplicate participant field",line);
         participant->fields |= 1u << i; participant->lines[i] = line;
-        if (i == 7) {
-            if (value_size) return fail(model,record,"rules.assignment","set: takes indented AXIS: EXPRESSION entries",line);
-            *in_set = 1; return 1;
+        if (i == 7 || i == 8) {
+            if (value_size) return fail(model,record,i == 7 ? "rules.assignment":"rules.pool",
+                                        i == 7 ? "set: takes indented AXIS: EXPRESSION entries":"pools: takes indented AXIS: ALIAS/NAME entries",line);
+            *in_set = i == 7 ? 1:2; return 1;
         }
         if (!value_size) return fail(model,record,"rules.value","Field needs a value; omit it for unspecified information",line);
         destination = i == 0 ? &participant->noun : i == 1 ? &participant->requires : i == 2 ? &participant->skip_if :
                       i == 3 ? &participant->other_axes : i == 4 ? &participant->becomes : i == 5 ? &participant->preserve : &participant->causes;
         *destination = retain(model,rules,record,value,value_size,line); return *destination != NULL;
     }
-    return fail(model,record,"rules.indent","Use four spaces for case fields, eight for participant fields, twelve for set entries",line);
+    return fail(model,record,"rules.indent","Use four spaces for case fields, eight for participant fields, twelve for set or pools entries",line);
 }
 static int read_source(GD_Model *model, GD_Rules *rules, GD_RuleSource *source) {
     const GD_Record *record = &model->records[source->record];
@@ -191,14 +209,14 @@ GD_Rules *gd_read_rules(GD_Model *model) {
     if (!rules) { gd_error(model,"rules.memory","Cannot allocate bounded rule declarations",NULL,0); return NULL; }
     memset(rules,0,sizeof(*rules)); rules->allocator = model->allocator; rules->model=model;
     for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_RULE) {
-        int participants = rules->participant_count, assignments = rules->assignment_count;
+        int participants = rules->participant_count, assignments = rules->assignment_count, pools = rules->pool_count;
         size_t text_used = rules->text_used;
         GD_RuleSource *source = &rules->sources[rules->source_count++];
         source->record = i; source->first_case = rules->case_count;
         if (!read_source(model,rules,source)) {
             /* A malformed record contributes no valid-looking partial cases. */
             rules->case_count = source->first_case; rules->participant_count = participants;
-            rules->assignment_count = assignments; rules->text_used = text_used;
+            rules->assignment_count = assignments; rules->pool_count = pools; rules->text_used = text_used;
             source->case_count = 0; source->state = GD_RULE_INVALID;
         }
     }
@@ -388,14 +406,23 @@ int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *ru
                 condition_result(output,model,rules,"requires_condition",&participant->required_condition,participant->lines[1]);
                 condition_result(output,model,rules,"skip_if_condition",&participant->skip_condition,participant->lines[2]);
                 fprintf(output,",\"line\":%d,\"field_lines\":{",participant->line);
-                fprintf(output,"\"noun\":%d,\"requires\":%d,\"skip_if\":%d,\"other_axes\":%d,\"becomes\":%d,\"preserve\":%d,\"causes\":%d,\"set\":%d},\"set\":[",
+                fprintf(output,"\"noun\":%d,\"requires\":%d,\"skip_if\":%d,\"other_axes\":%d,\"becomes\":%d,\"preserve\":%d,\"causes\":%d,\"set\":%d,\"pools\":%d},\"set\":[",
                         participant->lines[0],participant->lines[1],participant->lines[2],participant->lines[3],
-                        participant->lines[4],participant->lines[5],participant->lines[6],participant->lines[7]);
+                        participant->lines[4],participant->lines[5],participant->lines[6],participant->lines[7],participant->lines[8]);
                 for (k = 0; k < participant->assignment_count; ++k) {
                     const GD_RuleAssignment *assignment = &rules->assignments[participant->first_assignment+k];
                     if (k) fputc(',',output); fputs("{\"axis\":",output); gd_json_string(output,assignment->axis);
                     member(output,"expression",assignment->expression); fprintf(output,",\"line\":%d",assignment->line);
                     effect_target(output,model,assignment->target); quantity_result(output,rules,assignment->quantity); fputc('}',output);
+                }
+                fputs("],\"pools\":[",output);
+                for (k = 0; k < participant->pool_count; ++k) {
+                    const GD_RulePool *pool = &rules->pools[participant->first_pool+k];
+                    if (k) fputc(',',output); fputs("{\"axis\":",output); gd_json_string(output,pool->axis);
+                    member(output,"reference",pool->reference); fprintf(output,",\"line\":%d",pool->line);
+                    member(output,"resource_resolution",gd_rule_resolution_name(pool->resource_resolution));
+                    member(output,"identity_resolution",gd_rule_resolution_name(pool->identity_resolution));
+                    effect_target(output,model,pool->target); fputc('}',output);
                 }
                 fputs("],\"state_effects\":[",output);
                 for (k = 0; k < participant->state_effect_count; ++k) {
@@ -476,6 +503,7 @@ int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *ru
     fprintf(output,"\"axis_count\":%d,\"actor_count\":%d,\"axis_definitions_complete\":%s,\"bindings_complete\":%s,\"findings_omitted\":%d,",
             rules ? rules->axis_count:0,rules ? rules->actor_count:0,rules && rules->axis_definitions_complete ? "true":"false",
             rules && rules->bindings_complete ? "true":"false",rules ? rules->findings_omitted:0);
+    fprintf(output,"\"pool_count\":%d,\"pool_bindings_complete\":%s,",rules ? rules->pool_count:0,rules && rules->pool_bindings_complete ? "true":"false");
     fprintf(output,"\"preservation_count\":%d,\"preservation_bindings_complete\":%s,",rules ? rules->preservation_count:0,rules && rules->preservation_bindings_complete ? "true":"false");
     fprintf(output,"\"state_effect_count\":%d,\"effect_bindings_complete\":%s,\"symbol_work\":%d,",
             rules ? rules->state_effect_count:0,rules && rules->effect_bindings_complete ? "true":"false",rules ? rules->symbol_work:0);
@@ -491,7 +519,7 @@ int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *ru
         if (i) fputc(',',output); fputs("{\"alias\":",output); gd_json_string(output,model->collections[i].alias);
         member(output,"directory",model->collections[i].directory);
         member(output,"role",model->collections[i].role == GD_RULE ? "rules":model->collections[i].role == GD_NOUN ? "nouns":
-               model->collections[i].role == GD_VERB ? "verbs":model->collections[i].role == GD_CONTROL ? "control-vars":model->collections[i].role == GD_AXIS ? "axes":"related");
+               model->collections[i].role == GD_VERB ? "verbs":model->collections[i].role == GD_CONTROL ? "control-vars":model->collections[i].role == GD_AXIS ? "axes":model->collections[i].role == GD_RESOURCE ? "resources":"related");
         fputc('}',output);
     }
     fprintf(output,"],\"limits\":{\"cases\":%d,\"participants\":%d,\"assignments\":%d,\"text_bytes\":%d,\"line_bytes\":%d,\"axis_values\":%d,\"findings\":%d,\"records\":%d,\"axis_references\":%d,\"state_effects\":%d,\"symbol_work\":%d,\"condition_tokens\":%d,\"condition_items\":%d,\"condition_depth\":%d,\"evaluation_work\":%d,\"quantities\":%d,\"quantity_tokens\":%d,\"quantity_work\":%d,\"preservations\":%d}},\"errors\":[",

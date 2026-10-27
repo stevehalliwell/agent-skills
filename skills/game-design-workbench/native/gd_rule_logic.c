@@ -54,7 +54,7 @@ static GD_RuleTarget lookup(RuleReader *reader, int owner, GD_Field inventory,
     assert(owner < reader->model->record_count && (inventory == GD_AXES || inventory == GD_CONTEXT_AXES));
     if (!(inventory == GD_AXES ? reader->rules->actor_axes_complete[owner]:reader->rules->context_axes_complete[owner])) uncertain = 1;
     ++reader->generation;
-    assert(reader->generation <= GD_MAX_RULE_STATE_EFFECTS + GD_MAX_RULE_ASSIGNMENTS + GD_MAX_RULE_CONDITION_TOKENS + GD_MAX_RULE_CASES + GD_MAX_RULE_PRESERVATIONS);
+    assert(reader->generation <= GD_MAX_RULE_STATE_EFFECTS + GD_MAX_RULE_ASSIGNMENTS + GD_MAX_RULE_CONDITION_TOKENS + GD_MAX_RULE_CASES + GD_MAX_RULE_PRESERVATIONS + GD_MAX_RULE_POOLS);
     for (edge = inventory == GD_AXES ? reader->rules->actor_first[owner]:reader->rules->context_first[owner]; edge >= 0; edge = reader->rules->next_axis[edge]) {
         int axis = reader->model->edges[edge].target;
         const GD_RuleAxis *definition;
@@ -110,6 +110,45 @@ static GD_RuleTarget lookup(RuleReader *reader, int owner, GD_Field inventory,
 static GD_RuleTarget actor_target(RuleReader *reader, const GD_RuleParticipant *participant,
                                   const char *text, size_t size, LookupKind kind) {
     return lookup(reader,participant->noun_resolution == GD_RULE_RESOLVED ? participant->noun_record:-1,GD_AXES,text,size,kind);
+}
+static void resolve_pool(RuleReader *reader, const GD_RuleParticipant *participant, GD_RulePool *pool) {
+    const GD_Model *model = reader->model;
+    const char *slash = strchr(pool->reference,'/');
+    int i, found = -1, loaded = 0;
+    pool->target = actor_target(reader,participant,pool->axis,strlen(pool->axis),LOOKUP_ANY_AXIS);
+    pool->resource_record = -1; pool->resource_resolution = GD_RULE_UNLOADED;
+    for (i = 0; i < model->collection_count; ++i) {
+        if (!charge(reader,(size_t)(slash-pool->reference)+1)) goto limited;
+        if (strlen(model->collections[i].alias) == (size_t)(slash-pool->reference) &&
+            !memcmp(model->collections[i].alias,pool->reference,(size_t)(slash-pool->reference))) loaded = 1;
+    }
+    for (i = 0; i < model->record_count; ++i) {
+        if (!equal(reader,pool->reference,strlen(pool->reference),model->records[i].reference)) {
+            if (reader->exhausted) goto limited;
+            continue;
+        }
+        if (found >= 0) { pool->resource_resolution = GD_RULE_AMBIGUOUS; goto done; }
+        found = i;
+    }
+    if (found < 0) pool->resource_resolution = loaded ? (model->error_count || model->errors_omitted ? GD_RULE_UNAVAILABLE:GD_RULE_MISSING):GD_RULE_UNLOADED;
+    else {
+        pool->resource_record = found;
+        pool->resource_resolution = model->records[found].role == GD_RESOURCE ? GD_RULE_RESOLVED:GD_RULE_WRONG_ROLE;
+    }
+    goto done;
+limited:
+    pool->resource_resolution = GD_RULE_UNAVAILABLE;
+done:
+    pool->identity_resolution = pool->target.resolution != GD_RULE_RESOLVED ? pool->target.resolution:pool->resource_resolution;
+    if (pool->target.resolution != GD_RULE_RESOLVED || pool->resource_resolution != GD_RULE_RESOLVED) {
+        GD_Finding *item;
+        reader->rules->pool_bindings_complete = 0;
+        if (reader->rules->finding_count == GD_MAX_ERRORS) { ++reader->rules->findings_omitted; return; }
+        item = &reader->rules->findings[reader->rules->finding_count++];
+        item->record = reader->record; item->line = pool->line; item->field = "pools"; item->reference = pool->reference;
+        item->code = "rules.pool_unresolved";
+        item->message = "Pool axis or resource reference is unresolved; no shared identity inferred";
+    }
 }
 static void diagnose(RuleReader *reader, GD_RuleTarget target, const char *field,
                      const char *text, BindingKind kind) {
@@ -619,7 +658,7 @@ void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules) {
     assert(model && rules);
     memset(&reader,0,sizeof(reader)); reader.model = model; reader.rules = rules;
     rules->effect_bindings_complete = 1; rules->condition_bindings_complete = 1; rules->context_bindings_complete = 1;
-    rules->preservation_bindings_complete=1;
+    rules->preservation_bindings_complete=1; rules->pool_bindings_complete=1;
     for (i = 0; i < rules->case_count; ++i) {
         GD_RuleCase *item = &rules->cases[i];
         reader.record = rules->sources[item->source].record;
@@ -645,6 +684,37 @@ void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules) {
                 reader.line = assignment->line;
                 assignment->target = actor_target(&reader,participant,assignment->axis,strlen(assignment->axis),0);
                 diagnose(&reader,assignment->target,"set",assignment->axis,BIND_EFFECT);
+            }
+            for (k = 0; k < participant->pool_count; ++k) {
+                GD_RulePool *pool = &rules->pools[participant->first_pool+k];
+                reader.line = pool->line;
+                resolve_pool(&reader,participant,pool);
+            }
+            for (k = 0; k < participant->pool_count && !reader.exhausted; ++k) {
+                GD_RulePool *pool = &rules->pools[participant->first_pool+k];
+                int previous;
+                for (previous = 0; previous < k; ++previous) {
+                    GD_RulePool *other = &rules->pools[participant->first_pool+previous];
+                    reader.line = pool->line;
+                    if (!charge(&reader,strlen(pool->reference)+strlen(other->reference)+1)) break;
+                    if (pool->target.resolution == GD_RULE_RESOLVED && other->target.resolution == GD_RULE_RESOLVED &&
+                        pool->target.axis_record == other->target.axis_record && strcmp(pool->reference,other->reference)) {
+                        if (pool->identity_resolution != GD_RULE_AMBIGUOUS) {
+                            if (rules->finding_count < GD_MAX_ERRORS) {
+                                GD_Finding *finding = &rules->findings[rules->finding_count++];
+                                finding->record = reader.record; finding->line = pool->line; finding->field = "pools";
+                                finding->reference = pool->reference; finding->code = "rules.pool_conflict";
+                                finding->message = "Multiple resource references bind the same participant axis; no shared identity selected";
+                            } else ++rules->findings_omitted;
+                        }
+                        pool->identity_resolution = other->identity_resolution = GD_RULE_AMBIGUOUS;
+                        rules->pool_bindings_complete = 0;
+                    }
+                }
+            }
+            if (reader.exhausted) {
+                for (k = 0; k < participant->pool_count; ++k) rules->pools[participant->first_pool+k].identity_resolution = GD_RULE_UNAVAILABLE;
+                rules->pool_bindings_complete = 0;
             }
             reader.line=participant->lines[5]; preservation(&reader,participant);
         }

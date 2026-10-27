@@ -1,6 +1,6 @@
 # Game Design Workbench
 
-Status: Slice 1 delivered; framework guides remain provisional. Native matrix/connectivity, skill/progression drafts/views, focused relationship exploration, diagnostics browser, MDA CLI/explorer and typed control resolution/export/import planning implemented and checked. One historical crate timing baseline retains 1,000 trials and frozen evidence; no rerun during Review 01. Actor/state Review 01 is implemented and verified through full live-example migration, ready for review. Tasks 02–11 still need refinement and delivery; final integrated/manual review remains. User accepts explorer as starting point; usability review deferred. Review 01 checkpoint commit authorized; branch/worktree remains local. No push authorized.
+Status: Slice 1 delivered; framework guides remain provisional. Native matrix/connectivity, skill/progression drafts/views, focused relationship exploration, diagnostics browser, MDA CLI/explorer and typed control resolution/export/import planning implemented and checked. One historical crate timing baseline retains 1,000 trials and frozen evidence; no rerun during Review 01. Actor/state Review 01 is implemented and verified through full live-example migration, ready for review. Task 02 first-slice implementation is in progress; Tasks 03–12 still need refinement and delivery; final integrated/manual review remains. User accepts explorer as starting point; usability review deferred. Review 01 checkpoint commit authorized; branch/worktree remains local. No push authorized.
 
 Implementation context:
 
@@ -886,11 +886,65 @@ Status: ready for review; implemented and verified through full affected-example
 
 #### Review 02 — Resource roles and flows
 
-Status: needs-refinement; direction supported by user. Depends on relevant effect contracts from 01.
+Status: in progress, paused while Review 03 is refined. Depends on effect/condition/composition contracts from 01. Partial direct-declaration graph and read-only visual preview exist. Full identity compatibility, graph semantics, routes and finished viewer remain.
 
 - Result: existing canonical nouns participate as resources within associated systems; describe awareness, ownership/location, persistence, availability, gain/accrual, use/depletion, conversion and renewal. Include player-held pools and environmental opportunities.
-- Interactions own effects; resource views expose flows without duplicating rules. Gap analysis must distinguish missing declarations, limited role diversity and pivotal connections; low degree is not automatically a flaw and high degree is not the definition of pivotal.
-- Open: concrete schema/links, relationship to state/capability, source ownership, structural findings/evidence and CLI contract. No general rules engine or quality score.
+- Interactions own effects; resource views derive flows from those effects without separate authored flow definitions. Example: a rule takes 100 silver coins and returns 1 gold coin; tooling detects an economic conversion/trade from the resource changes. No explicit conversion declaration required.
+- Target experience: build/visualise flows of all game resources in the viewer. Explore whether one resource can convert into another, through which rules and intermediate resources; treat this as a graph-exploration problem, not separately authored conversion routes.
+- Incomplete design is allowed: visual tools show referenced-but-undefined things as distinct unresolved placeholders; analysis reports missing definition kinds and source references. Preserve these references so design can grow from small seeds. Do not require completion, hide them or auto-create definitions. Distinguish known missing targets from unloaded scope and existing nouns without optional resource-role metadata; do not invent a broken reference merely because an optional extension is absent.
+- Frontmatter repetition needs a specific Attendant projection/query/reference-validation requirement, not a presumed graphing need. Existing mechanic `resources` reference lists already provide an Attendant-visible relationship; no extra noun/axis mirror justified for that purpose. Body-level identity bindings do not automatically become Attendant-indexed relationships. Retain existing contracts; assess any actual indexing gap before adding fields.
+- Avoid duplicate declarations: do not add a resource record or repeat noun/axis/context metadata merely to make an already-described rule facet appear in the graph. Derive those graph facts from existing source. Display existing ownership/lifetime/awareness prose where useful; do not copy it into a second constraint language or a second description.
+- Graph identity: separately declared resource roles/pools remain distinct, including same-kind supplies with different ownership/location/scope. Allow visual grouping by resource kind without treating grouped pools as one supply or inventing transfer links. Unspecified ownership/location remains unknown.
+- Defer intended-resource-trade annotation until derived flows are in use. First delivery exposes flows regardless of intent; it does not label unmarked flows accidental. Use concrete examples to justify and refine any later intent marker.
+- Compatibility: revise resource guide's current one-extension-per-noun restriction where distinct roles/pools share a canonical noun; do not duplicate canonical nouns merely to name those roles.
+- Gap analysis must distinguish missing declarations, limited role diversity and pivotal connections; low degree is not automatically a flaw and high degree is not the definition of pivotal.
+
+##### Source and binding contract
+
+- Keep existing resource frontmatter (`noun`, `initial_control`, `capacity_control`) and owning mechanic/interaction reference contracts. No new axis mirror, resource-kind taxonomy, ownership/lifetime/awareness language or mandatory resource extension for each rule facet. Existing prose remains descriptive; only explicit rule conditions/effects supply machine semantics.
+- Add optional participant `pools:` map using existing scoped axis-name resolution and `ALIAS/NAME` resource references. It selects shared role identity for a facet, not effects. Example:
+
+```gd-rule
+PlayerWallet:
+    noun: nouns/wallet
+    pools:
+        Silver: resources/player-silver
+    set:
+        Silver: this - 100[silver]
+```
+
+- Reuse existing explicit declarations only when they identify one unambiguous role/facet/participant. Otherwise retain case-local identity and report ambiguity; do not infer global actors from local labels or merge all instances of a noun type. Explicit role reference plus bound axis identifies a shared graph facet. Known incompatible bindings are sourced findings, not silent merges. Preserve unresolved role references without creating definitions.
+- Graph includes required/changed actor-state facets and existing resource roles; a missing optional extension is not a missing noun or a new candidate authoring category. Named roles add identity/context; they do not gate inspection. Kind/group views use declared source information only; unknown grouping stays unknown and grouping never changes graph connectivity.
+- Attendant-visible frontmatter relationships remain distinct from body-level binding detail. Do not assume body references are indexed, add speculative mirror fields or implement native source/index writers.
+
+##### Derived graph and routes
+
+- Resource/facet nodes connect through owning rule-case/activation nodes. Do not invent recipients, conservation, event ordering or ownership from co-occurring changes. Keep multi-input/output bundles and nested invocation activation guards; do not flatten OR alternatives into AND requirements or independent conditional calls into one unconditional trade. Composition reuses shared explicit maps, immutable starting facts, exclusions, preservation and provenance.
+- Preserve literal expressions and units. Recognise checked numeric debit/credit patterns through shared math, not names, prose or a JS evaluator. Threshold predicates alone do not consume a resource. Minimum recognised forms: unchanged `this`, `this + C`, `this - C`, where C is a checked typed literal/control/formula independent of actor state; preserve C's actual sign, including zero/negative/unknown. Absolute assignments with unknown starting value do not imply gain/loss; unsupported/sign-uncertain expressions retain unknown direction.
+- Capped changes retain their conditions and expression: `min(this + 1[life], cap)` is not an unconditional one-life output. Route detail exposes the possible capped/no-gain outcome rather than promising an award. Arithmetic/type failures, unknown effects and unexamined expansion remain unavailable/unresolved, never a fabricated fixed exchange rate.
+- Reusable predicates and contextual requirements are enabling dependencies, not debit edges. Enum state changes retain authored before/after constraints; do not infer economic order or consumption from state names. Both production and enabling paths may answer how to obtain a target; every witness distinguishes their edge meanings and side requirements.
+- Return bounded alternative witnesses, not a single unexplained best route. No common cost/quality ordering across currencies, no starting-inventory plan, repeated-exchange optimisation, profitability proof, runtime timing, physical reachability or general algebra solver. Cycles remain inspectable without implying free/infinite production.
+
+##### CLI/viewer and failure contract
+
+- `gd resources` loads explicit interactions/mechanics plus optional nouns/axes/resources/control-vars/systems/related bindings. No implicit collection discovery, projection dependency or downloads. `gd view resources` accepts the same source bindings and uses the same C99 graph/query results.
+- No endpoints returns graph overview. `--from NODE_ID --to NODE_ID` finds directed conditional witnesses; `--to NODE_ID` explores ways to obtain/create that target. Node IDs come from output/viewer and derive from stable source/case/participant/axis identity or explicit resource-role plus axis, not transient array indices. Unresolved explicit references can identify placeholders. Ambiguous selectors report candidates rather than choosing. Do not precompute all-pairs plans.
+- JSON data sections: `nodes`, `relations`, `routes`, `findings`; retain standard source/coverage/error envelope and explicit field selection. Nodes/relations carry identity, source locations/status, activation/side conditions, expressions/units, unknowns and unresolved-reference kinds. Routes carry ordered witnesses, required side inputs, proposal reliance and coverage/limit reasons. Text reports the same semantics; piping/agent output stays JSON by existing convention.
+- Graph shows statuses; route default includes accepted and proposed rules with qualifications. `--accepted-only` narrows rule eligibility to accepted sources and defined interaction coverage without hiding relevant definitions; do not demand an interaction-only coverage field on mechanic records. Unset/custom statuses are not adopted authority. Excluded rule sources remain inspectable, not available routes.
+- Missing definitions/unloaded context/ambiguous identity are supported incomplete input, not parser failure. Completed inspection can succeed with unresolved coverage. Bad arguments, unsafe/unreadable/malformed source, allocation/output failures remain explicit failures. Invalid mathematical claims are unavailable with sourced diagnostics; do not erase other checked fragments. No known path is scoped to supplied sources, filters and checked work—not game-wide impossibility.
+- Bound first graph by existing layout capacities: 4,096 nodes / 32,768 relations; at most 64 route witnesses / 32 rule-activation steps per witness. Construction work at most 67,108,864 charged units; separate query work at most 16,777,216. Report retained/omitted/unexamined portions and every limit. No recursion, hidden growth or guessed negative answer after exhaustion. Use caller allocator; borrow immutable source until analysis is destroyed; no large evaluation structs on small thread stacks.
+- Viewer offers overview, source/target selection, route/side-input highlighting, edge-meaning legend, filters and source inspection/navigation. Reuse existing pan/zoom/layout/reload/diagnostics infrastructure; preserve last-good state on unsafe reload and display rejection. No source authoring, global input automation or full Task 06 navigation rewrite.
+
+##### Observable acceptance and delivery
+
+- Synthetic fixture: 100 player silver produces 1 player gold; 1 player gold plus 3 wood produces 1 key. Assert those quantities and both ordered rule witnesses for silver-to-key, retaining the wood requirement. Demonstrate alternative/proposed routes and distinct merchant/player pools; grouping cannot connect merchant stock to player exchanges. Add preserved-key coin source: key appears as enabling dependency, not consumed currency; chest/other requirements remain visible.
+- Remove wood definition: placeholder and missing-definition finding remain; structural route is unresolved rather than erased or claimed fully validated. Repeat for unloaded scope and ambiguous pool identity; these must remain distinguishable.
+- Live examples: inspect crate energy spending and plumber coin/life/pickup/time flows without inventing currency, resource behaviour, starting values or state. Capped life award must expose no-gain boundary. Keep original identities/statuses/dispositions/prose/links, unresolved design facts and frozen evidence; no experiment rerun.
+- Demonstrate explicit pool binding, unambiguous existing declarations, conflicting bindings, actor/state requirements, AND/OR/exclusions, conditional mapped invocations, negative/zero/unknown costs, unit/arithmetic errors and unknown expressions. Graph grouping cannot create a route. Excluded sources cannot provide a default route.
+- Exercise node/relation/path/depth/work limits, cycles, no-known-path, ambiguous selectors, empty designs, allocation failure, source immutability and rejected reload. Headless and viewer consume identical graph/witness IDs and semantics; manual viewer acceptance remains user-owned.
+- Deliver in order: (1) source identity bindings and shared graph extraction, (2) bounded headless routes/reports, (3) focused read-only view, (4) affected examples/templates/usages/guides and regression checks. Migrate only changes needed by this contract; frontmatter-wide conformance and expression/category consolidation remain separate later reviews. No implementation performed during refinement.
+- First-slice progress: rule reader retains bounded `pools:` entries and source lines, rolls back malformed records, and resolves participant-scoped axes and explicitly loaded resource references. Findings retain missing, unloaded, wrong-role and conflicting identities. Partial `gd_resource_graph` extracts direct condition atoms and writes with case/participant provenance, shares explicit unambiguous role/axis facets, retains standalone roles and missing/unloaded placeholders, and retains named-axis preservation as a distinct relation. Compiled explicit calls can be attached as guarded case-to-case edges with borrowed participant maps; effects are not flattened and unresolved calls remain unexamined. ALL/OTHER preservation enumerates explicitly declared axes; OTHER remains conditional on whole-case effects, and incomplete inventories stay unexamined. Composed outcomes remain unexamined. Quantity-write relations retain checked signed deltas without claiming a final outcome. It does not establish full cross-case compatibility or produce routes. `gd view resources` opens a clearly labelled read-only graph preview; it is not the finished viewer and does not provide route queries, source navigation, filters or refresh. Shared numeric logic now recognizes checked `this`, `this + C`, and `this - C` deltas without assuming a starting value; unsupported, unknown and invalid expressions remain distinct. CJIT native checks 64/64 pass, including parsing, rollback, reference resolution, signed delta, explicit call mapping, cycles and unloaded-call fixtures. Zig strict C99 compilation passes for changed core/rule modules. Preview build/capture checked on Windows with crate and plumber examples. User saw preview run but is unsure how useful it is; different view modes, context-aware highlighting and a more readable font belong to later viewer work. This does not accept Review 02 or its UX. Further implementation and validation remain.
+- Refinement checks: reread contract against user decisions and existing resource/mechanic schema fields; `git diff --check` passed.
 
 #### Review 03 — Contextual skills and skill relationships
 
@@ -921,13 +975,14 @@ Status: needs-refinement; may run earlier to inform model contracts. Informs 08�
 Status: needs-refinement; independent base work can move earlier. Foundation for 09.
 
 - Result: one tool with independently switchable data layer and view mode, preserving useful inspection context.
+- Resource preview feedback: different view modes and context-aware highlighting need later attention. Usefulness of current view remains uncertain; visible graph confirms it runs, not that it meets the intended inspection need.
 - Open: selection/filter/history retention, available combinations, incompatible-view behavior, draft/reload protection and shell integration. Preserve existing analyses and source ownership.
 
 #### Review 07 — Viewer usability improvements
 
 Status: needs-refinement; independent fixes can move earlier. Coordinate integration with 06.
 
-- Result: matrix zoom, held-key repeat, clearer navigation/inspection and fewer avoidable edge crossings, including Little plumber MDA layout.
+- Result: matrix zoom, held-key repeat, clearer navigation/inspection, more readable font and fewer avoidable edge crossings, including Little plumber MDA layout. Font feedback came from resource graph preview.
 - Compare current matrix renderer improvements with ImGui integration. Open: concrete input/zoom/layout behavior, renderer choice, delivery slices and user-owned acceptance. No agent mouse/global-keyboard automation.
 
 #### Review 08 — Expand analysis of existing data
@@ -935,6 +990,7 @@ Status: needs-refinement; independent fixes can move earlier. Coordinate integra
 Status: needs-refinement. Use 05 where relevant; do not wait for new schemas to expose current facts.
 
 - Result: better structural inspection and gap-finding through shared CLI/viewer computation over already authored relationships.
+- Shared incomplete-reference behavior: visual tools retain referenced-but-undefined things as unresolved placeholders; analysis reports kinds of missing definitions and referring sources. Incomplete designs are allowed to grow from smaller seeds; do not auto-create targets or require every reference to be resolved before useful inspection. Preserve unloaded-scope versus known-missing distinctions and parser/type safety.
 - Assess current matrix/force-directed and other consumers before assuming data is missing. Open: supported relationships, scope, metrics, witnesses, omissions and acceptance. Do not infer runtime frequency, learning or quality from topology.
 
 #### Review 09 — Analysis and views for expanded model
@@ -942,6 +998,7 @@ Status: needs-refinement. Use 05 where relevant; do not wait for new schemas to 
 Status: needs-refinement. Depends on relevant contracts from 01–04 and viewer integration from 06.
 
 - Result: actor/state navigation, state-specific ghosts, conditional comparisons, shared outcome nodes, resource flows and role changes in shared analysis and visual inspection.
+- Resource projection should expose Task 02's derived flows and conversion-path exploration across resources; query semantics belong to Task 02, not a second viewer evaluator.
 - Select actor and move through its states to reveal relevant partners; alternatively select actors and show ghosts for states in which they interact. Preserve underlying actor identity. Include resource gap/pivotal-connection evidence.
 - Open: projections, filters, density controls, CLI contracts and per-capability delivery slices. Do not draw every combination or add executable simulation by implication.
 
@@ -961,6 +1018,14 @@ Status: needs-refinement. Uses selected feature/relationship contracts and viewe
 - Parked candidates: UMAP, t-SNE, PCA and MDS; no algorithm/dependency selected. Keep separate from ordinary force-directed layouts.
 - Open: feature representation, weights, missing/unknown values, interpretation, reproducibility, implementation/dependency constraints and useful-inspection acceptance.
 
+#### Review 12 — Frontmatter validation and conformance
+
+Status: needs-refinement; later step after model contracts settle, before final integrated review.
+
+- Result: validate all frontmatter and bring nonconforming live records/templates into conformance with their owning contracts.
+- Use Attendant for generic collection/schema validation; do not add a parallel validator. Preserve frozen historical evidence unchanged and report any nonconformance separately.
+- Open: full file inventory, applicable contracts and required corrections. No validation or correction performed by this capture.
+
 Commits require explicit user approval; user approved the pre-implementation checkpoint and completed formula slice. No experiment rerun, control adoption, UI automation or publication implied.
 
 ### Deferred — control-variable JSON files
@@ -969,8 +1034,17 @@ Status: draft; explicitly deferred by user.
 
 - Store control variables in JSON files rather than Markdown files, per user correction. Record for future work; do not implement this format migration in current slice.
 
+### Deferred — Expression/category overlap review
+
+Status: needs-refinement; future review after the mechanisms have been put to use.
+
+- Inventory ways the tool describes the same design facts. Identify counterproductive overlap between categories, types and forms of expression that can cause duplicate or divergent work.
+- Reconsider/consolidate allowed categories and expression forms where evidence shows duplication; do not introduce parallel definitions merely for a new view.
+- Open: review scope, timing, evidence and any migration. Capture only; no consolidation or redesign authorized now.
+
 ### Final gate — review committed branch assets before push/completion
 
+- [ ] Complete Review 12 — frontmatter validation and conformance.
 - [ ] Complete user-owned manual interaction review of delivered native views after remaining delivery slices and World 1-1 example. Include MDA node/edge selection, source navigation, root/direction changes, query/witness filters, pan/zoom/drag, and layouts; skill draft edits, undo to loaded baseline, dirty-refresh protection, and successful/failed JSON handoff. Include controls added by later slices. Keep Slice 2 acceptance closed; this is integrated final acceptance, not reopening its delivery gate. No agent mouse/global-keyboard automation. Continue implementation until this gate; do not pause each slice for these deferred checks.
 - [ ] Review all assets committed on `feat/game-design-workbench` before any push or declaring this task complete. Cover full committed branch state and branch history, not only the last commit or current working diff.
 - [ ] Check code/tests, instructions/guides, templates/examples, source captures/data, reports, and other committed files for relevance, correctness, provenance, rights/publication limits, and accidental private or unrelated content. Validate the final committed snapshot; report coverage and unresolved findings.

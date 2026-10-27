@@ -3,6 +3,7 @@
 #endif
 #include "gd.h"
 #include "gd_rule_analysis.h"
+#include "gd_resource_graph.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
@@ -22,7 +23,7 @@ static void system_release(void *context, void *memory) { (void)context; free(me
 static void help(void) {
     puts("Game Design Workbench — native domain tools\n"
          "Usage: gd matrix|connectivity|skill-atoms|scaffolding|mda|controls|rules [options]\n"
-         "       gd view matrix|skill-atoms|mda [options]\n\n"
+         "       gd view matrix|skill-atoms|mda|resources [options]\n\n"
          "Matrix/connectivity collections (exactly one of each):\n"
          "  --nouns ALIAS=FOLDER\n  --verbs ALIAS=FOLDER\n  --interactions ALIAS=FOLDER\n"
          "Skill operations require: --skill-atoms ALIAS=FOLDER\n"
@@ -40,8 +41,10 @@ static void help(void) {
          "                         bypass implicit status default, not explicit --status.\n"
          "  --set ALIAS/NAME=VALUE  Temporary typed override; repeatable, never source edits\n"
          "                         Enum VALUE is raw text; booleans true/false; numeric unit from definition\n"
+         "Resource graph preview: gd view resources with the same rule inputs.\n"
+         "  Preview is incomplete: no routes or composed outcome expansion.\n"
          "Rules require --interactions and/or --mechanics ALIAS=FOLDER\n"
-         "  Optional --axes, --nouns, --verbs, --control-vars, --related; explicit applicability\n"
+         "  Optional --axes, --nouns, --verbs, --resources, --control-vars, --related; explicit applicability\n"
          "  Shared typed state/quantity logic; declaration inspection by default, no fabricated scene\n"
          "  --analyze              Compile explicit calls and compare bounded declared enum branches\n"
          "  --case ALIAS/NAME#CASE  Inspect conditional proposals under supplied assumptions\n"
@@ -151,6 +154,7 @@ static int application(int argc, char **argv) {
     GD_ControlImport *import_plan = NULL;
     GD_Rules *rules = NULL;
     GD_RuleAnalysis *rule_analysis=NULL;
+    GD_ResourceGraph *resource_graph=NULL;
     GD_RuleScenario scenario={0};
     const char *case_name=NULL, *assumptions[64], *context_assumptions[64];
     GD_RuleTruth context_truths[64];
@@ -195,15 +199,16 @@ static int application(int argc, char **argv) {
         if (argc > 2 && !strcmp(argv[2],"export")) { command = 9; first = 3; export_format = "json"; }
         else if (argc > 2 && !strcmp(argv[2],"import")) { command = 10; first = 3; }
     }
+    else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "resources")) { command = 12; first = 3; }
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "mda")) { command = 7; first = 3; layout = GD_VIEW_COLUMNS; }
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "skill-atoms")) { command = 4; first = 3; layout = GD_VIEW_PREREQUISITES; }
     else if (strcmp(argv[1], "matrix")) error = "Unsupported command; no generic inspect/validate/query commands exist";
     control_filter.root = -1; control_filter.accepted_default = command == 9 || command == 10;
     control_command = command >= 8 && command <= 10;
     route_command = command == 5;
-    rule_command = command == 11;
+    rule_command = command == 11 || command == 12;
     mda_command = command == 6 || command == 7;
-    skill_command = command >= 3 && command <= 5; view_command = command == 2 || command == 4 || command == 7;
+    skill_command = command >= 3 && command <= 5; view_command = command == 2 || command == 4 || command == 7 || command == 12;
     for (i = first; i < argc && !error; ++i) {
         GD_Role role = GD_RELATED;
         int mapping = 1;
@@ -218,6 +223,7 @@ static int application(int argc, char **argv) {
         else if (!strcmp(argv[i], "--aesthetics")) role = GD_MDA_AESTHETIC;
         else if (!strcmp(argv[i], "--control-vars")) role = GD_CONTROL;
         else if (!strcmp(argv[i], "--axes")) role = GD_AXIS;
+        else if (!strcmp(argv[i], "--resources")) role = GD_RESOURCE;
         else if (strcmp(argv[i], "--related")) mapping = 0;
         if (mapping) {
             char *equals; size_t length;
@@ -229,7 +235,8 @@ static int application(int argc, char **argv) {
             memcpy(aliases[count], argv[i], length); aliases[count][length] = 0;
             if (!absolute_folder(equals + 1, folders[count])) { error = "Collection path is invalid or exceeds 4095 UTF-8 bytes"; break; }
             collections[count].alias = aliases[count]; collections[count].directory = folders[count];
-            collections[count].role = rule_command && (role == GD_CASE || role == GD_MDA_MECHANIC) ? GD_RULE : role;
+            collections[count].role = rule_command && (role == GD_CASE || role == GD_MDA_MECHANIC) ? GD_RULE :
+                command == 12 && role == GD_MDA_SYSTEM ? GD_RELATED:role;
             if (role != GD_RELATED) roles |= 1 << role;
             ++count;
         } else if (!strcmp(argv[i], "--status") || !strcmp(argv[i], "--include") || !strcmp(argv[i], "--exclude")) {
@@ -329,9 +336,10 @@ static int application(int argc, char **argv) {
     }
     if (!error && rule_command) {
         int roots = (1 << GD_CASE) | (1 << GD_MDA_MECHANIC);
-        int permitted = roots | (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS);
-        if (!(roles & roots) || (roles & ~permitted)) error = "Rules require --interactions and/or --mechanics, optional --axes, --nouns, --verbs, --control-vars and --related";
+        int permitted = roots | (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS) | (1 << GD_RESOURCE) | (command == 12 ? (1 << GD_MDA_SYSTEM):0);
+        if (!(roles & roots) || (roles & ~permitted)) error = "Rules require --interactions and/or --mechanics, optional --axes, --nouns, --verbs, --resources, --control-vars and --related";
     }
+    if (!error && command == 12 && (analyze || case_name || assumption_count || context_assumption_count)) error="Resource preview does not accept scenario or comparison options";
     if (!error && !rule_command && (analyze || case_name || assumption_count || context_assumption_count)) error="--analyze, --case, --assume and context options apply only to rules";
     if (!error && (assumption_count || context_assumption_count) && !case_name) error="Rule assumptions require an explicit --case; no implicit scene or case selection";
     if (!error && rule_command && fields && strstr(fields,"analysis") && !analyze && !case_name) error="analysis field requires --analyze and/or --case";
@@ -370,7 +378,7 @@ static int application(int argc, char **argv) {
     else gd_load(model, collections, count);
     if (rule_command && !error) {
         rules=gd_read_rules(model);
-        if (rules && (analyze || case_name)) {
+        if (rules && (analyze || case_name || command == 12)) {
             rule_analysis=gd_analyze_rules(model,rules);
             if (rule_analysis && case_name) {
                 int selected_case=gd_rule_case_find(model,rules,case_name), valid=1;
@@ -387,6 +395,10 @@ static int application(int argc, char **argv) {
                 }
             }
             if (rule_analysis && analyze) gd_rule_compare(rule_analysis);
+        }
+        if (command == 12 && rules && rule_analysis && !model->error_count) {
+            resource_graph=gd_resource_graph_build(model,rules);
+            if (resource_graph) gd_resource_graph_bind_calls(resource_graph,rule_analysis);
         }
     }
     if (route_command && !error) routes = gd_analyze_routes(model);
@@ -412,7 +424,8 @@ static int application(int argc, char **argv) {
     }
     if (!model->error_count && view_command) {
 #ifdef GD_WITH_VIEW
-        if (layout == GD_VIEW_TABLE) status = gd_view(model, frames, screenshot);
+        if (command == 12 && resource_graph) status = gd_resource_view(model,resource_graph,frames,screenshot);
+        else if (layout == GD_VIEW_TABLE) status = gd_view(model, frames, screenshot);
         else {
 #ifdef GD_WITH_GRAPH
             if (command == 7) status = gd_mda_view(model,mda,frames,screenshot,layout == GD_VIEW_COLUMNS);
@@ -437,7 +450,7 @@ static int application(int argc, char **argv) {
         fprintf(stderr, "gd: %s: %s%s%s\n", e->code, e->message, e->path ? " — " : "", e->path ? e->path : "");
     }
     if (model->error_count || model->errors_omitted) status = 2;
-    gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
+    gd_resource_graph_destroy(resource_graph); gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
 }
 int main(int argc, char **argv) {
 #ifdef _WIN32

@@ -19,7 +19,7 @@ static const char *field_names[] = {
     "nouns", "verb", "context_nouns", "mechanics", "control-vars", "resources", "verbs", "prerequisites",
     "introduces", "practises", "requires", "tests_mastery", "next", "systems", "dynamics", "experiments", "axes", "context_axes"
 };
-enum { RANK_KEY = 5 + GD_CONTEXT_AXES + 1, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7 }; /* Consumed-field indices; byte markers avoid width-dependent bit shifts. */
+enum { RANK_KEY = 5 + GD_CONTEXT_AXES + 1, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7, RESOURCE_NOUN_KEY }; /* Consumed-field indices; byte markers avoid width-dependent bit shifts. */
 const char *gd_field_name(GD_Field field) { return field_names[field]; }
 
 GD_Model *gd_create(GD_Allocator allocator) {
@@ -315,7 +315,7 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
     Reader reader;
     yaml_event_t event;
     GD_Record *record = &model->records[index];
-    unsigned char seen[AXIS_CLOSED_KEY+1] = {0};
+    unsigned char seen[RESOURCE_NOUN_KEY+1] = {0};
     int stage, success = 0;
     memset(&reader, 0, sizeof(reader)); reader.model = model; reader.path = record->source_path;
     if (!yaml_parser_initialize(&reader.parser)) {
@@ -360,6 +360,7 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
         else if (!strcmp(key, "coverage") && (record->role == GD_CASE || record->role == GD_RULE)) { key_index = 4; destination = &record->coverage; }
         else if (!strcmp(key, "rank") && record->role == GD_SKILL) key_index = RANK_KEY;
         else if (!strcmp(key, "entry") && record->role == GD_CHALLENGE) key_index = ENTRY_KEY;
+        else if (!strcmp(key, "noun") && record->role == GD_RESOURCE) { key_index = RESOURCE_NOUN_KEY; destination = &record->resource_noun; }
         else if (!strcmp(key,"axes") && record->role == GD_NOUN) key_index = 5 + GD_AXES;
         else if (!strcmp(key,"context_axes") && (record->role == GD_RULE || record->role == GD_CASE)) key_index = 5 + GD_CONTEXT_AXES;
         else if (record->role == GD_AXIS && !strcmp(key,"closed")) key_index = AXIS_CLOSED_KEY;
@@ -391,7 +392,9 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
                      (int)event.start_mark.line + 2); yaml_event_delete(&event); goto done;
         }
         seen[key_index] = 1;
-        if (key_index == AXIS_CLOSED_KEY) {
+        if (key_index == RESOURCE_NOUN_KEY) {
+            int ok = consume_string(&reader,&event,destination); yaml_event_delete(&event); if (!ok) goto done;
+        } else if (key_index == AXIS_CLOSED_KEY) {
             int ok = consume_boolean(&reader,&event,&record->axis_closed,&record->axis_closed_line,
                 "rules.axis_closed_type","Axis closed requires boolean true or false; no coercion");
             yaml_event_delete(&event); if (!ok) goto done;
@@ -715,7 +718,7 @@ int gd_load(GD_Model *model, const GD_Collection *collections, int count) {
         if (collections[i].role == GD_CONTROL) model->control_mode = 1;
         if (collections[i].role == GD_RULE || collections[i].role == GD_AXIS) model->rule_mode = 1;
         if (collections[i].role != GD_RELATED && collections[i].role != GD_RULE) {
-            if (collections[i].role < GD_NOUN || collections[i].role > GD_AXIS || (roles & (1 << collections[i].role)))
+            if (collections[i].role < GD_NOUN || collections[i].role > GD_RESOURCE || (roles & (1 << collections[i].role)))
                 gd_error(model, "input.collections", "Supply each domain role exactly once", collections[i].directory, 0);
             else roles |= 1 << collections[i].role;
         }
@@ -723,7 +726,7 @@ int gd_load(GD_Model *model, const GD_Collection *collections, int count) {
         for (j = 0; j < i; ++j) if (!strcmp(collections[i].alias, collections[j].alias)) gd_error(model, "input.alias", "Collection aliases must be unique", collections[i].directory, 0);
     }
     if (model->rule_mode) {
-        int permitted = (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS);
+        int permitted = (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS) | (1 << GD_RESOURCE);
         if (roles & ~permitted)
             gd_error(model,"input.collections","Rules require rule sources, optional axes/nouns/verbs/control-vars and related collections",NULL,0);
     } else if (model->mda_mode) {

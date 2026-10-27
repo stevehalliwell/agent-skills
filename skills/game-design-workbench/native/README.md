@@ -25,10 +25,25 @@ CJIT application code is unoptimized. Windows Zig 0.17.0 `zig cc -std=c99` headl
 ```sh
 zig cc -std=c99 -DHAVE_CONFIG_H=1 -DYAML_DECLARE_STATIC=1 \
   -I vendor/libyaml/include -I vendor/libyaml/src \
-  gd_core.c gd_output.c gd_layout.c gd_focus.c gd_diagnostics.c gd_skills.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_cli.c vendor/libyaml/src/api.c \
+  gd_core.c gd_output.c gd_layout.c gd_focus.c gd_diagnostics.c gd_skills.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_cli.c vendor/libyaml/src/api.c \
   vendor/libyaml/src/parser.c vendor/libyaml/src/reader.c \
   vendor/libyaml/src/scanner.c -lshell32 -o build/gd-zig.exe
 ```
+
+## Resource graph preview
+
+Review 02 is in progress. `gd view resources` shows direct declarations, explicit pool bindings and compiled invocation links from shared C99 graph. It does not implement resource routes, composed outcomes, source navigation, filtering or refresh. A line is not proof of a flow; omitted rules and unmodeled conditions remain unknown. Close and reopen if sources change. Unbound resource roles remain separate; the preview does not infer identity from matching names.
+
+```powershell
+$native = 'skills/game-design-workbench/native'
+$game = 'skills/game-design-workbench/examples/crate-puzzle/game-design'
+& "$native/build/gd-view.exe" view resources `
+  --interactions "interactions=$game/interactions" --mechanics "mechanics=$game/mechanics" `
+  --nouns "nouns=$game/nouns" --axes "axes=$game/axes" `
+  --control-vars "control-vars=$game/control-vars" --resources "resources=$game/resources"
+```
+
+Select a node to inspect its source and incident declarations. Drag nodes; right-drag pans; wheel zooms; `F` fits; Space starts/stops settling. Preview is read-only; no manual UX acceptance claimed.
 
 ## Prepared experiments
 

@@ -1,6 +1,7 @@
 /* Native domain checks. Build/run through test.ps1. Fixtures stay in ignored build/. */
 #include "gd.h"
 #include "gd_rule_analysis.h"
+#include "gd_resource_graph.h"
 #include "gd_layout.h"
 #include "gd_diagnostics.h"
 #include <limits.h>
@@ -53,9 +54,9 @@ static int has_error(GD_Model *model, const char *code) {
     return 0;
 }
 TEST(rule_outcomes,
-    GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis;
+    GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ResourceGraph *graph;
     GD_RuleEvaluation *result; GD_RulePredicateFact facts[4]; GD_RuleContextFact context;
-    GD_RuleAssumptions inputs={facts,3,NULL,0}; int root_case,life,form,amount,hero,budget,i,found;
+    GD_RuleAssumptions inputs={facts,3,NULL,0}; int root_case,life,form,amount,hero,budget,i,found,all_count,other_count;
     TEST_ASSERT(model && setup("rule-outcomes")); collections[1].role=GD_AXIS; collections[2].role=GD_RULE;
     TEST_ASSERT(write_record(1,"Life","---\nvalue_type: enum\nallowed_values: [alive, dead]\nclosed: true\n---\nLife."));
     TEST_ASSERT(write_record(1,"Form","---\nvalue_type: enum\nallowed_values: [small, tall]\nclosed: true\n---\nForm."));
@@ -67,7 +68,28 @@ TEST(rule_outcomes,
     TEST_ASSERT(write_record(2,"helper","```gd-rule\ncase small:\n    context: ANY\n    Victim:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: dead\n        preserve: OTHER\n    Reserve:\n        noun: things/lives\n        requires: ANY\n        set:\n            Amount: this - 1[life]\n        preserve: OTHER\ncase named:\n    context: ANY\n    Victim:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: dead\n        preserve: Form, OTHER\n    Reserve:\n        noun: things/lives\n        requires: ANY\n        set:\n            Amount: this - 1[life]\ncase loop:\n    context: ANY\n    Again:\n        noun: things/hero\n        requires: ANY\n        causes: cases/helper#loop\n        preserve: ALL\n```"));
     TEST_ASSERT(write_record(2,"root","---\ncontext_axes: [actions/Contact]\n---\n```gd-rule\ncase direct:\n    context: ANY\n    Hero:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: dead, tall\n        preserve: OTHER\n    Budget:\n        noun: things/lives\n        requires: ANY\n        set:\n            Amount: this - 1[life]\n        preserve: OTHER\ncase composed:\n    context: ANY\n    Hero:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: tall\n        causes: cases/helper#small with Victim=Hero, Reserve=Budget\n        preserve: OTHER\n    Budget:\n        noun: things/lives\n        requires: ANY\n        preserve: OTHER\ncase named-conflict:\n    context: ANY\n    Hero:\n        noun: things/hero\n        requires: alive AND small\n        other_axes: ANY\n        becomes: tall\n        causes: cases/helper#named with Victim=Hero, Reserve=Budget\n        preserve: OTHER\n    Budget:\n        noun: things/lives\n        requires: ANY\ncase guard:\n    Hero:\n        noun: things/hero\n        skip_if: ANY\ncase context:\n    context: Hero sideContacts Target\n    Hero:\n        noun: things/hero\n        requires: ANY\n        preserve: ALL\n    Target:\n        noun: things/walker\n        requires: ANY\n        preserve: ALL\n```"));
     gd_load(model,collections,3); rules=gd_read_rules(model); TEST_ASSERT(rules && !model->error_count);
+    graph=gd_resource_graph_build(model,rules); TEST_ASSERT(graph && !graph->limited && !graph->preservation_unexamined && graph->composition_unexamined>0);
+    found=all_count=other_count=0; for (i=0;i<graph->relation_count;++i) if (graph->relations[i].kind==GD_RESOURCE_PRESERVATION) {
+        const GD_ResourceRelation *edge=&graph->relations[i];
+        const GD_RulePreservation *promise=&rules->preservations[edge->declaration];
+        if (promise->kind==GD_PRESERVE_AXIS) {
+            ++found; TEST_ASSERT(graph->nodes[edge->facet].axis==find_record(model,"actions/Form") && !edge->conditional);
+        } else {
+            TEST_ASSERT(edge->conditional==(promise->kind==GD_PRESERVE_OTHER));
+            if (promise->kind==GD_PRESERVE_ALL) ++all_count; else ++other_count;
+        }
+    }
+    TEST_ASSERT(found==1 && all_count>0 && other_count>0); gd_resource_graph_destroy(graph);
     analysis=gd_analyze_rules(model,rules); TEST_ASSERT(analysis && !model->error_count && analysis->call_count==3);
+    graph=gd_resource_graph_build(model,rules); TEST_ASSERT(graph && gd_resource_graph_bind_calls(graph,analysis));
+    TEST_ASSERT(graph->calls==analysis && graph->calls_bound && graph->composition_unexamined==0);
+    found=0; for (i=0;i<graph->relation_count;++i) if (graph->relations[i].kind==GD_RESOURCE_INVOCATION) {
+        const GD_ResourceRelation *edge=&graph->relations[i]; const GD_RuleCall *call=&analysis->calls[edge->declaration];
+        ++found; TEST_ASSERT(graph->nodes[edge->activation].case_index==call->caller_case);
+        TEST_ASSERT(graph->nodes[edge->facet].case_index>=call->first_case && graph->nodes[edge->facet].case_index<call->first_case+call->case_count);
+        TEST_ASSERT(call->binding_count>0 && edge->line==call->line);
+    }
+    TEST_ASSERT(found==3 && !gd_resource_graph_bind_calls(graph,analysis)); gd_resource_graph_destroy(graph);
     life=find_record(model,"actions/Life"); form=find_record(model,"actions/Form"); amount=find_record(model,"actions/Amount");
     root_case=gd_rule_case_find(model,rules,"cases/root#composed"); TEST_ASSERT(root_case>=0);
     hero=rules->cases[root_case].first_participant; budget=hero+1;
@@ -108,8 +130,8 @@ TEST(rule_outcomes,
 TEST(rule_quantities,
     GD_Model *model=model_create(); GD_Rules *rules;
     GD_Collection domains[4]; char directory[GD_MAX_PATH], path[GD_MAX_PATH];
-    GD_RulePredicateFact facts[5]; GD_RuleQuantityValue value;
-    int amount,life, first,second,other;
+    GD_RulePredicateFact facts[5]; GD_RuleQuantityValue value; GD_ResourceGraph *graph;
+    int amount,life, first,second,other,recognized;
     const char *control="---\nvalue_type: integer\nvalue: 1\nunit: energy\n---\nConfigured cost, not starting energy.";
     TEST_ASSERT(model && setup("rule-quantities")); collections[1].role=GD_AXIS; collections[2].role=GD_RULE;
     TEST_ASSERT(write_record(1,"Amount","---\nvalue_type: integer\nunit: energy\nminimum: 0\nmaximum: 3\n---\nEnergy."));
@@ -134,6 +156,18 @@ TEST(rule_quantities,
     TEST_ASSERT(gd_load(model,domains,4)); rules=gd_read_rules(model);
     TEST_ASSERT(rules && !model->error_count && rules->quantity_bindings_complete && rules->controls && rules->controls->resolved_count==3 && rules->effect_bindings_complete);
     TEST_ASSERT(rules->assignment_count==4 && rules->quantity_count==8);
+    graph=gd_resource_graph_build(model,rules);
+    TEST_ASSERT(graph && !graph->limited && graph->node_count>=3 && graph->relation_count>=8);
+    { int i,writes=0,requirements=0,exclusions=0;
+      for (i=0;i<graph->relation_count;++i) {
+          const GD_ResourceRelation *edge=&graph->relations[i];
+          TEST_ASSERT(graph->nodes[edge->activation].kind==GD_RESOURCE_CASE && graph->nodes[edge->facet].kind==GD_RESOURCE_FACET);
+          if (edge->kind==GD_RESOURCE_QUANTITY_WRITE) ++writes;
+          if (edge->kind==GD_RESOURCE_REQUIREMENT) ++requirements;
+          if (edge->kind==GD_RESOURCE_EXCLUSION) ++exclusions;
+      }
+      TEST_ASSERT(writes==4 && requirements>=3 && exclusions==1); }
+    gd_resource_graph_destroy(graph);
     TEST_ASSERT(rules->state_effect_count==1 && !strcmp(rules->state_effects[0].target.state,"small"));
     TEST_ASSERT(rules->state_effects[0].target.axis_record==find_record(model,"actions/Form"));
     amount=find_record(model,"actions/Amount"); life=find_record(model,"actions/Life");
@@ -141,6 +175,12 @@ TEST(rule_quantities,
     facts[1]=(GD_RulePredicateFact){0,life,"alive",GD_RULE_TRUTH_TRUE};
     first=rules->assignments[0].quantity; second=rules->assignments[1].quantity; other=rules->assignments[3].quantity;
     TEST_ASSERT(gd_rule_quantity_value(rules,first,NULL,0).state==GD_EXPRESSION_UNKNOWN);
+    value=gd_rule_quantity_delta(rules,first,&recognized);
+    TEST_ASSERT(recognized && value.known && value.checks_complete && value.number==-1);
+    value=gd_rule_quantity_delta(rules,second,&recognized);
+    TEST_ASSERT(recognized && value.known && value.number==1);
+    value=gd_rule_quantity_delta(rules,rules->assignments[2].quantity,&recognized);
+    TEST_ASSERT(!recognized && !value.known);
     value=gd_rule_quantity_value(rules,second,facts,2);
     TEST_ASSERT(value.state==GD_EXPRESSION_VALUE && value.known && value.number==4 && value.bounds==GD_BOUNDS_OUTSIDE);
     value=gd_rule_quantity_value(rules,first,facts,2);
@@ -195,7 +235,7 @@ TEST(rule_condition_logic,
     TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Life, actions/Form, actions/Protection]\n---\nSame noun, distinct participants."));
     TEST_ASSERT(write_record(2,"contact","```gd-rule\ncase contact:\n"
         "    First:\n        noun: things/hero\n        requires: alive AND (tall OR small) AND NOT protected\n        skip_if: dead\n        other_axes: ANY\n"
-        "    Second:\n        noun: things/hero\n        requires: alive\n"
+        "    Second:\n        noun: things/hero\n        requires: alive\n        pools:\n            Life: resources/player-life\n            actions/Form: resources/player-form\n            Unknown: resources/unknown\n"
         "    Unset:\n        noun: things/hero\n        other_axes: ANY\n"
         "    Constant:\n        requires: ANY\n"
         "    UnknownNot:\n        noun: things/hero\n        requires: NOT protected\n"
@@ -210,6 +250,9 @@ TEST(rule_condition_logic,
     TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
     TEST_ASSERT(rules && !model->error_count && rules->condition_bindings_complete && rules->condition_count == 13);
     life = find_record(model,"actions/Life"); protection = find_record(model,"actions/Protection");
+    TEST_ASSERT(rules->pool_count == 3 && rules->pools[0].target.resolution == GD_RULE_RESOLVED && rules->pools[0].target.axis_record == life);
+    TEST_ASSERT(rules->pools[1].target.resolution == GD_RULE_RESOLVED && rules->pools[1].target.axis_record == find_record(model,"actions/Form"));
+    TEST_ASSERT(rules->pools[2].target.resolution == GD_RULE_MISSING && rules->pools[2].target.axis_record == -1);
     facts[0] = (GD_RulePredicateFact){0,life,"alive",GD_RULE_TRUTH_TRUE};
     facts[1] = (GD_RulePredicateFact){0,find_record(model,"actions/Form"),"tall",GD_RULE_TRUTH_TRUE};
     facts[2] = (GD_RulePredicateFact){0,find_record(model,"actions/Form"),"small",GD_RULE_TRUTH_FALSE};
@@ -452,7 +495,7 @@ TEST(rules_declarations,
         "---\nname: contact\nstatus: accepted\ncoverage: defined\n---\n# Intent\n\n```gd-rule\n"
         "case powered-side-contact:\n    context: Player sideContacts Walker\n\n"
         "    Player:\n        noun: things/hero\n        requires: alive AND (tall OR spark) AND NOT protected\n"
-        "        other_axes: ANY\n        becomes: small, protected\n        set:\n"
+        "        other_axes: ANY\n        becomes: small, protected\n        pools:\n            Amount: resources/wallet\n        set:\n"
         "            ProtectionTime: {control-vars/safety-window}\n            Amount: this + 1[life]\n"
         "            Amount: this + 2[life]\n        preserve: OTHER\n"
         "    Walker:\n        noun: things/hero\n        requires: alive\n"
@@ -476,6 +519,9 @@ TEST(rules_declarations,
     TEST_ASSERT(rules->cases[0].ordered_context.target.resolution == GD_RULE_UNDETERMINED);
     TEST_ASSERT(rules->cases[1].ordered_context.state == GD_CONDITION_UNSPECIFIED && rules->cases[1].ordered_context.left == -1);
     TEST_ASSERT(!strcmp(rules->participants[0].requires,"alive AND (tall OR spark) AND NOT protected"));
+    TEST_ASSERT(rules->pool_count == 1 && rules->participants[0].pool_count == 1);
+    TEST_ASSERT(!strcmp(rules->pools[0].axis,"Amount") && !strcmp(rules->pools[0].reference,"resources/wallet"));
+    TEST_ASSERT(rules->pools[0].line == rules->participants[0].lines[8] + 1);
     TEST_ASSERT(!strcmp(rules->assignments[0].expression,"{control-vars/safety-window}"));
     TEST_ASSERT(!strcmp(rules->assignments[1].expression,"this + 1[life]") && !strcmp(rules->assignments[2].expression,"this + 2[life]"));
     TEST_ASSERT(!rules->participants[1].preserve && !rules->participants[1].becomes && !rules->participants[1].other_axes);
@@ -485,6 +531,71 @@ TEST(rules_declarations,
     TEST_ASSERT(!strcmp(rules->cases[1].unknown_conditions,"Unspecified placement predicate.") && !strcmp(rules->cases[1].unknown_effects,"Missing rebound magnitude."));
     TEST_ASSERT(rules->cases[1].unknown_conditions_line>rules->cases[1].line && rules->cases[1].unknown_effects_line>rules->cases[1].unknown_conditions_line);
     gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(resource_unloaded_call,
+    GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ResourceGraph *graph;
+    TEST_ASSERT(model && setup("resource-unloaded-call")); collections[2].role=GD_RULE;
+    TEST_ASSERT(write_record(2,"source","```gd-rule\ncase source:\n    Actor:\n        causes: external/action\n        preserve: ALL\n```\n"));
+    TEST_ASSERT(gd_load(model,collections,3)); rules=gd_read_rules(model); TEST_ASSERT(rules && !model->error_count);
+    analysis=gd_analyze_rules(model,rules); TEST_ASSERT(analysis && !model->error_count && analysis->call_count==1);
+    TEST_ASSERT(analysis->calls[0].resolution==GD_RULE_UNLOADED);
+    graph=gd_resource_graph_build(model,rules); TEST_ASSERT(graph && graph->composition_unexamined==1 && graph->preservation_unexamined==1);
+    TEST_ASSERT(gd_resource_graph_bind_calls(graph,analysis) && graph->composition_unexamined==1 && !graph->relation_count);
+    gd_resource_graph_destroy(graph); gd_rule_analysis_destroy(analysis); gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rule_expression_delta,
+    GD_Model *model = model_create(); GD_ControlToken tokens[GD_MAX_EXPRESSION_TOKENS];
+    GD_Expression expression = {tokens,0,GD_MAX_EXPRESSION_TOKENS};
+    GD_ExpressionSite site = {0,1,GD_EXPRESSION_ASSIGNMENT}; GD_ExpressionInput starting = {0}, delta;
+    const char *texts[] = {"this", "this - 100[coin]", "this + -2[coin]", "this - -3[coin]", "this + 0[coin]", "min(this + 1[coin], 9[coin])", "this + 1[life]", "this + this", "this * 2 + 1[coin]"};
+    const double expected[] = {0,-100,-2,3,0}; int i, recognized; GD_ExpressionState state;
+    TEST_ASSERT(model && setup("rule-expression-delta")); collections[2].role=GD_RULE;
+    TEST_ASSERT(write_record(2,"source","Source.")); TEST_ASSERT(gd_load(model,collections,3));
+    site.record=find_record(model,"cases/source"); TEST_ASSERT(site.record>=0);
+    starting.value.kind=GD_LITERAL_NUMBER; starting.unit_known=1;
+    TEST_ASSERT(gd_control_unit("coin",4,&starting.value.unit));
+    for (i=0;i<9;++i) {
+        expression.count=0; TEST_ASSERT(gd_compile_expression(model,&expression,texts[i],strlen(texts[i]),site));
+        state=gd_expression_delta(tokens,expression.count,NULL,&starting,1,&recognized,&delta);
+        if (i<5) TEST_ASSERT(recognized && state==GD_EXPRESSION_VALUE && delta.known && delta.unit_known && delta.value.number==expected[i]);
+        else if (i==6) TEST_ASSERT(recognized && state==GD_EXPRESSION_UNIT_ERROR);
+        else TEST_ASSERT(!recognized && state==GD_EXPRESSION_UNKNOWN);
+    }
+    gd_destroy(model);
+)
+TEST(rule_pool_resolution,
+    GD_Model *model = model_create(); GD_Rules *rules; GD_ResourceGraph *graph; GD_Collection inputs[4];
+    char folder[GD_MAX_PATH], path[GD_MAX_PATH];
+    TEST_ASSERT(model && setup("rule-pool-resolution")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+    TEST_ASSERT(snprintf(folder,sizeof(folder),"%s/rule-pool-resolution/resources",root) < (int)sizeof(folder));
+    TEST_ASSERT(file_directory_create(folder,1));
+    TEST_ASSERT(snprintf(path,sizeof(path),"%s/wallet.md",folder) < (int)sizeof(path));
+    { const char *text = "---\nnoun: things/coin\n---\nWallet.";
+      TEST_ASSERT(file_write_bytes(cstring_from_raw(path),text,strlen(text)) == file_error_ok); }
+    TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Amount]\n---\nHero."));
+    TEST_ASSERT(write_record(1,"Amount","---\nvalue_type: integer\nunit: coin\n---\nAmount."));
+    TEST_ASSERT(write_record(2,"trade","```gd-rule\ncase trade:\n    Actor:\n        noun: things/hero\n        pools:\n            Amount: resources/wallet\n            actions/Amount: resources/missing\n            Amount: other/wallet\n            Amount: things/hero\n        set:\n            Amount: this - 1[coin]\n    Other:\n        noun: things/hero\n        pools:\n            Amount: resources/wallet\n        set:\n            Amount: this + 1[coin]\n    Third:\n        noun: things/hero\n        pools:\n            Amount: resources/wallet\n        set:\n            Amount: this + 2[coin]\n    Missing:\n        noun: things/hero\n        pools:\n            Amount: resources/absent\n        set:\n            Amount: this - 1[coin]\n    Unloaded:\n        noun: things/hero\n        pools:\n            Amount: other/absent\n        set:\n            Amount: this - 1[coin]\n```\n"));
+    memcpy(inputs,collections,sizeof(collections)); inputs[3] = (GD_Collection){"resources",folder,GD_RESOURCE};
+    TEST_ASSERT(gd_load(model,inputs,4)); rules = gd_read_rules(model); TEST_ASSERT(rules && !model->error_count);
+    TEST_ASSERT(rules->pool_count == 8 && !rules->pool_bindings_complete);
+    TEST_ASSERT(rules->pools[0].resource_resolution == GD_RULE_RESOLVED && rules->pools[0].target.resolution == GD_RULE_RESOLVED);
+    TEST_ASSERT(!strcmp(model->records[rules->pools[0].resource_record].resource_noun,"things/coin"));
+    TEST_ASSERT(rules->pools[1].resource_resolution == GD_RULE_MISSING);
+    TEST_ASSERT(rules->pools[2].resource_resolution == GD_RULE_UNLOADED);
+    TEST_ASSERT(rules->pools[3].resource_resolution == GD_RULE_WRONG_ROLE);
+    TEST_ASSERT(rules->pools[0].identity_resolution == GD_RULE_AMBIGUOUS && rules->pools[3].identity_resolution == GD_RULE_AMBIGUOUS);
+    TEST_ASSERT(rules->pools[4].identity_resolution == GD_RULE_RESOLVED && rules->pools[5].identity_resolution == GD_RULE_RESOLVED);
+    graph=gd_resource_graph_build(model,rules);
+    TEST_ASSERT(graph && !graph->limited && graph->node_count==8 && graph->relation_count==8 && graph->unresolved_facets==3);
+    TEST_ASSERT(graph->nodes[0].kind==GD_RESOURCE_ROLE && graph->nodes[0].record==find_record(model,"resources/wallet"));
+    TEST_ASSERT(graph->relations[1].kind==GD_RESOURCE_ROLE_BINDING && graph->relations[1].activation==0);
+    TEST_ASSERT(graph->relations[0].facet!=graph->relations[2].facet && graph->relations[2].facet==graph->relations[3].facet);
+    TEST_ASSERT(graph->relations[0].delta_recognized && graph->relations[0].delta.known && graph->relations[0].delta.number==-1);
+    TEST_ASSERT(graph->relations[2].delta_recognized && graph->relations[2].delta.known && graph->relations[2].delta.number==1);
+    TEST_ASSERT(graph->nodes[graph->relations[4].activation].kind==GD_RESOURCE_ROLE && graph->nodes[graph->relations[4].activation].resolution==GD_RULE_MISSING);
+    TEST_ASSERT(graph->nodes[graph->relations[6].activation].kind==GD_RESOURCE_ROLE && graph->nodes[graph->relations[6].activation].resolution==GD_RULE_UNLOADED);
+    gd_resource_graph_destroy(graph);
+    TEST_ASSERT(!gd_sources_changed(model)); gd_rules_destroy(rules); gd_destroy(model);
 )
 TEST(rules_fence_scope,
     GD_Model *model = model_create();
@@ -513,13 +624,14 @@ TEST(rules_invalid_records,
         "```gd-rule\ncase bad:\n\tA:\n```\n",
         "```gd-rule\ncase bad:\n    A:\n        set: Amount: 1\n```\n",
         "```gd-rule\ncase bad:\n    A:\n        set:\n            Amount:\n```\n",
+        "```gd-rule\ncase bad:\n    A:\n        pools:\n            Amount: resources/valid\n            Other: bad\n```\n",
         "```gd-rule\ncase bad:\n    context: ANY\n    context: ANY\n```\n",
         "```gd-rule\ncase bad:\n    A:\n        noun: things/a\n",
         "```gd-rule\ncase bad:\n```\n```gd-rule\ncase another:\n```\n",
         "```gd-rule\n    A:\n```\n"
     };
     const char *codes[] = {"rules.duplicate_field","rules.duplicate_participant","rules.duplicate_case","rules.field",
-        "rules.value","rules.indent","rules.indent","rules.assignment","rules.assignment","rules.duplicate_field",
+        "rules.value","rules.indent","rules.indent","rules.assignment","rules.assignment","rules.pool","rules.duplicate_field",
         "rules.unclosed_block","rules.multiple_blocks","rules.case"};
     int i;
     for (i = 0; i < (int)(sizeof(inputs)/sizeof(inputs[0])); ++i) {
@@ -531,7 +643,7 @@ TEST(rules_invalid_records,
         TEST_ASSERT(write_record(2,"z-good","```gd-rule\ncase later:\n    Actor:\n        preserve: OTHER\n```\n"));
         TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
         TEST_ASSERT(rules && has_error(model,codes[i]));
-        TEST_ASSERT(rules->case_count == 2 && rules->participant_count == 2 && !rules->assignment_count);
+        TEST_ASSERT(rules->case_count == 2 && rules->participant_count == 2 && !rules->assignment_count && !rules->pool_count);
         TEST_ASSERT(rules->sources[1].state == GD_RULE_INVALID && !rules->sources[1].case_count);
         TEST_ASSERT(!strcmp(rules->cases[0].name,"good") && !strcmp(rules->cases[1].name,"later"));
         TEST_ASSERT(!strcmp(rules->participants[0].becomes,"alive") && !strcmp(rules->participants[1].preserve,"OTHER"));
@@ -1806,7 +1918,7 @@ int main(int argc, char **argv) {
     failed += test_rule_quantities(); failed += test_rule_numeric_comparisons();
     failed += test_rule_condition_logic(); failed += test_rule_exclusion_limits(); failed += test_rule_effect_bindings();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
-    failed += test_rules_declarations(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
+    failed += test_rules_declarations(); failed += test_resource_unloaded_call(); failed += test_rule_expression_delta(); failed += test_rule_pool_resolution(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
     failed += test_text_types(); failed += test_missing_endpoint();
     failed += test_input_limits();
@@ -1821,6 +1933,6 @@ int main(int argc, char **argv) {
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/61 passed\n", 61-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/64 passed\n", 64-failed);
     return failed ? 1 : 0;
 }
