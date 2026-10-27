@@ -23,7 +23,11 @@ Build flags enable FTS5, disable loadable extensions, disable compiler intrinsic
 
 ## json-build
 
-Copied unchanged from `D:/Repos/proto-framework/vendor/json-build/` at repository commit `f0b848e2541903ac99696f1f8a71d93e72ef4c5b`. Retained header, MIT license and existing provenance, including its upstream pin and local fixed-buffer modifications. Header SHA-256: `20a95741624dd363caf79361b4e6ec4e4e3e8b4414d535bb4a0ac54d9bd20ffb`. Uses fixed-buffer writer; no JSON input parser needed for this slice.
+Copied unchanged from `D:/Repos/proto-framework/vendor/json-build/` at repository commit `f0b848e2541903ac99696f1f8a71d93e72ef4c5b`. Retained header, MIT license and existing provenance, including its upstream pin and local fixed-buffer modifications. Header SHA-256: `20a95741624dd363caf79361b4e6ec4e4e3e8b4414d535bb4a0ac54d9bd20ffb`. Uses fixed-buffer writer.
+
+## libpdjson5
+
+Copied unchanged from `D:/Repos/proto-framework/vendor/libpdjson5/`: version 1.0.1, upstream commit `ed602821f2929930e5179cd9240d468abf210d60`. Retained C source, header, Unlicense and existing provenance. Native reads select strict JSON and non-streaming mode, with caller-arena allocation. Parser depth is compiled with `LIBPDJSON5_STACK_MAX=4`; parameter values themselves must be scalar/null. No fixed-shape `json.h` binding used.
 
 ## Fixture
 

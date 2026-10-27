@@ -26,6 +26,7 @@ __declspec(dllimport) LONG WINAPI BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE
 #define MAX_ITEMS 1024
 #define TEXT_CAPACITY (4 * 1024 * 1024)
 #define PATH_CAPACITY 4096
+#define OUTPUT_CAPACITY (12 * 1024 * 1024)
 
 typedef struct value value;
 struct value {
@@ -61,15 +62,20 @@ typedef struct context {
     collection collections[MAX_COLLECTIONS];
     int collection_count;
     record records[MAX_RECORDS];
-    int record_count, projected;
-    char json_scratch[TEXT_CAPACITY];
+    int record_count, projected, allow_fts;
+    const char *error_code;
+    char json_scratch[OUTPUT_CAPACITY];
 } context;
 
 static void json_check(jsonbcode status) {
-    if (status < 0) { fprintf(stderr, "JSON output capacity exhausted\n"); exit(1); }
+    if (status < 0) {
+        fprintf(stderr, "JSON output capacity exhausted\n");
+        puts("{\"error\":{\"code\":\"json-capacity\",\"message\":\"JSON output capacity exhausted\"}}");
+        exit(1);
+    }
 }
 static void fail(context *c, const char *format, ...) {
-    char message[2048], output[4096];
+    char message[2048], output[16384];
     jsonb b;
     va_list args;
     va_start(args, format);
@@ -86,7 +92,10 @@ static void fail(context *c, const char *format, ...) {
     json_check(jsonb_key(&b, output, sizeof(output), "error", 5));
     json_check(jsonb_object(&b, output, sizeof(output)));
     json_check(jsonb_key(&b, output, sizeof(output), "code", 4));
-    json_check(jsonb_string(&b, output, sizeof(output), "native-projection", 17));
+    {
+        const char *code = c->error_code ? c->error_code : "native-projection";
+        json_check(jsonb_string(&b, output, sizeof(output), code, strlen(code)));
+    }
     json_check(jsonb_key(&b, output, sizeof(output), "message", 7));
     json_check(jsonb_string(&b, output, sizeof(output), message, strlen(message)));
     json_check(jsonb_object_pop(&b, output, sizeof(output)));
@@ -733,6 +742,18 @@ static void make_edges(context *c) {
         }
     }
 }
+static const char *schema_digest(context *c, collection *table) {
+    size_t a = strlen(table->name), b = strlen(table->directory), d = strlen(table->schema_text);
+    char *joined = allocate(c, a + b + d + 5);
+    /* Current runner hashes literal backslash-zero separators, not NUL. */
+    memcpy(joined, table->name, a); memcpy(joined + a, "\\0", 2);
+    memcpy(joined + a + 2, table->directory, b); memcpy(joined + a + b + 2, "\\0", 2);
+    memcpy(joined + a + b + 4, table->schema_text, d + 1);
+    return digest(c, joined);
+}
+
+#include "read.h"
+
 int main(int argc, char **argv) {
     static unsigned char backing[128 * 1024 * 1024];
     static context c;
@@ -746,11 +767,10 @@ int main(int argc, char **argv) {
         for (i = 0; i < argc; i++) argv[i] = (char *)utf8(&c, arguments[i]);
         LocalFree(arguments);
     }
-    if (argc == 2 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h"))) {
-        puts("Usage: projection.exe <fixture-project>\nRead-only source; generates compatible .attendant/attendant.sqlite. Windows first-slice exploration only.");
-        return 0;
-    }
-    if (argc != 2) fail(&c, "Usage: projection.exe <fixture-project>");
+    if (argc < 2 || !strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) return native_help();
+    if (!strcmp(argv[1], "schema") || !strcmp(argv[1], "query") || !strcmp(argv[1], "search"))
+        return native_read_main(&c, argc, argv);
+    if (argc != 2) { c.error_code = "cli-command"; fail(&c, "Expected schema, query, search or one fixture-project path"); }
     root = full_path(&c, ".", argv[1]);
     load_config(&c, root);
     for (i = 0; i < c.collection_count; i++) load_records(&c, &c.collections[i]);
@@ -773,14 +793,7 @@ int main(int argc, char **argv) {
     metadata(&c, "config_hash", digest(&c, read_text(&c, full_path(&c, root, ".pi/attendant.tables"), NULL)));
     for (i = 0; i < c.collection_count; i++) {
         collection *table = &c.collections[i];
-        const char *schema_material;
-        size_t a = strlen(table->name), b = strlen(table->directory), d = strlen(table->schema_text);
-        char *joined = allocate(&c, a + b + d + 5);
-        /* Current runner hashes literal backslash-zero separators, not NUL. */
-        memcpy(joined, table->name, a); memcpy(joined + a, "\\0", 2);
-        memcpy(joined + a + 2, table->directory, b); memcpy(joined + a + b + 2, "\\0", 2);
-        memcpy(joined + a + b + 4, table->schema_text, d + 1); schema_material = joined;
-        metadata(&c, format_text(&c, "schema_hash:%s", table->name), digest(&c, schema_material));
+        metadata(&c, format_text(&c, "schema_hash:%s", table->name), schema_digest(&c, table));
         make_tables(&c, table);
     }
     for (i = 0; i < c.record_count; i++) project_record(&c, &c.records[i]);

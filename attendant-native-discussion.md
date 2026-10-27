@@ -126,6 +126,27 @@ Check steps only when completed. Complete the first slice through user review be
 - [x] Prepare concise review evidence and demo commands; report limitations and compiler-path results. See `exploration/attendant-native/README.md`; four compiler/configuration scenarios passed and existing runner's 7 tests passed. Build outputs and machine-readable check results remain under ignored `exploration/attendant-native/build/`.
 - [x] User reviewed the native-generation/existing-CLI result and requested committing this slice. Further implementation scope remains a separate decision.
 
+### Native read slice
+
+User approved native `schema`, `query`, and `search` over the compatible projection, without further product refinement. Source repair, source writes, and incremental refresh remain deferred. Commands consume an existing snapshot; changed config/schema requires rebuilding, and record edits require an explicit rebuild. Current implementation and acceptance commands: `exploration/attendant-native/README.md`.
+
+- [x] Add native read commands with familiar arguments and command-specific JSON results; use preferred strict JSON reader for parameters.
+- [x] Enforce read-only SQLite and authorizer containment; support parameter binding, file/stdin inputs, limits and structured errors.
+- [x] Preserve useful reporting for empty/limited results and valid UTF-8 JSON at the SQLite TEXT boundary. Malformed byte sequences become U+FFFD; oversized serialized rows truncate.
+- [x] Keep deterministic search tie-breaking. Exact Node locale collation is not required; do not add ICU for this distinction.
+- [x] Finish final build, regression and independent review checks. Both compiler paths passed four configuration scenarios, each with 23 oracle comparisons and 27 rejection cases, plus byte/row limits, UTF-8, live usage, snapshot producer interoperability and stable-tie checks. Existing runner's 7 tests passed. Independent read-only review found no remaining actionable issue in scope. Evidence: `exploration/attendant-native/build/review/read-results.json` (generated).
+
+### Native preparation slice
+
+User approved native `sync` and automatic preparation before `schema`, `query`, and `search`. Reuse an unchanged projection; fully rebuild when projection is missing or source records, config, or schemas change. Keep Markdown untouched. Source repair and incremental reconciliation remain deferred; use the existing normalized-input boundary and report unsupported source rather than silently return stale results.
+
+Acceptance: native reads build a missing projection without Node; unchanged operations reuse it; adding, editing or deleting source appears on the next read; existing `.mjs sync` reuses native output; source hashes stay unchanged. Preserve the published projection on rebuild failure. No concurrent producer/consumer guarantee in this slice.
+
+- [ ] Extract reusable in-process projection preparation and add native `sync`.
+- [ ] Detect source changes and reuse or fully rebuild; invoke preparation before native reads.
+- [ ] Verify missing/unchanged/added/edited/deleted/config/schema cases, `.mjs` interoperability, failure preservation and unchanged source on both compiler paths.
+- [ ] Update commands and evidence; report completed slice before further scope.
+
 ### Remaining refinement and parity work
 
 - [x] Create isolated discussion worktree: `D:/Repos/agent-skills-attendant-native`, branch `discuss/attendant-native`.
