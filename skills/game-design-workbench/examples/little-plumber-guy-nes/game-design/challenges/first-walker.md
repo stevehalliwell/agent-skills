@@ -12,6 +12,7 @@ introduces:
   - skill-atoms/jump
   - skill-atoms/stomp-walker
   - skill-atoms/land-on-target
+  - skill-atoms/jump-stomp
 requires:
   - skill-atoms/move-right
 mechanics:
@@ -26,7 +27,7 @@ A lone walker approaches across flat floor. Get past it by jumping over or attem
 
 ## Assistance and prior knowledge
 
-Space behind hero allows retreat. Jumping, landing and stomp are introduced together; whether that first threat teaches them legibly is untested.
+Space behind hero allows retreat. Jumping, target landing, above-impact understanding and the proposed jump-stomp combination are introduced together; whether that first threat teaches them legibly is untested. This does not claim an opportunity to practise the fall-stomp method.
 
 ## Route
 

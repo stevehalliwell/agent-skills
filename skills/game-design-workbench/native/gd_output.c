@@ -1,4 +1,5 @@
 #include "gd.h"
+#include "gd_skill_unlocks.h"
 #include <string.h>
 
 void gd_json_string_n(FILE *output, const char *value, size_t size) {
@@ -242,10 +243,20 @@ int gd_write_routes_result(FILE *output, const GD_Model *model, const GD_Routes 
     fprintf(output,"],\"errors_omitted\":%d,\"breadcrumbs\":[\"Inspect witness paths and original role/next declarations; no automatic teaching or route repairs\"]}\n",model->errors_omitted);
     return !ferror(output);
 }
-int gd_write_result(FILE *output, const GD_Model *model, int operation, int json, const char *fields) {
+static int write_result(FILE *output, const GD_Model *model, int operation, int json, const char *fields, const GD_SkillUnlocks *query) {
     int i, comma = 0, connectivity = operation == 1, skills = operation == 2;
     if (!json) {
         if (skills) {
+            if (query) {
+                fputs("Hypothetical knowledge only; no automatic learning.\n",output);
+                for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL)
+                    fprintf(output,"%s: %s%s; %d supplied; %d missing%s%s\n",model->records[i].reference,gd_skill_eligibility_name(query->eligibility[i]),query->known[i] ? "; KNOWN ASSUMPTION":"",query->supplied[i],query->missing[i],query->ancestors[i] ? "; prerequisite of root":"",query->descendants[i] ? "; structural unlock from root":"");
+                for (i=0;i<query->comparison_count;++i) {
+                    const GD_SkillComparison *candidate=&query->comparisons[i]; const GD_Edge *edge=&model->edges[candidate->root_edge];
+                    fprintf(output,"Compare %s: shared %s %s (lines %d, %d)\n",model->records[candidate->candidate].reference,gd_field_name(edge->field),edge->reference,edge->line,model->edges[candidate->candidate_edge].line);
+                }
+                fprintf(output,"Comparison evidence omitted: %d; work limited: %s\n",query->comparisons_omitted,query->limited ? "yes":"no");
+            }
             for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_SKILL) {
                 const GD_Record *record = &model->records[i]; const GD_SkillState *state = &model->skills[i];
                 fprintf(output, "%s: authored rank=", record->reference); rank_value(output, record->has_rank, record->rank);
@@ -277,7 +288,8 @@ int gd_write_result(FILE *output, const GD_Model *model, int operation, int json
     }
     fprintf(output, "{\"schema_version\":1,\"ok\":%s,\"data\":{", model->error_count || model->errors_omitted ? "false" : "true");
     if (skills) {
-        if (selected(fields, "skills")) { fputs("\"skills\":", output); skill_records(output, model); comma = 1; }
+        if (query && selected(fields,"exploration")) { fputs("\"exploration\":",output); gd_write_skill_unlocks(output,model,query); comma=1; }
+        if (selected(fields, "skills")) { if (comma++) fputc(',',output); fputs("\"skills\":", output); skill_records(output, model); }
         if (selected(fields, "links")) { if (comma++) fputc(',', output); fputs("\"links\":", output); skill_links(output, model); }
         if (selected(fields, "components")) { if (comma++) fputc(',', output); fputs("\"components\":", output); components(output, model); }
         if (selected(fields, "findings")) { if (comma++) fputc(',', output); fputs("\"findings\":", output); findings(output, model); fprintf(output, ",\"findings_omitted\":%d", model->findings_omitted); }
@@ -309,6 +321,12 @@ int gd_write_result(FILE *output, const GD_Model *model, int operation, int json
     return !ferror(output);
 }
 
+int gd_write_result(FILE *output, const GD_Model *model, int operation, int json, const char *fields) {
+    return write_result(output,model,operation,json,fields,NULL);
+}
+int gd_write_skill_result(FILE *output, const GD_Model *model, const GD_SkillUnlocks *query, int json, const char *fields) {
+    return write_result(output,model,2,json,fields,query);
+}
 int gd_write_mda_result(FILE *output, const GD_Model *model, const GD_Mda *mda, int json, const char *fields) {
     int i, j, comma = 0, complete = mda && mda->query_complete && !model->error_count && !model->errors_omitted;
     int query_references_complete = complete, scoped_links = 0;

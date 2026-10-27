@@ -1,5 +1,6 @@
 #include "gd.h"
 #include "gd_layout.h"
+#include "gd_skill_unlocks.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 #include "rlImGui.h"
@@ -435,13 +436,61 @@ static int focus_find(const GD_Model *model, const char *reference) {
     }
     return found;
 }
-int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_ViewLayout initial_layout, int other_pairs, int horizontal, const char *output_path, GD_ExplorerMode explorer_mode, const char *focus_from) {
+static void unlock_panel(const GD_Model *model, GD_SkillUnlocks *query, unsigned char *known, int selected, int *dirty, int *navigate) {
+    int i;
+    if (!query) return;
+    if (selected<0 || model->records[selected].role!=GD_SKILL) selected=-1;
+    if (selected!=query->root || *dirty) { gd_skill_unlocks(model,known,selected,query); *dirty=0; }
+    if (!igCollapsingHeader_TreeNodeFlags("Skill understanding, combinations and unlocks",ImGuiTreeNodeFlags_DefaultOpen)) return;
+    igTextWrapped("Hypothetical knowledge only. Unlocks are not learned automatically. All statuses retained. Teal: supplied; gold outline: chains from selection.");
+    if (igButton("Clear known assumptions",(ImVec2_c){0,0})) { memset(known,0,GD_MAX_RECORDS); *dirty=1; }
+    igBeginChild_Str("Known assumptions",(ImVec2_c){0,110},0,0);
+    for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL) {
+        bool checked=known[i]!=0;
+        igPushID_Int(i);
+        if (igCheckbox(model->records[i].name,&checked)) { known[i]=(unsigned char)checked; *dirty=1; }
+        igPopID();
+    }
+    igEndChild();
+    if (*dirty) { gd_skill_unlocks(model,known,selected,query); *dirty=0; }
+    if (selected>=0) {
+        igTextWrapped("Selected: %s | %s",model->records[selected].reference,gd_skill_eligibility_name(query->eligibility[selected]));
+        if (known[selected] && query->missing[selected]) igTextWrapped("Known assumption does not imply its prerequisites: %d still not supplied.",query->missing[selected]);
+        for (i=0;i<model->skill_link_count;++i) if (model->skill_links[i].dependent==selected && !known[model->skill_links[i].prerequisite])
+            igTextWrapped("Still needs: %s",model->records[model->skill_links[i].prerequisite].reference);
+        if (query->eligibility[selected]==GD_SKILL_UNRESOLVED) igTextWrapped("Unresolved ancestry/cycle: inspect source prerequisites and diagnostics; supplied counts do not prove eligibility.");
+    }
+    if (query->limited || query->comparisons_omitted) igTextWrapped("Partial exploration: work limit %s; %d comparison evidence rows omitted.",query->limited ? "reached":"not reached",query->comparisons_omitted);
+    if (igTreeNodeEx_Str("Combinations and prerequisite chains",ImGuiTreeNodeFlags_DefaultOpen)) {
+        for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL &&
+            (selected<0 || query->ancestors[i] || query->descendants[i] || i==selected)) {
+            igPushID_Int(i);
+            if (igSmallButton(model->records[i].reference)) *navigate=i;
+            igTextWrapped("%s | %d supplied / %d missing%s",gd_skill_eligibility_name(query->eligibility[i]),query->supplied[i],query->missing[i],query->known[i] ? " | known assumption":"");
+            igPopID();
+        }
+        igTreePop();
+    }
+    if (selected>=0 && igTreeNode_Str("Compare shared-link candidates")) {
+        for (i=0;i<query->comparison_count;++i) {
+            const GD_SkillComparison *item=&query->comparisons[i]; const GD_Edge *edge=&model->edges[item->root_edge];
+            igPushID_Int(i);
+            if (igSmallButton(model->records[item->candidate].reference)) *navigate=item->candidate;
+            igTextWrapped("Shared %s: %s | lines %d, %d",gd_field_name(edge->field),edge->reference,edge->line,model->edges[item->candidate_edge].line);
+            igPopID();
+        }
+        igTextWrapped("Comparison candidates only; not proof of contrast, transfer or mastery."); igTreePop();
+    }
+}
+int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_ViewLayout initial_layout, int other_pairs, int horizontal, const char *output_path, GD_ExplorerMode explorer_mode, const char *focus_from, const GD_SkillUnlocks *initial_query) {
     GD_Model *baseline = initial;
     GD_Draft *draft = initial->skill_mode ? gd_draft_create(initial) : NULL;
     GD_Model *model = draft ? draft->model : initial;
     GD_Routes *routes = draft && model->route_mode ? gd_analyze_routes(model) : NULL;
     int challenges = explorer_mode == GD_EXPLORE_CHALLENGES, focused = explorer_mode == GD_EXPLORE_RELATIONSHIPS;
-    int witness = -1, remembered[3]={-1,-1,-1};
+    int witness = -1, remembered[3]={-1,-1,-1}, query_dirty=1;
+    unsigned char known[GD_MAX_RECORDS]={0};
+    GD_SkillUnlocks *query=NULL;
     GD_Focus focus;
     GD_DiagnosticBrowser diagnostics={0};
     int root=focus_from ? focus_find(model,focus_from):-1;
@@ -478,9 +527,16 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (selection.cell < 0 && layout->node_count) selection.node = 0;
     }
     if (focused) select_record(layout,&selection,focus.root);
+    else if (root>=0 && model->records[root].role==GD_SKILL) select_record(layout,&selection,root);
+    if (model->skill_mode) {
+        query=initial->allocator.allocate(initial->allocator.context,sizeof(*query));
+        if (!query) { gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate skill exploration",NULL,0); return 2; }
+        if (initial_query) memcpy(known,initial_query->known,sizeof(known));
+        gd_skill_unlocks(model,known,-1,query);
+    }
     SetTraceLogCallback(graph_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(1440, 900, model->skill_mode ? "Game Design Workbench - skill and progression explorer" : "Game Design Workbench - matrix graph");
-    if (!IsWindowReady()) { gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context, layout); gd_error(initial, "view.window", "Cannot initialize graph window", NULL, 0); return 2; }
+    if (!IsWindowReady()) { if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context, layout); gd_error(initial, "view.window", "Cannot initialize graph window", NULL, 0); return 2; }
     if (draft) SetExitKey(KEY_NULL);
     SetWindowMinSize(1000, 650); SetTargetFPS(60); rlImGuiSetup(true);
     igGetIO_Nil()->IniFilename = NULL; igGetIO_Nil()->LogFilename = NULL;
@@ -571,6 +627,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             igTextWrapped("Route opportunity analysis uses current skill draft; not evidence of learning. Challenges remain read-only.");
             if (routes) igText("%d checks | Route references %s | Requirements %s",routes->check_count,routes->routes_complete ? "complete":"incomplete",routes->requirements_complete ? "complete":"incomplete");
         }
+        if (model->skill_mode && !focused && !challenges) unlock_panel(model,query,known,selected_before,&query_dirty,&navigate);
         igSeparator();
         {
             int target=gd_diagnostics_panel(&diagnostics,model,model->findings,model->finding_count,model->findings_omitted,selected_before);
@@ -589,6 +646,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             else if (applied>0) draft_changed=1;
             if (requested_mode!=GD_EXPLORE_RELATIONSHIPS && navigate>=0 && model->route_mode && (model->records[navigate].role==GD_SKILL || model->records[navigate].role==GD_CHALLENGE)) requested_mode=model->records[navigate].role==GD_CHALLENGE;
         }
+        if (draft_changed) query_dirty=1;
         if (draft_changed || requested_mode!=current_mode || navigate>=0 || focus_expand>=0) {
             /* Prerequisite edits can remove/reorder selected edge. Recover via
                editor/node identity, never dereference the old edge index. */
@@ -618,6 +676,15 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
         } else accumulator = 0;
         draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness);
+        if (query && !focused && !challenges) {
+            int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
+            for (i=0;i<layout->node_count;++i) {
+                int record=layout->nodes[i].key; Vector2 point=node_point(&layout->nodes[i]);
+                if (query->known[record]) DrawCircleV(point,7,(Color){65,200,175,255});
+                if (query->ancestors[record] || query->descendants[record]) DrawCircleLines((int)point.x,(int)point.y,24,graph_selected);
+            }
+            EndMode2D(); EndScissorMode();
+        }
         DrawText(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);
         rlImGuiEnd(); EndDrawing(); ++frame;
         if (screenshot && frame == frames && !gd_save_screenshot(screenshot)) { fputs("gd: graph screenshot export failed\n", stderr); result = 2; }
@@ -650,6 +717,14 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             if (ready) {
                 GD_Model *old = baseline;
                 int i;
+                if (query) {
+                    unsigned char remapped[GD_MAX_RECORDS]={0};
+                    for (i=0;i<model->record_count;++i) if (known[i]) {
+                        int target=focus_find(fresh,model->records[i].reference);
+                        if (target>=0 && fresh->records[target].role==GD_SKILL) remapped[target]=1;
+                    }
+                    memcpy(known,remapped,sizeof(known)); query_dirty=1;
+                }
                 gd_routes_destroy(routes); routes=replacement_routes;
                 gd_draft_destroy(draft); draft = replacement;
                 baseline = fresh; model = draft ? draft->model : baseline;
@@ -678,6 +753,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     gd_diagnostics_clear(&diagnostics);
     gd_routes_destroy(routes); gd_draft_destroy(draft);
     if (baseline != initial) gd_destroy(baseline);
+    if (query) initial->allocator.release(initial->allocator.context,query);
     initial->allocator.release(initial->allocator.context, layout);
     return result;
 }

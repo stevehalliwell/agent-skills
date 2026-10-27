@@ -27,7 +27,7 @@ One Markdown game-design model, selected framework reviews, and agent workflows 
 - [Reference index](references/README.md): supporting source captures, readable Markdown, and provenance separate from application guidance. Includes 13 source-backed framework folders and supplied Schell deck data. Follow per-source rights limits; local retention/checkpoint does not authorize publication.
 - `native/`: C99 domain computation, CLI, optional raylib table/cimgui graph views, shared graphics-free graph layout, build/check entry points, and pinned dependency notices.
 - `templates/`: authoritative starting collection files.
-- `examples/`: small crate-puzzle tutorial, larger 222-record Little plumber guy NES design, and historical evidence. Plumber example is an authored fictional course, not reverse-engineered game data.
+- `examples/`: small crate-puzzle tutorial, larger 225-record Little plumber guy NES design, and historical evidence. Plumber example is an authored fictional course, not reverse-engineered game data.
 
 Each framework guide ends with References. Add local source Markdown only after checking source adequacy and reuse terms; public access is not redistribution permission. Otherwise use an original summary with citation rather than full transcription. Book-based material remains bibliographic unless suitable reuse permission exists.
 

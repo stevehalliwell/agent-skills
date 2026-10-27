@@ -2,6 +2,7 @@
 #include "gd.h"
 #include "gd_rule_analysis.h"
 #include "gd_resource_graph.h"
+#include "gd_skill_unlocks.h"
 #include "gd_layout.h"
 #include "gd_diagnostics.h"
 #include <limits.h>
@@ -892,6 +893,57 @@ static int has_finding(const GD_Model *model, const char *code) {
     for (i = 0; i < model->finding_count; ++i) if (!strcmp(model->findings[i].code, code)) return 1;
     return 0;
 }
+TEST(skill_unlocks,
+    GD_Model *model=model_create(); GD_SkillUnlocks *query; unsigned char known[GD_MAX_RECORDS]={0};
+    int understanding,jump,fall,method,other,broken,cycle;
+    TEST_ASSERT(model && setup_skills("skill-unlocks"));
+    TEST_ASSERT(write_record(0,"understanding","---\nprerequisites: []\nmechanics: [rules/contact]\n---\nUnderstanding."));
+    TEST_ASSERT(write_record(0,"jump","---\nprerequisites: []\n---\nAim a jump."));
+    TEST_ASSERT(write_record(0,"fall","---\nprerequisites: []\n---\nControl a fall."));
+    TEST_ASSERT(write_record(0,"method","---\nstatus: proposed\nprerequisites: [atoms/understanding, atoms/jump, atoms/jump]\nmechanics: [rules/contact]\n---\nJump method."));
+    TEST_ASSERT(write_record(0,"other","---\nprerequisites: [atoms/understanding, atoms/fall]\nmechanics: [rules/contact]\n---\nFall method."));
+    TEST_ASSERT(write_record(0,"broken","---\nprerequisites: [atoms/absent]\n---\nUnknown ancestry."));
+    TEST_ASSERT(write_record(0,"cycle","---\nprerequisites: [atoms/cycle]\n---\nCycle."));
+    TEST_ASSERT(gd_load(model,collections,1));
+    understanding=find_record(model,"atoms/understanding"); jump=find_record(model,"atoms/jump"); fall=find_record(model,"atoms/fall");
+    method=find_record(model,"atoms/method"); other=find_record(model,"atoms/other"); broken=find_record(model,"atoms/broken"); cycle=find_record(model,"atoms/cycle");
+    query=allocate(storage,sizeof(*query)); TEST_ASSERT(query);
+    known[understanding]=known[jump]=1;
+    TEST_ASSERT(gd_skill_unlocks(model,known,understanding,query));
+    TEST_ASSERT(query->eligibility[method]==GD_SKILL_PREREQUISITES_SUPPLIED && !query->known[method] && query->supplied[method]==2);
+    TEST_ASSERT(query->eligibility[other]==GD_SKILL_NEEDS_MORE && query->missing[other]==1);
+    TEST_ASSERT(query->eligibility[broken]==GD_SKILL_UNRESOLVED && query->eligibility[cycle]==GD_SKILL_UNRESOLVED);
+    TEST_ASSERT(query->eligibility[fall]==GD_SKILL_NO_PREREQUISITES && !query->known[fall]);
+    TEST_ASSERT(query->descendants[method] && query->descendants[other] && query->comparison_count==2);
+    memset(known,0,sizeof(known)); known[method]=1;
+    TEST_ASSERT(gd_skill_unlocks(model,known,method,query) && query->missing[method]==2 && !query->known[jump]);
+    TEST_ASSERT(query->ancestors[understanding] && query->ancestors[jump] && !query->limited);
+    TEST_ASSERT(!gd_skill_unlocks(model,known,model->record_count,query));
+    TEST_ASSERT(gd_skill_unlocks(model,NULL,-1,query) && query->eligibility[method]==GD_SKILL_NEEDS_MORE);
+    { GD_Draft *draft=gd_draft_create(model); TEST_ASSERT(draft);
+      memset(known,0,sizeof(known)); known[understanding]=known[jump]=1;
+      TEST_ASSERT(gd_draft_prerequisite(draft,method,"atoms/fall",1)==1);
+      TEST_ASSERT(gd_skill_unlocks(draft->model,known,method,query) && query->eligibility[method]==GD_SKILL_NEEDS_MORE);
+      TEST_ASSERT(gd_draft_undo(draft)==1);
+      TEST_ASSERT(gd_skill_unlocks(draft->model,known,method,query) && query->eligibility[method]==GD_SKILL_PREREQUISITES_SUPPLIED);
+      TEST_ASSERT(gd_skill_unlocks(draft->model,query->known,method,query) && query->known[understanding]);
+      gd_draft_destroy(draft);
+    }
+    TEST_ASSERT(!gd_sources_changed(model)); release(storage,query); gd_destroy(model);
+)
+TEST(skill_unlock_limits,
+    GD_Model *model=model_create(); GD_SkillUnlocks *query;
+    int i; static char shared[129];
+    TEST_ASSERT(model); memset(shared,'x',128); shared[128]=0;
+    model->skill_mode=1; model->record_count=2; model->edge_count=1000;
+    model->records[0].role=model->records[1].role=GD_SKILL;
+    model->records[0].reference="atoms/first"; model->records[1].reference="atoms/second";
+    for(i=0;i<1000;++i) { model->edges[i].source=i<500 ? 0:1; model->edges[i].field=GD_MECHANICS; model->edges[i].reference=shared; }
+    query=allocate(storage,sizeof(*query)); TEST_ASSERT(query);
+    TEST_ASSERT(gd_skill_unlocks(model,NULL,0,query) && query->limited && query->work<=GD_SKILL_QUERY_WORK);
+    TEST_ASSERT(query->comparison_count==GD_SKILL_COMPARISONS && query->comparisons_omitted>0);
+    release(storage,query); gd_destroy(model);
+)
 TEST(skill_chain,
     GD_Model *model = model_create();
     GD_Layout *layout = &test_layout;
@@ -1923,7 +1975,7 @@ int main(int argc, char **argv) {
     failed += test_text_types(); failed += test_missing_endpoint();
     failed += test_input_limits();
     failed += test_component_chain(); failed += test_layout_modes(); failed += test_layout_capacity();
-    failed += test_skill_chain(); failed += test_skill_incomplete(); failed += test_skill_rank_types(); failed += test_skill_capacity();
+    failed += test_skill_unlock_limits(); failed += test_skill_unlocks(); failed += test_skill_chain(); failed += test_skill_incomplete(); failed += test_skill_rank_types(); failed += test_skill_capacity();
     failed += test_draft_ranks(); failed += test_draft_connections(); failed += test_draft_limits(); failed += test_draft_report();
     failed += test_routes_semantics(); failed += test_routes_types_unknown(); failed += test_routes_walk_oracle(); failed += test_routes_limits();
     failed += test_mda_traces(); failed += test_mda_resolution(); failed += test_mda_types(); failed += test_mda_oracle(); failed += test_mda_limits();
@@ -1933,6 +1985,6 @@ int main(int argc, char **argv) {
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/64 passed\n", 64-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/66 passed\n", 66-failed);
     return failed ? 1 : 0;
 }

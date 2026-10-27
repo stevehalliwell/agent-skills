@@ -25,7 +25,7 @@ CJIT application code is unoptimized. Windows Zig 0.17.0 `zig cc -std=c99` headl
 ```sh
 zig cc -std=c99 -DHAVE_CONFIG_H=1 -DYAML_DECLARE_STATIC=1 \
   -I vendor/libyaml/include -I vendor/libyaml/src \
-  gd_core.c gd_output.c gd_layout.c gd_focus.c gd_diagnostics.c gd_skills.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_cli.c vendor/libyaml/src/api.c \
+  gd_core.c gd_output.c gd_layout.c gd_focus.c gd_diagnostics.c gd_skills.c gd_skill_unlocks.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_cli.c vendor/libyaml/src/api.c \
   vendor/libyaml/src/parser.c vendor/libyaml/src/reader.c \
   vendor/libyaml/src/scanner.c -lshell32 -o build/gd-zig.exe
 ```
@@ -194,6 +194,35 @@ $skillAtoms = 'skill-atoms=skills/game-design-workbench/examples/crate-puzzle/ga
 - `data.findings` exposes deterministic rank conflicts, cycles, unresolved targets, and unknown downstream placement with record/path/field. `coverage.complete` concerns successful source loading; separate `coverage.placement_complete` reports whether all supplied prerequisite ancestry can be placed. Both remain scope-limited, not proof of learning or schema validity. Findings are capped at 128 with explicit `findings_omitted`; all per-node flags remain available.
 
 Example: six skills, five distinct prerequisite links, one group. `coordinate` retains authored rank 2, prerequisite depth 3, minimum/display rank 3, and `skill.rank_conflict`. `plan-push` retains null authored rank with display rank 1. Late root `read-switch` keeps rank 3 and depth 0. CLI source analysis and viewer draft analysis consume the same computation. Declared challenge/route opportunities use the headless command below; observed learning judgments remain outside native computation.
+
+### Skill understanding, combinations and unlocks
+
+```powershell
+$game = 'skills/game-design-workbench/examples/little-plumber-guy-nes/game-design'
+./skills/game-design-workbench/native/build/gd.exe skill-atoms `
+  --skill-atoms "skill-atoms=$game/skill-atoms" --from skill-atoms/stomp-walker `
+  --known skill-atoms/stomp-walker --known skill-atoms/land-on-target --json --fields exploration
+./skills/game-design-workbench/native/build/gd-view.exe view skill-atoms `
+  --skill-atoms "skill-atoms=$game/skill-atoms" --from skill-atoms/stomp-walker `
+  --known skill-atoms/stomp-walker --known skill-atoms/land-on-target
+```
+
+`exploration` is additive to skill CLI data and supports existing `--fields` selection. Repeated `--known` takes at most 64 qualified references. `--from` selects one loaded skill; missing, wrong-role or ambiguous selectors fail with exit 2. With no root, report all eligibility rows but do not compute comparison candidates or rooted chains. Text and JSON describe the same assumptions. Empty input returns an empty exploration.
+
+- `no_declared_prerequisites`: no prerequisite links, not already learned.
+- `needs_more`: some direct prerequisites are not explicitly supplied.
+- `all_declared_prerequisites_supplied`: every declared AND prerequisite is supplied, not observed mastery or automatic learning.
+- `unresolved`: prerequisite ancestry is incomplete or cyclic. Supplied counts cannot establish eligibility.
+
+Selecting an atom as known does **not** add its prerequisites. Newly unlocked atoms do not become known. `known_assumption`, direct `missing` references and counts stay separate from eligibility. Status is preserved in ordinary skill records; this query includes all statuses and does not adopt proposed/rejected content. Rooted ancestor/descendant flags describe structural chains, not an executable acquisition plan.
+
+Comparison candidates share exact prerequisite or mechanic references with the selected root. Each evidence row retains shared reference, field and both source lines. Unloaded shared mechanic references are authored comparison evidence, not proof that definitions exist. Repeated authored links may produce repeated evidence. No similarity score, inferred contrast, learning transfer, new taxonomy or OR prerequisite groups.
+
+Shared caller-owned `gd_skill_unlocks.h/.c` computes CLI/viewer results without source/rank mutation. Limits: 16,777,216 charged query work units; 128 comparison evidence rows. Exploration `complete:false` reports exhausted work or omitted evidence independently of source-loading coverage. Existing 4,096-record / 32,768-link bounds apply. No all-pairs query or recursion.
+
+Existing Skills explorer adds hypothetical-known checkboxes, eligibility/missing counts, navigable comparison candidates and chain markers. Teal dot marks supplied assumptions; gold ring marks selected skill's ancestor/descendant chains. Draft edits/undo recompute results; mode switches retain assumptions. Successful reload remaps assumptions by canonical reference and drops removed skills; unsafe reload retains last-good state. Closing emits only existing draft-change report, not learning state. Font, density and presentation usefulness need human review.
+
+Example: existing `stomp-walker` now describes shared above-impact understanding. Proposed `jump-stomp` combines it with `land-on-target`; proposed `fall-stomp` combines it with `control-fall`. Both reference the same walker-stomp rule. First-walker offers the jump combination; no challenge is claimed to teach controlled falling. New falling atoms retain null rank. Game rules remain unchanged.
 
 ### Switch Skills / Challenges in one explorer
 

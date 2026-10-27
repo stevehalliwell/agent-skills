@@ -205,8 +205,8 @@ $headlessExplorer = (& $executable view skill-atoms @explorerInputs --mode chall
 if ($LASTEXITCODE -ne 2 -or @($headlessExplorer.errors | Where-Object code -eq 'view.unavailable').Count -ne 1) { throw 'Combined explorer inputs rejected before view dispatch' }
 $headlessFocus = (& $executable view skill-atoms @explorerInputs --mode relationships --from skill-atoms/coordinate --json 2>$log | ConvertFrom-Json)
 if ($LASTEXITCODE -ne 2 -or @($headlessFocus.errors | Where-Object code -eq 'view.unavailable').Count -ne 1) { throw 'Focused explorer arguments rejected before display dispatch' }
-$badFocus = (& $executable view skill-atoms @explorerInputs --from skill-atoms/coordinate --json 2>$log | ConvertFrom-Json)
-if ($LASTEXITCODE -ne 2 -or @($badFocus.errors | Where-Object code -eq 'cli.arguments').Count -ne 1) { throw 'Focused root must require Relationships mode' }
+$skillRoot = (& $executable view skill-atoms @explorerInputs --from skill-atoms/coordinate --known skill-atoms/push --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or @($skillRoot.errors | Where-Object code -eq 'view.unavailable').Count -ne 1) { throw 'Skill root/known assumptions rejected before display dispatch' }
 $missingChallenges = (& $executable view skill-atoms --skill-atoms "skill-atoms=$example/skill-atoms" --mode challenges --json 2>$log | ConvertFrom-Json)
 if ($LASTEXITCODE -ne 2 -or @($missingChallenges.errors | Where-Object code -eq 'cli.arguments').Count -ne 1) { throw 'Challenges mode must require explicit challenge mapping' }
 $controlText = (& $executable controls @controlInputs --format text | Out-String)

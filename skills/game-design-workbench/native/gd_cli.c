@@ -4,6 +4,7 @@
 #include "gd.h"
 #include "gd_rule_analysis.h"
 #include "gd_resource_graph.h"
+#include "gd_skill_unlocks.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
@@ -27,6 +28,8 @@ static void help(void) {
          "Matrix/connectivity collections (exactly one of each):\n"
          "  --nouns ALIAS=FOLDER\n  --verbs ALIAS=FOLDER\n  --interactions ALIAS=FOLDER\n"
          "Skill operations require: --skill-atoms ALIAS=FOLDER\n"
+         "  --known ALIAS/NAME     Hypothetically known skill; repeatable, max 64\n"
+         "  --from ALIAS/NAME      Skill root for prerequisite/unlock chains and comparison evidence\n"
          "  view skill-atoms also accepts --challenges ALIAS=FOLDER for switchable exploration\n"
          "  --mode skills|challenges|relationships  Initial explorer mode; default skills\n"
          "Scaffolding also requires: --challenges ALIAS=FOLDER\n"
@@ -62,7 +65,7 @@ static void help(void) {
          "  --fields KEY,...       Top-level data selection; JSON only\n"
          "                         matrix: nouns,verbs,cases,cells,components\n"
          "                         connectivity: nouns,verbs\n"
-         "                         skill-atoms: skills,links,components,findings\n"
+         "                         skill-atoms: skills,links,components,findings,exploration\n"
          "                         scaffolding: challenges,skills,checks,witnesses,findings\n"
          "                         mda: nodes,links,paths,gaps,findings; controls: controls\n"
          "                         rules: records,cases,axes,actors,findings,analysis\n"
@@ -107,7 +110,7 @@ static int fields_valid(const char *fields, int operation) {
                   (n == 6 && !memcmp(p,"checks",n)) || (n == 9 && !memcmp(p,"witnesses",n)) || (n == 8 && !memcmp(p,"findings",n)))) return 0;
         } else if (operation == 2) {
             if (!((n == 6 && !memcmp(p, "skills", n)) || (n == 5 && !memcmp(p, "links", n)) ||
-                  (n == 10 && !memcmp(p, "components", n)) || (n == 8 && !memcmp(p, "findings", n)))) return 0;
+                  (n == 10 && !memcmp(p, "components", n)) || (n == 8 && !memcmp(p, "findings", n)) || (n == 11 && !memcmp(p,"exploration",n)))) return 0;
         } else if (!((n == 5 && !memcmp(p, "nouns", n)) || (n == 5 && !memcmp(p, "verbs", n)) ||
               (!connectivity && n == 5 && !memcmp(p, "cases", n)) || (!connectivity && n == 5 && !memcmp(p, "cells", n)) ||
               (!connectivity && n == 10 && !memcmp(p, "components", n)))) return 0;
@@ -155,6 +158,8 @@ static int application(int argc, char **argv) {
     GD_Rules *rules = NULL;
     GD_RuleAnalysis *rule_analysis=NULL;
     GD_ResourceGraph *resource_graph=NULL;
+    GD_SkillUnlocks *skill_query=NULL;
+    const char *known_names[64]; int known_count=0;
     GD_RuleScenario scenario={0};
     const char *case_name=NULL, *assumptions[64], *context_assumptions[64];
     GD_RuleTruth context_truths[64];
@@ -274,6 +279,9 @@ static int application(int argc, char **argv) {
             GD_RuleTruth truth=!strcmp(argv[i],"--context") ? GD_RULE_TRUTH_TRUE:GD_RULE_TRUTH_FALSE;
             if (++i==argc || !argv[i][0] || strlen(argv[i])>GD_MAX_RULE_LINE || context_assumption_count==64) { error="Context option needs one bounded ordered triple, at most 64 inputs"; break; }
             context_assumptions[context_assumption_count]=argv[i]; context_truths[context_assumption_count++]=truth;
+        } else if (!strcmp(argv[i],"--known")) {
+            if (++i==argc || !argv[i][0] || !strncmp(argv[i],"--",2) || known_count==64) { error="--known requires one qualified skill reference, at most 64 assumptions"; break; }
+            known_names[known_count++]=argv[i];
         } else if (!strcmp(argv[i], "--json")) {
             if (explicit_format == 0) error = "Conflicting output formats";
             explicit_format = 1; json = 1;
@@ -344,6 +352,7 @@ static int application(int argc, char **argv) {
     if (!error && (assumption_count || context_assumption_count) && !case_name) error="Rule assumptions require an explicit --case; no implicit scene or case selection";
     if (!error && rule_command && fields && strstr(fields,"analysis") && !analyze && !case_name) error="analysis field requires --analyze and/or --case";
     if (!error && control_command && roles != (1 << GD_CONTROL)) error = "Controls require --control-vars ALIAS=FOLDER, plus optional --related";
+    if (!error && known_count && command!=3 && command!=4) error="--known applies only to skill-atoms or view skill-atoms";
     if (!error && explorer_mode_supplied && command != 4) error = "--mode applies only to view skill-atoms";
     if (!error && command == 4 && explorer_mode == GD_EXPLORE_CHALLENGES && !(roles & (1 << GD_CHALLENGE))) error = "Challenges mode requires explicit --challenges ALIAS=FOLDER";
     if (!error && !rule_command && !control_command && !mda_command && !(command == 4 && roles == ((1 << GD_SKILL) | (1 << GD_CHALLENGE))) && roles != (route_command ? (1 << GD_SKILL) | (1 << GD_CHALLENGE) : skill_command ? 1 << GD_SKILL : 7))
@@ -363,7 +372,7 @@ static int application(int argc, char **argv) {
     if (!error && command == 2 && layout > GD_VIEW_COLUMNS) error = "Matrix view requires table, graph, or columns layout";
     if (!error && command == 4 && (layout < GD_VIEW_PREREQUISITES || other_pairs)) error = "Skill view requires prerequisites or rank layout; no matrix-pair overlay";
     if (!error && direction_supplied && command != 4 && !mda_command) error = "--direction applies only to MDA or view skill-atoms";
-    if (!error && from && !mda_command && !control_command && !(command == 4 && explorer_mode == GD_EXPLORE_RELATIONSHIPS)) error = "--from applies only to MDA, controls, or view skill-atoms --mode relationships";
+    if (!error && from && !mda_command && !control_command && command!=3 && command!=4) error = "--from applies only to MDA, controls, or skill exploration";
     if (!error && command == 7 && (layout != GD_VIEW_COLUMNS && layout != GD_VIEW_GRAPH)) error = "MDA view requires columns or graph layout";
     if (!error && mda_command && other_pairs) error = "--show-other-pairs applies only to matrix views";
     if (!error && other_pairs && layout == GD_VIEW_TABLE) error = "--show-other-pairs requires graph or columns layout";
@@ -401,6 +410,23 @@ static int application(int argc, char **argv) {
             if (resource_graph) gd_resource_graph_bind_calls(resource_graph,rule_analysis);
         }
     }
+    if ((command==3 || command==4) && !error && !model->error_count) {
+        unsigned char known[GD_MAX_RECORDS]={0}; int selected=-1;
+        for (i=0;i<known_count+(from ? 1:0);++i) {
+            const char *name=i<known_count ? known_names[i]:from;
+            int r,found=-1;
+            for (r=0;r<model->record_count;++r) if (!strcmp(model->records[r].reference,name)) { if (found!=-1) { found=-2; break; } found=r; }
+            if (found<0 || (model->records[found].role!=GD_SKILL && !(i==known_count && command==4 && explorer_mode==GD_EXPLORE_RELATIONSHIPS))) {
+                gd_error(model,"skills.selector","Known skill/root must identify one unique loaded skill (Relationships roots may be other records)",name,0); continue;
+            }
+            if (i<known_count) known[found]=1; else selected=found;
+        }
+        if (!model->error_count) {
+            skill_query=allocator.allocate(allocator.context,sizeof(*skill_query));
+            if (!skill_query) gd_error(model,"skills.memory","Cannot allocate skill exploration",NULL,0);
+            else gd_skill_unlocks(model,known,selected>=0 && model->records[selected].role==GD_SKILL ? selected:-1,skill_query);
+        }
+    }
     if (route_command && !error) routes = gd_analyze_routes(model);
     if (mda_command && !error) {
         mda = gd_analyze_mda(model);
@@ -429,7 +455,7 @@ static int application(int argc, char **argv) {
         else {
 #ifdef GD_WITH_GRAPH
             if (command == 7) status = gd_mda_view(model,mda,frames,screenshot,layout == GD_VIEW_COLUMNS);
-            else status = gd_graph_view(model, frames, screenshot, layout, other_pairs, horizontal, output_path, explorer_mode, from);
+            else status = gd_graph_view(model, frames, screenshot, layout, other_pairs, horizontal, output_path, explorer_mode, from, skill_query);
 #else
             gd_error(model, "view.graph_unavailable", "Graph view needs a view build with prepared cimgui/rlImGui DLL", NULL, 0);
 #endif
@@ -440,7 +466,7 @@ static int application(int argc, char **argv) {
     }
     if (!view_command || model->error_count) {
         int written = rule_command ? gd_write_rule_report(stdout,model,rules,rule_analysis,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
-            gd_write_result(stdout, model, skill_command ? 2 : command == 1, json, error ? NULL : fields);
+            command==3 ? gd_write_skill_result(stdout,model,skill_query,json,error ? NULL:fields) : gd_write_result(stdout, model, skill_command ? 2 : command == 1, json, error ? NULL : fields);
         if (!written || fflush(stdout)) {
             fputs("gd: cannot write result\n", stderr); status = 2;
         }
@@ -450,17 +476,18 @@ static int application(int argc, char **argv) {
         fprintf(stderr, "gd: %s: %s%s%s\n", e->code, e->message, e->path ? " — " : "", e->path ? e->path : "");
     }
     if (model->error_count || model->errors_omitted) status = 2;
+    if (skill_query) allocator.release(allocator.context,skill_query);
     gd_resource_graph_destroy(resource_graph); gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
 }
 int main(int argc, char **argv) {
 #ifdef _WIN32
     wchar_t **wide;
-    char arguments[131072], *utf8[128];
+    char arguments[131072], *utf8[256];
     int count, i, used = 0, result;
     (void)argc; (void)argv;
     /* The Windows CRT's narrow argv can lose Unicode before paths reach us. */
     wide = CommandLineToArgvW(GetCommandLineW(), &count);
-    if (!wide || count > 128) { if (wide) LocalFree(wide); fputs("gd: unsupported argument count\n", stderr); return 2; }
+    if (!wide || count > 256) { if (wide) LocalFree(wide); fputs("gd: unsupported argument count\n", stderr); return 2; }
     for (i = 0; i < count; ++i) {
         int bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide[i], -1, arguments + used, (int)sizeof(arguments) - used, NULL, NULL);
         if (!bytes) { LocalFree(wide); fputs("gd: invalid or oversized Unicode arguments\n", stderr); return 2; }

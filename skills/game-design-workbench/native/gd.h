@@ -454,7 +454,8 @@ int gd_write_result(FILE *output, const GD_Model *model, int operation,
 int gd_view(GD_Model *model, int frames, const char *screenshot);
 #ifdef GD_WITH_GRAPH
 int gd_mda_view(GD_Model *model, GD_Mda *mda, int frames, const char *screenshot, int bands);
-int gd_graph_view(GD_Model *model, int frames, const char *screenshot, GD_ViewLayout layout, int other_pairs, int horizontal, const char *output_path, GD_ExplorerMode explorer_mode, const char *focus_from);
+struct GD_SkillUnlocks;
+int gd_graph_view(GD_Model *model, int frames, const char *screenshot, GD_ViewLayout layout, int other_pairs, int horizontal, const char *output_path, GD_ExplorerMode explorer_mode, const char *focus_from, const struct GD_SkillUnlocks *initial_query);
 #endif
 int gd_save_screenshot(const char *path);
 #endif

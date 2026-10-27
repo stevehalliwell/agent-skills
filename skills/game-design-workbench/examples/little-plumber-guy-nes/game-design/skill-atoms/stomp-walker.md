@@ -2,25 +2,23 @@
 id: 01a16f86-6e2b-7636-a785-386775f3fce7
 name: stomp-walker
 created_at: 2026-10-24T20:07:23.435Z
-desc: Prefer descending top contact over harmful side contact.
+desc: Understand that descending impact from above defeats a walker, unlike harmful side contact.
 tags: []
 status: accepted
 rank: 3
-prerequisites:
-  - skill-atoms/jump
-  - skill-atoms/land-on-target
+prerequisites: []
 mechanics:
   - mechanics/walker-stomp
   - mechanics/enemy-contact
 ---
 ## Learning loop
 
-Compare safe top contact with harmful side contact, then aim descent onto walker.
+Compare descending top impact with harmful side contact; predict which contact defeats the walker.
 
 ## Understanding and expression
 
-Contact direction and vertical phase matter. Prerequisites require jumping and target landing, not only seeing an enemy.
+Contact direction and vertical phase matter. The game rule does not distinguish a jump from a fall. This atom captures shared understanding; `jump-stomp` and `fall-stomp` combine it with different learned abilities. No declared prerequisite is not proof that this understanding is innate.
 
 ## Evidence sought
 
-Player can explain and repeat a stomp. First encounter supplies only an opportunity, not proven learning.
+Player explains the above-impact distinction across more than one approach. A successful accident or first encounter is not proof of understanding. Repeating a particular approach belongs to that method's evidence.

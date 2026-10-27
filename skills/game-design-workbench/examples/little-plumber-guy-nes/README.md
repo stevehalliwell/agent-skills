@@ -6,13 +6,13 @@ Not a reconstruction of a published game. No ROM, copied map, screenshots, sprit
 
 ## What is here
 
-222 records across 15 collections:
+225 records across 15 collections:
 
 - 26 nouns and 12 verbs establish vocabulary and actions. Noun inventories explicitly reference known axes or remain null when unmodeled.
 - 20 provisional axes cover explicit actor dimensions, pool quantities and ordered context vocabulary. All 73 interaction/mechanic records have readable `gd-rule` blocks with 164 named cases. Shell remains a state of the same shellback; spent block remains a state of supply-block. Original descriptor nouns, flat links and prose remain. No initial scene, physics, event timing or missing outcomes inferred.
 - 49 conditional interactions retain different outcomes within the same noun–verb cell.
 - 24 mechanics and 6 systems own reusable behavior and arrangements.
-- 16 skill atoms and 19 challenges describe intended opportunities, demands, alternatives and joins.
+- 19 skill atoms and 19 challenges describe intended opportunities, demands, alternatives and joins. Above-impact understanding combines with distinct jump-based and fall-based methods; hypothetical unlocks are not observed learning.
 - 2 level groups distinguish overworld and optional cellar; challenge links own routes.
 - 20 controls and 4 resource extensions separate configuration from runtime pools.
 - 8 proposed dynamics, 6 intended aesthetics and 3 proposed investigations distinguish explanations, experience goals and evidence still needed.
@@ -82,6 +82,6 @@ No reference lookup was needed to author this fictional design. No external refe
 
 ## Checks and remaining limits
 
-Current headless checks read 26 nouns / 12 verbs / 49 interaction cases in 26 occupied cells; 16 skills with 19 prerequisite links and no cycle findings; 19 challenges; 20 resolved controls; 44 MDA nodes and 74 core links. Counts describe authored data, not exhaustive gameplay coverage. Maintainer tests validate a temporary copy through public Attendant and the existing native consumers.
+Current headless checks read 26 nouns / 12 verbs / 49 interaction cases in 26 occupied cells; 19 skills with 22 prerequisite links and no cycle findings; 19 challenges; 20 resolved controls; 44 MDA nodes and 74 core links. Counts describe authored data, not exhaustive gameplay coverage. Maintainer tests validate a temporary copy through public Attendant and the existing native consumers.
 
 [Model limits](model-limits.md) records state predicates, conditional route support, reset behavior, physical geometry and cross-control constraints that are currently prose rather than executable contracts. No rendered-performance or manual-UX acceptance claim. Data is useful before it is a complete game implementation.

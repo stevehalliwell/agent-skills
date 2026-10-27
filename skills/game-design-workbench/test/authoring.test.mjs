@@ -53,7 +53,7 @@ test('axis records retain readable definitions and valid local rule sources', as
 
 test('large plumber example contains authored records rather than copied tutorial or empty bodies', async () => {
   const expected = { axes: 20, nouns: 26, verbs: 12, interactions: 49, mechanics: 24, systems: 6, dynamics: 8,
-    aesthetics: 6, 'skill-atoms': 16, challenges: 19, levels: 2, 'control-vars': 20, resources: 4,
+    aesthetics: 6, 'skill-atoms': 19, challenges: 19, levels: 2, 'control-vars': 20, resources: 4,
     experiments: 3, glossary: 7 };
   let count = 0;
   for (const role of roles) {
@@ -68,7 +68,7 @@ test('large plumber example contains authored records rather than copied tutoria
     }
     count += records.length;
   }
-  assert.equal(count, 222);
+  assert.equal(count, 225);
   assert.match(await text(join(plumber, 'game-design/concept.md')), /^Working mode: game-design$/m);
   assert.match(await text(join(plumber, 'README.md')), /Approximate instruction/);
 });
@@ -81,7 +81,7 @@ test('public Attendant and native consumers read the large plumber example', { s
   const result = spawnSync(process.execPath, [runner, 'validate', '--strict', '--project', root], { encoding: 'utf8', timeout: 30000, maxBuffer: 4*1024*1024, windowsHide: true });
   assert.equal(result.status, 0, result.stderr);
   const validation = JSON.parse(result.stdout);
-  assert.equal(validation.records, 222);
+  assert.equal(validation.records, 225);
   assert.deepEqual(validation.diagnostics, []);
   assert.deepEqual(validation.corrections, []);
   if (!process.env.GD_NATIVE_EXE) return;
@@ -102,7 +102,7 @@ test('public Attendant and native consumers read the large plumber example', { s
   assert.equal(matrix.cases.length, 49);
   assert.equal(matrix.cells.length, 26);
   const skills = native(['skill-atoms', '--skill-atoms', binding('skill-atoms'), '--related', binding('mechanics'), '--json']);
-  assert.equal(skills.skills.length, 16);
+  assert.equal(skills.skills.length, 19);
   assert.deepEqual(skills.findings, []);
   const routes = native(['scaffolding', '--skill-atoms', binding('skill-atoms'), '--challenges', binding('challenges'), '--related', binding('mechanics'), '--json']);
   assert.equal(routes.challenges.length, 19);

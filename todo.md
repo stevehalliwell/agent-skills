@@ -1,6 +1,6 @@
 # Game Design Workbench
 
-Status: Slice 1 delivered; framework guides remain provisional. Native matrix/connectivity, skill/progression drafts/views, focused relationship exploration, diagnostics browser, MDA CLI/explorer and typed control resolution/export/import planning implemented and checked. One historical crate timing baseline retains 1,000 trials and frozen evidence; no rerun during Review 01. Actor/state Review 01 is implemented and verified through full live-example migration, ready for review. Task 02 first-slice implementation is in progress; Tasks 03–12 still need refinement and delivery; final integrated/manual review remains. User accepts explorer as starting point; usability review deferred. Review 01 checkpoint commit authorized; branch/worktree remains local. No push authorized.
+Status: Slice 1 delivered; framework guides remain provisional. Native matrix/connectivity, skill/progression drafts/views, focused relationship exploration, diagnostics browser, MDA CLI/explorer and typed control resolution/export/import planning implemented and checked. One historical crate timing baseline retains 1,000 trials and frozen evidence; no rerun during Review 01. Actor/state Review 01 is implemented and verified through full live-example migration, ready for review. Resource-flow visualiser remains incomplete and paused after checkpoint. Skill understanding, combinations and unlocks is accepted; commit authorized. Later tasks still need refinement and delivery; final integrated/manual review remains. User accepts explorer as starting point; usability review deferred. Review 01 checkpoint commit authorized; branch/worktree remains local. No push authorized.
 
 Implementation context:
 
@@ -946,15 +946,28 @@ PlayerWallet:
 - First-slice progress: rule reader retains bounded `pools:` entries and source lines, rolls back malformed records, and resolves participant-scoped axes and explicitly loaded resource references. Findings retain missing, unloaded, wrong-role and conflicting identities. Partial `gd_resource_graph` extracts direct condition atoms and writes with case/participant provenance, shares explicit unambiguous role/axis facets, retains standalone roles and missing/unloaded placeholders, and retains named-axis preservation as a distinct relation. Compiled explicit calls can be attached as guarded case-to-case edges with borrowed participant maps; effects are not flattened and unresolved calls remain unexamined. ALL/OTHER preservation enumerates explicitly declared axes; OTHER remains conditional on whole-case effects, and incomplete inventories stay unexamined. Composed outcomes remain unexamined. Quantity-write relations retain checked signed deltas without claiming a final outcome. It does not establish full cross-case compatibility or produce routes. `gd view resources` opens a clearly labelled read-only graph preview; it is not the finished viewer and does not provide route queries, source navigation, filters or refresh. Shared numeric logic now recognizes checked `this`, `this + C`, and `this - C` deltas without assuming a starting value; unsupported, unknown and invalid expressions remain distinct. CJIT native checks 64/64 pass, including parsing, rollback, reference resolution, signed delta, explicit call mapping, cycles and unloaded-call fixtures. Zig strict C99 compilation passes for changed core/rule modules. Preview build/capture checked on Windows with crate and plumber examples. User saw preview run but is unsure how useful it is; different view modes, context-aware highlighting and a more readable font belong to later viewer work. This does not accept Review 02 or its UX. Further implementation and validation remain.
 - Refinement checks: reread contract against user decisions and existing resource/mechanic schema fields; `git diff --check` passed.
 
-#### Review 03 — Contextual skills and skill relationships
+#### Review 03 — Skill understanding, combinations and unlocks
 
-Status: needs-refinement. Uses 01; informs 04.
+Status: accepted after user review; commit authorized. Uses 01; informs 04.
 
 - Result: distinguish verbs from contextual skills and represent necessary prerequisites separately from alternatives, teaching sequence, contrast, transfer and combinations.
-- User clarification: jumping is a verb, not the end of the skill chain; circumstances of deployment make distinct skills. Avoiding an enemy, defeating it by descending contact and applying the same understanding when falling are not interchangeable requirements.
-- Preserve genuine AND prerequisites. Open: added relationships, understanding/expression/evidence guidance, analysis and examples.
+- Jumping is a verb, not the end of the skill chain; circumstances of deployment matter. Avoiding an enemy, defeating it by descending contact and applying the same understanding when falling are not interchangeable requirements.
+- Mario example: game rule distinguishes impact from above, not whether the player jumped or fell. How the player produces that impact belongs in skill-atom data, not the interaction rule. Do not create separate game rules for jump and fall when the rule does not distinguish them.
+- Use multiple skill atoms for different ways of producing above-contact. Initial understanding must show how it unlocks more ways when combined with other learned abilities. Do not assume every method needs jumping.
+- Preserve genuine AND prerequisites. Existing `stomp-walker` lists jumping and target landing as mandatory; revisit against above-contact via falling rather than assuming jumping is necessary.
+- Use existing prerequisites for combinations; derive unlocks from reverse prerequisite links. Do not author duplicate unlock lists or add understanding/method record categories. Bodies retain understanding, expression and evidence sought. Eligibility never proves learning.
+- No new contrast/transfer fields in this delivery. Necessary reuse belongs in prerequisites. Derive comparison candidates from shared prerequisites/mechanics and show supporting links; shared links do not prove teaching contrast or learning transfer. Keep teaching sequence in challenge routes. Alternative methods remain separate atoms; OR prerequisite groups are outside this delivery.
+- Hypothetical knowledge: explicit selected skills only; never infer their prerequisites or promote newly unlocked atoms. Report `no_declared_prerequisites`, `needs_more`, `all_declared_prerequisites_supplied`, or `unresolved`. Unresolved ancestry/cycles override apparent eligibility. Show missing direct prerequisites and warn when a known assumption lacks its own supplied prerequisites. All statuses remain visible; eligibility does not adopt a proposed/rejected skill.
+- CLI: extend `skill-atoms` with repeated `--known ALIAS/NAME` (at most 64), optional `--from ALIAS/NAME`, and `exploration` JSON section. Preserve existing sections/errors and explicit field selection. Root exposes prerequisite ancestry, direct/transitive structural unlocks and comparison evidence from identical prerequisite/mechanic references, with source lines. No all-pairs scoring. Missing/ambiguous selectors fail explicitly. Bound rooted query work to 16,777,216 and comparison evidence to 128 rows with omissions/limits reported.
+- Viewer: extend existing Skills explorer with transient known selection, eligibility/missing counts, chain highlighting, navigable comparison candidates and supporting declarations. Preserve rank/prerequisite drafts, undo, mode switching and unsafe-reload protection. Remap known selection by reference on successful reload; drop removed skills. Same shared C99 query as CLI; no source writes or saved learning state.
+- Example migration: preserve IDs where meaning fits. Keep `stomp-walker` as shared above-impact understanding without mandatory jumping. Add separate jump-based and fall-based combinations; retain contextual launch/landing abilities and update affected challenge roles without claiming fall-based teaching where none is authored. Game rules and frozen evidence remain unchanged. Update shared authoring guidance; no new schema fields.
+- Acceptance: fixtures cover explicit knowledge, no automatic expansion/learning, AND combinations, duplicates, missing ancestry, cycles, empty inputs, exact selectors, comparison evidence/omissions, bounded work, source immutability and CLI/viewer shared semantics. Run native and focused CLI checks; build/capture viewer for human review. No manual interaction acceptance claimed.
+- Implementation: shared caller-owned `gd_skill_unlocks.h/.c` powers CLI and existing Skills explorer. Adds explicit known selectors, rooted chains, comparison declarations/source lines, partial-result limits, transient UI selection and reload remapping. Preserves draft/undo/mode/reload code paths. No schema fields, rules or frozen evidence changed. New proposed `control-fall`, `jump-stomp`, `fall-stomp` records retain explicit AND sets; first-walker introduces jump-stomp only. Example now has 225 records, 19 skills and 22 prerequisite links; route checks remain 18 with one absent-support finding. Shared usage/framework/model/inspect/native guidance updated.
+- Verification: `native/test.ps1` passes 66/66 native checks and full CLI regressions. Focused skill/rule/quantity/analysis plus authoring Node suites pass 24, skip 1 existing desktop draft-report application check (no supplied report). Native fixtures exercise draft edits/undo and aliased known input as well as bounded queries. Strict Zig C99 compilation passes new query, CLI and output modules; graph compiles with vendor-only typedef warnings suppressed for strict check. Windows graph build and final plumber capture succeed. Existing owned-window skills refresh probe captures successful refresh, invalid-source rejection retaining last-good graph, then recovery; private source restored byte-for-byte. Visual checks support rendering/reload behavior, not manual interaction acceptance or UX usefulness.
+- Review artifacts (ignored): `skills/game-design-workbench/native/build/skill-unlocks-review/` contains `gd.exe`, `gd-view.exe`, `exploration.json`, `unlocks-final.png` and validation logs. Reload captures: `native/build/refresh-16dc30418327443b99e3efddb90ff3e2/skills/`.
+- User review: current skill exploration seems good and working; accepted for now, commit authorized. Future analysis must change graph appearance, not only inspector output; captured under One explorer, multiple views. Dense labels and current font remain deferred viewer work. No push authorized.
 
-#### Review 04 — Challenges, encounters and generative design guidance
+#### Review 04 — Design encounters that teach and test
 
 Status: needs-refinement. Uses 01 and 03; relevant resource roles from 02.
 
@@ -962,7 +975,7 @@ Status: needs-refinement. Uses 01 and 03; relevant resource roles from 02.
 - Parked options: retain task/situation facets within challenges; separate encounters (arrangements) from challenges (goals/constraints); reusable challenge patterns with concrete encounter instances. No option selected; do not assume a new collection.
 - Test with opening enemy/block/mushroom, pipes/pit and shell role-transformation sequences. Open: record ownership, links, useful analysis and bounded delivery slices.
 
-#### Review 05 — Graph-query reference study
+#### Review 05 — Research useful design-graph queries
 
 Status: needs-refinement; may run earlier to inform model contracts. Informs 08–10.
 
@@ -970,22 +983,24 @@ Status: needs-refinement; may run earlier to inform model contracts. Informs 08�
 - Investigate high traffic, convergence, linchpins, alternative paths, clusters/isolates and transformation/role patterns. Exact research question and source/deliverable bounds remain to refine.
 - No Neo4j adoption, database migration or replacement of Attendant/Markdown implied.
 
-#### Review 06 — Unified viewer navigation
+#### Review 06 — One explorer, multiple views
 
 Status: needs-refinement; independent base work can move earlier. Foundation for 09.
 
 - Result: one tool with independently switchable data layer and view mode, preserving useful inspection context.
 - Resource preview feedback: different view modes and context-aware highlighting need later attention. Usefulness of current view remains uncertain; visible graph confirms it runs, not that it meets the intended inspection need.
+- Future visual-analysis requirement from skill explorer review: every analysis must produce a visual change in the graph, not only an inspector readout. A node with assumptions must look different from one with none.
+- Consider a corner legend showing each analysis encoding (icon, colour or overlay), with independent on/off toggles for analysis layers to avoid visual overload. Exact encodings, legend placement and toggle behavior remain to refine; coordinate readability with Readable graphs and usable controls. Capture only; no current implementation change.
 - Open: selection/filter/history retention, available combinations, incompatible-view behavior, draft/reload protection and shell integration. Preserve existing analyses and source ownership.
 
-#### Review 07 — Viewer usability improvements
+#### Review 07 — Readable graphs and usable controls
 
 Status: needs-refinement; independent fixes can move earlier. Coordinate integration with 06.
 
 - Result: matrix zoom, held-key repeat, clearer navigation/inspection, more readable font and fewer avoidable edge crossings, including Little plumber MDA layout. Font feedback came from resource graph preview.
 - Compare current matrix renderer improvements with ImGui integration. Open: concrete input/zoom/layout behavior, renderer choice, delivery slices and user-owned acceptance. No agent mouse/global-keyboard automation.
 
-#### Review 08 — Expand analysis of existing data
+#### Review 08 — Find gaps and key connections
 
 Status: needs-refinement. Use 05 where relevant; do not wait for new schemas to expose current facts.
 
@@ -993,7 +1008,7 @@ Status: needs-refinement. Use 05 where relevant; do not wait for new schemas to 
 - Shared incomplete-reference behavior: visual tools retain referenced-but-undefined things as unresolved placeholders; analysis reports kinds of missing definitions and referring sources. Incomplete designs are allowed to grow from smaller seeds; do not auto-create targets or require every reference to be resolved before useful inspection. Preserve unloaded-scope versus known-missing distinctions and parser/type safety.
 - Assess current matrix/force-directed and other consumers before assuming data is missing. Open: supported relationships, scope, metrics, witnesses, omissions and acceptance. Do not infer runtime frequency, learning or quality from topology.
 
-#### Review 09 — Analysis and views for expanded model
+#### Review 09 — Explore actor states and resource flows
 
 Status: needs-refinement. Depends on relevant contracts from 01–04 and viewer integration from 06.
 
@@ -1002,7 +1017,7 @@ Status: needs-refinement. Depends on relevant contracts from 01–04 and viewer 
 - Select actor and move through its states to reveal relevant partners; alternatively select actors and show ghosts for states in which they interact. Preserve underlying actor identity. Include resource gap/pivotal-connection evidence.
 - Open: projections, filters, density controls, CLI contracts and per-capability delivery slices. Do not draw every combination or add executable simulation by implication.
 
-#### Review 10 — Predefined design-query catalogue
+#### Review 10 — Reusable design questions
 
 Status: needs-refinement. Uses 05 and available capabilities from 08/09.
 
@@ -1010,7 +1025,7 @@ Status: needs-refinement. Uses 05 and available capabilities from 08/09.
 - Return supporting relationships/paths, conditions and incomplete-data limits, not unexplained scores. Distinguish structural importance, role variety and player-experience value.
 - Open: exact query set, parameters, algorithms, bounds and acceptance. Catalogue implementation is separate from reference research.
 
-#### Review 11 — Higher-dimensional projection layouts
+#### Review 11 — Map design similarities in 2D
 
 Status: needs-refinement. Uses selected feature/relationship contracts and viewer integration.
 
@@ -1018,7 +1033,7 @@ Status: needs-refinement. Uses selected feature/relationship contracts and viewe
 - Parked candidates: UMAP, t-SNE, PCA and MDS; no algorithm/dependency selected. Keep separate from ordinary force-directed layouts.
 - Open: feature representation, weights, missing/unknown values, interpretation, reproducibility, implementation/dependency constraints and useful-inspection acceptance.
 
-#### Review 12 — Frontmatter validation and conformance
+#### Review 12 — Check and repair record metadata
 
 Status: needs-refinement; later step after model contracts settle, before final integrated review.
 
@@ -1044,7 +1059,7 @@ Status: needs-refinement; future review after the mechanisms have been put to us
 
 ### Final gate — review committed branch assets before push/completion
 
-- [ ] Complete Review 12 — frontmatter validation and conformance.
+- [ ] Complete Review 12 — Check and repair record metadata.
 - [ ] Complete user-owned manual interaction review of delivered native views after remaining delivery slices and World 1-1 example. Include MDA node/edge selection, source navigation, root/direction changes, query/witness filters, pan/zoom/drag, and layouts; skill draft edits, undo to loaded baseline, dirty-refresh protection, and successful/failed JSON handoff. Include controls added by later slices. Keep Slice 2 acceptance closed; this is integrated final acceptance, not reopening its delivery gate. No agent mouse/global-keyboard automation. Continue implementation until this gate; do not pause each slice for these deferred checks.
 - [ ] Review all assets committed on `feat/game-design-workbench` before any push or declaring this task complete. Cover full committed branch state and branch history, not only the last commit or current working diff.
 - [ ] Check code/tests, instructions/guides, templates/examples, source captures/data, reports, and other committed files for relevance, correctness, provenance, rights/publication limits, and accidental private or unrelated content. Validate the final committed snapshot; report coverage and unresolved findings.
