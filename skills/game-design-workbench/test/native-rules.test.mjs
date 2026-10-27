@@ -53,6 +53,16 @@ test('native rule CLI exposes approved specimen without implying completed migra
     assert.deepEqual(value.data.actors.find(row => row.record === 'nouns/hero').axes.map(row => row.reference),
       ['axes/Life', 'axes/Form', 'axes/Protection', 'axes/ProtectionTime']);
     assert.equal(item.participants[0].requires, 'alive AND (tall OR spark) AND NOT protected');
+    assert.equal(value.coverage.condition_count, 3);
+    assert.equal(value.coverage.condition_bindings_complete, true);
+    assert.equal(item.participants[0].requires_condition.state, 'parsed');
+    assert.deepEqual(item.participants[0].requires_condition.program.map(row => row.op),
+      ['state', 'state', 'state', 'or', 'and', 'state', 'not', 'and']);
+    assert.deepEqual(item.participants[0].requires_condition.program.filter(row => row.op === 'state').map(row => row.target.state),
+      ['alive', 'tall', 'spark', 'protected']);
+    assert.equal(item.participants[0].other_axes_mode, 'any');
+    assert.equal(item.participants[0].skip_if_condition.state, 'unspecified');
+    assert.deepEqual(item.participants[0].skip_if_condition.program, []);
     assert.equal(item.participants[0].other_axes, 'ANY');
     assert.equal(item.participants[0].preserve, 'OTHER');
     assert.equal(item.participants[0].set[0].expression, '{control-vars/safety-window}');
@@ -290,4 +300,122 @@ test('native effect symbol count and byte-work limits preserve raw declarations 
     assert.ok(effects.some(row => row.target.resolution === 'undetermined'));
     assert.equal(effects.at(-1).target.resolution, 'unavailable');
     assert.equal(await readFile(rule, 'utf8'), expensive);
+    const mixed = '```gd-rule\ncase mixed:\n    First:\n        noun: actors/hero\n        requires: ' +
+      Array(100).fill('unknown').join(' OR ') + '\n        becomes: ' + Array(500).fill('unknown').join(', ') +
+      '\n    Later:\n        noun: actors/hero\n        requires: NOT unknown\n```\n';
+    await writeFile(rule, mixed);
+    const shared = structured(args, 2);
+    assert.equal(shared.errors[0].code, 'rules.symbol_work_limit');
+    assert.ok(shared.coverage.symbol_work <= shared.coverage.limits.symbol_work);
+    assert.ok(shared.data.cases[0].participants[0].requires_condition.program.filter(row => row.op === 'state')
+      .every(row => row.target.resolution === 'undetermined'));
+    assert.equal(shared.data.cases[0].participants[0].state_effects.at(-1).target.resolution, 'unavailable');
+    assert.equal(shared.data.cases[0].participants[1].requires_condition.program[0].target.resolution, 'unavailable');
+    assert.equal(await readFile(rule, 'utf8'), mixed);
+  });
+
+test('native condition grammar resolves grouped scoped predicates without flattening unknowns or local skips',
+  { skip: !executable && 'Set GD_NATIVE_EXE' }, async t => {
+    const root = await mkdtemp(join(tmpdir(), 'gd-condition-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    for (const folder of ['actors', 'axes', 'rules']) await mkdir(join(root, folder));
+    await writeFile(join(root, 'axes/Life.md'), '---\nvalue_type: enum\nallowed_values: [alive, dead]\nclosed: true\n---\nLife.');
+    await writeFile(join(root, 'axes/Protection.md'), '---\nvalue_type: enum\nallowed_values: ' + JSON.stringify(['protected', '斧"\\']) + '\n---\nOpen protection.');
+    await writeFile(join(root, 'axes/Time.md'), '---\nvalue_type: number\nunit: s\n---\nNumeric.');
+    await writeFile(join(root, 'actors/hero.md'), '---\naxes: [axes/Life, axes/Protection, axes/Time]\n---\nSame noun, distinct local bindings.');
+    const path = join(root, 'rules/contact.md');
+    const args = ['rules', '--mechanics', `rules=${join(root, 'rules')}`, '--axes', `axes=${join(root, 'axes')}`,
+      '--nouns', `actors=${join(root, 'actors')}`];
+    const check = async (expression, status = 0, extra = '') => {
+      const source = `\`\`\`gd-rule\ncase contact:\n    A:\n        noun: actors/hero\n        requires: ${expression}\n${extra}\n    B:\n        noun: actors/hero\n\`\`\`\n`;
+      await writeFile(path, source);
+      const value = structured(args, status);
+      assert.equal(await readFile(path, 'utf8'), source);
+      for (const token of value.data.cases[0].participants[0].requires_condition.program)
+        assert.equal(Buffer.from(expression).subarray(token.offset, token.offset + Buffer.byteLength(token.text)).toString('utf8'), token.text);
+      return { value, actor: value.data.cases[0].participants[0] };
+    };
+    let result = await check('alive aNd (NOT protected || Life.dead)', 0, '        skip_if: !alive\n        other_axes: \tAnY');
+    let condition = result.actor.requires_condition;
+    assert.equal(condition.state, 'parsed');
+    assert.equal(condition.bindings_complete, true);
+    assert.equal(result.actor.other_axes_mode, 'any');
+    assert.deepEqual(condition.program.map(row => row.op), ['state', 'state', 'not', 'state', 'or', 'and']);
+    assert.equal(condition.line, 5);
+    for (const token of condition.program) assert.equal(Buffer.from(result.actor.requires).subarray(token.offset,
+      token.offset + Buffer.byteLength(token.text)).toString('utf8'), token.text);
+    assert.deepEqual(result.actor.skip_if_condition.program.map(row => row.op), ['state', 'not']);
+    assert.equal(result.value.data.cases[0].participants[1].requires_condition.state, 'unspecified');
+    assert.equal(result.value.data.cases[0].participants[1].skip_if_condition.state, 'unspecified');
+    assert.equal(result.value.data.cases[0].participants[1].other_axes_mode, 'unspecified');
+    result = await check('Protection.斧"\\ AND !protected');
+    assert.equal(result.actor.requires_condition.program[0].target.state, '斧"\\');
+    result = await check('ANY');
+    assert.deepEqual(result.actor.requires_condition.program.map(row => row.op), ['any']);
+    result = await check('alive OR protected AND Life.dead');
+    assert.deepEqual(result.actor.requires_condition.program.map(row => row.op), ['state', 'state', 'state', 'and', 'or']);
+    result = await check('!!alive');
+    assert.deepEqual(result.actor.requires_condition.program.map(row => row.op), ['state', 'not', 'not']);
+    result = await check('NOT Protection.future');
+    assert.equal(result.actor.requires_condition.bindings_complete, false);
+    assert.equal(result.actor.requires_condition.program[0].target.resolution, 'undetermined');
+    assert.equal(result.value.coverage.condition_bindings_complete, false);
+    result = await check('Life.Alive', 2);
+    assert.equal(result.value.errors[0].code, 'rules.condition_missing'); // State names remain case-sensitive.
+    result = await check('Time.active', 2);
+    assert.equal(result.value.errors[0].code, 'rules.condition_type');
+    result = await check('Time > 0[s]');
+    assert.equal(result.actor.requires_condition.state, 'unsupported');
+    assert.deepEqual(result.actor.requires_condition.program, []);
+    assert.equal(result.value.coverage.condition_bindings_complete, false);
+    assert.ok(result.value.data.findings.some(row => row.code === 'rules.condition_unsupported'));
+    result = await check('ANY', 2, '        other_axes: NONE');
+    assert.equal(result.actor.other_axes_mode, 'invalid');
+    assert.equal(result.value.errors[0].code, 'rules.other_axes');
+    for (const expression of ['(', ')', '()', 'alive dead', 'alive AND', 'AND alive', 'alive || || dead',
+      '!', 'alive & dead', 'alive | dead', 'alive NOT dead', 'alive OR (dead', 'alive OR dead)', 'Life.']) {
+      result = await check(expression, 2);
+      assert.equal(result.value.errors[0].code, 'rules.condition_syntax', expression);
+      assert.equal(result.actor.requires_condition.state, 'invalid');
+      assert.deepEqual(result.actor.requires_condition.program, []); // Never return a partial Boolean program.
+      assert.equal(result.actor.requires, expression);
+    }
+  });
+
+test('native condition nesting, per-field and total program limits retain explicit partial coverage',
+  { skip: !executable && 'Set GD_NATIVE_EXE' }, async t => {
+    const root = await mkdtemp(join(tmpdir(), 'gd-condition-limits-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    const path = join(root, 'limit.md');
+    const args = ['rules', '--interactions', `rules=${root}`];
+    const single = expression => `\`\`\`gd-rule\ncase test:\n    A:\n        requires: ${expression}\n\`\`\`\n`;
+    await writeFile(path, single('('.repeat(64) + 'ANY' + ')'.repeat(64)));
+    assert.equal(structured(args).data.cases[0].participants[0].requires_condition.program.length, 1);
+    await writeFile(path, single('('.repeat(65) + 'ANY' + ')'.repeat(65)));
+    let value = structured(args, 2);
+    assert.equal(value.errors[0].code, 'rules.condition_depth');
+    assert.deepEqual(value.data.cases[0].participants[0].requires_condition.program, []);
+    await writeFile(path, single('NOT '.repeat(255) + 'ANY'));
+    assert.equal(structured(args).data.cases[0].participants[0].requires_condition.program.length, 256);
+    await writeFile(path, single('NOT '.repeat(256) + 'ANY'));
+    value = structured(args, 2);
+    assert.equal(value.errors[0].code, 'rules.condition_tokens');
+    assert.deepEqual(value.data.cases[0].participants[0].requires_condition.program, []);
+    const expression = Array(128).fill('ANY').join(' AND '); // 255 input and compiled tokens.
+    const prefix = '```gd-rule\ncase capacity:\n' + Array.from({ length: 257 }, (_, i) =>
+      `    A${i}:\n        requires: ${expression}\n`).join('');
+    const exact = prefix + '    Last:\n        requires: ANY\n```\n';
+    await writeFile(path, exact);
+    value = structured([...args, '--fields', 'records']);
+    assert.equal(value.coverage.condition_token_count, 65536);
+    assert.equal(value.coverage.condition_bindings_complete, true);
+    const overflow = prefix + '    Last:\n        requires: ANY\n    Overflow:\n        requires: ANY\n    Later:\n        requires: ANY\n```\n';
+    await writeFile(path, overflow);
+    value = structured([...args, '--fields', 'records'], 2);
+    assert.equal(value.errors[0].code, 'rules.condition_tokens');
+    assert.equal(value.errors.length, 1);
+    assert.equal(value.coverage.condition_token_count, 65536);
+    assert.equal(value.coverage.condition_bindings_complete, false);
+    assert.equal(value.coverage.limits.condition_tokens, 65536);
+    assert.equal(await readFile(path, 'utf8'), overflow);
   });

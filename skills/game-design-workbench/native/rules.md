@@ -1,6 +1,6 @@
 # Rule declaration reader
 
-Review 01 foundation: inspect approved body format through shared C99. Reader retains declarations and resolves explicit noun/axis applicability, not gameplay meaning. Effect states and quantity targets now bind through explicit actor axes. Conditions/context, resulting quantity values, preservation, explicit invocation expansion and bounded consistency comparisons remain pending. See [typed axes and applicability](axes.md). Do not treat successful syntax inspection as completed task or migration.
+Review 01 foundation: inspect approved body format through shared C99. Reader retains declarations and resolves explicit noun/axis applicability, not gameplay meaning. Effect states and quantity targets now bind through explicit actor axes. [State conditions](conditions.md) now compile to target-scoped Boolean programs with unknown truth preserved. Numeric comparisons/context, resulting quantity values, preservation, explicit invocation expansion and bounded consistency comparisons remain pending. See [typed axes and applicability](axes.md). Do not treat successful syntax inspection as completed task or migration.
 
 ## Run
 
@@ -73,17 +73,17 @@ case powered-side-contact:
 - `absent`: no authoritative rule block; prose is not silently converted.
 - `invalid`: malformed rule declaration; none of that record's cases returned as valid partial data.
 
-Frontmatter relationships retain declarations, duplicates, source lines and loaded/ambiguous flags from existing loader. Participant noun bindings now resolve against explicit noun roles; actor-axis references resolve against explicit axis roles. Effect bindings above resolve through those declarations; conditions and other body reference text remain unresolved. A structurally parsed block can still have effect-binding errors; raw cases stay visible, not semantically accepted.
+Frontmatter relationships retain declarations, duplicates, source lines and loaded/ambiguous flags from existing loader. Participant noun bindings now resolve against explicit noun roles; actor-axis references resolve against explicit axis roles. Effect bindings and state predicates resolve through those declarations; numeric predicates, ordered context and other body reference text remain unresolved. A structurally parsed block can still have effect-binding errors; raw cases stay visible, not semantically accepted.
 
 `data.cases` retains record identity/status/coverage/path, local case name and line, raw context and line, ordered participants, field lines and all numeric assignments with lines. Source line numbers address original Markdown, including frontmatter and CRLF files. Same-type participants remain distinct local bindings.
 
-`coverage.complete` concerns completed declaration/type/name checks only. Counts expose all source records versus records with cases. Scope text explicitly excludes semantic evaluation, equivalence, consistency and gameplay claims. `axes`, `actors`, participant binding flags and informational `findings` expose typed declarations and explicit applicability; [axis contract](axes.md) defines readiness limits. Missing blocks are not proof of missing gameplay behavior. Errors retain code, message, path and line; failed records do not discard other successfully parsed records.
+`coverage.complete` concerns completed declaration/type/name checks only. Counts expose all source records versus records with cases. Scope text distinguishes predicate logic from full applicability, equivalence, consistency and gameplay claims. `axes`, `actors`, participant binding flags and informational `findings` expose typed declarations and explicit applicability; [axis contract](axes.md) defines readiness limits. Missing blocks are not proof of missing gameplay behavior. Errors retain code, message, path and line; failed records do not discard other successfully parsed records.
 
 Current plumber example: 73 interaction/mechanic records; only accepted authoring specimen has a structured block. Other 72 remain visibly absent. Full migration is still required before task completion.
 
 ## Engineering bounds and checks
 
-`gd_rules.c` owns allocator-backed result and copied declaration text; `gd_rule_axes.c` resolves explicit noun/axis declarations; `gd_rule_effects.c` binds effect names with bounded byte work and no allocation. Effect spans borrow retained declaration text; resolved values borrow immutable model text. Model/provenance borrowed immutably until result destroyed. No recursion, source mutation, formula evaluator duplication or runtime code execution. Existing file/record/retained-model limits remain in force.
+`gd_rules.c` owns allocator-backed result and copied declaration text; `gd_rule_axes.c` resolves explicit noun/axis declarations; `gd_rule_logic.c` shares bounded state lookup across predicate compilation and effect bindings, without allocation. [Condition contract](conditions.md) defines grammar, derived facts, read-only truth and limits. Effect spans borrow retained declaration text; resolved values borrow immutable model text. Model/provenance borrowed immutably until result destroyed. No recursion, source mutation, formula evaluator duplication, arbitrary code execution or gameplay runtime. Existing file/record/retained-model limits remain in force.
 
 Operation limits: 4,096 cases, 8,192 participants, 8,192 assignments, 4 MiB copied declaration text, 8,192 bytes per rule line. Reject overflow; do not truncate or return a half-parsed record. Parsing scans bounded source text; local identity checks compare within bounded case/participant sets.
 

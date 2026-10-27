@@ -51,6 +51,70 @@ static int has_error(GD_Model *model, const char *code) {
     for (i = 0; i < model->error_count; ++i) if (!strcmp(model->errors[i].code, code)) return 1;
     return 0;
 }
+TEST(rule_condition_logic,
+    GD_Model *model = model_create(); GD_Rules *rules; int life, protection, a, b, owner;
+    GD_RulePredicateFact facts[5];
+    const GD_RuleTruth conjunction[3][3] = {{0,1,0},{1,1,1},{0,1,2}};
+    const GD_RuleTruth disjunction[3][3] = {{0,0,2},{0,1,2},{2,2,2}};
+    const GD_RuleTruth negation[3] = {0,2,1};
+    TEST_ASSERT(model && setup("rule-condition-logic")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+    TEST_ASSERT(write_record(1,"Life","---\nvalue_type: enum\nallowed_values: [alive, dead]\nclosed: true\n---\nLife."));
+    TEST_ASSERT(write_record(1,"Form","---\nvalue_type: enum\nallowed_values: [small, tall]\n---\nForm."));
+    TEST_ASSERT(write_record(1,"Protection","---\nvalue_type: enum\nallowed_values: [protected, unprotected]\n---\nProtection."));
+    TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Life, actions/Form, actions/Protection]\n---\nSame noun, distinct participants."));
+    TEST_ASSERT(write_record(2,"contact","```gd-rule\ncase contact:\n"
+        "    First:\n        noun: things/hero\n        requires: alive AND (tall OR small) AND NOT protected\n        skip_if: dead\n        other_axes: ANY\n"
+        "    Second:\n        noun: things/hero\n        requires: alive\n"
+        "    Unset:\n        noun: things/hero\n        other_axes: ANY\n"
+        "    Constant:\n        requires: ANY\n"
+        "    UnknownNot:\n        noun: things/hero\n        requires: NOT protected\n"
+        "    KnownOr:\n        noun: things/hero\n        requires: ANY OR protected\n"
+        "    KnownAnd:\n        noun: things/hero\n        requires: NOT ANY AND protected\n"
+        "    TruthAnd:\n        noun: things/hero\n        requires: alive AND protected\n"
+        "    TruthOr:\n        noun: things/hero\n        requires: alive OR protected\n"
+        "    TruthNot:\n        noun: things/hero\n        requires: NOT protected\n```\n"));
+    TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+    TEST_ASSERT(rules && !model->error_count && rules->condition_bindings_complete && rules->condition_count == 10);
+    life = find_record(model,"actions/Life"); protection = find_record(model,"actions/Protection");
+    facts[0] = (GD_RulePredicateFact){0,life,"alive",GD_RULE_TRUTH_TRUE};
+    facts[1] = (GD_RulePredicateFact){0,find_record(model,"actions/Form"),"tall",GD_RULE_TRUTH_TRUE};
+    facts[2] = (GD_RulePredicateFact){0,find_record(model,"actions/Form"),"small",GD_RULE_TRUTH_FALSE};
+    facts[3] = (GD_RulePredicateFact){0,protection,"protected",GD_RULE_TRUTH_FALSE};
+    facts[4] = (GD_RulePredicateFact){0,life,"dead",GD_RULE_TRUTH_FALSE};
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].required_condition,facts,5) == GD_RULE_TRUTH_TRUE);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].skip_condition,facts,5) == GD_RULE_TRUTH_FALSE);
+    facts[4].truth = GD_RULE_TRUTH_TRUE;
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].skip_condition,facts,5) == GD_RULE_TRUTH_TRUE);
+    facts[4].truth = GD_RULE_TRUTH_FALSE;
+    facts[3].truth = GD_RULE_TRUTH_UNKNOWN;
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].required_condition,facts,5) == GD_RULE_TRUTH_UNKNOWN);
+    facts[0].truth = GD_RULE_TRUTH_FALSE;
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].required_condition,facts,5) == GD_RULE_TRUTH_FALSE);
+    facts[0].truth = GD_RULE_TRUTH_TRUE;
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[1].required_condition,facts,5) == GD_RULE_TRUTH_UNKNOWN);
+    facts[0].participant = 1;
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[1].required_condition,facts,5) == GD_RULE_TRUTH_TRUE);
+    TEST_ASSERT(rules->participants[1].skip_condition.state == GD_CONDITION_UNSPECIFIED);
+    TEST_ASSERT(rules->participants[2].other_axes_mode == GD_RULE_OTHER_ANY && rules->participants[2].required_condition.state == GD_CONDITION_UNSPECIFIED);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[2].required_condition,NULL,0) == GD_RULE_TRUTH_UNKNOWN);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[3].required_condition,NULL,0) == GD_RULE_TRUTH_TRUE);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[4].required_condition,NULL,0) == GD_RULE_TRUTH_UNKNOWN);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[5].required_condition,NULL,0) == GD_RULE_TRUTH_TRUE);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[6].required_condition,NULL,0) == GD_RULE_TRUTH_FALSE);
+    for (owner = 7; owner < 10; ++owner) for (a = 0; a < 3; ++a) for (b = 0; b < 3; ++b) {
+        facts[0] = (GD_RulePredicateFact){owner,life,"alive",(GD_RuleTruth)a};
+        facts[1] = (GD_RulePredicateFact){owner,protection,"protected",(GD_RuleTruth)b};
+        TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[owner].required_condition,facts,2) ==
+                    (owner == 7 ? conjunction[a][b]:owner == 8 ? disjunction[a][b]:negation[b]));
+    }
+    facts[0] = (GD_RulePredicateFact){1,life,"alive",GD_RULE_TRUTH_TRUE};
+    facts[1] = (GD_RulePredicateFact){1,life,"alive",GD_RULE_TRUTH_FALSE};
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[1].required_condition,facts,2) == GD_RULE_TRUTH_UNKNOWN);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[1].required_condition,NULL,1) == GD_RULE_TRUTH_UNKNOWN);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[1].required_condition,facts,GD_MAX_RULE_CONDITION_ITEMS+1) == GD_RULE_TRUTH_UNKNOWN);
+    TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[1].required_condition,facts,-1) == GD_RULE_TRUTH_UNKNOWN);
+    TEST_ASSERT(!gd_sources_changed(model)); gd_rules_destroy(rules); gd_destroy(model);
+)
 TEST(rule_effect_bindings,
     GD_Model *model = model_create(); GD_Rules *rules; int life, form, time, amount;
     TEST_ASSERT(model && setup("rule-effect-bindings")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
@@ -1542,7 +1606,7 @@ int main(int argc, char **argv) {
     if (!file_directory_create(root, 1)) { fputs("Fixture directory must be new\n", stderr); return 2; }
     storage = free_list_from_buffer(backing, sizeof(backing));
     if (!storage) return 2;
-    failed += test_rule_effect_bindings();
+    failed += test_rule_condition_logic(); failed += test_rule_effect_bindings();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
     failed += test_rules_declarations(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
@@ -1559,6 +1623,6 @@ int main(int argc, char **argv) {
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/56 passed\n", 56-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/57 passed\n", 57-failed);
     return failed ? 1 : 0;
 }

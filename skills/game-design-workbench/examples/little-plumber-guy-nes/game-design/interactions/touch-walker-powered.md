@@ -20,7 +20,7 @@ control-vars:
 ---
 ## Rule
 
-Accepted authoring specimen. Native `gd rules` reads this block as declarations. Typed axes, explicit noun/axis bindings, effect state names and the quantity target now resolve. Context, conditions, resulting quantities, preservation and composition remain pending; name binding does not execute or validate gameplay meaning.
+Accepted authoring specimen. Native `gd rules` reads this block as declarations. Typed axes, explicit noun/axis bindings, grouped state predicates, effect names and the quantity target now resolve. Ordered context, concrete applicability, resulting quantities, preservation and composition remain pending; compiled predicates do not execute or validate gameplay meaning.
 
 ```gd-rule
 case powered-side-contact:

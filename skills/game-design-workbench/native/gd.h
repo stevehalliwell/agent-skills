@@ -243,13 +243,17 @@ GD_ControlImport *gd_plan_control_import(GD_Model *model, const GD_ControlSelect
 void gd_control_import_destroy(GD_ControlImport *plan);
 int gd_write_control_import(FILE *output, const GD_Model *model, const GD_ControlImport *plan, int json, const char *fields);
 
-/* Rule declarations, explicit applicability and effect target/state bindings.
-   No condition evaluation, expression evaluation or invocation expansion.
+/* Rule declarations, explicit applicability, state predicate logic and effect bindings.
+   Boolean evaluation consumes explicit predicate facts, not a gameplay runtime.
+   No quantitative expression evaluation or invocation expansion.
    Result owns copied declaration text; borrows immutable model/provenance. */
 #define GD_MAX_RULE_CASES 4096
 #define GD_MAX_RULE_PARTICIPANTS 8192
 #define GD_MAX_RULE_ASSIGNMENTS 8192
 #define GD_MAX_RULE_STATE_EFFECTS 8192
+#define GD_MAX_RULE_CONDITION_TOKENS 65536
+#define GD_MAX_RULE_CONDITION_ITEMS 256
+#define GD_MAX_RULE_CONDITION_DEPTH 64
 #define GD_RULE_SYMBOL_WORK_LIMIT (16 * 1024 * 1024)
 #define GD_RULE_TEXT_CAPACITY (4 * 1024 * 1024)
 #define GD_MAX_RULE_LINE 8192
@@ -262,10 +266,29 @@ typedef enum { GD_RULE_UNSPECIFIED, GD_RULE_RESOLVED, GD_RULE_UNLOADED, GD_RULE_
 typedef struct { GD_RuleResolution resolution; int axis_record; const char *state; } GD_RuleTarget;
 typedef enum { GD_AXIS_UNSPECIFIED, GD_AXIS_ENUM, GD_AXIS_INTEGER, GD_AXIS_NUMBER } GD_AxisType;
 typedef struct { GD_AxisType type; int valid, unit_known; } GD_RuleAxis;
+typedef enum { GD_CONDITION_UNSPECIFIED, GD_CONDITION_PARSED, GD_CONDITION_INVALID,
+               GD_CONDITION_UNSUPPORTED, GD_CONDITION_LIMITED } GD_RuleConditionState;
+typedef enum { GD_RULE_OP_STATE, GD_RULE_OP_ANY, GD_RULE_OP_NOT, GD_RULE_OP_AND, GD_RULE_OP_OR } GD_RuleConditionOp;
+typedef enum { GD_RULE_TRUTH_UNKNOWN, GD_RULE_TRUTH_FALSE, GD_RULE_TRUTH_TRUE } GD_RuleTruth;
+typedef enum { GD_RULE_OTHER_UNSPECIFIED, GD_RULE_OTHER_ANY, GD_RULE_OTHER_INVALID } GD_RuleOtherAxes;
+typedef struct {
+    GD_RuleConditionState state;
+    int first_token, token_count, bindings_complete, participant; /* Participant index in this snapshot. */
+} GD_RuleCondition;
+typedef struct {
+    GD_RuleConditionOp operation;
+    const char *text;
+    size_t length;
+    int offset; /* Byte offset within the raw condition, not Markdown column. */
+    GD_RuleTarget target;
+} GD_RuleConditionToken;
+typedef struct { int participant, axis_record; const char *state; GD_RuleTruth truth; } GD_RulePredicateFact;
 typedef struct {
     const char *name, *noun, *requires, *skip_if, *other_axes, *becomes, *preserve, *causes;
     int line, lines[8], first_assignment, assignment_count, noun_record;
     int first_state_effect, state_effect_count;
+    GD_RuleCondition required_condition, skip_condition;
+    GD_RuleOtherAxes other_axes_mode;
     GD_RuleResolution noun_resolution;
     unsigned fields;
 } GD_RuleParticipant;
@@ -276,6 +299,7 @@ typedef struct {
     int source_count, case_count, participant_count, assignment_count;
     int axis_count, actor_count, axis_definitions_complete, bindings_complete, finding_count, findings_omitted;
     int state_effect_count, effect_bindings_complete, symbol_work;
+    int condition_count, condition_token_count, condition_bindings_complete;
     GD_RuleAxis axes[GD_MAX_RECORDS]; /* Indexed by model record, not compact axis index. */
     int actor_first[GD_MAX_RECORDS], next_axis[GD_MAX_EDGES];
     unsigned char actor_axes_complete[GD_MAX_RECORDS];
@@ -286,13 +310,20 @@ typedef struct {
     GD_RuleParticipant participants[GD_MAX_RULE_PARTICIPANTS];
     GD_RuleAssignment assignments[GD_MAX_RULE_ASSIGNMENTS];
     GD_RuleStateEffect state_effects[GD_MAX_RULE_STATE_EFFECTS];
+    GD_RuleConditionToken condition_tokens[GD_MAX_RULE_CONDITION_TOKENS];
     size_t text_used;
     char text[GD_RULE_TEXT_CAPACITY];
 } GD_Rules;
 GD_Rules *gd_read_rules(GD_Model *model);
 /* Internal phase: call once per fresh rule result; diagnostics append to model. */
 void gd_resolve_rule_axes(GD_Model *model, GD_Rules *rules);
-void gd_resolve_rule_effects(GD_Model *model, GD_Rules *rules);
+void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules);
+/* Pure predicate evaluation. Missing, conflicting or unresolved facts remain unknown.
+   Facts use snapshot participant/axis indices. This does not establish case applicability. */
+GD_RuleTruth gd_rule_condition_value(const GD_Rules *rules, const GD_RuleCondition *condition,
+                                    const GD_RulePredicateFact *facts, int count);
+const char *gd_rule_condition_state_name(GD_RuleConditionState state);
+const char *gd_rule_condition_op_name(GD_RuleConditionOp operation);
 const char *gd_rule_resolution_name(GD_RuleResolution resolution);
 void gd_rules_destroy(GD_Rules *rules);
 int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *rules, int json, const char *fields);

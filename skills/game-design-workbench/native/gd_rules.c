@@ -193,7 +193,7 @@ GD_Rules *gd_read_rules(GD_Model *model) {
         }
     }
     gd_resolve_rule_axes(model,rules);
-    gd_resolve_rule_effects(model,rules);
+    gd_resolve_rule_logic(model,rules);
     return rules;
 }
 void gd_rules_destroy(GD_Rules *rules) {
@@ -227,6 +227,22 @@ static void effect_target(FILE *output, const GD_Model *model, GD_RuleTarget tar
     member(output,"axis",target.axis_record >= 0 ? model->records[target.axis_record].reference:NULL);
     member(output,"state",target.state); fputc('}',output);
 }
+static void condition_result(FILE *output, const GD_Model *model, const GD_Rules *rules,
+                             const char *key, const GD_RuleCondition *condition, int line) {
+    int i;
+    fputc(',',output); gd_json_string(output,key); fputs(":{\"state\":",output);
+    gd_json_string(output,gd_rule_condition_state_name(condition->state));
+    fprintf(output,",\"line\":%d,\"bindings_complete\":%s,\"program\":[",line,condition->bindings_complete ? "true":"false");
+    for (i = 0; i < condition->token_count; ++i) {
+        const GD_RuleConditionToken *token = &rules->condition_tokens[condition->first_token+i];
+        if (i) fputc(',',output); fputs("{\"op\":",output); gd_json_string(output,gd_rule_condition_op_name(token->operation));
+        fputs(",\"text\":",output); gd_json_string_n(output,token->text,token->length);
+        fprintf(output,",\"offset\":%d",token->offset);
+        if (token->operation == GD_RULE_OP_STATE) effect_target(output,model,token->target);
+        fputc('}',output);
+    }
+    fputs("]}",output);
+}
 int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *rules, int json, const char *fields) {
     int i, j, k, comma = 0, parsed = 0;
     int complete = rules && !model->error_count && !model->errors_omitted;
@@ -235,13 +251,16 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
         fprintf(output,"Rules: %d source records; %d with cases; %d cases; %d participants; %d assignments. Declaration checks %s.\n",
                 rules ? rules->source_count:0,parsed,rules ? rules->case_count:0,rules ? rules->participant_count:0,
                 rules ? rules->assignment_count:0,complete ? "complete":"incomplete");
-        fputs("Declarations only: explicit applicability and effect target/state bindings resolved where known; conditions, effect values and composition are not resolved or evaluated. No consistency or gameplay claims.\n",output);
+        fputs("Declarations only: explicit applicability, state predicate logic and effect bindings resolved where known; numeric comparisons, resulting quantities, context and composition are not resolved or evaluated. No consistency or gameplay claims.\n",output);
         fprintf(output,"Typed axes: %d; actors: %d; axis definitions %s; explicit bindings %s; findings: %d (+%d omitted).\n",
                 rules ? rules->axis_count:0,rules ? rules->actor_count:0,rules && rules->axis_definitions_complete ? "complete":"incomplete",
                 rules && rules->bindings_complete ? "complete":"incomplete",rules ? rules->finding_count:0,rules ? rules->findings_omitted:0);
         fprintf(output,"Effect bindings: %d state declarations; %s for authored targets; symbol work %d/%d. No resulting quantities evaluated.\n",
                 rules ? rules->state_effect_count:0,rules && rules->effect_bindings_complete ? "complete":"incomplete",
                 rules ? rules->symbol_work:0,GD_RULE_SYMBOL_WORK_LIMIT);
+        fprintf(output,"Conditions: %d authored; %d compiled tokens; bindings %s. Omitted predicates remain unspecified.\n",
+                rules ? rules->condition_count:0,rules ? rules->condition_token_count:0,
+                rules && rules->condition_bindings_complete ? "complete":"incomplete");
         if (rules) for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_AXIS) {
             const GD_Record *record = &model->records[i]; const char *value = record->axis.allowed;
             fprintf(output,"%s: %s; %s; unit=%s",record->reference,record->axis.type ? record->axis.type:"unspecified",
@@ -297,6 +316,10 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
                 member(output,"skip_if",participant->skip_if); member(output,"other_axes",participant->other_axes);
                 member(output,"becomes",participant->becomes); member(output,"preserve",participant->preserve);
                 member(output,"causes",participant->causes);
+                member(output,"other_axes_mode",participant->other_axes_mode == GD_RULE_OTHER_ANY ? "any":
+                       participant->other_axes_mode == GD_RULE_OTHER_INVALID ? "invalid":"unspecified");
+                condition_result(output,model,rules,"requires_condition",&participant->required_condition,participant->lines[1]);
+                condition_result(output,model,rules,"skip_if_condition",&participant->skip_condition,participant->lines[2]);
                 fprintf(output,",\"line\":%d,\"field_lines\":{",participant->line);
                 fprintf(output,"\"noun\":%d,\"requires\":%d,\"skip_if\":%d,\"other_axes\":%d,\"becomes\":%d,\"preserve\":%d,\"causes\":%d,\"set\":%d},\"set\":[",
                         participant->lines[0],participant->lines[1],participant->lines[2],participant->lines[3],
@@ -379,7 +402,9 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
             rules && rules->bindings_complete ? "true":"false",rules ? rules->findings_omitted:0);
     fprintf(output,"\"state_effect_count\":%d,\"effect_bindings_complete\":%s,\"symbol_work\":%d,",
             rules ? rules->state_effect_count:0,rules && rules->effect_bindings_complete ? "true":"false",rules ? rules->symbol_work:0);
-    fputs("\"scope\":\"Declaration scan, explicit applicability and effect target/state bindings, all supplied statuses/dispositions. Missing rules remain absent; omitted fields remain null, not ANY or preserved. Conditions, ordered context, resulting quantity values, preservation and composition are not resolved or evaluated. Effect bindings do not establish consistency or an applicable transition. Open vocabularies do not prove complete state sets or reachable combinations. No equivalence, consistency or gameplay claims.\",\"collections\":[",output);
+    fprintf(output,"\"condition_count\":%d,\"condition_token_count\":%d,\"condition_bindings_complete\":%s,",
+            rules ? rules->condition_count:0,rules ? rules->condition_token_count:0,rules && rules->condition_bindings_complete ? "true":"false");
+    fputs("\"scope\":\"Declaration scan, explicit applicability, state predicate logic and effect bindings, all supplied statuses/dispositions. Missing rules remain absent; omitted fields remain null, not ANY or preserved. State conditions compile to derived Boolean programs, not an applicability verdict. Numeric comparisons, ordered context, resulting quantity values, preservation and composition are not resolved or evaluated. Effect bindings do not establish consistency or an applicable transition. Open vocabularies do not prove complete state sets or reachable combinations. No equivalence, consistency or gameplay claims.\",\"collections\":[",output);
     for (i = 0; i < model->collection_count; ++i) {
         if (i) fputc(',',output); fputs("{\"alias\":",output); gd_json_string(output,model->collections[i].alias);
         member(output,"directory",model->collections[i].directory);
@@ -387,9 +412,9 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
                model->collections[i].role == GD_VERB ? "verbs":model->collections[i].role == GD_CONTROL ? "control-vars":model->collections[i].role == GD_AXIS ? "axes":"related");
         fputc('}',output);
     }
-    fprintf(output,"],\"limits\":{\"cases\":%d,\"participants\":%d,\"assignments\":%d,\"text_bytes\":%d,\"line_bytes\":%d,\"axis_values\":%d,\"findings\":%d,\"records\":%d,\"axis_references\":%d,\"state_effects\":%d,\"symbol_work\":%d}},\"errors\":[",
+    fprintf(output,"],\"limits\":{\"cases\":%d,\"participants\":%d,\"assignments\":%d,\"text_bytes\":%d,\"line_bytes\":%d,\"axis_values\":%d,\"findings\":%d,\"records\":%d,\"axis_references\":%d,\"state_effects\":%d,\"symbol_work\":%d,\"condition_tokens\":%d,\"condition_items\":%d,\"condition_depth\":%d}},\"errors\":[",
             GD_MAX_RULE_CASES,GD_MAX_RULE_PARTICIPANTS,GD_MAX_RULE_ASSIGNMENTS,GD_RULE_TEXT_CAPACITY,GD_MAX_RULE_LINE,
-            GD_MAX_ENUM_VALUES,GD_MAX_ERRORS,GD_MAX_RECORDS,GD_MAX_EDGES,GD_MAX_RULE_STATE_EFFECTS,GD_RULE_SYMBOL_WORK_LIMIT);
+            GD_MAX_ENUM_VALUES,GD_MAX_ERRORS,GD_MAX_RECORDS,GD_MAX_EDGES,GD_MAX_RULE_STATE_EFFECTS,GD_RULE_SYMBOL_WORK_LIMIT,GD_MAX_RULE_CONDITION_TOKENS,GD_MAX_RULE_CONDITION_ITEMS,GD_MAX_RULE_CONDITION_DEPTH);
     for (i = 0; i < model->error_count; ++i) {
         const GD_Error *error = &model->errors[i]; if (i) fputc(',',output);
         fputs("{\"code\":",output); gd_json_string(output,error->code); member(output,"message",error->message);
