@@ -6,7 +6,7 @@ desc: Derived time to cover one tile at target walk speed.
 tags: []
 status: accepted
 value_type: number
-expression: "${control-vars/tile-size} / ${control-vars/walk-speed}"
+expression: "{control-vars/tile-size} / {control-vars/walk-speed}"
 unit: "s"
 allowed_values: []
 ---

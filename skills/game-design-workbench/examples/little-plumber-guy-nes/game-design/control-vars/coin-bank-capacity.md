@@ -6,7 +6,7 @@ desc: Largest stable coin-bank value before threshold conversion.
 tags: []
 status: accepted
 value_type: integer
-expression: "${control-vars/coins-for-life} - 1[coin]"
+expression: "{control-vars/coins-for-life} - 1[coin]"
 unit: "coin"
 allowed_values: []
 minimum: 0

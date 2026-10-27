@@ -175,13 +175,16 @@ static int compile(GD_Model *model, GD_Controls *controls, int record) {
             if (!emit(controls,record,OP_NUMBER,-1,value,unit,unit_length,(int)(end-start-size))) goto limit;
             operand=0; continue;
         }
-        if (operand && p[0]=='$' && p[1]=='{') {
-            const char *reference=p+2; int target;
+        if (p[0]=='$' && p[1]=='{') {
+            control_error(model,record,2,"controls.reference_syntax","Use {ALIAS/NAME} for control lookups; the dollar-prefixed syntax is not supported"); return 0;
+        }
+        if (operand && *p=='{') {
+            const char *reference=p+1; int target;
             p=reference; while (*p && *p!='}') ++p;
             if (*p!='}' || p==reference || p-reference>257) goto invalid;
             target=find_slice(model,reference,(size_t)(p-reference));
             if (target<0) { control_error(model,record,2,"controls.reference","Formula requires a unique loaded control reference"); return 0; }
-            if (!emit(controls,record,OP_REFERENCE,target,0,NULL,0,(int)(reference-start-2))) goto limit;
+            if (!emit(controls,record,OP_REFERENCE,target,0,NULL,0,(int)(reference-start-1))) goto limit;
             ++p; operand=0; continue;
         }
         if (operand && isalpha((unsigned char)*p)) {

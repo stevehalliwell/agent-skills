@@ -842,6 +842,31 @@ TEST(control_formulas,
     controls=gd_resolve_controls(model,-1,NULL,0); TEST_ASSERT(controls && controls->complete && fabs(controls->values[0].number-1.2)<1e-15); gd_controls_destroy(controls);
     gd_destroy(model);
 )
+TEST(control_reference_syntax,
+    GD_Model *model=model_create(); GD_Controls *controls; int i;
+    const char *invalid[]={"${config/a}","{config/a} + ${config/a}","$ {config/a}","{}","{config/a","{config/a}}","{{config/a}}"};
+    TEST_ASSERT(model); model->record_count=2;
+    control_definition(model,0,"config/a","number","2",NULL,"s");
+    control_definition(model,1,"config/b","number",NULL,"({config/a} + {config/a}) / 2","s");
+    model->records[1].control.lines[2]=17;
+    controls=gd_resolve_controls(model,-1,NULL,0);
+    TEST_ASSERT(controls && controls->complete && controls->values[1].number==2 && controls->tokens[0].offset==1);
+    gd_controls_destroy(controls);
+    for (i=0;i<7;++i) {
+        model->error_count=model->errors_omitted=0; model->records[1].control.expression=invalid[i];
+        controls=gd_resolve_controls(model,-1,NULL,0);
+        TEST_ASSERT(controls && !controls->complete && model->error_count);
+        if (i<2) {
+            TEST_ASSERT(has_error(model,"controls.reference_syntax") && model->errors[0].line==17);
+            TEST_ASSERT(!strcmp(model->errors[0].path,"config/b") && strstr(model->errors[0].message,"{ALIAS/NAME}"));
+        }
+        gd_controls_destroy(controls);
+    }
+    model->error_count=model->errors_omitted=0; model->records[1].control.expression="{config/missing}";
+    controls=gd_resolve_controls(model,-1,NULL,0);
+    TEST_ASSERT(controls && !controls->complete && has_error(model,"controls.reference"));
+    gd_controls_destroy(controls); gd_destroy(model);
+)
 TEST(control_errors,
     GD_Model *model=model_create(); GD_Controls *controls; int i;
     const char *invalid[]={"1/0","clamp(1,3,2)","1[s]+2[ms]","min(1,2,3)","pow(2,3)","1;system(2)","()","min()","1+","1e309","2[bad/]","1,2","(1,2)","1(2)","1[s]+1","1e-999"};
@@ -867,7 +892,7 @@ TEST(control_loading,
     GD_Model *model=model_create(); GD_Controls *controls; int flag,mode;
     TEST_ASSERT(model && setup("control-loading")); collections[0].role=GD_CONTROL; collections[0].alias="config";
     TEST_ASSERT(write_record(0,"a","---\nvalue_type: number\nvalue: 2\nunit: m/s\n---\n"));
-    TEST_ASSERT(write_record(0,"b","---\nvalue_type: number\nvalue: null\nexpression: '1[m] / ${config/a}'\nunit: s\n---\n"));
+    TEST_ASSERT(write_record(0,"b","---\nvalue_type: number\nvalue: null\nexpression: '1[m] / {config/a}'\nunit: s\n---\n"));
     TEST_ASSERT(write_record(0,"flag","---\nvalue_type: boolean\nvalue: false\n---\n"));
     TEST_ASSERT(write_record(0,"mode","---\nvalue_type: enum\nvalue: '=value'\nallowed_values: ['=value', 'other', '']\n---\n"));
     TEST_ASSERT(gd_load(model,collections,1)); controls=gd_resolve_controls(model,-1,NULL,0);
@@ -893,14 +918,14 @@ TEST(control_overrides_scope,
     GD_Model *model=model_create(); GD_Controls *controls; GD_ControlOverride override={"config/a","4"};
     TEST_ASSERT(model); model->record_count=3;
     control_definition(model,0,"config/a","number","2",NULL,"m/s");
-    control_definition(model,1,"config/b","number",NULL,"1[m]/${config/a}","s");
+    control_definition(model,1,"config/b","number",NULL,"1[m]/{config/a}","s");
     control_definition(model,2,"config/unknown","unspecified",NULL,NULL,NULL);
     controls=gd_resolve_controls(model,1,&override,1);
     TEST_ASSERT(controls && controls->complete && controls->selected_count==2 && controls->values[1].number==0.25);
     TEST_ASSERT(controls->overridden[0] && !strcmp(model->records[0].control.value,"2") && !controls->selected[2]); gd_controls_destroy(controls);
     override.reference="config/b"; override.value="0.75";
     controls=gd_resolve_controls(model,1,&override,1);
-    TEST_ASSERT(controls && controls->complete && controls->selected_count==1 && controls->values[1].number==0.75 && !strcmp(model->records[1].control.expression,"1[m]/${config/a}")); gd_controls_destroy(controls);
+    TEST_ASSERT(controls && controls->complete && controls->selected_count==1 && controls->values[1].number==0.75 && !strcmp(model->records[1].control.expression,"1[m]/{config/a}")); gd_controls_destroy(controls);
     controls=gd_resolve_controls(model,-1,NULL,0); TEST_ASSERT(controls && !controls->complete && controls->resolved_count==2); gd_controls_destroy(controls); gd_destroy(model);
 )
 TEST(control_selection,
@@ -909,7 +934,7 @@ TEST(control_selection,
     TEST_ASSERT(model && setup("control-selection")); collections[0].role=GD_CONTROL; collections[0].alias="config";
     TEST_ASSERT(write_record(0,"a","---\nstatus: accepted\nvalue_type: number\nvalue: 2\nunit: m\n---\n"));
     TEST_ASSERT(write_record(0,"b","---\nstatus: proposed\nvalue_type: number\nvalue: 3\nunit: m\n---\n"));
-    TEST_ASSERT(write_record(0,"c","---\nstatus: accepted\nvalue_type: number\nexpression: '${config/a} + ${config/b}'\nunit: m\n---\n"));
+    TEST_ASSERT(write_record(0,"c","---\nstatus: accepted\nvalue_type: number\nexpression: '{config/a} + {config/b}'\nunit: m\n---\n"));
     TEST_ASSERT(write_record(0,"d","---\nstatus: rejected\nvalue_type: boolean\nvalue: false\n---\n"));
     TEST_ASSERT(gd_load(model,collections,1));
     a=gd_control_find(model,"config/a"); b=gd_control_find(model,"config/b"); c=gd_control_find(model,"config/c"); d=gd_control_find(model,"config/d");
@@ -946,12 +971,12 @@ TEST(control_limits,
     model->record_count=GD_MAX_RECORDS;
     for (i=0;i<GD_MAX_RECORDS;++i) {
         snprintf(names[i],sizeof(names[i]),"config/n%04d",i);
-        if (i) snprintf(expressions[i],sizeof(expressions[i]),"${config/n%04d}+1",i-1);
+        if (i) snprintf(expressions[i],sizeof(expressions[i]),"{config/n%04d}+1",i-1);
         control_definition(model,i,names[i],"integer",i ? NULL:"0",i ? expressions[i]:NULL,"1");
     }
     controls=gd_resolve_controls(model,GD_MAX_RECORDS-1,NULL,0);
     TEST_ASSERT(controls && controls->complete && controls->selected_count==GD_MAX_RECORDS && controls->values[GD_MAX_RECORDS-1].number==GD_MAX_RECORDS-1); gd_controls_destroy(controls);
-    model->records[0].control.value=NULL; model->records[0].control.kind=GD_LITERAL_NULL; model->records[0].control.expression="${config/n4095}";
+    model->records[0].control.value=NULL; model->records[0].control.kind=GD_LITERAL_NULL; model->records[0].control.expression="{config/n4095}";
     controls=gd_resolve_controls(model,-1,NULL,0);
     TEST_ASSERT(controls && !controls->complete && !controls->resolved_count && has_error(model,"controls.cycle") && model->errors_omitted==GD_MAX_RECORDS-GD_MAX_ERRORS); gd_controls_destroy(controls);
     model->error_count=model->errors_omitted=0; original=model->allocator; failure.parent=original; failure.remaining=0;
@@ -1014,7 +1039,7 @@ static GD_Model *import_model(void) {
     model->record_count=4;
     control_definition(model,0,"config/a","number","2",NULL,"s");
     control_definition(model,1,"config/b","number","3",NULL,"s");
-    control_definition(model,2,"config/c","number",NULL,"${config/a}+${config/b}","s");
+    control_definition(model,2,"config/c","number",NULL,"{config/a}+{config/b}","s");
     control_definition(model,3,"config/mode","enum","plain",NULL,NULL);
     model->records[3].control.kind=GD_LITERAL_STRING;
     model->records[3].control.allowed="plain\0\xe9\x9b\xaa\0\xf0\x9f\x98\x80\0line\n\"quoted\"\0";
@@ -1051,6 +1076,17 @@ TEST(control_import_roundtrip,
         TEST_ASSERT(plan && !plan->complete && has_error(model,"controls.range") && plan->candidate->selected[2]); gd_control_import_destroy(plan);
     }
     gd_destroy(model);
+)
+TEST(control_import_legacy_dependent,
+    GD_Model *model=import_model(); GD_ControlImport *plan; GD_ControlSelection selection;
+    const char *changed="{\"a\":4}"; int i;
+    TEST_ASSERT(model); memset(&selection,0,sizeof(selection)); selection.roots[0]=1;
+    for (i=0;i<4;++i) selection.allowed[i]=1;
+    model->records[2].control.expression="${config/a}+{config/b}";
+    plan=gd_plan_control_import(model,&selection,changed,strlen(changed),"json","game");
+    TEST_ASSERT(plan && !plan->complete && plan->candidate && plan->candidate->selected[2]);
+    TEST_ASSERT(has_error(model,"controls.reference_syntax") && !strcmp(model->records[0].control.value,"2"));
+    gd_control_import_destroy(plan); gd_destroy(model);
 )
 TEST(control_import_strings,
     GD_Model *model=import_model(); GD_ControlImport *plan; int i;
@@ -1219,12 +1255,12 @@ int main(int argc, char **argv) {
     failed += test_draft_ranks(); failed += test_draft_connections(); failed += test_draft_limits(); failed += test_draft_report();
     failed += test_routes_semantics(); failed += test_routes_types_unknown(); failed += test_routes_walk_oracle(); failed += test_routes_limits();
     failed += test_mda_traces(); failed += test_mda_resolution(); failed += test_mda_types(); failed += test_mda_oracle(); failed += test_mda_limits();
-    failed += test_control_units_numbers(); failed += test_control_formulas(); failed += test_control_errors();
+    failed += test_control_units_numbers(); failed += test_control_formulas(); failed += test_control_reference_syntax(); failed += test_control_errors();
     failed += test_control_loading(); failed += test_control_overrides_scope(); failed += test_control_selection(); failed += test_control_limits();
-    failed += test_control_import_roundtrip(); failed += test_control_import_strings(); failed += test_control_import_failures();
+    failed += test_control_import_roundtrip(); failed += test_control_import_legacy_dependent(); failed += test_control_import_strings(); failed += test_control_import_failures();
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control checks: %d/43 passed\n", 43-failed);
+    printf("native domain/layout/draft/route/MDA/control checks: %d/45 passed\n", 45-failed);
     return failed ? 1 : 0;
 }

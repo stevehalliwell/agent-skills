@@ -239,7 +239,8 @@ static int input_value(GD_Model *model, const GD_ControlInput *input, GD_Control
     return 1;
 }
 /* Validate status-admitted dependents too, even when omitted from game output.
-   This scans declared reference tokens only, never guesses identity/causality. */
+   Braced reference candidates include invalid prefixed forms so an affected
+   legacy formula is diagnosed by the resolver, not silently skipped. */
 static int affected_selection(ImportReader *reader, const GD_ControlSelection *original, GD_ControlSelection *expanded) {
     int head[GD_MAX_RECORDS],next[GD_MAX_EDGES],source[GD_MAX_EDGES],queue[GD_MAX_RECORDS];
     unsigned char seen[GD_MAX_RECORDS]={0};
@@ -253,11 +254,11 @@ static int affected_selection(ImportReader *reader, const GD_ControlSelection *o
     for (i=0;i<reader->model->record_count;++i) if (expanded->allowed[i] && reader->model->records[i].role==GD_CONTROL) {
         const char *p=reader->model->records[i].control.expression;
         if (!p) continue;
-        while ((p=strstr(p,"${"))!=NULL) {
-            const char *end=strchr(p+2,'}'); char reference[258]; int target;
+        while ((p=strchr(p,'{'))!=NULL) {
+            const char *end=strchr(p+1,'}'); char reference[258]; int target;
             if (!end) break;
-            if (end-p-2<=257) {
-                memcpy(reference,p+2,(size_t)(end-p-2)); reference[end-p-2]=0;
+            if (end-p-1<=257) {
+                memcpy(reference,p+1,(size_t)(end-p-1)); reference[end-p-1]=0;
                 target=gd_control_find(reader->model,reference);
                 if (target>=0) {
                     if (edges==GD_MAX_EDGES) return import_error(reader,"controls.import_impact_limit","Dependent validation exceeds 32768 declared references");

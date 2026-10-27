@@ -827,7 +827,7 @@ Preserve authoritative Markdown, Attendant ownership and shared C99 computation.
 
 #### Review 01 — Actor/state interaction model
 
-Status: needs-refinement; current understanding loop. Foundational for 02, 03, 04 and 09.
+Status: implementation started on agreed slices. Foundational for 02, 03, 04 and 09. User authorizes checkpoint then implementation; no further broad refinement gate.
 
 - Result: interactions describe participants, applicable circumstances, actor state transitions and other effects so shared outcomes and role changes can be inspected without interpreting prose alone.
 - Delivery boundary: include working headless inspection, selected by user, not authoring-only contracts. Deliver source contracts/usage, shared C99 reading/resolution, facts/diagnostics output and tests. Keep new actor-state visualisations, ghosts and broad graph queries in later tasks. Exact CLI/API and baseline-versus-advanced analysis coverage remain to refine.
@@ -861,7 +861,10 @@ Status: needs-refinement; current understanding loop. Foundational for 02, 03, 0
 - Equivalent rule formulations: support both direct conditional effects and explicitly composed rules. User example: side contact causes power loss; power loss on small player causes death, while on big player it causes small. Authoring preference must not force different terminal-result interpretation. Compare conditioned derived outcomes while preserving intermediate concepts, ordered participants, guards, all declared effects and source paths; structural topology need not be identical. Do not infer unrestricted conditions from omission, equate bare reachability with applicability, repeatedly apply power loss to a newly small actor for the same occurrence, or assert universal equivalence where information/analysis is insufficient. Exact invocation/composition syntax, supported equivalence checks and bounds remain to refine.
 - Rule invocation binding: allow a shorthand inside a participant group when the referenced rule has exactly one participant, selected by user. Bind that callee participant to the enclosing caller participant, independent of local label spelling. Multi-participant rules require explicit callee-to-caller binding maps. Do not guess bindings by names or noun type; diagnose incompatible types, missing/ambiguous bindings and use of the shorthand when additional participants are required. Invocation expansion retains the same starting-value semantics and source paths; it does not imply a later tick or sequential mutation. Proposed spellings `causes: mechanics/power-loss` and `apply`/`rule`/`bind` remain to refine.
 - Comparison coverage: include bounded comparison across declared state branches, selected by user rather than supplied-scenario checks only. Return matching results within checked scope, concrete conflict witnesses where established, and explicit undetermined/unexamined scope for open state sets, missing information, unsupported numeric reasoning or limits. Preserve conditions and provenance. Do not claim universal equivalence from sampled scenarios or adopt a general mathematical-equivalence solver by implication. Supported checks, numeric treatment, budgets and result fields remain to refine.
-- Open: dimension definitions and applicability completeness; condition predicates/syntax/unknown semantics and participant references; state/quantitative effect representation; explicit rule composition and consistency/equivalence coverage; compatibility with existing contracts/readers; bounded analysis contract and observable acceptance. Conceptual examples are not a schema or runtime API yet.
+- Implementation checkpoint: `529ff3c` commits current workbench changes, examples, retained experiment evidence and refinement records before implementation. Unrelated root concept drafts excluded; no push. Result evidence has byte-preserving Git attributes and includes its empty stderr log.
+- Implemented slice — formula lookups: shared C99 control resolver requires `{ALIAS/NAME}` and rejects dollar-prefixed references with sourced `controls.reference_syntax`. Updated import dependent-impact discovery, all six live derived-control formulas across both examples, existing native fixtures and formula guidance. Public Attendant updates preserved record identities/values; its standard serialization normalized the three crate metadata headers. Historical frozen input/results unchanged.
+- Checks — formula slice: new braced-reference regression failed on the old reader; after implementation native domain/layout/draft/route/MDA/control checks pass 45/45, including malformed/mixed/legacy references, source locations/offsets and omitted dependent validation during import. Staged headless CJIT builds succeed under `native/build/review01-formulas/`, preserving existing viewers/binaries. Authoring tests pass 6 with 1 optional desktop test skipped. Live Attendant strict baseline validates 63 crate and 202 plumber records without diagnostics/corrections; post-change copied-project validation passes in authoring tests. Scoped whitespace check passes; frozen-input/result diff empty. No experiment reruns or manual UX acceptance claimed.
+- Remaining implementation: axis schema/actor declarations, approved body-rule reader, target-scoped `this`, conditions and ordered context, explicit composition and bound comparisons, headless facts/findings and complete affected-example migration. Resolve routine representation/API details against the agreed specimen and existing conventions; ask only for material behavior gaps exposed by working code. Task 01 is not complete.
 
 #### Review 02 — Resource roles and flows
 
@@ -940,7 +943,13 @@ Status: needs-refinement. Uses selected feature/relationship contracts and viewe
 - Parked candidates: UMAP, t-SNE, PCA and MDS; no algorithm/dependency selected. Keep separate from ordinary force-directed layouts.
 - Open: feature representation, weights, missing/unknown values, interpretation, reproducibility, implementation/dependency constraints and useful-inspection acceptance.
 
-No new commit, experiment run, control adoption, UI automation or publication authorized by this example request.
+Commits require explicit user approval; user approved the pre-implementation checkpoint and completed formula slice. No experiment rerun, control adoption, UI automation or publication implied.
+
+### Deferred — control-variable authoring format
+
+Status: needs-refinement; explicitly deferred by user.
+
+- User flags control variables as JSON rather than Markdown authoring. Current files have `.md` extensions, but some contain JSON-style frontmatter. Clean up their authoring format in future; do not expand current implementation to do this now. Exact target representation remains to refine.
 
 ### Final gate — review committed branch assets before push/completion
 
