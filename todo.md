@@ -945,11 +945,11 @@ Status: needs-refinement. Uses selected feature/relationship contracts and viewe
 
 Commits require explicit user approval; user approved the pre-implementation checkpoint and completed formula slice. No experiment rerun, control adoption, UI automation or publication implied.
 
-### Deferred — control-variable authoring format
+### Deferred — control-variable JSON files
 
-Status: needs-refinement; explicitly deferred by user.
+Status: draft; explicitly deferred by user.
 
-- User flags control variables as JSON rather than Markdown authoring. Current files have `.md` extensions, but some contain JSON-style frontmatter. Clean up their authoring format in future; do not expand current implementation to do this now. Exact target representation remains to refine.
+- Store control variables in JSON files rather than Markdown files, per user correction. Record for future work; do not implement this format migration in current slice.
 
 ### Final gate — review committed branch assets before push/completion
 
