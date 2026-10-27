@@ -243,32 +243,39 @@ GD_ControlImport *gd_plan_control_import(GD_Model *model, const GD_ControlSelect
 void gd_control_import_destroy(GD_ControlImport *plan);
 int gd_write_control_import(FILE *output, const GD_Model *model, const GD_ControlImport *plan, int json, const char *fields);
 
-/* Rule declarations and explicit noun/axis applicability. No condition parsing,
-   state-effect resolution, expression evaluation or invocation expansion.
+/* Rule declarations, explicit applicability and effect target/state bindings.
+   No condition evaluation, expression evaluation or invocation expansion.
    Result owns copied declaration text; borrows immutable model/provenance. */
 #define GD_MAX_RULE_CASES 4096
 #define GD_MAX_RULE_PARTICIPANTS 8192
 #define GD_MAX_RULE_ASSIGNMENTS 8192
+#define GD_MAX_RULE_STATE_EFFECTS 8192
+#define GD_RULE_SYMBOL_WORK_LIMIT (16 * 1024 * 1024)
 #define GD_RULE_TEXT_CAPACITY (4 * 1024 * 1024)
 #define GD_MAX_RULE_LINE 8192
 typedef enum { GD_RULE_ABSENT, GD_RULE_PARSED, GD_RULE_EMPTY, GD_RULE_INVALID } GD_RuleSourceState;
 typedef struct { int record, first_case, case_count, line; GD_RuleSourceState state; } GD_RuleSource;
 typedef struct { const char *name, *context; int source, line, context_line, first_participant, participant_count; } GD_RuleCase;
 typedef enum { GD_RULE_UNSPECIFIED, GD_RULE_RESOLVED, GD_RULE_UNLOADED, GD_RULE_MISSING,
-               GD_RULE_WRONG_ROLE, GD_RULE_AMBIGUOUS, GD_RULE_UNAVAILABLE } GD_RuleResolution;
+               GD_RULE_WRONG_ROLE, GD_RULE_AMBIGUOUS, GD_RULE_UNAVAILABLE,
+               GD_RULE_UNDETERMINED, GD_RULE_WRONG_TYPE, GD_RULE_INVALID_DEFINITION } GD_RuleResolution;
+typedef struct { GD_RuleResolution resolution; int axis_record; const char *state; } GD_RuleTarget;
 typedef enum { GD_AXIS_UNSPECIFIED, GD_AXIS_ENUM, GD_AXIS_INTEGER, GD_AXIS_NUMBER } GD_AxisType;
 typedef struct { GD_AxisType type; int valid, unit_known; } GD_RuleAxis;
 typedef struct {
     const char *name, *noun, *requires, *skip_if, *other_axes, *becomes, *preserve, *causes;
     int line, lines[8], first_assignment, assignment_count, noun_record;
+    int first_state_effect, state_effect_count;
     GD_RuleResolution noun_resolution;
     unsigned fields;
 } GD_RuleParticipant;
-typedef struct { const char *axis, *expression; int line; } GD_RuleAssignment;
+typedef struct { const char *axis, *expression; int line; GD_RuleTarget target; } GD_RuleAssignment;
+typedef struct { const char *text; size_t length; int line; GD_RuleTarget target; } GD_RuleStateEffect;
 typedef struct {
     GD_Allocator allocator;
     int source_count, case_count, participant_count, assignment_count;
     int axis_count, actor_count, axis_definitions_complete, bindings_complete, finding_count, findings_omitted;
+    int state_effect_count, effect_bindings_complete, symbol_work;
     GD_RuleAxis axes[GD_MAX_RECORDS]; /* Indexed by model record, not compact axis index. */
     int actor_first[GD_MAX_RECORDS], next_axis[GD_MAX_EDGES];
     unsigned char actor_axes_complete[GD_MAX_RECORDS];
@@ -278,12 +285,14 @@ typedef struct {
     GD_RuleCase cases[GD_MAX_RULE_CASES];
     GD_RuleParticipant participants[GD_MAX_RULE_PARTICIPANTS];
     GD_RuleAssignment assignments[GD_MAX_RULE_ASSIGNMENTS];
+    GD_RuleStateEffect state_effects[GD_MAX_RULE_STATE_EFFECTS];
     size_t text_used;
     char text[GD_RULE_TEXT_CAPACITY];
 } GD_Rules;
 GD_Rules *gd_read_rules(GD_Model *model);
 /* Internal phase: call once per fresh rule result; diagnostics append to model. */
 void gd_resolve_rule_axes(GD_Model *model, GD_Rules *rules);
+void gd_resolve_rule_effects(GD_Model *model, GD_Rules *rules);
 const char *gd_rule_resolution_name(GD_RuleResolution resolution);
 void gd_rules_destroy(GD_Rules *rules);
 int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *rules, int json, const char *fields);
@@ -319,6 +328,7 @@ const char *gd_field_name(GD_Field field);
 void gd_error(GD_Model *model, const char *code, const char *message,
               const char *path, int line);
 void gd_json_string(FILE *output, const char *value);
+void gd_json_string_n(FILE *output, const char *value, size_t size);
 /* operation: 0 matrix, 1 connectivity, 2 skill-atoms.
    fields: comma-separated data keys, or NULL for command default. */
 int gd_write_result(FILE *output, const GD_Model *model, int operation,

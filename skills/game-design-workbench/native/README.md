@@ -25,7 +25,7 @@ CJIT application code is unoptimized. Windows Zig 0.17.0 `zig cc -std=c99` headl
 ```sh
 zig cc -std=c99 -DHAVE_CONFIG_H=1 -DYAML_DECLARE_STATIC=1 \
   -I vendor/libyaml/include -I vendor/libyaml/src \
-  gd_core.c gd_output.c gd_layout.c gd_focus.c gd_diagnostics.c gd_skills.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_cli.c vendor/libyaml/src/api.c \
+  gd_core.c gd_output.c gd_layout.c gd_focus.c gd_diagnostics.c gd_skills.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_effects.c gd_cli.c vendor/libyaml/src/api.c \
   vendor/libyaml/src/parser.c vendor/libyaml/src/reader.c \
   vendor/libyaml/src/scanner.c -lshell32 -o build/gd-zig.exe
 ```
@@ -271,7 +271,7 @@ Compare edited values with a fresh current export, without old baseline snapshot
 
 `gd rules --interactions ALIAS=FOLDER --mechanics ALIAS=FOLDER` reads authoritative `gd-rule` body blocks. Supply either or both source options. Optional `--axes`, `--nouns`, `--verbs`, `--control-vars`, `--related` use ordinary explicit bindings. JSON/text, pipe/agent defaults, `--fields records,cases,axes,actors,findings` and exit 0/2 follow existing CLI conventions. No new runtime dependency or source writer.
 
-[Rule reader contract and limits](rules.md) covers declaration scope; [typed axes and explicit applicability](axes.md) covers `--axes`, actor references and readiness flags. Native type/unit/bound validation and noun/axis binding resolution work. Both examples now have axis collections/contracts and explicit noun inventories. Condition/context/state/quantity resolution, explicit composition, consistency comparisons and full live-example migration remain pending. A successful declaration scan does not validate game rules.
+[Rule reader contract and limits](rules.md) covers declaration scope; [typed axes and explicit applicability](axes.md) covers `--axes`, actor references and readiness flags. Native type/unit/bound validation and noun/axis binding resolution work. Both examples now have axis collections/contracts and explicit noun inventories. State effects and quantity targets now bind through declared actor axes; ambiguous/type-incompatible/closed-missing names get sourced diagnostics. Open or incomplete names remain undetermined. Condition/context resolution, resulting quantity evaluation, preservation/composition, consistency comparisons and full live-example migration remain pending. A successful declaration scan does not validate game rules.
 
 ## MDA declared traces and questions
 

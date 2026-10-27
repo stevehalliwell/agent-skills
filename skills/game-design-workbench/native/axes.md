@@ -78,7 +78,7 @@ Actor intent and remaining unknowns.
 - References need explicit `--axes` and `--nouns` roles to resolve. Aliases need not match role names. Loading nouns through `--related` preserves text, not noun-role authority.
 - Rule participant labels remain case-local bindings. Two labels can independently bind the same noun type. No binding guessed from spelling, type similarity or implicit inheritance.
 
-This phase resolves declarations only. It does not resolve `requires`, `skip_if`, `becomes`, numeric assignment targets/expressions, ordered context or rule invocation. In particular, state/quantity mentions do not synthesize missing definitions.
+Effect state names and numeric assignment targets now resolve through explicit applicability; see [effect bindings](rules.md#effect-bindings). `requires`, `skip_if`, numeric expressions, ordered context, preservation and rule invocation remain pending. State/quantity mentions never synthesize missing definitions.
 
 ## Headless facts
 
@@ -87,7 +87,7 @@ This phase resolves declarations only. It does not resolve `requires`, `skip_if`
 - `axes`: identity/status/source metadata; raw declared type/unit/values; closed/default distinction and source lines; typed numeric bounds; `definition_valid`, `type_known`, `unit_known`.
 - `actors`: identity/status/source metadata, `axes_declared`, `applicable_axes_complete`, and every axis reference with source line/resolution.
 - `cases[].participants`: raw noun reference plus `noun_resolution` and `applicable_axes_complete`; distinct local identities remain intact.
-- Resolution: `resolved`, `unloaded`, `missing`, `wrong_role`, `ambiguous`, `unavailable`, `unspecified`. A failed load makes negative loaded-alias claims unavailable rather than proving absence.
+- Reference resolution: `resolved`, `unloaded`, `missing`, `wrong_role`, `ambiguous`, `unavailable`, `unspecified`. Effect symbols additionally report `undetermined`, `wrong_type`, `invalid_definition`. A failed load makes negative loaded-alias claims unavailable rather than proving absence.
 - `findings`: bounded informational gaps/repeated declarations, with source/path/line/reference. Missing information does not become false or a quality defect. Invalid typed metadata is instead a normal sourced operation error.
 
 `coverage.complete` still concerns successful declaration reading/typed metadata checks, not gameplay semantics. Additional flags:

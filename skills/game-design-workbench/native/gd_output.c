@@ -1,16 +1,20 @@
 #include "gd.h"
 #include <string.h>
 
-void gd_json_string(FILE *output, const char *value) {
-    const unsigned char *p;
+void gd_json_string_n(FILE *output, const char *value, size_t size) {
+    const unsigned char *p, *end;
     if (!value) { fputs("null", output); return; }
+    end = (const unsigned char *)value + size;
     fputc('"', output);
-    for (p = (const unsigned char *)value; *p; ++p) {
+    for (p = (const unsigned char *)value; p < end; ++p) {
         if (*p == '"' || *p == '\\') { fputc('\\', output); fputc(*p, output); }
         else if (*p < 32) fprintf(output, "\\u%04x", *p);
         else fputc(*p, output);
     }
     fputc('"', output);
+}
+void gd_json_string(FILE *output, const char *value) {
+    gd_json_string_n(output,value,value ? strlen(value):0);
 }
 static void member(FILE *output, const char *key, const char *value, int comma) {
     if (comma) fputc(',', output);

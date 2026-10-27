@@ -10,6 +10,9 @@ const char *gd_rule_resolution_name(GD_RuleResolution resolution) {
         case GD_RULE_WRONG_ROLE: return "wrong_role";
         case GD_RULE_AMBIGUOUS: return "ambiguous";
         case GD_RULE_UNAVAILABLE: return "unavailable";
+        case GD_RULE_UNDETERMINED: return "undetermined";
+        case GD_RULE_WRONG_TYPE: return "wrong_type";
+        case GD_RULE_INVALID_DEFINITION: return "invalid_definition";
         default: return "unspecified";
     }
 }

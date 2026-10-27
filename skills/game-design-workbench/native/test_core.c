@@ -51,6 +51,31 @@ static int has_error(GD_Model *model, const char *code) {
     for (i = 0; i < model->error_count; ++i) if (!strcmp(model->errors[i].code, code)) return 1;
     return 0;
 }
+TEST(rule_effect_bindings,
+    GD_Model *model = model_create(); GD_Rules *rules; int life, form, time, amount;
+    TEST_ASSERT(model && setup("rule-effect-bindings")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+    TEST_ASSERT(write_record(1,"Life","---\nvalue_type: enum\nallowed_values: [alive, dead, dead]\nclosed: true\n---\nLife."));
+    TEST_ASSERT(write_record(1,"Form","---\nvalue_type: enum\nallowed_values: [small, tall]\n---\nForm."));
+    TEST_ASSERT(write_record(1,"Time","---\nvalue_type: number\nunit: s\n---\nTime."));
+    TEST_ASSERT(write_record(1,"Amount","---\nvalue_type: integer\nunit: life\n---\nAmount."));
+    TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Life, actions/Form, actions/Time, actions/Life]\n---\nHero."));
+    TEST_ASSERT(write_record(0,"lives","---\naxes: [actions/Amount]\n---\nSeparate noun."));
+    TEST_ASSERT(write_record(2,"contact","```gd-rule\ncase contact:\n    First:\n        noun: things/hero\n        becomes: small, Form.small, Life.dead\n        set:\n            Time: {controls/window}\n    Second:\n        noun: things/hero\n        preserve: ALL\n    Lives:\n        noun: things/lives\n        set:\n            Amount: this + 1[life]\n```\n"));
+    TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+    TEST_ASSERT(rules && !model->error_count && rules->effect_bindings_complete && rules->state_effect_count == 3);
+    life = find_record(model,"actions/Life"); form = find_record(model,"actions/Form");
+    time = find_record(model,"actions/Time"); amount = find_record(model,"actions/Amount");
+    TEST_ASSERT(rules->participants[0].state_effect_count == 3 && !rules->participants[1].state_effect_count);
+    TEST_ASSERT(rules->state_effects[0].target.axis_record == form && rules->state_effects[1].target.axis_record == form);
+    TEST_ASSERT(rules->state_effects[2].target.axis_record == life && !strcmp(rules->state_effects[2].target.state,"dead"));
+    TEST_ASSERT(rules->state_effects[0].target.resolution == GD_RULE_RESOLVED && rules->state_effects[0].length == 5);
+    TEST_ASSERT(!strncmp(rules->state_effects[0].text,"small",5) && !strcmp(rules->participants[0].becomes,"small, Form.small, Life.dead"));
+    TEST_ASSERT(rules->assignments[0].target.resolution == GD_RULE_RESOLVED && rules->assignments[0].target.axis_record == time);
+    TEST_ASSERT(rules->assignments[1].target.resolution == GD_RULE_RESOLVED && rules->assignments[1].target.axis_record == amount);
+    TEST_ASSERT(!strcmp(rules->assignments[1].expression,"this + 1[life]"));
+    TEST_ASSERT(rules->symbol_work > 0 && rules->symbol_work <= GD_RULE_SYMBOL_WORK_LIMIT && !gd_sources_changed(model));
+    gd_rules_destroy(rules); gd_destroy(model);
+)
 TEST(rule_axis_definitions,
     GD_Model *model = model_create(); GD_Rules *rules; int life, amount, hero, isolated, empty, null_axes;
     TEST_ASSERT(model && setup("rule-axis-definitions")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
@@ -1517,6 +1542,7 @@ int main(int argc, char **argv) {
     if (!file_directory_create(root, 1)) { fputs("Fixture directory must be new\n", stderr); return 2; }
     storage = free_list_from_buffer(backing, sizeof(backing));
     if (!storage) return 2;
+    failed += test_rule_effect_bindings();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
     failed += test_rules_declarations(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
@@ -1533,6 +1559,6 @@ int main(int argc, char **argv) {
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/55 passed\n", 55-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/56 passed\n", 56-failed);
     return failed ? 1 : 0;
 }

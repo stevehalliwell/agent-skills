@@ -19,7 +19,7 @@ Templates: [all 15 collection contracts](../templates/). Each has `.schema.md`, 
 
 ## Actor/state work in progress
 
-Read [rule reader](../native/rules.md) for body syntax and [typed axes](../native/axes.md) for definitions/applicability. Native `gd rules` currently reads declarations, validates axis types/units/bounds and resolves explicit noun/axis references, across all supplied statuses. It does not yet resolve conditions, ordered context, state effects, quantitative effects or rule composition. Readiness flags are scoped facts, not gameplay validation. Full affected-example migration remains required; do not silently convert prose into invented rules.
+Read [rule reader](../native/rules.md) for body syntax and [typed axes](../native/axes.md) for definitions/applicability. Native `gd rules` currently reads declarations, validates axis types/units/bounds and resolves explicit noun/axis references, across all supplied statuses. It also binds declared effect state names and quantity targets through actor axes. It does not yet resolve conditions, ordered context, resulting quantities, preservation or rule composition; name bindings do not prove consistent or applicable outcomes. Readiness flags are scoped facts, not gameplay validation. Full affected-example migration remains required; do not silently convert prose into invented rules.
 
 ## Experiments
 

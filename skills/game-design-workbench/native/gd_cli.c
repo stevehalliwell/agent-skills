@@ -41,7 +41,7 @@ static void help(void) {
          "                         Enum VALUE is raw text; booleans true/false; numeric unit from definition\n"
          "Rules require --interactions and/or --mechanics ALIAS=FOLDER\n"
          "  Optional --axes, --nouns, --verbs, --control-vars, --related; explicit applicability\n"
-         "  Reads labelled gd-rule body blocks; no state/formula evaluation or comparison\n"
+         "  Resolves explicit effect targets/state names; no condition/formula evaluation or comparison\n"
          "MDA requires --mechanics, --dynamics, --aesthetics ALIAS=FOLDER; optional --systems\n"
          "  --from ALIAS/NAME       MDA/control root (default all), or Relationships root\n"
          "                         Relationships defaults first loaded skill, then other record\n"
