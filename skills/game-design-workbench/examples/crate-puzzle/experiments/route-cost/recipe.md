@@ -1,6 +1,8 @@
-# Crate route timing: prepared baseline recipe
+# Crate route timing: baseline recipe
 
 Status at source checkpoint: **prepared, not executed**. User authorized a narrow local checkpoint and one 1,000-trial baseline run in isolated checkout `D:/Repos/agent-skills-route-baseline`. Native supervision/result validation were checked with synthetic emitters. Actual trial results belong in owning experiment and retained result files after execution. No push, publication or control adoption authorized. Opening this file does not run anything.
+
+First authorized baseline run is now recorded in [owning experiment results](../../game-design/experiments/route-cost.md#results). Code and frozen inputs remain unchanged after that run.
 
 Owner: [route-cost](../../game-design/experiments/route-cost.md), id `01a15175-3c00-7e68-8f3b-b760984a9a2d`. Owning record links this prepared package and its agreed experiment-local clock boundary; no game rule is adopted.
 
@@ -110,4 +112,4 @@ Trace selection is frozen `trace_trial`, null or one valid trial index. New trac
 
 ## Preparation evidence
 
-100 input/random and 20 result helper checks passed under CJIT 1.2.0 and Zig 0.17.0. Both route executables compiled; neither executed. Native supervision/result validation pass synthetic fixture checks under both compilers; [shared verification boundary](../../../../native/experiments.md#verification-boundary) records coverage. No measured route outcomes, winner, checkpoint, simulation execution, or adoption exists.
+100 input/random and 20 result helper checks passed under CJIT 1.2.0 and Zig 0.17.0. Those engineering builds compiled both route executables without executing them. Native supervision/result validation pass synthetic fixture checks under both compilers; [shared verification boundary](../../../../native/experiments.md#verification-boundary) records coverage. Engineering checks are not measured route outcomes. Subsequent authorized baseline execution is linked above; no winner or adoption follows.

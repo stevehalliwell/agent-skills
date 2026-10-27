@@ -20,7 +20,7 @@ Read [experiment record](../examples/crate-puzzle/game-design/experiments/route-
 - Baseline: resolved walk duration 0.5 s and push duration 1 s; 1,000 trials with seed `0x000000000000002a`.
 - Clock: before first delay through completion of final push; include all delays and action durations.
 - Outputs: elapsed time, completion time, route completion and remaining energy. Compare actual valid attempted trials with supplied 8 s / 90% criterion only after execution.
-- Current result: prepared and compiled, not executed. Analytical prediction is not a measured result. No claim about human planning, fun or puzzle solvability.
+- Result: one authorized baseline run completed; owning record links raw measurements, exact checkpoint/build, summary and criterion comparison. Analytical prediction remains separate from measured result. No claim about human planning, fun or puzzle solvability.
 
 This is the target artifact shape, not a required seven-action model for other questions. Reuse existing example code when it answers the request; otherwise generate only the investigation-specific model.
 

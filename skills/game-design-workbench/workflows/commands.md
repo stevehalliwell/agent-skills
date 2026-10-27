@@ -17,7 +17,7 @@ Read relevant source when a projection is unnecessary. Schema/query/search prepa
 
 ## Experiment checkpoints
 
-Native analysis, formula resolution/import/export, views, and simulation tools remain deferred. Do not invent an available command or execute an experiment merely because a document describes one.
+Native matrix/skill/MDA analysis/views, challenge-route analysis, and typed control resolution/import planning/export are available; see [native contract](../native/README.md). [Shared experiment helpers and crate baseline](../native/README.md#prepared-experiments) are available; [owning experiment](../examples/crate-puzzle/game-design/experiments/route-cost.md#results) now records one complete baseline run. [Explicit Windows process supervision and read-only result validation](../native/experiments.md) are implemented and checked with synthetic emitters. Batch/sweep/replay automation and result views remain undelivered. No Git/approval/lifecycle automation is added. Agent builds bounded experiments and interprets results using [experiment workflow](experiment.md); use [tuning extension](experiment-tuning.md) only for requested comparisons or search. Do not invent an available runner or execute an experiment merely because a document describes one.
 
 When an explicitly authorized experiment has executable implementation:
 

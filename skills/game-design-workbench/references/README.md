@@ -29,6 +29,7 @@ All 17 retained HTML files map to 15 source-text Markdown captures. Bartle's raw
 Each index separates actual captures from cards and records source editions, methods, figures, fidelity limits, rights, and access gaps. PDF conversions and captions are listed there too.
 
 - [MDA](mda/README.md)
+- [Game grammar / Meaningful Play](game-grammar/README.md): retained seven-page chapter scan and visually checked reading copy; matrix is original workbench technique. Local-only/not-publication-cleared.
 - [GameFlow](gameflow/README.md)
 - [Skill atoms](skill-atoms/README.md)
 - [Gameplay patterns](gameplay-patterns/README.md)

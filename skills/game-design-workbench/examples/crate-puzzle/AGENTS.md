@@ -9,4 +9,4 @@
 - Load installed `game-design-workbench` skill for game-design operations. In this repository, its source is `../../SKILL.md` relative to this example root.
 - Live concept/mode: `game-design/concept.md`. Role aliases match directory basenames in registry; `skill-atoms` means game-design skill atoms, not agent skills.
 - Use Attendant and ordinary Git directly. No workbench CLI, manifest, or local runtime installation.
-- `game-design-results/` and `review-baseline*.json` contain historical evidence. No old report is a fresh review. Experiments remain proposed/unexecuted.
+- `game-design-results/` and `review-baseline*.json` contain historical evidence. No old report is a fresh review. Route-cost retains one completed baseline simulation; energy/planning remains proposed/unexecuted. Saved results are not a fresh rerun.

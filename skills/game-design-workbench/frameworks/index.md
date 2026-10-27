@@ -2,7 +2,7 @@
 
 Choose a lens by the question you need to answer. Read only the selected guide; overlapping entries offer different explanations, not a sequence to run through.
 
-Guides remain provisional. Each guide states its source coverage and limits; four book-based guides still await fuller source-backed expansion. Schell's guide now uses the retained English deck, not a full-book reading. Source text and provenance live in the separate [reference capture index](../references/README.md).
+Guides remain provisional. Each guide states its source coverage and limits; deeper source-backed expansion of resource economy, Caillois, and playcentric is deferred unless needed; user accepts current guides for now. Game grammar now uses the inspected Meaningful Play chapter, not a full-book reading. Schell's guide now uses the retained English deck, not a full-book reading. Source text and provenance live in the separate [reference capture index](../references/README.md).
 
 For precise emotional meanings or sequences, use [shared framing](../workflows/emotional-experience.md) and [working emotion vocabulary](../references/emotional-experience/emotions.md). These support the existing frameworks; they are not a nineteenth entry, required intake, or exhaustive taxonomy.
 

@@ -139,7 +139,7 @@ These are **workbench conventions**, not a transcription of Cook's whole theory:
 - Challenge `introduces`, `practises`, `requires`, and `tests_mastery` label intended opportunities/demands. `next` links can declare alternatives; they are not AND prerequisites. A challenge may introduce an understanding it also requires during play; inspect intent before calling that inconsistent.
 - Experiments own hypotheses, local measures, methods, observations, results, and limitations. No separate measures or decisions collection. An atom's “evidence sought” is not a completed experiment.
 
-Do not run graph recipes as psychological evaluation. Native cycle, rank-conflict, and all-route opportunity checks remain deferred until C99 analysis ships. Manual tracing names inspected nodes/routes and does not imply exhaustive coverage.
+Do not run graph recipes as psychological evaluation. Native C99 tools now check declared prerequisite cycles, rank conflicts, and prior introduction/practice opportunities across entry-to-visit routes, including revisits. Use [native route contract](../native/README.md#challenge-route-opportunities); unknown/incomplete coverage and witness limits remain explicit. Manual tracing still names inspected nodes/routes and does not imply exhaustive coverage.
 
 ## Apply to a selected design slice
 

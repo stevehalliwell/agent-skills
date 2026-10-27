@@ -72,7 +72,7 @@ Single-player interaction is assumed for this example. Target device, input sche
 - What feedback makes blocked and successful actions understandable?
 - Which assistance supports discovery without prescribing every move?
 - Does local [deliberate tension](aesthetics/deliberate-tension.md) support or conflict with the broader intended satisfaction and willingness to retry?
-- What can [route timing](experiments/route-cost.md) reveal under its stated assumptions? It is proposed, not executed, and does not model human puzzle solving.
+- What can [route timing](experiments/route-cost.md) reveal under its stated assumptions? It has one recorded baseline simulation under assumed delays and does not model human puzzle solving.
 
 Crate-color feedback remains proposed; pulling remains rejected in current source. Neither is silently adopted by this brief.
 

@@ -1,5 +1,5 @@
 ---
-{ "id": "01a15175-3c00-7e68-8f3b-b760984a9a2d", "name": "route-cost", "created_at": "2026-10-19T00:00:00.000Z", "desc": "Prepared seven-action route timing experiment; not executed", "tags": [], "status": "proposed", "stage": "proposed", "experiment_kind": "simulation", "control-vars": [ "control-vars/tile-distance", "control-vars/walk-speed", "control-vars/walk-duration", "control-vars/push-duration", "control-vars/initial-energy", "control-vars/energy-capacity", "control-vars/push-cost" ], "mechanics": [ "mechanics/grid-walking", "mechanics/crate-pushing" ], "interactions": [], "dynamics": [], "aesthetics": [], "program": experiments/route-cost/route_timing.c, "inputs": experiments/route-cost/frozen-input.json, "results": null }
+{ "id": "01a15175-3c00-7e68-8f3b-b760984a9a2d", "name": "route-cost", "created_at": "2026-10-19T00:00:00.000Z", "desc": "Executed 1000-trial route timing baseline; 245 finished within 8 s", "tags": [], "status": "proposed", "stage": "completed", "experiment_kind": "simulation", "control-vars": [ "control-vars/tile-distance", "control-vars/walk-speed", "control-vars/walk-duration", "control-vars/push-duration", "control-vars/initial-energy", "control-vars/energy-capacity", "control-vars/push-cost" ], "mechanics": [ "mechanics/grid-walking", "mechanics/crate-pushing" ], "interactions": [], "dynamics": [], "aesthetics": [], "program": experiments/route-cost/route_timing.c, "inputs": experiments/route-cost/frozen-input.json, "results": game-design-results/route-cost/20261024T193020Z-baseline-speed-2 }
 ---
 # Question
 
@@ -26,7 +26,7 @@ Four walks then three successful pushes. Assume route legality and correct decis
 
 Analytical reference: base time 5 s, continuous time range 5–12 s, probability of completion by 8 s is 1312/5040 ≈ 0.2603. This is mathematics, NOT executed simulation output.
 
-## Prepared test
+## Executed test
 
 One baseline configuration, not a speed sweep: 1,000 trials with seed `0x000000000000002a`. Use resolved walk duration 0.5 s and push duration 1 s at walk speed 2 m/s. Initial/capacity energy is 3; each successful push spends 1. Program reads frozen values, not live design files or a second formula evaluator. Insufficient starting energy is unsupported; no exhaustion/recovery policy is invented.
 
@@ -36,25 +36,34 @@ Artifacts below are relative to example root; Markdown links resolve from this r
 - Input: [frozen-input.json](../../experiments/route-cost/frozen-input.json), including typed controls, measures, assumptions, criterion, seed and limits.
 - Reproduction: [recipe.md](../../experiments/route-cost/recipe.md), with build/run instructions and dependencies.
 - Execution bounds: 1,000,000 steps per trial, 30 s wall time, 64 MiB output. No canonical source writes.
-- Output: raw per-trial NDJSON measurements plus completion/provenance; stderr retained separately. Actual result artifact does not exist yet, so `results` remains null.
+- Output: raw per-trial NDJSON measurements plus completion/provenance; stderr retained separately. Retained evidence is linked below.
 
-At source checkpoint, program has compiled under CJIT and Zig but no route trial has run. User authorized a narrow local checkpoint and one bounded baseline run from isolated checkout `D:/Repos/agent-skills-route-baseline`. Actual outputs and findings will be recorded after that run.
-
-After an authorized run, retain raw output and record requested/attempted/completed/invalid counts, count within 8 s and denominator, measured fraction, supplied 90% criterion comparison, actual checkpoint/build/toolchain, and limitations here. A missing final record or failed run is incomplete evidence, not a passing experiment. Do not fill these values from analytical reference.
+User authorized a narrow local checkpoint and one bounded baseline run. Executed exact committed source in isolated checkout `D:/Repos/agent-skills-route-baseline`, using Zig 0.17.0. No sweep or second seed was run.
 
 ## Observations
-None recorded.
+No playtest participants or observed player behavior. Results below are measurements from an actual execution of the stated simulation, not human observations.
 
 ## Results
-Not executed. Analytical reference above is not simulation output.
+Executed 2026-10-24 UTC; run identity `20261024T193020Z-baseline-speed-2`.
+
+- Requested / attempted / completed: 1,000 / 1,000 / 1,000 trials. Invalid trials: 0. Undefined completion times: 0. No exclusions.
+- Finished within 8 s: **245 / 1,000 = 24.5%**. Supplied criterion requires at least 90%; this run does **not** satisfy it.
+- Mean simulated completion time: 8.510268915928435 s. Minimum: 6.472825908102095 s. Maximum: 10.635222096694633 s.
+- Every route completed all seven actions and ended with 0 energy. This is distinct from meeting the time criterion.
+- Process exit 0; complete validated protocol, 1,002 records, 234,847 stdout bytes, empty stderr. No timeout or output limit reached.
+- Capture wall time: 1.0038945999986026 s, not simulated route duration.
+
+Evidence: [analysis and hashes](../../game-design-results/route-cost/20261024T193020Z-baseline-speed-2/summary.json), [raw trial output](../../game-design-results/route-cost/20261024T193020Z-baseline-speed-2/stdout.ndjson), [supervision and validation](../../game-design-results/route-cost/20261024T193020Z-baseline-speed-2/supervision.json), [recorded input](../../game-design-results/route-cost/20261024T193020Z-baseline-speed-2/input.json), [stderr](../../game-design-results/route-cost/20261024T193020Z-baseline-speed-2/stderr.log).
 
 ## Interpretation
-No execution or design verdict.
+Under this prescribed route and assumed delay model, baseline did not meet the 8 s / 90% criterion. Recorded 24.5% is a finite seeded sample; continuous analytical reference is approximately 26.03%, not an additional measured run or proof of distribution correctness. No conclusion about human planning, fun, puzzle solvability or game quality follows. No control changes adopted.
 
 ## Snapshot and provenance
+Source checkpoint: `014af8bd477524a145d6ad077abf3ca2ad60c47a`. Relevant source was clean in isolated checkout before execution. Frozen configuration `baseline-speed-2`; master seed `0x000000000000002a`; one 1,000-trial run. Exact compiler executable, argument array and build working directory: [build.json](../../game-design-results/route-cost/20261024T193020Z-baseline-speed-2/build.json). Native supervisor checked the stream; separate read-only native validation also passed. Input copy equals committed input byte-for-byte. Analysis counted all validated trial times <= 8 s and divided by all 1,000 attempted trials; range and arithmetic mean use the same 1,000 times.
+
 Criterion migrated from expectations/route-time, id 01a15175-3c00-7003-8c7e-5f8225a0df35.
 
 Embedded former measure identities: elapsed-time 01a15175-3c00-7ddf-805e-cf1b29a827c3; completion-time 01a15175-3c00-76dc-8930-00df128f5f6b; route-complete 01a15175-3c00-7868-8653-33fd950f27bd; remaining-energy 01a15175-3c00-7549-84c3-67f07be036b4.
 
 ## Limitations
-Model and frozen inputs exist. At source checkpoint, baseline execution is approved but not yet performed. This tests timing under assumed delays and a legal prescribed route, not human decisions, planning, fun or physical puzzle solvability. Continuous analytical prediction and discrete seeded simulation are different evidence. Historical runs must retain their exact code/inputs rather than follow later control changes.
+One Windows/Zig baseline execution is recorded. No second seed, candidate comparison, playtest or cross-platform execution was performed. This tests timing under assumed delays and a legal prescribed route, not human decisions, planning, fun or physical puzzle solvability. Continuous analytical prediction and discrete seeded simulation are different evidence. Historical runs must retain their exact code/inputs rather than follow later control changes.

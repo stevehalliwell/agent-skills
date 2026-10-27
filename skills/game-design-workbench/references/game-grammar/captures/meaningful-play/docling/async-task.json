@@ -1,0 +1,18 @@
+{
+  "task_id": "699fde5d-b7a4-4694-b73d-ce10dd6dafd6",
+  "task_type": "convert",
+  "task_status": "pending",
+  "task_position": 1,
+  "task_meta": null,
+  "error_message": null,
+  "failure": null,
+  "last_status": {
+    "task_id": "699fde5d-b7a4-4694-b73d-ce10dd6dafd6",
+    "task_type": "convert",
+    "task_status": "success",
+    "task_position": null,
+    "task_meta": null,
+    "error_message": null,
+    "failure": null
+  }
+}
