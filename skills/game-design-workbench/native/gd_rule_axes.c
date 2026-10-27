@@ -118,7 +118,10 @@ void gd_resolve_rule_axes(GD_Model *model, GD_Rules *rules) {
     assert(model && rules && model->record_count <= GD_MAX_RECORDS && model->edge_count <= GD_MAX_EDGES);
     rules->axis_definitions_complete = 0; rules->bindings_complete = 1;
     for (i = 0; i < model->collection_count; ++i) if (model->collections[i].role == GD_AXIS) rules->axis_definitions_complete = 1;
-    for (i = 0; i < model->record_count; ++i) rules->actor_first[i] = -1;
+    for (i = 0; i < model->record_count; ++i) {
+        rules->actor_first[i] = -1; rules->context_first[i] = -1;
+        rules->context_axes_complete[i] = (unsigned char)model->records[i].context_axes_declared;
+    }
     for (i = 0; i < model->record_count; ++i) {
         const GD_Record *record = &model->records[i];
         if (record->role == GD_AXIS) { ++rules->axis_count; validate_axis(model,rules,i); }
@@ -131,18 +134,21 @@ void gd_resolve_rule_axes(GD_Model *model, GD_Rules *rules) {
             }
         }
     }
-    /* Bucket only explicitly declared noun-to-axis links. Preserve authored
-       order and duplicates; do not infer applicability from body state names. */
-    for (i = model->edge_count-1; i >= 0; --i) if (model->edges[i].field == GD_AXES) {
+    /* Bucket actor and rule-context inventories separately. Shared definitions
+       do not make context axes into actor state or imply contact. */
+    for (i = model->edge_count-1; i >= 0; --i) if (model->edges[i].field == GD_AXES || model->edges[i].field == GD_CONTEXT_AXES) {
         const GD_Edge *edge = &model->edges[i];
         source = edge->source;
-        rules->next_axis[i] = rules->actor_first[source]; rules->actor_first[source] = i;
+        int context = edge->field == GD_CONTEXT_AXES;
+        int *first = context ? &rules->context_first[source]:&rules->actor_first[source];
+        rules->next_axis[i] = *first; *first = i;
         rules->axis_resolution[i] = edge->target == -2 ? GD_RULE_AMBIGUOUS : edge->target < 0 ? unresolved(model,edge->reference) :
             model->records[edge->target].role == GD_AXIS ? GD_RULE_RESOLVED:GD_RULE_WRONG_ROLE;
         if (rules->axis_resolution[i] != GD_RULE_RESOLVED) {
-            rules->actor_axes_complete[source] = 0; rules->bindings_complete = 0;
-            finding(rules,source,edge->line,"rules.axis_reference",
-                    "Declared actor axis is unresolved; inspect reference resolution","axes",edge->reference);
+            if (context) rules->context_axes_complete[source] = 0;
+            else { rules->actor_axes_complete[source] = 0; rules->bindings_complete = 0; }
+            finding(rules,source,edge->line,context ? "rules.context_axis_reference":"rules.axis_reference",
+                    "Declared axis is unresolved; inspect reference resolution",context ? "context_axes":"axes",edge->reference);
         }
     }
     for (i = 0; i < rules->case_count; ++i) {

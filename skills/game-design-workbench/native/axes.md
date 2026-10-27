@@ -56,7 +56,7 @@ Protection duration. No clamp, decay rule or initial duration implied.
 - `unit`: shared numeric unit grammar from controls. Symbols remain opaque; no automatic conversion. Missing/empty unit remains unknown, not dimensionless. Explicit `1` means dimensionless.
 - `minimum`, `maximum`: optional numeric literals in declared unit, inclusive constraints. Reuse shared finite-number and exact safe-integer checks. Fractional/unsafe integer bounds, malformed units and reversed bounds are sourced errors. No implicit correction, clamp or runtime rejection behavior. Omitted bounds do not establish a complete numeric domain.
 - Enum axes do not take numeric units/bounds. Definitions do not own actor instances' initial/current values and are not global mutable controls.
-- Same definition format may describe interaction-scoped context vocabulary. Loading such a definition does not add it to every actor; ordered context parsing remains pending.
+- Same definition format may describe interaction-scoped context vocabulary. Explicit rule `context_axes` selects it for [ordered context](context.md), without adding it to actors or inferring contact.
 
 ## Actor applicability
 
@@ -78,7 +78,7 @@ Actor intent and remaining unknowns.
 - References need explicit `--axes` and `--nouns` roles to resolve. Aliases need not match role names. Loading nouns through `--related` preserves text, not noun-role authority.
 - Rule participant labels remain case-local bindings. Two labels can independently bind the same noun type. No binding guessed from spelling, type similarity or implicit inheritance.
 
-Effect state names and numeric assignment targets now resolve through explicit applicability; see [effect bindings](rules.md#effect-bindings). State `requires`/`skip_if` now compile through the same lookup with [unknown truth preserved](conditions.md). Numeric comparisons/expressions, ordered context, preservation and rule invocation remain pending. State/quantity mentions never synthesize missing definitions.
+Effect state names and numeric assignment targets now resolve through explicit applicability; see [effect bindings](rules.md#effect-bindings). State `requires`/`skip_if` now compile through the same lookup with [unknown truth preserved](conditions.md). Ordered context endpoints/operators now bind separately. Numeric comparisons/expressions, concrete applicability, preservation and rule invocation remain pending. State/quantity mentions never synthesize missing definitions.
 
 ## Headless facts
 

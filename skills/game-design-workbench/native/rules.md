@@ -1,6 +1,6 @@
 # Rule declaration reader
 
-Review 01 foundation: inspect approved body format through shared C99. Reader retains declarations and resolves explicit noun/axis applicability, not gameplay meaning. Effect states and quantity targets now bind through explicit actor axes. [State conditions](conditions.md) now compile to target-scoped Boolean programs with unknown truth preserved. Numeric comparisons/context, resulting quantity values, preservation, explicit invocation expansion and bounded consistency comparisons remain pending. See [typed axes and applicability](axes.md). Do not treat successful syntax inspection as completed task or migration.
+Review 01 foundation: inspect approved body format through shared C99. Reader retains declarations and resolves explicit noun/axis applicability, not gameplay meaning. Effect states and quantity targets now bind through explicit actor axes. [State conditions](conditions.md) now compile to target-scoped Boolean programs with unknown truth preserved. [Ordered context](context.md) now binds explicit local endpoints and rule-scoped vocabulary without inferring scene truth. Numeric comparisons, resulting quantity values, preservation, explicit invocation expansion and bounded consistency comparisons remain pending. See [typed axes and applicability](axes.md). Do not treat successful syntax inspection as completed task or migration.
 
 ## Run
 
@@ -73,7 +73,7 @@ case powered-side-contact:
 - `absent`: no authoritative rule block; prose is not silently converted.
 - `invalid`: malformed rule declaration; none of that record's cases returned as valid partial data.
 
-Frontmatter relationships retain declarations, duplicates, source lines and loaded/ambiguous flags from existing loader. Participant noun bindings now resolve against explicit noun roles; actor-axis references resolve against explicit axis roles. Effect bindings and state predicates resolve through those declarations; numeric predicates, ordered context and other body reference text remain unresolved. A structurally parsed block can still have effect-binding errors; raw cases stay visible, not semantically accepted.
+Frontmatter relationships retain declarations, duplicates, source lines and loaded/ambiguous flags from existing loader. Participant noun bindings now resolve against explicit noun roles; actor-axis references resolve against explicit axis roles. Effect bindings and state predicates resolve through those declarations; ordered context binds through separate rule `context_axes`. Numeric predicates and other body reference text remain unresolved. A structurally parsed block can still have effect-binding errors; raw cases stay visible, not semantically accepted.
 
 `data.cases` retains record identity/status/coverage/path, local case name and line, raw context and line, ordered participants, field lines and all numeric assignments with lines. Source line numbers address original Markdown, including frontmatter and CRLF files. Same-type participants remain distinct local bindings.
 

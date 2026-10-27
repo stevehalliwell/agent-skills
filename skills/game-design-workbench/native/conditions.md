@@ -61,6 +61,16 @@ GD_RuleTruth value = gd_rule_condition_value(
 
 A true expression does not establish case applicability: other participants, unspecified axes, ordered context and local exclusions still matter. No input facts supplied by CLI yet; CLI exposes declarations/programs, not fabricated truth values. No tick, state transition, effect execution, sequence or independent corroboration is inferred.
 
+## Case-local early-outs
+
+Omitted `skip_if` means no guard declared. Do not evaluate absence, invent a false predicate or inherit a guard from another case/actor type. This differs from an authored guard whose value is unknown. Omitted `requires`/context still remain unspecified.
+
+`gd_rule_case_exclusions` checks only authored local guards under explicit predicate facts. Return `GD_EXCLUSION_ABSENT` for no guards, `GD_EXCLUSION_NOT_EXCLUDED` when all authored guards are false, `GD_EXCLUSION_EXCLUDED` when any is true, or `GD_EXCLUSION_UNKNOWN` when remaining guards are unknown/unexamined. A known true guard excludes its case even if another guard is unknown; it does not exclude other cases.
+
+Result retains `guard_count`, `checked_count`, snapshot `excluded_by` participant index (`-1` without witness), charged `work` and `limited`. A witness may end the check early; this is not priority or an interaction winner. CLI exposes authored `skip_if_count` only; no scenario facts or fabricated truth supplied.
+
+Each check reserves conservative token/byte-comparison upper bounds against a separate 16,777,216 evaluation-work budget. A guard that does not fit stays unexamined; no partial false result. Inputs remain limited to 256 facts and existing bounded case/program storage. No-guard result needs no predicate evaluation. This checks exclusions only: absent/false guards do not prove positive requirements, context, complete axis scope, valid scene, applicable effects or a consistent transition.
+
 ## Bounds and checks
 
 - Per field: 256 input tokens, 64 nested groups. Per result: 65,536 compiled tokens. Operator storage/evaluation stacks bounded by 256. No recursion or allocation inside compilation/evaluation.

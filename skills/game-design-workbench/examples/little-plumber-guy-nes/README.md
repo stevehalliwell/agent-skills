@@ -6,10 +6,10 @@ Not a reconstruction of a published game. No ROM, copied map, screenshots, sprit
 
 ## What is here
 
-210 records across 15 collections:
+211 records across 15 collections:
 
 - 26 nouns and 12 verbs establish vocabulary and actions. Noun inventories explicitly reference known axes or remain null when unmodeled.
-- 8 provisional axes cover life, form, protection/duration and existing pool quantities. This begins actor/state migration; most interaction/mechanic bodies remain prose, not structured rule coverage.
+- 9 provisional axes: 8 cover actor life, form, protection/duration and existing pool quantities; Contact supplies only the accepted specimen's ordered context vocabulary. This begins actor/state migration; most interaction/mechanic bodies remain prose, not structured rule coverage.
 - 49 conditional interactions retain different outcomes within the same noun–verb cell.
 - 24 mechanics and 6 systems own reusable behavior and arrangements.
 - 16 skill atoms and 19 challenges describe intended opportunities, demands, alternatives and joins.

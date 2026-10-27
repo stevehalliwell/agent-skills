@@ -17,10 +17,12 @@ mechanics:
   - mechanics/enemy-contact
 control-vars:
   - control-vars/safety-window
+context_axes:
+  - axes/Contact
 ---
 ## Rule
 
-Accepted authoring specimen. Native `gd rules` reads this block as declarations. Typed axes, explicit noun/axis bindings, grouped state predicates, effect names and the quantity target now resolve. Ordered context, concrete applicability, resulting quantities, preservation and composition remain pending; compiled predicates do not execute or validate gameplay meaning.
+Accepted authoring specimen. Native `gd rules` reads this block as declarations. Typed axes, explicit noun/axis bindings, grouped state predicates, effect names and the quantity target now resolve. Ordered context binds local participants through explicit `context_axes` without establishing actual contact. Concrete applicability, resulting quantities, preservation and composition remain pending; compiled predicates do not execute or validate gameplay meaning.
 
 ```gd-rule
 case powered-side-contact:
@@ -50,4 +52,4 @@ case powered-side-contact:
 
 Show power loss and temporary protection distinctly. Gap death and clock death remain possible; enemy-contact protection does not prevent them.
 
-This case does not specify the walker's resulting state. `ProtectionTime` is the proposed numeric protection-duration axis, measured in seconds; its [typed declaration](../axes/ProtectionTime.md) remains proposed. `sideContacts` is the proposed ordered contact-context value, not a new player-input action.
+This case does not specify the walker's resulting state. `ProtectionTime` is the proposed numeric protection-duration axis, measured in seconds; its [typed declaration](../axes/ProtectionTime.md) remains proposed. `sideContacts` belongs to the proposed [Contact vocabulary](../axes/Contact.md), not a new player-input action or inferred actor state.

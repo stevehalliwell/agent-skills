@@ -53,7 +53,7 @@ static int has_error(GD_Model *model, const char *code) {
 }
 TEST(rule_condition_logic,
     GD_Model *model = model_create(); GD_Rules *rules; int life, protection, a, b, owner;
-    GD_RulePredicateFact facts[5];
+    GD_RulePredicateFact facts[5]; GD_RuleExclusionCheck exclusion;
     const GD_RuleTruth conjunction[3][3] = {{0,1,0},{1,1,1},{0,1,2}};
     const GD_RuleTruth disjunction[3][3] = {{0,0,2},{0,1,2},{2,2,2}};
     const GD_RuleTruth negation[3] = {0,2,1};
@@ -72,18 +72,31 @@ TEST(rule_condition_logic,
         "    KnownAnd:\n        noun: things/hero\n        requires: NOT ANY AND protected\n"
         "    TruthAnd:\n        noun: things/hero\n        requires: alive AND protected\n"
         "    TruthOr:\n        noun: things/hero\n        requires: alive OR protected\n"
-        "    TruthNot:\n        noun: things/hero\n        requires: NOT protected\n```\n"));
+        "    TruthNot:\n        noun: things/hero\n        requires: NOT protected\n"
+        "case no-guard:\n    Actor:\n        noun: things/hero\n        requires: ANY\n"
+        "case always-skip:\n    Actor:\n        noun: things/hero\n        skip_if: ANY\n"
+        "case never-skip:\n    Actor:\n        noun: things/hero\n        skip_if: NOT ANY\n```\n"));
     TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
-    TEST_ASSERT(rules && !model->error_count && rules->condition_bindings_complete && rules->condition_count == 10);
+    TEST_ASSERT(rules && !model->error_count && rules->condition_bindings_complete && rules->condition_count == 13);
     life = find_record(model,"actions/Life"); protection = find_record(model,"actions/Protection");
     facts[0] = (GD_RulePredicateFact){0,life,"alive",GD_RULE_TRUTH_TRUE};
     facts[1] = (GD_RulePredicateFact){0,find_record(model,"actions/Form"),"tall",GD_RULE_TRUTH_TRUE};
     facts[2] = (GD_RulePredicateFact){0,find_record(model,"actions/Form"),"small",GD_RULE_TRUTH_FALSE};
     facts[3] = (GD_RulePredicateFact){0,protection,"protected",GD_RULE_TRUTH_FALSE};
     facts[4] = (GD_RulePredicateFact){0,life,"dead",GD_RULE_TRUTH_FALSE};
+    exclusion = gd_rule_case_exclusions(rules,0,facts,5);
+    TEST_ASSERT(exclusion.state == GD_EXCLUSION_NOT_EXCLUDED && exclusion.guard_count == 1 && exclusion.checked_count == 1 && exclusion.excluded_by == -1);
+    TEST_ASSERT(gd_rule_case_exclusions(rules,0,NULL,0).state == GD_EXCLUSION_UNKNOWN);
+    TEST_ASSERT(gd_rule_case_exclusions(rules,-1,facts,5).state == GD_EXCLUSION_UNKNOWN);
+    TEST_ASSERT(gd_rule_case_exclusions(rules,2,NULL,0).state == GD_EXCLUSION_EXCLUDED);
+    TEST_ASSERT(gd_rule_case_exclusions(rules,3,NULL,0).state == GD_EXCLUSION_NOT_EXCLUDED);
     TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].required_condition,facts,5) == GD_RULE_TRUTH_TRUE);
     TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].skip_condition,facts,5) == GD_RULE_TRUTH_FALSE);
     facts[4].truth = GD_RULE_TRUTH_TRUE;
+    exclusion = gd_rule_case_exclusions(rules,0,facts,5);
+    TEST_ASSERT(exclusion.state == GD_EXCLUSION_EXCLUDED && exclusion.excluded_by == 0 && !exclusion.limited);
+    exclusion = gd_rule_case_exclusions(rules,1,facts,5);
+    TEST_ASSERT(exclusion.state == GD_EXCLUSION_ABSENT && exclusion.guard_count == 0 && exclusion.checked_count == 0 && !exclusion.work);
     TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[0].skip_condition,facts,5) == GD_RULE_TRUTH_TRUE);
     facts[4].truth = GD_RULE_TRUTH_FALSE;
     facts[3].truth = GD_RULE_TRUTH_UNKNOWN;
@@ -114,6 +127,41 @@ TEST(rule_condition_logic,
     TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[1].required_condition,facts,GD_MAX_RULE_CONDITION_ITEMS+1) == GD_RULE_TRUTH_UNKNOWN);
     TEST_ASSERT(gd_rule_condition_value(rules,&rules->participants[1].required_condition,facts,-1) == GD_RULE_TRUTH_UNKNOWN);
     TEST_ASSERT(!gd_sources_changed(model)); gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rule_exclusion_limits,
+    GD_Model *model = model_create(); GD_Rules *rules;
+    GD_RulePredicateFact facts[GD_MAX_RULE_CONDITION_ITEMS]; GD_RuleExclusionCheck result;
+    const int guards = GD_MAX_RULE_CONDITION_TOKENS/(GD_MAX_RULE_CONDITION_ITEMS-1);
+    size_t used; int i, j, life, symbol_work;
+    TEST_ASSERT(model && setup("rule-exclusion-limits")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+    TEST_ASSERT(write_record(1,"Life","---\nvalue_type: enum\nallowed_values: [alive, dead]\nclosed: true\n---\nLife."));
+    TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Life]\n---\nActor."));
+    used = (size_t)snprintf(model->input,sizeof(model->input),"```gd-rule\ncase guards:\n");
+    for (i = 0; i < guards; ++i) {
+        used += (size_t)snprintf(model->input+used,sizeof(model->input)-used,"    A%d:\n        noun: things/hero\n        skip_if: ",i);
+        for (j = 0; j < GD_MAX_RULE_CONDITION_ITEMS/2; ++j)
+            used += (size_t)snprintf(model->input+used,sizeof(model->input)-used,"%sdead",j ? " OR ":"");
+        TEST_ASSERT(used+6 < sizeof(model->input)); model->input[used++] = '\n';
+    }
+    strcpy(model->input+used,"```\n"); TEST_ASSERT(write_record(2,"guards",model->input));
+    TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+    TEST_ASSERT(rules && !model->error_count && rules->cases[0].skip_if_count == guards);
+    life = find_record(model,"actions/Life"); symbol_work = rules->symbol_work;
+    for (i = 0; i < GD_MAX_RULE_CONDITION_ITEMS; ++i)
+        facts[i] = (GD_RulePredicateFact){i,life,"dead",GD_RULE_TRUTH_FALSE};
+    result = gd_rule_case_exclusions(rules,0,facts,GD_MAX_RULE_CONDITION_ITEMS);
+    TEST_ASSERT(result.state == GD_EXCLUSION_UNKNOWN && result.limited && result.guard_count == guards);
+    TEST_ASSERT(result.checked_count > 0 && result.checked_count < guards && result.work <= GD_RULE_EVALUATION_WORK_LIMIT && result.excluded_by == -1);
+    facts[0].truth = GD_RULE_TRUTH_TRUE;
+    result = gd_rule_case_exclusions(rules,0,facts,GD_MAX_RULE_CONDITION_ITEMS);
+    TEST_ASSERT(result.state == GD_EXCLUSION_EXCLUDED && result.excluded_by == 0 && result.checked_count == 1 && !result.limited);
+    facts[0].truth = GD_RULE_TRUTH_UNKNOWN; facts[1].truth = GD_RULE_TRUTH_TRUE;
+    result = gd_rule_case_exclusions(rules,0,facts,GD_MAX_RULE_CONDITION_ITEMS);
+    TEST_ASSERT(result.state == GD_EXCLUSION_EXCLUDED && result.excluded_by == 1 && result.checked_count == 2 && !result.limited);
+    TEST_ASSERT(gd_rule_case_exclusions(rules,0,NULL,1).state == GD_EXCLUSION_UNKNOWN);
+    TEST_ASSERT(gd_rule_case_exclusions(rules,0,facts,GD_MAX_RULE_CONDITION_ITEMS+1).state == GD_EXCLUSION_UNKNOWN);
+    TEST_ASSERT(rules->symbol_work == symbol_work && !gd_sources_changed(model));
+    gd_rules_destroy(rules); gd_destroy(model);
 )
 TEST(rule_effect_bindings,
     GD_Model *model = model_create(); GD_Rules *rules; int life, form, time, amount;
@@ -291,6 +339,11 @@ TEST(rules_declarations,
     TEST_ASSERT(rules->sources[1].state == GD_RULE_EMPTY && rules->sources[2].state == GD_RULE_ABSENT);
     TEST_ASSERT(rules->cases[0].line == 9 && rules->cases[0].context_line == 10 && rules->participants[0].line == 12);
     TEST_ASSERT(!strcmp(rules->cases[0].context,"Player sideContacts Walker"));
+    TEST_ASSERT(rules->context_count == 1 && !rules->context_bindings_complete);
+    TEST_ASSERT(rules->cases[0].ordered_context.state == GD_CONDITION_PARSED);
+    TEST_ASSERT(rules->cases[0].ordered_context.left == 0 && rules->cases[0].ordered_context.right == 1);
+    TEST_ASSERT(rules->cases[0].ordered_context.target.resolution == GD_RULE_UNDETERMINED);
+    TEST_ASSERT(rules->cases[1].ordered_context.state == GD_CONDITION_UNSPECIFIED && rules->cases[1].ordered_context.left == -1);
     TEST_ASSERT(!strcmp(rules->participants[0].requires,"alive AND (tall OR spark) AND NOT protected"));
     TEST_ASSERT(!strcmp(rules->assignments[0].expression,"{control-vars/safety-window}"));
     TEST_ASSERT(!strcmp(rules->assignments[1].expression,"this + 1[life]") && !strcmp(rules->assignments[2].expression,"this + 2[life]"));
@@ -1606,7 +1659,7 @@ int main(int argc, char **argv) {
     if (!file_directory_create(root, 1)) { fputs("Fixture directory must be new\n", stderr); return 2; }
     storage = free_list_from_buffer(backing, sizeof(backing));
     if (!storage) return 2;
-    failed += test_rule_condition_logic(); failed += test_rule_effect_bindings();
+    failed += test_rule_condition_logic(); failed += test_rule_exclusion_limits(); failed += test_rule_effect_bindings();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
     failed += test_rules_declarations(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
@@ -1623,6 +1676,6 @@ int main(int argc, char **argv) {
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/57 passed\n", 57-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/58 passed\n", 58-failed);
     return failed ? 1 : 0;
 }

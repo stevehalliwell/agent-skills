@@ -22,7 +22,7 @@ typedef enum { GD_NOUN, GD_VERB, GD_CASE, GD_RELATED, GD_SKILL, GD_CHALLENGE,
 typedef enum { GD_NOUNS, GD_VERB_REF, GD_CONTEXT, GD_MECHANICS,
                GD_CONTROLS, GD_RESOURCES, GD_VERBS, GD_PREREQUISITES,
                GD_INTRODUCES, GD_PRACTISES, GD_REQUIRES, GD_TESTS_MASTERY, GD_NEXT,
-               GD_SYSTEMS, GD_DYNAMICS, GD_EXPERIMENTS, GD_AXES } GD_Field;
+               GD_SYSTEMS, GD_DYNAMICS, GD_EXPERIMENTS, GD_AXES, GD_CONTEXT_AXES } GD_Field;
 typedef struct { const char *alias; const char *directory; GD_Role role; } GD_Collection;
 #define GD_MAX_ENUM_VALUES 64
 typedef enum { GD_LITERAL_NULL, GD_LITERAL_NUMBER, GD_LITERAL_BOOLEAN, GD_LITERAL_STRING } GD_LiteralKind;
@@ -40,7 +40,7 @@ typedef struct {
     const char *source_path, *body;
     GD_Role role;
     int collection, load_index, has_rank, rank_line, entry, entry_line, body_line;
-    int axis_closed, axis_closed_line, axes_declared, axes_line;
+    int axis_closed, axis_closed_line, axes_declared, axes_line, context_axes_declared, context_axes_line;
     int64_t rank;
 } GD_Record;
 typedef struct { int source, target; GD_Field field; const char *reference; int line; } GD_Edge;
@@ -255,11 +255,11 @@ int gd_write_control_import(FILE *output, const GD_Model *model, const GD_Contro
 #define GD_MAX_RULE_CONDITION_ITEMS 256
 #define GD_MAX_RULE_CONDITION_DEPTH 64
 #define GD_RULE_SYMBOL_WORK_LIMIT (16 * 1024 * 1024)
+#define GD_RULE_EVALUATION_WORK_LIMIT (16 * 1024 * 1024)
 #define GD_RULE_TEXT_CAPACITY (4 * 1024 * 1024)
 #define GD_MAX_RULE_LINE 8192
 typedef enum { GD_RULE_ABSENT, GD_RULE_PARSED, GD_RULE_EMPTY, GD_RULE_INVALID } GD_RuleSourceState;
 typedef struct { int record, first_case, case_count, line; GD_RuleSourceState state; } GD_RuleSource;
-typedef struct { const char *name, *context; int source, line, context_line, first_participant, participant_count; } GD_RuleCase;
 typedef enum { GD_RULE_UNSPECIFIED, GD_RULE_RESOLVED, GD_RULE_UNLOADED, GD_RULE_MISSING,
                GD_RULE_WRONG_ROLE, GD_RULE_AMBIGUOUS, GD_RULE_UNAVAILABLE,
                GD_RULE_UNDETERMINED, GD_RULE_WRONG_TYPE, GD_RULE_INVALID_DEFINITION } GD_RuleResolution;
@@ -284,6 +284,18 @@ typedef struct {
 } GD_RuleConditionToken;
 typedef struct { int participant, axis_record; const char *state; GD_RuleTruth truth; } GD_RulePredicateFact;
 typedef struct {
+    GD_RuleConditionState state;
+    int unrestricted, left, right, operator_offset, bindings_complete;
+    const char *operator_text;
+    size_t operator_length;
+    GD_RuleTarget target;
+} GD_RuleContext;
+typedef struct {
+    const char *name, *context;
+    int source, line, context_line, first_participant, participant_count, skip_if_count;
+    GD_RuleContext ordered_context;
+} GD_RuleCase;
+typedef struct {
     const char *name, *noun, *requires, *skip_if, *other_axes, *becomes, *preserve, *causes;
     int line, lines[8], first_assignment, assignment_count, noun_record;
     int first_state_effect, state_effect_count;
@@ -300,9 +312,12 @@ typedef struct {
     int axis_count, actor_count, axis_definitions_complete, bindings_complete, finding_count, findings_omitted;
     int state_effect_count, effect_bindings_complete, symbol_work;
     int condition_count, condition_token_count, condition_bindings_complete;
+    int context_count, context_bindings_complete;
     GD_RuleAxis axes[GD_MAX_RECORDS]; /* Indexed by model record, not compact axis index. */
     int actor_first[GD_MAX_RECORDS], next_axis[GD_MAX_EDGES];
     unsigned char actor_axes_complete[GD_MAX_RECORDS];
+    int context_first[GD_MAX_RECORDS];
+    unsigned char context_axes_complete[GD_MAX_RECORDS];
     GD_RuleResolution axis_resolution[GD_MAX_EDGES];
     GD_Finding findings[GD_MAX_ERRORS];
     GD_RuleSource sources[GD_MAX_RECORDS];
@@ -322,6 +337,12 @@ void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules);
    Facts use snapshot participant/axis indices. This does not establish case applicability. */
 GD_RuleTruth gd_rule_condition_value(const GD_Rules *rules, const GD_RuleCondition *condition,
                                     const GD_RulePredicateFact *facts, int count);
+typedef enum { GD_EXCLUSION_UNKNOWN, GD_EXCLUSION_ABSENT, GD_EXCLUSION_NOT_EXCLUDED, GD_EXCLUSION_EXCLUDED } GD_RuleExclusion;
+typedef struct { GD_RuleExclusion state; int guard_count, checked_count, excluded_by, work, limited; } GD_RuleExclusionCheck;
+/* Check only authored case-local early-outs. No guards returns ABSENT, not a false
+   predicate or applicable-case verdict. Logical inputs use snapshot indices. */
+GD_RuleExclusionCheck gd_rule_case_exclusions(const GD_Rules *rules, int case_index,
+                                            const GD_RulePredicateFact *facts, int count);
 const char *gd_rule_condition_state_name(GD_RuleConditionState state);
 const char *gd_rule_condition_op_name(GD_RuleConditionOp operation);
 const char *gd_rule_resolution_name(GD_RuleResolution resolution);

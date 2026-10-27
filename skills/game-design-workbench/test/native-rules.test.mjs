@@ -35,7 +35,14 @@ test('native rule CLI exposes approved specimen without implying completed migra
     assert.equal(value.coverage.operation, 'rules');
     assert.equal(value.coverage.source_record_count, 73);
     assert.equal(value.coverage.records_with_cases, 1);
-    assert.equal(value.coverage.axis_count, 8);
+    assert.equal(value.coverage.axis_count, 9);
+    assert.equal(value.coverage.context_count, 1);
+    assert.equal(value.coverage.context_bindings_complete, true);
+    assert.equal(value.data.cases[0].skip_if_count, 0);
+    assert.equal(value.coverage.limits.evaluation_work, 16 * 1024 * 1024);
+    assert.deepEqual([value.data.cases[0].ordered_context.left, value.data.cases[0].ordered_context.right], ['Player', 'Walker']);
+    assert.equal(value.data.cases[0].ordered_context.target.axis, 'axes/Contact');
+    assert.equal(value.data.cases[0].ordered_context.target.state, 'sideContacts');
     assert.equal(value.coverage.axis_definitions_complete, true);
     assert.equal(value.coverage.bindings_complete, false); // Remaining inventories stay explicitly unknown.
     assert.equal(value.data.records.filter(row => row.rule_block === 'absent').length, 72);
@@ -345,6 +352,7 @@ test('native condition grammar resolves grouped scoped predicates without flatte
     for (const token of condition.program) assert.equal(Buffer.from(result.actor.requires).subarray(token.offset,
       token.offset + Buffer.byteLength(token.text)).toString('utf8'), token.text);
     assert.deepEqual(result.actor.skip_if_condition.program.map(row => row.op), ['state', 'not']);
+    assert.equal(result.value.data.cases[0].skip_if_count, 1);
     assert.equal(result.value.data.cases[0].participants[1].requires_condition.state, 'unspecified');
     assert.equal(result.value.data.cases[0].participants[1].skip_if_condition.state, 'unspecified');
     assert.equal(result.value.data.cases[0].participants[1].other_axes_mode, 'unspecified');
@@ -418,4 +426,112 @@ test('native condition nesting, per-field and total program limits retain explic
     assert.equal(value.coverage.condition_bindings_complete, false);
     assert.equal(value.coverage.limits.condition_tokens, 65536);
     assert.equal(await readFile(path, 'utf8'), overflow);
+  });
+
+test('native ordered context uses explicit rule vocabularies and case-local ordered identities without actor-state leakage',
+  { skip: !executable && 'Set GD_NATIVE_EXE' }, async t => {
+    const root = await mkdtemp(join(tmpdir(), 'gd-context-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    for (const folder of ['actors', 'axes', 'rules']) await mkdir(join(root, folder));
+    const axisPath = join(root, 'axes/Contact.md'), rulePath = join(root, 'rules/contact.md');
+    const vocabulary = (values = ['touches'], closed = false) => '---\nvalue_type: enum\nallowed_values: ' + JSON.stringify(values) + '\nclosed: ' + closed + '\n---\nContact vocabulary.';
+    await writeFile(axisPath, vocabulary());
+    await writeFile(join(root, 'axes/Life.md'), '---\nvalue_type: enum\nallowed_values: [alive]\nclosed: true\n---\nActor-only.');
+    await writeFile(join(root, 'actors/hero.md'), '---\naxes: [vocab/Life]\n---\nSame type, distinct bindings.');
+    const args = ['rules', '--mechanics', `rules=${join(root, 'rules')}`, '--axes', `vocab=${join(root, 'axes')}`,
+      '--nouns', `actors=${join(root, 'actors')}`];
+    const check = async (context, inventory = '[vocab/Contact]', status = 0, requirement = 'alive') => {
+      const source = '---\nstatus: proposed\n' + (inventory === null ? '' : `context_axes: ${inventory}\n`) + '---\n```gd-rule\ncase ordered:\n' +
+        (context === null ? '' : `    context: ${context}\n`) +
+        `    A:\n        noun: actors/hero\n        requires: ${requirement}\n    B:\n        noun: actors/hero\n        requires: ANY\n` +
+        'case independent:\n    C:\n        noun: actors/hero\n```\n';
+      await writeFile(rulePath, source);
+      const value = structured(args, status);
+      assert.equal(await readFile(rulePath, 'utf8'), source);
+      const result = value.data.cases[0].ordered_context;
+      assert.equal(value.data.cases[1].ordered_context.state, 'unspecified');
+      if (result.operator) assert.equal(Buffer.from(context).subarray(result.operator_offset,
+        result.operator_offset + Buffer.byteLength(result.operator)).toString('utf8'), result.operator);
+      return { value, result };
+    };
+    let { value, result } = await check('A touches B');
+    assert.equal(value.coverage.context_count, 1);
+    assert.equal(value.coverage.context_bindings_complete, true);
+    assert.deepEqual([result.left, result.right, result.left_index, result.right_index], ['A', 'B', 0, 1]);
+    assert.equal(result.target.axis, 'vocab/Contact');
+    assert.equal(result.target.state, 'touches');
+    assert.deepEqual(value.data.actors[0].axes.map(row => row.reference), ['vocab/Life']);
+    ({ result } = await check('B touches A'));
+    assert.deepEqual([result.left_index, result.right_index], [1, 0]); // Never sort or assume commutativity.
+    ({ result } = await check('A touches A'));
+    assert.deepEqual([result.left_index, result.right_index], [0, 0]); // No invented physical prohibition.
+    ({ result } = await check('any', 'null'));
+    assert.equal(result.unrestricted, true);
+    assert.equal(result.bindings_complete, true);
+    assert.equal(result.left, null);
+    ({ value, result } = await check(null));
+    assert.equal(result.state, 'unspecified');
+    assert.equal(result.unrestricted, false);
+    assert.equal(value.coverage.context_count, 0);
+    ({ value, result } = await check('A touches B', null));
+    assert.equal(result.target.resolution, 'undetermined'); // Omission never creates global applicability.
+    assert.equal(value.data.records[0].context_axes_line, 0);
+    ({ value, result } = await check('A touches B', 'null'));
+    assert.equal(result.target.resolution, 'undetermined'); // Loaded definition is not global applicability.
+    assert.equal(value.data.records[0].context_axes_declared, false);
+    ({ result } = await check('A vocab/Contact.touches B', 'null'));
+    assert.equal(result.target.resolution, 'undetermined'); // Qualification never creates inventory membership.
+    ({ value } = await check('A touches B', '[]', 2));
+    assert.ok(value.errors.some(row => row.code === 'rules.context_missing'));
+    ({ result } = await check('A touches B', '[vocab/Contact, external/Future]'));
+    assert.equal(result.target.resolution, 'undetermined');
+    ({ result } = await check('A vocab/Contact.touches B', '[vocab/Contact, external/Future]'));
+    assert.equal(result.target.resolution, 'resolved');
+    ({ value, result } = await check('A touches B', '[vocab/Contact, vocab/Contact]'));
+    assert.equal(result.target.resolution, 'resolved');
+    ({ value } = await check('A touches B', '[actors/hero]'));
+    assert.ok(value.data.findings.some(row => row.code === 'rules.context_axis_reference'));
+    ({ value } = await check('A touches C', '[vocab/Contact]', 2));
+    assert.ok(value.errors.some(row => row.code === 'rules.context_participant')); // C exists only in another case.
+    for (const context of ['A', 'A touches', 'A touches B extra', 'A .touches B', 'A Contact. B']) {
+      ({ value, result } = await check(context, '[vocab/Contact]', 2));
+      assert.ok(value.errors.some(row => row.code === 'rules.context_syntax'), context);
+      assert.equal(result.state, 'invalid');
+      assert.equal(result.left_index, -1);
+    }
+    ({ value } = await check('A touches B', '[vocab/Contact]', 2, 'vocab/Contact.touches'));
+    assert.ok(value.errors.some(row => row.code === 'rules.condition_missing')); // Context axis is not actor state.
+    await writeFile(join(root, 'axes/Other.md'), vocabulary());
+    ({ value } = await check('A touches B', '[vocab/Contact, vocab/Other]', 2));
+    assert.ok(value.errors.some(row => row.code === 'rules.context_ambiguous'));
+    ({ result } = await check('A Contact.touches B', '[vocab/Contact, vocab/Other]'));
+    assert.equal(result.target.axis, 'vocab/Contact');
+    await rm(join(root, 'axes/Other.md'));
+    await writeFile(axisPath, vocabulary(['touches', 'touches', '斧"\\']));
+    ({ result } = await check('A Contact.斧"\\ B'));
+    assert.equal(result.target.state, '斧"\\');
+    await writeFile(axisPath, vocabulary(['touches'], true));
+    ({ value } = await check('A Contact.absent B', '[vocab/Contact]', 2));
+    assert.ok(value.errors.some(row => row.code === 'rules.context_missing'));
+    await writeFile(axisPath, '---\nvalue_type: enum\nallowed_values: [touches]\nunit: s\n---\nInvalid definition.');
+    ({ value } = await check('A Contact.touches B', '[vocab/Contact]', 2));
+    assert.ok(value.errors.some(row => row.code === 'rules.context_definition'));
+    await writeFile(axisPath, '---\nvalue_type: number\nunit: s\n---\nNumeric.');
+    ({ value } = await check('A Contact.touches B', '[vocab/Contact]', 2));
+    assert.ok(value.errors.some(row => row.code === 'rules.context_type'));
+    await writeFile(axisPath, '---\nvalue_type: enum\nclosed: true\nclosed: false\n---\nDuplicate late consumed field.');
+    value = structured(args, 2);
+    assert.ok(value.errors.some(row => row.code === 'input.duplicate_field'));
+    await writeFile(axisPath, vocabulary(Array.from({ length: 64 }, (_, i) => 'long' + 'x'.repeat(980) + i)));
+    const source = '---\ncontext_axes: [vocab/Contact]\n---\n```gd-rule\n' + Array.from({ length: 500 }, (_, i) =>
+      `case C${i}:\n    context: A unknown B\n    A:\n        noun: actors/hero\n    B:\n        noun: actors/hero\n`).join('') + '```\n';
+    await writeFile(rulePath, source);
+    value = structured(args, 2);
+    assert.equal(value.errors.length, 1);
+    assert.equal(value.errors[0].code, 'rules.symbol_work_limit');
+    assert.equal(value.data.cases[0].ordered_context.target.resolution, 'undetermined');
+    assert.equal(value.data.cases.at(-1).ordered_context.target.resolution, 'unavailable');
+    assert.equal(value.coverage.context_bindings_complete, false);
+    assert.ok(value.coverage.symbol_work <= value.coverage.limits.symbol_work);
+    assert.equal(await readFile(rulePath, 'utf8'), source);
   });

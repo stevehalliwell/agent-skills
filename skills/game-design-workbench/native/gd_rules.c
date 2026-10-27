@@ -243,6 +243,16 @@ static void condition_result(FILE *output, const GD_Model *model, const GD_Rules
     }
     fputs("]}",output);
 }
+static void context_result(FILE *output, const GD_Model *model, const GD_Rules *rules, const GD_RuleContext *context) {
+    fputs(",\"ordered_context\":{\"state\":",output); gd_json_string(output,gd_rule_condition_state_name(context->state));
+    fprintf(output,",\"unrestricted\":%s,\"bindings_complete\":%s",context->unrestricted ? "true":"false",context->bindings_complete ? "true":"false");
+    member(output,"left",context->left >= 0 ? rules->participants[context->left].name:NULL);
+    member(output,"right",context->right >= 0 ? rules->participants[context->right].name:NULL);
+    fprintf(output,",\"left_index\":%d,\"right_index\":%d,\"operator\":",context->left,context->right);
+    gd_json_string_n(output,context->operator_text,context->operator_length);
+    fprintf(output,",\"operator_offset\":%d",context->operator_offset);
+    effect_target(output,model,context->target); fputc('}',output);
+}
 int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *rules, int json, const char *fields) {
     int i, j, k, comma = 0, parsed = 0;
     int complete = rules && !model->error_count && !model->errors_omitted;
@@ -251,7 +261,7 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
         fprintf(output,"Rules: %d source records; %d with cases; %d cases; %d participants; %d assignments. Declaration checks %s.\n",
                 rules ? rules->source_count:0,parsed,rules ? rules->case_count:0,rules ? rules->participant_count:0,
                 rules ? rules->assignment_count:0,complete ? "complete":"incomplete");
-        fputs("Declarations only: explicit applicability, state predicate logic and effect bindings resolved where known; numeric comparisons, resulting quantities, context and composition are not resolved or evaluated. No consistency or gameplay claims.\n",output);
+        fputs("Declarations only: explicit applicability, state predicate logic and effect bindings resolved where known; ordered context binds local participants and declared operator vocabulary only; numeric comparisons, resulting quantities and composition are not resolved or evaluated. No consistency or gameplay claims.\n",output);
         fprintf(output,"Typed axes: %d; actors: %d; axis definitions %s; explicit bindings %s; findings: %d (+%d omitted).\n",
                 rules ? rules->axis_count:0,rules ? rules->actor_count:0,rules && rules->axis_definitions_complete ? "complete":"incomplete",
                 rules && rules->bindings_complete ? "complete":"incomplete",rules ? rules->finding_count:0,rules ? rules->findings_omitted:0);
@@ -261,6 +271,8 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
         fprintf(output,"Conditions: %d authored; %d compiled tokens; bindings %s. Omitted predicates remain unspecified.\n",
                 rules ? rules->condition_count:0,rules ? rules->condition_token_count:0,
                 rules && rules->condition_bindings_complete ? "complete":"incomplete");
+        fprintf(output,"Ordered context: %d authored; bindings %s. No contact, symmetry, reachability or scene truth inferred.\n",
+                rules ? rules->context_count:0,rules && rules->context_bindings_complete ? "complete":"incomplete");
         if (rules) for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_AXIS) {
             const GD_Record *record = &model->records[i]; const char *value = record->axis.allowed;
             fprintf(output,"%s: %s; %s; unit=%s",record->reference,record->axis.type ? record->axis.type:"unspecified",
@@ -284,7 +296,9 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
             member(output,"name",model->records[source->record].name);
             member(output,"description",model->records[source->record].description);
             member(output,"rule_block",source_state(source->state));
-            fprintf(output,",\"case_count\":%d,\"relationships\":[",source->case_count);
+            fprintf(output,",\"context_axes_declared\":%s,\"context_axes_complete\":%s,\"context_axes_line\":%d,\"case_count\":%d,\"relationships\":[",
+                    model->records[source->record].context_axes_declared ? "true":"false",
+                    rules->context_axes_complete[source->record] ? "true":"false",model->records[source->record].context_axes_line,source->case_count);
             {
                 int edge_comma = 0;
                 for (j = 0; j < model->edge_count; ++j) if (model->edges[j].source == source->record) {
@@ -305,7 +319,8 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
             const GD_RuleCase *item = &rules->cases[i]; if (i) fputc(',',output);
             provenance(output,&model->records[rules->sources[item->source].record],item->line);
             member(output,"case",item->name); member(output,"context",item->context);
-            fprintf(output,",\"context_line\":%d,\"participants\":[",item->context_line);
+            context_result(output,model,rules,&item->ordered_context);
+            fprintf(output,",\"context_line\":%d,\"skip_if_count\":%d,\"participants\":[",item->context_line,item->skip_if_count);
             for (j = 0; j < item->participant_count; ++j) {
                 const GD_RuleParticipant *participant = &rules->participants[item->first_participant+j];
                 if (j) fputc(',',output); fputs("{\"name\":",output); gd_json_string(output,participant->name);
@@ -404,7 +419,9 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
             rules ? rules->state_effect_count:0,rules && rules->effect_bindings_complete ? "true":"false",rules ? rules->symbol_work:0);
     fprintf(output,"\"condition_count\":%d,\"condition_token_count\":%d,\"condition_bindings_complete\":%s,",
             rules ? rules->condition_count:0,rules ? rules->condition_token_count:0,rules && rules->condition_bindings_complete ? "true":"false");
-    fputs("\"scope\":\"Declaration scan, explicit applicability, state predicate logic and effect bindings, all supplied statuses/dispositions. Missing rules remain absent; omitted fields remain null, not ANY or preserved. State conditions compile to derived Boolean programs, not an applicability verdict. Numeric comparisons, ordered context, resulting quantity values, preservation and composition are not resolved or evaluated. Effect bindings do not establish consistency or an applicable transition. Open vocabularies do not prove complete state sets or reachable combinations. No equivalence, consistency or gameplay claims.\",\"collections\":[",output);
+    fprintf(output,"\"context_count\":%d,\"context_bindings_complete\":%s,",rules ? rules->context_count:0,
+            rules && rules->context_bindings_complete ? "true":"false");
+    fputs("\"scope\":\"Declaration scan, explicit applicability, state predicate logic, ordered context bindings and effect bindings, all supplied statuses/dispositions. Missing rules remain absent; omitted fields remain null, not ANY or preserved. State conditions compile to derived Boolean programs, not an applicability verdict. Ordered context binds case-local endpoints and explicit context_axes vocabulary; no contact, symmetry, reachability or scene truth inferred. Numeric comparisons, resulting quantity values, preservation and composition are not resolved or evaluated. Effect bindings do not establish consistency or an applicable transition. Open vocabularies do not prove complete state sets or reachable combinations. No equivalence, consistency or gameplay claims.\",\"collections\":[",output);
     for (i = 0; i < model->collection_count; ++i) {
         if (i) fputc(',',output); fputs("{\"alias\":",output); gd_json_string(output,model->collections[i].alias);
         member(output,"directory",model->collections[i].directory);
@@ -412,9 +429,9 @@ int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *r
                model->collections[i].role == GD_VERB ? "verbs":model->collections[i].role == GD_CONTROL ? "control-vars":model->collections[i].role == GD_AXIS ? "axes":"related");
         fputc('}',output);
     }
-    fprintf(output,"],\"limits\":{\"cases\":%d,\"participants\":%d,\"assignments\":%d,\"text_bytes\":%d,\"line_bytes\":%d,\"axis_values\":%d,\"findings\":%d,\"records\":%d,\"axis_references\":%d,\"state_effects\":%d,\"symbol_work\":%d,\"condition_tokens\":%d,\"condition_items\":%d,\"condition_depth\":%d}},\"errors\":[",
+    fprintf(output,"],\"limits\":{\"cases\":%d,\"participants\":%d,\"assignments\":%d,\"text_bytes\":%d,\"line_bytes\":%d,\"axis_values\":%d,\"findings\":%d,\"records\":%d,\"axis_references\":%d,\"state_effects\":%d,\"symbol_work\":%d,\"condition_tokens\":%d,\"condition_items\":%d,\"condition_depth\":%d,\"evaluation_work\":%d}},\"errors\":[",
             GD_MAX_RULE_CASES,GD_MAX_RULE_PARTICIPANTS,GD_MAX_RULE_ASSIGNMENTS,GD_RULE_TEXT_CAPACITY,GD_MAX_RULE_LINE,
-            GD_MAX_ENUM_VALUES,GD_MAX_ERRORS,GD_MAX_RECORDS,GD_MAX_EDGES,GD_MAX_RULE_STATE_EFFECTS,GD_RULE_SYMBOL_WORK_LIMIT,GD_MAX_RULE_CONDITION_TOKENS,GD_MAX_RULE_CONDITION_ITEMS,GD_MAX_RULE_CONDITION_DEPTH);
+            GD_MAX_ENUM_VALUES,GD_MAX_ERRORS,GD_MAX_RECORDS,GD_MAX_EDGES,GD_MAX_RULE_STATE_EFFECTS,GD_RULE_SYMBOL_WORK_LIMIT,GD_MAX_RULE_CONDITION_TOKENS,GD_MAX_RULE_CONDITION_ITEMS,GD_MAX_RULE_CONDITION_DEPTH,GD_RULE_EVALUATION_WORK_LIMIT);
     for (i = 0; i < model->error_count; ++i) {
         const GD_Error *error = &model->errors[i]; if (i) fputc(',',output);
         fputs("{\"code\":",output); gd_json_string(output,error->code); member(output,"message",error->message);

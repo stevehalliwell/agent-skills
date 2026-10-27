@@ -17,9 +17,9 @@
 
 static const char *field_names[] = {
     "nouns", "verb", "context_nouns", "mechanics", "control-vars", "resources", "verbs", "prerequisites",
-    "introduces", "practises", "requires", "tests_mastery", "next", "systems", "dynamics", "experiments", "axes"
+    "introduces", "practises", "requires", "tests_mastery", "next", "systems", "dynamics", "experiments", "axes", "context_axes"
 };
-enum { RANK_KEY = 5 + GD_AXES + 1, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7 }; /* Consumed-field bit positions. */
+enum { RANK_KEY = 5 + GD_CONTEXT_AXES + 1, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7 }; /* Consumed-field indices; byte markers avoid width-dependent bit shifts. */
 const char *gd_field_name(GD_Field field) { return field_names[field]; }
 
 GD_Model *gd_create(GD_Allocator allocator) {
@@ -315,7 +315,7 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
     Reader reader;
     yaml_event_t event;
     GD_Record *record = &model->records[index];
-    unsigned seen = 0;
+    unsigned char seen[AXIS_CLOSED_KEY+1] = {0};
     int stage, success = 0;
     memset(&reader, 0, sizeof(reader)); reader.model = model; reader.path = record->source_path;
     if (!yaml_parser_initialize(&reader.parser)) {
@@ -361,6 +361,7 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
         else if (!strcmp(key, "rank") && record->role == GD_SKILL) key_index = RANK_KEY;
         else if (!strcmp(key, "entry") && record->role == GD_CHALLENGE) key_index = ENTRY_KEY;
         else if (!strcmp(key,"axes") && record->role == GD_NOUN) key_index = 5 + GD_AXES;
+        else if (!strcmp(key,"context_axes") && (record->role == GD_RULE || record->role == GD_CASE)) key_index = 5 + GD_CONTEXT_AXES;
         else if (record->role == GD_AXIS && !strcmp(key,"closed")) key_index = AXIS_CLOSED_KEY;
         else if (record->role == GD_CONTROL || record->role == GD_AXIS) {
             static const char *keys[] = { "value_type", "value", "expression", "unit", "allowed_values", "minimum", "maximum" };
@@ -385,11 +386,11 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
         }
         if (!next_event(&reader, &event)) goto done;
         if (key_index < 0) { if (!skip_value(&reader, &event)) goto done; continue; }
-        if (seen & (1u << key_index)) {
+        if (seen[key_index]) {
             gd_error(model, "input.duplicate_field", "Duplicate consumed field is ambiguous", record->source_path,
                      (int)event.start_mark.line + 2); yaml_event_delete(&event); goto done;
         }
-        seen |= 1u << key_index;
+        seen[key_index] = 1;
         if (key_index == AXIS_CLOSED_KEY) {
             int ok = consume_boolean(&reader,&event,&record->axis_closed,&record->axis_closed_line,
                 "rules.axis_closed_type","Axis closed requires boolean true or false; no coercion");
@@ -409,6 +410,9 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
             if (key_index == 5 + GD_AXES) {
                 record->axes_line = (int)event.start_mark.line+2;
                 record->axes_declared = event.type == YAML_SEQUENCE_START_EVENT;
+            } else if (key_index == 5 + GD_CONTEXT_AXES) {
+                record->context_axes_line = (int)event.start_mark.line+2;
+                record->context_axes_declared = event.type == YAML_SEQUENCE_START_EVENT;
             }
             if (!consume_links(&reader, index, (GD_Field)(key_index - 5), &event)) goto done;
         }
