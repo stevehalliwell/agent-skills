@@ -1,0 +1,80 @@
+
+real: boundary=true runner-map=true subset=true
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+  ./probe-cjit.exe edit semantic=true comments=true unrelated-format=true newline=true body-bytes=true
+  ./probe-zig.exe edit semantic=true comments=true unrelated-format=true newline=true body-bytes=true
+  runner edit semantic=true comments=true unrelated-format=true front-newline=true whole-newline=true body-bytes=true
+
+simple: boundary=true runner-map=true subset=true
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+  ./probe-cjit.exe edit semantic=true comments=false unrelated-format=false newline=true body-bytes=true
+  ./probe-zig.exe edit semantic=true comments=false unrelated-format=false newline=true body-bytes=true
+  runner edit semantic=true comments=true unrelated-format=true front-newline=true whole-newline=true body-bytes=true
+
+simple_crlf: boundary=true runner-map=true subset=true
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+  ./probe-cjit.exe edit semantic=true comments=false unrelated-format=false newline=false body-bytes=true
+  ./probe-zig.exe edit semantic=true comments=false unrelated-format=false newline=false body-bytes=true
+  runner edit semantic=true comments=true unrelated-format=true front-newline=true whole-newline=false body-bytes=true
+
+lf: boundary=true runner-map=true subset=true
+  runner-values={"status":"old","flag":true,"empty":null,"count":42,"date":"2024-02-29","time":"2024-02-29T12:30:00Z","items":["one","two"],"quoted":"true"}
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+  ./probe-cjit.exe edit semantic=true comments=false unrelated-format=false newline=true body-bytes=true
+  ./probe-zig.exe edit semantic=true comments=false unrelated-format=false newline=true body-bytes=true
+  runner edit semantic=true comments=true unrelated-format=false front-newline=true whole-newline=true body-bytes=true
+
+crlf: boundary=true runner-map=true subset=true
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+  ./probe-cjit.exe edit semantic=true comments=false unrelated-format=false newline=false body-bytes=true
+  ./probe-zig.exe edit semantic=true comments=false unrelated-format=false newline=false body-bytes=true
+  runner edit semantic=true comments=true unrelated-format=false front-newline=true whole-newline=false body-bytes=true
+
+no_final_newline: boundary=true runner-map=true subset=true
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+  ./probe-cjit.exe edit semantic=true comments=false unrelated-format=false newline=true body-bytes=true
+  ./probe-zig.exe edit semantic=true comments=false unrelated-format=false newline=true body-bytes=true
+  runner edit semantic=true comments=true unrelated-format=false front-newline=true whole-newline=true body-bytes=true
+
+duplicate: boundary=true runner-map=false subset=false
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+
+malformed: boundary=true runner-map=false subset=false
+  ./probe-cjit.exe parse=rejected parse: did not find expected ',' or ']' at 2:1
+  ./probe-zig.exe parse=rejected parse: did not find expected ',' or ']' at 2:1
+
+empty: boundary=true runner-map=false subset=false
+  ./probe-cjit.exe parse=rejected not a mapping
+  ./probe-zig.exe parse=rejected not a mapping
+
+missing: boundary=false runner-map=false subset=false
+
+missing_close: boundary=false runner-map=false subset=false
+
+nested: boundary=true runner-map=true subset=false
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+
+alias: boundary=true runner-map=true subset=false
+  ./probe-cjit.exe parse=accepted 
+  ./probe-zig.exe parse=accepted 
+splice real: rejected
+splice simple: accepted exact-expected=true body-bytes=true
+splice simple_crlf: accepted exact-expected=true body-bytes=true
+splice lf: rejected
+splice crlf: rejected
+splice no_final_newline: rejected
+splice duplicate: rejected
+splice malformed: rejected
+splice empty: rejected
+splice missing: rejected
+splice missing_close: rejected
+splice nested: rejected
+splice alias: rejected
