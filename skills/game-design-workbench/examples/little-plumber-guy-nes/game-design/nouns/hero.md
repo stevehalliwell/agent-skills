@@ -5,6 +5,11 @@ created_at: 2026-10-24T20:07:20.545Z
 desc: Player-controlled plumber with position, velocity and a power state.
 tags: []
 status: accepted
+axes:
+  - axes/Life
+  - axes/Form
+  - axes/Protection
+  - axes/ProtectionTime
 ---
 ## Definition
 

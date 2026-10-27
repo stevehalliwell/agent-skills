@@ -110,7 +110,7 @@ Read only inputs needed for the selected question:
 
 Missing context limits the comparison; it does not justify inventing rules. A missing declared relationship is not proof that an action is unavailable. In game-explorer mode, an absent destination is not a defect; compare possible leads without adopting one.
 
-Keep the existing 14 roles. No required pattern tags, new schemas, or separate measures, decisions, or skills collection. Existing project decisions remain user-owned. Experiments own hypotheses, local measures, methods, observations, and interpretation. Record reading and guide application do not authorize record edits, experiments, implementation, or adoption.
+Keep existing collection roles. No required pattern tags, new schemas, or separate measures, decisions, or skills collection. Existing project decisions remain user-owned. Experiments own hypotheses, local measures, methods, observations, and interpretation. Record reading and guide application do not authorize record edits, experiments, implementation, or adoption.
 
 ## Apply to a selected design slice
 

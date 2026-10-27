@@ -5,6 +5,7 @@ created_at: 2026-10-19T00:00:00.000Z
 desc: wall
 tags: []
 status: accepted
+axes: null
 ---
 # wall
 

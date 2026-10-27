@@ -109,7 +109,7 @@ Roles: `skill-atoms`, `challenges`, `mechanics`, `experiments`.
 
 Inspection topics: skill atoms, challenge routes, and experiment evidence.
 
-Read selected concept and relevant source bodies, not just links or query columns. Use existing [model owners](../workflows/model.md); preserve all 14 roles. Where relevant, inspect interactions for case feedback and `control-vars` for named configuration. No new skills, measures, decisions, or player-profile collection is needed.
+Read selected concept and relevant source bodies, not just links or query columns. Use existing [model owners](../workflows/model.md); preserve existing collection roles. Where relevant, inspect interactions for case feedback and `control-vars` for named configuration. No new skills, measures, decisions, or player-profile collection is needed.
 
 - **Challenge routes** identify authored opportunities and alternatives, not proven reachability or acquired capability.
 - **Skill atoms** describe declared understanding, expression, learning opportunities, and prerequisites. Authored rank is conceptual placement, not a calibrated ability estimate; `tests_mastery` is intent, not measured mastery.

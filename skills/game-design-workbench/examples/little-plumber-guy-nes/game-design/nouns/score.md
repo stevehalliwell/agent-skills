@@ -5,6 +5,8 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Non-spendable record of rewarded actions.
 tags: []
 status: accepted
+axes:
+  - axes/ScoreAmount
 ---
 ## Definition
 

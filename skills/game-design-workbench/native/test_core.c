@@ -51,6 +51,265 @@ static int has_error(GD_Model *model, const char *code) {
     for (i = 0; i < model->error_count; ++i) if (!strcmp(model->errors[i].code, code)) return 1;
     return 0;
 }
+TEST(rule_axis_definitions,
+    GD_Model *model = model_create(); GD_Rules *rules; int life, amount, hero, isolated, empty, null_axes;
+    TEST_ASSERT(model && setup("rule-axis-definitions")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+    TEST_ASSERT(write_record(1,"Life","---\nvalue_type: enum\nallowed_values: [alive, dead, alive]\nclosed: false\n---\nKnown states, open set."));
+    TEST_ASSERT(write_record(1,"Amount","---\nvalue_type: integer\nunit: life\nminimum: -0\nmaximum: 99\n---\nQuantity, not initial value."));
+    TEST_ASSERT(write_record(1,"Time","---\nvalue_type: number\nunit: s\n---\nNo invented numeric bounds."));
+    TEST_ASSERT(write_record(1,"Unknown","---\nvalue_type: unspecified\n---\nIncomplete definition allowed."));
+    TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Life, actions/Time, actions/Life]\n---\nActor."));
+    TEST_ASSERT(write_record(0,"lives","---\naxes: [actions/Amount]\n---\nPool stays a noun."));
+    TEST_ASSERT(write_record(0,"isolated","Actor with unspecified axes."));
+    TEST_ASSERT(write_record(0,"empty","---\naxes: []\n---\nNo axes currently declared."));
+    TEST_ASSERT(write_record(0,"null","---\naxes: null\n---\nExplicitly unspecified."));
+    TEST_ASSERT(write_record(2,"rule","```gd-rule\ncase contact:\n    A:\n        noun: things/hero\n    B:\n        noun: things/hero\n    Lives:\n        noun: things/lives\n```\n"));
+    TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model); TEST_ASSERT(rules && !model->error_count);
+    life = find_record(model,"actions/Life"); amount = find_record(model,"actions/Amount"); hero = find_record(model,"things/hero");
+    isolated = find_record(model,"things/isolated"); empty = find_record(model,"things/empty"); null_axes = find_record(model,"things/null");
+    TEST_ASSERT(rules->axis_count == 4 && rules->actor_count == 5 && !rules->axis_definitions_complete && !rules->bindings_complete);
+    TEST_ASSERT(rules->axes[life].type == GD_AXIS_ENUM && rules->axes[life].valid && !model->records[life].axis_closed);
+    TEST_ASSERT(model->records[life].axis.allowed_count == 3 && model->records[life].axis_closed_line == 4);
+    TEST_ASSERT(rules->axes[amount].type == GD_AXIS_INTEGER && rules->axes[amount].unit_known && rules->axes[amount].valid);
+    TEST_ASSERT(!strcmp(model->records[amount].axis.minimum,"-0") && !model->records[amount].axis_closed_line);
+    TEST_ASSERT(rules->actor_axes_complete[hero] && !rules->actor_axes_complete[isolated] && rules->actor_axes_complete[empty] && !rules->actor_axes_complete[null_axes]);
+    TEST_ASSERT(model->records[null_axes].axes_line == 2 && !model->records[null_axes].axes_declared);
+    TEST_ASSERT(model->records[empty].axes_declared && rules->actor_first[empty] == -1);
+    TEST_ASSERT(rules->participants[0].noun_resolution == GD_RULE_RESOLVED && rules->participants[0].noun_record == hero);
+    TEST_ASSERT(rules->participants[1].noun_record == hero && strcmp(rules->participants[0].name,rules->participants[1].name));
+    TEST_ASSERT(rules->next_axis[rules->next_axis[rules->actor_first[hero]]] >= 0); /* Duplicate declaration retained. */
+    gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rule_axis_errors,
+    const char *definitions[] = {
+        "value_type: boolean\n", "value_type: integer\nunit: life\nminimum: 1.5\n",
+        "value_type: number\nunit: s\nminimum: 2\nmaximum: 1\n", "value_type: number\nunit: s+life\n",
+        "value_type: enum\nunit: s\n", "value_type: integer\nunit: life\nclosed: true\n",
+        "value_type: enum\nallowed_values: [alive, null]\n", "value_type: enum\nallowed_values: [\"\"]\n",
+        "value_type: enum\nclosed: null\n", "value_type: enum\nclosed: false\nclosed: true\n",
+        "value_type: integer\nunit: life\nminimum: 9007199254740992\n", "value_type: number\nminimum: \"0\"\n"
+    };
+    const char *codes[] = {"rules.axis_type","rules.axis_bound","rules.axis_bounds","rules.axis_unit","rules.axis_shape",
+        "rules.axis_shape","rules.axis_value_type","rules.axis_value_empty","rules.axis_closed_type","input.duplicate_field","rules.axis_bound","rules.axis_field_type"};
+    int i;
+    for (i = 0; i < (int)(sizeof(definitions)/sizeof(definitions[0])); ++i) {
+        GD_Model *model = model_create(); GD_Rules *rules; char name[64], text[1024];
+        snprintf(name,sizeof(name),"rule-axis-error-%d",i);
+        TEST_ASSERT(model && setup(name)); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+        snprintf(text,sizeof(text),"---\n%s---\nDefinition.",definitions[i]); TEST_ASSERT(write_record(1,"Bad",text));
+        (void)gd_load(model,collections,3); rules = gd_read_rules(model);
+        TEST_ASSERT(rules && has_error(model,codes[i]) && !rules->axis_definitions_complete && !rules->bindings_complete);
+        TEST_ASSERT(model->errors[0].line > 0);
+        gd_rules_destroy(rules); gd_destroy(model);
+    }
+)
+TEST(rule_axis_references,
+    GD_Model *model = model_create(); GD_Rules *rules; int hero, edge, count = 0;
+    TEST_ASSERT(model && setup("rule-axis-references")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+    TEST_ASSERT(write_record(1,"Life","---\nvalue_type: enum\nallowed_values: [alive, dead]\nclosed: true\n---\nStates."));
+    TEST_ASSERT(write_record(0,"hero","---\naxes: [actions/Life, actions/absent, foreign/Life, things/hero]\n---\nActor."));
+    TEST_ASSERT(write_record(2,"rule","```gd-rule\ncase refs:\n    A:\n        noun: things/hero\n    Missing:\n        noun: things/absent\n    Unloaded:\n        noun: foreign/actor\n    Wrong:\n        noun: actions/Life\n    Unknown:\n        requires: ANY\n```\n"));
+    TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model); TEST_ASSERT(rules && !model->error_count);
+    TEST_ASSERT(rules->axis_definitions_complete && !rules->bindings_complete);
+    hero = find_record(model,"things/hero"); edge = rules->actor_first[hero];
+    TEST_ASSERT(rules->axis_resolution[edge] == GD_RULE_RESOLVED); edge = rules->next_axis[edge];
+    TEST_ASSERT(rules->axis_resolution[edge] == GD_RULE_MISSING); edge = rules->next_axis[edge];
+    TEST_ASSERT(rules->axis_resolution[edge] == GD_RULE_UNLOADED); edge = rules->next_axis[edge];
+    TEST_ASSERT(rules->axis_resolution[edge] == GD_RULE_WRONG_ROLE && rules->next_axis[edge] == -1);
+    TEST_ASSERT(rules->participants[0].noun_resolution == GD_RULE_RESOLVED);
+    TEST_ASSERT(rules->participants[1].noun_resolution == GD_RULE_MISSING);
+    TEST_ASSERT(rules->participants[2].noun_resolution == GD_RULE_UNLOADED);
+    TEST_ASSERT(rules->participants[3].noun_resolution == GD_RULE_WRONG_ROLE);
+    TEST_ASSERT(rules->participants[4].noun_resolution == GD_RULE_UNSPECIFIED);
+    for (edge = 0; edge < rules->finding_count; ++edge) if (!strcmp(rules->findings[edge].code,"rules.axis_reference")) ++count;
+    TEST_ASSERT(count == 3);
+    gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rule_axis_incomplete,
+    GD_Model *model = model_create(); GD_Rules *rules;
+    TEST_ASSERT(model && setup("rule-axis-incomplete")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+    TEST_ASSERT(write_record(1,"Time","---\nvalue_type: number\n---\nUnit not yet known."));
+    TEST_ASSERT(write_record(1,"Open","---\nvalue_type: enum\nallowed_values: []\n---\nOpen, no invented states."));
+    TEST_ASSERT(write_record(1,"ClosedEmpty","---\nvalue_type: enum\nallowed_values: []\nclosed: true\n---\nExplicit empty domain, not a parse failure."));
+    TEST_ASSERT(write_record(0,"actor","---\naxes: [actions/Time]\n---\nActor."));
+    TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+    TEST_ASSERT(rules && !model->error_count && !rules->axis_definitions_complete && rules->bindings_complete);
+    TEST_ASSERT(rules->axes[find_record(model,"actions/Time")].valid && !rules->axes[find_record(model,"actions/Time")].unit_known);
+    TEST_ASSERT(!model->records[find_record(model,"actions/Open")].axis_closed && model->records[find_record(model,"actions/ClosedEmpty")].axis_closed);
+    gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rule_axis_limits,
+    {
+        GD_Model *model = model_create(); GD_Rules *rules; size_t used; int i;
+        TEST_ASSERT(model && setup("rule-axis-value-limit")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+        used = (size_t)snprintf(model->input,sizeof(model->input),"---\nvalue_type: enum\nallowed_values: [");
+        for (i = 0; i <= GD_MAX_ENUM_VALUES; ++i)
+            used += (size_t)snprintf(model->input+used,sizeof(model->input)-used,"%sv%d",i ? ", ":"",i);
+        strcpy(model->input+used,"]\n---\nValues."); TEST_ASSERT(write_record(1,"Many",model->input));
+        TEST_ASSERT(!gd_load(model,collections,3)); rules = gd_read_rules(model);
+        TEST_ASSERT(rules && has_error(model,"rules.axis_value_limit") && !rules->axis_definitions_complete);
+        gd_rules_destroy(rules); gd_destroy(model);
+    }
+    {
+        GD_Model *model = model_create(); GD_Rules *rules; int i;
+        TEST_ASSERT(model && setup("rule-axis-finding-limit")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+        for (i = 0; i <= GD_MAX_ERRORS; ++i) { char name[32]; snprintf(name,sizeof(name),"actor-%d",i); TEST_ASSERT(write_record(0,name,"Axes unspecified.")); }
+        TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+        TEST_ASSERT(rules && !model->error_count && rules->finding_count == GD_MAX_ERRORS && rules->findings_omitted == 1 && !rules->bindings_complete);
+        gd_rules_destroy(rules); gd_destroy(model);
+    }
+    {
+        GD_Model *model = model_create(); GD_Rules *rules; int actor;
+        TEST_ASSERT(model && setup("rule-axis-ambiguous")); collections[1].role = GD_AXIS; collections[2].role = GD_RULE;
+        TEST_ASSERT(write_record(1,"a","---\nname: Life\nvalue_type: enum\n---\nAxis A."));
+        TEST_ASSERT(write_record(1,"b","---\nname: Life\nvalue_type: enum\n---\nAxis B."));
+        TEST_ASSERT(write_record(0,"a","---\nname: hero\naxes: [actions/Life]\n---\nActor A."));
+        TEST_ASSERT(write_record(0,"b","---\nname: hero\naxes: [actions/Life]\n---\nActor B."));
+        TEST_ASSERT(write_record(2,"refs","```gd-rule\ncase refs:\n    Ambiguous:\n        noun: things/hero\n    Missing:\n        noun: things/absent\n```\n"));
+        TEST_ASSERT(!gd_load(model,collections,3)); rules = gd_read_rules(model);
+        TEST_ASSERT(rules && has_error(model,"input.identity") && rules->participants[0].noun_resolution == GD_RULE_AMBIGUOUS);
+        TEST_ASSERT(rules->participants[1].noun_resolution == GD_RULE_UNAVAILABLE);
+        actor = find_record(model,"things/hero"); TEST_ASSERT(rules->axis_resolution[rules->actor_first[actor]] == GD_RULE_AMBIGUOUS);
+        TEST_ASSERT(!rules->axis_definitions_complete && !rules->bindings_complete);
+        gd_rules_destroy(rules); gd_destroy(model);
+    }
+)
+TEST(rules_declarations,
+    GD_Model *model = model_create();
+    GD_Rules *rules;
+    TEST_ASSERT(model && setup("rules-declarations"));
+    collections[2].role = GD_RULE;
+    TEST_ASSERT(write_record(0,"hero","Hero."));
+    TEST_ASSERT(write_record(2,"contact",
+        "---\nname: contact\nstatus: accepted\ncoverage: defined\n---\n# Intent\n\n```gd-rule\n"
+        "case powered-side-contact:\n    context: Player sideContacts Walker\n\n"
+        "    Player:\n        noun: things/hero\n        requires: alive AND (tall OR spark) AND NOT protected\n"
+        "        other_axes: ANY\n        becomes: small, protected\n        set:\n"
+        "            ProtectionTime: {control-vars/safety-window}\n            Amount: this + 1[life]\n"
+        "            Amount: this + 2[life]\n        preserve: OTHER\n"
+        "    Walker:\n        noun: things/hero\n        requires: alive\n"
+        "    Lives:\n        requires: ANY\n        preserve: ALL\n"
+        "case unknown-result:\n    Player:\n        skip_if: dead OR (hidden AND NOT revealed)\n"
+        "        causes: mechanics/power-loss\n```\n"));
+    TEST_ASSERT(write_record(2,"legacy","Legacy prose remains unknown."));
+    TEST_ASSERT(write_record(2,"empty","```gd-rule\n# Design not filled in.\n```\n"));
+    TEST_ASSERT(gd_load(model,collections,3));
+    TEST_ASSERT(model->rule_mode && !model->cell_count && !model->component_count);
+    rules = gd_read_rules(model);
+    TEST_ASSERT(rules && !model->error_count);
+    TEST_ASSERT(rules->source_count == 3 && rules->case_count == 2 && rules->participant_count == 4 && rules->assignment_count == 3);
+    TEST_ASSERT(rules->sources[0].state == GD_RULE_PARSED && rules->sources[0].line == 8);
+    TEST_ASSERT(rules->sources[1].state == GD_RULE_EMPTY && rules->sources[2].state == GD_RULE_ABSENT);
+    TEST_ASSERT(rules->cases[0].line == 9 && rules->cases[0].context_line == 10 && rules->participants[0].line == 12);
+    TEST_ASSERT(!strcmp(rules->cases[0].context,"Player sideContacts Walker"));
+    TEST_ASSERT(!strcmp(rules->participants[0].requires,"alive AND (tall OR spark) AND NOT protected"));
+    TEST_ASSERT(!strcmp(rules->assignments[0].expression,"{control-vars/safety-window}"));
+    TEST_ASSERT(!strcmp(rules->assignments[1].expression,"this + 1[life]") && !strcmp(rules->assignments[2].expression,"this + 2[life]"));
+    TEST_ASSERT(!rules->participants[1].preserve && !rules->participants[1].becomes && !rules->participants[1].other_axes);
+    TEST_ASSERT(!rules->participants[2].noun && !strcmp(rules->participants[2].requires,"ANY"));
+    TEST_ASSERT(!rules->cases[1].context && !rules->participants[3].requires && !rules->participants[3].noun);
+    TEST_ASSERT(!strcmp(rules->participants[3].causes,"mechanics/power-loss"));
+    gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rules_fence_scope,
+    GD_Model *model = model_create();
+    GD_Rules *rules;
+    TEST_ASSERT(model && setup("rules-fence-scope")); collections[2].role = GD_RULE;
+    TEST_ASSERT(write_record(2,"quoted",
+        "````markdown\r\n```gd-rule\r\ncase hidden:\r\n```\r\n````\r\n"
+        "   ~~~ gd-rule\r\ncase real:\r\n    context: ANY\r\n    Actor:\r\n"
+        "        noun: things/actor\r\n        becomes: unknown\r\n   ~~~~\r\n"));
+    TEST_ASSERT(write_record(2,"z-duplicate","```gd-rule\ncase real:\n```\n"));
+    TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+    TEST_ASSERT(rules && !model->error_count && rules->case_count == 2);
+    TEST_ASSERT(!strcmp(rules->cases[0].name,"real") && rules->cases[0].line == 7);
+    TEST_ASSERT(!strcmp(rules->cases[1].name,"real") && rules->cases[0].source != rules->cases[1].source);
+    TEST_ASSERT(!strcmp(rules->cases[0].context,"ANY") && rules->participants[0].lines[4] == 11);
+    gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(rules_invalid_records,
+    const char *inputs[] = {
+        "```gd-rule\ncase bad:\n    A:\n        noun: things/a\n        noun: things/b\n```\n",
+        "```gd-rule\ncase bad:\n    A:\n    A:\n```\n",
+        "```gd-rule\ncase bad:\ncase bad:\n```\n",
+        "```gd-rule\ncase bad:\n    A:\n        mystery: wrong\n```\n",
+        "```gd-rule\ncase bad:\n    A:\n        requires:\n```\n",
+        "```gd-rule\ncase bad:\n    A:\n          noun: things/a\n```\n",
+        "```gd-rule\ncase bad:\n\tA:\n```\n",
+        "```gd-rule\ncase bad:\n    A:\n        set: Amount: 1\n```\n",
+        "```gd-rule\ncase bad:\n    A:\n        set:\n            Amount:\n```\n",
+        "```gd-rule\ncase bad:\n    context: ANY\n    context: ANY\n```\n",
+        "```gd-rule\ncase bad:\n    A:\n        noun: things/a\n",
+        "```gd-rule\ncase bad:\n```\n```gd-rule\ncase another:\n```\n",
+        "```gd-rule\n    A:\n```\n"
+    };
+    const char *codes[] = {"rules.duplicate_field","rules.duplicate_participant","rules.duplicate_case","rules.field",
+        "rules.value","rules.indent","rules.indent","rules.assignment","rules.assignment","rules.duplicate_field",
+        "rules.unclosed_block","rules.multiple_blocks","rules.case"};
+    int i;
+    for (i = 0; i < (int)(sizeof(inputs)/sizeof(inputs[0])); ++i) {
+        GD_Model *model = model_create(); GD_Rules *rules; char name[64];
+        snprintf(name,sizeof(name),"rules-invalid-%d",i);
+        TEST_ASSERT(model && setup(name)); collections[2].role = GD_RULE;
+        TEST_ASSERT(write_record(2,"a-good","```gd-rule\ncase good:\n    Actor:\n        becomes: alive\n```\n"));
+        TEST_ASSERT(write_record(2,"bad",inputs[i]));
+        TEST_ASSERT(write_record(2,"z-good","```gd-rule\ncase later:\n    Actor:\n        preserve: OTHER\n```\n"));
+        TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+        TEST_ASSERT(rules && has_error(model,codes[i]));
+        TEST_ASSERT(rules->case_count == 2 && rules->participant_count == 2 && !rules->assignment_count);
+        TEST_ASSERT(rules->sources[1].state == GD_RULE_INVALID && !rules->sources[1].case_count);
+        TEST_ASSERT(!strcmp(rules->cases[0].name,"good") && !strcmp(rules->cases[1].name,"later"));
+        TEST_ASSERT(!strcmp(rules->participants[0].becomes,"alive") && !strcmp(rules->participants[1].preserve,"OTHER"));
+        TEST_ASSERT(model->errors[0].line > 0);
+        gd_rules_destroy(rules); gd_destroy(model);
+    }
+)
+TEST(rules_limits,
+    int mode;
+    const char *codes[] = {"rules.case_limit","rules.participant_limit","rules.assignment_limit","rules.line_limit"};
+    for (mode = 0; mode < 4; ++mode) {
+        GD_Model *model = model_create(); GD_Rules *rules; char name[64];
+        size_t used; int i, count = mode == 0 ? GD_MAX_RULE_CASES : mode == 1 ? GD_MAX_RULE_PARTICIPANTS : GD_MAX_RULE_ASSIGNMENTS;
+        snprintf(name,sizeof(name),"rules-limit-%d",mode);
+        TEST_ASSERT(model && setup(name)); collections[2].role = GD_RULE;
+        used = (size_t)snprintf(model->input,sizeof(model->input),"```gd-rule\n");
+        if (mode) used += (size_t)snprintf(model->input+used,sizeof(model->input)-used,"case big:\n");
+        if (mode == 2) used += (size_t)snprintf(model->input+used,sizeof(model->input)-used,"    Actor:\n        set:\n");
+        if (mode == 3) {
+            memset(model->input+used,'x',GD_MAX_RULE_LINE+1); used += GD_MAX_RULE_LINE+1;
+            model->input[used++] = '\n';
+        } else for (i = 0; i <= count; ++i)
+            used += (size_t)snprintf(model->input+used,sizeof(model->input)-used,
+                mode == 0 ? "case c%d:\n" : mode == 1 ? "    A%d:\n" : "            Amount: this + %d[life]\n",i);
+        TEST_ASSERT(used+5 < sizeof(model->input));
+        strcpy(model->input+used,"```\n");
+        TEST_ASSERT(write_record(2,"limit",model->input));
+        TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+        TEST_ASSERT(rules && has_error(model,codes[mode]));
+        TEST_ASSERT(!rules->case_count && !rules->participant_count && !rules->assignment_count && !rules->text_used);
+        gd_rules_destroy(rules); gd_destroy(model);
+    }
+    {
+        GD_Model *model = model_create(); GD_Rules *rules; size_t used; int i, j;
+        TEST_ASSERT(model && setup("rules-text-limit")); collections[2].role = GD_RULE;
+        for (i = 0; i < 6; ++i) {
+            char name[32]; snprintf(name,sizeof(name),"text-%d",i);
+            used = (size_t)snprintf(model->input,sizeof(model->input),"```gd-rule\ncase text:\n    Actor:\n        set:\n");
+            for (j = 0; j < 120; ++j) {
+                used += (size_t)snprintf(model->input+used,sizeof(model->input)-used,"            Amount: ");
+                TEST_ASSERT(used+7501+5 < sizeof(model->input));
+                memset(model->input+used,'x',7500); used += 7500; model->input[used++] = '\n';
+            }
+            strcpy(model->input+used,"```\n"); TEST_ASSERT(write_record(2,name,model->input));
+        }
+        TEST_ASSERT(gd_load(model,collections,3)); rules = gd_read_rules(model);
+        TEST_ASSERT(rules && has_error(model,"rules.text_limit") && model->error_count == 2);
+        TEST_ASSERT(rules->source_count == 6 && rules->case_count == 4 && rules->assignment_count == 480);
+        TEST_ASSERT(rules->sources[4].state == GD_RULE_INVALID && rules->sources[5].state == GD_RULE_INVALID);
+        TEST_ASSERT(rules->text_used < GD_RULE_TEXT_CAPACITY && strlen(rules->assignments[479].expression) == 7500);
+        gd_rules_destroy(rules); gd_destroy(model);
+    }
+)
 TEST(empty,
     GD_Model *model = model_create();
     TEST_ASSERT(model && setup("empty"));
@@ -1239,6 +1498,17 @@ TEST(diagnostic_retention,
     }
     gd_destroy(model);
 )
+TEST(rules_allocation_failure,
+    GD_Model *model = model_create();
+    RouteFailure failure;
+    GD_Allocator allocator;
+    TEST_ASSERT(model);
+    allocator = model->allocator;
+    failure.parent = allocator; failure.remaining = 0;
+    model->allocator.context = &failure; model->allocator.allocate = route_allocate; model->allocator.release = route_release;
+    TEST_ASSERT(!gd_read_rules(model) && has_error(model,"rules.memory"));
+    model->allocator = allocator; gd_destroy(model);
+)
 int main(int argc, char **argv) {
     int failed = 0;
     if (argc != 2 || strlen(argv[1]) >= sizeof(root)) { fputs("Usage: test-core NEW-FIXTURE-DIRECTORY\n", stderr); return 2; }
@@ -1247,6 +1517,8 @@ int main(int argc, char **argv) {
     if (!file_directory_create(root, 1)) { fputs("Fixture directory must be new\n", stderr); return 2; }
     storage = free_list_from_buffer(backing, sizeof(backing));
     if (!storage) return 2;
+    failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
+    failed += test_rules_declarations(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
     failed += test_text_types(); failed += test_missing_endpoint();
     failed += test_input_limits();
@@ -1261,6 +1533,6 @@ int main(int argc, char **argv) {
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control checks: %d/45 passed\n", 45-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/55 passed\n", 55-failed);
     return failed ? 1 : 0;
 }

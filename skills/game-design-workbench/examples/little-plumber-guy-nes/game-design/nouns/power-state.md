@@ -5,6 +5,7 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Small, tall or spark capability state of the hero.
 tags: []
 status: accepted
+axes: null
 ---
 ## Definition
 

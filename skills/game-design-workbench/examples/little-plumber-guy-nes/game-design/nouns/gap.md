@@ -5,6 +5,7 @@ created_at: 2026-10-24T20:07:20.546Z
 desc: Missing floor with a lethal lower boundary.
 tags: []
 status: accepted
+axes: null
 ---
 ## Definition
 

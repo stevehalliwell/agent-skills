@@ -5,6 +5,7 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Pickup granting projectile ability to a tall hero.
 tags: []
 status: accepted
+axes: null
 ---
 ## Definition
 

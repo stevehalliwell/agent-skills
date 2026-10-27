@@ -106,7 +106,7 @@ Compare with the concept's intended experience or, in explorer mode, its candida
 5. **Develop one bounded comparison.** Consider a stable cue, history, better relation mapping, staged presentation, or unchanged memory challenge. State what each would externalize and what reasoning it might remove or alter. Done: option remains proposed; nothing is adopted or repaired.
 6. **Return a trace and an investigation question.** Include evidence status, alternate explanation, trade-off, and unresolved input. Done: user can inspect the claim without accepting a slot budget or a hidden design change.
 
-Chat or ordinary Markdown is enough. Saving a review or changing records needs separate authority. If an investigation is later authorized, its hypotheses, measures, method, observations, and interpretation belong together in `experiments`; guide application does not execute it or create separate measures, decisions, or skills collections. Existing 14 roles remain unchanged.
+Chat or ordinary Markdown is enough. Saving a review or changing records needs separate authority. If an investigation is later authorized, its hypotheses, measures, method, observations, and interpretation belong together in `experiments`; guide application does not execute it or create separate measures, decisions, or skills collections. Existing collection roles remain unchanged.
 
 ## Worked example and output
 

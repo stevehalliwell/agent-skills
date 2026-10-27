@@ -5,6 +5,8 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Remaining active course time displayed in the HUD.
 tags: []
 status: accepted
+axes:
+  - axes/TimeRemaining
 ---
 ## Definition
 

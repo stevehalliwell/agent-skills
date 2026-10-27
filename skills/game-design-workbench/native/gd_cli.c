@@ -20,7 +20,7 @@ static void *system_allocate(void *context, size_t size) { (void)context; return
 static void system_release(void *context, void *memory) { (void)context; free(memory); }
 static void help(void) {
     puts("Game Design Workbench — native domain tools\n"
-         "Usage: gd matrix|connectivity|skill-atoms|scaffolding|mda|controls [options]\n"
+         "Usage: gd matrix|connectivity|skill-atoms|scaffolding|mda|controls|rules [options]\n"
          "       gd view matrix|skill-atoms|mda [options]\n\n"
          "Matrix/connectivity collections (exactly one of each):\n"
          "  --nouns ALIAS=FOLDER\n  --verbs ALIAS=FOLDER\n  --interactions ALIAS=FOLDER\n"
@@ -39,6 +39,9 @@ static void help(void) {
          "                         bypass implicit status default, not explicit --status.\n"
          "  --set ALIAS/NAME=VALUE  Temporary typed override; repeatable, never source edits\n"
          "                         Enum VALUE is raw text; booleans true/false; numeric unit from definition\n"
+         "Rules require --interactions and/or --mechanics ALIAS=FOLDER\n"
+         "  Optional --axes, --nouns, --verbs, --control-vars, --related; explicit applicability\n"
+         "  Reads labelled gd-rule body blocks; no state/formula evaluation or comparison\n"
          "MDA requires --mechanics, --dynamics, --aesthetics ALIAS=FOLDER; optional --systems\n"
          "  --from ALIAS/NAME       MDA/control root (default all), or Relationships root\n"
          "                         Relationships defaults first loaded skill, then other record\n"
@@ -53,6 +56,7 @@ static void help(void) {
          "                         skill-atoms: skills,links,components,findings\n"
          "                         scaffolding: challenges,skills,checks,witnesses,findings\n"
          "                         mda: nodes,links,paths,gaps,findings; controls: controls\n"
+         "                         rules: records,cases,axes,actors,findings\n"
          "                         controls import: changes,derived,items (flags/errors retained)\n"
          "                         MDA view: columns (default) or graph; source read-only\n"
          "  --layout table|graph|columns  View layout; graph settles dynamically\n"
@@ -79,7 +83,10 @@ static int fields_valid(const char *fields, int operation) {
     if (!p || !*p) return 0;
     while (*p) {
         const char *end = strchr(p, ','); size_t n = end ? (size_t)(end-p) : strlen(p);
-        if (operation == 6) {
+        if (operation == 7) {
+            if (!((n==7 && !memcmp(p,"records",n)) || (n==5 && !memcmp(p,"cases",n)) ||
+                  (n==4 && !memcmp(p,"axes",n)) || (n==6 && !memcmp(p,"actors",n)) || (n==8 && !memcmp(p,"findings",n)))) return 0;
+        } else if (operation == 6) {
             if (!((n==7 && !memcmp(p,"changes",n)) || (n==7 && !memcmp(p,"derived",n)) || (n==5 && !memcmp(p,"items",n)))) return 0;
         } else if (operation == 5) {
             if (n != 8 || memcmp(p,"controls",n)) return 0;
@@ -136,6 +143,7 @@ static int application(int argc, char **argv) {
     GD_Mda *mda = NULL;
     GD_Controls *controls = NULL;
     GD_ControlImport *import_plan = NULL;
+    GD_Rules *rules = NULL;
     const char *input_path = NULL, *input_format = "json";
     int import_option = 0;
     GD_ControlOverride overrides[64]; char override_names[64][258];
@@ -145,7 +153,7 @@ static int application(int argc, char **argv) {
     int as_supplied = 0, control_command;
     GD_MdaDirection mda_direction = GD_MDA_BOTH;
     const char *from = NULL;
-    int route_command, mda_command;
+    int route_command, mda_command, rule_command;
     int i, count = 0, roles = 0, command = 0, first = 2, frames = 0, explicit_format = -1;
     GD_ViewLayout layout = GD_VIEW_TABLE;
     GD_ExplorerMode explorer_mode = GD_EXPLORE_SKILLS;
@@ -164,12 +172,13 @@ static int application(int argc, char **argv) {
         if (!strcmp(argv[i], "--help")) { help(); return 0; }
         if (!strcmp(argv[i], "--version")) { puts("gd native 0.1 (output schema 1)"); return 0; }
     }
-    if (argc < 2) error = "Supply matrix, connectivity, skill-atoms, scaffolding, mda, controls, or view; see --help";
+    if (argc < 2) error = "Supply matrix, connectivity, skill-atoms, scaffolding, mda, controls, rules, or view; see --help";
     else if (!strcmp(argv[1], "connectivity")) command = 1;
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "matrix")) { command = 2; first = 3; }
     else if (!strcmp(argv[1], "skill-atoms")) command = 3;
     else if (!strcmp(argv[1], "scaffolding")) command = 5;
     else if (!strcmp(argv[1], "mda")) command = 6;
+    else if (!strcmp(argv[1], "rules")) command = 11;
     else if (!strcmp(argv[1], "controls")) {
         command = 8;
         if (argc > 2 && !strcmp(argv[2],"export")) { command = 9; first = 3; export_format = "json"; }
@@ -181,6 +190,7 @@ static int application(int argc, char **argv) {
     control_filter.root = -1; control_filter.accepted_default = command == 9 || command == 10;
     control_command = command >= 8 && command <= 10;
     route_command = command == 5;
+    rule_command = command == 11;
     mda_command = command == 6 || command == 7;
     skill_command = command >= 3 && command <= 5; view_command = command == 2 || command == 4 || command == 7;
     for (i = first; i < argc && !error; ++i) {
@@ -196,6 +206,7 @@ static int application(int argc, char **argv) {
         else if (!strcmp(argv[i], "--dynamics")) role = GD_MDA_DYNAMIC;
         else if (!strcmp(argv[i], "--aesthetics")) role = GD_MDA_AESTHETIC;
         else if (!strcmp(argv[i], "--control-vars")) role = GD_CONTROL;
+        else if (!strcmp(argv[i], "--axes")) role = GD_AXIS;
         else if (strcmp(argv[i], "--related")) mapping = 0;
         if (mapping) {
             char *equals; size_t length;
@@ -206,7 +217,8 @@ static int application(int argc, char **argv) {
             if (role != GD_RELATED && (roles & (1 << role))) { error = "Supply each domain role exactly once"; break; }
             memcpy(aliases[count], argv[i], length); aliases[count][length] = 0;
             if (!absolute_folder(equals + 1, folders[count])) { error = "Collection path is invalid or exceeds 4095 UTF-8 bytes"; break; }
-            collections[count].alias = aliases[count]; collections[count].directory = folders[count]; collections[count].role = role;
+            collections[count].alias = aliases[count]; collections[count].directory = folders[count];
+            collections[count].role = rule_command && (role == GD_CASE || role == GD_MDA_MECHANIC) ? GD_RULE : role;
             if (role != GD_RELATED) roles |= 1 << role;
             ++count;
         } else if (!strcmp(argv[i], "--status") || !strcmp(argv[i], "--include") || !strcmp(argv[i], "--exclude")) {
@@ -292,10 +304,15 @@ static int application(int argc, char **argv) {
         int required = (1 << GD_MDA_MECHANIC) | (1 << GD_MDA_DYNAMIC) | (1 << GD_MDA_AESTHETIC);
         if (roles != required && roles != (required | (1 << GD_MDA_SYSTEM))) error = "MDA requires --mechanics, --dynamics, --aesthetics ALIAS=FOLDER; optional --systems and --related";
     }
+    if (!error && rule_command) {
+        int roots = (1 << GD_CASE) | (1 << GD_MDA_MECHANIC);
+        int permitted = roots | (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS);
+        if (!(roles & roots) || (roles & ~permitted)) error = "Rules require --interactions and/or --mechanics, optional --axes, --nouns, --verbs, --control-vars and --related";
+    }
     if (!error && control_command && roles != (1 << GD_CONTROL)) error = "Controls require --control-vars ALIAS=FOLDER, plus optional --related";
     if (!error && explorer_mode_supplied && command != 4) error = "--mode applies only to view skill-atoms";
     if (!error && command == 4 && explorer_mode == GD_EXPLORE_CHALLENGES && !(roles & (1 << GD_CHALLENGE))) error = "Challenges mode requires explicit --challenges ALIAS=FOLDER";
-    if (!error && !control_command && !mda_command && !(command == 4 && roles == ((1 << GD_SKILL) | (1 << GD_CHALLENGE))) && roles != (route_command ? (1 << GD_SKILL) | (1 << GD_CHALLENGE) : skill_command ? 1 << GD_SKILL : 7))
+    if (!error && !rule_command && !control_command && !mda_command && !(command == 4 && roles == ((1 << GD_SKILL) | (1 << GD_CHALLENGE))) && roles != (route_command ? (1 << GD_SKILL) | (1 << GD_CHALLENGE) : skill_command ? 1 << GD_SKILL : 7))
         error = route_command ? "Supply exactly --skill-atoms and --challenges ALIAS=FOLDER, plus optional --related collections" : skill_command ? "Supply exactly --skill-atoms ALIAS=FOLDER, plus optional --related collections" : "Explicit --nouns, --verbs, and --interactions ALIAS=FOLDER inputs are required";
     if (!error && !control_command && (control_filter.status_count || control_filter.include_count || control_filter.exclude_count)) error = "--status, --include, --exclude apply only to controls";
     if (!error && override_count && !control_command) error = "--set applies only to controls";
@@ -307,7 +324,7 @@ static int application(int argc, char **argv) {
     if (!error && command == 4 && explicit_format == 0) error = "Skill view change report supports JSON only";
     if (command == 4) json = 1;
     if (!error && output_path && (strlen(output_path) >= GD_MAX_PATH || strlen(output_path) < 5 || strcmp(output_path+strlen(output_path)-5, ".json"))) error = "Report path must end in .json and fit 4095 UTF-8 bytes";
-    if (!error && fields && (!json || view_command || !fields_valid(fields, command == 10 ? 6 : control_command ? 5 : mda_command ? 4 : route_command ? 3 : skill_command ? 2 : command == 1))) error = "--fields needs JSON and supported top-level data keys";
+    if (!error && fields && (!json || view_command || !fields_valid(fields, rule_command ? 7 : command == 10 ? 6 : control_command ? 5 : mda_command ? 4 : route_command ? 3 : skill_command ? 2 : command == 1))) error = "--fields needs JSON and supported top-level data keys";
     if (!error && !view_command && (frames || screenshot || layout_supplied || other_pairs || (direction_supplied && !mda_command))) error = "Layout/direction/frame/capture options apply only to views";
     if (!error && command == 2 && layout > GD_VIEW_COLUMNS) error = "Matrix view requires table, graph, or columns layout";
     if (!error && command == 4 && (layout < GD_VIEW_PREREQUISITES || other_pairs)) error = "Skill view requires prerequisites or rank layout; no matrix-pair overlay";
@@ -325,6 +342,7 @@ static int application(int argc, char **argv) {
     if (!model) { fputs("gd: cannot allocate bounded model storage\n", stderr); return 2; }
     if (error) gd_error(model, "cli.arguments", error, NULL, 0);
     else gd_load(model, collections, count);
+    if (rule_command && !error) rules = gd_read_rules(model);
     if (route_command && !error) routes = gd_analyze_routes(model);
     if (mda_command && !error) {
         mda = gd_analyze_mda(model);
@@ -362,7 +380,7 @@ static int application(int argc, char **argv) {
 #endif
     }
     if (!view_command || model->error_count) {
-        int written = command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
+        int written = rule_command ? gd_write_rules_result(stdout,model,rules,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
             gd_write_result(stdout, model, skill_command ? 2 : command == 1, json, error ? NULL : fields);
         if (!written || fflush(stdout)) {
             fputs("gd: cannot write result\n", stderr); status = 2;
@@ -373,7 +391,7 @@ static int application(int argc, char **argv) {
         fprintf(stderr, "gd: %s: %s%s%s\n", e->code, e->message, e->path ? " — " : "", e->path ? e->path : "");
     }
     if (model->error_count || model->errors_omitted) status = 2;
-    gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
+    gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
 }
 int main(int argc, char **argv) {
 #ifdef _WIN32

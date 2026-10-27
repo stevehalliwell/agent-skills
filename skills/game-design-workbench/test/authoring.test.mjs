@@ -26,7 +26,7 @@ async function temporary(t) {
 }
 
 test('shipped templates and example contain readable collection contracts and concept', async () => {
-  assert.equal(roles.length, 14);
+  assert.equal(roles.length, 15);
   for (const role of roles) for (const name of ['.schema.md', '.usage.md', '.template.md']) {
     assert.ok((await text(join(home, 'templates', role, name))).trim(), `${role}/${name}: empty template`);
     assert.ok((await text(join(example, 'game-design', role, name))).trim(), `${role}/${name}: empty example contract`);
@@ -36,8 +36,23 @@ test('shipped templates and example contain readable collection contracts and co
   assert.match(concept, /Hypothetical player voice/);
 });
 
+test('axis records retain readable definitions and valid local rule sources', async () => {
+  for (const [project, expected] of [[example, 3], [plumber, 8]]) {
+    const folder = join(project, 'game-design/axes');
+    const records = (await readdir(folder)).filter(name => !name.startsWith('.') && name.endsWith('.md'));
+    assert.equal(records.length, expected);
+    for (const name of records) {
+      const source = await text(join(folder, name));
+      const body = normalized(source).split('\n---\n')[1];
+      assert.ok(body && !body.includes('Describe this independent dimension'), name);
+      for (const match of body.matchAll(/\[[^\]]+\]\(([^)]+\.md)\)/g))
+        assert.ok((await text(join(folder, match[1]))).trim(), `${name}: ${match[1]}`);
+    }
+  }
+});
+
 test('large plumber example contains authored records rather than copied tutorial or empty bodies', async () => {
-  const expected = { nouns: 26, verbs: 12, interactions: 49, mechanics: 24, systems: 6, dynamics: 8,
+  const expected = { axes: 8, nouns: 26, verbs: 12, interactions: 49, mechanics: 24, systems: 6, dynamics: 8,
     aesthetics: 6, 'skill-atoms': 16, challenges: 19, levels: 2, 'control-vars': 20, resources: 4,
     experiments: 3, glossary: 7 };
   let count = 0;
@@ -53,7 +68,7 @@ test('large plumber example contains authored records rather than copied tutoria
     }
     count += records.length;
   }
-  assert.equal(count, 202);
+  assert.equal(count, 210);
   assert.match(await text(join(plumber, 'game-design/concept.md')), /^Working mode: game-design$/m);
   assert.match(await text(join(plumber, 'README.md')), /Approximate instruction/);
 });
@@ -66,7 +81,7 @@ test('public Attendant and native consumers read the large plumber example', { s
   const result = spawnSync(process.execPath, [runner, 'validate', '--strict', '--project', root], { encoding: 'utf8', timeout: 30000, maxBuffer: 4*1024*1024, windowsHide: true });
   assert.equal(result.status, 0, result.stderr);
   const validation = JSON.parse(result.stdout);
-  assert.equal(validation.records, 202);
+  assert.equal(validation.records, 210);
   assert.deepEqual(validation.diagnostics, []);
   assert.deepEqual(validation.corrections, []);
   if (!process.env.GD_NATIVE_EXE) return;
@@ -144,8 +159,8 @@ test('external Attendant validates copied templates/example and preserves rank-o
     assert.deepEqual(query(`SELECT id FROM "${role}"`, empty), []);
     return query(`SELECT id FROM "${role}"`).map(row => row.id);
   });
-  assert.equal(identities.length, 63);
-  assert.equal(new Set(identities).size, 63);
+  assert.equal(identities.length, 66);
+  assert.equal(new Set(identities).size, 66);
   for (const id of identities) assert.match(id, /^[a-f0-9]{8}-[a-f0-9]{4}-7[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
   const atoms = query('SELECT id, name, rank FROM "skill-atoms" ORDER BY name');
   assert.equal(atoms.length, 6);

@@ -20,7 +20,7 @@ control-vars:
 ---
 ## Rule
 
-Authoring-review specimen. Axis declarations, context vocabulary and the `gd-rule` reader are pending; this block is not yet executable or semantically validated.
+Accepted authoring specimen. Native `gd rules` reads this block as declarations. Typed axes and explicit noun/axis bindings now load. Context, condition and effect resolution remain pending; declaration inspection does not execute or validate gameplay meaning.
 
 ```gd-rule
 case powered-side-contact:
@@ -50,4 +50,4 @@ case powered-side-contact:
 
 Show power loss and temporary protection distinctly. Gap death and clock death remain possible; enemy-contact protection does not prevent them.
 
-This case does not specify the walker's resulting state. `ProtectionTime` is the proposed numeric protection-duration axis, measured in seconds; its declaration belongs in the pending axis model. `sideContacts` is the proposed ordered contact-context value, not a new player-input action.
+This case does not specify the walker's resulting state. `ProtectionTime` is the proposed numeric protection-duration axis, measured in seconds; its [typed declaration](../axes/ProtectionTime.md) remains proposed. `sideContacts` is the proposed ordered contact-context value, not a new player-input action.

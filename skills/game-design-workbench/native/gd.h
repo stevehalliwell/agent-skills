@@ -18,11 +18,11 @@
 #define GD_TEXT_CAPACITY (16 * 1024 * 1024)
 
 typedef enum { GD_NOUN, GD_VERB, GD_CASE, GD_RELATED, GD_SKILL, GD_CHALLENGE,
-               GD_MDA_MECHANIC, GD_MDA_SYSTEM, GD_MDA_DYNAMIC, GD_MDA_AESTHETIC, GD_CONTROL } GD_Role;
+               GD_MDA_MECHANIC, GD_MDA_SYSTEM, GD_MDA_DYNAMIC, GD_MDA_AESTHETIC, GD_CONTROL, GD_RULE, GD_AXIS } GD_Role;
 typedef enum { GD_NOUNS, GD_VERB_REF, GD_CONTEXT, GD_MECHANICS,
                GD_CONTROLS, GD_RESOURCES, GD_VERBS, GD_PREREQUISITES,
                GD_INTRODUCES, GD_PRACTISES, GD_REQUIRES, GD_TESTS_MASTERY, GD_NEXT,
-               GD_SYSTEMS, GD_DYNAMICS, GD_EXPERIMENTS } GD_Field;
+               GD_SYSTEMS, GD_DYNAMICS, GD_EXPERIMENTS, GD_AXES } GD_Field;
 typedef struct { const char *alias; const char *directory; GD_Role role; } GD_Collection;
 #define GD_MAX_ENUM_VALUES 64
 typedef enum { GD_LITERAL_NULL, GD_LITERAL_NUMBER, GD_LITERAL_BOOLEAN, GD_LITERAL_STRING } GD_LiteralKind;
@@ -31,13 +31,16 @@ typedef struct {
     const char *allowed; /* allowed_count consecutive NUL-terminated strings in model text. */
     int allowed_count, lines[7];
     GD_LiteralKind kind;
-} GD_ControlDefinition;
+} GD_ValueDefinition;
+typedef GD_ValueDefinition GD_ControlDefinition; /* Existing control API name retained. */
 typedef struct {
     const char *reference, *name, *id, *description, *status, *coverage;
     GD_ControlDefinition control;
+    GD_ValueDefinition axis; /* No control value/expression or implicit actor initial value. */
     const char *source_path, *body;
     GD_Role role;
-    int collection, load_index, has_rank, rank_line, entry, entry_line;
+    int collection, load_index, has_rank, rank_line, entry, entry_line, body_line;
+    int axis_closed, axis_closed_line, axes_declared, axes_line;
     int64_t rank;
 } GD_Record;
 typedef struct { int source, target; GD_Field field; const char *reference; int line; } GD_Edge;
@@ -76,7 +79,7 @@ struct GD_Model {
     GD_SkillState skills[GD_MAX_RECORDS];
     GD_SkillLink skill_links[GD_MAX_EDGES];
     GD_Finding findings[GD_MAX_ERRORS];
-    int skill_mode, route_mode, mda_mode, control_mode, skill_link_count, finding_count, findings_omitted, skill_incomplete;
+    int skill_mode, route_mode, mda_mode, control_mode, rule_mode, skill_link_count, finding_count, findings_omitted, skill_incomplete;
     GD_Error errors[GD_MAX_ERRORS];
     int collection_count, record_count, edge_count, pair_count, cell_count;
     int error_count, errors_omitted, unplaced_cases;
@@ -239,6 +242,51 @@ GD_ControlImport *gd_plan_control_import(GD_Model *model, const GD_ControlSelect
                                         const char *input, size_t size, const char *format, const char *path);
 void gd_control_import_destroy(GD_ControlImport *plan);
 int gd_write_control_import(FILE *output, const GD_Model *model, const GD_ControlImport *plan, int json, const char *fields);
+
+/* Rule declarations and explicit noun/axis applicability. No condition parsing,
+   state-effect resolution, expression evaluation or invocation expansion.
+   Result owns copied declaration text; borrows immutable model/provenance. */
+#define GD_MAX_RULE_CASES 4096
+#define GD_MAX_RULE_PARTICIPANTS 8192
+#define GD_MAX_RULE_ASSIGNMENTS 8192
+#define GD_RULE_TEXT_CAPACITY (4 * 1024 * 1024)
+#define GD_MAX_RULE_LINE 8192
+typedef enum { GD_RULE_ABSENT, GD_RULE_PARSED, GD_RULE_EMPTY, GD_RULE_INVALID } GD_RuleSourceState;
+typedef struct { int record, first_case, case_count, line; GD_RuleSourceState state; } GD_RuleSource;
+typedef struct { const char *name, *context; int source, line, context_line, first_participant, participant_count; } GD_RuleCase;
+typedef enum { GD_RULE_UNSPECIFIED, GD_RULE_RESOLVED, GD_RULE_UNLOADED, GD_RULE_MISSING,
+               GD_RULE_WRONG_ROLE, GD_RULE_AMBIGUOUS, GD_RULE_UNAVAILABLE } GD_RuleResolution;
+typedef enum { GD_AXIS_UNSPECIFIED, GD_AXIS_ENUM, GD_AXIS_INTEGER, GD_AXIS_NUMBER } GD_AxisType;
+typedef struct { GD_AxisType type; int valid, unit_known; } GD_RuleAxis;
+typedef struct {
+    const char *name, *noun, *requires, *skip_if, *other_axes, *becomes, *preserve, *causes;
+    int line, lines[8], first_assignment, assignment_count, noun_record;
+    GD_RuleResolution noun_resolution;
+    unsigned fields;
+} GD_RuleParticipant;
+typedef struct { const char *axis, *expression; int line; } GD_RuleAssignment;
+typedef struct {
+    GD_Allocator allocator;
+    int source_count, case_count, participant_count, assignment_count;
+    int axis_count, actor_count, axis_definitions_complete, bindings_complete, finding_count, findings_omitted;
+    GD_RuleAxis axes[GD_MAX_RECORDS]; /* Indexed by model record, not compact axis index. */
+    int actor_first[GD_MAX_RECORDS], next_axis[GD_MAX_EDGES];
+    unsigned char actor_axes_complete[GD_MAX_RECORDS];
+    GD_RuleResolution axis_resolution[GD_MAX_EDGES];
+    GD_Finding findings[GD_MAX_ERRORS];
+    GD_RuleSource sources[GD_MAX_RECORDS];
+    GD_RuleCase cases[GD_MAX_RULE_CASES];
+    GD_RuleParticipant participants[GD_MAX_RULE_PARTICIPANTS];
+    GD_RuleAssignment assignments[GD_MAX_RULE_ASSIGNMENTS];
+    size_t text_used;
+    char text[GD_RULE_TEXT_CAPACITY];
+} GD_Rules;
+GD_Rules *gd_read_rules(GD_Model *model);
+/* Internal phase: call once per fresh rule result; diagnostics append to model. */
+void gd_resolve_rule_axes(GD_Model *model, GD_Rules *rules);
+const char *gd_rule_resolution_name(GD_RuleResolution resolution);
+void gd_rules_destroy(GD_Rules *rules);
+int gd_write_rules_result(FILE *output, const GD_Model *model, const GD_Rules *rules, int json, const char *fields);
 
 #define GD_MAX_DRAFT_EDITS 4096
 typedef struct {

@@ -5,6 +5,8 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Token count toward the next earned life.
 tags: []
 status: accepted
+axes:
+  - axes/CoinAmount
 ---
 ## Definition
 

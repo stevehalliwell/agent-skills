@@ -5,6 +5,7 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Single-use block with an authored reward type.
 tags: []
 status: accepted
+axes: null
 ---
 ## Definition
 

@@ -12,3 +12,4 @@ game-design/control-vars as control-vars
 game-design/experiments as experiments
 game-design/glossary as glossary
 game-design/resources as resources
+game-design/axes as axes

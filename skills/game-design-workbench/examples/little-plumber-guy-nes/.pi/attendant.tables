@@ -12,3 +12,4 @@ game-design/resources as resources
 game-design/skill-atoms as skill-atoms
 game-design/systems as systems
 game-design/verbs as verbs
+game-design/axes as axes

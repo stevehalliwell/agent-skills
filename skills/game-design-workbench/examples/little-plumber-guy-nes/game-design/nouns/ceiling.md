@@ -5,6 +5,7 @@ created_at: 2026-10-24T20:07:20.546Z
 desc: Solid surface above the hero that constrains jumping.
 tags: []
 status: accepted
+axes: null
 ---
 ## Definition
 

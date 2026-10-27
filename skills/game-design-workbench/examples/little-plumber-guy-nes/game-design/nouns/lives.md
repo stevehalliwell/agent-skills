@@ -5,6 +5,8 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Finite retry budget carried through attempts.
 tags: []
 status: accepted
+axes:
+  - axes/Amount
 ---
 ## Definition
 

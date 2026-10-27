@@ -17,9 +17,9 @@
 
 static const char *field_names[] = {
     "nouns", "verb", "context_nouns", "mechanics", "control-vars", "resources", "verbs", "prerequisites",
-    "introduces", "practises", "requires", "tests_mastery", "next", "systems", "dynamics", "experiments"
+    "introduces", "practises", "requires", "tests_mastery", "next", "systems", "dynamics", "experiments", "axes"
 };
-enum { RANK_KEY = 5 + GD_EXPERIMENTS + 1, ENTRY_KEY, CONTROL_KEY }; /* Consumed-field bit positions. */
+enum { RANK_KEY = 5 + GD_AXES + 1, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7 }; /* Consumed-field bit positions. */
 const char *gd_field_name(GD_Field field) { return field_names[field]; }
 
 GD_Model *gd_create(GD_Allocator allocator) {
@@ -241,22 +241,23 @@ invalid:
     gd_error(reader->model, "skill.rank_type", "Rank requires null or a JSON-safe signed decimal integer; no coercion", reader->path, (int)event->start_mark.line+2);
     return 0;
 }
-static int consume_entry(Reader *reader, yaml_event_t *event, GD_Record *record) {
+static int consume_boolean(Reader *reader, yaml_event_t *event, int *result, int *line,
+                           const char *code, const char *message) {
     const char *value;
     if (event->type != YAML_SCALAR_EVENT ||
         memchr(event->data.scalar.value, 0, event->data.scalar.length) ||
         (event->data.scalar.tag ? strcmp((const char *)event->data.scalar.tag, "tag:yaml.org,2002:bool") :
          event->data.scalar.style != YAML_PLAIN_SCALAR_STYLE)) goto invalid;
     value = (const char *)event->data.scalar.value;
-    if (!strcmp(value,"true") || !strcmp(value,"True") || !strcmp(value,"TRUE")) record->entry = 1;
-    else if (!strcmp(value,"false") || !strcmp(value,"False") || !strcmp(value,"FALSE")) record->entry = 0;
+    if (!strcmp(value,"true") || !strcmp(value,"True") || !strcmp(value,"TRUE")) *result = 1;
+    else if (!strcmp(value,"false") || !strcmp(value,"False") || !strcmp(value,"FALSE")) *result = 0;
     else goto invalid;
-    record->entry_line = (int)event->start_mark.line+2; return 1;
+    *line = (int)event->start_mark.line+2; return 1;
 invalid:
-    gd_error(reader->model,"challenge.entry_type","Entry requires a boolean true or false; no coercion",reader->path,(int)event->start_mark.line+2);
+    gd_error(reader->model,code,message,reader->path,(int)event->start_mark.line+2);
     return 0;
 }
-static int consume_control(Reader *reader, yaml_event_t *event, GD_ControlDefinition *definition, int field) {
+static int consume_definition(Reader *reader, yaml_event_t *event, GD_ValueDefinition *definition, int field, int axis) {
     const char **destination = field == 0 ? &definition->type : field == 1 ? &definition->value :
         field == 2 ? &definition->expression : field == 3 ? &definition->unit :
         field == 5 ? &definition->minimum : &definition->maximum;
@@ -270,11 +271,11 @@ static int consume_control(Reader *reader, yaml_event_t *event, GD_ControlDefini
             if (!next_event(reader,event)) return 0;
             if (event->type == YAML_SEQUENCE_END_EVENT) { yaml_event_delete(event); return 1; }
             if (definition->allowed_count == GD_MAX_ENUM_VALUES) {
-                gd_error(reader->model,"controls.enum_limit","At most 64 enum values per control",reader->path,definition->lines[field]);
+                gd_error(reader->model,axis ? "rules.axis_value_limit":"controls.enum_limit",axis ? "At most 64 named values per axis":"At most 64 enum values per control",reader->path,definition->lines[field]);
                 yaml_event_delete(event); return 0;
             }
             if (!consume_string(reader,event,&value) || !value) {
-                gd_error(reader->model,"controls.enum_value","Enum entries require strings, not null",reader->path,(int)event->start_mark.line+2);
+                gd_error(reader->model,axis ? "rules.axis_value_type":"controls.enum_value","Enum entries require strings, not null",reader->path,(int)event->start_mark.line+2);
                 yaml_event_delete(event); return 0;
             }
             if (!definition->allowed_count) definition->allowed = value;
@@ -307,7 +308,7 @@ static int consume_control(Reader *reader, yaml_event_t *event, GD_ControlDefini
         int ok = consume_string(reader,event,destination); yaml_event_delete(event); return ok;
     }
 invalid:
-    gd_error(reader->model,"controls.field_type","Control metadata requires typed scalars or a string enum list; no coercion/aliases",reader->path,definition->lines[field]);
+    gd_error(reader->model,axis ? "rules.axis_field_type":"controls.field_type",axis ? "Axis metadata requires typed scalars or a string state list; no coercion/aliases":"Control metadata requires typed scalars or a string enum list; no coercion/aliases",reader->path,definition->lines[field]);
     yaml_event_delete(event); return 0;
 }
 static int parse_metadata(GD_Model *model, int index, const char *start, size_t length) {
@@ -356,12 +357,14 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
         else if (!strcmp(key, "id")) { key_index = 1; destination = &record->id; }
         else if (!strcmp(key, "desc")) { key_index = 2; destination = &record->description; }
         else if (!strcmp(key, "status")) { key_index = 3; destination = &record->status; }
-        else if (!strcmp(key, "coverage") && record->role == GD_CASE) { key_index = 4; destination = &record->coverage; }
+        else if (!strcmp(key, "coverage") && (record->role == GD_CASE || record->role == GD_RULE)) { key_index = 4; destination = &record->coverage; }
         else if (!strcmp(key, "rank") && record->role == GD_SKILL) key_index = RANK_KEY;
         else if (!strcmp(key, "entry") && record->role == GD_CHALLENGE) key_index = ENTRY_KEY;
-        else if (record->role == GD_CONTROL) {
+        else if (!strcmp(key,"axes") && record->role == GD_NOUN) key_index = 5 + GD_AXES;
+        else if (record->role == GD_AXIS && !strcmp(key,"closed")) key_index = AXIS_CLOSED_KEY;
+        else if (record->role == GD_CONTROL || record->role == GD_AXIS) {
             static const char *keys[] = { "value_type", "value", "expression", "unit", "allowed_values", "minimum", "maximum" };
-            for (i = 0; i < 7; ++i) if (!strcmp(key,keys[i])) { key_index = CONTROL_KEY+i; break; }
+            for (i = 0; i < 7; ++i) if ((record->role == GD_CONTROL || (i != 1 && i != 2)) && !strcmp(key,keys[i])) { key_index = CONTROL_KEY+i; break; }
         }
         else if (gd_mda_role(record->role)) {
             for (i = 0; i <= GD_EXPERIMENTS; ++i) {
@@ -377,7 +380,7 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
         }
         else if (record->role == GD_SKILL && (!strcmp(key, "prerequisites") || !strcmp(key, "mechanics")))
             key_index = 5 + (!strcmp(key, "prerequisites") ? GD_PREREQUISITES : GD_MECHANICS);
-        else if (record->role == GD_CASE || record->role == GD_RELATED) {
+        else if (record->role == GD_CASE || record->role == GD_RELATED || record->role == GD_RULE) {
             for (i = 0; i < 7; ++i) if (!strcmp(key, field_names[i])) { key_index = 5 + i; break; }
         }
         if (!next_event(&reader, &event)) goto done;
@@ -387,15 +390,28 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
                      (int)event.start_mark.line + 2); yaml_event_delete(&event); goto done;
         }
         seen |= 1u << key_index;
-        if (key_index >= CONTROL_KEY) {
-            if (!consume_control(&reader,&event,&record->control,key_index-CONTROL_KEY)) goto done;
+        if (key_index == AXIS_CLOSED_KEY) {
+            int ok = consume_boolean(&reader,&event,&record->axis_closed,&record->axis_closed_line,
+                "rules.axis_closed_type","Axis closed requires boolean true or false; no coercion");
+            yaml_event_delete(&event); if (!ok) goto done;
+        } else if (key_index >= CONTROL_KEY) {
+            int axis = record->role == GD_AXIS;
+            if (!consume_definition(&reader,&event,axis ? &record->axis:&record->control,key_index-CONTROL_KEY,axis)) goto done;
         } else if (key_index == ENTRY_KEY) {
-            int ok = consume_entry(&reader, &event, record); yaml_event_delete(&event); if (!ok) goto done;
+            int ok = consume_boolean(&reader,&event,&record->entry,&record->entry_line,
+                "challenge.entry_type","Entry requires a boolean true or false; no coercion");
+            yaml_event_delete(&event); if (!ok) goto done;
         } else if (key_index == RANK_KEY) {
             int ok = consume_rank(&reader, &event, record); yaml_event_delete(&event); if (!ok) goto done;
         } else if (destination) {
             int ok = consume_string(&reader, &event, destination); yaml_event_delete(&event); if (!ok) goto done;
-        } else if (!consume_links(&reader, index, (GD_Field)(key_index - 5), &event)) goto done;
+        } else {
+            if (key_index == 5 + GD_AXES) {
+                record->axes_line = (int)event.start_mark.line+2;
+                record->axes_declared = event.type == YAML_SEQUENCE_START_EVENT;
+            }
+            if (!consume_links(&reader, index, (GD_Field)(key_index - 5), &event)) goto done;
+        }
     }
     for (stage = 0; stage < 2; ++stage) {
         if (!next_event(&reader, &event)) goto done;
@@ -464,6 +480,8 @@ static int load_record(GD_Model *model, int collection, const char *path, size_t
     snprintf(reference, sizeof(reference), "%s/%s", model->collections[collection].alias, record->name);
     record->reference = copy_text(model, reference, strlen(reference));
     record->body = copy_text(model, model->input + body, size - body);
+    record->body_line = 1;
+    for (p = 0; p < body; ++p) if (model->input[p] == '\n') ++record->body_line;
     if (!record->reference || !record->body) { model->edge_count = edge_start; return 0; }
     model->record_count++; return 1;
 }
@@ -691,15 +709,20 @@ int gd_load(GD_Model *model, const GD_Collection *collections, int count) {
         if (collections[i].role == GD_CHALLENGE) model->route_mode = 1;
         if (gd_mda_role(collections[i].role)) model->mda_mode = 1;
         if (collections[i].role == GD_CONTROL) model->control_mode = 1;
-        if (collections[i].role != GD_RELATED) {
-            if (collections[i].role < GD_NOUN || collections[i].role > GD_CONTROL || (roles & (1 << collections[i].role)))
+        if (collections[i].role == GD_RULE || collections[i].role == GD_AXIS) model->rule_mode = 1;
+        if (collections[i].role != GD_RELATED && collections[i].role != GD_RULE) {
+            if (collections[i].role < GD_NOUN || collections[i].role > GD_AXIS || (roles & (1 << collections[i].role)))
                 gd_error(model, "input.collections", "Supply each domain role exactly once", collections[i].directory, 0);
             else roles |= 1 << collections[i].role;
         }
         if (!technical_name(collections[i].alias)) gd_error(model, "input.alias", "Collection alias must be an ASCII technical name", collections[i].directory, 0);
         for (j = 0; j < i; ++j) if (!strcmp(collections[i].alias, collections[j].alias)) gd_error(model, "input.alias", "Collection aliases must be unique", collections[i].directory, 0);
     }
-    if (model->mda_mode) {
+    if (model->rule_mode) {
+        int permitted = (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS);
+        if (roles & ~permitted)
+            gd_error(model,"input.collections","Rules require rule sources, optional axes/nouns/verbs/control-vars and related collections",NULL,0);
+    } else if (model->mda_mode) {
         int required = (1 << GD_MDA_MECHANIC) | (1 << GD_MDA_DYNAMIC) | (1 << GD_MDA_AESTHETIC);
         if (roles != required && roles != (required | (1 << GD_MDA_SYSTEM)))
             gd_error(model,"input.collections","MDA requires mechanics/dynamics/aesthetics roles, optional systems; no other domain roles",NULL,0);
@@ -717,7 +740,7 @@ int gd_load(GD_Model *model, const GD_Collection *collections, int count) {
         gd_error(model, "input.identity", "Duplicate identity: cannot select a unique record", model->records[i].source_path, 0);
     resolve_edges(model);
     if (model->skill_mode) gd_recompute_skills(model);
-    else if (!model->mda_mode && !model->control_mode) { build_matrix(model); build_components(model); }
+    else if (!model->rule_mode && !model->mda_mode && !model->control_mode) { build_matrix(model); build_components(model); }
     if (!model->error_count && gd_sources_changed(model)) gd_error(model, "input.changed", "Source changed while loading; retry explicitly", NULL, 0);
     return model->error_count == 0 && model->errors_omitted == 0;
 }

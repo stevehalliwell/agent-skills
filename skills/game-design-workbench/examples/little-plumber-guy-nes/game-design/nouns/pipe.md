@@ -5,6 +5,7 @@ created_at: 2026-10-24T20:07:20.547Z
 desc: Solid obstacle that may also declare a downward entrance.
 tags: []
 status: accepted
+axes: null
 ---
 ## Definition
 

@@ -87,7 +87,7 @@ Tuning therefore means iterative translation: state an experiential aim, predict
 
 ## Inputs and workbench ownership
 
-Primary roles: `mechanics`, `systems`, `dynamics`, `aesthetics`, `experiments`. Follow relevant links into existing `interactions`, `control-vars`, `resources`, challenges, or content only as needed for the selected slice. Keep the existing 14 roles; no separate measures, decisions, or skills collection.
+Primary roles: `mechanics`, `systems`, `dynamics`, `aesthetics`, `experiments`. Follow relevant links into existing `interactions`, `control-vars`, `resources`, challenges, or content only as needed for the selected slice. Keep existing collection roles; no separate measures, decisions, or skills collection.
 
 Inspection topics: MDA relationships, experiment evidence, and relevant source records.
 

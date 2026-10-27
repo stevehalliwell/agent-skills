@@ -143,7 +143,7 @@ Roles: `aesthetics`, `mechanics`, `dynamics`, `challenges`, `experiments`.
 
 Inspection topics: MDA relationships, challenge routes, experiment evidence, and relevant source records.
 
-Read selected concept/mode and bounded rules first. Follow relevant links to interactions, resources, `control-vars`, or `skill-atoms` only when needed to understand the activity. Use existing 14 roles; no framework collection, mandatory need profile, or separate measures/decisions/skills collection.
+Read selected concept/mode and bounded rules first. Follow relevant links to interactions, resources, `control-vars`, or `skill-atoms` only when needed to understand the activity. Use existing collection roles; no framework collection, mandatory need profile, or separate measures/decisions/skills collection.
 
 Seek:
 

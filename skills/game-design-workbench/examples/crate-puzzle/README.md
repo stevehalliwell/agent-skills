@@ -1,6 +1,6 @@
 # Crate-and-switch example
 
-63 records across 14 collections. Includes six skill atoms, three crate/push cases, one executed timing investigation, one unexecuted planning investigation, and a working concept. No project-local workbench runtime or nested copy of tutorial data is required.
+66 records across 15 collections. Three provisional typed axes cover known switch occupancy, exit state and energy quantity; other noun inventories remain explicitly unspecified. This starts actor/state migration, not complete structured rule coverage. Includes six skill atoms, three crate/push cases, one executed timing investigation, one unexecuted planning investigation, and a working concept. No project-local workbench runtime or nested copy of tutorial data is required.
 
 ## Game concept
 

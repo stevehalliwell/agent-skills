@@ -106,7 +106,7 @@ Keep four claim levels explicit:
 - **Observation/account:** an actual event or participant report, tied to source, timing, and context. Neither retry nor completion directly measures a feeling.
 - **Conclusion:** what evidence supports, contradicts, or leaves unresolved. Missing evidence is not absence of emotion.
 
-Existing 14 roles remain owners. `control-vars` owns named configuration; `experiments` owns investigation hypotheses, local measures, observations, results, and limitations. No separate measures, decisions, or skills collection, required schema, automatic framework sweep, or aggregate fun/psychological score. Guide application authorizes no record edits, experiment execution, or design adoption.
+Existing collection roles remain owners. `control-vars` owns named configuration; `experiments` owns investigation hypotheses, local measures, observations, results, and limitations. No separate measures, decisions, or skills collection, required schema, automatic framework sweep, or aggregate fun/psychological score. Guide application authorizes no record edits, experiment execution, or design adoption.
 
 ## Apply to a selected slice
 

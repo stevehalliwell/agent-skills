@@ -68,7 +68,7 @@ These are workbench conventions, not an extracted book ontology.
 
 ## Inputs and available inspection
 
-Primary roles: `nouns`, `verbs`, `interactions`, `mechanics`, `challenges`. Read the concept for intended activity/context; follow actual links into relevant controls, resources, dynamics, aesthetics, or experiments only when they support the question. Preserve existing 14 roles; no grammar, feedback, or meaning collection is needed.
+Primary roles: `nouns`, `verbs`, `interactions`, `mechanics`, `challenges`. Read the concept for intended activity/context; follow actual links into relevant controls, resources, dynamics, aesthetics, or experiments only when they support the question. Preserve existing collection roles; no grammar, feedback, or meaning collection is needed.
 
 Inspection topics: declared target/action cases, condition overlaps, changed/unchanged state, presentation, later significance, and source/evidence limits.
 

@@ -6,9 +6,10 @@ Not a reconstruction of a published game. No ROM, copied map, screenshots, sprit
 
 ## What is here
 
-202 records across the existing 14 collections:
+210 records across 15 collections:
 
-- 26 nouns and 12 verbs establish vocabulary and actions.
+- 26 nouns and 12 verbs establish vocabulary and actions. Noun inventories explicitly reference known axes or remain null when unmodeled.
+- 8 provisional axes cover life, form, protection/duration and existing pool quantities. This begins actor/state migration; most interaction/mechanic bodies remain prose, not structured rule coverage.
 - 49 conditional interactions retain different outcomes within the same noun–verb cell.
 - 24 mechanics and 6 systems own reusable behavior and arrangements.
 - 16 skill atoms and 19 challenges describe intended opportunities, demands, alternatives and joins.
@@ -56,6 +57,9 @@ $gd = '../../native/build/gd.exe'
 & $gd scaffolding --skill-atoms skill-atoms=game-design/skill-atoms `
   --challenges challenges=game-design/challenges --related mechanics=game-design/mechanics --json
 & $gd controls --control-vars control-vars=game-design/control-vars --json
+& $gd rules --interactions interactions=game-design/interactions --mechanics mechanics=game-design/mechanics `
+  --axes axes=game-design/axes --nouns nouns=game-design/nouns --control-vars control-vars=game-design/control-vars `
+  --json --fields axes,actors,cases,findings
 ```
 
 Existing native view can open the same folders in Skills, Challenges and Relationships modes. Use [documented view invocation](../../native/README.md#skill-prerequisites-and-ranks), replacing crate-puzzle folders with this example; no separate example viewer or copied runtime.
@@ -68,7 +72,7 @@ Existing native view can open the same folders in Skills, Challenges and Relatio
 
 Workbench parts used:
 
-1. **Concept/model/setup:** established an authored `game-design` concept, separate example root and the 14 shipped contracts. Attendant created collections and record identities; no new schema system.
+1. **Concept/model/setup:** established an authored `game-design` concept, separate example root and the 15 shipped contracts. Attendant created collections and record identities; no new schema system.
 2. **Capture:** wrote rules, cases, configuration, resources and glossary. Source Markdown remains authoritative. No generated content mirror is required to maintain the example.
 3. **Skills/challenges:** authored AND prerequisites, ranks, introduction/practice/demand roles and branching course routes.
 4. **MDA:** separated rules, possible behavior and intended feelings, linking proposed investigations instead of inventing evidence.

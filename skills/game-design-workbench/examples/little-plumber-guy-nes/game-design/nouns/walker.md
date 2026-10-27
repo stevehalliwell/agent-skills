@@ -5,6 +5,8 @@ created_at: 2026-10-24T20:07:20.546Z
 desc: Ground enemy that patrols a platform and reverses at walls.
 tags: []
 status: accepted
+axes:
+  - axes/Life
 ---
 ## Definition
 
