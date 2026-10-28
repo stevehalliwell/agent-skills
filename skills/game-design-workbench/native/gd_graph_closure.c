@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include "gd_resource_graph.h"
 
 static int bit(const GD_GraphClosure *closure, int root, int node) {
     return (int)((closure->rows[root][node/64]>>(node%64))&1u);
@@ -14,9 +15,8 @@ static int charge(GD_GraphClosure *closure) {
     if (closure->work==closure->limit) return 0;
     ++closure->work; return 1;
 }
-const GD_GraphClosure *gd_graph_closure(GD_GraphAnalysis *analysis, const unsigned char *eligible,
+const GD_GraphClosure *gd_graph_closure_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, const unsigned char *eligible,
     const unsigned char *boundary, int relation, int reverse, int undirected, int work_limit) {
-    GD_GraphClosure *closure=&analysis->foundations;
     int i,root,same,words=(analysis->node_count+63)/64;
     assert(analysis->initialized && relation>=0 && work_limit>=0 && work_limit<=GD_GRAPH_ANALYSIS_WORK);
     reverse=reverse!=0; undirected=undirected!=0;
@@ -88,8 +88,22 @@ static int shared_count(const GD_GraphClosure *closure, int a, int b) {
     }
     return count;
 }
-const GD_GraphComparison *gd_graph_closure_compare(GD_GraphAnalysis *analysis, int a, int b) {
-    GD_GraphClosure *closure=&analysis->foundations; GD_GraphComparison *comparison=&closure->comparison;
+static void closure_parents(const GD_GraphAnalysis *analysis, GD_GraphClosure *closure, int root, int *parents) {
+    int i,read=0,count=0;
+    for (i=0;i<analysis->node_count;++i) parents[i]=-1;
+    if (root<0) return;
+    parents[root]=-2; closure->queue[count++]=root;
+    while (read<count) {
+        int arc;
+        for (arc=closure->head[closure->queue[read++]];arc>=0;arc=closure->next[arc]) {
+            const GD_LayoutEdge *edge=&analysis->edges[arc/2]; int target=arc%2 ? edge->a:edge->b;
+            if (parents[target]!=-1) continue;
+            parents[target]=arc; closure->queue[count++]=target;
+        }
+    }
+}
+const GD_GraphComparison *gd_graph_closure_compare_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, int a, int b) {
+    GD_GraphComparison *comparison=&closure->comparison;
     int i;
     if (!closure->valid || a<0 || a>=analysis->node_count || !closure->eligible[a] || !closure->finished[a] ||
         b< -1 || b>=analysis->node_count || b==a || (b>=0 && (!closure->eligible[b] || !closure->finished[b]))) return NULL;
@@ -121,15 +135,67 @@ const GD_GraphComparison *gd_graph_closure_compare(GD_GraphAnalysis *analysis, i
             comparison->edges[i]|=(unsigned char)(has_a && has_b ? GD_GRAPH_SHARED:has_a ? GD_GRAPH_A_ONLY:has_b ? GD_GRAPH_B_ONLY:0);
         }
     }
+    closure_parents(analysis,closure,a,comparison->first_a); closure_parents(analysis,closure,b,comparison->first_b);
     comparison->valid=1; return comparison;
 }
-const GD_GraphComparison *gd_graph_closure_choose(GD_GraphAnalysis *analysis, int a, int *peer) {
-    GD_GraphClosure *closure=&analysis->foundations;
+const GD_GraphComparison *gd_graph_closure_choose_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, int a, int *peer) {
     if (!closure->valid || a<0 || a>=analysis->node_count || !closure->eligible[a] || !closure->finished[a]) return NULL;
-    if (closure->selected!=a && !gd_graph_closure_compare(analysis,a,-1)) return NULL;
+    if (closure->selected!=a && !gd_graph_closure_compare_into(analysis,closure,a,-1)) return NULL;
     if (*peer<0 || *peer>=analysis->node_count || !closure->shared[*peer])
         *peer=closure->peer_count ? closure->peers[0]:-1;
-    return gd_graph_closure_compare(analysis,a,*peer);
+    return gd_graph_closure_compare_into(analysis,closure,a,*peer);
+}
+const GD_GraphClosure *gd_graph_closure(GD_GraphAnalysis *analysis, const unsigned char *eligible,
+    const unsigned char *boundary, int relation, int reverse, int undirected, int work_limit) {
+    return gd_graph_closure_into(analysis,&analysis->foundations,eligible,boundary,relation,reverse,undirected,work_limit);
+}
+const GD_GraphComparison *gd_graph_closure_compare(GD_GraphAnalysis *analysis, int a, int b) {
+    return gd_graph_closure_compare_into(analysis,&analysis->foundations,a,b);
+}
+const GD_GraphComparison *gd_graph_closure_choose(GD_GraphAnalysis *analysis, int a, int *peer) {
+    return gd_graph_closure_choose_into(analysis,&analysis->foundations,a,peer);
+}
+int gd_graph_closure_path(const GD_GraphAnalysis *analysis, const GD_GraphClosure *closure, int side, int target, int *arcs, int capacity) {
+    const GD_GraphComparison *comparison=&closure->comparison; const int *parents; int root,length=0,node=target;
+    assert(capacity>=0 && (arcs || !capacity));
+    if (!closure->valid || !comparison->valid || side<0 || side>1 || target<0 || target>=analysis->node_count) return -1;
+    root=side ? comparison->b:comparison->a; parents=side ? comparison->first_b:comparison->first_a;
+    if (root<0 || (target!=root && parents[target]<0)) return -1;
+    while (node!=root && length<analysis->node_count) {
+        int arc=parents[node]; const GD_LayoutEdge *edge;
+        if (arc<0) return -1;
+        if (length<capacity) arcs[length]=arc;
+        ++length; edge=&analysis->edges[arc/2]; node=arc%2 ? edge->b:edge->a;
+    }
+    return node==root ? length:-1;
+}
+const char *gd_graph_relation_name(int relation) {
+    if (relation<0) return "projection relation";
+    if (relation<GD_FIELD_COUNT) return gd_field_name((GD_Field)relation);
+    if (relation==GD_RELATION_CASE_PAIR) return "derived case pair";
+    switch (relation-GD_RELATION_RESOURCE_BASE) {
+        case GD_RESOURCE_REQUIREMENT:return "condition incidence";
+        case GD_RESOURCE_EXCLUSION:return "exclusion incidence";
+        case GD_RESOURCE_STATE_WRITE:return "state-write incidence";
+        case GD_RESOURCE_QUANTITY_WRITE:return "quantity-write incidence";
+        case GD_RESOURCE_ROLE_BINDING:return "role binding (not flow)";
+        case GD_RESOURCE_PRESERVATION:return "preservation incidence";
+        case GD_RESOURCE_INVOCATION:return "conditional invocation incidence";
+        default:return "projection relation";
+    }
+}
+const GD_GraphClosure *gd_graph_reachability_prepare(GD_GraphAnalysis *analysis, GD_ReachControls *controls, int undirected) {
+    int i;
+    if (!controls->enabled) return NULL;
+    if (controls->relation<0) for (i=0;i<analysis->edge_count;++i) {
+        const GD_LayoutEdge *edge=&analysis->edges[i];
+        if (analysis->shown[edge->a] && analysis->shown[edge->b] && (edge->active || analysis->include_inactive)) { controls->relation=edge->relation; break; }
+    }
+    if (controls->relation<0) return NULL;
+    if (!analysis->reachability.valid || analysis->reachability.relation!=controls->relation ||
+        analysis->reachability.reverse!=(controls->reverse!=0) || analysis->reachability.undirected!=(undirected!=0))
+        controls->peer=controls->target=-1;
+    return gd_graph_closure_into(analysis,&analysis->reachability,NULL,NULL,controls->relation,controls->reverse,undirected,GD_GRAPH_ANALYSIS_WORK);
 }
 static int pair_order(const void *left, const void *right) {
     uint64_t a=*(const uint64_t *)left,b=*(const uint64_t *)right;

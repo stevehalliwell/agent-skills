@@ -1,0 +1,30 @@
+TEST(typed_reachability_controls,
+    GD_Layout *layout=allocate(storage,sizeof(*layout)); GD_GraphAnalysis *analysis=allocate(storage,sizeof(*analysis));
+    GD_ReachControls controls={0,-1,0,-1,-1}; const GD_GraphClosure *foundation,*reach; int peer=-1,arcs[1],i;
+    TEST_ASSERT(layout && analysis); memset(layout,0,sizeof(*layout)); memset(analysis,0,sizeof(*analysis));
+    layout->node_count=3; layout->edge_count=2;
+    for (i=0;i<3;++i) layout->nodes[i].key=i;
+    layout->edges[0]=(GD_LayoutEdge){0,1,5,1,GD_PREREQUISITES}; layout->edges[1]=(GD_LayoutEdge){1,2,6,1,GD_PREREQUISITES};
+    gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis);
+    foundation=gd_graph_closure(analysis,NULL,NULL,GD_PREREQUISITES,1,0,GD_GRAPH_ANALYSIS_WORK);
+    TEST_ASSERT(foundation->count[0]==0 && foundation->count[2]==2 && !gd_graph_reachability_prepare(analysis,&controls,0));
+    controls.enabled=1; reach=gd_graph_reachability_prepare(analysis,&controls,0);
+    TEST_ASSERT(reach && controls.relation==GD_PREREQUISITES && reach->count[0]==2 && foundation->count[0]==0 && foundation->count[2]==2 && foundation->valid);
+    TEST_ASSERT(gd_graph_closure_choose_into(analysis,&analysis->reachability,0,&peer)->b==1 && peer==1);
+    TEST_ASSERT(gd_graph_closure_path(analysis,reach,0,2,arcs,1)==2 && arcs[0]==2);
+    TEST_ASSERT(gd_graph_closure_path(analysis,reach,1,2,arcs,1)==1 && arcs[0]==2 && gd_graph_closure_path(analysis,reach,2,2,arcs,1)==-1);
+    TEST_ASSERT(gd_graph_closure_path(analysis,reach,0,2,NULL,0)==2);
+    controls.peer=1; controls.target=2; controls.reverse=1;
+    reach=gd_graph_reachability_prepare(analysis,&controls,0);
+    TEST_ASSERT(reach->count[0]==0 && reach->count[2]==2 && controls.peer==-1 && controls.target==-1 && foundation->valid);
+    layout->nodes[0].x=99; TEST_ASSERT(!gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis) && reach->valid && foundation->valid);
+    layout->edges[0].relation=GD_NEXT; TEST_ASSERT(gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis) && !reach->valid && !foundation->valid);
+    controls.relation=GD_NEXT; controls.reverse=0;
+    reach=gd_graph_reachability_prepare(analysis,&controls,1); TEST_ASSERT(reach->count[0]==1 && reach->count[1]==1 && reach->count[2]==0 && !reach->cycle[0]);
+    controls.relation=GD_PREREQUISITES; reach=gd_graph_reachability_prepare(analysis,&controls,0); TEST_ASSERT(reach->count[0]==0 && reach->count[1]==1);
+    layout->edge_count=0; gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis);
+    reach=gd_graph_reachability_prepare(analysis,&controls,0); TEST_ASSERT(reach && reach->complete && !reach->count[1]);
+    controls.relation=-1; TEST_ASSERT(!gd_graph_reachability_prepare(analysis,&controls,0));
+    TEST_ASSERT(!strcmp(gd_graph_relation_name(GD_PREREQUISITES),"prerequisites") && !strcmp(gd_graph_relation_name(GD_RELATION_CASE_PAIR),"derived case pair"));
+    release(storage,analysis); release(storage,layout);
+)

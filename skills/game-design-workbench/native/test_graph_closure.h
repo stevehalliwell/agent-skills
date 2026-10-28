@@ -51,6 +51,22 @@ static int test_graph_closure_oracle(void) {
                         int has_a=i!=a && reach[a][i],has_b=i!=b && reach[b][i];
                         TEST_ASSERT(comparison->nodes[i]==(has_a && has_b ? GD_GRAPH_SHARED:has_a ? GD_GRAPH_A_ONLY:has_b ? GD_GRAPH_B_ONLY:0));
                     }
+                    for (i=0;i<6;++i) {
+                        int side;
+                        for (side=0;side<2;++side) {
+                            int origin=side ? b:a,arcs[3],length=gd_graph_closure_path(analysis,closure,side,i,arcs,3),node=i,step;
+                            TEST_ASSERT((length>=0)==(i==origin || reach[origin][i]));
+                            if (length<0) continue;
+                            TEST_ASSERT(length<6);
+                            for (step=0;step<length && step<3;++step) {
+                                const GD_LayoutEdge *edge=&layout->edges[arcs[step]/2]; int reverse=arcs[step]%2;
+                                TEST_ASSERT((reverse ? edge->a:edge->b)==node && edge->relation==1 && (edge->active || mode));
+                                node=reverse ? edge->b:edge->a;
+                                TEST_ASSERT(shown[node] && eligible[node] && (direction==2 || reverse==(direction==1)));
+                            }
+                            if (length<=3) TEST_ASSERT(node==origin);
+                        }
+                    }
                     for (i=0;i<24;++i) {
                         const GD_LayoutEdge *edge=&layout->edges[i]; int side,flags=0;
                         if (edge->relation==1 && (edge->active || mode) && shown[edge->a] && shown[edge->b] && eligible[edge->a] && eligible[edge->b])

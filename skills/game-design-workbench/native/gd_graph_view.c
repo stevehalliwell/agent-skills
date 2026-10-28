@@ -135,7 +135,8 @@ static int witness_edge(const GD_Routes *routes, int witness, int source, int ta
 static void draw_graph(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection,
                        Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
                        GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass,
-                       const GD_GraphClosure *foundations, const GD_GraphComparison *foundation_pair) {
+                       const GD_GraphClosure *foundations, const GD_GraphComparison *foundation_pair,
+                       const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selection->node,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
@@ -181,6 +182,7 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
         Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
         if (!edge->active && !other_pairs) continue;
         int conflict = !focused && !challenges && model->skill_mode && (model->skills[layout->nodes[edge->a].key].incomplete || model->skills[layout->nodes[edge->b].key].incomplete);
+        if (reach_pair && reach_pair->edges[i]) gd_graph_route_line(&route,17,gd_graph_branch_color(reach_pair->edges[i]),!edge->active || conflict);
         if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_graph_route_line(&route,15,gd_bypass_color,!edge->active || conflict);
         if (path_selection && path_selection->edges[i]) gd_graph_route_line(&route,11,gd_path_color,!edge->active || conflict);
         if (foundation_pair && foundation_pair->edges[i]) gd_graph_route_line(&route,9,gd_graph_branch_color(foundation_pair->edges[i]),!edge->active || conflict);
@@ -245,6 +247,13 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
                 }
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text);
             } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)node->x+19,(int)node->y-8,13,shared_color);
+        }
+        if (reachability) {
+            gd_graph_reachability_badge(reachability,i,(int)node->x+36,(int)node->y-53,graph_background);
+            if (reach_pair) {
+                if (reach_pair->nodes[i]) DrawCircleLines((int)node->x,(int)node->y,32,gd_graph_branch_color(reach_pair->nodes[i]));
+                if (i==reach_pair->a || i==reach_pair->b) DrawText(i==reach_pair->a ? "T-A":"T-B",(int)node->x-67,(int)node->y-53,12,graph_text);
+            }
         }
         if (foundations && foundations->eligible[i]) {
             gd_graph_foundation_badge(foundations,i,(int)node->x+36,(int)node->y-23,graph_background);
@@ -554,6 +563,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false,foundation_enabled=false; int shared_peer=-1,foundation_peer=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls[3]={{0}};
+    GD_ReachControls reach_controls[3]={{0,-1,0,-1,-1},{0,-1,0,-1,-1},{0,-1,0,-1,-1}};
     GD_DiagnosticBrowser diagnostics={0};
     int root=focus_from ? focus_find(model,focus_from):-1;
     char browse[129]="";
@@ -671,7 +681,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         igSameLine(0, -1);
         if (igButton("Rearrange", (ImVec2_c){0,0})) { prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; fit = 1; }
         if (!focused && !model->skill_mode) igCheckbox("Overlay other pairs (does not merge groups)", &overlay);
-        if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=-1;
+        if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=foundation_peer=-1;
         { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_lens,&branches,&shared_peer);
           if (pair>=0) shared_source(model,layout,analysis,pair,focused,challenges); }
         {
@@ -696,6 +706,12 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             if (comparison) for (i=0;i<layout->edge_count;++i) if (comparison->edges[i]) {
                 ++total; if (shown<64) { projected_source(model,layout,i,focused,challenges); ++shown; }
             }
+            if (total>shown) igText("%d further marked links not listed",total-shown);
+        }
+        if (gd_graph_reachability_panel(layout,analysis,selection.node,&reach_controls[focused ? 2:challenges ? 1:0],!focused && !model->skill_mode)) {
+            const GD_GraphComparison *comparison=&analysis->reachability.comparison; int i,shown=0,total=0;
+            igTextWrapped("Typed traversal source examples (first source per projected Skills link):");
+            for (i=0;i<layout->edge_count;++i) if (comparison->edges[i]) { ++total; if (shown<64) { projected_source(model,layout,i,focused,challenges); ++shown; } }
             if (total>shown) igText("%d further marked links not listed",total-shown);
         }
         refresh = igButton("Refresh sources", (ImVec2_c){0,0});
@@ -769,13 +785,15 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             accumulator += fminf(GetFrameTime(), 0.05f);
             while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
         } else accumulator = 0;
-        if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=-1;
+        if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=foundation_peer=-1;
         unsigned char entries[GD_MAX_RECORDS];
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls[focused ? 2:challenges ? 1:0],path_entries(model,layout,challenges,entries),!focused && !model->skill_mode);
         const GD_PathBypass *bypass=paths && path_controls[focused ? 2:challenges ? 1:0].compare ? gd_graph_path_bypass(analysis,selection.node,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
         const GD_GraphClosure *foundations=foundation_enabled ? gd_graph_foundations(model,analysis,focused):NULL;
         const GD_GraphComparison *foundation_pair=foundations ? gd_graph_closure_choose(analysis,selection.node,&foundation_peer):NULL;
-        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair);
+        const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls[focused ? 2:challenges ? 1:0],!focused && !model->skill_mode);
+        const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selection.node,&reach_controls[focused ? 2:challenges ? 1:0].peer):NULL;
+        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair,reachability,reach_pair);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
             for (i=0;i<layout->node_count;++i) {

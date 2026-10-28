@@ -84,6 +84,44 @@ static int path_sources(const GD_ResourceGraph *graph, const GD_Layout *layout, 
     }
     return y;
 }
+static void next_reach_kind(const GD_GraphAnalysis *analysis, GD_ReachControls *controls) {
+    int i,first=-1,next=-1;
+    for (i=0;i<analysis->edge_count;++i) {
+        const GD_LayoutEdge *edge=&analysis->edges[i]; int kind=edge->relation;
+        if (!analysis->shown[edge->a] || !analysis->shown[edge->b] || (!edge->active && !analysis->include_inactive)) continue;
+        if (first<0 || kind<first) first=kind;
+        if (kind>controls->relation && (next<0 || kind<next)) next=kind;
+    }
+    controls->relation=next>=0 ? next:first;
+}
+static void reach_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                          GD_ReachControls *controls, int selected, int x) {
+    const GD_GraphClosure *closure=gd_graph_reachability_prepare(analysis,controls,1);
+    const GD_GraphComparison *comparison=closure ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selected,&controls->peer):NULL;
+    int i,j,y=350;
+    DrawText(controls->enabled ? "[x] Typed multi-hop (click)":"[ ] Typed multi-hop (click)",x,114,16,foreground);
+    if (!controls->enabled) return;
+    DrawText(TextFormat("Kind: %.36s (click)",controls->relation>=0 ? gd_graph_relation_name(controls->relation):"none"),x,146,13,foreground);
+    DrawText(TextFormat("B: %.24s | %d peers (click)",comparison && comparison->b>=0 ? node_label(graph,comparison->b):"none",closure ? closure->peer_count:0),x,178,13,foreground);
+    DrawText("Same-kind incidence connections, NOT flow.",x,211,14,muted);
+    DrawText("T: other origins reaching this identity.",x,233,14,muted);
+    DrawText("Purple shared | blue A-only | amber B-only",x,255,13,muted);
+    if (!closure) { DrawText("No shown relation kind.",x,278,14,muted); return; }
+    if (!comparison) { DrawText("Select node with completed local traversal.",x,278,14,muted); return; }
+    DrawText(TextFormat("A: %.22s | %d targets%s",node_label(graph,selected),closure->count[selected],closure->complete ? "":" | partial"),x,278,13,muted);
+    DrawText("Witness target (click to cycle)",x,302,14,foreground);
+    if (controls->target<0 || controls->target>=layout->node_count || !comparison->nodes[controls->target]) {
+        controls->target=-1; for (i=0;i<layout->node_count;++i) if (comparison->nodes[i]) { controls->target=i; break; }
+    }
+    if (controls->target>=0) DrawText(TextFormat("%.45s",node_label(graph,controls->target)),x,324,13,foreground);
+    for (j=0;j<2 && controls->target>=0;++j) {
+        int arcs[64],length=gd_graph_closure_path(analysis,closure,j,controls->target,arcs,64),retained=length<64 ? length:64;
+        if (length<0) continue;
+        DrawText(TextFormat("%c: %d links; last %d shown",j ? 'B':'A',length,retained<4 ? retained:4),x,y,13,foreground); y+=20;
+        y=path_sources(graph,layout,arcs,retained,x,y)+12;
+    }
+    DrawText("Shown links only; not complete source semantics.",x,y,12,muted);
+}
 static void path_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
                          const GD_GraphPaths *paths, const GD_PathControls *controls, int selected, int x) {
     const GD_PathSelection *support; int y=controls->compare ? 280:248;
@@ -205,6 +243,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
     int shared=1,branches=0,peer=-1,pair=-1; double next_check=0;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls={0}; int path_tab=0;
+    GD_ReachControls reach_controls={0,-1,0,-1,-1};
     if (!layout || !analysis || !resource_layout(graph,layout)) {
         if (analysis) model->allocator.release(model->allocator.context,analysis);
         if (layout) model->allocator.release(model->allocator.context,layout);
@@ -236,8 +275,27 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         }
         if (!paused) gd_layout_step(layout,held);
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,72,100,25})) path_tab=0;
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+124,72,100,25})) path_tab=1;
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+234,72,120,25})) path_tab=2;
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+124,72,70,25})) path_tab=1;
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+204,72,140,25})) path_tab=path_tab==2 ? 3:2;
+        if (path_tab==3 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) reach_controls.enabled=!reach_controls.enabled;
+            if (reach_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,140,340,25})) next_reach_kind(analysis,&reach_controls);
+            if (reach_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,172,340,25})) {
+                const GD_GraphClosure *closure=gd_graph_reachability_prepare(analysis,&reach_controls,1); int i;
+                if (closure && gd_graph_closure_choose_into(analysis,&analysis->reachability,selected,&reach_controls.peer) && closure->peer_count) {
+                    for (i=0;i<closure->peer_count && closure->peers[i]!=reach_controls.peer;++i) {}
+                    reach_controls.peer=closure->peers[(i+1)%closure->peer_count];
+                }
+            }
+            if (reach_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,296,340,25})) {
+                const GD_GraphClosure *closure=gd_graph_reachability_prepare(analysis,&reach_controls,1);
+                const GD_GraphComparison *comparison=closure ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selected,&reach_controls.peer):NULL;
+                if (comparison) for (i=0;i<layout->node_count;++i) {
+                    int node=(reach_controls.target+1+i)%layout->node_count;
+                    if (comparison->nodes[node]) { reach_controls.target=node; break; }
+                }
+            }
+        }
         if (path_tab==1 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) path_controls.enabled=!path_controls.enabled;
             if (path_controls.enabled && selected>=0 && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,144,320,25})) gd_graph_path_start(&path_controls,selected);
@@ -261,6 +319,8 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls,NULL,1);
         const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selected):NULL;
         const GD_PathBypass *bypass=paths && path_controls.compare ? gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
+        const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls,1);
+        const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selected,&reach_controls.peer):NULL;
         BeginDrawing(); ClearBackground(background);
         DrawText("Resource graph preview",18,14,26,foreground);
         DrawText("Incomplete: routes and composed outcomes are not implemented. Lines are declarations, not proof of flow.",18,49,16,selected_color);
@@ -272,6 +332,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             Color color=rel->kind==GD_RESOURCE_ROLE_BINDING ? role_color : rel->kind==GD_RESOURCE_INVOCATION ? selected_color :
                 rel->kind==GD_RESOURCE_EXCLUSION ? (Color){230,125,125,255} : rel->kind==GD_RESOURCE_REQUIREMENT ? (Color){81,194,178,255} :
                 rel->kind==GD_RESOURCE_PRESERVATION ? (Color){180,201,119,255} : facet_color;
+            if (reach_pair && reach_pair->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},17,gd_graph_branch_color(reach_pair->edges[i]));
             if (bypass && bypass->complete && bypass->found && bypass->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},15,gd_bypass_color);
             if (path_selection && path_selection->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},11,gd_path_color);
             if (comparison && comparison->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},7,gd_graph_branch_color(comparison->edges[i]));
@@ -296,6 +357,10 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                 }
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground);
             }
+            if (reachability) {
+                gd_graph_reachability_badge(reachability,i,(int)n->x-83,(int)n->y-43,background);
+                if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-98,n->y-32,196,64},2,gd_graph_branch_color(reach_pair->nodes[i]));
+            }
             if (paths) {
                 gd_graph_path_badge(paths,path_selection,bypass,i,(int)n->x,(int)n->y-20,background);
                 if (paths->roots[i]) gd_graph_path_start_marker((int)n->x+76,(int)n->y-15);
@@ -305,7 +370,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
         DrawText(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
         DrawText(path_tab==1 ? "[Paths]":"Paths",split+124,76,14,foreground);
-        DrawText(path_tab==2 ? "[Foundations]":"Foundations",split+234,76,14,foreground);
+        DrawText(path_tab==3 ? "[Typed paths]":path_tab==2 ? "[Foundations]":"Layers (click)",split+204,76,12,foreground);
         if (path_tab==2) {
             DrawText("Prerequisite foundations: unavailable",split+14,114,15,foreground);
             DrawText("This projection has resource/rule facets,",split+14,145,14,muted);
@@ -314,6 +379,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             DrawText("Resource incidences are not AND skills,",split+14,225,14,muted);
             DrawText("learning requirements or proof of flow.",split+14,245,14,muted);
         }
+        else if (path_tab==3) reach_details(graph,layout,analysis,&reach_controls,selected,split+14);
         else if (path_tab==1) path_details(graph,layout,analysis,paths,&path_controls,selected,split+14);
         else {
         DrawText(shared ? "[x] Shared neighbors (click)":"[ ] Shared neighbors (click)",split+14,114,16,foreground);

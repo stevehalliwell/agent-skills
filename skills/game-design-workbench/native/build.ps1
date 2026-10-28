@@ -41,7 +41,7 @@ if ($View) {
     if ($Graph) {
         if (-not $UiLibrary) { $UiLibrary = Join-Path $root 'build/gd-ui.dll' }
         if (-not (Test-Path -LiteralPath $UiLibrary -PathType Leaf)) { throw 'Graph view needs prepared gd-ui.dll. Run build-ui.ps1 explicitly first.' }
-        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'), (Join-Path $root 'gd_graph_view.c'), (Join-Path $root 'gd_mda_view.c'), (Join-Path $root 'gd_graph_analysis_ui.c'), (Join-Path $root 'gd_diagnostics_ui.c'), (Resolve-Path -LiteralPath $UiLibrary).Path)
+        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'), (Join-Path $root 'gd_graph_view.c'), (Join-Path $root 'gd_mda_view.c'), (Join-Path $root 'gd_graph_analysis_ui.c'), (Join-Path $root 'gd_graph_reachability_ui.c'), (Join-Path $root 'gd_diagnostics_ui.c'), (Resolve-Path -LiteralPath $UiLibrary).Path)
         $uiDestination = Join-Path $output (Split-Path $UiLibrary -Leaf)
         if ([IO.Path]::GetFullPath($UiLibrary) -ne [IO.Path]::GetFullPath($uiDestination)) { Copy-Item -LiteralPath $UiLibrary -Destination $uiDestination -Force }
     }

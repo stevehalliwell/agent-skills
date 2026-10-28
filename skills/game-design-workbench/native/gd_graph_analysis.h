@@ -75,7 +75,7 @@ typedef struct {
     GD_GraphLens lens;
     GD_GraphComparison comparison;
     GD_GraphPaths paths;
-    GD_GraphClosure foundations;
+    GD_GraphClosure foundations, reachability;
     int shown_nodes, shown_edges, feature_count, pair_count, complete, work;
 } GD_GraphAnalysis;
 /* Zero-initialize once. NULL mask includes all nodes. Inactive edges count only
@@ -112,6 +112,19 @@ const GD_PathSelection *gd_graph_path_selection(GD_GraphAnalysis *analysis, int 
    branches; fork=-1 denotes separate starts via virtual root, not authored fork.
    Borrow until next bypass/selection/path recomputation or analyze invalidation. */
 const GD_PathBypass *gd_graph_path_bypass(GD_GraphAnalysis *analysis, int selected, int candidate, int work_limit);
+typedef struct { int enabled, relation, reverse, peer, target; } GD_ReachControls;
+/* Separate caller-owned registered cache for ordinary typed reachability.
+   Same kernel as foundations, without AND/knowledge interpretation. */
+const GD_GraphClosure *gd_graph_closure_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure,
+    const unsigned char *eligible, const unsigned char *boundary, int relation, int reverse, int undirected, int work_limit);
+const GD_GraphComparison *gd_graph_closure_compare_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, int a, int b);
+const GD_GraphComparison *gd_graph_closure_choose_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, int a, int *peer);
+const GD_GraphClosure *gd_graph_reachability_prepare(GD_GraphAnalysis *analysis, GD_ReachControls *controls, int undirected);
+/* Full path length, -1 if unavailable. arcs retains trailing suffix in reverse
+   order, at most capacity entries. side 0/1 selects current comparison A/B.
+   Source arc = 2*projected link + reversed-endpoint bit. No route semantics. */
+int gd_graph_closure_path(const GD_GraphAnalysis *analysis, const GD_GraphClosure *closure, int side, int target, int *arcs, int capacity);
+const char *gd_graph_relation_name(int relation);
 /* One typed relation. reverse follows b->a; undirected follows both endpoint
    directions (connections, not flow). NULL eligible includes shown nodes;
    NULL boundary means no external source-boundary facts. Cache is invalidated

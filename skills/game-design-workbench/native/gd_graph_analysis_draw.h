@@ -73,6 +73,10 @@ static inline void gd_graph_path_badge(const GD_GraphPaths *paths, const GD_Path
     else snprintf(label,sizeof(label),"D%d%s%s",paths->dominated[node],ancestor,witness);
     DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background); DrawText(label,x,y,12,*witness ? gd_bypass_color:gd_path_color);
 }
+static inline void gd_graph_reachability_badge(const GD_GraphClosure *closure, int node, int x, int y, Color background) {
+    char label[32]; snprintf(label,sizeof(label),"T%d%s",closure->users[node],closure->complete ? "":"+");
+    DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background); DrawText(label,x,y,12,(Color){160,200,224,255});
+}
 static inline void gd_graph_foundation_badge(const GD_GraphClosure *closure, int node, int x, int y, Color background) {
     char label[80],combination[32]="";
     if (closure->direct[node]>=2) snprintf(combination,sizeof(combination)," AND%d%s",closure->direct[node],closure->finished[node] ? "":"+");
