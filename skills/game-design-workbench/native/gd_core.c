@@ -17,9 +17,10 @@
 
 static const char *field_names[] = {
     "nouns", "verb", "context_nouns", "mechanics", "control-vars", "resources", "verbs", "prerequisites",
-    "introduces", "practises", "requires", "tests_mastery", "next", "systems", "dynamics", "experiments", "axes", "context_axes"
+    "introduces", "practises", "requires", "tests_mastery", "next", "systems", "dynamics", "experiments", "axes", "context_axes",
+    "interactions", "noun", "initial_control", "capacity_control"
 };
-enum { RANK_KEY = 5 + GD_CONTEXT_AXES + 1, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7, RESOURCE_NOUN_KEY }; /* Consumed-field indices; byte markers avoid width-dependent bit shifts. */
+enum { RANK_KEY = 5 + GD_FIELD_COUNT, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7 }; /* Consumed-field indices; byte markers avoid width-dependent bit shifts. */
 const char *gd_field_name(GD_Field field) { return field_names[field]; }
 
 GD_Model *gd_create(GD_Allocator allocator) {
@@ -201,7 +202,7 @@ static int add_edge(Reader *reader, int source, GD_Field field, yaml_event_t *ev
 }
 static int consume_links(Reader *reader, int source, GD_Field field, yaml_event_t *event) {
     if (event->type == YAML_SCALAR_EVENT && scalar_null(event)) { yaml_event_delete(event); return 1; }
-    if (field == GD_VERB_REF) {
+    if (field == GD_VERB_REF || field == GD_RESOURCE_NOUN || field == GD_INITIAL_CONTROL || field == GD_CAPACITY_CONTROL) {
         int ok = add_edge(reader, source, field, event); yaml_event_delete(event); return ok;
     }
     if (event->type != YAML_SEQUENCE_START_EVENT) {
@@ -315,7 +316,7 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
     Reader reader;
     yaml_event_t event;
     GD_Record *record = &model->records[index];
-    unsigned char seen[RESOURCE_NOUN_KEY+1] = {0};
+    unsigned char seen[AXIS_CLOSED_KEY+1] = {0};
     int stage, success = 0;
     memset(&reader, 0, sizeof(reader)); reader.model = model; reader.path = record->source_path;
     if (!yaml_parser_initialize(&reader.parser)) {
@@ -360,7 +361,9 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
         else if (!strcmp(key, "coverage") && (record->role == GD_CASE || record->role == GD_RULE)) { key_index = 4; destination = &record->coverage; }
         else if (!strcmp(key, "rank") && record->role == GD_SKILL) key_index = RANK_KEY;
         else if (!strcmp(key, "entry") && record->role == GD_CHALLENGE) key_index = ENTRY_KEY;
-        else if (!strcmp(key, "noun") && record->role == GD_RESOURCE) { key_index = RESOURCE_NOUN_KEY; destination = &record->resource_noun; }
+        else if (!strcmp(key, "noun") && (record->role == GD_RESOURCE || record->role == GD_RELATED)) key_index = 5 + GD_RESOURCE_NOUN;
+        else if ((record->role == GD_RESOURCE || record->role == GD_RELATED) && !strcmp(key, "initial_control")) key_index = 5 + GD_INITIAL_CONTROL;
+        else if ((record->role == GD_RESOURCE || record->role == GD_RELATED) && !strcmp(key, "capacity_control")) key_index = 5 + GD_CAPACITY_CONTROL;
         else if (!strcmp(key,"axes") && record->role == GD_NOUN) key_index = 5 + GD_AXES;
         else if (!strcmp(key,"context_axes") && (record->role == GD_RULE || record->role == GD_CASE)) key_index = 5 + GD_CONTEXT_AXES;
         else if (record->role == GD_AXIS && !strcmp(key,"closed")) key_index = AXIS_CLOSED_KEY;
@@ -378,7 +381,11 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
             }
         }
         else if (record->role == GD_CHALLENGE) {
-            for (i = GD_INTRODUCES; i <= GD_NEXT; ++i) if (!strcmp(key, field_names[i])) { key_index = 5+i; break; }
+            for (i = 0; i < GD_FIELD_COUNT; ++i) {
+                int allowed = (i >= GD_INTRODUCES && i <= GD_NEXT) || i == GD_MECHANICS ||
+                    i == GD_INTERACTIONS || i == GD_NOUNS || i == GD_VERBS || i == GD_RESOURCES;
+                if (allowed && !strcmp(key, field_names[i])) { key_index = 5+i; break; }
+            }
         }
         else if (record->role == GD_SKILL && (!strcmp(key, "prerequisites") || !strcmp(key, "mechanics")))
             key_index = 5 + (!strcmp(key, "prerequisites") ? GD_PREREQUISITES : GD_MECHANICS);
@@ -392,8 +399,10 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
                      (int)event.start_mark.line + 2); yaml_event_delete(&event); goto done;
         }
         seen[key_index] = 1;
-        if (key_index == RESOURCE_NOUN_KEY) {
-            int ok = consume_string(&reader,&event,destination); yaml_event_delete(&event); if (!ok) goto done;
+        if (key_index == 5 + GD_RESOURCE_NOUN) {
+            int before = model->edge_count;
+            if (!consume_links(&reader,index,GD_RESOURCE_NOUN,&event)) goto done;
+            record->resource_noun = model->edge_count > before ? model->edges[before].reference : NULL;
         } else if (key_index == AXIS_CLOSED_KEY) {
             int ok = consume_boolean(&reader,&event,&record->axis_closed,&record->axis_closed_line,
                 "rules.axis_closed_type","Axis closed requires boolean true or false; no coercion");
@@ -692,6 +701,26 @@ static void build_components(GD_Model *model) {
         model->components[model->component_of[model->cells[i].noun]].edge_count++;
     for (i = 0; i < model->skill_link_count; ++i)
         model->components[model->component_of[model->skill_links[i].prerequisite]].edge_count++;
+}
+void gd_index_links(const GD_Model *model, GD_LinkIndex *index) {
+    int i;
+    assert(model && index && model->record_count >= 0 && model->record_count <= GD_MAX_RECORDS);
+    assert(model->edge_count >= 0 && model->edge_count <= GD_MAX_EDGES);
+    for (i = 0; i < model->record_count; ++i) index->outgoing[i] = index->incoming[i] = -1;
+    /* Prepend in reverse order so each chain retains declaration order. */
+    for (i = model->edge_count-1; i >= 0; --i) {
+        const GD_Edge *edge = &model->edges[i];
+        assert(edge->source >= 0 && edge->source < model->record_count);
+        assert(edge->target >= -2 && edge->target < model->record_count);
+        assert(edge->field >= 0 && edge->field < GD_FIELD_COUNT);
+        index->next_outgoing[i] = index->outgoing[edge->source];
+        index->outgoing[edge->source] = i;
+        index->next_incoming[i] = -1;
+        if (edge->target >= 0) {
+            index->next_incoming[i] = index->incoming[edge->target];
+            index->incoming[edge->target] = i;
+        }
+    }
 }
 void gd_recompute_skills(GD_Model *model) {
     assert(model->skill_mode);

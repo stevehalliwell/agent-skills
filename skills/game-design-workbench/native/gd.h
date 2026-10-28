@@ -22,7 +22,8 @@ typedef enum { GD_NOUN, GD_VERB, GD_CASE, GD_RELATED, GD_SKILL, GD_CHALLENGE,
 typedef enum { GD_NOUNS, GD_VERB_REF, GD_CONTEXT, GD_MECHANICS,
                GD_CONTROLS, GD_RESOURCES, GD_VERBS, GD_PREREQUISITES,
                GD_INTRODUCES, GD_PRACTISES, GD_REQUIRES, GD_TESTS_MASTERY, GD_NEXT,
-               GD_SYSTEMS, GD_DYNAMICS, GD_EXPERIMENTS, GD_AXES, GD_CONTEXT_AXES } GD_Field;
+               GD_SYSTEMS, GD_DYNAMICS, GD_EXPERIMENTS, GD_AXES, GD_CONTEXT_AXES,
+               GD_INTERACTIONS, GD_RESOURCE_NOUN, GD_INITIAL_CONTROL, GD_CAPACITY_CONTROL, GD_FIELD_COUNT } GD_Field;
 typedef struct { const char *alias; const char *directory; GD_Role role; } GD_Collection;
 #define GD_MAX_ENUM_VALUES 64
 typedef enum { GD_LITERAL_NULL, GD_LITERAL_NUMBER, GD_LITERAL_BOOLEAN, GD_LITERAL_STRING } GD_LiteralKind;
@@ -44,6 +45,12 @@ typedef struct {
     int64_t rank;
 } GD_Record;
 typedef struct { int source, target; GD_Field field; const char *reference; int line; } GD_Edge;
+/* Caller-owned snapshot adjacency retains raw edge indices, types, duplicates
+   and source order. Unresolved/ambiguous declarations are outgoing only. */
+typedef struct {
+    int outgoing[GD_MAX_RECORDS], incoming[GD_MAX_RECORDS];
+    int next_outgoing[GD_MAX_EDGES], next_incoming[GD_MAX_EDGES];
+} GD_LinkIndex;
 typedef struct { int noun, verb, interaction; } GD_Pair;
 typedef struct { int noun, verb, first_pair, pair_count, active; } GD_Cell;
 typedef struct { int partners, cases, active_cases; } GD_Connectivity;
@@ -101,6 +108,10 @@ int gd_read_text(GD_Model *model, const char *path, size_t *size);
 /* Analysis implementation; use recompute for an edited skill snapshot. */
 void gd_analyze_skills(GD_Model *model);
 void gd_recompute_skills(GD_Model *model);
+/* Rebuild scratch after changing snapshot/edge indices. No allocation,
+   resolution, inference or model mutation. Storage is about 288 KiB; use caller
+   allocator rather than a small thread stack. Each chain retains edge order. */
+void gd_index_links(const GD_Model *model, GD_LinkIndex *index);
 
 #define GD_MAX_ROUTE_CHECKS 32768
 #define GD_MAX_ROUTE_WITNESSES 128

@@ -4,6 +4,7 @@
 #include "gd_resource_graph.h"
 #include "gd_skill_unlocks.h"
 #include "gd_layout.h"
+#include "gd_graph_analysis.h"
 #include "gd_diagnostics.h"
 #include <limits.h>
 #include <math.h>
@@ -1820,11 +1821,143 @@ TEST(control_import_failures,
     }
     gd_destroy(model);
 )
+TEST(graph_analysis_projection,
+    GD_Layout *layout=allocate(storage,sizeof(*layout)); GD_GraphAnalysis *analysis=allocate(storage,sizeof(*analysis));
+    unsigned seed=37; int run,i,a,b,k,mode; unsigned char shown[8];
+    TEST_ASSERT(layout && analysis); memset(layout,0,sizeof(*layout)); memset(analysis,0,sizeof(*analysis));
+    layout->node_count=8; layout->edge_count=12;
+    for (i=0;i<8;++i) { layout->nodes[i].key=100+i; layout->nodes[i].label="node"; }
+    for (run=0;run<32;++run) {
+        for (i=0;i<12;++i) {
+            GD_LayoutEdge *edge=&layout->edges[i];
+            seed=seed*1664525u+1013904223u; edge->a=(int)((seed>>16)%8);
+            seed=seed*1664525u+1013904223u; edge->b=(int)((seed>>16)%8);
+            edge->key=i; edge->active=i%3!=0;
+        }
+        for (mode=0;mode<4;++mode) {
+            int adjacent[8][8]={{0}},incident[8]={0},nodes=0,edges=0;
+            GD_LayoutEdge before[12]; memcpy(before,layout->edges,sizeof(before));
+            for (i=0;i<8;++i) { shown[i]=(unsigned char)(mode<2 || i%3!=0); nodes+=shown[i]; }
+            for (i=0;i<12;++i) {
+                const GD_LayoutEdge *edge=&layout->edges[i];
+                if ((!edge->active && !(mode%2)) || !shown[edge->a] || !shown[edge->b]) continue;
+                adjacent[edge->a][edge->b]=adjacent[edge->b][edge->a]=1;
+                ++edges; ++incident[edge->a]; if (edge->a!=edge->b) ++incident[edge->b];
+            }
+            gd_graph_analyze(layout,shown,mode%2,analysis);
+            TEST_ASSERT(analysis->complete && analysis->shown_nodes==nodes && analysis->shown_edges==edges);
+            TEST_ASSERT(!memcmp(before,layout->edges,sizeof(before)));
+            for (a=0;a<8;++a) {
+                int matches=0,neighbors=0;
+                for (b=0;b<8;++b) {
+                    int common=0,pair;
+                    if (a==b) continue;
+                    neighbors+=adjacent[a][b];
+                    for (k=0;k<8;++k) common+=adjacent[a][k] && adjacent[b][k];
+                    pair=gd_graph_match(analysis,a,b);
+                    TEST_ASSERT((pair>=0)==(common>0));
+                    if (pair>=0) {
+                        const GD_GraphMatch *match=&analysis->pairs[pair];
+                        const GD_GraphFeature *left=&analysis->features[match->first_a],*right=&analysis->features[match->first_b];
+                        TEST_ASSERT(match->shared==common && left->neighbor==right->neighbor);
+                        TEST_ASSERT(adjacent[left->owner][left->neighbor] && adjacent[right->owner][right->neighbor]);
+                        TEST_ASSERT(left->edge>=0 && left->edge<12 && right->edge>=0 && right->edge<12);
+                        ++matches;
+                    }
+                }
+                TEST_ASSERT(analysis->matched[a]==matches && analysis->neighbors[a]==neighbors && analysis->incident[a]==incident[a]);
+            }
+            layout->nodes[0].x+=1; layout->nodes[0].y-=2; ++layout->tick;
+            TEST_ASSERT(!gd_graph_analyze(layout,shown,mode%2,analysis));
+        }
+    }
+    layout->edges[0].key+=100; TEST_ASSERT(gd_graph_analyze(layout,shown,1,analysis));
+    release(storage,analysis); release(storage,layout);
+)
+TEST(graph_analysis_limits,
+    GD_Layout *layout=allocate(storage,sizeof(*layout)); GD_GraphAnalysis *analysis=allocate(storage,sizeof(*analysis)); int i;
+    TEST_ASSERT(layout && analysis); memset(layout,0,sizeof(*layout)); memset(analysis,0,sizeof(*analysis));
+    layout->node_count=GD_MAX_RECORDS; layout->edge_count=GD_MAX_RECORDS-1;
+    for (i=0;i<GD_MAX_RECORDS;++i) layout->nodes[i].key=i;
+    for (i=0;i<layout->edge_count;++i) layout->edges[i]=(GD_LayoutEdge){0,i+1,i,1};
+    TEST_ASSERT(gd_graph_analyze(layout,NULL,1,analysis));
+    TEST_ASSERT(!analysis->complete && analysis->pair_count==GD_GRAPH_ANALYSIS_PAIRS && analysis->work<=GD_GRAPH_ANALYSIS_WORK);
+    TEST_ASSERT(analysis->neighbors[0]==GD_MAX_RECORDS-1 && analysis->incident[0]==GD_MAX_RECORDS-1 && !analysis->matched[0]);
+    layout->edge_count=GD_MAX_PAIRS;
+    for (i=0;i<layout->edge_count;++i) layout->edges[i]=(GD_LayoutEdge){i%GD_MAX_RECORDS,i%GD_MAX_RECORDS,i,1};
+    TEST_ASSERT(gd_graph_analyze(layout,NULL,1,analysis) && analysis->complete && !analysis->pair_count);
+    TEST_ASSERT(analysis->feature_count==GD_MAX_RECORDS && analysis->shown_edges==GD_MAX_PAIRS);
+    for (i=0;i<GD_MAX_RECORDS;++i) TEST_ASSERT(!analysis->neighbors[i] && !analysis->matched[i] && analysis->incident[i]==GD_MAX_PAIRS/GD_MAX_RECORDS);
+    layout->node_count=layout->edge_count=0;
+    TEST_ASSERT(gd_graph_analyze(layout,NULL,0,analysis) && analysis->complete && !analysis->feature_count && !analysis->shown_nodes && !analysis->shown_edges);
+    release(storage,analysis); release(storage,layout);
+)
+TEST(graph_input_links,
+    GD_Model *model=model_create(); GD_Draft *draft; GD_Focus focus; int encounter, energy, jump;
+    GD_Layout *layout=allocate(storage,sizeof(*layout)); GD_LinkIndex *index=allocate(storage,sizeof(*index));
+    TEST_ASSERT(model && layout && index && setup("graph-input-links"));
+    collections[0].role=GD_SKILL; collections[0].alias="atoms";
+    collections[1].role=GD_CHALLENGE; collections[1].alias="steps";
+    collections[2].role=GD_RELATED; collections[2].alias="context";
+    TEST_ASSERT(write_record(0,"jump","---\nstatus: proposed\n---\nJump."));
+    TEST_ASSERT(write_record(1,"encounter","---\nentry: true\nrequires: [atoms/jump]\nmechanics: [context/rule]\ninteractions: [context/contact]\nnouns: [context/noun]\nverbs: [context/verb]\nresources: [context/energy]\n---\nEncounter."));
+    TEST_ASSERT(write_record(2,"rule","---\nmechanics: [context/rule]\n---\nSelf link."));
+    TEST_ASSERT(write_record(2,"contact","Contact.")); TEST_ASSERT(write_record(2,"noun","Noun."));
+    TEST_ASSERT(write_record(2,"verb","Verb.")); TEST_ASSERT(write_record(2,"start","Start.")); TEST_ASSERT(write_record(2,"limit","Limit."));
+    TEST_ASSERT(write_record(2,"energy","---\nnoun: context/noun\ninitial_control: context/start\ncapacity_control: context/limit\n---\nEnergy."));
+    TEST_ASSERT(gd_load(model,collections,3) && model->edge_count==10);
+    encounter=find_record(model,"steps/encounter"); energy=find_record(model,"context/energy"); jump=find_record(model,"atoms/jump");
+    gd_index_links(model,index);
+    TEST_ASSERT(encounter>=0 && energy>=0 && jump>=0 && index->outgoing[jump]==-1);
+    TEST_ASSERT(!strcmp(model->records[energy].resource_noun,"context/noun"));
+    TEST_ASSERT(gd_focus_reset(model,&focus,encounter) && gd_focus_layout(model,&focus,layout,GD_SORT_NAME));
+    TEST_ASSERT(layout->node_count==7 && layout->edge_count==8 && focus.boundary_count==2);
+    TEST_ASSERT(gd_focus_expand(model,&focus,energy) && gd_focus_layout(model,&focus,layout,GD_SORT_NAME));
+    TEST_ASSERT(layout->node_count==9 && layout->edge_count==10 && !focus.boundary_count);
+    draft=gd_draft_create(model); TEST_ASSERT(draft);
+    TEST_ASSERT(gd_draft_prerequisite(draft,jump,"atoms/jump",1)==1);
+    gd_index_links(draft->model,index);
+    TEST_ASSERT(index->outgoing[jump]>=0 && draft->model->edges[index->outgoing[jump]].field==GD_PREREQUISITES);
+    TEST_ASSERT(gd_draft_undo(draft)==1); gd_index_links(draft->model,index);
+    TEST_ASSERT(index->outgoing[jump]==-1);
+    TEST_ASSERT(gd_focus_reset(draft->model,&focus,energy) && gd_focus_layout(draft->model,&focus,layout,GD_SORT_NAME));
+    TEST_ASSERT(focus.visible[find_record(model,"context/start")] && focus.visible[find_record(model,"context/limit")]);
+    TEST_ASSERT(!gd_sources_changed(model)); gd_draft_destroy(draft); release(storage,index); release(storage,layout); gd_destroy(model);
+)
+TEST(resource_input_links,
+    GD_Model *model=model_create(); GD_Focus focus; GD_Layout *layout=allocate(storage,sizeof(*layout)); int resource;
+    const char *fields[]={"noun","initial_control","capacity_control"};
+    const char *invalid[]={"[]","{}","true","42","\"\"","[controls/start]"}; int f,v;
+    TEST_ASSERT(model && layout && setup("resource-input-links")); collections[1].role=GD_RESOURCE; collections[2].role=GD_RULE;
+    TEST_ASSERT(write_record(0,"coin","Coin.")); TEST_ASSERT(write_record(2,"source","Rule source."));
+    TEST_ASSERT(write_record(1,"wallet","---\nnoun: things/coin\ninitial_control: controls/start\ncapacity_control: controls/limit\n---\nWallet."));
+    TEST_ASSERT(gd_load(model,collections,3) && model->edge_count==3);
+    resource=find_record(model,"actions/wallet"); TEST_ASSERT(resource>=0);
+    TEST_ASSERT(!strcmp(model->records[resource].resource_noun,"things/coin"));
+    TEST_ASSERT(model->edges[0].field==GD_RESOURCE_NOUN && model->edges[0].line==2);
+    TEST_ASSERT(model->edges[1].field==GD_INITIAL_CONTROL && model->edges[1].line==3 && model->edges[1].target==-1);
+    TEST_ASSERT(model->edges[2].field==GD_CAPACITY_CONTROL && model->edges[2].line==4 && model->edges[2].target==-1);
+    TEST_ASSERT(!strcmp(gd_field_name(GD_RESOURCE_NOUN),"noun") && !strcmp(gd_field_name(GD_CAPACITY_CONTROL),"capacity_control"));
+    TEST_ASSERT(gd_focus_reset(model,&focus,resource) && gd_focus_layout(model,&focus,layout,GD_SORT_NAME));
+    TEST_ASSERT(layout->node_count==2 && layout->edge_count==1 && focus.boundary_count==2);
+    TEST_ASSERT(!gd_sources_changed(model)); gd_destroy(model);
+    for (f=0;f<3;++f) for (v=0;v<6;++v) {
+        char text[512]; model=model_create(); TEST_ASSERT(model);
+        snprintf(text,sizeof(text),"---\n%s: %s\n---\nInvalid.",fields[f],invalid[v]);
+        TEST_ASSERT(write_record(1,"wallet",text));
+        TEST_ASSERT(!gd_load(model,collections,3) && model->record_count==2 && !model->edge_count);
+        gd_destroy(model);
+    }
+    model=model_create(); TEST_ASSERT(model);
+    TEST_ASSERT(write_record(1,"wallet","---\nnoun: null\ninitial_control: null\ncapacity_control: null\n---\nUnspecified."));
+    TEST_ASSERT(gd_load(model,collections,3) && !model->edge_count);
+    release(storage,layout); gd_destroy(model);
+)
 TEST(focused_relationships,
     GD_Model *model=model_create(); GD_Focus focus; int i;
-    GD_Layout *layout=allocate(storage,sizeof(*layout));
+    GD_Layout *layout=allocate(storage,sizeof(*layout)); GD_LinkIndex *index=allocate(storage,sizeof(*index));
     const char *references[]={"things/incoming","skills/root","mechanics/neighbor","cases/farther","things/hidden","cases/isolated"};
-    TEST_ASSERT(model && layout);
+    TEST_ASSERT(model && layout && index);
     model->record_count=6; model->edge_count=7;
     for (i=0;i<6;++i) { model->records[i].reference=references[i]; model->records[i].status=i%2 ? "rejected":"accepted"; }
     model->edges[0]=(GD_Edge){0,1,GD_MECHANICS,references[1],10};
@@ -1834,6 +1967,11 @@ TEST(focused_relationships,
     model->edges[4]=(GD_Edge){1,1,GD_PREREQUISITES,references[1],14};
     model->edges[5]=(GD_Edge){1,-1,GD_MECHANICS,"missing/unknown",15};
     model->edges[6]=(GD_Edge){4,5,GD_MECHANICS,references[5],16};
+    gd_index_links(model,index);
+    TEST_ASSERT(index->outgoing[1]==1 && index->next_outgoing[1]==3 && index->next_outgoing[3]==4);
+    TEST_ASSERT(index->next_outgoing[4]==5 && index->next_outgoing[5]==-1);
+    TEST_ASSERT(index->incoming[1]==0 && index->next_incoming[0]==4 && index->next_incoming[4]==-1);
+    TEST_ASSERT(index->next_incoming[5]==-1);
     TEST_ASSERT(gd_focus_reset(model,&focus,1) && gd_focus_layout(model,&focus,layout,GD_SORT_NAME));
     TEST_ASSERT(layout->node_count==3 && layout->edge_count==4 && focus.boundary_count==2);
     TEST_ASSERT(focus.visible[0] && focus.visible[1] && focus.visible[2] && !focus.visible[3] && !focus.visible[4] && !focus.visible[5]);
@@ -1843,29 +1981,35 @@ TEST(focused_relationships,
     TEST_ASSERT(gd_focus_expand(model,&focus,2) && gd_focus_layout(model,&focus,layout,GD_SORT_PARTNERS));
     TEST_ASSERT(layout->node_count==4 && layout->edge_count==5 && focus.boundary_count==1);
     TEST_ASSERT(gd_focus_reset(model,&focus,1));
-    model->edges[1].target=5; model->edges[1].reference=references[5];
+    model->edges[1].target=5; model->edges[1].reference=references[5]; gd_index_links(model,index);
     TEST_ASSERT(gd_focus_layout(model,&focus,layout,GD_SORT_NAME) && focus.visible[5] && !focus.visible[4] && !focus.visible[3]);
-    model->edges[1].target=-1;
+    model->edges[1].target=-1; gd_index_links(model,index);
     TEST_ASSERT(gd_focus_layout(model,&focus,layout,GD_SORT_NAME) && focus.visible[5]); /* Retain revealed isolate. */
     TEST_ASSERT(!gd_focus_reset(model,&focus,6) && focus.root==1);
     TEST_ASSERT(!gd_focus_expand(model,&focus,-1));
     TEST_ASSERT(gd_focus_reset(model,&focus,-1) && gd_focus_layout(model,&focus,layout,GD_SORT_NAME));
     TEST_ASSERT(!layout->node_count && !layout->edge_count && !focus.boundary_count);
-    release(storage,layout); gd_destroy(model);
+    release(storage,index); release(storage,layout); gd_destroy(model);
 )
 TEST(focused_relationship_capacity,
     GD_Model *model=model_create(); GD_Focus focus; int i;
-    GD_Layout *layout=allocate(storage,sizeof(*layout));
-    TEST_ASSERT(model && layout);
+    GD_Layout *layout=allocate(storage,sizeof(*layout)); GD_LinkIndex *index=allocate(storage,sizeof(*index));
+    TEST_ASSERT(model && layout && index);
     model->record_count=GD_MAX_RECORDS; model->edge_count=GD_MAX_EDGES;
     for (i=0;i<GD_MAX_RECORDS;++i) model->records[i].reference="same visible label; distinct record indices";
     for (i=0;i<GD_MAX_EDGES;++i) model->edges[i]=(GD_Edge){0,i%GD_MAX_RECORDS,GD_MECHANICS,"reference",i};
+    gd_index_links(model,index);
+    { int outgoing=0, incoming=0, edge;
+      for (edge=index->outgoing[0];edge>=0;edge=index->next_outgoing[edge]) ++outgoing;
+      for (edge=index->incoming[0];edge>=0;edge=index->next_incoming[edge]) ++incoming;
+      TEST_ASSERT(outgoing==GD_MAX_EDGES && incoming==GD_MAX_EDGES/GD_MAX_RECORDS);
+    }
     TEST_ASSERT(gd_focus_reset(model,&focus,0) && gd_focus_layout(model,&focus,layout,GD_SORT_PARTNERS));
     TEST_ASSERT(layout->node_count==GD_MAX_RECORDS && layout->edge_count==GD_MAX_EDGES && !focus.boundary_count);
     for (i=0;i<layout->edge_count;++i) TEST_ASSERT(layout->edges[i].key==i);
     gd_layout_step(layout,-1);
     for (i=0;i<layout->node_count;++i) TEST_ASSERT(isfinite(layout->nodes[i].x) && isfinite(layout->nodes[i].y));
-    release(storage,layout); gd_destroy(model);
+    release(storage,index); release(storage,layout); gd_destroy(model);
 )
 TEST(diagnostic_projection,
     GD_Model *model=model_create(); GD_DiagnosticItem item;
@@ -1983,8 +2127,10 @@ int main(int argc, char **argv) {
     failed += test_control_loading(); failed += test_control_overrides_scope(); failed += test_control_selection(); failed += test_control_limits();
     failed += test_control_import_roundtrip(); failed += test_control_import_legacy_dependent(); failed += test_control_import_strings(); failed += test_control_import_failures();
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
+    failed += test_graph_analysis_projection(); failed += test_graph_analysis_limits();
+    failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/66 passed\n", 66-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/70 passed\n", 70-failed);
     return failed ? 1 : 0;
 }

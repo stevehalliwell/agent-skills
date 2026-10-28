@@ -1,5 +1,6 @@
 #include "gd.h"
 #include "gd_layout.h"
+#include "gd_graph_analysis_ui.h"
 #include "gd_skill_unlocks.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
@@ -124,7 +125,12 @@ static int witness_edge(const GD_Routes *routes, int witness, int source, int ta
     return 0;
 }
 static void draw_graph(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection,
-                       Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness) {
+                       Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
+                       const GD_GraphAnalysis *analysis, int shared, int peer) {
+    const Color shared_color={193,155,228,255};
+    int pair=shared ? gd_graph_match(analysis,selection->node,peer):-1;
+    const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
+    const GD_GraphFeature *right=pair>=0 ? &analysis->features[analysis->pairs[pair].first_b]:NULL;
     Rectangle bounds[GD_MAX_RECORDS];
     int i;
     memset(bounds, 0, sizeof(bounds));
@@ -160,6 +166,10 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
         Vector2 a = node_point(&layout->nodes[edge->a]), b = node_point(&layout->nodes[edge->b]);
         Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
         if (!edge->active && !other_pairs) continue;
+        if (pair>=0 && (i==left->edge || i==right->edge)) {
+            if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,27,shared_color);
+            else DrawLineEx(a,b,7,shared_color);
+        }
         int conflict = !focused && !challenges && model->skill_mode && (model->skills[layout->nodes[edge->a].key].incomplete || model->skills[layout->nodes[edge->b].key].incomplete);
         if (challenges && witness_edge(routes,witness,layout->nodes[edge->a].key,layout->nodes[edge->b].key)) color=graph_selected;
         if (conflict && selection->cell != edge->key) color = (Color){238, 114, 120, 255};
@@ -223,8 +233,31 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
             if (state->incomplete || state->rank_conflict) DrawCircleLines((int)node->x, (int)node->y, 18, warning);
             DrawText(caption, (int)node->x-MeasureText(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted);
         }
+        if (shared) {
+            const char *badge=TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+");
+            DrawText(badge,(int)node->x-MeasureText(badge,13)/2,(int)node->y-37,13,shared_color);
+            if (pair>=0 && (i==analysis->pairs[pair].a || i==analysis->pairs[pair].b)) DrawCircleLines((int)node->x,(int)node->y,30,shared_color);
+            if (pair>=0 && i==left->neighbor) DrawText("shared",(int)node->x+19,(int)node->y-8,13,shared_color);
+        }
     }
     EndMode2D(); EndScissorMode();
+}
+static void shared_source(const GD_Model *model, const GD_Layout *layout, const GD_GraphAnalysis *analysis, int pair, int focused, int challenges) {
+    int side;
+    for (side=0;side<2;++side) {
+        const GD_GraphMatch *match=&analysis->pairs[pair];
+        const GD_GraphFeature *feature=&analysis->features[side ? match->first_b:match->first_a];
+        int key=layout->edges[feature->edge].key,i; const GD_Edge *edge=NULL;
+        if (focused || challenges) edge=&model->edges[key];
+        else if (model->skill_mode) {
+            const GD_SkillLink *link=&model->skill_links[key];
+            for (i=0;i<model->edge_count;++i) if (model->edges[i].field==GD_PREREQUISITES && model->edges[i].source==link->dependent && model->edges[i].target==link->prerequisite) { edge=&model->edges[i]; break; }
+        } else {
+            const GD_Cell *cell=&model->cells[key];
+            igTextWrapped("Derived case-pair cell: %s / %s | %d cases; inspect cell for authored sources",model->records[cell->noun].reference,model->records[cell->verb].reference,cell->pair_count);
+        }
+        if (edge) igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
+    }
 }
 typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } SkillEditor;
 static int has_prerequisite(const GD_Model *model, int record, const char *reference) {
@@ -492,6 +525,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     unsigned char known[GD_MAX_RECORDS]={0};
     GD_SkillUnlocks *query=NULL;
     GD_Focus focus;
+    GD_GraphAnalysis *analysis=NULL; bool shared=true; int shared_peer=-1;
     GD_DiagnosticBrowser diagnostics={0};
     int root=focus_from ? focus_find(model,focus_from):-1;
     char browse[129]="";
@@ -537,6 +571,9 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     SetTraceLogCallback(graph_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(1440, 900, model->skill_mode ? "Game Design Workbench - skill and progression explorer" : "Game Design Workbench - matrix graph");
     if (!IsWindowReady()) { if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context, layout); gd_error(initial, "view.window", "Cannot initialize graph window", NULL, 0); return 2; }
+    analysis=initial->allocator.allocate(initial->allocator.context,sizeof(*analysis));
+    if (!analysis) { CloseWindow(); if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
+    memset(analysis,0,sizeof(*analysis));
     if (draft) SetExitKey(KEY_NULL);
     SetWindowMinSize(1000, 650); SetTargetFPS(60); rlImGuiSetup(true);
     igGetIO_Nil()->IniFilename = NULL; igGetIO_Nil()->LogFilename = NULL;
@@ -604,6 +641,9 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         igSameLine(0, -1);
         if (igButton("Rearrange", (ImVec2_c){0,0})) { prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; fit = 1; }
         if (!focused && !model->skill_mode) igCheckbox("Overlay other pairs (does not merge groups)", &overlay);
+        if (gd_graph_analyze(layout,NULL,overlay,analysis)) shared_peer=-1;
+        { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_peer);
+          if (pair>=0) shared_source(model,layout,analysis,pair,focused,challenges); }
         refresh = igButton("Refresh sources", (ImVec2_c){0,0});
         if (stale) igTextUnformatted("STALE: disk sources changed or could not be checked.", NULL);
         if (*failure) igTextWrapped("%s", failure);
@@ -675,7 +715,8 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             accumulator += fminf(GetFrameTime(), 0.05f);
             while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
         } else accumulator = 0;
-        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness);
+        if (gd_graph_analyze(layout,NULL,overlay,analysis)) shared_peer=-1;
+        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
             for (i=0;i<layout->node_count;++i) {
@@ -685,6 +726,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             }
             EndMode2D(); EndScissorMode();
         }
+        if (shared) DrawText(analysis->complete ? "S: shared-neighbor matches | Thick purple: example links | Shown graph only":"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(Color){193,155,228,255});
         DrawText(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);
         rlImGuiEnd(); EndDrawing(); ++frame;
         if (screenshot && frame == frames && !gd_save_screenshot(screenshot)) { fputs("gd: graph screenshot export failed\n", stderr); result = 2; }
@@ -728,7 +770,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
                 gd_routes_destroy(routes); routes=replacement_routes;
                 gd_draft_destroy(draft); draft = replacement;
                 baseline = fresh; model = draft ? draft->model : baseline;
-                editor.record = -1;
+                editor.record = -1; shared_peer=-1; analysis->initialized=0;
                 witness=-1; remembered[0]=remembered[1]=remembered[2]=-1;
                 if (!focused && *root_reference) fresh_root=focus_find(model,root_reference);
                 gd_focus_reset(model,&focus,fresh_root);
@@ -754,6 +796,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     gd_routes_destroy(routes); gd_draft_destroy(draft);
     if (baseline != initial) gd_destroy(baseline);
     if (query) initial->allocator.release(initial->allocator.context,query);
+    initial->allocator.release(initial->allocator.context,analysis);
     initial->allocator.release(initial->allocator.context, layout);
     return result;
 }

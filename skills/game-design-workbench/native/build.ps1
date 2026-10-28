@@ -24,7 +24,7 @@ New-Item -ItemType Directory -Force $output | Out-Null
 $arguments = @('-q', '-DHAVE_CONFIG_H=1', '-DYAML_DECLARE_STATIC=1',
     '-I', (Join-Path $root 'vendor/libyaml/include'),
     '-I', (Join-Path $root 'vendor/libyaml/src'),
-    (Join-Path $root 'gd_core.c'), (Join-Path $root 'gd_output.c'), (Join-Path $root 'gd_layout.c'), (Join-Path $root 'gd_focus.c'), (Join-Path $root 'gd_diagnostics.c'), (Join-Path $root 'gd_skills.c'), (Join-Path $root 'gd_skill_unlocks.c'), (Join-Path $root 'gd_draft.c'), (Join-Path $root 'gd_routes.c'), (Join-Path $root 'gd_mda.c'), (Join-Path $root 'gd_controls.c'), (Join-Path $root 'gd_control_import.c'), (Join-Path $root 'gd_rules.c'), (Join-Path $root 'gd_rule_axes.c'), (Join-Path $root 'gd_rule_logic.c'), (Join-Path $root 'gd_rule_quantities.c'), (Join-Path $root 'gd_rule_analysis.c'), (Join-Path $root 'gd_resource_graph.c'))
+    (Join-Path $root 'gd_core.c'), (Join-Path $root 'gd_output.c'), (Join-Path $root 'gd_layout.c'), (Join-Path $root 'gd_focus.c'), (Join-Path $root 'gd_graph_analysis.c'), (Join-Path $root 'gd_diagnostics.c'), (Join-Path $root 'gd_skills.c'), (Join-Path $root 'gd_skill_unlocks.c'), (Join-Path $root 'gd_draft.c'), (Join-Path $root 'gd_routes.c'), (Join-Path $root 'gd_mda.c'), (Join-Path $root 'gd_controls.c'), (Join-Path $root 'gd_control_import.c'), (Join-Path $root 'gd_rules.c'), (Join-Path $root 'gd_rule_axes.c'), (Join-Path $root 'gd_rule_logic.c'), (Join-Path $root 'gd_rule_quantities.c'), (Join-Path $root 'gd_rule_analysis.c'), (Join-Path $root 'gd_resource_graph.c'))
 if ($Test) { $arguments += Join-Path $root 'test_core.c' }
 else { $arguments += Join-Path $root 'gd_cli.c' }
 foreach ($file in @('api.c', 'parser.c', 'reader.c', 'scanner.c')) {
@@ -41,7 +41,7 @@ if ($View) {
     if ($Graph) {
         if (-not $UiLibrary) { $UiLibrary = Join-Path $root 'build/gd-ui.dll' }
         if (-not (Test-Path -LiteralPath $UiLibrary -PathType Leaf)) { throw 'Graph view needs prepared gd-ui.dll. Run build-ui.ps1 explicitly first.' }
-        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'), (Join-Path $root 'gd_graph_view.c'), (Join-Path $root 'gd_mda_view.c'), (Join-Path $root 'gd_diagnostics_ui.c'), (Resolve-Path -LiteralPath $UiLibrary).Path)
+        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'), (Join-Path $root 'gd_graph_view.c'), (Join-Path $root 'gd_mda_view.c'), (Join-Path $root 'gd_graph_analysis_ui.c'), (Join-Path $root 'gd_diagnostics_ui.c'), (Resolve-Path -LiteralPath $UiLibrary).Path)
         $uiDestination = Join-Path $output (Split-Path $UiLibrary -Leaf)
         if ([IO.Path]::GetFullPath($UiLibrary) -ne [IO.Path]::GetFullPath($uiDestination)) { Copy-Item -LiteralPath $UiLibrary -Destination $uiDestination -Force }
     }

@@ -1,5 +1,6 @@
 #include "gd_resource_graph.h"
 #include "gd_layout.h"
+#include "gd_graph_analysis.h"
 #include "raylib.h"
 #include <math.h>
 #include <string.h>
@@ -53,8 +54,46 @@ static void fit(Camera2D *camera, const GD_Layout *layout, Rectangle viewport) {
     camera->zoom=fminf(viewport.width/(right-left+50),viewport.height/(bottom-top+50));
     if (camera->zoom>1.2f) camera->zoom=1.2f; if (camera->zoom<0.002f) camera->zoom=0.002f;
 }
-static void detail(const GD_ResourceGraph *graph, int selected, int x, int width) {
-    const GD_ResourceNode *node; const GD_Record *source=NULL; int y=118;
+static int shared_choice(const GD_GraphAnalysis *analysis, int selected, int *peer, int next) {
+    int current=gd_graph_match(analysis,selected,*peer),i,start=current>=0 ? current+1:0;
+    if (current>=0 && !next) return current;
+    for (i=0;i<analysis->pair_count;++i) {
+        int index=(start+i)%analysis->pair_count; const GD_GraphMatch *match=&analysis->pairs[index];
+        if (match->a!=selected && match->b!=selected) continue;
+        *peer=match->a==selected ? match->b:match->a; return index;
+    }
+    *peer=-1; return -1;
+}
+static void shared_details(const GD_ResourceGraph *graph, const GD_Layout *layout, const GD_GraphAnalysis *analysis, int selected, int pair, int x) {
+    int i,y=240;
+    DrawText(TextFormat("Shown: %d nodes / %d links",analysis->shown_nodes,analysis->shown_edges),x,146,14,muted);
+    if (selected<0) { DrawText("Select a node for shared neighbors",x,168,14,muted); return; }
+    DrawText(TextFormat("%d%s related | %d other neighbors",analysis->matched[selected],analysis->complete ? "":"+ retained",analysis->neighbors[selected]),x,168,14,muted);
+    DrawText("Next retained match",x+6,197,14,foreground);
+    if (pair>=0) {
+        const GD_GraphMatch *match=&analysis->pairs[pair];
+        int other=match->a==selected ? match->b:match->a;
+        DrawText(TextFormat("%.31s | %d%s shared",node_label(graph,other),match->shared,analysis->complete ? "":"+"),x,222,14,foreground);
+        for (i=0;i<2;++i) {
+            const GD_GraphFeature *feature=&analysis->features[i ? match->first_b:match->first_a];
+            const GD_ResourceRelation *relation=&graph->relations[layout->edges[feature->edge].key];
+            int c=graph->nodes[relation->activation].kind==GD_RESOURCE_CASE ? graph->nodes[relation->activation].case_index:-1,k;
+            if (c<0 && relation->participant>=0) for (k=0;k<graph->rules->case_count;++k) {
+                const GD_RuleCase *item=&graph->rules->cases[k];
+                if (relation->participant>=item->first_participant && relation->participant<item->first_participant+item->participant_count) { c=k; break; }
+            }
+            DrawText(TextFormat("%s | line %d",relation_name(relation->kind),relation->line),x,y,13,muted); y+=18;
+            if (c>=0) {
+                const GD_Record *record=&graph->model->records[graph->rules->sources[graph->rules->cases[c].source].record];
+                DrawText(TextFormat("%.43s",record->reference),x,y,13,muted); y+=18;
+            }
+        }
+    } else DrawText(analysis->complete ? "No shared-neighbor match":"No retained match; result is partial",x,222,14,muted);
+    DrawText(analysis->complete ? "S: matches | thick purple: example links":"PARTIAL: counts are lower bounds",x,320,13,muted);
+    DrawText("Shared incidence is not resource flow.",x,338,13,muted);
+}
+static void detail(const GD_ResourceGraph *graph, int selected, int x, int width, int y) {
+    const GD_ResourceNode *node; const GD_Record *source=NULL;
     DrawText("Selection",x,y,20,foreground); y+=32;
     if (selected<0 || selected>=graph->node_count) { DrawText("Select a node",x,y,16,muted); return; }
     node=&graph->nodes[selected];
@@ -103,11 +142,15 @@ static void detail(const GD_ResourceGraph *graph, int selected, int x, int width
 }
 int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const char *screenshot) {
     GD_Layout *layout=model->allocator.allocate(model->allocator.context,sizeof(*layout));
-    Camera2D camera={0}; int frame=0, selected=-1,held=-1,stale=0,result=0,paused=1,i; double next_check=0;
-    if (!layout || !resource_layout(graph,layout)) {
+    GD_GraphAnalysis *analysis=model->allocator.allocate(model->allocator.context,sizeof(*analysis));
+    Camera2D camera={0}; int frame=0, selected=graph->node_count ? 0:-1,held=-1,stale=0,result=0,paused=1,i;
+    int shared=1,peer=-1,pair=-1; double next_check=0;
+    if (!layout || !analysis || !resource_layout(graph,layout)) {
+        if (analysis) model->allocator.release(model->allocator.context,analysis);
         if (layout) model->allocator.release(model->allocator.context,layout);
         gd_error(model,"resources.layout","Cannot allocate or arrange resource preview",NULL,0); return 2;
     }
+    memset(analysis,0,sizeof(*analysis));
     SetConfigFlags(FLAG_WINDOW_RESIZABLE); InitWindow(1440,900,"Resource graph preview"); SetTargetFPS(60);
     for (i=0;i<120;++i) gd_layout_step(layout,-1);
     fit(&camera,layout,(Rectangle){0,100,1060,755});
@@ -132,6 +175,10 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             if (held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_move_node(layout,held,world.x,world.y);
         }
         if (!paused) gd_layout_step(layout,held);
+        if (gd_graph_analyze(layout,NULL,1,analysis)) peer=-1;
+        if (!frame && analysis->pair_count) selected=analysis->pairs[0].a;
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) shared=!shared;
+        pair=shared_choice(analysis,selected,&peer,shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,190,190,25}));
         BeginDrawing(); ClearBackground(background);
         DrawText("Resource graph preview",18,14,26,foreground);
         DrawText("Incomplete: routes and composed outcomes are not implemented. Lines are declarations, not proof of flow.",18,49,16,selected_color);
@@ -143,6 +190,8 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             Color color=rel->kind==GD_RESOURCE_ROLE_BINDING ? role_color : rel->kind==GD_RESOURCE_INVOCATION ? selected_color :
                 rel->kind==GD_RESOURCE_EXCLUSION ? (Color){230,125,125,255} : rel->kind==GD_RESOURCE_REQUIREMENT ? (Color){81,194,178,255} :
                 rel->kind==GD_RESOURCE_PRESERVATION ? (Color){180,201,119,255} : facet_color;
+            if (shared && pair>=0 && (i==analysis->features[analysis->pairs[pair].first_a].edge || i==analysis->features[analysis->pairs[pair].first_b].edge))
+                DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},7,role_color);
             DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},1.5f,color);
         }
         for (i=0;i<layout->node_count;++i) {
@@ -152,14 +201,18 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             DrawRectangleRoundedLinesEx((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,selected==n->key ? 3:1.5f,selected==n->key ? selected_color:color);
             DrawText(item->kind==GD_RESOURCE_CASE ? "case":item->kind==GD_RESOURCE_ROLE ? "resource role":"facet",(int)n->x-83,(int)n->y-19,11,color);
             DrawText(TextFormat("%.23s",node_label(graph,n->key)),(int)n->x-83,(int)n->y-3,14,foreground);
+            if (shared) DrawText(TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)n->x-83,(int)n->y+28,13,role_color);
         }
         EndMode2D(); EndScissorMode();
-        DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255}); detail(graph,selected,split+14,width-split-28);
+        DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
+        DrawText(shared ? "[x] Shared neighbors (click)":"[ ] Shared neighbors (click)",split+14,114,16,foreground);
+        if (shared) { DrawRectangleLines(split+14,190,190,25,muted); shared_details(graph,layout,analysis,selected,pair,split+14); }
+        detail(graph,selected,split+14,width-split-28,shared ? 365:150);
         if (stale) DrawText("STALE: sources changed. Close and reopen preview.",18,height-38,15,selected_color);
         else DrawText("Drag nodes | Right drag: pan | Wheel: zoom | F: fit | Space: settle/pause",18,height-38,15,muted);
         DrawText("Edges: teal condition | red exclusion | blue write | green preservation | purple role | gold call",18,height-20,13,muted);
         EndDrawing(); ++frame;
         if (screenshot && frame==frames && !gd_save_screenshot(screenshot)) { gd_error(model,"view.screenshot","Resource preview screenshot failed",screenshot,0); result=2; }
     }
-    CloseWindow(); model->allocator.release(model->allocator.context,layout); return result;
+    CloseWindow(); model->allocator.release(model->allocator.context,analysis); model->allocator.release(model->allocator.context,layout); return result;
 }
