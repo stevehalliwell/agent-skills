@@ -14,7 +14,7 @@ Explore moving Attendant from Node.js to C99 + CJIT. Core native commands now im
 - Keep each dataset self-sufficient and regeneratable. Markdown remains source of truth; define exact regeneration boundary during refinement.
 - Preserve useful CLI capabilities, except migration commands; redesign interactions against `cli-design` skill.
 - Keep transparent automatic repair for copied Markdown records. Report applied repairs through CLI and, if built, viewer warnings.
-- Human and agent own Git operations, diffs, and recovery. No Git awareness is needed in native Attendant for now; retain possible future uses as exploration.
+- Human and agent own Git mutations and recovery. Native CLI remains Git-independent. GUI may show files changed from last commit; broader Git features remain need-driven exploration.
 - Explore a reusable native core that could later support a raylib/cimgui visual collaboration layer without duplicating record rules. Primary value: shared context between human and agent, not a better standalone data editor.
 
 ## Anti-goals
@@ -26,7 +26,7 @@ Explore moving Attendant from Node.js to C99 + CJIT. Core native commands now im
 - Do not assume smaller size or better performance without evidence.
 - Do not change unrelated skills or tools.
 - Do not include dataset import, schema migration, or migration-plan execution in native CLI. Human/agent workflows can transform Markdown outside tool.
-- Do not invoke Git, create commits, or make CLI responsible for Git-based rollback.
+- Native CLI must not invoke Git, create commits or own Git-based rollback. Read-only Git awareness is allowed in GUI exploration; no automatic commits or recovery.
 - Do not make GUI exploration a commitment to build or ship GUI.
 
 ## Current behavior inventory
@@ -83,6 +83,20 @@ Preserve existing Attendant core features and broad behavior in native explorati
 - Apply `cli-design` skill. Preserve existing successful command-specific JSON shapes where practical; extend them with consistent repair and diagnostic reporting rather than wrapping all results in a new envelope. Preserve stdout data/stderr display separation; define stable machine-readable errors, field selection, empty results, agent mode, and exit semantics. Existing always-JSON output is established behavior; do not silently switch defaults based on TTY.
 - Viewer remains exploratory during this discussion. Decide whether to include it in a release after native Attendant reaches approximate parity with the existing runner. Show collections and their files, render and edit Markdown, and follow links between records. Investigate current cimgui-related Markdown preview/editing tooling; exact component and compatibility need verification. Agent can reveal locations without changing human selection; viewer reports the current human selection back to the tool for agent retrieval. Selection granularity and transport remain open.
 - Showing a proposed edit location or reporting a selection does not itself mean edit approval. Define approval separately if needed.
+
+### Human-facing GUI exploration
+
+Current focus: slim shared Markdown workspace, source editing and preview. Application/core stays C99; third-party native dependencies may include C++, as in Ink player. Preserve CJIT and Zig build/link paths; dependency compatibility still needs verification. No GUI implementation or launcher rollout authorized by exploration alone.
+
+- Markdown files remain authoritative at all times; DB is disposable projection. Human saves files; existing preparation refreshes DB on next interaction. Do not introduce DB ownership/synchronization or collaborative merge infrastructure as prerequisite for GUI.
+- Key interaction: select text, add comment such as “I don't think we need this part,” then send file, character range and comment to agent for response. Include selected text as proposed context so feedback remains understandable if file changes.
+- Feedback expresses user intent for agent to consider/respond to; it is not an automatic deletion command. Human can continue browsing/editing while agent works.
+- Front-matter references are navigable. Clicking a reference such as `depends_on: [tasks/example]` opens target record using declared reference field and collection configuration, not guessed filesystem paths. Array references expose each target separately. Missing targets remain visible as unresolved links.
+- Prefer top document tabs for multiple open files. Opening an already-open reference focuses its existing tab; keep current document available rather than replacing it. Workspace switching remains distinct from document tabs; exact layout is exploratory.
+- GUI may flag files changed from last commit. Broader Git features only if useful need appears. This does not change Git-independent CLI contract.
+- Agent may reveal intended locations without stealing human selection/focus. Selection alone is not edit approval.
+- Open: character coordinate convention, selection from source versus preview and mapping, saved versus unsaved selection, agent/session targeting and feedback delivery. Keep these local interaction decisions, not a general concurrent-editing project.
+- Existing Ink player GUI/CLI shared-session model is reference, not an adopted transport or component stack. Compare gamedesign workbench and proto-framework patterns before selecting implementation.
 
 ### Existing `.mjs` findings
 
@@ -224,14 +238,16 @@ Status: checkpoint committed as `daddf13`; in-place follow-up complete and valid
 ### Remaining refinement and parity work
 
 Current review direction:
-- Leave native launcher/compiler discovery and skill integration until last.
+- Leave native launcher/compiler discovery and skill integration until last, after correctness, representative speed and useful additional capabilities are demonstrated. Do not implement launcher now or invent new feature scope to satisfy gate.
+- Unicode corpus audit finds no affected category mismatches in 201 captured files. `²` occurs but classifies compatibly; synthetic `⁴`/supplementary-letter gap remains recorded, not a current-corpus blocker. Defer Unicode expansion unless real data/search needs change.
+- Record long-path/UNC/access-denied coverage as unverified; user expects low practical risk. Do not expand qualification now.
 - Current native/CJIT/Node and first-search strategy comparisons complete; retain workload/variance evidence in adoption report. Further tuning requires measured benefit; do not infer full-rebuild speed from bare-build versus first-search totals.
 - Native writers now target WAL/NORMAL with bounded lock waits and unchanged default checkpoint policy. Preserve temporary publication for full rebuilds and safety around live readers/sidecars; measure actual workload effects. Details and limits belong to incremental task above.
 - Keep current explicit capacities as starting limits. Growable arenas or expanding allocators remain possible later work, not a blocker for current datasets.
 - Defer query hints. Run full representative-data acceptance near end of review, before launcher rollout.
 - Use isolated copies of active `D:/Repos/proto-framework` and `D:/Repos/godot-proto` datasets for analysis; never run correction/preparation in originals. Capture source config and collection Markdown, not existing `.attendant/` projections. Keep pristine references separate from disposable runner workspaces.
 
-Dataset capture: `exploration/attendant-native/capture-datasets.mjs`; shared read-only inventory/containment checks in `dataset-files.mjs`. Commands/evidence in exploration README. Initial captured datasets contain 127 and 60 records. Both native compilers and `.mjs` pass strict validation without diagnostics or pending corrections. Full real-data acceptance remains pending.
+Dataset capture: `exploration/attendant-native/capture-datasets.mjs`; shared read-only inventory/containment checks in `dataset-files.mjs`. Commands/evidence in exploration README. Initial captured datasets contain 127 and 60 records. Both native compilers and `.mjs` pass strict validation without diagnostics or pending corrections. Copied basic workflow acceptance now passes 66 cases: both datasets × `.mjs`/CJIT/Zig × 11 cases, covering edits, creates/defaults/templates/references, SQL/search, rejected batches, body preservation, hidden/rename/delete transitions, cache rebuild and indexed handoff. Pristine copies unchanged; no runner invoked in original projects. Details, limits and evidence: `exploration/attendant-native/REAL-DATA-CHECKS.md`. Broader release acceptance and feature-benefit gate remain separate.
 
 Historical pre-incremental performance baseline: `exploration/attendant-native/benchmark.mjs`; method/results in `BENCHMARK.md` beside it. Both datasets × `.mjs`/CJIT/Zig × six scenarios passed 720 measured samples plus 108 separate warmups. External wall clock includes process/CLI startup through exit/output capture; excludes native compilation, fixture resets, edits and result checks. No `bench.h` needed for this boundary. Zig now defaults to `zig cc -O3` for all sources, including SQLite; no fast-math or explicit assertion removal added. Optimized rerun beats CJIT in all tested cases and `.mjs` on fresh/unchanged commands; larger dataset's changed-source rebuilds remain slower than `.mjs`. Optimized median CLI times are 1.95–3.18 times faster than initial unoptimized Zig run; separate shared-machine runs limit exact causal attribution. Record counts, query/search parity, projected/cache hashes, cache mtimes/sizes, FTS edits and source/pristine preservation passed. Optimized Zig passes source, projection/read, preparation and CLI suites in both config modes; eight harness tests and seven existing runner tests pass. Independent review drove cached-mtime regression. Optimized raw evidence: `exploration/attendant-native/build/bench/run-U3wwg9/`; original unoptimized evidence preserved at `build/bench/run-FRyLLI/` under same exploration. Those baseline runs predate incremental/WAL task above; launcher remains deferred.
 

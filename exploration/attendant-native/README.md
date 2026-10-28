@@ -66,7 +66,7 @@ Initial capture: `build/real-data/capture-C41Ig7/`.
 - `.mjs`, CJIT and Zig strict validation passed both datasets: no diagnostics or pending corrections. `.mjs schema` passed without changing copied source. Pristine hashes stayed unchanged.
 - `manifest.json` records per-file hashes; `baseline-analysis.json` summarizes initial checks. Full command outputs stay alongside dataset workspaces.
 
-These capture checks are not final real-data acceptance. Use disposable workspaces for mutations. Copy-time filesystem timestamps/creation times need not match originals.
+Capture alone is not final real-data acceptance. Copied workflow suite now passes 66 cases across both datasets and `.mjs`/CJIT/Zig: [REAL-DATA-CHECKS.md](REAL-DATA-CHECKS.md). Run `node exploration/attendant-native/real-data-check.mjs --manifest <capture/manifest.json>` for fresh owned copies, edits, queries/search, source preservation and cache/handoff checks. No affected Unicode category mismatches in captured data; defer wider Unicode and Windows path qualification. Copy-time filesystem timestamps/creation times need not match originals.
 
 ### CLI performance baseline
 
@@ -100,7 +100,7 @@ Safe SQLite tuning experiment: [SQLITE-TUNING.md](SQLITE-TUNING.md). Six experim
 
 Disposable-cache/lazy-FTS experiments: [SQLITE-DISPOSABLE.md](SQLITE-DISPOSABLE.md). Twelve isolated Zig profiles plus Node passed 3042 measured + 468 warmups, then 676 measured + 104 warmups on never-searched sync/edit workloads. Lazy FTS and reduced routine integrity scanning show larger benefits than cache-cap tuning. SQL failure/process-kill checks and invalidating-lazy reader/rollback tests passed for those experimental binaries; no power-loss qualification. Current persistent lazy implementation differs; see adoption report. Build/profile tools remain separate from normal builds.
 
-Review direction: partial SQLite updates, WAL/NORMAL and measured deferred-FTS/read policy now implemented. Current capacity limits are accepted starting bounds; growable allocators may follow. Full real-data acceptance belongs near end; launcher/skill integration stays last. See `attendant-native-discussion.md` for current scope.
+Review direction: partial SQLite updates, WAL/NORMAL and measured deferred-FTS/read policy now implemented. Current capacity limits are accepted starting bounds; growable allocators may follow. Copied basic workflows now pass; broader release acceptance remains separate. Launcher/skill integration stays last, gated by correctness, representative speed and additional feature benefits. See `attendant-native-discussion.md` for current scope.
 
 ## Commands
 
