@@ -1,12 +1,12 @@
 # Native Attendant exploration
 
-C99 implements core commands: `doctor`, `validate`, `sync`, `schema`, `query`, `search`, `add-table`, `create`, and `update`. No Node runtime needed. Native and existing `.mjs` commands consume either builder's layout-2 projection on shared fixtures. Use native consumers for lossless extended integer handling.
+C99 implements core commands: `doctor`, `validate`, `sync`, `schema`, `query`, `search`, `add-table`, `create`, and `update`. No Node runtime needed. Cold native caches omit FTS; first search publishes full indexed rebuild, then keeps indexes current. Indexed layout-2 projections remain shared with `.mjs`; cold native layout 3 forces safe legacy rebuild. Use native consumers for lossless extended integer handling.
 
-Windows exploration, not full YAML parity or replacement rollout. **Reads can now correct Markdown metadata.** Use generated datasets for review; do not use live production collections yet. Migration/import, Git awareness, incremental reconciliation, concurrent writers and viewer remain excluded. Existing skill still uses `.mjs`.
+Windows exploration, not full YAML parity or replacement rollout. **Reads can now correct Markdown metadata.** Use generated datasets for review; do not use live production collections yet. Migration/import, Git awareness, concurrent source writers and viewer remain excluded. Existing skill still uses `.mjs`.
 
 ## Build and check
 
-Requires Windows x64, Git Bash, installed CJIT or Zig. No automatic downloads or installs. `CJIT` and `ZIG` override compiler paths. Compiler paths are independent; Zig does not need CJIT or `build.h` bootstrap.
+Requires Windows x64, Git Bash, installed CJIT or Zig. No automatic downloads or installs. `CJIT` and `ZIG` override compiler paths. Compiler paths are independent; Zig does not need CJIT or `build.h` bootstrap. Zig builds all sources with `-O3` by default; no fast-math or explicit assertion removal.
 
 From repository root:
 
@@ -22,6 +22,12 @@ node exploration/attendant-native/prepare-check.mjs \
 node exploration/attendant-native/cli-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
+node exploration/attendant-native/incremental-check.mjs \
+  exploration/attendant-native/build/projection-cjit.exe \
+  exploration/attendant-native/build/projection-zig.exe
+node exploration/attendant-native/search-mode-check.mjs \
+  exploration/attendant-native/build/projection-cjit.exe \
+  exploration/attendant-native/build/projection-zig.exe
 node exploration/attendant-native/source-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
@@ -34,12 +40,67 @@ Suites replace generated copies under ignored `build/review/`, including paths w
 
 - `results.json`: native versus independent `.mjs` projection rows, columns, cache, hashes, FTS and edges. Requires `.mjs sync` to report `reused`, not silently rebuild.
 - `read-results.json`: 23 oracle comparisons and 27 rejection cases per scenario; both projection producers, input transports, live usage, duplicate parameter semantics, UTF-8, byte/row limits, budgets and deterministic ties.
-- `prepare-results.json`: 34 lifecycle cases per scenario; missing/changed/broken projection, equal-stat edits, collection changes, malformed-source skipping, SQL/publication failure, active WAL and genuine hot rollback journal preservation.
+- `prepare-results.json`: 34 lifecycle cases per scenario; missing/changed/broken projection, equal-stat edits, collection changes, malformed-source skipping, SQL/build failures, bounded busy-writer refusal and genuine hot rollback journal preservation.
+- `incremental-results.json`: 11 focused cases per scenario; changed-only row/FTS writes, metadata-only refresh, mid-delta transaction rollback, ID swaps, global blocking/unblocking, held WAL snapshots, shared create/update refresh, non-writing doctor and full-rebuild refusal with active readers.
+- `search-mode-results.json`: 9 cases per scenario; cold commands without FTS, failed/private/reader-blocked first upgrade, full-replacement proof, persistent incremental maintenance, enabled rebuilds and legacy format handoff.
 - `cli-results.json`: 19 cases and 18 rejected batches per scenario. Covers read-only doctor/validation, strict parity, corrections, source/body preservation, Unicode encoding, defaults/templates/UUIDs, malformed and 5000-deep YAML, duplicate heuristics, schema errors, collection capacity, partial publication and post-write projection failure.
 
 - `source-results.json`: 10 focused source-contract groups per scenario; exact integer limits/SQL params, JSON-backed `u64`, mixed enums including TEXT-affinity precision/reuse, finite floats and source round-trip, overflow rejection, 10 invalid timestamp cases, UTF-8/NEL/LS/PS preservation, cache/projection precision invalidation and unchanged configured path spelling.
 
-SQLite file bytes need not match across builders. Source bytes and logical results are compared where applicable. No performance or footprint claim.
+SQLite file bytes need not match across builders. Source bytes and logical results are compared where applicable. These correctness suites do not measure performance or footprint.
+
+## Real dataset analysis
+
+Capture current active datasets without running Attendant in originals:
+
+```sh
+node exploration/attendant-native/capture-datasets.mjs \
+  D:/Repos/proto-framework D:/Repos/godot-proto
+```
+
+Tool creates unique ignored `build/real-data/capture-*` directory. JSON summary identifies `manifest.json`, source sizes/counts, and each dataset's `pristine`, `mjs`, `cjit` and `zig` folders. Copy original config and immediate collection Markdown byte-for-byte; do not copy `.attendant/`, Git state or unrelated project files. Reject external collections and links. Verify copied hashes and source inventories before/after capture; no atomic cross-file snapshot guarantee. Each invocation creates fresh workspaces, never overwrites previous capture.
+
+Initial capture: `build/real-data/capture-C41Ig7/`.
+- `proto-framework`: 93 tasks, 34 decisions; 1,508,608 captured source bytes; largest file 89,360 bytes.
+- `godot-proto`: 55 tasks, 5 decisions; 471,535 captured source bytes; largest file 38,324 bytes.
+- `.mjs`, CJIT and Zig strict validation passed both datasets: no diagnostics or pending corrections. `.mjs schema` passed without changing copied source. Pristine hashes stayed unchanged.
+- `manifest.json` records per-file hashes; `baseline-analysis.json` summarizes initial checks. Full command outputs stay alongside dataset workspaces.
+
+These capture checks are not final real-data acceptance. Use disposable workspaces for mutations. Copy-time filesystem timestamps/creation times need not match originals.
+
+### CLI performance baseline
+
+Compile separately, then benchmark prebuilt executables:
+
+```sh
+bash exploration/attendant-native/build.sh cjit
+bash exploration/attendant-native/build.sh zig
+node --test exploration/attendant-native/benchmark.test.mjs
+node exploration/attendant-native/benchmark.mjs \
+  --manifest exploration/attendant-native/build/real-data/capture-C41Ig7/manifest.json \
+  --runs 20 --warmup 3
+```
+
+`--cjit <exe>` and `--zig <exe>` override prebuilt paths. Harness never invokes compilers. All three runners use one external monotonic wall clock: immediately before process launch through exit/output capture. Includes CLI startup and parent handoff; excludes compilation, copying/resetting fixtures, source edits, JSON parsing and correctness checks. `bench.h` is unnecessary for this boundary; internal timers would not capture startup.
+
+- Warm-filesystem CLI tests, not cold-disk tests or isolated language comparisons. Every command starts a fresh process. Warmups prime OS/file/executable caches, not a persistent VM. Runner order rotates each round; all timed commands run serially. Other machine activity is not controlled.
+- Six scenarios: fresh `sync`, unchanged `sync`/`query`/`search`, one-record body edit then `sync`, and mtime-only change then `sync`. Query returns 25 ordered tasks; search requests 20 `task` hits. Both workloads must return data.
+- Create fresh owned copies under ignored `build/bench/run-*`; never use manifest's original/working paths as mutation targets. Validate source hashes and config containment first. Share read-only inventory checks with capture tool through `dataset-files.mjs`.
+- Normalize copied source mtimes to `2026-01-01T00:00:00.000Z`. Build each runner's baseline there; restore closed DB/sidecar snapshots and original target bytes before every trial. Mutation trials advance target mtime by 60 seconds. Mtime-only trial leaves bytes unchanged. Copies/reset work intentionally warm filesystem caches.
+- Validate strict sources and schemas/usage before timing. Compare query/search with `.mjs`, allowing documented score rounding; check record counts, projected source hashes, cached mtime/size/hash, edited-body FTS hits and source preservation outside timers. Pristine captures stay unchanged. Stop on failed checks; partial reports have `complete: false`.
+- Stdout: one JSON summary. Stderr: progress. `report.json` contains environment, executable/script hashes, SQLite versions, dataset sizes, state counts, medians, p90, min/max and means. `samples.jsonl` retains every warmup/measured sample, command, timing and stderr. Warmups never enter summary statistics; no outlier trimming. Retain generated workspaces for inspection.
+
+Zig default is `-O3`; CJIT build flags remain unchanged. Record build flags/compiler versions when interpreting results; executable hashes alone do not identify compiler options. No timing threshold or speedup requirement.
+
+Current deferred-FTS/mmap/integrity-policy adoption: [SQLITE-ADOPTION.md](SQLITE-ADOPTION.md). First search performs full private rebuild; later edits maintain enabled indexes. Normal builds use 64 MiB mmap and build/doctor integrity scans, not per-lookup scans. WAL/NORMAL stays default. Current CJIT/Zig/Node and matched late/full comparison passed 2376 measured + 264 warmups, then 216 + 24 in final first-search run. Matched timing does not show full rebuild faster; requested strategy retained.
+
+Historical incremental/WAL baseline: [BENCHMARK.md](BENCHMARK.md). Both datasets × three runners × six scenarios passed 720 measured samples plus 108 warmups. Body edits now report `updated` and mtime-only changes `reused` for all runners. Historical optimized/unoptimized rebuild runs remain preserved.
+
+Safe SQLite tuning experiment: [SQLITE-TUNING.md](SQLITE-TUNING.md). Six experimental Zig profiles interleaved with Node passed 1764 measured samples plus 252 warmups. That stage favored mmap; bounded mmap adoption and newer policy results are in current adoption report.
+
+Disposable-cache/lazy-FTS experiments: [SQLITE-DISPOSABLE.md](SQLITE-DISPOSABLE.md). Twelve isolated Zig profiles plus Node passed 3042 measured + 468 warmups, then 676 measured + 104 warmups on never-searched sync/edit workloads. Lazy FTS and reduced routine integrity scanning show larger benefits than cache-cap tuning. SQL failure/process-kill checks and invalidating-lazy reader/rollback tests passed for those experimental binaries; no power-loss qualification. Current persistent lazy implementation differs; see adoption report. Build/profile tools remain separate from normal builds.
+
+Review direction: partial SQLite updates, WAL/NORMAL and measured deferred-FTS/read policy now implemented. Current capacity limits are accepted starting bounds; growable allocators may follow. Full real-data acceptance belongs near end; launcher/skill integration stays last. See `attendant-native-discussion.md` for current scope.
 
 ## Commands
 
@@ -50,7 +111,7 @@ native='exploration/attendant-native/build/projection-cjit.exe'
 project='exploration/attendant-native/build/review/projection-cjit-relative café Ω'
 "$native" doctor -p "$project"
 "$native" validate --strict -p "$project"
-"$native" sync -p "$project"  # state: reused or rebuilt
+"$native" sync -p "$project"  # state: reused, updated or rebuilt
 "$native" schema -p "$project"
 "$native" query -p "$project" \
   -s 'SELECT name,status FROM tasks WHERE status=:status' -P '{"status":"active"}'
@@ -101,11 +162,17 @@ Demo create/add-table names must not already exist; rerun acceptance to reset ge
 
 ## Projection and read safety
 
-`prepare.h` scans/hashes/validates bounded source, then reuses or fully rebuilds in process. No Node subprocess. Reuse checks layout/config/schema metadata, SQLite quick check, source path/collection/hash/size/mtime, decoded front matter, precision-sensitive scalar values and required table/cache counts. Compare large integers directly with SQLite INTEGER values, or exact decimal TEXT for string-first mixed enums: old float JSON can have identical digits yet a rounded projected value. Check floats stored in TEXT too; serialize numbers explicitly rather than use SQLite's lower-precision double-to-TEXT conversion. Changed interpretation invalidates stale projections even when source bytes/stat match.
+`prepare.h` scans/hashes/parses/validates bounded source, then reuses, incrementally reconciles rows or rebuilds in process. Full source validation is retained: cached JSON cannot reconstruct all exact typed numbers; equal-stat edits still require hashes. No Node subprocess. Reuse checks search mode/layout/config/schema metadata, source path/collection/hash/size/mtime, decoded front matter, precision-sensitive scalar values and required table/cache counts. Compare large integers directly with SQLite INTEGER values, or exact decimal TEXT for string-first mixed enums: old float JSON can have identical digits yet a rounded projected value. Check floats stored in TEXT too; serialize numbers explicitly rather than use SQLite's lower-precision double-to-TEXT conversion. Changed interpretation invalidates stale projections even when source bytes/stat match.
 
-- Detect additions, edits, deletion, rename, hidden state and config/schema changes, including equal-size/equal-mtime edits. Mtime-only changes fully rebuild, unlike `.mjs` metadata-only reconciliation. Usage text remains live without rebuild.
-- Build temporary DB before replacing published DB. SQL/build/publication failure preserves old DB. Source corrections committed before failure are separate and reported.
-- Sequential use only. WAL/SHM sidecars and rollback journals block replacement. Native never removes sidecars or recovers journals. Stop consumers; use SQLite recovery or remove disposable projection before retrying.
+- Detect additions, edits, deletion, rename and hidden/blocked transitions, including equal-size/equal-mtime edits. Delete affected set before reinserting rows/cache/FTS/trigram entries; untouched rows/index entries stay in place. Rebuild global diagnostics and reference edges when projected source changes. `create`/`update` use same incremental refresh after source publication.
+- Mtime-only changes update cache metadata without row/index churn and return `reused`, matching `.mjs`. Projected `updated_at` stays as last row projection until content changes or full rebuild. Usage text remains live without rebuild.
+- Missing/config/schema/incompatible/corrupt projections still use temporary full rebuild and atomic file replacement. Checkpoint/close temporary DB before publishing; SQL/build/publication failure preserves old logical projection. Source corrections committed before failure are separate and reported.
+- Writers use `journal_mode=WAL`, `synchronous=NORMAL`, 2000 ms SQLite busy timeout and default 1000-page automatic checkpoint. Replan delta under `BEGIN IMMEDIATE`; commit affected rows/cache/indexes/diagnostics/edges atomically. SQL errors roll back projection transaction. NORMAL retains SQLite consistency but may lose recent projection commits after power loss; Markdown remains authoritative.
+- WAL permits snapshot readers during incremental writes. Full replacement still requires no active consumers: SQLite checkpoints/closes existing WAL, then native refuses remaining published sidecars rather than deleting them. Hot rollback journals remain protected; recover externally with SQLite or remove disposable state after stopping consumers. No concurrent source-writer or coordinated CLI/GUI guarantee.
+- Cold caches omit FTS. First search builds/validates complete indexed replacement, then persists `fts_enabled=1`; later source changes maintain indexes incrementally. Known enabled state survives contract rebuilds. First replacement can be blocked by active consumers. Schema reports declared FTS columns before physical creation.
+- Run `PRAGMA optimize`, `quick_check` and snapshot validation after full build, before publication. Doctor retains full integrity inspection. Do not scan whole DB before every healthy read/write preparation. Query/search consumers remain read-only/query-only.
+- Request bounded 64 MiB mmap on shared projection opens. Cache/temp sizes and automatic checkpoint defaults unchanged. No default journal/synchronous OFF or speculative indexes. WAL/OFF combination remains experimental; WAL is not universally fastest for reads.
+- Doctor remains non-writing. Empty WAL/SHM leftovers can be inspected immutably while holding main-file read lock against writers. Nonempty WAL or active writer-capable handles report conservatively stale instead of ignoring pending WAL pages.
 - After preparation, user SQL uses read-only/query-only connection and authorizer. Cannot mutate data, attach DBs, read private cache/metadata or load extensions. One statement; SQL comments unsupported.
 - Sync returns `collections`, `records`, `diagnostics`, `state`. Query/search retain `columns`, `rows`, `returned`, `truncated`, with correction/diagnostic reports when relevant. Empty results keep columns; zero limit returns zero rows; quoted semicolons plus trailing terminator work.
 - Success emits one JSON value. Failures emit `{ "error": { "code": "...", "message": "..." }, "failed": "path", "written": ["..."] }`; `failed` identifies failed source publication/staging when known, `written` omitted when empty. Explanation on stderr, exit 1. Strict validation/unhealthy doctor return their diagnostic result with exit 1. No TTY-dependent output or prompts.
@@ -114,7 +181,7 @@ Demo create/add-table names must not already exist; rerun acceptance to reset ge
 
 ## Compatibility and limits
 
-`projection.c` mirrors layout `2`: collection columns, metadata/cache, diagnostics, reference edges, Unicode and trigram FTS5. Schema hashes use literal `\\0` separators. Reuse needs configured directory spelling, absolute paths, SHA-256 and filesystem timestamps. Windows CNG supplies hashes and secure UUID randomness.
+`projection.c` uses cold layout `3` with `fts_enabled=0` and no FTS objects. Indexed layout `2` adds Unicode/trigram FTS5 and `fts_enabled=1`; missing flag on legacy layout `2` means already indexed. Both include collection columns, metadata/cache, diagnostics and reference edges. Schema hashes use literal `\\0` separators. Reuse needs configured directory spelling, absolute paths, SHA-256 and filesystem timestamps. Windows CNG supplies hashes and secure UUID randomness.
 
 - Tested Windows x64, CJIT v1.2.0, Zig 0.17.0, SQLite 3.53.0, LibYAML 0.2.5, Node v24.16.0.
 - 128 MiB caller-owned arena plus 12 MiB JSON workspace; parser/SQLite allocate independently. Upper bounds: 32 collections, 128 schema fields each, 256 front-matter keys, 1024 scalar items per array, 4096 records total, 4 MiB per source file. Combined arena limits may fail earlier. SQL/path/output capacities also fail explicitly.
@@ -125,7 +192,7 @@ Demo create/add-table names must not already exist; rerun acceptance to reset ge
 - Float JSON uses tested round-trip formatting, not full ECMAScript serialization equivalence. Retain float syntax when a plain integer token would change value or select a rejected unsigned scalar. Source YAML always retains float syntax. Readback compares typed values, not serialized JSON text. Private cache/FTS keeps prior float spelling to preserve search terms; cache is not source reconstruction. Integer-index key ordering matches runner for FTS content. Differential tests compare shared-fixture JSON arrays semantically; focused tests separately check exact typed numbers.
 - Configured path source spelling stays untouched. Resolve paths for local filesystem access; DB paths need not travel across machines or repositories. Windows NLS classifies search words; general Unicode-category/version, long-path and UNC behavior remain unverified. No locale collation or ICU dependency.
 - Intentional `.mjs` differences: strict canonical timestamps instead of general date parsing; restricted flat YAML; exact typed integer handling without JavaScript safe-integer limits; deterministic byte-order search ties. Layout reuse remains tested on shared fixtures, not every input the JavaScript runner accepts.
-- No incremental reconciliation, cross-file transaction, simultaneous CLI/GUI protocol, body editor, migration/import, Git invocation, viewer or skill launcher rollout. Diagnostic messages and unsupported-input behavior are not complete `.mjs` equivalence.
+- No cross-file source transaction, simultaneous CLI/GUI protocol, body editor, migration/import, Git invocation, viewer or skill launcher rollout. Diagnostic messages and unsupported-input behavior are not complete `.mjs` equivalence.
 
 ## Dependencies and review
 

@@ -94,6 +94,7 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
     assert.equal(record.fields.priority, 0); assert.deepEqual(record.fields.labels, []);
     assert.ok(readFileSync(record.path, 'utf8').endsWith(body));
   }
+  native('search', '-q', 'Template'); // Indexed format is the legacy interoperability boundary.
   assert.equal(oracle('sync').state, 'reused');
   assert.deepEqual(native('query', '-s', 'SELECT name,status,priority,labels FROM notes ORDER BY name'), oracle('query', '-s', 'SELECT name,status,priority,labels FROM notes ORDER BY name'));
   cases.push('create batch defaults UUID metadata templates and runner reuse');

@@ -145,7 +145,7 @@ static int query_progress(void *opaque) {
 static void open_snapshot(context *c, read_options *options) {
     const char *path = full_path(c, options->project, ".attendant/attendant.sqlite");
     c->error_code = "projection-open";
-    if (sqlite3_open_v2(path, &c->db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) fail(c, "Cannot open prepared projection");
+    if (projection_open(c, path, SQLITE_OPEN_READONLY) != SQLITE_OK) fail(c, "Cannot open prepared projection");
     sql(c, "PRAGMA query_only=ON; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=0;");
     sqlite3_limit(c->db, SQLITE_LIMIT_LENGTH, OUTPUT_CAPACITY);
     sqlite3_limit(c->db, SQLITE_LIMIT_SQL_LENGTH, TEXT_CAPACITY);
@@ -504,7 +504,10 @@ static const char *schema_json(context *c, read_options *options) {
         json_property(&b, out, OUTPUT_CAPACITY, "table", fts);
         json_check(jsonb_key(&b, out, OUTPUT_CAPACITY, "columns", 7));
         {
-            const char *columns = columns_json(c, fts);
+            /* Describe supported search schema even before physical creation. */
+            const char *columns = c->fts_enabled ? columns_json(c, fts) :
+                "[{\"cid\":0,\"name\":\"record_id\",\"type\":\"\",\"notnull\":0,\"dflt_value\":null,\"pk\":0},"
+                "{\"cid\":1,\"name\":\"content\",\"type\":\"\",\"notnull\":0,\"dflt_value\":null,\"pk\":0}]";
             json_check(jsonb_token(&b, out, OUTPUT_CAPACITY, columns, strlen(columns)));
         }
         json_check(jsonb_object_pop(&b, out, OUTPUT_CAPACITY)); json_check(jsonb_object_pop(&b, out, OUTPUT_CAPACITY));
@@ -639,7 +642,7 @@ static int native_read_main(context *c, int argc, char **argv) {
     if (options.params) query_parameters(c, NULL, options.params);
     c->error_code = "projection-prepare";
     {
-        const char *state = prepare_projection(c, options.project, PROJECTION_REUSE);
+        const char *state = prepare_projection(c, options.project, !strcmp(options.command, "search") ? PROJECTION_SEARCH : PROJECTION_REUSE);
         if (!strcmp(options.command, "sync")) { print_sync(c, state); return 0; }
     }
     open_snapshot(c, &options);

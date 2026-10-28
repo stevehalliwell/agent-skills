@@ -320,6 +320,6 @@ static int native_write_records(context *c, read_options *options) {
     }
     c->rollback_count = 0; c->staged_count = 0;
     c->error_code = "projection-refresh";
-    reload_records(c); projection_requirements(c); rebuild_projection(c, options->project);
+    reload_records(c); refresh_projection(c, options->project, PROJECTION_REUSE);
     puts(output); return 0;
 }

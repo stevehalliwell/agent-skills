@@ -196,6 +196,7 @@ for (const { executable, project, variant } of scenarios) {
   assert.equal(databaseHash(), runnerSnapshot, 'Native consumption replaced or wrote runner DB');
   rmSync(join(project, '.attendant'), { recursive: true, force: true });
   run(executable, [project]);
+  native('search', '-q', 'lantern'); // Indexed layout remains reusable by legacy runner.
   assert.equal(oracle('sync').state, 'reused');
   assert.deepEqual(sourceHashes(project), frozen);
   const tieProject = `${project} ties`;

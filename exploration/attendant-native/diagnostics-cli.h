@@ -69,12 +69,22 @@ static int native_doctor(context *c, read_options *options) {
     if (directory == INVALID_HANDLE_VALUE) healthy = 0; else CloseHandle(directory);
     doctor_check(&b, out, "state-write", directory != INVALID_HANDLE_VALUE ? "ok" : "error", directory != INVALID_HANDLE_VALUE ? "Project root is writable for generated state." : "Project root is not writable for generated state.", NULL);
     if (GetFileAttributesW(wide(c, path)) != INVALID_FILE_ATTRIBUTES) {
-        const char *suffixes[] = {"-wal", "-shm", "-journal"};
-        int i, sidecar = 0;
-        for (i = 0; i < 3; i++) if (GetFileAttributesW(wide(c, format_text(c, "%s%s", path, suffixes[i]))) != INVALID_FILE_ATTRIBUTES) sidecar = 1;
+        WIN32_FILE_ATTRIBUTE_DATA wal;
+        HANDLE stable = CreateFileW(wide(c, path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        DWORD journal = GetFileAttributesW(wide(c, format_text(c, "%s-journal", path)));
+        DWORD journal_error = GetLastError();
+        int sidecar = journal != INVALID_FILE_ATTRIBUTES || (journal_error != ERROR_FILE_NOT_FOUND && journal_error != ERROR_PATH_NOT_FOUND);
+        if (GetFileAttributesExW(wide(c, format_text(c, "%s-wal", path)), GetFileExInfoStandard, &wal)) {
+            if ((wal.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || wal.nFileSizeHigh || wal.nFileSizeLow) sidecar = 1;
+        } else {
+            DWORD wal_error = GetLastError();
+            if (wal_error != ERROR_FILE_NOT_FOUND && wal_error != ERROR_PATH_NOT_FOUND) sidecar = 1;
+        }
         projection = "stale";
-        /* Immutable URI prevents even WAL/SHM creation during health inspection. */
-        if (!sidecar) {
+        /* Read-only consumers can leave empty WAL/SHM files. Freeze the main
+           file against writers, then inspect immutably only without WAL data.
+           Active writers/nonempty WAL remain conservatively stale, not ignored. */
+        if (!sidecar && stable != INVALID_HANDLE_VALUE) {
             size_t length = strlen(path), used = 0, j;
             char *encoded = allocate(c, length * 3 + 1);
             for (j = 0; j < length; j++) {
@@ -84,14 +94,12 @@ static int native_doctor(context *c, read_options *options) {
                 else encoded[used++] = (char)byte;
             }
             if (sqlite3_open_v2(format_text(c, "file:%s?immutable=1", encoded), &c->db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, NULL) == SQLITE_OK) {
-                sqlite3_stmt *statement = NULL;
-                int quick = sqlite3_prepare_v2(c->db, "PRAGMA quick_check", -1, &statement, NULL) == SQLITE_OK && sqlite3_step(statement) == SQLITE_ROW &&
-                    sqlite3_column_type(statement, 0) == SQLITE_TEXT && !strcmp((const char *)sqlite3_column_text(statement, 0), "ok");
-                sqlite3_finalize(statement);
+                int quick = snapshot_integrity(c);
                 projection = !quick ? "corrupt" : c->config_hash && snapshot_matches(c) ? "fresh" : "stale";
             } else projection = "corrupt";
             sqlite3_close(c->db); c->db = NULL;
         }
+        if (stable != INVALID_HANDLE_VALUE) CloseHandle(stable);
     }
     if (strcmp(projection, "fresh")) healthy = 0;
     doctor_check(&b, out, "projection", !strcmp(projection, "fresh") ? "ok" : "error", format_text(c, "Projection is %s.", projection), NULL);

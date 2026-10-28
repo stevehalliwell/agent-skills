@@ -53,9 +53,15 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
     const published = hash(database);
     assert.deepEqual(native('sync'), { collections: 2, records: 3, diagnostics: [], state: 'reused' });
     assert.equal(hash(database), published, `${label}: unchanged native sync wrote DB`);
+    // Cold layout intentionally rejects legacy consumption; enable FTS before
+    // asserting indexed-layout interoperability and unchanged runner reuse.
+    const mode = new DatabaseSync(database, { readOnly: true });
+    const unindexed = mode.prepare("SELECT value FROM __attendant_metadata WHERE key='fts_enabled'").get()?.value === '0'; mode.close();
+    if (unindexed) native('search', '-q', 'lantern');
+    const indexed = hash(database);
     assert.equal(oracle('sync').state, 'reused', `${label}: runner rejected native DB`);
     assert.deepEqual(sourceHashes(project), frozen, `${label}: runner repaired source`);
-    assert.equal(hash(database), published, `${label}: runner wrote DB`);
+    assert.equal(hash(database), indexed, `${label}: runner wrote DB`);
     cases.push(label);
   }
   for (const args of [['sync'], ['schema'], ['query', '-s', 'SELECT count(*) n FROM tasks'], ['search', '-q', 'lantern']]) {
@@ -75,7 +81,7 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
   // Hashing must detect an equal-size edit even with the exact cached mtime.
   const seconds = 1_790_000_000;
   utimesSync(first, seconds, seconds);
-  check('mtime-only full rebuild', () => assert.equal(native('sync').state, 'rebuilt'));
+  check('mtime-only cache refresh', () => assert.equal(native('sync').state, 'reused'));
   const prior = statSync(first);
   writeFileSync(first, readFileSync(first, 'utf8').replace('projection lantern.', 'projection beacons.'));
   utimesSync(first, seconds, seconds);
@@ -96,7 +102,7 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
   renameSync(added, renamed);
   writeFileSync(renamed, readFileSync(renamed, 'utf8').replace('name: third', 'name: renamed'));
   frozen = sourceHashes(project);
-  assert.equal(native('sync').state, 'rebuilt');
+  assert.equal(native('sync').state, 'updated');
   assert.deepEqual(native('query', '-s', "SELECT name FROM tasks WHERE name='renamed'").rows, [{ name: 'renamed' }]);
   assert.equal(oracle('sync').state, 'reused'); assert.deepEqual(sourceHashes(project), frozen); cases.push('renamed record');
   rmSync(renamed);
@@ -104,7 +110,7 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
 
   writeFileSync(hidden, readFileSync(hidden, 'utf8') + '\nHidden source changed.\n');
   check('hidden record edit', () => {
-    assert.equal(native('sync').state, 'rebuilt');
+    assert.equal(native('sync').state, 'updated');
     assert.equal(native('search', '-q', '"hidden-only-token"').returned, 0);
   });
   const hiddenText = readFileSync(hidden, 'utf8');
@@ -114,7 +120,7 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
   assert.equal(native('sync').records, 4); assert.equal(oracle('sync').state, 'reused');
   assert.deepEqual(sourceHashes(project), frozen); cases.push('hidden to visible');
   writeFileSync(hidden, hiddenText);
-  check('visible to hidden', () => assert.equal(native('sync').state, 'rebuilt'));
+  check('visible to hidden', () => assert.equal(native('sync').state, 'updated'));
 
   writeFileSync(config, initialConfig + '\n# changed config\n');
   check('changed config via query', () => native('query', '-s', 'SELECT name FROM tasks'));
@@ -163,7 +169,7 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
     assert.deepEqual(sourceHashes(project), frozen);
   }
   rmSync(bad);
-  assert.equal(native('sync').state, 'rebuilt'); published = hash(database);
+  assert.equal(native('sync').state, 'updated'); published = hash(database);
   cases.push('malformed source reported skipped unchanged across all commands');
   // Force a failure during SQL construction, after opening the temporary DB.
   writeFileSync(config, initialConfig + '\nrecords/decisions as TASKS\n');
@@ -181,29 +187,29 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
   cases.push('SQL step failure preserves DB and removes temporary file');
   check('recovery after invalid source', () => assert.equal(native('sync').state, 'reused'));
 
-  // Windows SQLite handles deny replacement while the published DB is open.
+  // WAL writers wait only for bounded time; failed updates preserve old data.
   writeFileSync(first, readFileSync(first, 'utf8') + '\nPublication failure test.\n');
   frozen = sourceHashes(project);
   connection = new DatabaseSync(database); connection.exec('BEGIN EXCLUSIVE');
   try {
     const failure = run(executable, ['sync', '-p', project], 1);
-    assert.match(failure.error.message, /Cannot publish database/);
+    assert.match(failure.error.message, /database is locked/);
     assert.equal(hash(database), published); assert.deepEqual(sourceHashes(project), frozen);
     assert.ok(!readdirSync(join(project, '.attendant')).some(name => name.startsWith('native-')));
   } finally { connection.exec('ROLLBACK'); connection.close(); }
-  cases.push('publication failure preserves DB and removes temporary file');
-  check('recovery after publication failure', () => assert.equal(native('sync').state, 'rebuilt'));
+  cases.push('busy writer preserves DB and creates no temporary file');
+  check('recovery after busy writer', () => assert.equal(native('sync').state, 'updated'));
   writeFileSync(first, readFileSync(first, 'utf8') + '\nWAL refusal test.\n');
   frozen = sourceHashes(project);
   connection = new DatabaseSync(database); connection.exec('PRAGMA journal_mode=WAL; BEGIN IMMEDIATE');
   const walPublished = hash(database);
   try {
-    assert.match(run(executable, ['sync', '-p', project], 1).error.message, /Existing WAL sidecars/);
+    assert.match(run(executable, ['sync', '-p', project], 1).error.message, /database is locked/);
     assert.equal(hash(database), walPublished); assert.deepEqual(sourceHashes(project), frozen);
     assert.ok(!readdirSync(join(project, '.attendant')).some(name => name.startsWith('native-')));
   } finally { connection.exec('ROLLBACK; PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE'); connection.close(); }
-  cases.push('active WAL refusal');
-  check('recovery after explicit WAL cleanup', () => assert.equal(native('sync').state, 'rebuilt'));
+  cases.push('active WAL writer bounded refusal');
+  check('recovery after WAL writer release', () => assert.equal(native('sync').state, 'updated'));
 
   // A killed writer leaves a genuine hot rollback journal. Native must not
   // publish over it: recovery of old pages could corrupt the replacement DB.

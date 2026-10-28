@@ -36,7 +36,7 @@ function snapshot(project) {
     const tables = ['decisions', 'tasks', '__attendant_metadata', '__attendant_cache', '__attendant_diagnostics', '__attendant_edges',
       '__attendant_fts_decisions', '__attendant_trigram_decisions', '__attendant_fts_tasks', '__attendant_trigram_tasks'];
     return Object.fromEntries(tables.map(table => {
-      const rows = plain(db.prepare(`SELECT * FROM "${table}"`).all()).map(row => {
+      const rows = plain(db.prepare(`SELECT * FROM "${table}"`).all()).filter(row => table !== '__attendant_metadata' || row.key !== 'fts_enabled').map(row => {
         // JSON syntax can differ while representing the same cached metadata.
         if (row.front_matter) row.front_matter = JSON.parse(row.front_matter);
         // Typed native JSON may retain .0 where legacy float JSON omits it.
@@ -97,6 +97,15 @@ for (const { exe, variant } of jobs) {
   assert.equal(nativeBuild.records, 3);
   assert.equal(nativeBuild.collections, 2);
   assert.deepEqual(hashes(project), before, 'Native builder must not change source');
+  // First search publishes a full indexed rebuild, before any runner consumes it.
+  const cold = new DatabaseSync(join(project, '.attendant/attendant.sqlite'));
+  const deferred = cold.prepare("SELECT value FROM __attendant_metadata WHERE key='fts_enabled'").get();
+  if (deferred) {
+    assert.equal(deferred.value, '0');
+    assert.equal(cold.prepare("SELECT count(*) n FROM sqlite_schema WHERE name='__attendant_fts_tasks'").get().n, 0);
+  }
+  cold.close();
+  run(exe, ['search', '-q', 'lantern', '-p', project]);
   // Compare before the runner is allowed to refresh or mutate the native DB.
   const native = snapshot(project);
   assert.deepEqual(native, reference, 'Native logical DB must match reference before CLI consumption');

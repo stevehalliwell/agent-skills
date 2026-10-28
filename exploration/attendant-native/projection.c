@@ -63,7 +63,7 @@ typedef struct record {
     collection *owner;
     const char *path, *text, *body, *hash, *front_json;
     mapping front, corrections;
-    int blocked;
+    int blocked, projection_changed, cache_changed;
     const char *next_text, *validation_name;
     double mtime_ms;
     ULONGLONG created_on_disk;
@@ -81,7 +81,7 @@ typedef struct context {
     collection collections[MAX_COLLECTIONS];
     int collection_count;
     record records[MAX_RECORDS];
-    int record_count, projected, allow_fts, diagnostic_count, contract_diagnostic_count, auto_correct;
+    int record_count, projected, allow_fts, fts_enabled, diagnostic_count, contract_diagnostic_count, auto_correct;
     const char *applied_corrections;
     diagnostic *diagnostics;
     const char *written[MAX_RECORDS], *staged[MAX_RECORDS];
@@ -145,10 +145,16 @@ static void fail(context *c, const char *format, ...) {
         if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, owned, -1, path, PATH_CAPACITY)) RemoveDirectoryW(path);
     }
     if (c->temporary) {
-        wchar_t path[PATH_CAPACITY];
-        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c->temporary, -1, path, PATH_CAPACITY) &&
-            !DeleteFileW(path) && GetLastError() != ERROR_FILE_NOT_FOUND)
-            fprintf(stderr, "Cannot remove temporary projection: %s\n", c->temporary);
+        const char *suffixes[] = {"", "-wal", "-shm", "-journal"};
+        int i;
+        for (i = 0; i < 4; i++) {
+            wchar_t path[PATH_CAPACITY];
+            char name[PATH_CAPACITY * 4];
+            snprintf(name, sizeof(name), "%s%s", c->temporary, suffixes[i]);
+            if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name, -1, path, PATH_CAPACITY) &&
+                !DeleteFileW(path) && GetLastError() != ERROR_FILE_NOT_FOUND)
+                fprintf(stderr, "Cannot remove temporary projection: %s\n", name);
+        }
     }
     jsonb_init(&b);
     json_check(jsonb_object(&b, output, sizeof(output)));
@@ -629,8 +635,10 @@ static void make_tables(context *c, collection *table) {
         strcat(statement, part);
     }
     strcat(statement, ")"); sql(c, statement);
-    sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'unicode61 remove_diacritics 2')", internal(c, "fts", table)));
-    sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'trigram')", internal(c, "trigram", table)));
+    if (c->fts_enabled) {
+        sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'unicode61 remove_diacritics 2')", internal(c, "fts", table)));
+        sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'trigram')", internal(c, "trigram", table)));
+    }
 }
 static void bind_value(context *c, sqlite3_stmt *s, int index, value *v, field *f) {
     if (!v && f && (!strcmp(f->kind, "default") || !strcmp(f->kind, "enum"))) v = &f->fallback;
@@ -675,7 +683,7 @@ static void project_record(context *c, record *r) {
     bind_text(c, s, 8, r->path); bind_text(c, s, 9, r->hash);
     for (i = 0; i < table->field_count; i++) bind_value(c, s, 10 + i, lookup(&r->front, table->fields[i].name), &table->fields[i]);
     finish(c, s);
-    for (i = 0; i < 2; i++) {
+    for (i = 0; c->fts_enabled && i < 2; i++) {
         s = prepare(c, format_text(c, "INSERT INTO %s (record_id,content) VALUES (?,?)", internal(c, i ? "trigram" : "fts", table)));
         bind_text(c, s, 1, lookup(&r->front, "id")->text);
         {
