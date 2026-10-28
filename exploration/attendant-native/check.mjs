@@ -39,6 +39,10 @@ function snapshot(project) {
       const rows = plain(db.prepare(`SELECT * FROM "${table}"`).all()).map(row => {
         // JSON syntax can differ while representing the same cached metadata.
         if (row.front_matter) row.front_matter = JSON.parse(row.front_matter);
+        // Typed native JSON may retain .0 where legacy float JSON omits it.
+        // This shared fixture uses JS-representable values; source-check.mjs
+        // separately verifies exact integers and ambiguous f64 with lossless JSON.
+        if (typeof row.misc === 'string') row.misc = JSON.parse(row.misc);
         return row;
       });
       rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
@@ -101,9 +105,7 @@ for (const { exe, variant } of jobs) {
   assert.deepEqual(publicResults(project), expectedPublic);
   assert.deepEqual(hashes(project), before, 'CLI consumption must not repair source');
   assert.equal(cli(project, 'sync').state, 'reused');
-  // Failures leave source and an already-published projection untouched.
-  const dbPath = join(project, '.attendant/attendant.sqlite');
-  const published = createHash('sha256').update(readFileSync(dbPath)).digest('hex');
+  // Invalid/unsupported records are now reported and skipped, never repaired.
   const bad = join(project, 'records/tasks/bad.md');
   const failures = [
     '---\nname: [unfinished\n---\nbody',
@@ -114,14 +116,16 @@ for (const { exe, variant } of jobs) {
   for (const text of failures) {
     writeFileSync(bad, text);
     const frozen = hashes(project);
-    const failure = run(exe, [project], 1);
-    assert.equal(failure.error.code, 'native-projection');
+    const result = run(exe, [project]);
+    assert.equal(result.records, 3);
+    assert.ok(result.diagnostics.some(item => item.path === bad));
     assert.deepEqual(hashes(project), frozen);
-    assert.equal(createHash('sha256').update(readFileSync(dbPath)).digest('hex'), published);
+    assert.equal(cli(project, 'sync').state, 'reused');
   }
   rmSync(bad);
+  run(exe, [project]);
   assert.deepEqual(hashes(project), before);
-  const result = { executable: exe, variant, project, referenceBuild, nativeBuild, reuse: reused.state, failureCases: failures.length, checks: 'logical tables/columns/FTS, public schema/query/search, source hashes, rejected inputs' };
+  const result = { executable: exe, variant, project, referenceBuild, nativeBuild, reuse: reused.state, failureCases: failures.length, checks: 'logical tables/columns/FTS, public schema/query/search, source hashes, reported/skipped invalid inputs' };
   summaries.push(result);
   console.log(JSON.stringify(result));
 }

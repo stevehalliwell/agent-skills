@@ -19,7 +19,8 @@ Build flags enable FTS5, disable loadable extensions, disable compiler intrinsic
 
 - Source: <https://github.com/yaml/libyaml>, commit `90a56d4500aa1a1798514c5cb55c3ad4cb095f94`.
 - Version 0.2.5 from source configuration. Build passes version macros explicitly.
-- Retained `src/`, `include/` and MIT `License` unchanged. Parser used for reading only. No parser or emitter source patches.
+- Retained `src/`, `include/` and MIT `License`. Parser used for reading only; no document emission.
+- Local patch: `src/yaml_private.h`, `IS_BREAK_AT` recognizes CR/LF only, matching YAML 1.2 treatment of NEL/LS/PS as content rather than normalized line breaks. Keeps literal UTF-8 values and source marks intact. No claim of general YAML 1.2 equivalence; Attendant still enforces its flat subset.
 
 ## json-build
 

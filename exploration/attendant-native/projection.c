@@ -1,4 +1,4 @@
-/* Native Windows exploration. Source is read-only. See README.md.
+/* Native Windows exploration. Source contract and write boundaries: README.md.
    The process owns one bounded arena; libraries retain their own allocators.
    Reject unsupported inputs rather than advertise untested YAML compatibility. */
 #include "include/base.h"
@@ -32,13 +32,23 @@ __declspec(dllimport) LONG WINAPI BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE
 typedef struct value value;
 struct value {
     enum { VALUE_NULL, VALUE_STRING, VALUE_NUMBER, VALUE_BOOL, VALUE_ARRAY } kind;
+    enum { NUMBER_F64, NUMBER_I64, NUMBER_U64 } number_kind;
     const char *text;
-    double number;
+    union { double real; long long signed_integer; unsigned long long unsigned_integer; } number;
     value *items;
     int count;
 };
-typedef struct pair { const char *key; value data; } pair;
-typedef struct mapping { pair *pairs; int count; } mapping;
+typedef struct pair {
+    const char *key;
+    value data;
+    size_t value_start, value_end;
+    int indentless_sequence;
+} pair;
+typedef struct mapping {
+    pair *pairs;
+    int count, present;
+    const char *problem, *problem_code;
+} mapping;
 typedef struct field {
     const char *name, *kind, *reference;
     int optional;
@@ -47,15 +57,21 @@ typedef struct field {
 typedef struct collection {
     const char *name, *directory, *schema_path, *schema_text;
     field fields[MAX_FIELDS];
-    int field_count;
+    int field_count, invalid;
 } collection;
 typedef struct record {
     collection *owner;
     const char *path, *text, *body, *hash, *front_json;
-    mapping front;
+    mapping front, corrections;
+    int blocked;
+    const char *next_text, *validation_name;
     double mtime_ms;
+    ULONGLONG created_on_disk;
     size_t size;
 } record;
+typedef struct diagnostic { collection *owner; const char *path, *code, *message; } diagnostic;
+#define MAX_DIAGNOSTICS 32768
+
 typedef struct context {
     arena *memory;
     sqlite3 *db;
@@ -65,30 +81,68 @@ typedef struct context {
     collection collections[MAX_COLLECTIONS];
     int collection_count;
     record records[MAX_RECORDS];
-    int record_count, projected, allow_fts;
-    const char *error_code;
+    int record_count, projected, allow_fts, diagnostic_count, contract_diagnostic_count, auto_correct;
+    const char *applied_corrections;
+    diagnostic *diagnostics;
+    const char *written[MAX_RECORDS], *staged[MAX_RECORDS];
+    int written_count, staged_count;
+    const char *rollback_paths[MAX_RECORDS], *created_directories[128];
+    int rollback_count, created_directory_count;
+    const char *error_code, *error_path;
     char json_scratch[OUTPUT_CAPACITY];
 } context;
 
+/* One process owns one command context, including cleanup on JSON capacity failure. */
+static context *active_context;
+static void fail(context *c, const char *format, ...);
 static void json_check(jsonbcode status) {
     if (status < 0) {
+        if (active_context) { active_context->error_code = "json-capacity"; fail(active_context, "JSON output capacity exhausted"); }
         fprintf(stderr, "JSON output capacity exhausted\n");
         puts("{\"error\":{\"code\":\"json-capacity\",\"message\":\"JSON output capacity exhausted\"}}");
         exit(1);
     }
 }
 static void fail(context *c, const char *format, ...) {
-    char message[2048], output[16384];
+    char message[2048], cleaned[6144], output[16384];
+    size_t raw_length, offset = 0, cleaned_length = 0;
     jsonb b;
     va_list args;
     va_start(args, format);
     vsnprintf(message, sizeof(message), format, args);
-    va_end(args);
-    fprintf(stderr, "%s\n", message);
+    va_end(args); message[sizeof(message) - 1] = 0;
+    raw_length = strlen(message);
+    while (offset < raw_length) {
+        size_t width = string_utf8_sequence_size((const u8 *)message + offset, raw_length - offset);
+        if (!width) { memcpy(cleaned + cleaned_length, "\xef\xbf\xbd", 3); cleaned_length += 3; offset++; }
+        else { memcpy(cleaned + cleaned_length, message + offset, width); cleaned_length += width; offset += width; }
+    }
+    cleaned[cleaned_length] = 0;
+    fprintf(stderr, "%s\n", cleaned);
     if (c->db) {
         /* Only finalize our own statements, never FTS's internal statements. */
         while (c->builder_statement_count) sqlite3_finalize(c->builder_statements[--c->builder_statement_count]);
         sqlite3_close_v2(c->db); c->db = NULL;
+    }
+    while (c->staged_count) {
+        wchar_t path[PATH_CAPACITY];
+        const char *temporary = c->staged[--c->staged_count];
+        if (temporary && MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, temporary, -1, path, PATH_CAPACITY)) DeleteFileW(path);
+    }
+    while (c->rollback_count) {
+        wchar_t path[PATH_CAPACITY];
+        const char *owned = c->rollback_paths[--c->rollback_count];
+        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, owned, -1, path, PATH_CAPACITY) && DeleteFileW(path)) {
+            int i;
+            for (i = 0; i < c->written_count; i++) if (!strcmp(c->written[i], owned)) {
+                memmove(&c->written[i], &c->written[i + 1], (c->written_count - i - 1) * sizeof(char *)); c->written_count--; break;
+            }
+        }
+    }
+    while (c->created_directory_count) {
+        wchar_t path[PATH_CAPACITY];
+        const char *owned = c->created_directories[--c->created_directory_count];
+        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, owned, -1, path, PATH_CAPACITY)) RemoveDirectoryW(path);
     }
     if (c->temporary) {
         wchar_t path[PATH_CAPACITY];
@@ -106,14 +160,30 @@ static void fail(context *c, const char *format, ...) {
         json_check(jsonb_string(&b, output, sizeof(output), code, strlen(code)));
     }
     json_check(jsonb_key(&b, output, sizeof(output), "message", 7));
-    json_check(jsonb_string(&b, output, sizeof(output), message, strlen(message)));
+    json_check(jsonb_string(&b, output, sizeof(output), cleaned, cleaned_length));
     json_check(jsonb_object_pop(&b, output, sizeof(output)));
     json_check(jsonb_object_pop(&b, output, sizeof(output)));
-    printf("%.*s\n", (int)b.pos, output);
+    printf("%.*s", (int)b.pos - 1, output);
+    if (c->error_path) {
+        fputs(",\"failed\":", stdout);
+        jsonb_init(&b); json_check(jsonb_string(&b, output, sizeof(output), c->error_path, strlen(c->error_path)));
+        printf("%.*s", (int)b.pos, output);
+    }
+    if (c->written_count) {
+        int i;
+        fputs(",\"written\":[", stdout);
+        for (i = 0; i < c->written_count; i++) {
+            const char *path = c->written[i];
+            jsonb_init(&b); json_check(jsonb_string(&b, output, sizeof(output), path, strlen(path)));
+            printf("%s%.*s", i ? "," : "", (int)b.pos, output);
+        }
+        fputc(']', stdout);
+    }
+    puts("}");
     exit(1);
 }
 static void *allocate(context *c, size_t size) {
-    arena_result result = arena_alloc(c->memory, size, 16);
+    arena_result result = arena_alloc(c->memory, size ? size : 1, 16);
     if (result.error) fail(c, "Native projection's 128 MiB workspace exhausted");
     return result.ptr;
 }
@@ -211,117 +281,39 @@ static value *lookup(mapping *map, const char *key) {
     for (i = 0; i < map->count; i++) if (!strcmp(map->pairs[i].key, key)) return &map->pairs[i].data;
     return NULL;
 }
+static void json_number(context *c, jsonb *b, char *output, size_t capacity, double number);
+#include "numbers.h"
 static int scalar_equal(value a, value b) {
     if (a.kind != b.kind) return 0;
     if (a.kind == VALUE_STRING) return !strcmp(a.text, b.text);
-    if (a.kind == VALUE_NUMBER || a.kind == VALUE_BOOL) return a.number == b.number;
+    if (a.kind == VALUE_NUMBER) return numbers_equal(a, b);
+    if (a.kind == VALUE_BOOL) return a.number.real == b.number.real;
     return a.kind == VALUE_NULL;
 }
-static value scalar(context *c, yaml_node_t *node, const char *path) {
-    value result = {0};
-    char *end;
-    const char *text = (const char *)node->data.scalar.value;
-    if (node->data.scalar.length != strlen(text)) fail(c, "NUL in YAML scalar: %s", path);
-    result.kind = VALUE_STRING;
-    result.text = copy_text(c, text, strlen(text));
-    if (node->data.scalar.style != YAML_PLAIN_SCALAR_STYLE) return result;
-    if (!*text || !strcmp(text, "~") || !_stricmp(text, "null")) result.kind = VALUE_NULL;
-    else if (!_stricmp(text, "true") || !_stricmp(text, "false")) {
-        result.kind = VALUE_BOOL; result.number = !_stricmp(text, "true");
-    } else if ((*text >= '0' && *text <= '9') || *text == '-' || *text == '+' || *text == '.') {
-        /* C locale is the process default. This slice covers decimal numbers only. */
-        double number;
-        if (!_stricmp(text, ".nan") || !_stricmp(text, ".inf") || !_stricmp(text, "+.inf") || !_stricmp(text, "-.inf"))
-            fail(c, "Nonfinite YAML number unsupported: %s", path);
-        number = strtod(text, &end);
-        if (end != text && !*end) {
-            if (!isfinite(number)) fail(c, "Nonfinite YAML number unsupported: %s", path);
-            result.kind = VALUE_NUMBER; result.number = number;
-        } else if (!strncmp(text, "0x", 2) || !strncmp(text, "0o", 2) || !_stricmp(text, ".nan") || !_stricmp(text, ".inf"))
-            fail(c, "Non-decimal YAML number unsupported in first slice: %s", path);
-    }
-    return result;
+static int value_equal(value a, value b) {
+    int i;
+    if (a.kind != VALUE_ARRAY || b.kind != VALUE_ARRAY) return scalar_equal(a, b);
+    if (a.count != b.count) return 0;
+    for (i = 0; i < a.count; i++) if (!scalar_equal(a.items[i], b.items[i])) return 0;
+    return 1;
 }
-static mapping parse_mapping(context *c, const char *text, const char *path, const char **body) {
-    const char *start, *line, *end = NULL;
-    yaml_parser_t parser;
-    yaml_document_t document;
-    yaml_node_t *root;
-    yaml_node_pair_t *entry;
-    mapping result = {0};
-    if (!strncmp(text, "---\r\n", 5)) start = text + 5;
-    else if (!strncmp(text, "---\n", 4)) start = text + 4;
-    else { fail(c, "Missing opening front matter delimiter: %s", path); return result; }
-    for (line = start; *line; ) {
-        const char *next = strchr(line, '\n');
-        size_t length = next ? (size_t)(next - line) : strlen(line);
-        if (length && line[length - 1] == '\r') length--;
-        if (length == 3 && !memcmp(line, "---", 3)) {
-            end = line;
-            if (body) *body = next ? next + 1 : line + strlen(line);
-            break;
-        }
-        if (!next) break;
-        line = next + 1;
+static int mapping_equal(mapping *a, mapping *b) {
+    int i;
+    if (a->count != b->count) return 0;
+    for (i = 0; i < a->count; i++) {
+        value *actual = lookup(b, a->pairs[i].key);
+        if (!actual || !value_equal(a->pairs[i].data, *actual)) return 0;
     }
-    if (!end) fail(c, "Missing closing front matter delimiter: %s", path);
-    if (!yaml_parser_initialize(&parser)) fail(c, "YAML parser allocation failed");
-    yaml_parser_set_input_string(&parser, (const unsigned char *)start, end - start);
-    if (!yaml_parser_load(&parser, &document)) {
-        char problem[512];
-        snprintf(problem, sizeof(problem), "%s at line %lu", parser.problem ? parser.problem : "parse failure", (unsigned long)parser.problem_mark.line + 2);
-        yaml_parser_delete(&parser); fail(c, "YAML %s: %s", problem, path);
-    }
-    root = yaml_document_get_root_node(&document);
-    if (!root || root->type != YAML_MAPPING_NODE) fail(c, "Front matter must be a mapping: %s", path);
-    /* Reject aliases, anchors and explicit tags in this bounded first slice.
-       LibYAML's document loader otherwise resolves aliases before subset checks. */
-    {
-        yaml_parser_t scanner;
-        yaml_token_t token;
-        int done = 0;
-        if (!yaml_parser_initialize(&scanner)) fail(c, "YAML scanner allocation failed");
-        yaml_parser_set_input_string(&scanner, (const unsigned char *)start, end - start);
-        while (!done) {
-            if (!yaml_parser_scan(&scanner, &token)) fail(c, "YAML scanning failed: %s", path);
-            if (token.type == YAML_ALIAS_TOKEN || token.type == YAML_ANCHOR_TOKEN || token.type == YAML_TAG_TOKEN || token.type == YAML_DOCUMENT_START_TOKEN)
-                fail(c, "Aliases, anchors, tags and extra documents unsupported: %s", path);
-            done = token.type == YAML_STREAM_END_TOKEN;
-            yaml_token_delete(&token);
-        }
-        yaml_parser_delete(&scanner);
-    }
-    result.pairs = allocate(c, MAX_PAIRS * sizeof(pair));
-    for (entry = root->data.mapping.pairs.start; entry < root->data.mapping.pairs.top; entry++) {
-        yaml_node_t *key = yaml_document_get_node(&document, entry->key);
-        yaml_node_t *node = yaml_document_get_node(&document, entry->value);
-        pair *p;
-        value key_value;
-        if (result.count == MAX_PAIRS) fail(c, "Too many front matter keys: %s", path);
-        if (!key || key->type != YAML_SCALAR_NODE) fail(c, "Invalid YAML key: %s", path);
-        key_value = scalar(c, key, path);
-        if (key_value.kind != VALUE_STRING || !*key_value.text) fail(c, "YAML key must be nonempty string: %s", path);
-        if (lookup(&result, key_value.text)) fail(c, "Duplicate YAML key %s: %s", key_value.text, path);
-        p = &result.pairs[result.count++];
-        p->key = key_value.text;
-        if (node->type == YAML_SCALAR_NODE) p->data = scalar(c, node, path);
-        else if (node->type == YAML_SEQUENCE_NODE) {
-            yaml_node_item_t *item;
-            p->data.kind = VALUE_ARRAY;
-            p->data.count = (int)(node->data.sequence.items.top - node->data.sequence.items.start);
-            if (p->data.count > MAX_ITEMS) fail(c, "YAML array capacity exceeded: %s", path);
-            p->data.items = allocate(c, (p->data.count + 1) * sizeof(value));
-            for (item = node->data.sequence.items.start; item < node->data.sequence.items.top; item++) {
-                yaml_node_t *child = yaml_document_get_node(&document, *item);
-                if (child->type != YAML_SCALAR_NODE) fail(c, "Nested YAML unsupported: %s", path);
-                p->data.items[item - node->data.sequence.items.start] = scalar(c, child, path);
-            }
-        } else fail(c, "Nested YAML unsupported: %s", path);
-    }
-    yaml_document_delete(&document);
-    yaml_parser_delete(&parser);
-    return result;
+    return 1;
 }
+static void add_diagnostic(context *c, collection *owner, const char *path, const char *code, const char *message) {
+    diagnostic *d;
+    if (!c->diagnostics) c->diagnostics = allocate(c, MAX_DIAGNOSTICS * sizeof(diagnostic));
+    if (c->diagnostic_count == MAX_DIAGNOSTICS) fail(c, "Diagnostic capacity exceeded");
+    d = &c->diagnostics[c->diagnostic_count++];
+    d->owner = owner; d->path = path; d->code = code; d->message = message;
+}
+#include "source-yaml.h"
 /* Shortest decimal precision that round-trips through strtod, then ECMAScript's
    fixed/exponent range. This is not a general replacement for a proven dtoa;
    the differential fixture checks cover the numeric forms used in this slice. */
@@ -365,17 +357,22 @@ static void json_number(context *c, jsonb *b, char *output, size_t capacity, dou
     if (used <= 0 || used >= (int)sizeof(token)) fail(c, "Number serialization failed");
     json_check(jsonb_token(b, output, capacity, token, used));
 }
-static void json_value(context *c, jsonb *b, char *output, size_t capacity, value v) {
+static void json_value_format(context *c, jsonb *b, char *output, size_t capacity, value v, number_format format) {
     int i;
     if (v.kind == VALUE_STRING) json_check(jsonb_string(b, output, capacity, v.text, strlen(v.text)));
-    else if (v.kind == VALUE_NUMBER) json_number(c, b, output, capacity, v.number);
-    else if (v.kind == VALUE_BOOL) json_check(jsonb_bool(b, output, capacity, (int)v.number));
+    else if (v.kind == VALUE_NUMBER) json_numeric(c, b, output, capacity, v, format);
+    else if (v.kind == VALUE_BOOL) json_check(jsonb_bool(b, output, capacity, (int)v.number.real));
     else if (v.kind == VALUE_NULL) json_check(jsonb_null(b, output, capacity));
     else {
         json_check(jsonb_array(b, output, capacity));
-        for (i = 0; i < v.count; i++) json_value(c, b, output, capacity, v.items[i]);
+        for (i = 0; i < v.count; i++) json_value_format(c, b, output, capacity, v.items[i], format);
         json_check(jsonb_array_pop(b, output, capacity));
     }
+}
+static void json_value(context *c, jsonb *b, char *out, size_t capacity, value v) { json_value_format(c, b, out, capacity, v, JSON_NUMBERS); }
+static void json_property(jsonb *b, char *out, size_t capacity, const char *key, const char *text) {
+    json_check(jsonb_key(b, out, capacity, key, strlen(key)));
+    json_check(jsonb_string(b, out, capacity, text, strlen(text)));
 }
 static const char *value_json(context *c, value v) {
     char *buffer = c->json_scratch;
@@ -394,7 +391,7 @@ static unsigned long long object_index(const char *key) {
     }
     return number < 4294967295ULL ? number : 4294967295ULL;
 }
-static const char *mapping_json(context *c, mapping *map) {
+static const char *mapping_json_format(context *c, mapping *map, number_format format) {
     char *buffer = c->json_scratch;
     jsonb b;
     int i, j, order[MAX_PAIRS];
@@ -411,11 +408,12 @@ static const char *mapping_json(context *c, mapping *map) {
     for (i = 0; i < map->count; i++) {
         pair *entry = &map->pairs[order[i]];
         json_check(jsonb_key(&b, buffer, TEXT_CAPACITY, entry->key, strlen(entry->key)));
-        json_value(c, &b, buffer, TEXT_CAPACITY, entry->data);
+        json_value_format(c, &b, buffer, TEXT_CAPACITY, entry->data, format);
     }
     json_check(jsonb_object_pop(&b, buffer, TEXT_CAPACITY));
     return copy_text(c, buffer, b.pos);
 }
+static const char *mapping_json(context *c, mapping *map) { return mapping_json_format(c, map, JSON_NUMBERS); }
 static void sql(context *c, const char *statement) {
     char *error = NULL;
     if (sqlite3_exec(c->db, statement, NULL, NULL, &error) != SQLITE_OK) fail(c, "SQLite: %s", error ? error : sqlite3_errmsg(c->db));
@@ -456,41 +454,62 @@ static const char *internal(context *c, const char *prefix, collection *table) {
     return identifier(c, format_text(c, "__attendant_%s_%s", prefix, table->name));
 }
 static const char *builtins[] = {"id", "name", "created_at", "updated_at", "desc", "tags", "hidden", "source_path", "source_hash"};
+static void schema_problem(context *c, collection *table, const char *code, const char *message) {
+    table->invalid = 1;
+    add_diagnostic(c, table, table->schema_path, code, message);
+}
 static void load_schema(context *c, collection *table) {
-    mapping schema = parse_mapping(c, table->schema_text, table->schema_path, NULL);
+    mapping schema = read_mapping(c, table->schema_text, NULL);
     int i, j;
+    if (schema.problem) { schema_problem(c, table, "schema-yaml", schema.problem); return; }
     if (schema.count > MAX_FIELDS) fail(c, "Schema exceeds field capacity");
     for (i = 0; i < schema.count; i++) {
-        field *f = &table->fields[table->field_count++];
+        field f = {0};
         value v = schema.pairs[i].data;
-        f->name = schema.pairs[i].key;
-        for (j = 0; j < (int)(sizeof(builtins) / sizeof(builtins[0])); j++)
-            if (!strcmp(f->name, builtins[j])) fail(c, "Reserved schema field: %s", f->name);
-        f->declaration = v;
-        if (v.kind == VALUE_NULL) { f->kind = "untyped"; f->optional = 1; }
+        f.name = schema.pairs[i].key; f.declaration = v;
+        for (j = 0; j < (int)(sizeof(builtins) / sizeof(builtins[0])); j++) if (!strcmp(f.name, builtins[j])) break;
+        if (j != (int)(sizeof(builtins) / sizeof(builtins[0]))) { schema_problem(c, table, "schema-field-reserved", format_text(c, "%s is reserved for Attendant.", f.name)); continue; }
+        if (v.kind == VALUE_NULL) { f.kind = "untyped"; f.optional = 1; }
         else if (v.kind == VALUE_ARRAY) {
-            if (!v.count) fail(c, "Empty schema enum: %s", f->name);
-            for (j = 0; j < v.count; j++) if (v.items[j].kind == VALUE_NULL) fail(c, "Null enum member: %s", f->name);
-            f->kind = "enum"; f->fallback = v.items[0];
+            for (j = 0; j < v.count; j++) if (v.items[j].kind == VALUE_NULL) break;
+            if (!v.count || j != v.count) { schema_problem(c, table, "schema-enum", "Enum must be a non-empty scalar array without null."); continue; }
+            f.kind = "enum"; f.fallback = v.items[0];
         } else if (v.kind == VALUE_STRING) {
             const char *marker = v.text;
-            if (*marker == '?') { f->optional = 1; marker++; }
-            if (!strcmp(marker, "date") || !strcmp(marker, "datetime")) f->kind = marker;
-            else if (!strcmp(marker, "string[]")) f->kind = "string-array";
-            else if (!strncmp(marker, "ref:", 4)) { f->kind = "ref"; f->reference = marker + 4; }
-            else if (!strncmp(marker, "ref[]:", 6)) { f->kind = "ref-array"; f->reference = marker + 6; }
-            else {
-                if (f->optional) fail(c, "Unsupported optional schema marker: %s", marker);
-                f->kind = "default"; f->fallback = v;
-            }
-        } else { f->kind = "default"; f->fallback = v; }
+            if (*marker == '?') { f.optional = 1; marker++; }
+            if (!strcmp(marker, "date") || !strcmp(marker, "datetime")) f.kind = marker;
+            else if (!strcmp(marker, "string[]")) f.kind = "string-array";
+            else if (!strncmp(marker, "ref:", 4) && marker[4]) { f.kind = "ref"; f.reference = marker + 4; }
+            else if (!strncmp(marker, "ref[]:", 6) && marker[6]) { f.kind = "ref-array"; f.reference = marker + 6; }
+            else if (!strcmp(marker, "ref") || !strcmp(marker, "ref[]") || !strncmp(marker, "ref:", 4) || !strncmp(marker, "ref[]:", 6)) {
+                schema_problem(c, table, "schema-ref", "Reference marker needs a collection name."); continue;
+            } else if (f.optional) { schema_problem(c, table, "schema-marker", "Unsupported optional schema marker."); continue; }
+            else { f.kind = "default"; f.fallback = v; }
+        } else { f.kind = "default"; f.fallback = v; }
+        if ((f.fallback.kind == VALUE_NUMBER && f.fallback.number_kind == NUMBER_U64)) {
+            schema_problem(c, table, "schema-number-range", "Numeric default exceeds SQLite signed 64-bit INTEGER range."); continue;
+        }
+        if (!strcmp(f.kind, "enum")) {
+            for (j = 0; j < f.declaration.count; j++) if (f.declaration.items[j].kind == VALUE_NUMBER && f.declaration.items[j].number_kind == NUMBER_U64) break;
+            if (j != f.declaration.count) { schema_problem(c, table, "schema-number-range", "Numeric enum value exceeds SQLite signed 64-bit INTEGER range."); continue; }
+        }
+        table->fields[table->field_count++] = f;
     }
+}
+static char *table_alias_separator(char *directory) {
+    char *p;
+    for (p = directory; *p; p++) if ((*p == ' ' || *p == '\t') && p[1] == 'a' && p[2] == 's' && (p[3] == ' ' || p[3] == '\t')) return p;
+    return NULL;
 }
 static void load_config(context *c, const char *root) {
     const char *path = full_path(c, root, ".pi/attendant.tables");
-    const char *source = read_text(c, path, NULL);
-    char *config = copy_text(c, source, strlen(source));
-    char *line = config;
+    const char *source;
+    char *config, *line;
+    if (GetFileAttributesW(wide(c, path)) == INVALID_FILE_ATTRIBUTES) {
+        add_diagnostic(c, NULL, path, "tables-missing", "Missing .pi/attendant.tables."); return;
+    }
+    source = read_text(c, path, NULL);
+    config = copy_text(c, source, strlen(source)); line = config;
     c->config_hash = digest(c, source);
     while (line) {
         char *next = strchr(line, '\n');
@@ -502,13 +521,7 @@ static void load_config(context *c, const char *root) {
         line = next;
         if (!*directory || *directory == '#') continue;
         if (c->collection_count == MAX_COLLECTIONS) fail(c, "Collection capacity exceeded");
-        alias = NULL;
-        {
-            char *p;
-            for (p = directory; *p; p++) {
-                if ((*p == ' ' || *p == '\t') && p[1] == 'a' && p[2] == 's' && (p[3] == ' ' || p[3] == '\t')) { alias = p; break; }
-            }
-        }
+        alias = table_alias_separator(directory);
         if (alias) { *alias = 0; name = trim(alias + 3); directory = trim(directory); }
         else {
             char *base = copy_text(c, directory, strlen(directory));
@@ -518,16 +531,32 @@ static void load_config(context *c, const char *root) {
             a = strrchr(base, '/'); b = strrchr(base, '\\');
             name = a && (!b || a > b) ? a + 1 : b ? b + 1 : base;
         }
-        if (!*name || strchr(name, '/') || !strncmp(name, "__attendant_", 12)) fail(c, "Invalid collection name: %s", name);
-        for (i = 0; i < c->collection_count; i++) if (!strcmp(name, c->collections[i].name)) fail(c, "Duplicate collection: %s", name);
+        if (!*name || strchr(name, '/') || !strncmp(name, "__attendant_", 12)) {
+            add_diagnostic(c, NULL, path, "collection-name", format_text(c, "Invalid collection name: %s", name)); continue;
+        }
+        for (i = 0; i < c->collection_count; i++) if (!strcmp(name, c->collections[i].name)) break;
+        if (i != c->collection_count) { add_diagnostic(c, NULL, path, "collection-duplicate", format_text(c, "Collection name %s is repeated.", name)); continue; }
         table = &c->collections[c->collection_count++];
         table->name = name;
         /* loadContract preserves spelling of absolute configured paths. Its
            schema hash includes that spelling even when file paths normalize. */
         table->directory = absolute_path(directory) ? directory : full_path(c, root, directory);
         table->schema_path = full_path(c, table->directory, ".schema.md");
+        if (GetFileAttributesW(wide(c, table->schema_path)) == INVALID_FILE_ATTRIBUTES) {
+            schema_problem(c, table, "schema-missing", "Collection has no .schema.md.");
+            table->schema_text = ""; continue;
+        }
         table->schema_text = read_text(c, table->schema_path, NULL);
         load_schema(c, table);
+    }
+    {
+        int i, j, k;
+        for (i = 0; i < c->collection_count; i++) for (j = 0; j < c->collections[i].field_count; j++) {
+            field *f = &c->collections[i].fields[j];
+            if (!f->reference) continue;
+            for (k = 0; k < c->collection_count; k++) if (!strcmp(f->reference, c->collections[k].name)) break;
+            if (k == c->collection_count) schema_problem(c, &c->collections[i], "schema-ref", format_text(c, "%s references unknown collection %s.", f->name, f->reference));
+        }
     }
 }
 static const char *iso_time(context *c, FILETIME filetime) {
@@ -535,87 +564,15 @@ static const char *iso_time(context *c, FILETIME filetime) {
     if (!FileTimeToSystemTime(&filetime, &time)) fail(c, "Invalid file timestamp");
     return format_text(c, "%04u-%02u-%02uT%02u:%02u:%02u.%03uZ", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond, time.wMilliseconds);
 }
-static const char *normalized_datetime(context *c, const char *text) {
-    /* ponytail: normalized UTC date-times only for this read-only slice;
-       support other runner-accepted RFC3339 forms before general parity. */
-    size_t length = strlen(text);
-    if (length == 20 && text[10] == 'T' && text[19] == 'Z') return format_text(c, "%.19s.000Z", text);
-    if (length == 24 && text[10] == 'T' && text[19] == '.' && text[23] == 'Z') return text;
-    fail(c, "First slice requires UTC timestamps with seconds and optional 3-digit milliseconds: %s", text);
-    return NULL;
-}
-static value *required(context *c, record *r, const char *key, int kind) {
-    value *v = lookup(&r->front, key);
-    if (!v || v->kind != kind) fail(c, "Normalized record requires %s: %s", key, r->path);
-    return v;
-}
-static void validate_record(context *c, record *r) {
-    const char *id = required(c, r, "id", VALUE_STRING)->text;
-    int i, j;
-    required(c, r, "name", VALUE_STRING);
-    normalized_datetime(c, required(c, r, "created_at", VALUE_STRING)->text);
-    required(c, r, "desc", VALUE_STRING);
-    {
-        value tags = *required(c, r, "tags", VALUE_ARRAY);
-        for (i = 0; i < tags.count; i++) if (tags.items[i].kind != VALUE_STRING) fail(c, "Invalid tags: %s", r->path);
-    }
-    if (strlen(id) != 36 || id[14] != '7' || !strchr("89abAB", id[19])) fail(c, "Expected UUIDv7: %s", r->path);
-    for (i = 0; i < 36; i++) {
-        if (i == 8 || i == 13 || i == 18 || i == 23) { if (id[i] != '-') fail(c, "Invalid UUID: %s", r->path); }
-        else if (!strchr("0123456789abcdefABCDEF", id[i])) fail(c, "Invalid UUID: %s", r->path);
-    }
-    for (i = 0; i < r->owner->field_count; i++) {
-        field *f = &r->owner->fields[i];
-        value *v = lookup(&r->front, f->name);
-        if (!v || v->kind == VALUE_NULL) {
-            if (!v && (!strcmp(f->kind, "default") || !strcmp(f->kind, "enum") || !strcmp(f->kind, "string-array")))
-                fail(c, "Fixture needs default normalization for %s: %s", f->name, r->path);
-            if (!f->optional && strcmp(f->kind, "default") && strcmp(f->kind, "enum") && strcmp(f->kind, "string-array") && strcmp(f->kind, "untyped"))
-                fail(c, "Missing required field %s: %s", f->name, r->path);
-            continue;
-        }
-        if (!strcmp(f->kind, "default") && v->kind != f->fallback.kind) fail(c, "Incorrect scalar type %s: %s", f->name, r->path);
-        if (!strcmp(f->kind, "enum")) {
-            for (j = 0; j < f->declaration.count; j++) if (scalar_equal(*v, f->declaration.items[j])) break;
-            if (j == f->declaration.count) fail(c, "Invalid enum %s: %s", f->name, r->path);
-        }
-        if (!strcmp(f->kind, "datetime")) {
-            if (v->kind != VALUE_STRING) fail(c, "Expected datetime string: %s", r->path);
-            normalized_datetime(c, v->text);
-        }
-        if (!strcmp(f->kind, "date") || !strcmp(f->kind, "ref")) {
-            if (v->kind != VALUE_STRING) fail(c, "Expected string %s: %s", f->name, r->path);
-        }
-        if (!strcmp(f->kind, "ref-array") || !strcmp(f->kind, "string-array")) {
-            if (v->kind != VALUE_ARRAY) fail(c, "Expected array %s: %s", f->name, r->path);
-            for (j = 0; j < v->count; j++) if (v->items[j].kind != VALUE_STRING) fail(c, "Expected string item %s: %s", f->name, r->path);
-        }
-    }
-    {
-        value *hidden = lookup(&r->front, "hidden");
-        if (hidden && hidden->kind != VALUE_BOOL) fail(c, "Invalid hidden field: %s", r->path);
-    }
-}
-static void validate_dataset(context *c) {
-    int i, j;
-    for (i = 0; i < c->record_count; i++) {
-        record *r = &c->records[i];
-        for (j = 0; j < i; j++) {
-            record *prior = &c->records[j];
-            if (prior->owner != r->owner) continue;
-            if (!strcmp(lookup(&r->front, "id")->text, lookup(&prior->front, "id")->text) ||
-                !strcmp(lookup(&r->front, "name")->text, lookup(&prior->front, "name")->text))
-                fail(c, "First slice requires normalized unique IDs and names: %s", r->path);
-        }
-    }
-}
+#include "datetime.h"
+#include "records.h"
 static int compare_paths(const void *a, const void *b) { return strcmp(*(const char *const *)a, *(const char *const *)b); }
 static void load_records(context *c, collection *table) {
     WIN32_FIND_DATAW entry;
     HANDLE search = FindFirstFileW(wide(c, format_text(c, "%s\\*", table->directory)), &entry);
     const char *paths[MAX_RECORDS];
     int count = 0, i;
-    if (search == INVALID_HANDLE_VALUE) fail(c, "Cannot scan collection: %s", table->directory);
+    if (search == INVALID_HANDLE_VALUE) { add_diagnostic(c, table, table->directory, "collection-read", "Collection directory cannot be read."); table->invalid = 1; return; }
     do {
         const char *name = utf8(c, entry.cFileName);
         size_t length = strlen(name);
@@ -639,10 +596,15 @@ static void load_records(context *c, collection *table) {
         ticks.QuadPart -= 116444736000000000ULL;
         /* Match Node/libuv's seconds + nanosecond fraction arithmetic. */
         r->mtime_ms = (double)(ticks.QuadPart / 10000000ULL) * 1000.0 + (double)(ticks.QuadPart % 10000000ULL) / 10000.0;
-        r->front = parse_mapping(c, r->text, r->path, &r->body);
+        ticks.LowPart = attributes.ftCreationTime.dwLowDateTime; ticks.HighPart = attributes.ftCreationTime.dwHighDateTime;
+        r->created_on_disk = ticks.QuadPart;
+        r->front = read_mapping(c, r->text, &r->body);
+        if (!r->front.present && !r->front.problem) {
+            r->front.problem_code = "record-frontmatter"; r->front.problem = "Record front matter must be a block mapping.";
+        }
         validate_record(c, r);
         r->hash = digest(c, r->text);
-        r->front_json = mapping_json(c, &r->front);
+        r->front_json = r->front.problem || !r->front.present ? "null" : mapping_json_format(c, &r->front, INDEX_NUMBERS);
     }
 }
 static void metadata(context *c, const char *key, const char *value) {
@@ -671,11 +633,16 @@ static void make_tables(context *c, collection *table) {
     sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'trigram')", internal(c, "trigram", table)));
 }
 static void bind_value(context *c, sqlite3_stmt *s, int index, value *v, field *f) {
-    if (!v || v->kind == VALUE_NULL) sqlite3_bind_null(s, index);
-    else if (v->kind == VALUE_ARRAY) bind_text(c, s, index, value_json(c, *v));
-    else if (v->kind == VALUE_STRING) bind_text(c, s, index, f && !strcmp(f->kind, "datetime") ? normalized_datetime(c, v->text) : v->text);
-    else if (v->kind == VALUE_BOOL) sqlite3_bind_int(s, index, (int)v->number);
-    else sqlite3_bind_double(s, index, v->number);
+    if (!v && f && (!strcmp(f->kind, "default") || !strcmp(f->kind, "enum"))) v = &f->fallback;
+    if (!v && f && !strcmp(f->kind, "string-array")) bind_text(c, s, index, "[]");
+    else if (!v || v->kind == VALUE_NULL) sqlite3_bind_null(s, index);
+    else if (v->kind == VALUE_ARRAY || (v->kind == VALUE_NUMBER && f && !strcmp(field_type(f), "TEXT")))
+        bind_text(c, s, index, value_json(c, *v)); /* Avoid SQLite's lossy double-to-TEXT conversion for mixed enums. */
+    else if (v->kind == VALUE_STRING) bind_text(c, s, index, f && !strcmp(f->kind, "datetime") ? validated_datetime(c, v->text) : v->text);
+    else if (v->kind == VALUE_BOOL) sqlite3_bind_int(s, index, (int)v->number.real);
+    else if (v->number_kind == NUMBER_I64) sqlite3_bind_int64(s, index, v->number.signed_integer);
+    else if (v->number_kind == NUMBER_U64) fail(c, "Unsigned scalar exceeds SQLite INTEGER range");
+    else sqlite3_bind_double(s, index, v->number.real);
 }
 static void project_record(context *c, record *r) {
     collection *table = r->owner;
@@ -687,13 +654,13 @@ static void project_record(context *c, record *r) {
     bind_text(c, s, 1, r->path); bind_text(c, s, 2, table->name);
     sqlite3_bind_double(s, 3, r->mtime_ms); sqlite3_bind_int64(s, 4, (sqlite3_int64)r->size);
     bind_text(c, s, 5, r->hash); bind_text(c, s, 6, r->front_json);
-    bind_text(c, s, 7, "[]"); bind_text(c, s, 8, r->text); finish(c, s);
-    if (hidden && hidden->number) return;
+    bind_text(c, s, 7, record_diagnostics_json(c, r)); bind_text(c, s, 8, r->text); finish(c, s);
+    if (r->blocked || (hidden && hidden->number.real)) return;
     for (i = 1; i < 9 + table->field_count; i++) strcat(placeholders, ",?");
     s = prepare(c, format_text(c, "INSERT INTO %s VALUES (%s)", identifier(c, table->name), placeholders));
     bind_value(c, s, 1, lookup(&r->front, "id"), NULL);
     bind_value(c, s, 2, lookup(&r->front, "name"), NULL);
-    bind_text(c, s, 3, normalized_datetime(c, lookup(&r->front, "created_at")->text));
+    bind_text(c, s, 3, validated_datetime(c, lookup(&r->front, "created_at")->text));
     {
         ULARGE_INTEGER time;
         FILETIME ft;
@@ -750,7 +717,7 @@ static void make_edges(context *c) {
     for (i = 0; i < c->record_count; i++) {
         record *r = &c->records[i];
         value *hidden = lookup(&r->front, "hidden");
-        if (hidden && hidden->number) continue;
+        if (r->blocked || (hidden && hidden->number.real)) continue;
         for (j = 0; j < r->owner->field_count; j++) {
             field *f = &r->owner->fields[j];
             value *v = lookup(&r->front, f->name);
@@ -770,6 +737,21 @@ static const char *schema_digest(context *c, collection *table) {
     return digest(c, joined);
 }
 
+static void load_source(context *c, const char *root) {
+    int i;
+    load_config(c, root);
+    c->contract_diagnostic_count = c->diagnostic_count;
+    for (i = 0; i < c->collection_count; i++) load_records(c, &c->collections[i]);
+    validate_dataset(c);
+}
+static void reload_records(context *c) {
+    int i;
+    c->record_count = 0; c->diagnostic_count = c->contract_diagnostic_count;
+    memset(c->records, 0, sizeof(c->records));
+    for (i = 0; i < c->collection_count; i++) load_records(c, &c->collections[i]);
+    validate_dataset(c);
+}
+#include "source-write.h"
 #include "prepare.h"
 #include "read.h"
 
@@ -778,6 +760,7 @@ int main(int argc, char **argv) {
     static context c;
     const char *root, *state;
     int i;
+    active_context = &c;
     c.memory = arena_from_buffer(backing, sizeof(backing));
     {
         LPWSTR *arguments = CommandLineToArgvW(GetCommandLineW(), &argc);
@@ -787,9 +770,10 @@ int main(int argc, char **argv) {
         LocalFree(arguments);
     }
     if (argc < 2 || !strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) return native_help();
-    if (!strcmp(argv[1], "sync") || !strcmp(argv[1], "schema") || !strcmp(argv[1], "query") || !strcmp(argv[1], "search"))
+    if (!strcmp(argv[1], "doctor") || !strcmp(argv[1], "validate") || !strcmp(argv[1], "add-table") || !strcmp(argv[1], "create") || !strcmp(argv[1], "update") ||
+        !strcmp(argv[1], "sync") || !strcmp(argv[1], "schema") || !strcmp(argv[1], "query") || !strcmp(argv[1], "search"))
         return native_read_main(&c, argc, argv);
-    if (argc != 2) { c.error_code = "cli-command"; fail(&c, "Expected sync, schema, query, search or one fixture-project path"); }
+    if (argc != 2) { c.error_code = "cli-command"; fail(&c, "Expected a native command or one fixture-project path"); }
     root = full_path(&c, ".", argv[1]);
     state = prepare_projection(&c, root, PROJECTION_REBUILD);
     print_sync(&c, state);

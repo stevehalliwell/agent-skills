@@ -144,7 +144,7 @@ for (const { executable, project, variant } of scenarios) {
     ['query', '-s', 'SELECT :x', '-P', '[]'],
     ['query', '-s', 'SELECT :x', '-P', '{"x":[1]}'],
     ['query', '-s', 'SELECT :x', '-P', '{"unknown":1}'],
-    ['query', '-s', 'SELECT 9223372036854775807'],
+    ['query', '-s', 'SELECT :x', '-P', '{"x":18446744073709551615}'],
     ['query', '-s', 'SELECT 1', '--sql', 'SELECT 2'],
     ['query', '-s', 'SELECT 1', '-l', '-1'],
     ['query', '-s', '-', '-P', '-'],

@@ -153,17 +153,18 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
   writeFileSync(database, 'not a SQLite database');
   check('corrupt DB', () => { native('schema'); });
 
-  const published = hash(database);
+  let published = hash(database);
   const bad = join(project, 'records/tasks/bad.md');
   writeFileSync(bad, '---\nname: [unfinished\n---\nbody\n');
   frozen = sourceHashes(project);
   for (const args of [['sync'], ['schema'], ['query', '-s', 'SELECT 1'], ['search', '-q', 'lantern']]) {
-    const failure = run(executable, [...args, '-p', project], 1);
-    assert.equal(failure.error.code, 'projection-prepare');
-    assert.equal(hash(database), published);
+    const result = run(executable, [...args, '-p', project]);
+    assert.ok(result.diagnostics.some(item => item.path === bad));
     assert.deepEqual(sourceHashes(project), frozen);
   }
-  rmSync(bad); cases.push('malformed source preserves DB across all commands');
+  rmSync(bad);
+  assert.equal(native('sync').state, 'rebuilt'); published = hash(database);
+  cases.push('malformed source reported skipped unchanged across all commands');
   // Force a failure during SQL construction, after opening the temporary DB.
   writeFileSync(config, initialConfig + '\nrecords/decisions as TASKS\n');
   frozen = sourceHashes(project);

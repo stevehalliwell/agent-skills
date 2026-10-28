@@ -326,17 +326,10 @@ yaml_string_join(
  * Check if the character at the specified position is a line break.
  */
 
+/* Attendant local patch: YAML 1.2 line breaks are CR/LF only.
+ * NEL/LS/PS remain UTF-8 scalar content; do not fold or normalize them. */
 #define IS_BREAK_AT(string,offset)                                              \
-    (CHECK_AT((string),'\r',(offset))               /* CR (#xD)*/               \
-     || CHECK_AT((string),'\n',(offset))            /* LF (#xA) */              \
-     || (CHECK_AT((string),'\xC2',(offset))                                     \
-         && CHECK_AT((string),'\x85',(offset)+1))   /* NEL (#x85) */            \
-     || (CHECK_AT((string),'\xE2',(offset))                                     \
-         && CHECK_AT((string),'\x80',(offset)+1)                                \
-         && CHECK_AT((string),'\xA8',(offset)+2))   /* LS (#x2028) */           \
-     || (CHECK_AT((string),'\xE2',(offset))                                     \
-         && CHECK_AT((string),'\x80',(offset)+1)                                \
-         && CHECK_AT((string),'\xA9',(offset)+2)))  /* PS (#x2029) */
+    (CHECK_AT((string),'\r',(offset)) || CHECK_AT((string),'\n',(offset)))
 
 #define IS_BREAK(string)    IS_BREAK_AT((string),0)
 

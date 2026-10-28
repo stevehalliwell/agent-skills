@@ -1,5 +1,5 @@
-/* Commands share config, schema, arena, JSON and in-process preparation.
-   No source writes or incremental reconciliation. */
+/* CLI commands share config, schema, arena, JSON and in-process preparation.
+   Read preparation may correct source; incremental reconciliation is excluded. */
 #include "vendor/libpdjson5/pdjson5.h"
 #include <io.h>
 #include <fcntl.h>
@@ -10,7 +10,8 @@
 
 typedef struct read_options {
     const char *command, *project, *sql_text, *params, *query_text, *collections;
-    int limit, stdin_used, allow_fts;
+    const char *directory, *alias, *collection, *items;
+    int limit, stdin_used, allow_fts, strict, no_correct;
     unsigned long progress_calls;
 } read_options;
 typedef struct result_rows {
@@ -21,12 +22,16 @@ typedef struct result_rows {
 } result_rows;
 
 static int native_help(void) {
-    puts("{\"usage\":\"projection.exe <sync|schema|query|search> [options]; projection.exe <fixture-project> builds projection\","
+    puts("{\"usage\":\"projection.exe <doctor|validate|add-table|create|update|sync|schema|query|search> [options]; projection.exe <fixture-project> builds projection\","
          "\"project\":\"--project, -p <path>; defaults to current directory\","
+         "\"doctor\":\"read-only health checks; no Git checks; exits 1 when unhealthy\","
+         "\"validate\":\"[--no-correct|--strict]; default applies mechanical corrections\","
+         "\"add-table\":\"--directory, -d <path> [--alias, -a <name>]\","
+         "\"create/update\":\"--collection, -c <name> --items, -i <JSON array>\","
          "\"query\":\"--sql, -s <sql> [--params, -P <JSON object>] [--limit, -l <integer>]\","
          "\"search\":\"--query, -q <text> [--collections, -c <comma-separated names>] [--limit, -l <integer>]\","
          "\"input\":\"@path reads UTF-8; - reads stdin once for text options\","
-         "\"projection\":\"automatic reuse or full rebuild from normalized source; Markdown unchanged\","
+         "\"projection\":\"automatic reuse/rebuild; reads apply reported mechanical corrections; malformed records diagnosed/skipped\","
          "\"output\":\"one JSON value on stdout; errors also explained on stderr; exits 0/1\"}");
     return 0;
 }
@@ -56,7 +61,16 @@ static read_options parse_read_options(context *c, int argc, char **argv) {
     for (i = 2; i < argc; i++) {
         const char *arg = argv[i], **destination = NULL;
         if (!strcmp(arg, "--help") || !strcmp(arg, "-h")) { native_help(); exit(0); }
+        if (!strcmp(result.command, "validate") && (!strcmp(arg, "--strict") || !strcmp(arg, "--no-correct"))) {
+            int *flag = !strcmp(arg, "--strict") ? &result.strict : &result.no_correct;
+            if (*flag) fail(c, "Option may be supplied only once: %s", arg);
+            *flag = 1; continue;
+        }
         if (!strcmp(arg, "--project") || !strcmp(arg, "-p")) destination = &result.project;
+        else if (!strcmp(result.command, "add-table") && (!strcmp(arg, "--directory") || !strcmp(arg, "-d"))) destination = &result.directory;
+        else if (!strcmp(result.command, "add-table") && (!strcmp(arg, "--alias") || !strcmp(arg, "-a"))) destination = &result.alias;
+        else if ((!strcmp(result.command, "create") || !strcmp(result.command, "update")) && (!strcmp(arg, "--collection") || !strcmp(arg, "-c"))) destination = &result.collection;
+        else if ((!strcmp(result.command, "create") || !strcmp(result.command, "update")) && (!strcmp(arg, "--items") || !strcmp(arg, "-i"))) destination = &result.items;
         else if (!strcmp(result.command, "query") && (!strcmp(arg, "--sql") || !strcmp(arg, "-s"))) destination = &result.sql_text;
         else if (!strcmp(result.command, "query") && (!strcmp(arg, "--params") || !strcmp(arg, "-P"))) destination = &result.params;
         else if (!strcmp(result.command, "search") && (!strcmp(arg, "--query") || !strcmp(arg, "-q"))) destination = &result.query_text;
@@ -81,6 +95,9 @@ static read_options parse_read_options(context *c, int argc, char **argv) {
     if (!strcmp(result.command, "query") && !result.sql_text) fail(c, "--sql is required for query");
     if (!strcmp(result.command, "search") && !result.query_text) fail(c, "--query is required for search");
     result.project = full_path(c, ".", result.project ? result.project : ".");
+    if (!strcmp(result.command, "add-table") && !result.directory) fail(c, "--directory is required for add-table");
+    if ((!strcmp(result.command, "create") || !strcmp(result.command, "update")) && (!result.collection || !result.items)) fail(c, "--collection and --items are required");
+    if (result.items) result.items = option_input(c, &result, result.items);
     if (result.sql_text) result.sql_text = option_input(c, &result, result.sql_text);
     if (result.params) result.params = option_input(c, &result, result.params);
     if (result.query_text) result.query_text = option_input(c, &result, result.query_text);
@@ -193,7 +210,7 @@ typedef struct query_parameter {
     const char *name, *text;
     size_t length;
     enum pdjson_type type;
-    double number;
+    value number;
 } query_parameter;
 static void query_parameters(context *c, sqlite3_stmt *statement, const char *text) {
     pdjson_stream parser;
@@ -221,7 +238,9 @@ static void query_parameters(context *c, sqlite3_stmt *statement, const char *te
         if (p->type == PDJSON_STRING) {
             const char *value = pdjson_get_value(&parser, &length);
             p->text = copy_text(c, value, length - 1); p->length = length - 1;
-        } else if (p->type == PDJSON_NUMBER) p->number = strtod(pdjson_get_value(&parser, NULL), NULL);
+        } else if (p->type == PDJSON_NUMBER) {
+            if (parse_number(pdjson_get_value(&parser, NULL), &p->number) != NUMBER_VALID) fail(c, "Parameter number exceeds i64/u64 or finite f64 range");
+        }
         else if (p->type == PDJSON_ERROR) fail(c, "Invalid JSON parameter value");
     }
     if (token != PDJSON_OBJECT_END || pdjson_next(&parser) != PDJSON_DONE) fail(c, "Invalid or trailing JSON in --params");
@@ -236,6 +255,12 @@ static void query_parameters(context *c, sqlite3_stmt *statement, const char *te
     }
     c->error_code = "sql-params";
     for (i = 0; i < count; i++) {
+        enum pdjson_type type = parameters[i].type;
+        if (type == PDJSON_NUMBER && parameters[i].number.number_kind == NUMBER_U64) fail(c, "Parameter exceeds SQLite signed 64-bit INTEGER range");
+        if (type != PDJSON_STRING && type != PDJSON_NUMBER && type != PDJSON_TRUE && type != PDJSON_FALSE && type != PDJSON_NULL) fail(c, "Parameters must be scalar JSON values");
+    }
+    if (!statement) return; /* Transport preflight before any source correction. */
+    for (i = 0; i < count; i++) {
         query_parameter *p = &parameters[order[i]];
         int index = sqlite3_bind_parameter_index(statement, p->name), status;
         if (!index) {
@@ -248,7 +273,7 @@ static void query_parameters(context *c, sqlite3_stmt *statement, const char *te
         }
         if (!index) fail(c, "Unknown query parameter: %s", p->name);
         if (p->type == PDJSON_STRING) status = sqlite3_bind_text(statement, index, p->text, (int)p->length, SQLITE_TRANSIENT);
-        else if (p->type == PDJSON_NUMBER) status = sqlite3_bind_double(statement, index, p->number);
+        else if (p->type == PDJSON_NUMBER) status = p->number.number_kind == NUMBER_I64 ? sqlite3_bind_int64(statement, index, p->number.number.signed_integer) : sqlite3_bind_double(statement, index, p->number.number.real);
         else if (p->type == PDJSON_TRUE || p->type == PDJSON_FALSE) status = sqlite3_bind_int(statement, index, p->type == PDJSON_TRUE);
         else if (p->type == PDJSON_NULL) status = sqlite3_bind_null(statement, index);
         else fail(c, "Parameters must be scalar JSON values");
@@ -309,6 +334,10 @@ static int decimal_digits(unsigned int number) { int count = 1; while (number >=
 static size_t sql_json_size(context *c, sqlite3_stmt *s, int index, string_view *text) {
     int type = sqlite3_column_type(s, index);
     if (type == SQLITE_NULL) return 4;
+    if (type == SQLITE_INTEGER) {
+        char token[32]; jsonb b;
+        jsonb_init(&b); json_integer(&b, token, sizeof(token), sqlite3_column_int64(s, index)); return b.pos;
+    }
     if (type == SQLITE_TEXT) { *text = sql_text(c, s, index); return quoted_size(*text); }
     if (type == SQLITE_BLOB) {
         const unsigned char *bytes = sqlite3_column_blob(s, index);
@@ -321,13 +350,14 @@ static size_t sql_json_size(context *c, sqlite3_stmt *s, int index, string_view 
         double number = sqlite3_column_double(s, index);
         char token[128]; jsonb b;
         if (!isfinite(number)) return 4;
-        jsonb_init(&b); json_number(c, &b, token, sizeof(token), number);
+        jsonb_init(&b); json_real(c, &b, token, sizeof(token), number);
         return b.pos;
     }
 }
 static void sql_json_value(context *c, jsonb *b, char *out, size_t capacity, sqlite3_stmt *s, int index, string_view text) {
     int type = sqlite3_column_type(s, index);
     if (type == SQLITE_NULL) json_check(jsonb_null(b, out, capacity));
+    else if (type == SQLITE_INTEGER) json_integer(b, out, capacity, sqlite3_column_int64(s, index));
     else if (type == SQLITE_TEXT) json_check(jsonb_string(b, out, capacity, (const char *)text.data, text.len));
     else if (type == SQLITE_BLOB) {
         int i, length = sqlite3_column_bytes(s, index);
@@ -342,9 +372,7 @@ static void sql_json_value(context *c, jsonb *b, char *out, size_t capacity, sql
         json_check(jsonb_object_pop(b, out, capacity));
     } else {
         double number = sqlite3_column_double(s, index);
-        if (type == SQLITE_INTEGER && (sqlite3_column_int64(s, index) > 9007199254740991LL || sqlite3_column_int64(s, index) < -9007199254740991LL))
-            fail(c, "SQLite integer exceeds JavaScript safe-integer range, as in existing CLI");
-        if (isfinite(number)) json_number(c, b, out, capacity, number);
+        if (isfinite(number)) json_real(c, b, out, capacity, number);
         else json_check(jsonb_null(b, out, capacity));
     }
 }
@@ -428,10 +456,6 @@ static const char *columns_json(context *c, const char *table) {
     for (i = 0; i < rows->count; i++) json_check(jsonb_token(&b, out, 256 * 1024, rows->rows[i], strlen(rows->rows[i])));
     json_check(jsonb_array_pop(&b, out, 256 * 1024));
     return out;
-}
-static void json_property(jsonb *b, char *out, size_t capacity, const char *key, const char *text) {
-    json_check(jsonb_key(b, out, capacity, key, strlen(key)));
-    json_check(jsonb_string(b, out, capacity, text, strlen(text)));
 }
 static const char *schema_json(context *c, read_options *options) {
     char *out = allocate(c, OUTPUT_CAPACITY);
@@ -599,11 +623,20 @@ static result_rows *collect_search(context *c, read_options *options) {
     }
     return result;
 }
+#include "diagnostics-cli.h"
+#include "write-cli.h"
+
 static int native_read_main(context *c, int argc, char **argv) {
     read_options options = parse_read_options(c, argc, argv);
     const char *output;
+    if (!strcmp(options.command, "doctor")) return native_doctor(c, &options);
+    if (!strcmp(options.command, "validate")) return native_validate(c, &options);
+    if (!strcmp(options.command, "add-table")) return native_add_table(c, &options);
+    if (!strcmp(options.command, "create") || !strcmp(options.command, "update")) return native_write_records(c, &options);
     options.allow_fts = strcmp(options.command, "query") != 0;
+    c->auto_correct = strcmp(options.command, "sync") != 0;
     if (options.sql_text) one_read_statement(c, options.sql_text);
+    if (options.params) query_parameters(c, NULL, options.params);
     c->error_code = "projection-prepare";
     {
         const char *state = prepare_projection(c, options.project, PROJECTION_REUSE);
@@ -624,6 +657,21 @@ static int native_read_main(context *c, int argc, char **argv) {
     }
     if (sqlite3_close(c->db) != SQLITE_OK) fail(c, "Cannot close read-only database");
     c->db = NULL;
+    if (c->applied_corrections || c->diagnostic_count) {
+        jsonb report;
+        char *tail = c->json_scratch, *extended;
+        size_t a = strlen(output);
+        jsonb_init(&report); json_check(jsonb_object(&report, tail, OUTPUT_CAPACITY));
+        if (c->applied_corrections) {
+            json_check(jsonb_key(&report, tail, OUTPUT_CAPACITY, "corrections", 11));
+            json_check(jsonb_token(&report, tail, OUTPUT_CAPACITY, c->applied_corrections, strlen(c->applied_corrections)));
+        }
+        if (c->diagnostic_count) { json_check(jsonb_key(&report, tail, OUTPUT_CAPACITY, "diagnostics", 11)); json_diagnostics(c, &report, tail, OUTPUT_CAPACITY, NULL); }
+        json_check(jsonb_object_pop(&report, tail, OUTPUT_CAPACITY));
+        if (a + report.pos > OUTPUT_CAPACITY) fail(c, "Result plus source report exceeds output capacity");
+        extended = allocate(c, a + report.pos + 1); memcpy(extended, output, a - 1); extended[a - 1] = ',';
+        memcpy(extended + a, tail + 1, report.pos - 1); output = extended;
+    }
     puts(output);
     return 0;
 }

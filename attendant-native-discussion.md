@@ -1,6 +1,6 @@
 # Attendant native discussion
 
-Explore moving Attendant from Node.js to C99 + CJIT. No rewrite decision yet.
+Explore moving Attendant from Node.js to C99 + CJIT. Core native commands now implemented within Windows/resource/flat-YAML bounds; production replacement and launcher rollout remain undecided. Current contract, commands and evidence: `exploration/attendant-native/README.md`.
 
 ## Goals
 
@@ -56,8 +56,8 @@ Inspected bundled runner, YAML dependency, CLI help, references, and all seven s
 - C YAML candidates need evaluation, not adoption. [libfyaml](https://github.com/pantoniou/libfyaml) has a document API and experimental opt-in comment handling; its own documentation describes round-trip comment placement as best effort. [LibYAML](https://github.com/yaml/libyaml) is another parser/emitter candidate; comment-preserving edits need separate investigation. Verify Windows, CJIT, `zig cc`, licensing, supported YAML semantics, and source-preservation fixtures before selection.
 - A C Markdown parser such as [MD4C](https://github.com/mity/md4c) is a candidate only if future functionality needs Markdown structure. Current record processing does not establish that dependency.
 - Preferred JSON dependencies already exist in `D:/Repos/proto-framework/vendor/`: `libpdjson5` for reading and `json-build` for writing. Reuse these as the starting point for native JSON needs; check their pinned versions, licenses, strict JSON behavior and compiler compatibility before copying. `include/json.h` provides optional fixed-shape native bindings, but excludes maps and optional values and requires object roots; do not assume that wrapper fits Attendant's schema-driven fields and array-root batch inputs. The underlying libraries can be evaluated independently.
-- Completed YAML spike: `spikes/c99-yaml-frontmatter/RESULTS.md`, probes, fixture and raw results retained here. Parent independently reproduced LibYAML builds and identical probe output with CJIT v1.2.0 and Zig 0.17.0. LibYAML can parse and emit tested mappings but drops comments, changes formatting, accepts duplicate keys, and needs explicit Attendant subset and scalar resolution logic. It is not a drop-in source-preserving editor. libfyaml runtime behavior remains untested: direct compilation hit missing `xxhash.h`; supported CMake build was not attempted. A narrow JS splice preserves simple fixtures but rejects the real flow-sequence example; it is not a native editing solution. Current runner-equivalent serialization also changes some formatting and produces a mixed CRLF closing delimiter. No parser adopted; next YAML evidence needed is a supported libfyaml build or a deliberately scoped source-preserving native edit experiment.
-- Copied `base.h`, `build.h`, and `test.h` from `D:/Repos/proto-framework/include/` at commit `f0b848e2541903ac99696f1f8a71d93e72ef4c5b` into `exploration/attendant-native/include/`. `base.h` supplies allocators, strings, collections, file and process helpers; `build.h` supplies a bounded CJIT/Zig build driver; `test.h` supplies assertions and runner generation. These are exploration dependencies, not an approved native implementation. `base.h` collection macros require `__typeof__`; `build.h` bootstraps via CJIT even when targeting Zig, so it does not by itself satisfy a Zig-only fallback.
+- Completed YAML spike: `spikes/c99-yaml-frontmatter/RESULTS.md`, probes, fixture and raw results retained here. Parent independently reproduced LibYAML builds and identical probe output with CJIT v1.2.0 and Zig 0.17.0. LibYAML can parse and emit tested mappings but drops comments, changes formatting, accepts duplicate keys, and needs explicit Attendant subset and scalar resolution logic. It is not a drop-in source-preserving editor. libfyaml runtime behavior remains untested: direct compilation hit missing `xxhash.h`; supported CMake build was not attempted. A narrow JS splice preserves simple fixtures but rejects the real flow-sequence example; it is not a native editing solution. Current runner-equivalent serialization also changes some formatting and produces a mixed CRLF closing delimiter. LibYAML now supplies bounded native reads and edit spans, never whole-document emission. CLI completion exercises deliberately scoped source-preserving edits; full YAML equivalence remains unproven. libfyaml remains unadopted and runtime-untested.
+- Copied `base.h`, `build.h`, and `test.h` from `D:/Repos/proto-framework/include/` at commit `f0b848e2541903ac99696f1f8a71d93e72ef4c5b` into `exploration/attendant-native/include/`. `base.h` supplies allocators, strings, collections, file and process helpers; `build.h` supplies a bounded CJIT/Zig build driver; `test.h` supplies assertions and runner generation. These remain exploration dependencies, not a final packaging choice. `base.h` collection macros require `__typeof__`; `build.h` bootstraps via CJIT even when targeting Zig, so it does not by itself satisfy a Zig-only fallback.
 - A minimal combined-header assertion ran with CJIT v1.2.0 and Zig 0.17.0. Zig's default global cache failed to link due to missing cache artifacts; a fresh isolated global cache passed. This does not verify SQLite, YAML, build driver operation, or full header behavior.
 
 ### Native behavior baseline
@@ -84,14 +84,14 @@ Preserve existing Attendant core features and broad behavior in native explorati
 - Viewer remains exploratory during this discussion. Decide whether to include it in a release after native Attendant reaches approximate parity with the existing runner. Show collections and their files, render and edit Markdown, and follow links between records. Investigate current cimgui-related Markdown preview/editing tooling; exact component and compatibility need verification. Agent can reveal locations without changing human selection; viewer reports the current human selection back to the tool for agent retrieval. Selection granularity and transport remain open.
 - Showing a proposed edit location or reporting a selection does not itself mean edit approval. Define approval separately if needed.
 
-### Remaining discussion findings
+### Existing `.mjs` findings
 
 - Inspection can write source: `schema`, `query`, and `search` prepare project, applying missing/default metadata and resolving duplicate names/IDs when projection is not fresh. These corrections are not included in those commands' returned results.
 - Success is one JSON value; operation failures generally emit text on stderr with exit 1 and no stdout JSON. Validation and projection diagnostics are embedded in successful JSON results. Non-strict validation can exit 0 with diagnostics.
 - Query/search return `columns`, `rows`, `returned`, and `truncated`. Default limit is 100; shaping caps output at 10,000 rows and 10 MiB of serialized rows, but SQL/search results are fully materialized before shaping.
 - Confirmed inconsistencies: `--limit 0` returns up to one row; empty query results lose column metadata; reused projection diagnostics use `source_path`/`collection_name` while rebuilt/updated diagnostics use `path`.
 - Lock acquisition and some generated-file cleanup retries have no deadline. Future GUI alongside CLI makes bounded waiting and concurrent-write handling important.
-- Stable machine-readable errors/diagnostics and visible automatic repairs are agreed direction; exact contract remains open. Possible additions: optional correction preview, body read/edit through shared core, and stale-edit conflict detection. These additions are not approved scope. Migration improvements are excluded from native CLI.
+- Native prototype now exposes structured errors/diagnostics and automatic repairs; broader product CLI contract remains open. Possible additions: optional correction preview, body read/edit through shared core, and stale-edit conflict detection. These additions are not approved scope. Migration improvements are excluded from native CLI.
 
 ## First slice: native projection, existing CLI consumer
 
@@ -128,7 +128,7 @@ Check steps only when completed. Complete the first slice through user review be
 
 ### Native read slice
 
-User approved native `schema`, `query`, and `search` over the compatible projection, without further product refinement. Source repair, source writes, and incremental refresh remain deferred. Read slice initially required an existing snapshot; preparation slice below replaces that boundary. Current implementation and acceptance commands: `exploration/attendant-native/README.md`.
+User approved native `schema`, `query`, and `search` over compatible projection, without further product refinement. This slice initially deferred repair/writes/incremental refresh; CLI completion below adds source writes. Read slice initially required an existing snapshot; preparation slice below replaces that boundary. Current implementation and acceptance commands: `exploration/attendant-native/README.md`.
 
 - [x] Add native read commands with familiar arguments and command-specific JSON results; use preferred strict JSON reader for parameters.
 - [x] Enforce read-only SQLite and authorizer containment; support parameter binding, file/stdin inputs, limits and structured errors.
@@ -138,7 +138,7 @@ User approved native `schema`, `query`, and `search` over the compatible project
 
 ### Native preparation slice
 
-User approved native `sync` and automatic preparation before `schema`, `query`, and `search`. Reuse an unchanged projection; fully rebuild when projection is missing or source records, config, or schemas change. Keep Markdown untouched. Source repair and incremental reconciliation remain deferred; use the existing normalized-input boundary and report unsupported source rather than silently return stale results.
+At `5e2d32a`, user-approved native `sync` and automatic read preparation reused unchanged projection or fully rebuilt changed/missing projection without source writes. CLI completion below supersedes normalized-only/untouched-source boundary: reads can correct metadata; malformed records are diagnosed/skipped. Incremental reconciliation remains excluded.
 
 Acceptance: native reads build a missing projection without Node; unchanged operations reuse it; adding, editing or deleting source appears on the next read; existing `.mjs sync` reuses native output; source hashes stay unchanged. Preserve the published projection on rebuild failure. No concurrent producer/consumer guarantee in this slice.
 
@@ -147,11 +147,45 @@ Acceptance: native reads build a missing projection without Node; unchanged oper
 - [x] Verify missing/unchanged/added/edited/deleted/config/schema cases, `.mjs` interoperability, failure preservation and unchanged source on both compiler paths. Each of four compiler/configuration scenarios passed 34 named lifecycle cases, including Node absent from PATH, collection changes, missing/corrupt DB parts, failed SQL steps, blocked publication, active WAL and genuine hot-journal preservation. Existing read checks passed 23 comparisons and 27 rejections per scenario; runner's 7 tests passed.
 - [x] Update commands and evidence. See `exploration/attendant-native/README.md` and generated `build/review/prepare-results.json`. Independent read-only review found journal protection, statement-cleanup and missing-edge-table gaps; fixes gained executable regressions. Follow-up inspection found no remaining actionable defect in fixes. Preparation slice completed and reviewed. Source repair, incremental reconciliation and concurrent publication remain separate work.
 
-### Native CLI completion direction
+### Native CLI completion slice
 
-User requested committing preparation progress and identified remaining native CLI features as likely next scope. Remaining core commands: `doctor`, `validate` (including `--no-correct` and `--strict`), `add-table`, `create`, and `update`. Migration/import commands remain excluded.
+User approved completing all remaining core CLI commands in order within one slice. Preparation progress committed as `5e2d32a`. Scope: `doctor`, `validate` (including `--no-correct` and `--strict`), `add-table`, `create`, and `update`. Migration/import commands remain excluded.
 
-Proposed sequence: diagnostics and validation foundation; source-preserving mechanical correction; collection creation; record create/update. Keep existing command-specific success shapes, batch preflight, immutable metadata and body preservation. Malformed YAML must be reported and skipped, never repaired. Completing command names alone does not establish parity: reads/preparation must also handle invalid records and expose corrections consistently. Source-write behavior needs scoped acceptance before implementation; no write implementation started.
+Agreed sequence: `doctor`; `validate` diagnostics; source-preserving mechanical correction; `add-table`; record `create`/`update`. Keep existing command-specific success shapes, batch preflight, immutable metadata and body preservation. Malformed YAML must be reported and skipped, never repaired. Completing command names alone does not establish parity: reads/preparation must also handle invalid records and expose corrections consistently. Source writes use bounded top-level YAML edits rather than a whole-document emitter: preserve unrelated source bytes, comments, newline style and body. Preflight all requested records before publication; replacements atomic per file, not across an entire update batch. Report already-written paths if later publication or projection refresh fails. Do not add Git checks to doctor. Retain exploration resource/platform/YAML boundaries and document tested parity rather than claim full YAML equivalence.
+
+- [x] Implement native doctor and non-writing validation with structured diagnostics. Doctor inspects SQLite immutably; strict/no-correct do not touch source/state.
+- [x] Implement mechanical correction and malformed-record skipping in preparation; expose corrections. Prefer valid source dates, then available filesystem creation times within tied cohorts, then path; never rename files. Event preflight rejects nested/root-sequence input and counts implicit-null/indentless arrays before recursive document load.
+- [x] Implement add-table with safe preflight and cleanup. Reject unrepresentable config entries, disposable-state paths and capacity overflow before writes.
+- [x] Implement create/update, strict transport, batch preflight and source-preserving writes. Escape YAML-sensitive Unicode; verify parsed meaning. Report `failed` source path and committed `written` paths on staging/publication failure; preserve source commits after projection-refresh failure.
+- [x] Verify both compiler paths, `.mjs` interoperability, source preservation and failure paths. Four compiler/config scenarios each pass 19 CLI cases plus 18 rejected batches, 34 preparation cases, 23 read comparisons and 27 read rejections; existing runner's 7 tests pass. CLI checks cover Node absent from PATH, exact body/unrelated comments, CRLF, YAML-sensitive Unicode, duplicate creation-time heuristics, 1024/1025 array boundaries, locked-file partial publication, config rollback, projection-refresh reporting and 32-collection capacity. Independent read-only review drove comment-span, encoding, config grammar, capacity and event-bound fixes; final bounded follow-up found no remaining actionable issue. README and generated `build/review/cli-results.json` retain commands/evidence. Slice complete; included in CLI/source-contract checkpoint.
+
+### Source contract task
+
+Status: complete; included in CLI/source-contract checkpoint.
+
+Checks: CJIT/Zig × relative/absolute config passed focused source, projection/read, preparation and CLI suites. Existing runner's 7 tests passed. Independent read-only review drove precision regressions; final bounded follow-up found no remaining actionable issue in inspected fixes. Commands, limits and generated evidence: exploration README.
+
+Goal: enforce Attendant's deliberate source contract, not JavaScript/YAML-library permissiveness.
+
+Contract:
+- Datetimes exactly `YYYY-MM-DDTHH:mm:ss.sssZ`; date-only fields exactly `YYYY-MM-DD`. Check calendar/time validity. Reject alternate spellings without guessing or rewriting author values.
+- Keep flat YAML mappings, scalars and scalar arrays. No nested objects, anchors, aliases, tags or extra documents. Preserve unrelated formatting/comments and Markdown bodies.
+- Read decimal numbers into `i64`, `u64` or finite `f64`; preserve integer precision through YAML/JSON, validation, writes, projection and query output. No JavaScript safe-integer restriction or general JavaScript serialization requirement.
+- Preserve valid UTF-8 values without locale collation or Unicode normalization. Reject invalid source encoding. Treat literal NEL/LS/PS as scalar content, not line breaks; YAML syntax remains enforced. Local LibYAML patch and provenance document this boundary.
+- Paths are local inputs/derived DB values, not cross-machine portable identifiers. Keep configured source spelling untouched; resolve separately for filesystem access. No UNC/long-path expansion unless actual checks reveal an in-scope defect.
+
+Storage: reject scalar numeric-column values above `INT64_MAX` explicitly; never round or change numeric columns to text. Full `u64` remains valid inside JSON-backed values such as arrays. Oversized identifiers can use explicitly quoted string fields.
+
+Acceptance:
+- [x] Canonical dates pass; alternate timestamp formats fail with diagnostics and no guessed repair.
+- [x] Integer boundaries and finite float cases retain intended values across supported transports, source writes, cache/projection and query output; overflow fails explicitly.
+- [x] UTF-8 text and unrelated source/body bytes remain unchanged through read/write round trips.
+- [x] Existing restricted YAML forms remain supported; elaborate forms stay rejected.
+- [x] Both compiler paths pass focused regressions and affected existing suites. Document intentional differences from `.mjs`.
+
+Implementation: `numbers.h` retains exact integers and checked mixed numeric equality; SQLite INTEGER binding/output stays exact. Strict date parser validates without normalization. Source serialization preserves float syntax; typed numeric readback catches meaning changes that JSON string comparison misses. Cache reuse checks decoded front matter and precision-sensitive projected numbers, catching old rounding even when cached JSON digits match. Honor TEXT affinity in mixed enums; explicitly serialize numeric TEXT values to avoid SQLite's lower-precision double conversion. Focused suite: `exploration/attendant-native/source-check.mjs`; generated evidence: `build/review/source-results.json`. README owns detailed limits and intentional `.mjs` differences.
+
+Excludes: migration/import, broader YAML grammar, locale matching, path portability, incremental reconciliation, launcher rollout, viewer and commits.
 
 ### Remaining refinement and parity work
 
@@ -167,11 +201,11 @@ Proposed sequence: diagnostics and validation foundation; source-preserving mech
 - [x] Establish Git boundary: no Git awareness or invocation for now; human/agent own Git operations and recovery. Worktree context and non-Git warnings are possible future exploration.
 - [x] Capture current dataset source and disposable projection regeneration at broad-strokes level; configured external paths and filesystem-derived metadata limit exact portability.
 - [ ] Refine human and agent CLI contract against `cli-design`: output defaults/flags, field selection, errors, warnings, agent mode, exit status, and applicable breadcrumbs.
-- [ ] Define stable error/diagnostic shapes, empty-result metadata, and limit semantics.
+- [x] Define native prototype error/diagnostic shapes, empty-result metadata and limit semantics. See exploration README; final product contract remains reviewable.
 - [ ] Assess body read/edit and stale-edit conflict detection as possible initial core capabilities.
 - [ ] Define bounded resource use and lock waits, including future CLI/GUI coexistence.
 - [x] Decide migration responsibility: external workflow, not native CLI.
-- [ ] Define write-failure reporting and recovery expectations without tool-managed Git operations.
+- [x] Define write-failure reporting/recovery without tool-managed Git: atomic per-file replacements, no cross-file update transaction, structured failed/written paths, source remains authoritative after projection-refresh failure.
 - [ ] Sketch visual collaboration loops: agent shows intended edit locations; human selects context; agent retrieves selection through CLI. Exploratory only, no build commitment.
 - [ ] Define selection granularity and addressing: records, fields, body sections, or text ranges; alternatives, not agreed requirements.
 - [ ] Define CLI/viewer communication, session ownership, stale selections, and behavior when viewer is absent.
@@ -184,7 +218,7 @@ Proposed sequence: diagnostics and validation foundation; source-preserving mech
 - [ ] Compare C99 + CJIT with keeping Node.js; consider Zig only where relevant to a concrete constraint.
 - [ ] Define measurements for startup time, footprint, and runtime requirements.
 - [ ] Identify replacement rollout, data safety, recovery, and test requirements; no CLI migration machinery.
-- [ ] Evaluate a source-preserving feasibility milestone before implementing writes; proposal, not agreed scope.
+- [x] Exercise source-preserving feasibility within user-approved CLI completion slice: bounded YAML splices, exact body/unrelated-comment checks, Unicode semantic readback and locked-file failure regressions.
 - [x] Select first implementation slice: native projection generation consumed by existing `.mjs` CLI, with explicit user review before further scope.
 
 ## Comments

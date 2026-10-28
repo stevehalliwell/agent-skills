@@ -1,7 +1,7 @@
 ---
 id: 01a1094f-6054-7326-9479-1113deab9d71
 name: first
-created_at: 2026-10-04T23:45:59Z
+created_at: 2026-10-04T23:45:59.000Z
 desc: "Inspect the native SQLite projection, café Ω"
 tags: [native, "true"]
 status: active

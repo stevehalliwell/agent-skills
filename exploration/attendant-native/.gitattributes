@@ -1,3 +1,5 @@
 # Preserve vendored source bytes and Bash portability on Windows.
 vendor/** -text
+# Keep patched vendor header CRLF; check real trailing spaces, not CR bytes.
+vendor/libyaml/src/yaml_private.h whitespace=trailing-space,space-before-tab,cr-at-eol
 *.sh text eol=lf
