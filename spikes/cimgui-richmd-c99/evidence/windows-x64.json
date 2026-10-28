@@ -1,0 +1,189 @@
+{
+  "ok": true,
+  "runStartedAt": "2026-10-28T23:06:58.592Z",
+  "platform": "win32",
+  "architecture": "x64",
+  "build": {
+    "builtAt": "2026-10-28T23:06:58.500Z",
+    "zig": "0.17.0",
+    "generatorZig": "0.17.0",
+    "sourceTreeSha256": "0488ec460db29838eaeea1ec193a7dc4fbcd0799d498e64528157452b22cd42e"
+  },
+  "cjit": "1.2.0",
+  "dependencies": {
+    "dependencies": [
+      [
+        "cimgui",
+        "https://github.com/cimgui/cimgui.git",
+        "2a6a93fccd10f275ee9206167dc9698f6f00fac1"
+      ],
+      [
+        "cimgui/imgui",
+        "https://github.com/ocornut/imgui.git",
+        "c1aaac65e896a45f81f47a4d68f9959e0f86c859"
+      ],
+      [
+        "richmd",
+        "https://github.com/pthom/imgui_rich_md.git",
+        "609039721f838108251520079fff79011cf46659"
+      ],
+      [
+        "richmd/external/md4c",
+        "https://github.com/mity/md4c.git",
+        "481fbfbdf72daab2912380d62bb5f2187d438408"
+      ],
+      [
+        "luajit",
+        "https://github.com/LuaJIT/LuaJIT.git",
+        "a4c064539ea931274d407e1249b4bb575424a0f4"
+      ]
+    ],
+    "patch": "Guard IM_NODEBUGSTEP so generator can suppress debug-only attributes"
+  },
+  "dll": {
+    "bytes": 2643968,
+    "sha256": "f80b6d790dd100c0db6391da78150cbc3136d2ad62d3eca329b3cbab60ab0de2",
+    "imports": [
+      "d3d11.dll",
+      "D3DCOMPILER_47.dll",
+      "dwmapi.dll",
+      "GDI32.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-private-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "KERNEL32.dll",
+      "SHELL32.dll",
+      "USER32.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll",
+      "api-ms-win-crt-multibyte-l1-1-0.dll"
+    ]
+  },
+  "results": [
+    {
+      "name": "zig",
+      "preview": false,
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 2740,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 0,
+        "sha256": "a3c23a6d8529bf234461dbcb4d1e16c7f0cb4149279eef390e7ef0afad591e6b"
+      }
+    },
+    {
+      "name": "zig",
+      "preview": true,
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 4706,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 7666,
+        "sha256": "bbdcb9215991dcf130820b1ee8b81afbd0ec6d66a413994e95a7bd35de21fa9c"
+      }
+    },
+    {
+      "name": "cjit",
+      "preview": false,
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 2740,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 0,
+        "sha256": "a3c23a6d8529bf234461dbcb4d1e16c7f0cb4149279eef390e7ef0afad591e6b"
+      }
+    },
+    {
+      "name": "cjit",
+      "preview": true,
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 4706,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 7666,
+        "sha256": "bbdcb9215991dcf130820b1ee8b81afbd0ec6d66a413994e95a7bd35de21fa9c"
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "name": "zig",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 4766,
+        "links": 1,
+        "exercise": true,
+        "copied_bytes": 54
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 7693,
+        "sha256": "e51e6d362a4133edf1af8afd36cdbf6cb11055cb8db2441b082992814e453285"
+      }
+    },
+    {
+      "name": "cjit",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 4766,
+        "links": 1,
+        "exercise": true,
+        "copied_bytes": 54
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 7693,
+        "sha256": "e51e6d362a4133edf1af8afd36cdbf6cb11055cb8db2441b082992814e453285"
+      }
+    }
+  ]
+}
