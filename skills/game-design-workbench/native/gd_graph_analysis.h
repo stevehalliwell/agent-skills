@@ -22,7 +22,13 @@ typedef struct {
 typedef struct {
     unsigned char ancestors[GD_MAX_RECORDS], edges[GD_MAX_PAIRS];
     int arcs[64], retained, length, ancestor_count, node;
+    int candidates[GD_MAX_RECORDS], candidate_count, candidate;
 } GD_PathSelection;
+typedef struct {
+    unsigned char edges[GD_MAX_PAIRS];
+    int arcs[64], retained, length, target, candidate, fork, rejoin;
+    int valid, complete, found, work, limit;
+} GD_PathBypass;
 typedef struct {
     int out_head[GD_MAX_RECORDS], in_head[GD_MAX_RECORDS];
     int out_next[2*GD_MAX_PAIRS], in_next[2*GD_MAX_PAIRS];
@@ -32,9 +38,10 @@ typedef struct {
     unsigned char roots[GD_MAX_RECORDS], reached[GD_MAX_RECORDS];
     int valid, complete, undirected, root_count, reachable_count, work, limit;
     GD_PathSelection selection;
+    GD_PathBypass bypass;
 } GD_GraphPaths;
 /* Presentation keys, not node selection. Remap across source reload. */
-typedef struct { int keys[GD_MAX_RECORDS], count; int enabled, declared, lost; } GD_PathControls;
+typedef struct { int keys[GD_MAX_RECORDS], count; int enabled, declared, lost, compare; } GD_PathControls;
 /* Caller-allocated scratch/result; not for a small thread stack. Owns no strings
    or model pointers. All node/edge indices refer to the current layout. Two
    incident links establish a shared neighbor, not equivalent semantic roles.
@@ -80,6 +87,13 @@ const GD_GraphComparison *gd_graph_compare(GD_GraphAnalysis *analysis, int a, in
    Results exclude unreachable nodes; dominated counts exclude self. */
 const GD_GraphPaths *gd_graph_paths(GD_GraphAnalysis *analysis, const unsigned char *roots, int undirected, int work_limit);
 const GD_PathSelection *gd_graph_path_selection(GD_GraphAnalysis *analysis, int selected);
+/* Candidates are nonmandatory nodes on selected DFS support path, closest
+   first. -1 uses selection.candidate. A separate bounded vertex-avoiding BFS
+   retains a second path under identical starts/scope. No opportunity/learning
+   semantics. complete=0 means no witness conclusion. F/R delimit two witness
+   branches; fork=-1 denotes separate starts via virtual root, not authored fork.
+   Borrow until next bypass/selection/path recomputation or analyze invalidation. */
+const GD_PathBypass *gd_graph_path_bypass(GD_GraphAnalysis *analysis, int selected, int candidate, int work_limit);
 /* Sorted unique keys; 1 added, 0 duplicate, -1 capacity. No allocation. */
 int gd_graph_path_start(GD_PathControls *controls, int key);
 const GD_GraphPaths *gd_graph_paths_prepare(GD_GraphAnalysis *analysis, const GD_PathControls *controls,

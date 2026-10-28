@@ -127,7 +127,7 @@ static int witness_edge(const GD_Routes *routes, int witness, int source, int ta
 }
 static void draw_graph(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection,
                        Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
-                       GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths) {
+                       GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selection->node,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
@@ -170,6 +170,7 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
         Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
         if (!edge->active && !other_pairs) continue;
         int conflict = !focused && !challenges && model->skill_mode && (model->skills[layout->nodes[edge->a].key].incomplete || model->skills[layout->nodes[edge->b].key].incomplete);
+        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_graph_underlay_line(a,b,15,gd_bypass_color,!edge->active || conflict);
         if (path_selection && path_selection->edges[i]) {
             if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,29,gd_path_color);
             else gd_graph_underlay_line(a,b,11,gd_path_color,!edge->active || conflict);
@@ -256,7 +257,7 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
             } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)node->x+19,(int)node->y-8,13,shared_color);
         }
         if (paths) {
-            gd_graph_path_badge(paths,path_selection,i,(int)node->x+36,(int)node->y+7,graph_background);
+            gd_graph_path_badge(paths,path_selection,bypass,i,(int)node->x+36,(int)node->y+7,graph_background);
             if (paths->roots[i]) gd_graph_path_start_marker((int)node->x-49,(int)node->y-24);
         }
     }
@@ -679,7 +680,15 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             unsigned char entries[GD_MAX_RECORDS]; GD_PathControls *control=&path_controls[focused ? 2:challenges ? 1:0];
             if (gd_graph_paths_panel(layout,analysis,control,selection.node,path_entries(model,layout,challenges,entries),!focused && !model->skill_mode)) {
                 const GD_PathSelection *support=gd_graph_path_selection(analysis,selection.node); int i;
+                igTextUnformatted("Support source declarations:",NULL);
                 for (i=support->retained-1;i>=0;--i) projected_source(model,layout,support->arcs[i]/2,focused,challenges);
+                if (control->compare) {
+                    const GD_PathBypass *bypass=gd_graph_path_bypass(analysis,selection.node,-1,GD_GRAPH_ANALYSIS_WORK);
+                    if (bypass && bypass->complete && bypass->found) {
+                        igTextUnformatted("Bypass source declarations:",NULL);
+                        for (i=bypass->retained-1;i>=0;--i) projected_source(model,layout,bypass->arcs[i]/2,focused,challenges);
+                    }
+                }
             }
             if (control->enabled && model->skill_mode && !focused && !challenges) igTextWrapped("Path domination is NOT AND prerequisite necessity. Every declared prerequisite remains required; one path is not an acquisition plan.");
         }
@@ -757,7 +766,8 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=-1;
         unsigned char entries[GD_MAX_RECORDS];
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls[focused ? 2:challenges ? 1:0],path_entries(model,layout,challenges,entries),!focused && !model->skill_mode);
-        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths);
+        const GD_PathBypass *bypass=paths && path_controls[focused ? 2:challenges ? 1:0].compare ? gd_graph_path_bypass(analysis,selection.node,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
+        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
             for (i=0;i<layout->node_count;++i) {
@@ -767,7 +777,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             }
             EndMode2D(); EndScissorMode();
         }
-        if (paths) DrawText(TextFormat("D: mandatory-path targets | !: ancestor of selection | Pink: ONE path | White triangle: start (%d)",paths->root_count),20,height-69,12,gd_path_color);
+        if (paths) DrawText(TextFormat("D: dominated targets | !: ancestor | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,height-69,12,gd_path_color);
         if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(Color){193,155,228,255});
         DrawText(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);
         rlImGuiEnd(); EndDrawing(); ++frame;

@@ -98,6 +98,26 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
     selection=gd_graph_path_selection(analysis,selected);
     if (!selection) { igTextWrapped("Selection has no path from shown starts, or no node selected."); return 0; }
     igText("Selection: D%d | %d mandatory ancestors",paths->dominated[selected],selection->ancestor_count);
+    { bool compare=controls->compare!=0;
+      igCheckbox("Compare support / bypass",&compare); controls->compare=compare; }
+    if (controls->compare) {
+        GD_PathSelection *nominated=&analysis->paths.selection;
+        if (!selection->candidate_count) igTextWrapped("No nonmandatory node on this support path. This does not rule out alternatives elsewhere.");
+        else {
+            const char *labels[64]; int choice=0,count=selection->candidate_count<64 ? selection->candidate_count:64;
+            const GD_PathBypass *bypass;
+            for (i=0;i<count;++i) { labels[i]=layout->nodes[selection->candidates[i]].label; if (selection->candidate==selection->candidates[i]) choice=i; }
+            if (igCombo_Str_arr("Candidate C",&choice,labels,count,-1)) nominated->candidate=selection->candidates[choice];
+            if (selection->candidate_count>count) igText("%d further support-path candidates not listed",selection->candidate_count-count);
+            bypass=gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK);
+            if (!bypass->complete) igTextWrapped("Bypass witness unavailable: work limit. No partial witness proof.");
+            else if (bypass->found) {
+                igTextWrapped("C can be avoided on shown paths. Cyan: bypass; pink: support. Not an optional gameplay ingredient.");
+                igTextWrapped("F: %s | R: %s",bypass->fork>=0 ? layout->nodes[bypass->fork].label:"virtual root (separate starts)",layout->nodes[bypass->rejoin].label);
+                igTextWrapped("F: witness fork; R: rejoin. These two paths may lie in cycles; not all reconvergences.");
+            }
+        }
+    }
     if (!igCollapsingHeader_TreeNodeFlags("Mandatory-path evidence",0)) return 0;
     igTextWrapped("Mandatory ancestors, closest first (derived, not necessarily adjacent source links):");
     for (i=0,node=paths->dominator[selected];node!=analysis->node_count && i<64;node=paths->dominator[node],++i)
@@ -107,6 +127,16 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
     for (i=selection->retained-1;i>=0;--i) {
         int arc=selection->arcs[i]; const GD_LayoutEdge *edge=&analysis->edges[arc/2];
         igTextWrapped("%s %s %s",layout->nodes[arc%2 ? edge->b:edge->a].label,undirected ? "--":"->",layout->nodes[arc%2 ? edge->a:edge->b].label);
+    }
+    if (controls->compare) {
+        const GD_PathBypass *bypass=gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK);
+        if (bypass && bypass->complete && bypass->found) {
+            igTextWrapped("Bypass avoids C: %d links, last %d retained.",bypass->length,bypass->retained);
+            for (i=bypass->retained-1;i>=0;--i) {
+                int arc=bypass->arcs[i]; const GD_LayoutEdge *edge=&analysis->edges[arc/2];
+                igTextWrapped("%s %s %s",layout->nodes[arc%2 ? edge->b:edge->a].label,undirected ? "--":"->",layout->nodes[arc%2 ? edge->a:edge->b].label);
+            }
+        }
     }
     return 1;
 }

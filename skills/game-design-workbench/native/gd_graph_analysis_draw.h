@@ -39,15 +39,25 @@ static inline void gd_graph_underlay_line(Vector2 a, Vector2 b, float width, Col
     }
 }
 static const Color gd_path_color={230,142,180,255};
-static inline void gd_graph_path_badge(const GD_GraphPaths *paths, const GD_PathSelection *selection,
+static const Color gd_bypass_color={89,220,226,255};
+static inline void gd_graph_path_badge(const GD_GraphPaths *paths, const GD_PathSelection *selection, const GD_PathBypass *bypass,
                                       int node, int x, int y, Color background) {
     char label[48];
+    const char *ancestor=selection && selection->ancestors[node] ? " !":"";
+    const char *witness="";
+    if (bypass) {
+        if (bypass->candidate==node) witness=" C";
+        else if (bypass->complete && bypass->found) {
+            if (bypass->fork==node) witness=" F";
+            else if (bypass->rejoin==node) witness=" R";
+        }
+    }
     if (!paths->root_count || !paths->complete) snprintf(label,sizeof(label),"D?");
     else if (!paths->reached[node]) snprintf(label,sizeof(label),"D-");
     else if (!paths->undirected && paths->incoming[node]>=2)
-        snprintf(label,sizeof(label),"D%d J%d%s",paths->dominated[node],paths->incoming[node],selection && selection->ancestors[node] ? " !":"");
-    else snprintf(label,sizeof(label),"D%d%s",paths->dominated[node],selection && selection->ancestors[node] ? " !":"");
-    DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background); DrawText(label,x,y,12,gd_path_color);
+        snprintf(label,sizeof(label),"D%d J%d%s%s",paths->dominated[node],paths->incoming[node],ancestor,witness);
+    else snprintf(label,sizeof(label),"D%d%s%s",paths->dominated[node],ancestor,witness);
+    DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background); DrawText(label,x,y,12,*witness ? gd_bypass_color:gd_path_color);
 }
 static inline void gd_graph_path_start_marker(int x, int y) {
     DrawTriangleLines((Vector2){(float)x,(float)y-5},(Vector2){(float)x-5,(float)y+5},(Vector2){(float)x+5,(float)y+5},(Color){225,233,241,255});

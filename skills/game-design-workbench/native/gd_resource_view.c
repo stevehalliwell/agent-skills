@@ -74,18 +74,30 @@ static const GD_Record *relation_source(const GD_ResourceGraph *graph, int index
     }
     return c>=0 ? &graph->model->records[graph->rules->sources[graph->rules->cases[c].source].record]:NULL;
 }
+static int path_sources(const GD_ResourceGraph *graph, const GD_Layout *layout, const int *arcs, int retained, int x, int y) {
+    int i;
+    for (i=(retained<4 ? retained:4)-1;i>=0;--i) {
+        int index=layout->edges[arcs[i]/2].key; const GD_ResourceRelation *relation=&graph->relations[index];
+        const GD_Record *source=relation_source(graph,index);
+        DrawText(TextFormat("%s | line %d",relation_name(relation->kind),relation->line),x,y,13,muted); y+=18;
+        if (source) { DrawText(TextFormat("%.43s",source->reference),x,y,13,foreground); y+=18; }
+    }
+    return y;
+}
 static void path_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
                          const GD_GraphPaths *paths, const GD_PathControls *controls, int selected, int x) {
-    const GD_PathSelection *support; int i,y=220;
+    const GD_PathSelection *support; int y=controls->compare ? 280:248;
     DrawText(controls->enabled ? "[x] Mandatory connections (click)":"[ ] Mandatory connections (click)",x,114,14,foreground);
     if (!paths) { DrawText("Enable, then choose analysis starts.",x,148,14,muted); return; }
     DrawRectangleLines(x,144,320,25,muted); DrawText("Add selection as analysis start",x+5,150,14,foreground);
     DrawRectangleLines(x,176,240,25,muted); DrawText("Clear analysis starts",x+5,182,14,foreground);
+    DrawText(controls->compare ? "[x] Compare support / bypass (click)":"[ ] Compare support / bypass (click)",x,212,14,foreground);
+    if (controls->compare) DrawText("Next support-path candidate (click)",x,244,14,foreground);
     DrawText(TextFormat("Configured %d | shown starts %d",controls->count,paths->root_count),x,y,14,muted); y+=22;
     DrawText("Virtual start; inspection does not re-root.",x,y,13,muted); y+=20;
     DrawText("D: necessary connections, NOT resource flow.",x,y,13,muted); y+=20;
     DrawText("D-: unreachable | D?: unavailable",x,y,13,muted); y+=20;
-    DrawText("Pink: ONE path | !: mandatory ancestor",x,y,13,muted); y+=20;
+    DrawText("Pink: support | cyan: bypass | !: mandatory",x,y,13,muted); y+=20;
     DrawText("White triangle: chosen analysis start",x,y,13,muted); y+=20;
     if (!paths->root_count) { DrawText("Unavailable: no shown analysis starts.",x,y,14,selected_color); return; }
     if (!paths->complete) { DrawText("Work limit: intermediate results NOT proofs.",x,y,13,selected_color); return; }
@@ -95,11 +107,16 @@ static void path_details(const GD_ResourceGraph *graph, const GD_Layout *layout,
     if (!support) { DrawText("Selection has no path from starts.",x,y,14,muted); return; }
     DrawText(TextFormat("Selected D%d | %d mandatory ancestors",paths->dominated[selected],support->ancestor_count),x,y,14,foreground); y+=23;
     DrawText(TextFormat("Support: %d links; last %d shown below",support->length,support->retained<4 ? support->retained:4),x,y,13,muted); y+=23;
-    for (i=(support->retained<4 ? support->retained:4)-1;i>=0;--i) {
-        int index=layout->edges[support->arcs[i]/2].key; const GD_ResourceRelation *relation=&graph->relations[index];
-        const GD_Record *source=relation_source(graph,index);
-        DrawText(TextFormat("%s | line %d",relation_name(relation->kind),relation->line),x,y,13,muted); y+=18;
-        if (source) { DrawText(TextFormat("%.43s",source->reference),x,y,13,foreground); y+=18; }
+    y=path_sources(graph,layout,support->arcs,support->retained,x,y);
+    if (controls->compare) {
+        const GD_PathBypass *bypass=gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK);
+        if (!bypass) { DrawText("No nonmandatory node on this support path.",x,y,13,muted); DrawText("Alternatives elsewhere are not ruled out.",x,y+18,13,muted); return; }
+        if (!bypass->complete || !bypass->found) { DrawText("Bypass witness unavailable; no partial proof.",x,y,13,muted); return; }
+        DrawText(TextFormat("C (avoided): %.28s",node_label(graph,bypass->candidate)),x,y,13,gd_bypass_color); y+=20;
+        DrawText(TextFormat("F (fork): %.29s",bypass->fork>=0 ? node_label(graph,bypass->fork):"virtual root (separate starts)"),x,y,13,gd_bypass_color); y+=20;
+        DrawText(TextFormat("R (rejoin): %.27s",node_label(graph,bypass->rejoin)),x,y,13,gd_bypass_color); y+=20;
+        DrawText(TextFormat("Bypass: %d links; last %d shown",bypass->length,bypass->retained<4 ? bypass->retained:4),x,y,13,muted); y+=20;
+        path_sources(graph,layout,bypass->arcs,bypass->retained,x,y);
     }
 }
 static void shared_details(const GD_ResourceGraph *graph, const GD_Layout *layout, const GD_GraphAnalysis *analysis, const GD_GraphComparison *comparison, int selected, int pair, int x) {
@@ -224,6 +241,14 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) path_controls.enabled=!path_controls.enabled;
             if (path_controls.enabled && selected>=0 && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,144,320,25})) gd_graph_path_start(&path_controls,selected);
             if (path_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,176,240,25})) path_controls.count=0;
+            if (path_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,208,340,25})) path_controls.compare=!path_controls.compare;
+            if (path_controls.enabled && path_controls.compare && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,240,340,25})) {
+                const GD_PathSelection *support=gd_graph_path_selection(analysis,selected); int i;
+                if (support && support->candidate_count) {
+                    for (i=0;i<support->candidate_count;++i) if (support->candidates[i]==support->candidate) break;
+                    analysis->paths.selection.candidate=support->candidates[(i+1)%support->candidate_count];
+                }
+            }
         }
         if (!path_tab && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) shared=!shared;
         if (!path_tab && shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,136,340,25})) shared_lens=(GD_GraphLens)((shared_lens+1)%GD_GRAPH_LENS_COUNT);
@@ -234,6 +259,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         const GD_GraphComparison *comparison=shared && branches && pair>=0 ? gd_graph_compare(analysis,selected,peer):NULL;
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls,NULL,1);
         const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selected):NULL;
+        const GD_PathBypass *bypass=paths && path_controls.compare ? gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
         BeginDrawing(); ClearBackground(background);
         DrawText("Resource graph preview",18,14,26,foreground);
         DrawText("Incomplete: routes and composed outcomes are not implemented. Lines are declarations, not proof of flow.",18,49,16,selected_color);
@@ -245,6 +271,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             Color color=rel->kind==GD_RESOURCE_ROLE_BINDING ? role_color : rel->kind==GD_RESOURCE_INVOCATION ? selected_color :
                 rel->kind==GD_RESOURCE_EXCLUSION ? (Color){230,125,125,255} : rel->kind==GD_RESOURCE_REQUIREMENT ? (Color){81,194,178,255} :
                 rel->kind==GD_RESOURCE_PRESERVATION ? (Color){180,201,119,255} : facet_color;
+            if (bypass && bypass->complete && bypass->found && bypass->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},15,gd_bypass_color);
             if (path_selection && path_selection->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},11,gd_path_color);
             if (comparison && comparison->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},7,gd_graph_branch_color(comparison->edges[i]));
             else if (!comparison && shared && pair>=0 && (i==analysis->features[analysis->pairs[pair].first_a].edge || i==analysis->features[analysis->pairs[pair].first_b].edge))
@@ -269,7 +296,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground);
             }
             if (paths) {
-                gd_graph_path_badge(paths,path_selection,i,(int)n->x+10,(int)n->y-20,background);
+                gd_graph_path_badge(paths,path_selection,bypass,i,(int)n->x,(int)n->y-20,background);
                 if (paths->roots[i]) gd_graph_path_start_marker((int)n->x+76,(int)n->y-15);
             }
         }

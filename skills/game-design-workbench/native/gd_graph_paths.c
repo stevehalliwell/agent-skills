@@ -18,14 +18,15 @@ const GD_GraphPaths *gd_graph_paths(GD_GraphAnalysis *analysis, const unsigned c
         if (i==analysis->node_count) return paths;
     }
     paths->valid=1; paths->complete=1; paths->undirected=undirected; paths->limit=work_limit;
-    paths->root_count=paths->reachable_count=paths->work=0; paths->selection.node=-1;
+    paths->root_count=paths->reachable_count=paths->work=0; paths->selection.node=-1; paths->bypass.valid=0;
     for (i=0;i<analysis->node_count;++i) {
         paths->roots[i]=(unsigned char)(roots && roots[i] && analysis->shown[i]); paths->root_count+=paths->roots[i];
         paths->out_head[i]=paths->in_head[i]=paths->dominator[i]=paths->parent_arc[i]=-1;
         paths->reached[i]=0; paths->dominated[i]=paths->incoming[i]=0;
     }
     if (!paths->root_count) return paths;
-    for (i=0;i<analysis->edge_count;++i) {
+    /* Prepend backwards so witness traversal follows projected link order. */
+    for (i=analysis->edge_count-1;i>=0;--i) {
         const GD_LayoutEdge *edge=&analysis->edges[i];
         if ((!edge->active && !analysis->include_inactive) || !analysis->shown[edge->a] || !analysis->shown[edge->b]) continue;
         for (j=0;j<(undirected ? 2:1);++j) {
@@ -101,7 +102,8 @@ const GD_PathSelection *gd_graph_path_selection(GD_GraphAnalysis *analysis, int 
     GD_GraphPaths *paths=&analysis->paths; GD_PathSelection *selection=&paths->selection; int node;
     if (!paths->valid || !paths->complete || !paths->root_count || selected<0 || selected>=analysis->node_count || !paths->reached[selected]) return NULL;
     if (selection->node==selected) return selection;
-    selection->node=selected; selection->ancestor_count=selection->retained=selection->length=0;
+    paths->bypass.valid=0;
+    selection->node=selected; selection->ancestor_count=selection->retained=selection->length=selection->candidate_count=0;
     memset(selection->ancestors,0,(size_t)analysis->node_count);
     memset(selection->edges,0,(size_t)analysis->edge_count);
     for (node=paths->dominator[selected];node!=analysis->node_count;node=paths->dominator[node]) {
@@ -114,8 +116,68 @@ const GD_PathSelection *gd_graph_path_selection(GD_GraphAnalysis *analysis, int 
         selection->edges[arc/2]=1;
         if (selection->retained<64) selection->arcs[selection->retained++]=arc;
         ++selection->length; node=target(analysis,arc^1);
+        if (!selection->ancestors[node]) selection->candidates[selection->candidate_count++]=node;
     }
+    selection->candidate=selection->candidate_count ? selection->candidates[0]:-1;
     assert(paths->roots[node]); return selection;
+}
+const GD_PathBypass *gd_graph_path_bypass(GD_GraphAnalysis *analysis, int selected, int candidate, int work_limit) {
+    GD_GraphPaths *paths=&analysis->paths; GD_PathBypass *bypass=&paths->bypass;
+    const GD_PathSelection *selection=gd_graph_path_selection(analysis,selected);
+    int i,node,front=0,back=0;
+    assert(work_limit>=0 && work_limit<=GD_GRAPH_ANALYSIS_WORK);
+    if (!selection) return NULL;
+    if (candidate==-1) candidate=selection->candidate;
+    for (i=0;i<selection->candidate_count;++i) if (selection->candidates[i]==candidate) break;
+    if (i==selection->candidate_count) return NULL;
+    if (bypass->valid && bypass->target==selected && bypass->candidate==candidate && bypass->limit==work_limit) return bypass;
+    bypass->valid=bypass->complete=1; bypass->found=bypass->work=bypass->length=bypass->retained=0;
+    bypass->target=selected; bypass->candidate=candidate; bypass->limit=work_limit; bypass->fork=bypass->rejoin=-1;
+    memset(bypass->edges,0,(size_t)analysis->edge_count);
+    /* Reuse completed-analysis scratch, never the original DFS parent arcs.
+       This asks vertex avoidance, not the route engine's two-state skill query. */
+    for (i=0;i<analysis->node_count;++i) paths->cursor[i]=-2;
+    for (i=0;i<analysis->node_count;++i) if (paths->roots[i] && i!=candidate) {
+        paths->cursor[i]=-1; paths->stack[back++]=i;
+    }
+    while (front<back && paths->cursor[selected]==-2) {
+        int arc;
+        if (bypass->work==work_limit) { bypass->complete=0; return bypass; } ++bypass->work;
+        node=paths->stack[front++];
+        for (arc=paths->out_head[node];arc>=0;arc=paths->out_next[arc]) {
+            int next=target(analysis,arc);
+            if (bypass->work==work_limit) { bypass->complete=0; return bypass; } ++bypass->work;
+            if (next==candidate || paths->cursor[next]!=-2) continue;
+            paths->cursor[next]=arc; assert(back<GD_MAX_RECORDS); paths->stack[back++]=next;
+            if (next==selected) break;
+        }
+    }
+    bypass->found=paths->cursor[selected]!=-2;
+    /* A complete dominator result and nonmandatory support-path candidate
+       guarantee a bypass. Failure here is broken reasoning, not no-route data. */
+    assert(bypass->found);
+    if (!bypass->found) return bypass;
+    for (i=0;i<analysis->node_count;++i) paths->stack[i]=-1;
+    for (node=selected;;) {
+        int arc=paths->cursor[node]; paths->stack[node]=bypass->length;
+        if (arc<0) { assert(paths->roots[node]); break; }
+        assert(node!=candidate && bypass->length<analysis->node_count);
+        bypass->edges[arc/2]=1;
+        if (bypass->retained<64) bypass->arcs[bypass->retained++]=arc;
+        ++bypass->length; node=target(analysis,arc^1);
+    }
+    /* Closest shared support prefix before C; first rejoin after C that also
+       follows that prefix on bypass. Position check matters in cyclic graphs
+       where common nodes can occur in opposite orders on the two paths. */
+    for (node=candidate;paths->parent_arc[node]>=0;) {
+        node=target(analysis,paths->parent_arc[node]^1);
+        if (paths->stack[node]>=0) { bypass->fork=node; break; }
+    }
+    for (node=selected;node!=candidate;node=target(analysis,paths->parent_arc[node]^1)) {
+        assert(paths->parent_arc[node]>=0);
+        if (paths->stack[node]>=0 && (bypass->fork<0 || paths->stack[node]<paths->stack[bypass->fork])) bypass->rejoin=node;
+    }
+    assert(bypass->rejoin>=0); return bypass;
 }
 int gd_graph_path_start(GD_PathControls *controls, int key) {
     int low=0,high=controls->count;
@@ -139,7 +201,7 @@ const GD_GraphPaths *gd_graph_paths_prepare(GD_GraphAnalysis *analysis, const GD
 }
 void gd_graph_paths_remap(GD_PathControls *controls, const GD_Model *old, const GD_Model *fresh) {
     GD_PathControls mapped={0}; int i,j;
-    mapped.enabled=controls->enabled; mapped.declared=controls->declared; mapped.lost=controls->lost;
+    mapped.enabled=controls->enabled; mapped.declared=controls->declared; mapped.lost=controls->lost; mapped.compare=controls->compare;
     for (i=0;i<controls->count;++i) {
         int key=controls->keys[i],found=-1,matches=0,old_matches=0;
         if (key>=0 && key<old->record_count) for (j=0;j<old->record_count;++j)
