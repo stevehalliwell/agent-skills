@@ -5,5 +5,8 @@
 /* Shared controls/details for cimgui views. Returns retained evidence-pair index,
    or -1. Caller renders view-specific provenance and graph marks. */
 int gd_graph_analysis_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis,
-                            int selected, bool *enabled, GD_GraphLens *lens, int *peer);
+                            int selected, bool *enabled, GD_GraphLens *lens, bool *branches, int *peer);
+/* Independent layer. Return 1 when selected witness provenance is expanded. */
+int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD_PathControls *controls,
+                         int selected, const unsigned char *declared, int undirected);
 #endif

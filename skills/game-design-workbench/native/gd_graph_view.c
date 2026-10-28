@@ -1,6 +1,7 @@
 #include "gd.h"
 #include "gd_layout.h"
 #include "gd_graph_analysis_ui.h"
+#include "gd_graph_analysis_draw.h"
 #include "gd_skill_unlocks.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
@@ -126,11 +127,13 @@ static int witness_edge(const GD_Routes *routes, int witness, int source, int ta
 }
 static void draw_graph(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection,
                        Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
-                       const GD_GraphAnalysis *analysis, int shared, int peer) {
+                       GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selection->node,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
     const GD_GraphFeature *right=pair>=0 ? &analysis->features[analysis->pairs[pair].first_b]:NULL;
+    const GD_GraphComparison *comparison=pair>=0 && branches ? gd_graph_compare(analysis,selection->node,peer):NULL;
+    const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selection->node):NULL;
     Rectangle bounds[GD_MAX_RECORDS];
     int i;
     memset(bounds, 0, sizeof(bounds));
@@ -166,11 +169,16 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
         Vector2 a = node_point(&layout->nodes[edge->a]), b = node_point(&layout->nodes[edge->b]);
         Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
         if (!edge->active && !other_pairs) continue;
-        if (pair>=0 && (i==left->edge || i==right->edge)) {
-            if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,27,shared_color);
-            else DrawLineEx(a,b,7,shared_color);
-        }
         int conflict = !focused && !challenges && model->skill_mode && (model->skills[layout->nodes[edge->a].key].incomplete || model->skills[layout->nodes[edge->b].key].incomplete);
+        if (path_selection && path_selection->edges[i]) {
+            if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,29,gd_path_color);
+            else gd_graph_underlay_line(a,b,11,gd_path_color,!edge->active || conflict);
+        }
+        if ((comparison && comparison->edges[i]) || (!comparison && pair>=0 && (i==left->edge || i==right->edge))) {
+            Color underlay=comparison ? gd_graph_branch_color(comparison->edges[i]):shared_color;
+            if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,27,underlay);
+            else gd_graph_underlay_line(a,b,7,underlay,!edge->active || conflict);
+        }
         if (challenges && witness_edge(routes,witness,layout->nodes[edge->a].key,layout->nodes[edge->b].key)) color=graph_selected;
         if (conflict && selection->cell != edge->key) color = (Color){238, 114, 120, 255};
         if ((focused || model->skill_mode) && edge->a == edge->b) DrawCircleLines((int)a.x+24, (int)a.y-24, 24, color);
@@ -237,26 +245,46 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
             const char *badge=TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+");
             DrawText(badge,(int)node->x-MeasureText(badge,13)/2,(int)node->y-37,13,shared_color);
             if (pair>=0 && (i==analysis->pairs[pair].a || i==analysis->pairs[pair].b)) DrawCircleLines((int)node->x,(int)node->y,30,shared_color);
-            if (pair>=0 && i==left->neighbor) DrawText("shared",(int)node->x+19,(int)node->y-8,13,shared_color);
+            if (comparison) {
+                unsigned category=comparison->nodes[i];
+                if (category) {
+                    Color branch_color=gd_graph_branch_color(category);
+                    DrawCircleLines((int)node->x,(int)node->y,21,branch_color);
+                    gd_graph_branch_badge(category,(int)node->x+36,(int)node->y-8,graph_background);
+                }
+                if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text);
+            } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)node->x+19,(int)node->y-8,13,shared_color);
+        }
+        if (paths) {
+            gd_graph_path_badge(paths,path_selection,i,(int)node->x+36,(int)node->y+7,graph_background);
+            if (paths->roots[i]) gd_graph_path_start_marker((int)node->x-49,(int)node->y-24);
         }
     }
     EndMode2D(); EndScissorMode();
+}
+static void projected_source(const GD_Model *model, const GD_Layout *layout, int index, int focused, int challenges) {
+    int key=layout->edges[index].key,i; const GD_Edge *edge=NULL;
+    if (focused || challenges) edge=&model->edges[key];
+    else if (model->skill_mode) {
+        const GD_SkillLink *link=&model->skill_links[key];
+        for (i=0;i<model->edge_count;++i) if (model->edges[i].field==GD_PREREQUISITES && model->edges[i].source==link->dependent && model->edges[i].target==link->prerequisite) { edge=&model->edges[i]; break; }
+    } else {
+        const GD_Cell *cell=&model->cells[key];
+        igTextWrapped("Derived case-pair cell: %s / %s | %d cases; inspect cell for authored sources",model->records[cell->noun].reference,model->records[cell->verb].reference,cell->pair_count);
+    }
+    if (edge) igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
+}
+static const unsigned char *path_entries(const GD_Model *model, const GD_Layout *layout, int challenges, unsigned char *entries) {
+    int i; if (!challenges) return NULL;
+    for (i=0;i<layout->node_count;++i) entries[i]=(unsigned char)model->records[layout->nodes[i].key].entry;
+    return entries;
 }
 static void shared_source(const GD_Model *model, const GD_Layout *layout, const GD_GraphAnalysis *analysis, int pair, int focused, int challenges) {
     int side;
     for (side=0;side<2;++side) {
         const GD_GraphMatch *match=&analysis->pairs[pair];
         const GD_GraphFeature *feature=&analysis->features[side ? match->first_b:match->first_a];
-        int key=layout->edges[feature->edge].key,i; const GD_Edge *edge=NULL;
-        if (focused || challenges) edge=&model->edges[key];
-        else if (model->skill_mode) {
-            const GD_SkillLink *link=&model->skill_links[key];
-            for (i=0;i<model->edge_count;++i) if (model->edges[i].field==GD_PREREQUISITES && model->edges[i].source==link->dependent && model->edges[i].target==link->prerequisite) { edge=&model->edges[i]; break; }
-        } else {
-            const GD_Cell *cell=&model->cells[key];
-            igTextWrapped("Derived case-pair cell: %s / %s | %d cases; inspect cell for authored sources",model->records[cell->noun].reference,model->records[cell->verb].reference,cell->pair_count);
-        }
-        if (edge) igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
+        projected_source(model,layout,feature->edge,focused,challenges);
     }
 }
 typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } SkillEditor;
@@ -525,8 +553,9 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     unsigned char known[GD_MAX_RECORDS]={0};
     GD_SkillUnlocks *query=NULL;
     GD_Focus focus;
-    GD_GraphAnalysis *analysis=NULL; bool shared=true; int shared_peer=-1;
+    GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false; int shared_peer=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
+    GD_PathControls path_controls[3]={{0}};
     GD_DiagnosticBrowser diagnostics={0};
     int root=focus_from ? focus_find(model,focus_from):-1;
     char browse[129]="";
@@ -570,6 +599,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         gd_skill_unlocks(model,known,-1,query);
     }
     SetTraceLogCallback(graph_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    path_controls[1].declared=1;
     InitWindow(1440, 900, model->skill_mode ? "Game Design Workbench - skill and progression explorer" : "Game Design Workbench - matrix graph");
     if (!IsWindowReady()) { if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context, layout); gd_error(initial, "view.window", "Cannot initialize graph window", NULL, 0); return 2; }
     analysis=initial->allocator.allocate(initial->allocator.context,sizeof(*analysis));
@@ -643,8 +673,16 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (igButton("Rearrange", (ImVec2_c){0,0})) { prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; fit = 1; }
         if (!focused && !model->skill_mode) igCheckbox("Overlay other pairs (does not merge groups)", &overlay);
         if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=-1;
-        { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_lens,&shared_peer);
+        { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_lens,&branches,&shared_peer);
           if (pair>=0) shared_source(model,layout,analysis,pair,focused,challenges); }
+        {
+            unsigned char entries[GD_MAX_RECORDS]; GD_PathControls *control=&path_controls[focused ? 2:challenges ? 1:0];
+            if (gd_graph_paths_panel(layout,analysis,control,selection.node,path_entries(model,layout,challenges,entries),!focused && !model->skill_mode)) {
+                const GD_PathSelection *support=gd_graph_path_selection(analysis,selection.node); int i;
+                for (i=support->retained-1;i>=0;--i) projected_source(model,layout,support->arcs[i]/2,focused,challenges);
+            }
+            if (control->enabled && model->skill_mode && !focused && !challenges) igTextWrapped("Path domination is NOT AND prerequisite necessity. Every declared prerequisite remains required; one path is not an acquisition plan.");
+        }
         refresh = igButton("Refresh sources", (ImVec2_c){0,0});
         if (stale) igTextUnformatted("STALE: disk sources changed or could not be checked.", NULL);
         if (*failure) igTextWrapped("%s", failure);
@@ -717,7 +755,9 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
         } else accumulator = 0;
         if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=-1;
-        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer);
+        unsigned char entries[GD_MAX_RECORDS];
+        const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls[focused ? 2:challenges ? 1:0],path_entries(model,layout,challenges,entries),!focused && !model->skill_mode);
+        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
             for (i=0;i<layout->node_count;++i) {
@@ -727,7 +767,8 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             }
             EndMode2D(); EndScissorMode();
         }
-        if (shared) DrawText(analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(Color){193,155,228,255});
+        if (paths) DrawText(TextFormat("D: mandatory-path targets | !: ancestor of selection | Pink: ONE path | White triangle: start (%d)",paths->root_count),20,height-69,12,gd_path_color);
+        if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(Color){193,155,228,255});
         DrawText(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);
         rlImGuiEnd(); EndDrawing(); ++frame;
         if (screenshot && frame == frames && !gd_save_screenshot(screenshot)) { fputs("gd: graph screenshot export failed\n", stderr); result = 2; }
@@ -768,6 +809,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
                     }
                     memcpy(known,remapped,sizeof(known)); query_dirty=1;
                 }
+                { int slot; for (slot=0;slot<3;++slot) gd_graph_paths_remap(&path_controls[slot],model,fresh); }
                 gd_routes_destroy(routes); routes=replacement_routes;
                 gd_draft_destroy(draft); draft = replacement;
                 baseline = fresh; model = draft ? draft->model : baseline;

@@ -87,7 +87,7 @@ int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
     analysis->initialized=1; analysis->include_inactive=include_inactive; analysis->lens=lens;
     analysis->node_count=layout->node_count; analysis->edge_count=layout->edge_count;
     analysis->shown_nodes=analysis->shown_edges=analysis->feature_count=analysis->pair_count=analysis->work=0;
-    analysis->complete=1; memset(analysis->slots,0,sizeof(analysis->slots));
+    analysis->complete=1; analysis->comparison.valid=0; analysis->paths.valid=0; memset(analysis->slots,0,sizeof(analysis->slots));
     for (i=0;i<layout->node_count;++i) {
         analysis->keys[i]=layout->nodes[i].key; analysis->shown[i]=(unsigned char)(shown ? shown[i]!=0:1);
         analysis->shown_nodes+=analysis->shown[i];
@@ -134,6 +134,69 @@ int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
         begin=end;
     }
     return 1;
+}
+/* A deduplicated owner group is sorted by relation/endpoint. Unlike global
+   discovery, checking one pair needs no quadratic join or truncated result. */
+static int comparison_role(const GD_GraphAnalysis *analysis, int first, int relation, int endpoint) {
+    int low=first,high=analysis->features[first].owner_end;
+    const GD_GraphFeature *feature=&analysis->features[first];
+    if (analysis->lens==GD_GRAPH_ANY) return 1;
+    if (analysis->lens==GD_GRAPH_CHANGED_ROLE)
+        return high>first+1 || feature->relation!=relation || feature->endpoint!=endpoint;
+    while (low<high) {
+        int middle=low+(high-low)/2,order;
+        feature=&analysis->features[middle];
+        order=feature->relation!=relation ? (feature->relation<relation ? -1:1):
+            (feature->endpoint>endpoint)-(feature->endpoint<endpoint);
+        if (!order) return 1;
+        if (order<0) low=middle+1; else high=middle;
+    }
+    return 0;
+}
+const GD_GraphComparison *gd_graph_compare(GD_GraphAnalysis *analysis, int a, int b) {
+    GD_GraphComparison *comparison=&analysis->comparison; int i;
+    if (!analysis->initialized || a<0 || b<0 || a==b || a>=analysis->node_count || b>=analysis->node_count ||
+        !analysis->shown[a] || !analysis->shown[b]) return NULL;
+    if (comparison->valid && comparison->a==a && comparison->b==b) return comparison;
+    comparison->a=a; comparison->b=b;
+    comparison->shared=comparison->a_only=comparison->b_only=comparison->other_role=0;
+    for (i=0;i<analysis->node_count;++i) {
+        comparison->first_a[i]=comparison->first_b[i]=-1; comparison->nodes[i]=0;
+    }
+    for (i=0;i<analysis->feature_count;i=analysis->features[i].owner_end) {
+        const GD_GraphFeature *feature=&analysis->features[i];
+        assert(feature->owner_end>i && feature->owner_end<=analysis->feature_count);
+        if (feature->owner==a) comparison->first_a[feature->neighbor]=i;
+        if (feature->owner==b) comparison->first_b[feature->neighbor]=i;
+    }
+    for (i=0;i<analysis->node_count;++i) {
+        int has_a=comparison->first_a[i]>=0,has_b=comparison->first_b[i]>=0;
+        comparison->nodes[i]=(unsigned char)(has_a && has_b ? GD_GRAPH_OTHER_ROLE:
+            has_a ? GD_GRAPH_A_ONLY:has_b ? GD_GRAPH_B_ONLY:0);
+    }
+    for (i=0;i<analysis->edge_count;++i) {
+        const GD_LayoutEdge *edge=&analysis->edges[i]; int side;
+        comparison->edges[i]=0;
+        if ((!edge->active && !analysis->include_inactive) || !analysis->shown[edge->a] || !analysis->shown[edge->b]) continue;
+        for (side=0;side<2;++side) {
+            int owner=side ? edge->b:edge->a,neighbor=side ? edge->a:edge->b,other;
+            unsigned char category;
+            if (owner!=a && owner!=b) continue;
+            other=owner==a ? comparison->first_b[neighbor]:comparison->first_a[neighbor];
+            if (other<0) category=(unsigned char)(owner==a ? GD_GRAPH_A_ONLY:GD_GRAPH_B_ONLY);
+            else if (comparison_role(analysis,other,edge->relation,side)) {
+                category=GD_GRAPH_SHARED; comparison->nodes[neighbor]=GD_GRAPH_SHARED;
+            } else category=GD_GRAPH_OTHER_ROLE;
+            comparison->edges[i]|=category;
+        }
+    }
+    for (i=0;i<analysis->node_count;++i) {
+        comparison->shared+=comparison->nodes[i]==GD_GRAPH_SHARED;
+        comparison->a_only+=comparison->nodes[i]==GD_GRAPH_A_ONLY;
+        comparison->b_only+=comparison->nodes[i]==GD_GRAPH_B_ONLY;
+        comparison->other_role+=comparison->nodes[i]==GD_GRAPH_OTHER_ROLE;
+    }
+    comparison->valid=1; return comparison;
 }
 int gd_graph_match(const GD_GraphAnalysis *analysis, int node, int peer) {
     int i;

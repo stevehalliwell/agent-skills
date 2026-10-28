@@ -1,5 +1,6 @@
 #include "gd_layout.h"
 #include "gd_graph_analysis_ui.h"
+#include "gd_graph_analysis_draw.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 #include "rlImGui.h"
@@ -121,11 +122,13 @@ static int analyze_display(const GD_Model *model, const GD_Mda *mda, const GD_La
     if (gd_graph_analyze(layout,shown,1,lens,analysis)) *peer=-1;
     return selected;
 }
-static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, const GD_GraphAnalysis *analysis, int shared, int selected, int peer) {
+static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selected,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
     const GD_GraphFeature *right=pair>=0 ? &analysis->features[analysis->pairs[pair].first_b]:NULL;
+    const GD_GraphComparison *comparison=pair>=0 && branches ? gd_graph_compare(analysis,selected,peer):NULL;
+    const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selected):NULL;
     int i, pass, drawn = 0;
     BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
     /* Draw emphasis last so duplicate declarations cannot hide a witness. */
@@ -137,7 +140,9 @@ static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layo
         Color color = display->link == edge->key || display->path_links[edge->key] ? selected_color : mda->selected[source] && mda->selected[target] ? (Color){104,182,171,255}:(Color){73,88,107,255};
         float dx, dy, length, t;
         if (emphasized != pass || !visible(model,mda,display,source) || !visible(model,mda,display,target)) continue;
-        if (pair>=0 && (i==left->edge || i==right->edge)) DrawSplineSegmentBezierQuadratic(a,c,b,7,shared_color);
+        if (path_selection && path_selection->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,11,gd_path_color);
+        if (comparison && comparison->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,7,gd_graph_branch_color(comparison->edges[i]));
+        else if (!comparison && pair>=0 && (i==left->edge || i==right->edge)) DrawSplineSegmentBezierQuadratic(a,c,b,7,shared_color);
         DrawSplineSegmentBezierQuadratic(a,c,b,display->link == edge->key ? 4:2.5f,color);
         /* Mid-curve marker points in authored source-to-reference direction. */
         t = 0.5f; tip = curve(a,c,b,t); before = curve(a,c,b,t-0.025f);
@@ -163,7 +168,19 @@ static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layo
         if (node->key == mda->root) DrawText("ROOT",(int)position.x+60,(int)position.y-24,12,selected_color);
         if (shared) {
             DrawText(TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)position.x-96,(int)position.y+35,13,shared_color);
-            if (pair>=0 && i==left->neighbor) DrawText("shared",(int)position.x+25,(int)position.y+35,13,shared_color);
+            if (comparison) {
+                unsigned category=comparison->nodes[i];
+                if (category) {
+                    Color branch_color=gd_graph_branch_color(category);
+                    DrawRectangle((int)position.x+100,(int)position.y-20,3,40,branch_color);
+                    gd_graph_branch_badge(category,(int)position.x-40,(int)position.y+35,background);
+                }
+                if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)position.x+83,(int)position.y+35,13,foreground);
+            } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)position.x+25,(int)position.y+35,13,shared_color);
+        }
+        if (paths) {
+            gd_graph_path_badge(paths,path_selection,i,(int)position.x-96,(int)position.y+15,background);
+            if (paths->roots[i]) gd_graph_path_start_marker((int)position.x+94,(int)position.y+17);
         }
     }
     EndMode2D();
@@ -214,8 +231,9 @@ static void source_details(const GD_Model *model, const GD_Mda *mda, MdaDisplay 
 int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *screenshot, int bands) {
     GD_Model *model = initial; GD_Mda *mda = initial_mda;
     GD_DiagnosticBrowser diagnostics={0};
-    GD_GraphAnalysis *analysis=NULL; bool shared=true; int shared_peer=-1,shared_selected=-1;
+    GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false; int shared_peer=-1,shared_selected=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
+    GD_PathControls path_controls={0};
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context,sizeof(*layout));
     MdaDisplay display = {.record = -1,.link = -1,.held = -1,.roles = {true,true,true,true},.paused = true};
     Camera2D camera = {{0,0},{0,0},0,1};
@@ -272,13 +290,21 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         igSetNextItemWidth(-1); igInputText("##MDA-reference-filter",display.filter,sizeof(display.filter),0,NULL,NULL);
         igTextUnformatted("Reference filter; presentation only. Clear to show all.",NULL);
         mark_path(mda,&display); shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
-        { int pair=gd_graph_analysis_panel(layout,analysis,shared_selected,&shared,&shared_lens,&shared_peer);
+        { int pair=gd_graph_analysis_panel(layout,analysis,shared_selected,&shared,&shared_lens,&branches,&shared_peer);
           if (pair>=0) for (i=0;i<2;++i) {
               const GD_GraphMatch *match=&analysis->pairs[pair];
               int feature=i ? match->first_b:match->first_a;
               const GD_Edge *edge=&model->edges[mda->links[layout->edges[analysis->features[feature].edge].key].edge];
               igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
           } }
+        if (gd_graph_paths_panel(layout,analysis,&path_controls,shared_selected,NULL,0)) {
+            const GD_PathSelection *support=gd_graph_path_selection(analysis,shared_selected);
+            for (i=support->retained-1;i>=0;--i) {
+                const GD_Edge *edge=&model->edges[mda->links[layout->edges[support->arcs[i]/2].key].edge];
+                igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
+            }
+        }
+        if (path_controls.enabled) igTextWrapped("Path starts are independent of query root/traversal; follow authored arrows, not inferred causality.");
         if (igCollapsingHeader_TreeNodeFlags("Browse supplied MDA records",0)) {
             igBeginChild_Str("MDA records",(ImVec2_c){0,120},0,0);
             for (i = 0; i < model->record_count; ++i) if (visible(model,mda,&display,i)) {
@@ -302,8 +328,10 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         input(model,mda,layout,&display,&camera,viewport); mark_path(mda,&display);
         if (!display.paused) gd_layout_step(layout,display.held);
         shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
-        draw(model,mda,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer);
-        if (shared) DrawText(analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
+        const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls,NULL,0);
+        draw(model,mda,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths);
+        if (paths) DrawText(TextFormat("D: mandatory-path targets | J: incoming neighbors | Pink: ONE path | White triangle: start (%d)",paths->root_count),20,155,12,gd_path_color);
+        if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
         DrawText("Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload",20,height-40,14,muted);
         DrawText("Declared links/questions are not design or experience verdicts.",20,height-21,14,muted);
         rlImGuiEnd(); EndDrawing(); ++frame;
@@ -321,6 +349,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
             }
             if (ready) { fresh_layout = initial->allocator.allocate(initial->allocator.context,sizeof(*fresh_layout)); ready = fresh_layout && gd_mda_layout(fresh,replacement,fresh_layout,!layout_choice); }
             if (ready) {
+                gd_graph_paths_remap(&path_controls,model,fresh);
                 if (model != initial) { gd_mda_destroy(mda); gd_destroy(model); }
                 initial->allocator.release(initial->allocator.context,layout); layout = fresh_layout; model = fresh; mda = replacement;
                 display.record = display.link = display.held = -1;
