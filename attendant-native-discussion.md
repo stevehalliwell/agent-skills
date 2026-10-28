@@ -128,7 +128,7 @@ Check steps only when completed. Complete the first slice through user review be
 
 ### Native read slice
 
-User approved native `schema`, `query`, and `search` over the compatible projection, without further product refinement. Source repair, source writes, and incremental refresh remain deferred. Commands consume an existing snapshot; changed config/schema requires rebuilding, and record edits require an explicit rebuild. Current implementation and acceptance commands: `exploration/attendant-native/README.md`.
+User approved native `schema`, `query`, and `search` over the compatible projection, without further product refinement. Source repair, source writes, and incremental refresh remain deferred. Read slice initially required an existing snapshot; preparation slice below replaces that boundary. Current implementation and acceptance commands: `exploration/attendant-native/README.md`.
 
 - [x] Add native read commands with familiar arguments and command-specific JSON results; use preferred strict JSON reader for parameters.
 - [x] Enforce read-only SQLite and authorizer containment; support parameter binding, file/stdin inputs, limits and structured errors.
@@ -142,10 +142,16 @@ User approved native `sync` and automatic preparation before `schema`, `query`, 
 
 Acceptance: native reads build a missing projection without Node; unchanged operations reuse it; adding, editing or deleting source appears on the next read; existing `.mjs sync` reuses native output; source hashes stay unchanged. Preserve the published projection on rebuild failure. No concurrent producer/consumer guarantee in this slice.
 
-- [ ] Extract reusable in-process projection preparation and add native `sync`.
-- [ ] Detect source changes and reuse or fully rebuild; invoke preparation before native reads.
-- [ ] Verify missing/unchanged/added/edited/deleted/config/schema cases, `.mjs` interoperability, failure preservation and unchanged source on both compiler paths.
-- [ ] Update commands and evidence; report completed slice before further scope.
+- [x] Extract reusable in-process projection preparation and add native `sync`; positional project invocation still forces a build. Prior progress and this slice's plan committed as `3012b65`.
+- [x] Detect source changes and reuse or fully rebuild; invoke preparation before native reads. Scan/hash/validate all bounded source; compare content even when size/mtime are unchanged. No Node subprocess or Markdown writes.
+- [x] Verify missing/unchanged/added/edited/deleted/config/schema cases, `.mjs` interoperability, failure preservation and unchanged source on both compiler paths. Each of four compiler/configuration scenarios passed 34 named lifecycle cases, including Node absent from PATH, collection changes, missing/corrupt DB parts, failed SQL steps, blocked publication, active WAL and genuine hot-journal preservation. Existing read checks passed 23 comparisons and 27 rejections per scenario; runner's 7 tests passed.
+- [x] Update commands and evidence. See `exploration/attendant-native/README.md` and generated `build/review/prepare-results.json`. Independent read-only review found journal protection, statement-cleanup and missing-edge-table gaps; fixes gained executable regressions. Follow-up inspection found no remaining actionable defect in fixes. Preparation slice completed and reviewed. Source repair, incremental reconciliation and concurrent publication remain separate work.
+
+### Native CLI completion direction
+
+User requested committing preparation progress and identified remaining native CLI features as likely next scope. Remaining core commands: `doctor`, `validate` (including `--no-correct` and `--strict`), `add-table`, `create`, and `update`. Migration/import commands remain excluded.
+
+Proposed sequence: diagnostics and validation foundation; source-preserving mechanical correction; collection creation; record create/update. Keep existing command-specific success shapes, batch preflight, immutable metadata and body preservation. Malformed YAML must be reported and skipped, never repaired. Completing command names alone does not establish parity: reads/preparation must also handle invalid records and expose corrections consistently. Source-write behavior needs scoped acceptance before implementation; no write implementation started.
 
 ### Remaining refinement and parity work
 

@@ -166,20 +166,23 @@ for (const { executable, project, variant } of scenarios) {
   assert.equal(capped.returned, 10000); assert.equal(capped.truncated, true);
   assert.deepEqual(sourceHashes(project), frozen, 'Read commands changed source');
   assert.equal(databaseHash(), before, 'Read commands changed DB');
-  // Changing configuration or schema requires an explicit snapshot rebuild.
+  // Changed configuration/schema now triggers automatic preparation.
   for (const path of [join(project, '.pi/attendant.tables'), join(project, 'records/tasks/.schema.md')]) {
     const original = readFileSync(path);
     writeFileSync(path, Buffer.concat([original, Buffer.from('\n# changed\n')]));
-    const stale = run(executable, ['schema', '-p', project], { expected: 1 });
-    assert.equal(stale.error.code, 'projection-stale');
+    assert.deepEqual(native('schema'), oracle('schema'));
+    assert.equal(native('sync').state, 'reused');
     writeFileSync(path, original);
+    assert.equal(native('sync').state, 'rebuilt');
   }
   assert.deepEqual(sourceHashes(project), frozen);
-  assert.equal(databaseHash(), before);
+  assert.equal(native('sync').state, 'reused');
   // Read interoperability goes both ways: native commands also consume a DB
   // generated entirely by the unchanged mjs runner.
   rmSync(join(project, '.attendant'), { recursive: true, force: true });
   assert.equal(oracle('sync').state, 'rebuilt');
+  const runnerSnapshot = databaseHash();
+  assert.equal(native('sync').state, 'reused', 'Native preparation must reuse a runner-produced DB');
   for (const args of [['schema'], ['query', '-s', 'SELECT name FROM tasks ORDER BY name'], ['search', '-q', 'lantern']]) {
     const actual = native(...args), expected = oracle(...args);
     if (args[0] === 'search') {
@@ -190,6 +193,7 @@ for (const { executable, project, variant } of scenarios) {
     }
     assert.deepEqual(actual, expected);
   }
+  assert.equal(databaseHash(), runnerSnapshot, 'Native consumption replaced or wrote runner DB');
   rmSync(join(project, '.attendant'), { recursive: true, force: true });
   run(executable, [project]);
   assert.equal(oracle('sync').state, 'reused');

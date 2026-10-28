@@ -1,5 +1,5 @@
-/* Read commands share the builder's config, schema, arena and JSON helpers.
-   Existing projection required. No source repair, rebuild or incremental refresh. */
+/* Commands share config, schema, arena, JSON and in-process preparation.
+   No source writes or incremental reconciliation. */
 #include "vendor/libpdjson5/pdjson5.h"
 #include <io.h>
 #include <fcntl.h>
@@ -21,12 +21,12 @@ typedef struct result_rows {
 } result_rows;
 
 static int native_help(void) {
-    puts("{\"usage\":\"projection.exe <schema|query|search> [options]; projection.exe <fixture-project> builds projection\","
+    puts("{\"usage\":\"projection.exe <sync|schema|query|search> [options]; projection.exe <fixture-project> builds projection\","
          "\"project\":\"--project, -p <path>; defaults to current directory\","
          "\"query\":\"--sql, -s <sql> [--params, -P <JSON object>] [--limit, -l <integer>]\","
          "\"search\":\"--query, -q <text> [--collections, -c <comma-separated names>] [--limit, -l <integer>]\","
          "\"input\":\"@path reads UTF-8; - reads stdin once for text options\","
-         "\"projection\":\"existing layout-2 snapshot required; no automatic refresh\","
+         "\"projection\":\"automatic reuse or full rebuild from normalized source; Markdown unchanged\","
          "\"output\":\"one JSON value on stdout; errors also explained on stderr; exits 0/1\"}");
     return 0;
 }
@@ -61,7 +61,7 @@ static read_options parse_read_options(context *c, int argc, char **argv) {
         else if (!strcmp(result.command, "query") && (!strcmp(arg, "--params") || !strcmp(arg, "-P"))) destination = &result.params;
         else if (!strcmp(result.command, "search") && (!strcmp(arg, "--query") || !strcmp(arg, "-q"))) destination = &result.query_text;
         else if (!strcmp(result.command, "search") && (!strcmp(arg, "--collections") || !strcmp(arg, "-c"))) destination = &result.collections;
-        else if (strcmp(result.command, "schema") && (!strcmp(arg, "--limit") || !strcmp(arg, "-l"))) {
+        else if ((!strcmp(result.command, "query") || !strcmp(result.command, "search")) && (!strcmp(arg, "--limit") || !strcmp(arg, "-l"))) {
             const char *p;
             unsigned long limit = 0;
             if (limit_seen++) fail(c, "--limit may be supplied only once");
@@ -125,29 +125,15 @@ static int query_progress(void *opaque) {
     read_options *options = opaque;
     return ++options->progress_calls > 10000; /* 10 million VM instructions. */
 }
-static void require_metadata(context *c, const char *key, const char *expected) {
-    sqlite3_stmt *s = prepare(c, "SELECT value FROM __attendant_metadata WHERE key=?");
-    bind_text(c, s, 1, key);
-    if (sqlite3_step(s) != SQLITE_ROW || sqlite3_column_type(s, 0) != SQLITE_TEXT || strcmp((const char *)sqlite3_column_text(s, 0), expected))
-        fail(c, "Projection metadata differs at %s; rebuild the snapshot first", key);
-    sqlite3_finalize(s);
-}
 static void open_snapshot(context *c, read_options *options) {
     const char *path = full_path(c, options->project, ".attendant/attendant.sqlite");
-    int i;
-    load_config(c, options->project);
     c->error_code = "projection-open";
-    if (sqlite3_open_v2(path, &c->db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) fail(c, "Cannot open existing projection; run the native builder first");
+    if (sqlite3_open_v2(path, &c->db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) fail(c, "Cannot open prepared projection");
     sql(c, "PRAGMA query_only=ON; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=0;");
     sqlite3_limit(c->db, SQLITE_LIMIT_LENGTH, OUTPUT_CAPACITY);
     sqlite3_limit(c->db, SQLITE_LIMIT_SQL_LENGTH, TEXT_CAPACITY);
     sqlite3_limit(c->db, SQLITE_LIMIT_COLUMN, COLUMN_LIMIT);
     sqlite3_limit(c->db, SQLITE_LIMIT_EXPR_DEPTH, 100);
-    c->error_code = "projection-stale";
-    require_metadata(c, "layout_version", "2");
-    require_metadata(c, "config_hash", digest(c, read_text(c, full_path(c, options->project, ".pi/attendant.tables"), NULL)));
-    for (i = 0; i < c->collection_count; i++)
-        require_metadata(c, format_text(c, "schema_hash:%s", c->collections[i].name), schema_digest(c, &c->collections[i]));
     c->allow_fts = options->allow_fts;
     sqlite3_set_authorizer(c->db, read_authorizer, c);
     sqlite3_progress_handler(c->db, 1000, query_progress, options);
@@ -618,6 +604,11 @@ static int native_read_main(context *c, int argc, char **argv) {
     const char *output;
     options.allow_fts = strcmp(options.command, "query") != 0;
     if (options.sql_text) one_read_statement(c, options.sql_text);
+    c->error_code = "projection-prepare";
+    {
+        const char *state = prepare_projection(c, options.project, PROJECTION_REUSE);
+        if (!strcmp(options.command, "sync")) { print_sync(c, state); return 0; }
+    }
     open_snapshot(c, &options);
     c->error_code = "sql-execution";
     if (!strcmp(options.command, "schema")) output = schema_json(c, &options);

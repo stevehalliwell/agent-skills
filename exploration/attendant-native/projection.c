@@ -1,4 +1,4 @@
-/* Projection-only Windows exploration. Source is read-only. See README.md.
+/* Native Windows exploration. Source is read-only. See README.md.
    The process owns one bounded arena; libraries retain their own allocators.
    Reject unsupported inputs rather than advertise untested YAML compatibility. */
 #include "include/base.h"
@@ -27,6 +27,7 @@ __declspec(dllimport) LONG WINAPI BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE
 #define TEXT_CAPACITY (4 * 1024 * 1024)
 #define PATH_CAPACITY 4096
 #define OUTPUT_CAPACITY (12 * 1024 * 1024)
+#define MAX_BUILDER_STATEMENTS 2 /* Edge INSERT plus target SELECT; finalize in stack order. */
 
 typedef struct value value;
 struct value {
@@ -58,7 +59,9 @@ typedef struct record {
 typedef struct context {
     arena *memory;
     sqlite3 *db;
-    const char *temporary;
+    sqlite3_stmt *builder_statements[MAX_BUILDER_STATEMENTS];
+    int builder_statement_count;
+    const char *temporary, *config_hash;
     collection collections[MAX_COLLECTIONS];
     int collection_count;
     record records[MAX_RECORDS];
@@ -82,10 +85,16 @@ static void fail(context *c, const char *format, ...) {
     vsnprintf(message, sizeof(message), format, args);
     va_end(args);
     fprintf(stderr, "%s\n", message);
-    if (c->db) { sqlite3_close_v2(c->db); c->db = NULL; }
+    if (c->db) {
+        /* Only finalize our own statements, never FTS's internal statements. */
+        while (c->builder_statement_count) sqlite3_finalize(c->builder_statements[--c->builder_statement_count]);
+        sqlite3_close_v2(c->db); c->db = NULL;
+    }
     if (c->temporary) {
         wchar_t path[PATH_CAPACITY];
-        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c->temporary, -1, path, PATH_CAPACITY)) DeleteFileW(path);
+        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c->temporary, -1, path, PATH_CAPACITY) &&
+            !DeleteFileW(path) && GetLastError() != ERROR_FILE_NOT_FOUND)
+            fprintf(stderr, "Cannot remove temporary projection: %s\n", c->temporary);
     }
     jsonb_init(&b);
     json_check(jsonb_object(&b, output, sizeof(output)));
@@ -413,15 +422,23 @@ static void sql(context *c, const char *statement) {
 }
 static sqlite3_stmt *prepare(context *c, const char *statement) {
     sqlite3_stmt *result;
+    if (c->builder_statement_count == MAX_BUILDER_STATEMENTS) fail(c, "Builder statement capacity exceeded");
     if (sqlite3_prepare_v2(c->db, statement, -1, &result, NULL) != SQLITE_OK) fail(c, "SQLite prepare: %s", sqlite3_errmsg(c->db));
+    c->builder_statements[c->builder_statement_count++] = result;
     return result;
+}
+static int finalize_builder(context *c, sqlite3_stmt *statement) {
+    if (!c->builder_statement_count || c->builder_statements[c->builder_statement_count - 1] != statement)
+        fail(c, "Builder statement ownership mismatch");
+    c->builder_statement_count--;
+    return sqlite3_finalize(statement);
 }
 static void bind_text(context *c, sqlite3_stmt *s, int i, const char *text) {
     if (sqlite3_bind_text(s, i, text, -1, SQLITE_TRANSIENT) != SQLITE_OK) fail(c, "SQLite bind failed");
 }
 static void finish(context *c, sqlite3_stmt *s) {
     if (sqlite3_step(s) != SQLITE_DONE) fail(c, "SQLite step: %s", sqlite3_errmsg(c->db));
-    if (sqlite3_finalize(s) != SQLITE_OK) fail(c, "SQLite finalize failed");
+    if (finalize_builder(c, s) != SQLITE_OK) fail(c, "SQLite finalize failed");
 }
 static const char *identifier(context *c, const char *text) {
     char buffer[2048];
@@ -474,6 +491,7 @@ static void load_config(context *c, const char *root) {
     const char *source = read_text(c, path, NULL);
     char *config = copy_text(c, source, strlen(source));
     char *line = config;
+    c->config_hash = digest(c, source);
     while (line) {
         char *next = strchr(line, '\n');
         char *directory, *alias, *name;
@@ -723,7 +741,7 @@ static void edge(context *c, record *r, field *f, value *v) {
         find = prepare(c, format_text(c, "SELECT source_path FROM %s WHERE name=?", identifier(c, table)));
         bind_text(c, find, 1, target_name);
         if (sqlite3_step(find) == SQLITE_ROW) bind_text(c, s, 7, (const char *)sqlite3_column_text(find, 0));
-        sqlite3_finalize(find);
+        if (finalize_builder(c, find) != SQLITE_OK) fail(c, "Cannot finish reference lookup");
     }
     finish(c, s);
 }
@@ -752,12 +770,13 @@ static const char *schema_digest(context *c, collection *table) {
     return digest(c, joined);
 }
 
+#include "prepare.h"
 #include "read.h"
 
 int main(int argc, char **argv) {
     static unsigned char backing[128 * 1024 * 1024];
     static context c;
-    const char *root, *directory, *target;
+    const char *root, *state;
     int i;
     c.memory = arena_from_buffer(backing, sizeof(backing));
     {
@@ -768,45 +787,11 @@ int main(int argc, char **argv) {
         LocalFree(arguments);
     }
     if (argc < 2 || !strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) return native_help();
-    if (!strcmp(argv[1], "schema") || !strcmp(argv[1], "query") || !strcmp(argv[1], "search"))
+    if (!strcmp(argv[1], "sync") || !strcmp(argv[1], "schema") || !strcmp(argv[1], "query") || !strcmp(argv[1], "search"))
         return native_read_main(&c, argc, argv);
-    if (argc != 2) { c.error_code = "cli-command"; fail(&c, "Expected schema, query, search or one fixture-project path"); }
+    if (argc != 2) { c.error_code = "cli-command"; fail(&c, "Expected sync, schema, query, search or one fixture-project path"); }
     root = full_path(&c, ".", argv[1]);
-    load_config(&c, root);
-    for (i = 0; i < c.collection_count; i++) load_records(&c, &c.collections[i]);
-    validate_dataset(&c);
-    directory = full_path(&c, root, ".attendant");
-    if (!CreateDirectoryW(wide(&c, directory), NULL) && GetLastError() != ERROR_ALREADY_EXISTS) fail(&c, "Cannot create projection directory");
-    target = full_path(&c, directory, "attendant.sqlite");
-    {
-        const char *temporary = full_path(&c, directory, format_text(&c, "native-%lu.sqlite", (unsigned long)GetCurrentProcessId()));
-        if (GetFileAttributesW(wide(&c, temporary)) != INVALID_FILE_ATTRIBUTES) fail(&c, "Temporary database already exists");
-        c.temporary = temporary;
-    }
-    if (sqlite3_open(c.temporary, &c.db) != SQLITE_OK) fail(&c, "Cannot create SQLite database");
-    sql(&c, "PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; BEGIN IMMEDIATE;");
-    sql(&c, "CREATE TABLE __attendant_diagnostics (collection_name TEXT, source_path TEXT NOT NULL, code TEXT NOT NULL, message TEXT NOT NULL);");
-    sql(&c, "CREATE TABLE __attendant_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);");
-    sql(&c, "CREATE TABLE __attendant_cache (source_path TEXT PRIMARY KEY, collection_name TEXT NOT NULL, mtime_ms REAL NOT NULL, size INTEGER NOT NULL, source_hash TEXT NOT NULL, front_matter TEXT NOT NULL, local_diagnostics TEXT NOT NULL, content TEXT NOT NULL);");
-    sql(&c, "CREATE TABLE __attendant_edges (source_collection TEXT NOT NULL, source_path TEXT NOT NULL, source_id TEXT NOT NULL, field TEXT NOT NULL, target_collection TEXT NOT NULL, target_name TEXT NOT NULL, target_path TEXT);");
-    metadata(&c, "layout_version", "2");
-    metadata(&c, "config_hash", digest(&c, read_text(&c, full_path(&c, root, ".pi/attendant.tables"), NULL)));
-    for (i = 0; i < c.collection_count; i++) {
-        collection *table = &c.collections[i];
-        metadata(&c, format_text(&c, "schema_hash:%s", table->name), schema_digest(&c, table));
-        make_tables(&c, table);
-    }
-    for (i = 0; i < c.record_count; i++) project_record(&c, &c.records[i]);
-    make_edges(&c);
-    sql(&c, "COMMIT;");
-    if (sqlite3_close(c.db) != SQLITE_OK) fail(&c, "Cannot close database");
-    c.db = NULL;
-    /* Sequential fixture use only. Never replace an active WAL database. */
-    if (GetFileAttributesW(wide(&c, format_text(&c, "%s-wal", target))) != INVALID_FILE_ATTRIBUTES ||
-        GetFileAttributesW(wide(&c, format_text(&c, "%s-shm", target))) != INVALID_FILE_ATTRIBUTES)
-        fail(&c, "Existing WAL sidecars: stop consumers and remove disposable projection before rebuilding");
-    if (!MoveFileExW(wide(&c, c.temporary), wide(&c, target), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) fail(&c, "Cannot publish database (is another process using it?)");
-    c.temporary = NULL;
-    printf("{\"collections\":%d,\"records\":%d,\"diagnostics\":[],\"state\":\"rebuilt\"}\n", c.collection_count, c.projected);
+    state = prepare_projection(&c, root, PROJECTION_REBUILD);
+    print_sync(&c, state);
     return 0;
 }
