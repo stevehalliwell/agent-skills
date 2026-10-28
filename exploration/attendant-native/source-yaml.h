@@ -59,7 +59,7 @@ static mapping read_mapping(context *c, const char *text, const char **body) {
     /* Event preflight counts real nodes, including implicit nulls/indentless
        sequences, before LibYAML's recursive document loader allocates nodes. */
     if (!yaml_parser_initialize(&scanner)) fail(c, "YAML scanner allocation failed");
-    scanning = 1;
+    scanning = 1; c->yaml_scanner = &scanner;
     yaml_parser_set_input_string(&scanner, (const unsigned char *)start, end - start);
     for (;;) {
         yaml_event_t event;
@@ -96,13 +96,13 @@ static mapping read_mapping(context *c, const char *text, const char **body) {
     }
     if (result.problem) goto done;
     if (!yaml_parser_initialize(&parser)) fail(c, "YAML parser allocation failed");
-    initialized = 1;
+    initialized = 1; c->yaml_parser = &parser;
     yaml_parser_set_input_string(&parser, (const unsigned char *)start, end - start);
     if (!yaml_parser_load(&parser, &document)) {
         result.problem = format_text(c, "%s at line %lu", parser.problem ? parser.problem : "YAML parse failure", (unsigned long)parser.problem_mark.line + 2);
         goto done;
     }
-    loaded = 1;
+    loaded = 1; c->yaml_document = &document;
     root = yaml_document_get_root_node(&document);
     result.pairs = allocate(c, MAX_PAIRS * sizeof(pair));
     if (!root) goto done; /* Empty schemas declare no fields. */
@@ -147,8 +147,8 @@ static mapping read_mapping(context *c, const char *text, const char **body) {
         if (result.problem) goto done;
     }
 done:
-    if (scanning) yaml_parser_delete(&scanner);
-    if (loaded) yaml_document_delete(&document);
-    if (initialized) yaml_parser_delete(&parser);
+    if (scanning) { yaml_parser_delete(&scanner); c->yaml_scanner = NULL; }
+    if (loaded) { yaml_document_delete(&document); c->yaml_document = NULL; }
+    if (initialized) { yaml_parser_delete(&parser); c->yaml_parser = NULL; }
     return result;
 }

@@ -14,6 +14,7 @@ __declspec(dllimport) LONG WINAPI BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE
 #endif
 #include <math.h>
 #include <stdarg.h>
+#include <setjmp.h>
 #include <yaml.h>
 #include <sqlite3.h>
 #define JSONB_STATIC
@@ -89,6 +90,12 @@ typedef struct context {
     const char *rollback_paths[MAX_RECORDS], *created_directories[128];
     int rollback_count, created_directory_count;
     const char *error_code, *error_path;
+    /* Embedded request boundary only; CLI keeps its existing fatal contract. */
+    jmp_buf *recovery;
+    char error_message[6144];
+    HANDLE reading_file, scanning_directory;
+    yaml_parser_t *yaml_scanner, *yaml_parser;
+    yaml_document_t *yaml_document;
     char json_scratch[OUTPUT_CAPACITY];
 } context;
 
@@ -118,7 +125,12 @@ static void fail(context *c, const char *format, ...) {
         else { memcpy(cleaned + cleaned_length, message + offset, width); cleaned_length += width; offset += width; }
     }
     cleaned[cleaned_length] = 0;
-    fprintf(stderr, "%s\n", cleaned);
+    if (!c->recovery) fprintf(stderr, "%s\n", cleaned);
+    if (c->reading_file) { CloseHandle(c->reading_file); c->reading_file = NULL; }
+    if (c->scanning_directory) { FindClose(c->scanning_directory); c->scanning_directory = NULL; }
+    if (c->yaml_document) { yaml_document_delete(c->yaml_document); c->yaml_document = NULL; }
+    if (c->yaml_parser) { yaml_parser_delete(c->yaml_parser); c->yaml_parser = NULL; }
+    if (c->yaml_scanner) { yaml_parser_delete(c->yaml_scanner); c->yaml_scanner = NULL; }
     if (c->db) {
         /* Only finalize our own statements, never FTS's internal statements. */
         while (c->builder_statement_count) sqlite3_finalize(c->builder_statements[--c->builder_statement_count]);
@@ -155,6 +167,10 @@ static void fail(context *c, const char *format, ...) {
                 !DeleteFileW(path) && GetLastError() != ERROR_FILE_NOT_FOUND)
                 fprintf(stderr, "Cannot remove temporary projection: %s\n", name);
         }
+    }
+    if (c->recovery) {
+        memcpy(c->error_message, cleaned, cleaned_length + 1);
+        longjmp(*c->recovery, 1);
     }
     jsonb_init(&b);
     json_check(jsonb_object(&b, output, sizeof(output)));
@@ -249,11 +265,12 @@ static const char *read_text(context *c, const char *path, size_t *length) {
     if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > TEXT_CAPACITY) {
         CloseHandle(file); fail(c, "Source exceeds 4 MiB capacity: %s", path);
     }
+    c->reading_file = file;
     text = allocate(c, (size_t)size.QuadPart + 1);
     if (!ReadFile(file, text, (DWORD)size.QuadPart, &count, NULL) || count != size.QuadPart) {
-        CloseHandle(file); fail(c, "Read failed: %s", path);
+        CloseHandle(file); c->reading_file = NULL; fail(c, "Read failed: %s", path);
     }
-    CloseHandle(file);
+    CloseHandle(file); c->reading_file = NULL;
     if (memchr(text, 0, count) || !string_view_utf8_valid(string_view_from_cstr(text))) fail(c, "Source must be NUL-free UTF-8: %s", path);
     if (length) *length = count;
     return text;
@@ -579,6 +596,7 @@ static void load_records(context *c, collection *table) {
     const char *paths[MAX_RECORDS];
     int count = 0, i;
     if (search == INVALID_HANDLE_VALUE) { add_diagnostic(c, table, table->directory, "collection-read", "Collection directory cannot be read."); table->invalid = 1; return; }
+    c->scanning_directory = search;
     do {
         const char *name = utf8(c, entry.cFileName);
         size_t length = strlen(name);
@@ -586,8 +604,8 @@ static void load_records(context *c, collection *table) {
         if (count == MAX_RECORDS) fail(c, "Record capacity exceeded");
         paths[count++] = full_path(c, table->directory, name);
     } while (FindNextFileW(search, &entry));
-    if (GetLastError() != ERROR_NO_MORE_FILES) { FindClose(search); fail(c, "Directory enumeration failed"); }
-    FindClose(search);
+    if (GetLastError() != ERROR_NO_MORE_FILES) { FindClose(search); c->scanning_directory = NULL; fail(c, "Directory enumeration failed"); }
+    FindClose(search); c->scanning_directory = NULL;
     qsort(paths, count, sizeof(paths[0]), compare_paths);
     for (i = 0; i < count; i++) {
         WIN32_FILE_ATTRIBUTE_DATA attributes;
@@ -772,6 +790,7 @@ static void reload_records(context *c) {
 #include "prepare.h"
 #include "read.h"
 
+#ifndef ATTENDANT_EMBEDDED
 int main(int argc, char **argv) {
     static unsigned char backing[128 * 1024 * 1024];
     static context c;
@@ -796,3 +815,4 @@ int main(int argc, char **argv) {
     print_sync(&c, state);
     return 0;
 }
+#endif

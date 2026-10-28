@@ -30,6 +30,21 @@ static int inside_project(const char *root, const char *path) {
     size_t length = strlen(root);
     return !_strnicmp(root, path, length) && (path[length] == '\\' || path[length] == '/');
 }
+static void require_empty_directory(context *c, const char *directory) {
+    DWORD attributes = GetFileAttributesW(wide(c, directory));
+    if (attributes != INVALID_FILE_ATTRIBUTES) {
+        WIN32_FIND_DATAW entry;
+        HANDLE scan;
+        if (!(attributes & FILE_ATTRIBUTE_DIRECTORY) || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) fail(c, "Collection target must be a regular empty directory");
+        scan = FindFirstFileW(wide(c, format_text(c, "%s\\*", directory)), &entry);
+        if (scan == INVALID_HANDLE_VALUE) fail(c, "Cannot inspect collection directory");
+        do {
+            if (wcscmp(entry.cFileName, L".") && wcscmp(entry.cFileName, L"..")) { FindClose(scan); fail(c, "Collection target must not contain files"); }
+        } while (FindNextFileW(scan, &entry));
+        if (GetLastError() != ERROR_NO_MORE_FILES) { FindClose(scan); fail(c, "Cannot finish directory inspection"); }
+        FindClose(scan);
+    } else if (GetLastError() != ERROR_FILE_NOT_FOUND && GetLastError() != ERROR_PATH_NOT_FOUND) fail(c, "Cannot inspect collection target");
+}
 static int native_add_table(context *c, read_options *options) {
     const char *directory = full_path(c, options->project, options->directory);
     const char *base = strrchr(directory, '\\'), *name = options->alias ? trim(copy_text(c, options->alias, strlen(options->alias))) : base ? base + 1 : directory;
@@ -37,7 +52,6 @@ static int native_add_table(context *c, read_options *options) {
     const char *paths[3], *texts[] = {"---\n---\n", "", ""}, *staged[3], *staged_config;
     char *out = allocate(c, 65536);
     jsonb b;
-    DWORD attributes;
     size_t a, d;
     int i;
     c->error_code = "add-table-input";
@@ -53,19 +67,7 @@ static int native_add_table(context *c, read_options *options) {
     for (i = 0; i < c->collection_count; i++) {
         if (!_stricmp(name, c->collections[i].name) || !lstrcmpiW(wide(c, directory), wide(c, full_path(c, ".", c->collections[i].directory)))) fail(c, "Collection name or directory is already configured");
     }
-    attributes = GetFileAttributesW(wide(c, directory));
-    if (attributes != INVALID_FILE_ATTRIBUTES) {
-        WIN32_FIND_DATAW entry;
-        HANDLE scan;
-        if (!(attributes & FILE_ATTRIBUTE_DIRECTORY) || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) fail(c, "Collection target must be a regular empty directory");
-        scan = FindFirstFileW(wide(c, format_text(c, "%s\\*", directory)), &entry);
-        if (scan == INVALID_HANDLE_VALUE) fail(c, "Cannot inspect collection directory");
-        do {
-            if (wcscmp(entry.cFileName, L".") && wcscmp(entry.cFileName, L"..")) { FindClose(scan); fail(c, "Collection target must not contain files"); }
-        } while (FindNextFileW(scan, &entry));
-        if (GetLastError() != ERROR_NO_MORE_FILES) { FindClose(scan); fail(c, "Cannot finish directory inspection"); }
-        FindClose(scan);
-    } else if (GetLastError() != ERROR_FILE_NOT_FOUND && GetLastError() != ERROR_PATH_NOT_FOUND) fail(c, "Cannot inspect collection target");
+    require_empty_directory(c, directory);
     config = read_text(c, config_path, NULL);
     line = inside_project(options->project, directory) ? directory + strlen(options->project) + 1 : directory;
     {
