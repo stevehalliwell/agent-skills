@@ -12,7 +12,10 @@ typedef struct {
     float axis, anchor;
     float x, y, vx, vy;
 } GD_LayoutNode;
-typedef struct { int a, b, key, active; } GD_LayoutEdge;
+/* Opaque incident-role tags: authored GD_Field, derived case pair, or resource
+   relation kind. Endpoint a/b is part of incident role, never inferred flow. */
+enum { GD_RELATION_CASE_PAIR=GD_FIELD_COUNT, GD_RELATION_RESOURCE_BASE };
+typedef struct { int a, b, key, active, relation; } GD_LayoutEdge;
 typedef struct { float x, y, width, height; int first, count; } GD_LayoutGroup;
 typedef struct {
     GD_LayoutNode nodes[GD_MAX_RECORDS];

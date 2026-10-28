@@ -38,7 +38,7 @@ static int resource_layout(const GD_ResourceGraph *graph, GD_Layout *layout) {
     }
     for (i=0;i<graph->relation_count;++i) {
         layout->edges[i].a=graph->relations[i].facet; layout->edges[i].b=graph->relations[i].activation;
-        layout->edges[i].key=i; layout->edges[i].active=1;
+        layout->edges[i].key=i; layout->edges[i].active=1; layout->edges[i].relation=GD_RELATION_RESOURCE_BASE+graph->relations[i].kind;
     }
     return gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME);
 }
@@ -65,15 +65,15 @@ static int shared_choice(const GD_GraphAnalysis *analysis, int selected, int *pe
     *peer=-1; return -1;
 }
 static void shared_details(const GD_ResourceGraph *graph, const GD_Layout *layout, const GD_GraphAnalysis *analysis, int selected, int pair, int x) {
-    int i,y=240;
-    DrawText(TextFormat("Shown: %d nodes / %d links",analysis->shown_nodes,analysis->shown_edges),x,146,14,muted);
-    if (selected<0) { DrawText("Select a node for shared neighbors",x,168,14,muted); return; }
-    DrawText(TextFormat("%d%s related | %d other neighbors",analysis->matched[selected],analysis->complete ? "":"+ retained",analysis->neighbors[selected]),x,168,14,muted);
-    DrawText("Next retained match",x+6,197,14,foreground);
+    int i,y=266;
+    DrawText(TextFormat("Shown: %d nodes / %d links",analysis->shown_nodes,analysis->shown_edges),x,172,14,muted);
+    if (selected<0) { DrawText("Select a node for shared neighbors",x,194,14,muted); return; }
+    DrawText(TextFormat("%d%s related | %d other neighbors",analysis->matched[selected],analysis->complete ? "":"+ retained",analysis->neighbors[selected]),x,194,14,muted);
+    DrawText("Next retained match",x+6,223,14,foreground);
     if (pair>=0) {
         const GD_GraphMatch *match=&analysis->pairs[pair];
         int other=match->a==selected ? match->b:match->a;
-        DrawText(TextFormat("%.31s | %d%s shared",node_label(graph,other),match->shared,analysis->complete ? "":"+"),x,222,14,foreground);
+        DrawText(TextFormat("%.31s | %d%s shared",node_label(graph,other),match->shared,analysis->complete ? "":"+"),x,248,14,foreground);
         for (i=0;i<2;++i) {
             const GD_GraphFeature *feature=&analysis->features[i ? match->first_b:match->first_a];
             const GD_ResourceRelation *relation=&graph->relations[layout->edges[feature->edge].key];
@@ -88,9 +88,9 @@ static void shared_details(const GD_ResourceGraph *graph, const GD_Layout *layou
                 DrawText(TextFormat("%.43s",record->reference),x,y,13,muted); y+=18;
             }
         }
-    } else DrawText(analysis->complete ? "No shared-neighbor match":"No retained match; result is partial",x,222,14,muted);
-    DrawText(analysis->complete ? "S: matches | thick purple: example links":"PARTIAL: counts are lower bounds",x,320,13,muted);
-    DrawText("Shared incidence is not resource flow.",x,338,13,muted);
+    } else DrawText(analysis->complete ? "No shared-neighbor match":"No retained match; result is partial",x,248,14,muted);
+    DrawText(analysis->complete ? "S: matches | thick purple: example links":"PARTIAL: counts are lower bounds",x,346,13,muted);
+    DrawText("Incident role is not resource flow.",x,364,13,muted);
 }
 static void detail(const GD_ResourceGraph *graph, int selected, int x, int width, int y) {
     const GD_ResourceNode *node; const GD_Record *source=NULL;
@@ -145,6 +145,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
     GD_GraphAnalysis *analysis=model->allocator.allocate(model->allocator.context,sizeof(*analysis));
     Camera2D camera={0}; int frame=0, selected=graph->node_count ? 0:-1,held=-1,stale=0,result=0,paused=1,i;
     int shared=1,peer=-1,pair=-1; double next_check=0;
+    GD_GraphLens shared_lens=GD_GRAPH_ANY;
     if (!layout || !analysis || !resource_layout(graph,layout)) {
         if (analysis) model->allocator.release(model->allocator.context,analysis);
         if (layout) model->allocator.release(model->allocator.context,layout);
@@ -175,10 +176,11 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             if (held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_move_node(layout,held,world.x,world.y);
         }
         if (!paused) gd_layout_step(layout,held);
-        if (gd_graph_analyze(layout,NULL,1,analysis)) peer=-1;
-        if (!frame && analysis->pair_count) selected=analysis->pairs[0].a;
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) shared=!shared;
-        pair=shared_choice(analysis,selected,&peer,shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,190,190,25}));
+        if (shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,136,340,25})) shared_lens=(GD_GraphLens)((shared_lens+1)%GD_GRAPH_LENS_COUNT);
+        if (gd_graph_analyze(layout,NULL,1,shared_lens,analysis)) peer=-1;
+        if (!frame && analysis->pair_count) selected=analysis->pairs[0].a;
+        pair=shared_choice(analysis,selected,&peer,shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,216,190,25}));
         BeginDrawing(); ClearBackground(background);
         DrawText("Resource graph preview",18,14,26,foreground);
         DrawText("Incomplete: routes and composed outcomes are not implemented. Lines are declarations, not proof of flow.",18,49,16,selected_color);
@@ -206,8 +208,11 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         EndMode2D(); EndScissorMode();
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
         DrawText(shared ? "[x] Shared neighbors (click)":"[ ] Shared neighbors (click)",split+14,114,16,foreground);
-        if (shared) { DrawRectangleLines(split+14,190,190,25,muted); shared_details(graph,layout,analysis,selected,pair,split+14); }
-        detail(graph,selected,split+14,width-split-28,shared ? 365:150);
+        if (shared) {
+            DrawText(TextFormat("Lens: %s (click)",gd_graph_lens_names[shared_lens]),split+14,140,14,foreground);
+            DrawRectangleLines(split+14,216,190,25,muted); shared_details(graph,layout,analysis,selected,pair,split+14);
+        }
+        detail(graph,selected,split+14,width-split-28,shared ? 391:150);
         if (stale) DrawText("STALE: sources changed. Close and reopen preview.",18,height-38,15,selected_color);
         else DrawText("Drag nodes | Right drag: pan | Wheel: zoom | F: fit | Space: settle/pause",18,height-38,15,muted);
         DrawText("Edges: teal condition | red exclusion | blue write | green preservation | purple role | gold call",18,height-20,13,muted);

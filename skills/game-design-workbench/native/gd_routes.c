@@ -219,7 +219,7 @@ int gd_route_layout(const GD_Model *model, GD_Layout *layout, int horizontal, GD
         const GD_Edge *edge=&model->edges[i]; GD_LayoutEdge *link;
         if (edge->field!=GD_NEXT || nodes[edge->source]<0 || edge->target<0 || nodes[edge->target]<0) continue;
         next[i]=head[edge->source]; head[edge->source]=i;
-        link=&layout->edges[layout->edge_count++]; link->a=nodes[edge->source]; link->b=nodes[edge->target]; link->key=i; link->active=1;
+        link=&layout->edges[layout->edge_count++]; link->a=nodes[edge->source]; link->b=nodes[edge->target]; link->key=i; link->active=1; link->relation=GD_NEXT;
         ++layout->nodes[link->a].degree; ++layout->nodes[link->b].degree;
     }
     while (read<write) {

@@ -38,7 +38,7 @@ static int prepare_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMod
     for (i = 0; i < model->cell_count; ++i) {
         GD_LayoutEdge *edge = &layout->edges[layout->edge_count++];
         edge->a = record_node[model->cells[i].noun]; edge->b = record_node[model->cells[i].verb];
-        edge->key = i; edge->active = model->cells[i].active;
+        edge->key = i; edge->active = model->cells[i].active; edge->relation=GD_RELATION_CASE_PAIR;
     }
     return gd_layout_arrange(layout, mode, sort);
 }
@@ -526,6 +526,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     GD_SkillUnlocks *query=NULL;
     GD_Focus focus;
     GD_GraphAnalysis *analysis=NULL; bool shared=true; int shared_peer=-1;
+    GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_DiagnosticBrowser diagnostics={0};
     int root=focus_from ? focus_find(model,focus_from):-1;
     char browse[129]="";
@@ -641,8 +642,8 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         igSameLine(0, -1);
         if (igButton("Rearrange", (ImVec2_c){0,0})) { prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; fit = 1; }
         if (!focused && !model->skill_mode) igCheckbox("Overlay other pairs (does not merge groups)", &overlay);
-        if (gd_graph_analyze(layout,NULL,overlay,analysis)) shared_peer=-1;
-        { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_peer);
+        if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=-1;
+        { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_lens,&shared_peer);
           if (pair>=0) shared_source(model,layout,analysis,pair,focused,challenges); }
         refresh = igButton("Refresh sources", (ImVec2_c){0,0});
         if (stale) igTextUnformatted("STALE: disk sources changed or could not be checked.", NULL);
@@ -715,7 +716,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             accumulator += fminf(GetFrameTime(), 0.05f);
             while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
         } else accumulator = 0;
-        if (gd_graph_analyze(layout,NULL,overlay,analysis)) shared_peer=-1;
+        if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=-1;
         draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
@@ -726,7 +727,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             }
             EndMode2D(); EndScissorMode();
         }
-        if (shared) DrawText(analysis->complete ? "S: shared-neighbor matches | Thick purple: example links | Shown graph only":"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(Color){193,155,228,255});
+        if (shared) DrawText(analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(Color){193,155,228,255});
         DrawText(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);
         rlImGuiEnd(); EndDrawing(); ++frame;
         if (screenshot && frame == frames && !gd_save_screenshot(screenshot)) { fputs("gd: graph screenshot export failed\n", stderr); result = 2; }

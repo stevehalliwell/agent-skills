@@ -6,7 +6,9 @@
 #define GD_GRAPH_ANALYSIS_HASH 32768
 #define GD_GRAPH_ANALYSIS_WORK 16777216
 
-typedef struct { int owner, neighbor, edge, endpoint; } GD_GraphFeature;
+typedef enum { GD_GRAPH_ANY, GD_GRAPH_SAME_ROLE, GD_GRAPH_CHANGED_ROLE, GD_GRAPH_LENS_COUNT } GD_GraphLens;
+extern const char *const gd_graph_lens_names[GD_GRAPH_LENS_COUNT];
+typedef struct { int owner, neighbor, edge, endpoint, relation, owner_end; } GD_GraphFeature;
 typedef struct { int a, b, shared, first_a, first_b; } GD_GraphMatch;
 /* Caller-allocated scratch/result; not for a small thread stack. Owns no strings
    or model pointers. All node/edge indices refer to the current layout. Two
@@ -21,15 +23,20 @@ typedef struct {
     unsigned char shown[GD_MAX_RECORDS];
     GD_LayoutEdge edges[GD_MAX_PAIRS];
     int initialized, include_inactive, node_count, edge_count;
+    GD_GraphLens lens;
     int shown_nodes, shown_edges, feature_count, pair_count, complete, work;
 } GD_GraphAnalysis;
 /* Zero-initialize once. NULL mask includes all nodes. Inactive edges count only
-   when include_inactive is true. Recomputes after topology/display-mask changes;
+   when include_inactive is true. Cached analysis->shown may serve as mask for
+   a lens-only update. Recomputes after topology/tag/lens/display-mask changes;
    returns 1 on recompute, 0 when cached. Complete covers this projection only.
    At most 2*edges sorted occurrences, then bounded inverted-index pair joins.
-   Budget/pair exhaustion marks partial; top-k display is not the compute bound. */
+   Budget/pair exhaustion marks partial; top-k display is not the compute bound.
+   Role = projection relation tag + incident endpoint. Same-role requires at
+   least one equal role; changed-role requires at least one unequal role.
+   Alternatives may satisfy both lenses. Counts still deduplicate neighbors. */
 int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
-                     int include_inactive, GD_GraphAnalysis *analysis);
+                     int include_inactive, GD_GraphLens lens, GD_GraphAnalysis *analysis);
 /* Retained match, or -1. Partial result cannot establish absence of a match. */
 int gd_graph_match(const GD_GraphAnalysis *analysis, int node, int peer);
 #endif

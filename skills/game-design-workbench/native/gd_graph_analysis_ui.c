@@ -4,13 +4,20 @@
 #include "cimgui.h"
 #include <stdio.h>
 
-int gd_graph_analysis_panel(const GD_Layout *layout, const GD_GraphAnalysis *analysis,
-                            int selected, bool *enabled, int *peer) {
+int gd_graph_analysis_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                            int selected, bool *enabled, GD_GraphLens *lens, int *peer) {
     enum { DISPLAY_MATCHES=128 };
     int i,pair,shown=0;
     igSeparator(); igCheckbox("Shared neighbors layer",enabled);
     if (!*enabled) return -1;
-    igTextWrapped("S: nodes sharing a neighbor. Thick purple: example links. Roles may differ; not equivalence.");
+    { int choice=*lens;
+      if (igCombo_Str_arr("Neighbor lens",&choice,gd_graph_lens_names,GD_GRAPH_LENS_COUNT,-1)) {
+          *lens=(GD_GraphLens)choice;
+          gd_graph_analyze(layout,analysis->shown,analysis->include_inactive,*lens,analysis);
+          *peer=-1;
+      } }
+    igTextWrapped("S: nodes sharing a neighbor. Thick purple: example links. Not equivalence.");
+    if (*lens!=GD_GRAPH_ANY) igTextWrapped("Incident role = link kind + endpoint side, not inferred flow. Alternative links can satisfy both role lenses.");
     igText("Scope: %d shown nodes / %d shown links",analysis->shown_nodes,analysis->shown_edges);
     if (!analysis->complete) igTextWrapped("PARTIAL: join/pair limit reached. Counts are lower bounds; missing matches are not disproved.");
     if (selected<0 || selected>=layout->node_count || !analysis->shown[selected]) {

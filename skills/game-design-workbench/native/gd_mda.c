@@ -187,7 +187,7 @@ int gd_mda_layout(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, i
     }
     for (i = 0; i < mda->link_count; ++i) if (mda->links[i].resolution == GD_MDA_RESOLVED) {
         const GD_Edge *edge = &model->edges[mda->links[i].edge]; GD_LayoutEdge *line = &layout->edges[layout->edge_count++];
-        line->a = mapping[edge->source]; line->b = mapping[edge->target]; line->key = i; line->active = 1;
+        line->a = mapping[edge->source]; line->b = mapping[edge->target]; line->key = i; line->active = 1; line->relation=edge->field;
     }
     if (!gd_layout_arrange(layout,bands ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE,GD_SORT_NAME)) return 0;
     if (bands) for (i = 0; i < layout->node_count; ++i) {

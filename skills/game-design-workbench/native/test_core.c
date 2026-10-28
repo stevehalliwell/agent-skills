@@ -847,7 +847,7 @@ TEST(layout_modes,
     layout->nodes[0] = (GD_LayoutNode){.key=0, .label="zeta", .degree=1};
     layout->nodes[1] = (GD_LayoutNode){.key=1, .label="alpha", .side=1, .degree=2};
     layout->nodes[2] = (GD_LayoutNode){.key=2, .label="beta", .degree=3};
-    layout->edges[0] = (GD_LayoutEdge){0,1,0,1}; layout->edges[1] = (GD_LayoutEdge){1,2,1,1};
+    layout->edges[0] = (GD_LayoutEdge){0,1,0,1,0}; layout->edges[1] = (GD_LayoutEdge){1,2,1,1,0};
     TEST_ASSERT(gd_layout_arrange(layout, GD_LAYOUT_COLUMNS, GD_SORT_NAME));
     TEST_ASSERT(layout->order[0] == 1 && layout->order[1] == 2 && layout->order[2] == 0);
     first_x = layout->nodes[0].x; first_y = layout->nodes[0].y;
@@ -875,7 +875,7 @@ TEST(layout_capacity,
     int i;
     memset(layout, 0, sizeof(*layout)); layout->node_count = GD_MAX_RECORDS; layout->edge_count = GD_MAX_PAIRS; layout->group_count = 1;
     for (i = 0; i < layout->node_count; ++i) { layout->nodes[i].label = "node"; layout->nodes[i].key = i; layout->nodes[i].side = i%2; }
-    for (i = 0; i < layout->edge_count; ++i) layout->edges[i] = (GD_LayoutEdge){i%GD_MAX_RECORDS, (i+1)%GD_MAX_RECORDS, i, 1};
+    for (i = 0; i < layout->edge_count; ++i) layout->edges[i] = (GD_LayoutEdge){i%GD_MAX_RECORDS, (i+1)%GD_MAX_RECORDS, i, 1,0};
     TEST_ASSERT(gd_layout_arrange(layout, GD_LAYOUT_FORCE, GD_SORT_NAME));
     start = clock();
     for (i = 0; i < 10; ++i) gd_layout_step(layout, -1);
@@ -1381,6 +1381,7 @@ TEST(mda_traces,
     for (i = 0; i < layout->edge_count; ++i) {
         const GD_Edge *edge = &model->edges[mda->links[layout->edges[i].key].edge];
         TEST_ASSERT(layout->nodes[layout->edges[i].a].key == edge->source && layout->nodes[layout->edges[i].b].key == edge->target);
+        TEST_ASSERT(layout->edges[i].relation==(int)edge->field);
         TEST_ASSERT(layout->nodes[layout->edges[i].a].layer > layout->nodes[layout->edges[i].b].layer);
     }
     TEST_ASSERT(gd_mda_layout(model,mda,layout,0) && layout->mode == GD_LAYOUT_FORCE && layout->node_count == 6);
@@ -1704,7 +1705,9 @@ TEST(skill_progression_modes,
     for (i=0;i<6;++i) {
         TEST_ASSERT(gd_focus_layout(draft->model,&focus,layout,GD_SORT_NAME) && focus.visible[b]);
         TEST_ASSERT(gd_skill_layout(draft->model,layout,i%2,i%2,GD_SORT_NAME) && layout->node_count==2);
+        { int edge; for (edge=0;edge<layout->edge_count;++edge) TEST_ASSERT(layout->edges[edge].relation==GD_PREREQUISITES); }
         TEST_ASSERT(gd_route_layout(draft->model,layout,i%2,GD_SORT_PARTNERS) && layout->node_count==3 && layout->edge_count==4);
+        { int edge; for (edge=0;edge<layout->edge_count;++edge) TEST_ASSERT(layout->edges[edge].relation==GD_NEXT); }
         TEST_ASSERT(layout->nodes[0].key>=0 && draft->modified_count==1 && draft->history_count==2 && draft->model->records[a].rank==-2);
     }
     for (i=0;i<layout->node_count;++i) {
@@ -1844,7 +1847,7 @@ TEST(graph_analysis_projection,
                 adjacent[edge->a][edge->b]=adjacent[edge->b][edge->a]=1;
                 ++edges; ++incident[edge->a]; if (edge->a!=edge->b) ++incident[edge->b];
             }
-            gd_graph_analyze(layout,shown,mode%2,analysis);
+            gd_graph_analyze(layout,shown,mode%2,GD_GRAPH_ANY,analysis);
             TEST_ASSERT(analysis->complete && analysis->shown_nodes==nodes && analysis->shown_edges==edges);
             TEST_ASSERT(!memcmp(before,layout->edges,sizeof(before)));
             for (a=0;a<8;++a) {
@@ -1868,10 +1871,76 @@ TEST(graph_analysis_projection,
                 TEST_ASSERT(analysis->matched[a]==matches && analysis->neighbors[a]==neighbors && analysis->incident[a]==incident[a]);
             }
             layout->nodes[0].x+=1; layout->nodes[0].y-=2; ++layout->tick;
-            TEST_ASSERT(!gd_graph_analyze(layout,shown,mode%2,analysis));
+            TEST_ASSERT(!gd_graph_analyze(layout,shown,mode%2,GD_GRAPH_ANY,analysis));
         }
     }
-    layout->edges[0].key+=100; TEST_ASSERT(gd_graph_analyze(layout,shown,1,analysis));
+    layout->edges[0].key+=100; TEST_ASSERT(gd_graph_analyze(layout,shown,1,GD_GRAPH_ANY,analysis));
+    release(storage,analysis); release(storage,layout);
+)
+TEST(graph_analysis_roles,
+    GD_Layout *layout=allocate(storage,sizeof(*layout)); GD_GraphAnalysis *analysis=allocate(storage,sizeof(*analysis));
+    unsigned seed=91; int run,mode,lens,i,a,b,n,r,s,x,y; unsigned char shown[6];
+    TEST_ASSERT(layout && analysis); memset(layout,0,sizeof(*layout)); memset(analysis,0,sizeof(*analysis));
+    layout->node_count=6; layout->edge_count=16;
+    for (i=0;i<6;++i) layout->nodes[i].key=i;
+    for (run=0;run<32;++run) {
+        for (i=0;i<16;++i) {
+            GD_LayoutEdge *edge=&layout->edges[i];
+            seed=seed*1664525u+1013904223u; edge->a=(int)((seed>>16)%6);
+            seed=seed*1664525u+1013904223u; edge->b=(int)((seed>>16)%6);
+            seed=seed*1664525u+1013904223u; edge->relation=(int)((seed>>16)%4);
+            edge->key=i; edge->active=i%3!=0;
+        }
+        for (mode=0;mode<4;++mode) {
+            unsigned char roles[6][6][4][2]={{{{0}}}};
+            for (i=0;i<6;++i) shown[i]=(unsigned char)(mode<2 || i%3!=0);
+            for (i=0;i<16;++i) {
+                const GD_LayoutEdge *edge=&layout->edges[i];
+                if ((!edge->active && !(mode%2)) || !shown[edge->a] || !shown[edge->b]) continue;
+                roles[edge->a][edge->b][edge->relation][0]=1;
+                roles[edge->b][edge->a][edge->relation][1]=1;
+            }
+            for (lens=0;lens<GD_GRAPH_LENS_COUNT;++lens) {
+                gd_graph_analyze(layout,shown,mode%2,(GD_GraphLens)lens,analysis);
+                TEST_ASSERT(analysis->complete && analysis->lens==(GD_GraphLens)lens);
+                for (a=0;a<6;++a) for (b=a+1;b<6;++b) {
+                    int common=0,pair;
+                    for (n=0;n<6;++n) {
+                        int qualifies=0;
+                        for (r=0;r<4;++r) for (s=0;s<4;++s) for (x=0;x<2;++x) for (y=0;y<2;++y)
+                            if (roles[a][n][r][x] && roles[b][n][s][y] &&
+                                (lens==GD_GRAPH_ANY || (lens==GD_GRAPH_SAME_ROLE ? r==s && x==y:r!=s || x!=y))) qualifies=1;
+                        common+=qualifies;
+                    }
+                    pair=gd_graph_match(analysis,a,b);
+                    TEST_ASSERT((pair>=0)==(common>0));
+                    if (pair>=0) {
+                        const GD_GraphMatch *match=&analysis->pairs[pair];
+                        const GD_GraphFeature *left=&analysis->features[match->first_a],*right=&analysis->features[match->first_b];
+                        int same=left->relation==right->relation && left->endpoint==right->endpoint;
+                        TEST_ASSERT(match->shared==common && left->neighbor==right->neighbor);
+                        TEST_ASSERT(roles[left->owner][left->neighbor][left->relation][left->endpoint] && roles[right->owner][right->neighbor][right->relation][right->endpoint]);
+                        TEST_ASSERT(lens==GD_GRAPH_ANY || (lens==GD_GRAPH_SAME_ROLE ? same:!same));
+                    }
+                }
+                TEST_ASSERT(!gd_graph_analyze(layout,shown,mode%2,(GD_GraphLens)lens,analysis));
+            }
+        }
+    }
+    layout->edges[0].relation=(layout->edges[0].relation+1)%4;
+    TEST_ASSERT(gd_graph_analyze(layout,shown,1,GD_GRAPH_CHANGED_ROLE,analysis));
+    TEST_ASSERT(gd_graph_analyze(layout,analysis->shown,analysis->include_inactive,GD_GRAPH_ANY,analysis));
+    layout->node_count=3; layout->edge_count=4;
+    layout->edges[0]=(GD_LayoutEdge){0,2,0,1,GD_MECHANICS};
+    layout->edges[1]=(GD_LayoutEdge){1,2,1,1,GD_MECHANICS};
+    layout->edges[2]=(GD_LayoutEdge){1,2,2,1,GD_RESOURCES}; layout->edges[3]=layout->edges[2];
+    for (lens=0;lens<GD_GRAPH_LENS_COUNT;++lens) {
+        int pair; gd_graph_analyze(layout,NULL,1,(GD_GraphLens)lens,analysis); pair=gd_graph_match(analysis,0,1);
+        TEST_ASSERT(pair>=0 && analysis->pairs[pair].shared==1 && analysis->neighbors[1]==1 && analysis->incident[1]==3);
+    }
+    layout->edge_count=2; layout->edges[1].relation=GD_MECHANICS; layout->edges[1].a=2; layout->edges[1].b=1;
+    gd_graph_analyze(layout,NULL,1,GD_GRAPH_SAME_ROLE,analysis); TEST_ASSERT(gd_graph_match(analysis,0,1)<0);
+    gd_graph_analyze(layout,NULL,1,GD_GRAPH_CHANGED_ROLE,analysis); TEST_ASSERT(gd_graph_match(analysis,0,1)>=0);
     release(storage,analysis); release(storage,layout);
 )
 TEST(graph_analysis_limits,
@@ -1879,17 +1948,22 @@ TEST(graph_analysis_limits,
     TEST_ASSERT(layout && analysis); memset(layout,0,sizeof(*layout)); memset(analysis,0,sizeof(*analysis));
     layout->node_count=GD_MAX_RECORDS; layout->edge_count=GD_MAX_RECORDS-1;
     for (i=0;i<GD_MAX_RECORDS;++i) layout->nodes[i].key=i;
-    for (i=0;i<layout->edge_count;++i) layout->edges[i]=(GD_LayoutEdge){0,i+1,i,1};
-    TEST_ASSERT(gd_graph_analyze(layout,NULL,1,analysis));
+    for (i=0;i<layout->edge_count;++i) layout->edges[i]=(GD_LayoutEdge){0,i+1,i,1,0};
+    TEST_ASSERT(gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis));
     TEST_ASSERT(!analysis->complete && analysis->pair_count==GD_GRAPH_ANALYSIS_PAIRS && analysis->work<=GD_GRAPH_ANALYSIS_WORK);
     TEST_ASSERT(analysis->neighbors[0]==GD_MAX_RECORDS-1 && analysis->incident[0]==GD_MAX_RECORDS-1 && !analysis->matched[0]);
+    layout->edge_count=(GD_MAX_RECORDS-1)*2;
+    for (i=0;i<layout->edge_count;++i) layout->edges[i]=(GD_LayoutEdge){0,i/2+1,i,1,i};
+    TEST_ASSERT(gd_graph_analyze(layout,NULL,1,GD_GRAPH_SAME_ROLE,analysis));
+    TEST_ASSERT(!analysis->complete && !analysis->pair_count && analysis->work==GD_GRAPH_ANALYSIS_WORK);
+    TEST_ASSERT(analysis->neighbors[0]==GD_MAX_RECORDS-1 && analysis->incident[0]==(GD_MAX_RECORDS-1)*2);
     layout->edge_count=GD_MAX_PAIRS;
-    for (i=0;i<layout->edge_count;++i) layout->edges[i]=(GD_LayoutEdge){i%GD_MAX_RECORDS,i%GD_MAX_RECORDS,i,1};
-    TEST_ASSERT(gd_graph_analyze(layout,NULL,1,analysis) && analysis->complete && !analysis->pair_count);
-    TEST_ASSERT(analysis->feature_count==GD_MAX_RECORDS && analysis->shown_edges==GD_MAX_PAIRS);
+    for (i=0;i<layout->edge_count;++i) layout->edges[i]=(GD_LayoutEdge){i%GD_MAX_RECORDS,i%GD_MAX_RECORDS,i,1,0};
+    TEST_ASSERT(gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis) && analysis->complete && !analysis->pair_count);
+    TEST_ASSERT(analysis->feature_count==GD_MAX_RECORDS*2 && analysis->shown_edges==GD_MAX_PAIRS);
     for (i=0;i<GD_MAX_RECORDS;++i) TEST_ASSERT(!analysis->neighbors[i] && !analysis->matched[i] && analysis->incident[i]==GD_MAX_PAIRS/GD_MAX_RECORDS);
     layout->node_count=layout->edge_count=0;
-    TEST_ASSERT(gd_graph_analyze(layout,NULL,0,analysis) && analysis->complete && !analysis->feature_count && !analysis->shown_nodes && !analysis->shown_edges);
+    TEST_ASSERT(gd_graph_analyze(layout,NULL,0,GD_GRAPH_ANY,analysis) && analysis->complete && !analysis->feature_count && !analysis->shown_nodes && !analysis->shown_edges);
     release(storage,analysis); release(storage,layout);
 )
 TEST(graph_input_links,
@@ -2127,10 +2201,10 @@ int main(int argc, char **argv) {
     failed += test_control_loading(); failed += test_control_overrides_scope(); failed += test_control_selection(); failed += test_control_limits();
     failed += test_control_import_roundtrip(); failed += test_control_import_legacy_dependent(); failed += test_control_import_strings(); failed += test_control_import_failures();
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
-    failed += test_graph_analysis_projection(); failed += test_graph_analysis_limits();
+    failed += test_graph_analysis_projection(); failed += test_graph_analysis_roles(); failed += test_graph_analysis_limits();
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/70 passed\n", 70-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/71 passed\n", 71-failed);
     return failed ? 1 : 0;
 }

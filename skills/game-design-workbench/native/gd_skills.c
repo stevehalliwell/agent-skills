@@ -189,7 +189,7 @@ int gd_skill_layout(const GD_Model *model, GD_Layout *layout, int rank_mode, int
     for (i = 0; i < model->skill_link_count; ++i) {
         GD_LayoutEdge *edge = &layout->edges[layout->edge_count++];
         edge->a = record_node[model->skill_links[i].prerequisite];
-        edge->b = record_node[model->skill_links[i].dependent]; edge->key = i; edge->active = 1;
+        edge->b = record_node[model->skill_links[i].dependent]; edge->key = i; edge->active = 1; edge->relation=GD_PREREQUISITES;
     }
     return gd_layout_arrange(layout, GD_LAYOUT_DIRECTED, sort);
 }

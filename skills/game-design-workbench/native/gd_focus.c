@@ -45,7 +45,7 @@ int gd_focus_layout(const GD_Model *model, GD_Focus *focus, GD_Layout *layout, G
         int source = map[edge->source], target = edge->target >= 0 ? map[edge->target] : -1;
         if (source >= 0 && target >= 0) {
             GD_LayoutEdge *drawn = &layout->edges[layout->edge_count++];
-            drawn->a = source; drawn->b = target; drawn->key = i; drawn->active = 1;
+            drawn->a = source; drawn->b = target; drawn->key = i; drawn->active = 1; drawn->relation=edge->field;
             layout->nodes[source].degree++; layout->nodes[target].degree++;
         } else if (source >= 0 || target >= 0) ++focus->boundary_count;
     }

@@ -112,13 +112,13 @@ static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, M
         }
     }
 }
-static int analyze_display(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, GD_GraphAnalysis *analysis, int *peer) {
+static int analyze_display(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, GD_GraphAnalysis *analysis, GD_GraphLens lens, int *peer) {
     unsigned char shown[GD_MAX_RECORDS]; int i,selected=-1;
     for (i=0;i<layout->node_count;++i) {
         shown[i]=(unsigned char)visible(model,mda,display,layout->nodes[i].key);
         if (shown[i] && layout->nodes[i].key==display->record) selected=i;
     }
-    if (gd_graph_analyze(layout,shown,1,analysis)) *peer=-1;
+    if (gd_graph_analyze(layout,shown,1,lens,analysis)) *peer=-1;
     return selected;
 }
 static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, const GD_GraphAnalysis *analysis, int shared, int selected, int peer) {
@@ -215,6 +215,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     GD_Model *model = initial; GD_Mda *mda = initial_mda;
     GD_DiagnosticBrowser diagnostics={0};
     GD_GraphAnalysis *analysis=NULL; bool shared=true; int shared_peer=-1,shared_selected=-1;
+    GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context,sizeof(*layout));
     MdaDisplay display = {.record = -1,.link = -1,.held = -1,.roles = {true,true,true,true},.paused = true};
     Camera2D camera = {{0,0},{0,0},0,1};
@@ -270,8 +271,8 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         for (i = 0; i < 4; ++i) { if (i) igSameLine(0,-1); igCheckbox(gd_mda_role_name((GD_Role)(GD_MDA_MECHANIC+i)),&display.roles[i]); }
         igSetNextItemWidth(-1); igInputText("##MDA-reference-filter",display.filter,sizeof(display.filter),0,NULL,NULL);
         igTextUnformatted("Reference filter; presentation only. Clear to show all.",NULL);
-        mark_path(mda,&display); shared_selected=analyze_display(model,mda,layout,&display,analysis,&shared_peer);
-        { int pair=gd_graph_analysis_panel(layout,analysis,shared_selected,&shared,&shared_peer);
+        mark_path(mda,&display); shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
+        { int pair=gd_graph_analysis_panel(layout,analysis,shared_selected,&shared,&shared_lens,&shared_peer);
           if (pair>=0) for (i=0;i<2;++i) {
               const GD_GraphMatch *match=&analysis->pairs[pair];
               int feature=i ? match->first_b:match->first_a;
@@ -300,9 +301,9 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         if (fit_next) { fit(&camera,model,mda,layout,&display,viewport); fit_next = 0; }
         input(model,mda,layout,&display,&camera,viewport); mark_path(mda,&display);
         if (!display.paused) gd_layout_step(layout,display.held);
-        shared_selected=analyze_display(model,mda,layout,&display,analysis,&shared_peer);
+        shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
         draw(model,mda,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer);
-        if (shared) DrawText(analysis->complete ? "S: shared-neighbor matches | Thick purple: example links | Shown graph only":"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
+        if (shared) DrawText(analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
         DrawText("Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload",20,height-40,14,muted);
         DrawText("Declared links/questions are not design or experience verdicts.",20,height-21,14,muted);
         rlImGuiEnd(); EndDrawing(); ++frame;
