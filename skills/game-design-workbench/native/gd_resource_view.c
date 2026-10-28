@@ -84,6 +84,31 @@ static int path_sources(const GD_ResourceGraph *graph, const GD_Layout *layout, 
     }
     return y;
 }
+static const GD_GraphShapes *resource_shapes(const GD_ResourceGraph *graph, GD_GraphAnalysis *analysis, int enabled) {
+    int roles[GD_MAX_RECORDS],i;
+    if (!enabled) return NULL;
+    for (i=0;i<analysis->node_count;++i) roles[i]=graph->nodes[i].kind;
+    return gd_graph_shapes(analysis,roles,GD_GRAPH_ANALYSIS_WORK);
+}
+static void shape_details(const GD_ResourceGraph *graph, const GD_GraphShapes *shapes, int enabled, int selected, int x) {
+    int i,shown=0,y=290;
+    DrawText(enabled ? "[x] Structural shapes (click)":"[ ] Structural shapes (click)",x,114,16,foreground);
+    DrawText("Two exact typed endpoint-neighborhood rounds.",x,146,13,muted);
+    DrawText("Next repeated family (click)",x,178,14,foreground);
+    DrawText("Transient IDs; NOT identity or equivalence.",x,210,13,muted);
+    DrawText("Shown incidences, NOT resource flow.",x,232,13,muted);
+    if (!shapes) return;
+    if (!shapes->complete) { DrawText("Unavailable: shape work limit.",x,256,14,muted); return; }
+    DrawText(TextFormat("%d families | gold outline: selected family",shapes->family_count),x,256,13,muted);
+    if (selected<0 || selected>=shapes->node_count) return;
+    DrawText(TextFormat("shape %d / %d members",shapes->colors[selected]+1,shapes->size[shapes->colors[selected]]),x,y,14,foreground); y+=24;
+    for (i=0;i<shapes->node_count && shown<12;++i) if (shapes->colors[i]==shapes->colors[selected]) {
+        DrawText(TextFormat("%.45s",node_label(graph,i)),x,y,13,foreground); y+=18; ++shown;
+    }
+    if (shapes->size[shapes->colors[selected]]>shown) { DrawText(TextFormat("%d more members",shapes->size[shapes->colors[selected]]-shown),x,y,13,muted); y+=20; }
+    DrawText("Missing data can change families; rarity is",x,y+12,13,muted);
+    DrawText("not a design defect. Source roles stay intact.",x,y+32,13,muted);
+}
 static void next_reach_kind(const GD_GraphAnalysis *analysis, GD_ReachControls *controls) {
     int i,first=-1,next=-1;
     for (i=0;i<analysis->edge_count;++i) {
@@ -243,13 +268,13 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
     int shared=1,branches=0,peer=-1,pair=-1; double next_check=0;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls={0}; int path_tab=0;
-    GD_ReachControls reach_controls={0,-1,0,-1,-1};
+    GD_ReachControls reach_controls={0,-1,0,-1,-1}; int shape_enabled=0;
     if (!layout || !analysis || !resource_layout(graph,layout)) {
         if (analysis) model->allocator.release(model->allocator.context,analysis);
         if (layout) model->allocator.release(model->allocator.context,layout);
         gd_error(model,"resources.layout","Cannot allocate or arrange resource preview",NULL,0); return 2;
     }
-    memset(analysis,0,sizeof(*analysis));
+    memset(analysis,0,sizeof(*analysis)); gd_graph_analyze(layout,NULL,1,shared_lens,analysis);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE); InitWindow(1440,900,"Resource graph preview"); SetTargetFPS(60);
     for (i=0;i<120;++i) gd_layout_step(layout,-1);
     fit(&camera,layout,(Rectangle){0,100,1060,755});
@@ -276,7 +301,17 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         if (!paused) gd_layout_step(layout,held);
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,72,100,25})) path_tab=0;
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+124,72,70,25})) path_tab=1;
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+204,72,140,25})) path_tab=path_tab==2 ? 3:2;
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+204,72,140,25})) path_tab=path_tab>=2 && path_tab<4 ? path_tab+1:2;
+        if (path_tab==4 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) shape_enabled=!shape_enabled;
+            if (shape_enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,172,340,25})) {
+                const GD_GraphShapes *shapes=resource_shapes(graph,analysis,1); int family=selected>=0 ? shapes->colors[selected]:-1;
+                if (shapes->complete) for (i=0;i<shapes->family_count;++i) {
+                    int next=(family+1+i)%shapes->family_count;
+                    if (shapes->size[next]>1) { selected=shapes->representative[next]; break; }
+                }
+            }
+        }
         if (path_tab==3 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) reach_controls.enabled=!reach_controls.enabled;
             if (reach_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,140,340,25})) next_reach_kind(analysis,&reach_controls);
@@ -321,6 +356,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         const GD_PathBypass *bypass=paths && path_controls.compare ? gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
         const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls,1);
         const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selected,&reach_controls.peer):NULL;
+        const GD_GraphShapes *shapes=resource_shapes(graph,analysis,shape_enabled);
         BeginDrawing(); ClearBackground(background);
         DrawText("Resource graph preview",18,14,26,foreground);
         DrawText("Incomplete: routes and composed outcomes are not implemented. Lines are declarations, not proof of flow.",18,49,16,selected_color);
@@ -357,6 +393,10 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                 }
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground);
             }
+            if (shapes) {
+                gd_graph_shape_badge(shapes,i,(int)n->x-83,(int)n->y+45,background);
+                if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){n->x-102,n->y-36,204,72},2,(Color){220,205,148,255});
+            }
             if (reachability) {
                 gd_graph_reachability_badge(reachability,i,(int)n->x-83,(int)n->y-43,background);
                 if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-98,n->y-32,196,64},2,gd_graph_branch_color(reach_pair->nodes[i]));
@@ -370,7 +410,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
         DrawText(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
         DrawText(path_tab==1 ? "[Paths]":"Paths",split+124,76,14,foreground);
-        DrawText(path_tab==3 ? "[Typed paths]":path_tab==2 ? "[Foundations]":"Layers (click)",split+204,76,12,foreground);
+        DrawText(path_tab==4 ? "[Shapes]":path_tab==3 ? "[Typed paths]":path_tab==2 ? "[Foundations]":"Layers (click)",split+204,76,12,foreground);
         if (path_tab==2) {
             DrawText("Prerequisite foundations: unavailable",split+14,114,15,foreground);
             DrawText("This projection has resource/rule facets,",split+14,145,14,muted);
@@ -379,6 +419,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             DrawText("Resource incidences are not AND skills,",split+14,225,14,muted);
             DrawText("learning requirements or proof of flow.",split+14,245,14,muted);
         }
+        else if (path_tab==4) shape_details(graph,shapes,shape_enabled,selected,split+14);
         else if (path_tab==3) reach_details(graph,layout,analysis,&reach_controls,selected,split+14);
         else if (path_tab==1) path_details(graph,layout,analysis,paths,&path_controls,selected,split+14);
         else {

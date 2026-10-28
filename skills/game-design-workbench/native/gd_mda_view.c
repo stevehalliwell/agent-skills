@@ -126,7 +126,7 @@ static void projected_source(const GD_Model *model, const GD_Mda *mda, const GD_
     const GD_Edge *edge=&model->edges[mda->links[layout->edges[index].key].edge];
     igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
 }
-static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair) {
+static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selected,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
@@ -183,6 +183,10 @@ static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layo
                 }
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)position.x+83,(int)position.y+35,13,foreground);
             } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)position.x+25,(int)position.y+35,13,shared_color);
+        }
+        if (shapes) {
+            gd_graph_shape_badge(shapes,i,(int)position.x-96,(int)position.y+52,background);
+            if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){position.x-117,position.y-44,234,88},2,(Color){220,205,148,255});
         }
         if (reachability) {
             gd_graph_reachability_badge(reachability,i,(int)position.x-96,(int)position.y-48,background);
@@ -244,7 +248,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     GD_DiagnosticBrowser diagnostics={0};
     GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false; int shared_peer=-1,shared_selected=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
-    GD_PathControls path_controls={0}; bool foundation_enabled=false; int foundation_peer=-1;
+    GD_PathControls path_controls={0}; bool foundation_enabled=false,shape_enabled=false; int foundation_peer=-1;
     GD_ReachControls reach_controls={0,-1,0,-1,-1};
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context,sizeof(*layout));
     MdaDisplay display = {.record = -1,.link = -1,.held = -1,.roles = {true,true,true,true},.paused = true};
@@ -326,6 +330,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
             for (i=0;i<layout->edge_count && count<64;++i) if (comparison->edges[i]) { projected_source(model,mda,layout,i); ++count; }
             igTextWrapped("Source examples retain first 64 marked projected declarations; graph marks remain complete.");
         }
+        { int node=gd_graph_shapes_panel(model,layout,analysis,shared_selected,&shape_enabled); if (node>=0) { display.record=layout->nodes[node].key; display.link=-1; mark_path(mda,&display); } }
         if (path_controls.enabled) igTextWrapped("Path starts are independent of query root/traversal; follow authored arrows, not inferred causality.");
         if (igCollapsingHeader_TreeNodeFlags("Browse supplied MDA records",0)) {
             igBeginChild_Str("MDA records",(ImVec2_c){0,120},0,0);
@@ -354,7 +359,8 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         const GD_PathBypass *bypass=paths && path_controls.compare ? gd_graph_path_bypass(analysis,shared_selected,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
         const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls,0);
         const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,shared_selected,&reach_controls.peer):NULL;
-        draw(model,mda,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair);
+        const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
+        draw(model,mda,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair,shapes);
         if (paths) DrawText(TextFormat("D: dominated targets | J: incoming neighbors | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,155,12,gd_path_color);
         if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
         DrawText("Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload",20,height-40,14,muted);

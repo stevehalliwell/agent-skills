@@ -65,3 +65,40 @@ int gd_graph_reachability_panel(const GD_Layout *layout, GD_GraphAnalysis *analy
     }
     return 1;
 }
+int gd_graph_shapes_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis, int selected, bool *enabled) {
+    const GD_GraphShapes *shapes; int i,repeated=0,shown=0,navigate=-1;
+    igSeparator(); igCheckbox("Structural shape families layer",enabled);
+    if (!*enabled) return -1;
+    shapes=gd_graph_model_shapes(model,analysis);
+    igTextWrapped("Two exact typed endpoint-neighborhood refinement rounds, starting from node roles. Shape ID / family size are transient per projection. Same family is NOT identity, isomorphism, equivalence or quality.");
+    igTextWrapped("Shown graph only; missing declarations can change families. Rare shape is not a design defect. Gold outer outline marks selected family, not shared canonical ingredients.");
+    if (!shapes->complete) { igTextWrapped("UNAVAILABLE: shape work limit; intermediate classes are not family proofs."); return -1; }
+    for (i=0;i<shapes->family_count;++i) repeated+=shapes->size[i]>1;
+    igText("%d shown families | %d repeated families",shapes->family_count,repeated);
+    if (igCollapsingHeader_TreeNodeFlags("Discovered shape families",0)) {
+        igBeginChild_Str("Shape families",(ImVec2_c){0,85},0,0);
+        for (i=0;i<shapes->family_count && shown<128;++i) if (shapes->size[i]>1) {
+            char label[192]; int node=shapes->representative[i];
+            snprintf(label,sizeof(label),"shape %d | %d nodes | %.80s##shape-%d",i+1,shapes->size[i],layout->nodes[node].label,i);
+            if (igButton(label,(ImVec2_c){0,0})) navigate=node;
+            ++shown;
+        }
+        if (repeated>shown) igText("%d further repeated families not listed",repeated-shown);
+        igEndChild();
+    }
+    if (selected<0 || selected>=layout->node_count || !analysis->shown[selected]) return navigate;
+    igText("Selection: shape %d / %d nodes",shapes->colors[selected]+1,shapes->size[shapes->colors[selected]]);
+    if (!igCollapsingHeader_TreeNodeFlags("Shape signature and members",0)) return navigate;
+    igText("Node role tag: %d | typed incident features: %d",shapes->roles[selected],shapes->begin[selected+1]-shapes->begin[selected]);
+    for (i=shapes->begin[selected];i<shapes->begin[selected+1] && i<shapes->begin[selected]+32;++i) {
+        const GD_ShapeFeature *feature=&shapes->features[i];
+        igTextWrapped("%s | endpoint %c | previous-round class %d",gd_graph_relation_name(feature->relation),feature->endpoint ? 'B':'A',feature->color);
+    }
+    if (shapes->begin[selected+1]-shapes->begin[selected]>32) igTextWrapped("Signature text retains first 32 features; equality compares full exact tuples.");
+    shown=0;
+    for (i=0;i<layout->node_count && shown<128;++i) if (analysis->shown[i] && shapes->colors[i]==shapes->colors[selected]) {
+        igTextUnformatted(model->records[layout->nodes[i].key].reference,NULL); ++shown;
+    }
+    if (shapes->size[shapes->colors[selected]]>shown) igText("%d further members not listed",shapes->size[shapes->colors[selected]]-shown);
+    return navigate;
+}

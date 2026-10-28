@@ -61,7 +61,7 @@ static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle view
         float label_width = (float)MeasureText(node->label, 18)/2+20;
         if (!i || node->x-label_width < min_x) min_x = node->x-label_width;
         if (!i || node->x+label_width > max_x) max_x = node->x+label_width;
-        if (!i || node->y-65 < min_y) min_y = node->y-65;
+        if (!i || node->y-85 < min_y) min_y = node->y-85;
         if (!i || node->y+50 > max_y) max_y = node->y+50;
     }
     for (i=0;i<layout->edge_count;++i) {
@@ -136,7 +136,7 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
                        Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
                        GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass,
                        const GD_GraphClosure *foundations, const GD_GraphComparison *foundation_pair,
-                       const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair) {
+                       const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selection->node,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
@@ -247,6 +247,10 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
                 }
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text);
             } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)node->x+19,(int)node->y-8,13,shared_color);
+        }
+        if (shapes) {
+            gd_graph_shape_badge(shapes,i,(int)node->x-65,(int)node->y-71,graph_background);
+            if (gd_graph_shape_peer(shapes,i,selection->node)) DrawCircleLines((int)node->x,(int)node->y,36,(Color){220,205,148,255});
         }
         if (reachability) {
             gd_graph_reachability_badge(reachability,i,(int)node->x+36,(int)node->y-53,graph_background);
@@ -560,7 +564,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     unsigned char known[GD_MAX_RECORDS]={0};
     GD_SkillUnlocks *query=NULL;
     GD_Focus focus;
-    GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false,foundation_enabled=false; int shared_peer=-1,foundation_peer=-1;
+    GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false,foundation_enabled=false,shape_enabled=false; int shared_peer=-1,foundation_peer=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls[3]={{0}};
     GD_ReachControls reach_controls[3]={{0,-1,0,-1,-1},{0,-1,0,-1,-1},{0,-1,0,-1,-1}};
@@ -714,6 +718,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             for (i=0;i<layout->edge_count;++i) if (comparison->edges[i]) { ++total; if (shown<64) { projected_source(model,layout,i,focused,challenges); ++shown; } }
             if (total>shown) igText("%d further marked links not listed",total-shown);
         }
+        { int node=gd_graph_shapes_panel(model,layout,analysis,selection.node,&shape_enabled); if (node>=0) navigate=layout->nodes[node].key; }
         refresh = igButton("Refresh sources", (ImVec2_c){0,0});
         if (stale) igTextUnformatted("STALE: disk sources changed or could not be checked.", NULL);
         if (*failure) igTextWrapped("%s", failure);
@@ -793,7 +798,8 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         const GD_GraphComparison *foundation_pair=foundations ? gd_graph_closure_choose(analysis,selection.node,&foundation_peer):NULL;
         const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls[focused ? 2:challenges ? 1:0],!focused && !model->skill_mode);
         const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selection.node,&reach_controls[focused ? 2:challenges ? 1:0].peer):NULL;
-        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair,reachability,reach_pair);
+        const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
+        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair,reachability,reach_pair,shapes);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
             for (i=0;i<layout->node_count;++i) {

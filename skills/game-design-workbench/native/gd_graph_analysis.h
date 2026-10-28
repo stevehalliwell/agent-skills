@@ -59,6 +59,13 @@ typedef struct {
     int selected, peer_count, peers[GD_MAX_RECORDS], shared[GD_MAX_RECORDS];
     GD_GraphComparison comparison;
 } GD_GraphClosure;
+typedef struct { int owner, relation, endpoint, color; } GD_ShapeFeature;
+typedef struct {
+    GD_ShapeFeature features[2*GD_MAX_PAIRS];
+    int begin[GD_MAX_RECORDS+1], roles[GD_MAX_RECORDS], colors[GD_MAX_RECORDS], previous[GD_MAX_RECORDS];
+    int order[GD_MAX_RECORDS], merge[GD_MAX_RECORDS], size[GD_MAX_RECORDS], representative[GD_MAX_RECORDS];
+    int valid, complete, work, limit, family_count, node_count;
+} GD_GraphShapes;
 /* Caller-allocated scratch/result; not for a small thread stack. Owns no strings
    or model pointers. All node/edge indices refer to the current layout. Two
    incident links establish a shared neighbor, not equivalent semantic roles.
@@ -76,6 +83,7 @@ typedef struct {
     GD_GraphComparison comparison;
     GD_GraphPaths paths;
     GD_GraphClosure foundations, reachability;
+    GD_GraphShapes shapes;
     int shown_nodes, shown_edges, feature_count, pair_count, complete, work;
 } GD_GraphAnalysis;
 /* Zero-initialize once. NULL mask includes all nodes. Inactive edges count only
@@ -112,6 +120,12 @@ const GD_PathSelection *gd_graph_path_selection(GD_GraphAnalysis *analysis, int 
    branches; fork=-1 denotes separate starts via virtual root, not authored fork.
    Borrow until next bypass/selection/path recomputation or analyze invalidation. */
 const GD_PathBypass *gd_graph_path_bypass(GD_GraphAnalysis *analysis, int selected, int candidate, int work_limit);
+/* Two exact refinement rounds over deduplicated typed incident roles. Colors
+   are transient families, not identity, isomorphism or semantic equivalence.
+   NULL roles treats all nodes alike. Work exhaustion suppresses all families;
+   fixed-capacity feature sorts remain bounded independently. */
+const GD_GraphShapes *gd_graph_shapes(GD_GraphAnalysis *analysis, const int *roles, int work_limit);
+const GD_GraphShapes *gd_graph_model_shapes(const GD_Model *model, GD_GraphAnalysis *analysis);
 typedef struct { int enabled, relation, reverse, peer, target; } GD_ReachControls;
 /* Separate caller-owned registered cache for ordinary typed reachability.
    Same kernel as foundations, without AND/knowledge interpretation. */
