@@ -1,6 +1,6 @@
 # Disposable-cache and lazy-search experiments
 
-Historical experiment stage. Current normal implementation uses persistent deferred FTS with first-search full rebuild, bounded mmap and reduced routine integrity scans: [SQLITE-ADOPTION.md](SQLITE-ADOPTION.md). Below records earlier invalidating-lazy prototype, not current enabled-mode lifecycle. Bare-build versus first-search figures below do not establish faster rebuilding; matched comparison in adoption report corrects that inference.
+Historical experiment stage. Current normal implementation uses persistent deferred FTS with first-search in-place population, bounded mmap and reduced routine integrity scans: [SQLITE-ADOPTION.md](SQLITE-ADOPTION.md). Below records earlier invalidating-lazy prototype, not current enabled-mode lifecycle. Bare-build versus first-search figures below do not establish faster rebuilding; matched comparison in adoption report corrects that inference.
 
 2026-10-28. User authorizes trading projection durability for speed and proposes lazy FTS because agents reportedly use SQL/ripgrep more often. Usage frequency is supplied assumption, not measured telemetry. Markdown remains authoritative. **Experimental binaries only; normal application defaults and launchers unchanged.**
 

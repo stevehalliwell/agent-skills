@@ -366,6 +366,26 @@ static void rebuild_projection(context *c, const char *root) {
     if (!MoveFileExW(wide(c, c->temporary), wide(c, target), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) fail(c, "Cannot publish database (is another process using it?)");
     c->temporary = NULL;
 }
+/* Upgrade only search objects in an otherwise current projection. WAL readers
+   retain their complete cold snapshot. Indexes and enabled flag commit together. */
+static void populate_search(context *c, const char *root) {
+    int i;
+    if (projection_open(c, full_path(c, root, ".attendant/attendant.sqlite"), SQLITE_OPEN_READWRITE) != SQLITE_OK) fail(c, "Cannot open search writer");
+    projection_writer(c);
+    for (i = 0; i < c->record_count; i++) c->records[i].projection_changed = 0;
+    if (!snapshot_matches(c)) fail(c, "Projection changed while preparing search; retry");
+    if (!c->fts_enabled) {
+        c->fts_enabled = 1;
+        for (i = 0; i < c->collection_count; i++) make_search_tables(c, &c->collections[i]);
+        for (i = 0; i < c->record_count; i++) index_record(c, &c->records[i]);
+        sql(c, "UPDATE __attendant_metadata SET value='1' WHERE key='fts_enabled'; UPDATE __attendant_metadata SET value='2' WHERE key='layout_version'");
+        /* Check before commit so failed construction/validation rolls back mode too. */
+        if (!snapshot_integrity(c) || !snapshot_matches(c)) fail(c, "Populated search failed validation");
+    }
+    sql(c, "COMMIT; PRAGMA optimize");
+    if (sqlite3_close(c->db) != SQLITE_OK) fail(c, "Cannot close search writer");
+    c->db = NULL;
+}
 static const char *refresh_projection(context *c, const char *root, projection_mode mode) {
     const char *target = full_path(c, root, ".attendant/attendant.sqlite");
     int i, reuse = 0, incremental = 0;
@@ -386,11 +406,6 @@ static const char *refresh_projection(context *c, const char *root, projection_m
         c->db = NULL;
     }
     if (mode == PROJECTION_REBUILD) reuse = incremental = 0;
-    if (mode == PROJECTION_SEARCH && !c->fts_enabled) {
-        /* Full private build once; later sync/create/update keep indexes current. */
-        c->fts_enabled = 1;
-        reuse = incremental = 0;
-    }
     if (!reuse && incremental) {
         if (projection_open(c, target, SQLITE_OPEN_READWRITE) != SQLITE_OK) fail(c, "Cannot open projection writer");
         projection_writer(c);
@@ -399,7 +414,11 @@ static const char *refresh_projection(context *c, const char *root, projection_m
         if (sqlite3_close(c->db) != SQLITE_OK) fail(c, "Cannot close projection writer");
         c->db = NULL;
     }
-    if (!reuse) { rebuild_projection(c, root); return "rebuilt"; }
+    if (!reuse) {
+        if (mode == PROJECTION_SEARCH) c->fts_enabled = 1;
+        rebuild_projection(c, root); return "rebuilt";
+    }
+    if (mode == PROJECTION_SEARCH && !c->fts_enabled) populate_search(c, root);
     c->projected = 0;
     for (i = 0; i < c->record_count; i++) {
         value *hidden = lookup(&c->records[i].front, "hidden");

@@ -57,20 +57,45 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
   assert.ok(!readdirSync(join(project, '.attendant')).some(name => name.startsWith('native-')));
   writeFileSync(config, validConfig); mode(0);
   cases.push('failed private first-search construction preserves cold cache and removes owned temporary state');
-  const reader = new DatabaseSync(database);
+  inspect(db => db.exec("CREATE TRIGGER fail_search_enable BEFORE UPDATE ON __attendant_metadata WHEN NEW.key='layout_version' AND NEW.value='2' BEGIN SELECT RAISE(ABORT,'injected search failure'); END"));
+  const beforeFailure = sourceHashes(project);
+  assert.match(native(['search', '-q', 'Coldmodesearchtoken'], 1).error.message, /injected search failure/);
+  mode(0); assert.deepEqual(sourceHashes(project), beforeFailure);
+  inspect(db => {
+    assert.equal(db.prepare("SELECT count(*) n FROM sqlite_schema WHERE name GLOB '__attendant_fts_*' OR name GLOB '__attendant_trigram_*'").get().n, 0);
+    db.exec('DROP TRIGGER fail_search_enable');
+  });
+  cases.push('failed population rolls back both indexes and enabled flag after all rows inserted');
+  inspect(db => db.exec("CREATE TRIGGER fail_search_validation AFTER UPDATE ON __attendant_metadata WHEN NEW.key='layout_version' AND NEW.value='2' BEGIN DELETE FROM tasks WHERE name='first'; END"));
+  assert.match(native(['search', '-q', 'Coldmodesearchtoken'], 1).error.message, /Populated search failed validation/);
+  mode(0); assert.deepEqual(sourceHashes(project), beforeFailure);
+  inspect(db => {
+    assert.equal(db.prepare("SELECT count(*) n FROM tasks WHERE name='first'").get().n, 1);
+    db.exec('DROP TRIGGER fail_search_validation');
+  });
+  cases.push('failed pre-commit snapshot validation restores collection rows and cold index state');
+  const writer = new DatabaseSync(database);
+  try {
+    writer.exec('BEGIN IMMEDIATE');
+    assert.match(native(['search', '-q', 'Coldmodesearchtoken'], 1).error.message, /locked|busy/i);
+    mode(0); writer.exec('ROLLBACK');
+  } finally { writer.close(); }
+  cases.push('first-search writer contention fails bounded without enabling indexes');
+  inspect(db => db.exec('CREATE TABLE cold_generation_sentinel(value TEXT); INSERT INTO cold_generation_sentinel VALUES(\'old\')'));
+  const reader = new DatabaseSync(database), beforePopulation = sourceHashes(project);
   try {
     reader.exec('BEGIN'); reader.prepare('SELECT count(*) FROM tasks').get();
-    const frozen = digest(readFileSync(database)), source = sourceHashes(project);
-    assert.match(native(['search', '-q', 'Coldmodesearchtoken'], 1).error.message, /Existing WAL sidecars|Cannot publish database/);
-    assert.equal(digest(readFileSync(database)), frozen); assert.deepEqual(sourceHashes(project), source);
+    assert.equal(native(['search', '-q', 'Coldmodesearchtoken']).returned, 1); mode(1);
+    assert.equal(reader.prepare("SELECT value FROM __attendant_metadata WHERE key='fts_enabled'").get().value, '0');
+    assert.equal(reader.prepare("SELECT count(*) n FROM sqlite_schema WHERE name='__attendant_fts_tasks'").get().n, 0);
+    assert.equal(reader.prepare('SELECT value FROM cold_generation_sentinel').get().value, 'old');
+    assert.deepEqual(sourceHashes(project), beforePopulation);
     reader.exec('ROLLBACK');
   } finally { reader.close(); }
-  mode(0); cases.push('first-search rebuild refuses active reader and preserves old complete cache');
-  inspect(db => db.exec('CREATE TABLE cold_generation_sentinel(value TEXT); INSERT INTO cold_generation_sentinel VALUES(\'old\')'));
-  assert.equal(native(['search', '-q', 'Coldmodesearchtoken']).returned, 1); mode(1);
-  inspect(db => assert.equal(db.prepare("SELECT count(*) n FROM sqlite_schema WHERE name='cold_generation_sentinel'").get().n, 0, 'First search populated in place instead of full rebuild'));
+  cases.push('first-search population succeeds with old WAL reader retaining complete cold snapshot');
+  inspect(db => assert.equal(db.prepare("SELECT count(*) n FROM sqlite_schema WHERE name='cold_generation_sentinel'").get().n, 1, 'First search unnecessarily rebuilt collection/cache generation'));
   assert.deepEqual(native(['schema']), coldSchema);
-  cases.push('first search replaces entire cache with indexed layout and unchanged schema JSON');
+  cases.push('first search preserves collection generation and schema JSON while enabling both indexes');
   assert.equal(native(['search', '-q', 'Coldwrittensearchtoken']).returned, 1);
   inspect(db => db.exec('CREATE TABLE indexed_generation_sentinel(value TEXT)'));
   writeFileSync(first, readFileSync(first, 'utf8') + '\nPersistedsearchtoken.\n');
@@ -84,6 +109,12 @@ for (const executable of executables) for (const variant of ['relative', 'absolu
   assert.equal(native(['sync']).state, 'rebuilt'); mode(1);
   assert.equal(native(['search', '-q', 'Persistedsearchtoken']).returned, 1);
   cases.push('mtime-only preserves indexes and contract rebuild retains enabled mode');
+  rmSync(join(project, '.attendant'), { recursive: true, force: true }); native(['sync']); mode(0);
+  inspect(db => db.exec('CREATE TABLE pending_generation_sentinel(value TEXT)'));
+  writeFileSync(first, readFileSync(first, 'utf8') + '\nPendingsearchtoken.\n');
+  assert.equal(native(['search', '-q', 'Pendingsearchtoken']).returned, 1); mode(1);
+  inspect(db => assert.equal(db.prepare("SELECT count(*) n FROM sqlite_schema WHERE name='pending_generation_sentinel'").get().n, 1));
+  cases.push('first search reconciles pending source delta then populates indexes without replacing cache');
   // Cold layout has explicit incompatible version so legacy CLI rebuilds safely.
   rmSync(join(project, '.attendant'), { recursive: true, force: true }); native(['sync']); mode(0);
   const beforeLegacy = sourceHashes(project);

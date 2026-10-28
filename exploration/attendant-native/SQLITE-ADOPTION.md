@@ -1,13 +1,14 @@
 # Deferred FTS and read-path adoption
 
-2026-10-28. User approved lazy FTS, reduced routine integrity scans and bounded mmap. User specifies **full indexed rebuild on first search**, then persistent enabled mode. Implemented in normal CJIT/Zig builds; no launcher rollout or commit. WAL/NORMAL remains default; WAL/OFF combination measured separately, not adopted.
+2026-10-28. Lazy FTS, reduced routine integrity scans and bounded mmap checkpoint committed as `daddf13`. User then approves **in-place FTS population on first search**, retaining persistent enabled mode. Follow-up implemented and validated in normal CJIT/Zig builds; user approved commit. No launcher rollout. WAL/NORMAL remains default; WAL/OFF combination measured separately, not adopted.
 
 ## Current behavior
 
 - Cold `sync`, `schema`, SQL `query`, `create`, `update`: collection rows/cache/diagnostics/edges only. No normal-token/trigram FTS objects.
-- First `search`: reuse already loaded/validated source to build complete new indexed DB privately. Validate, checkpoint/close, then replace published cache. No initial unindexed build if search is first command.
+- First `search` against compatible cold cache: reconcile pending source changes, acquire `BEGIN IMMEDIATE`, recheck current source snapshot, create/populate both FTS indexes in place. Validate before commit; indexes, `fts_enabled=1` and layout `2` become visible together. Failure rolls back all population/mode changes. Collection rows/cache/diagnostics/edges retain generation.
+- Missing/incompatible cache still requires full private rebuild. Search as first command directly builds indexed cache, without intermediate cold build.
 - Once enabled, ordinary deltas maintain both indexes transactionally. Never drop them merely because source changed. Full contract rebuild preserves known enabled state. Removing/corrupting disposable cache can reset inferred state.
-- First-search full replacement retains existing active-consumer refusal. Failed replacement preserves old cache and source; stop reader and retry. Later incremental updates retain WAL reader coexistence.
+- Healthy first-search upgrade coexists with WAL readers: held reader retains complete cold schema/mode; new readers see complete indexed state after commit. Competing writers have bounded busy failure. Actual full replacement still refuses active consumers.
 - Metadata `fts_enabled` is exact TEXT `0`/`1`. Cold layout `3` requires flag `0` and absent indexes. Indexed layout `2` supports explicit `1` or missing flag for legacy-produced DBs.
 - Distinct cold layout makes unchanged `.mjs` rebuild it safely instead of trying missing FTS. Indexed layout stays interoperable. Native can consume legacy indexed DB without modifying it.
 - `schema.fts` describes supported table/column contract even before physical creation. Successful schema JSON shape remains unchanged.
@@ -18,9 +19,24 @@
 
 Earlier bare-build timings versus first-search timings did **not** establish that full rebuild is faster: first search also includes preparation and actual search. Matched profiles retain same mmap, integrity, persistent-mode and synchronous settings.
 
-**Matched measurements do not favor full rebuild.** Requested full rebuild remains implemented: private validation/publication isolates replacement failure, but active readers can block it. Late population is modestly faster and can coexist with WAL readers; it remains comparison variant, not normal path.
+**Matched measurements do not favor full rebuild.** In-place population is now normal path; full replacement remains comparison variant. Private full build validates after commit before publication; in-place upgrade validates before commit to preserve atomic rollback on validation failure.
 
-Focused final first-search run, median / p90 milliseconds:
+## Current in-place first-search result
+
+Production follow-up versus full replacement, median / p90 milliseconds:
+
+| Dataset | In-place, NORMAL | Full rebuild, NORMAL | In-place, OFF | Full rebuild, OFF |
+| --- | ---: | ---: | ---: | ---: |
+| Proto — 127 records | 322.9 / 333.6 | 345.0 / 368.1 | 276.0 / 288.2 | 295.7 / 303.4 |
+| Godot — 60 records | 121.7 / 124.6 | 134.7 / 140.4 | 103.9 / 106.7 | 115.6 / 120.2 |
+
+Six runners × two datasets × 18 measured + 2 warmups: **216 measured + 24 warmups**, all valid. Normal native, CJIT, Node, WAL/OFF and full/full-OFF variants share current harness. Current default in-place reduces median first-search latency about 6–10% versus full in this run. Checks occur at different transaction boundaries by design; not an isolated SQL insertion microbenchmark. Source capture/pristine preservation and result parity pass. No new full eleven-case matrix; historical non-first-search numbers below predate this follow-up.
+
+Evidence: `build/bench/run-kUJbeU/`, entry `build/sqlite-population-first-search.json`. Current driver outputs `sqlite-population*.json`, preserving earlier entries. Full comparison profiles are now `full`/`full-wal-off`; former `late` generators remain reproducible from checkpoint `daddf13`.
+
+## Historical matched first-search comparison
+
+Checkpoint-era final first-search run, median / p90 milliseconds:
 
 | Dataset | Full rebuild, NORMAL | Late population, NORMAL | Full rebuild, OFF | Late population, OFF |
 | --- | ---: | ---: | ---: | ---: |
@@ -29,7 +45,7 @@ Focused final first-search run, median / p90 milliseconds:
 
 Both strategies perform post-commit optimize/integrity/snapshot validation, including committed FTS segments. Earlier main-matrix late variant checked integrity before commit; focused run supersedes that first-search comparison. Other normal-build results below unchanged. No power-loss qualification for OFF.
 
-## Current native versus Node
+## Historical checkpoint native versus Node
 
 Same warm-filesystem, startup-inclusive harness. Compilation/reset/edit/check work excluded. All work in owned copied captures, never live projects. Six runners: Node, normal CJIT, normal Zig `-O3`, and Zig variants `wal-off`, `late`, `late-wal-off`. Main matrix **18 measured + 2 warmups** × 11 cases × 2 datasets × 6 runners: **2376 measured + 264 warmups**, all valid, exit 0/no stderr. Rotating order balances six measured positions.
 
@@ -77,10 +93,10 @@ Normal builds pass both compilers × relative/absolute configs:
 - 34 lifecycle cases, including corrupt/incompatible cache, SQL construction failure, bounded busy writers and hot-journal refusal.
 - 19 CLI cases + 18 rejected batches. Indexed interoperability explicitly enabled before asserting legacy reuse; cold format handoff separately checked.
 - 11 incremental/WAL regressions; changed-only row/FTS writes, mtime-only no index churn, rollback, ID swaps, global validation, held readers and shared create/update path.
-- 9 search-mode cases, including private-construction failure preserving old cache and cleaning owned temporary files. Sentinel table proves first search replaces entire DB, while later edits retain existing generation. Also tests cold SQL/schema/doctor/create/update, reader-blocked upgrade, enabled contract rebuild, cold legacy rebuild and search-first startup.
+- 13 search-mode cases. Sentinel table proves first search retains collection/cache generation. Injected metadata failure after all FTS rows inserted rolls back indexes and enabled flag. Injected collection deletion during upgrade forces validation failure and proves pre-commit rollback restores rows/cold mode. Held WAL reader retains cold snapshot while upgrade succeeds; competing writer fails bounded. Also covers pending edit plus first search, cold SQL/schema/doctor/create/update, failed private contract rebuild, enabled contract rebuild, cold legacy rebuild and search-first startup.
 - 10 benchmark unit tests + 7 existing runner tests pass. Search-after-edit preflight now checks persistent index state before timing, so hidden rebuilding cannot masquerade as ready-search latency.
 
-Independent source review found no actionable issue in inspected adoption paths. Review covered mode/version compatibility, connections, full validation/publication, incremental maintenance, schema descriptors and test transitions. Source-only review; benchmarks not independently reproduced.
+Independent source review found no actionable issue in inspected checkpoint adoption paths. Review covered mode/version compatibility, connections, full validation/publication, incremental maintenance, schema descriptors and test transitions. Source-only review; benchmarks not independently reproduced. In-place follow-up has fresh full correctness suites and focused timing, not a fresh independent review.
 
 Current-mode explicit SQL-failure and active-reader tests establish tested failure behavior. Earlier process-kill experiments remain historical evidence for their own binaries, not fresh crash/power-loss qualification of this adoption. mmap I/O fault injection, long-lived GUI coordination and wider Unicode category parity remain unverified. WAL/OFF automatic invalidation after OS crash/restart/corruption remains separate work.
 
@@ -92,7 +108,7 @@ bash exploration/attendant-native/build.sh zig
 node exploration/attendant-native/search-mode-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
-for profile in wal-off late late-wal-off; do
+for profile in wal-off full full-wal-off; do
   bash exploration/attendant-native/sqlite-adoption-build.sh "$profile"
 done
 node exploration/attendant-native/sqlite-adoption-check.mjs \
@@ -104,7 +120,7 @@ node exploration/attendant-native/sqlite-adoption-check.mjs \
 - Main evidence: `build/bench/run-fzhcMF/`, entry `build/sqlite-adoption.json`.
 - Final first-search evidence: `build/bench/run-hBsV60/`, entry `build/sqlite-adoption-first-search.json`.
 - Per-run `report.json`, every sample, `sqlite-adoption.json`, binary/source hashes and owned workspaces retained locally/ignored.
-- `build/review/search-mode-results.json` plus `build/adoption-{source,read,prepare,incremental,mode,cli}-results.jsonl` retain correctness output.
+- `build/review/search-mode-results.json` plus `build/population-{source,read,prepare,incremental,mode,cli}-results.jsonl` retain current correctness output; checkpoint results remain in `build/adoption-*.jsonl`.
 - Historical pre-adoption experiment C inputs frozen under `fixtures/sqlite-experiment-base/`; older generators/adapters use that baseline rather than silently measuring new defaults. Other source-contract/vendor headers remain shared; original binary hashes define exact historical measurement.
 
 Prior experiments: [SQLITE-DISPOSABLE.md](SQLITE-DISPOSABLE.md), [SQLITE-TUNING.md](SQLITE-TUNING.md). Historical native/CJIT/Node baselines: [BENCHMARK.md](BENCHMARK.md).

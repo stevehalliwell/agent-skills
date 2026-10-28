@@ -623,6 +623,10 @@ static const char *field_type(field *f) {
         return f->fallback.kind == VALUE_NUMBER ? "NUMERIC" : f->fallback.kind == VALUE_BOOL ? "INTEGER" : "TEXT";
     return "TEXT";
 }
+static void make_search_tables(context *c, collection *table) {
+    sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'unicode61 remove_diacritics 2')", internal(c, "fts", table)));
+    sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'trigram')", internal(c, "trigram", table)));
+}
 static void make_tables(context *c, collection *table) {
     char statement[32768];
     int i;
@@ -635,10 +639,7 @@ static void make_tables(context *c, collection *table) {
         strcat(statement, part);
     }
     strcat(statement, ")"); sql(c, statement);
-    if (c->fts_enabled) {
-        sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'unicode61 remove_diacritics 2')", internal(c, "fts", table)));
-        sql(c, format_text(c, "CREATE VIRTUAL TABLE %s USING fts5(record_id UNINDEXED, content, tokenize = 'trigram')", internal(c, "trigram", table)));
-    }
+    if (c->fts_enabled) make_search_tables(c, table);
 }
 static void bind_value(context *c, sqlite3_stmt *s, int index, value *v, field *f) {
     if (!v && f && (!strcmp(f->kind, "default") || !strcmp(f->kind, "enum"))) v = &f->fallback;
@@ -651,6 +652,24 @@ static void bind_value(context *c, sqlite3_stmt *s, int index, value *v, field *
     else if (v->number_kind == NUMBER_I64) sqlite3_bind_int64(s, index, v->number.signed_integer);
     else if (v->number_kind == NUMBER_U64) fail(c, "Unsigned scalar exceeds SQLite INTEGER range");
     else sqlite3_bind_double(s, index, v->number.real);
+}
+static void index_record(context *c, record *r) {
+    collection *table = r->owner;
+    sqlite3_stmt *s;
+    value *hidden = lookup(&r->front, "hidden");
+    int i;
+    if (r->blocked || (hidden && hidden->number.real)) return;
+    for (i = 0; c->fts_enabled && i < 2; i++) {
+        s = prepare(c, format_text(c, "INSERT INTO %s (record_id,content) VALUES (?,?)", internal(c, i ? "trigram" : "fts", table)));
+        bind_text(c, s, 1, lookup(&r->front, "id")->text);
+        {
+            size_t a = strlen(r->front_json), b = strlen(r->body);
+            char *content = allocate(c, a + b + 2);
+            memcpy(content, r->front_json, a); content[a] = '\n'; memcpy(content + a + 1, r->body, b + 1);
+            bind_text(c, s, 2, content);
+        }
+        finish(c, s);
+    }
 }
 static void project_record(context *c, record *r) {
     collection *table = r->owner;
@@ -683,17 +702,7 @@ static void project_record(context *c, record *r) {
     bind_text(c, s, 8, r->path); bind_text(c, s, 9, r->hash);
     for (i = 0; i < table->field_count; i++) bind_value(c, s, 10 + i, lookup(&r->front, table->fields[i].name), &table->fields[i]);
     finish(c, s);
-    for (i = 0; c->fts_enabled && i < 2; i++) {
-        s = prepare(c, format_text(c, "INSERT INTO %s (record_id,content) VALUES (?,?)", internal(c, i ? "trigram" : "fts", table)));
-        bind_text(c, s, 1, lookup(&r->front, "id")->text);
-        {
-            size_t a = strlen(r->front_json), b = strlen(r->body);
-            char *content = allocate(c, a + b + 2);
-            memcpy(content, r->front_json, a); content[a] = '\n'; memcpy(content + a + 1, r->body, b + 1);
-            bind_text(c, s, 2, content);
-        }
-        finish(c, s);
-    }
+    index_record(c, r);
     c->projected++;
 }
 static void edge(context *c, record *r, field *f, value *v) {
