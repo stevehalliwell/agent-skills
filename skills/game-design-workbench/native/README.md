@@ -131,6 +131,8 @@ Core `components` groups accepted, defined matrix pairs only. Every axis node be
 
 `gd_layout.h/.c` accepts labelled nodes, edges, caller-provided groups/column sides/layers, and sort weights, not game records, statuses, prerequisites, or ranks. `gd_skills.c` owns skill analysis and its layout adapter. Directed presentation locks ordering axis; domain code supplies layers. Four deterministic barycentre sweeps order within bands; label/card dimensions reserve disjoint lanes. Native renderer measures 18-pixel labels after window initialization; headless fallback counts UTF-8 codepoints, not bytes. Directed settling omits generic edge springs so shared parents cannot collapse packed lanes. MDA supplies 220 × 96 card bounds and retains its card/Bezier renderer. One fixed display step evaluates at most 32 repulsion samples/node plus active edges; larger groups rotate samples. No all-pairs force loop or convergence wait. Renderer runs at most four fixed steps/frame; pause/columns skip steps. Display physics is approximate layout, not game simulation or community detection.
 
+Repeatable six-view rendering probes: `pwsh -NoProfile -File scripts/capture-workbench-graph-review.ps1 -RaylibDirectory PATH` from repository root. Requires prepared SDK/UI/executable; no downloads, prompts or OS input. Default captures five layer states for plumber; `-Example crate-puzzle` changes fixture. Each run uses fresh ignored directory, JSON metadata, unchanged-example/source checks and empty-draft assertions. Non-default layers use PRIVATE source copies with seeded flags/selections; they are rendering evidence, not real-control/input-isolation acceptance. Use PowerShell `Get-Help ./scripts/capture-workbench-graph-review.ps1` for contract.
+
 Bounded graph capture works with existing `--frames`/`--screenshot` options. Physical pointer/clipboard behavior and large-project rendering still need review. Live external-edit/F5/failure/recovery paths are checked by the desktop workflow below; bounded captures and graphics-free solver/source-change paths are also checked.
 
 ## Focused relationships
@@ -208,7 +210,7 @@ Default-off **Structural shape families layer** adds two exact typed endpoint-ne
 - Same family is not semantic equivalence, canonical identity or graph isomorphism. Rare shape is not a defect. Missing declarations can change families; results describe shown projection only.
 - Work exhaustion suppresses family claims, never exposes intermediate refinement as proof. Shape work/cache is independent of shared-neighbor discovery; complete shape results can survive partial pair discovery. No unchecked hash equality, embeddings or quality score.
 
-Resources **Shapes** tab keeps independent toggle; **Next repeated family** selects representative. Integrated interaction/usefulness review remains pending.
+Resources **Shapes** tab keeps independent toggle; **Next repeated family** selects representative. Member labels retain snapshot-local `#node` keys because different case/participant facets can share axis labels. Integrated interaction/usefulness review remains pending.
 
 ### Typed multi-hop connections
 

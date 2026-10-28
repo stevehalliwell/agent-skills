@@ -127,11 +127,12 @@ static void shape_details(const GD_ResourceGraph *graph, const GD_GraphShapes *s
     if (selected<0 || selected>=shapes->node_count) return;
     DrawText(TextFormat("shape %d / %d members",shapes->colors[selected]+1,shapes->size[shapes->colors[selected]]),x,y,14,foreground); y+=24;
     for (i=0;i<shapes->node_count && shown<12;++i) if (shapes->colors[i]==shapes->colors[selected]) {
-        DrawText(TextFormat("%.45s",node_label(graph,i)),x,y,13,foreground); y+=18; ++shown;
+        /* Case-local facets can share labels; preserve distinct snapshot keys. */
+        DrawText(TextFormat("#%d %.39s",i,node_label(graph,i)),x,y,13,foreground); y+=18; ++shown;
     }
     if (shapes->size[shapes->colors[selected]]>shown) { DrawText(TextFormat("%d more members",shapes->size[shapes->colors[selected]]-shown),x,y,13,muted); y+=20; }
     DrawText("Missing data can change families; rarity is",x,y+12,13,muted);
-    DrawText("not a design defect. Source roles stay intact.",x,y+32,13,muted);
+    DrawText("not a design defect. Member # keys are local.",x,y+32,13,muted);
 }
 static void next_reach_kind(const GD_GraphAnalysis *analysis, GD_ReachControls *controls) {
     int i,first=-1,next=-1;
