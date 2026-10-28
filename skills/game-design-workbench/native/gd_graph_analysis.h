@@ -66,6 +66,14 @@ typedef struct {
     int order[GD_MAX_RECORDS], merge[GD_MAX_RECORDS], size[GD_MAX_RECORDS], representative[GD_MAX_RECORDS];
     int valid, complete, work, limit, family_count, node_count;
 } GD_GraphShapes;
+#define GD_OVERVIEW_BINS 32
+typedef struct { int enabled,row,column; } GD_OverviewControls;
+typedef struct {
+    int counts[GD_OVERVIEW_BINS*GD_OVERVIEW_BINS], first[GD_OVERVIEW_BINS*GD_OVERVIEW_BINS];
+    int nodes[GD_MAX_RECORDS], node_bin[GD_MAX_RECORDS], start[GD_OVERVIEW_BINS+1];
+    unsigned char selected_nodes[GD_MAX_RECORDS], selected_edges[GD_MAX_PAIRS];
+    int valid, undirected, bins, node_count, link_count, peak, selected_row, selected_column, selected_count;
+} GD_GraphOverview;
 /* Caller-allocated scratch/result; not for a small thread stack. Owns no strings
    or model pointers. All node/edge indices refer to the current layout. Two
    incident links establish a shared neighbor, not equivalent semantic roles.
@@ -84,6 +92,7 @@ typedef struct {
     GD_GraphPaths paths;
     GD_GraphClosure foundations, reachability;
     GD_GraphShapes shapes;
+    GD_GraphOverview overview;
     int shown_nodes, shown_edges, feature_count, pair_count, complete, work;
 } GD_GraphAnalysis;
 /* Zero-initialize once. NULL mask includes all nodes. Inactive edges count only
@@ -120,6 +129,13 @@ const GD_PathSelection *gd_graph_path_selection(GD_GraphAnalysis *analysis, int 
    branches; fork=-1 denotes separate starts via virtual root, not authored fork.
    Borrow until next bypass/selection/path recomputation or analyze invalidation. */
 const GD_PathBypass *gd_graph_path_bypass(GD_GraphAnalysis *analysis, int selected, int candidate, int work_limit);
+/* Optional fixed-capacity adjacency/incidence binning over all shown nodes in
+   projection index order, never camera/sort position. No semantic clustering.
+   Directed rows follow shown a->b; undirected counts mirror only across bins.
+   link_count counts input rows once, not sum of mirrored cells. Scope changes
+   reset selected cell. Selection flags mark actual contributing links/nodes. */
+const GD_GraphOverview *gd_graph_overview(GD_GraphAnalysis *analysis, GD_OverviewControls *controls, int undirected);
+void gd_graph_overview_select(GD_GraphAnalysis *analysis, int row, int column);
 /* Two exact refinement rounds over deduplicated typed incident roles. Colors
    are transient families, not identity, isomorphism or semantic equivalence.
    NULL roles treats all nodes alike. Work exhaustion suppresses all families;

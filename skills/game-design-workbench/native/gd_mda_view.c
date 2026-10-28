@@ -1,6 +1,7 @@
 #include "gd_layout.h"
 #include "gd_graph_analysis_ui.h"
 #include "gd_graph_analysis_draw.h"
+#include "gd_graph_overview_draw.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 #include "rlImGui.h"
@@ -74,10 +75,11 @@ static void fit(Camera2D *camera, const GD_Model *model, const GD_Mda *mda, cons
     if (camera->zoom > 1.2f) camera->zoom = 1.2f;
     if (camera->zoom < 0.002f) camera->zoom = 0.002f;
 }
-static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, MdaDisplay *display, Camera2D *camera, Rectangle viewport) {
+static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, MdaDisplay *display, Camera2D *camera, Rectangle viewport, int blocked) {
     Vector2 mouse = GetMousePosition(), world; int i;
     camera->offset = (Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) display->held = -1;
+    if (blocked) { display->held=-1; return; }
     if (display->held >= 0) {
         world = GetScreenToWorld2D(mouse,*camera); gd_layout_move_node(layout,display->held,world.x/spacing(layout),world.y/spacing(layout));
     }
@@ -126,7 +128,7 @@ static void projected_source(const GD_Model *model, const GD_Mda *mda, const GD_
     const GD_Edge *edge=&model->edges[mda->links[layout->edges[index].key].edge];
     igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
 }
-static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes) {
+static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selected,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
@@ -144,6 +146,7 @@ static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layo
         Color color = display->link == edge->key || display->path_links[edge->key] ? selected_color : mda->selected[source] && mda->selected[target] ? (Color){104,182,171,255}:(Color){73,88,107,255};
         float dx, dy, length, t;
         if (emphasized != pass || !visible(model,mda,display,source) || !visible(model,mda,display,target)) continue;
+        if (overview && overview->selected_edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,21,selected_color);
         if (reach_pair && reach_pair->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,17,gd_graph_branch_color(reach_pair->edges[i]));
         if (bypass && bypass->complete && bypass->found && bypass->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,15,gd_bypass_color);
         if (path_selection && path_selection->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,11,gd_path_color);
@@ -184,6 +187,7 @@ static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layo
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)position.x+83,(int)position.y+35,13,foreground);
             } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)position.x+25,(int)position.y+35,13,shared_color);
         }
+        if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){position.x-121,position.y-48,242,96},2,selected_color);
         if (shapes) {
             gd_graph_shape_badge(shapes,i,(int)position.x-96,(int)position.y+52,background);
             if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){position.x-117,position.y-44,234,88},2,(Color){220,205,148,255});
@@ -250,6 +254,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls={0}; bool foundation_enabled=false,shape_enabled=false; int foundation_peer=-1;
     GD_ReachControls reach_controls={0,-1,0,-1,-1};
+    GD_OverviewControls overview_controls={0,-1,-1};
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context,sizeof(*layout));
     MdaDisplay display = {.record = -1,.link = -1,.held = -1,.roles = {true,true,true,true},.paused = true};
     Camera2D camera = {{0,0},{0,0},0,1};
@@ -331,6 +336,11 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
             igTextWrapped("Source examples retain first 64 marked projected declarations; graph marks remain complete.");
         }
         { int node=gd_graph_shapes_panel(model,layout,analysis,shared_selected,&shape_enabled); if (node>=0) { display.record=layout->nodes[node].key; display.link=-1; mark_path(mda,&display); } }
+        if (gd_graph_overview_panel(model,layout,analysis,&overview_controls,0)) {
+            int i,shown=0;
+            for (i=0;i<layout->edge_count && shown<64;++i) if (analysis->overview.selected_edges[i]) { projected_source(model,mda,layout,i); ++shown; }
+            if (analysis->overview.selected_count>shown) igText("%d further contributing declarations not listed",analysis->overview.selected_count-shown);
+        }
         if (path_controls.enabled) igTextWrapped("Path starts are independent of query root/traversal; follow authored arrows, not inferred causality.");
         if (igCollapsingHeader_TreeNodeFlags("Browse supplied MDA records",0)) {
             igBeginChild_Str("MDA records",(ImVec2_c){0,120},0,0);
@@ -352,7 +362,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         mark_path(mda,&display);
         camera.offset = (Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
         if (fit_next) { fit(&camera,model,mda,layout,&display,viewport); fit_next = 0; }
-        input(model,mda,layout,&display,&camera,viewport); mark_path(mda,&display);
+        input(model,mda,layout,&display,&camera,viewport,gd_graph_overview_hit(&overview_controls,viewport,GetMousePosition())); mark_path(mda,&display);
         if (!display.paused) gd_layout_step(layout,display.held);
         shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls,NULL,0);
@@ -360,7 +370,9 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls,0);
         const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,shared_selected,&reach_controls.peer):NULL;
         const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
-        draw(model,mda,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair,shapes);
+        const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,0);
+        draw(model,mda,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair,shapes,overview);
+        gd_graph_overview_draw(analysis,&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
         if (paths) DrawText(TextFormat("D: dominated targets | J: incoming neighbors | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,155,12,gd_path_color);
         if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
         DrawText("Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload",20,height-40,14,muted);

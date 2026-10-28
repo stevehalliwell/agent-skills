@@ -2,6 +2,7 @@
 #include "gd_layout.h"
 #include "gd_graph_analysis.h"
 #include "gd_graph_analysis_draw.h"
+#include "gd_graph_overview_draw.h"
 #include "raylib.h"
 #include <math.h>
 #include <string.h>
@@ -83,6 +84,29 @@ static int path_sources(const GD_ResourceGraph *graph, const GD_Layout *layout, 
         if (source) { DrawText(TextFormat("%.43s",source->reference),x,y,13,foreground); y+=18; }
     }
     return y;
+}
+static void overview_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                             GD_OverviewControls *controls, int x) {
+    const GD_GraphOverview *overview=gd_graph_overview(analysis,controls,1); int i,count=0,arcs[4],types[7]={0},y=390;
+    DrawText(controls->enabled ? "[x] Incidence overview (click)":"[ ] Incidence overview (click)",x,114,16,foreground);
+    if (!overview) return;
+    DrawText("Row + (click)",x,146,14,foreground); DrawText("Column + (click)",x+160,146,14,foreground);
+    DrawText("Next occupied cell (click)",x,178,14,foreground); DrawText("Clear cell (click)",x,210,14,foreground);
+    DrawText("Symmetric incidence, NOT flow. Log brightness:",x,244,13,muted);
+    DrawText("projected link rows, not quantities/strength.",x,264,13,muted);
+    DrawText("Index bins, not clusters. Diagonal is not",x,284,13,muted);
+    DrawText("necessarily a self-link. Gold: contributors.",x,304,13,muted);
+    DrawText(TextFormat("%d identities / %d bins / %d input rows",overview->node_count,overview->bins,overview->link_count),x,330,13,muted);
+    if (controls->row<0 || controls->column<0 || !overview->bins) return;
+    DrawText(TextFormat("Cell %d,%d: %d rows | arrows: move cell",controls->row,controls->column,overview->selected_count),x,352,13,foreground);
+    DrawText(TextFormat("Row ordinals %d..%d | column %d..%d",overview->start[controls->row],overview->start[controls->row+1]-1,overview->start[controls->column],overview->start[controls->column+1]-1),x,372,12,muted);
+    for (i=0;i<analysis->edge_count;++i) if (overview->selected_edges[i]) {
+        int kind=graph->relations[layout->edges[i].key].kind;
+        if (kind>=0 && kind<7) ++types[kind];
+        if (count<4) arcs[count++]=2*i;
+    }
+    for (i=0;i<7;++i) if (types[i]) { DrawText(TextFormat("%s: %d",relation_name((GD_ResourceRelationKind)i),types[i]),x,y,12,muted); y+=18; }
+    DrawText("Up to four contributing source examples:",x,y+4,12,muted); path_sources(graph,layout,arcs,count,x,y+24);
 }
 static const GD_GraphShapes *resource_shapes(const GD_ResourceGraph *graph, GD_GraphAnalysis *analysis, int enabled) {
     int roles[GD_MAX_RECORDS],i;
@@ -269,6 +293,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls={0}; int path_tab=0;
     GD_ReachControls reach_controls={0,-1,0,-1,-1}; int shape_enabled=0;
+    GD_OverviewControls overview_controls={0,-1,-1};
     if (!layout || !analysis || !resource_layout(graph,layout)) {
         if (analysis) model->allocator.release(model->allocator.context,analysis);
         if (layout) model->allocator.release(model->allocator.context,layout);
@@ -287,7 +312,8 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         if (IsKeyPressed(KEY_F)) fit(&camera,layout,viewport);
         if (IsKeyPressed(KEY_SPACE)) paused=!paused;
         if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) held=-1;
-        if (CheckCollisionPointRec(mouse,viewport)) {
+        if (gd_graph_overview_hit(&overview_controls,viewport,mouse)) held=-1;
+        if (CheckCollisionPointRec(mouse,viewport) && !gd_graph_overview_hit(&overview_controls,viewport,mouse)) {
             Vector2 world=GetScreenToWorld2D(mouse,camera);
             float wheel=GetMouseWheelMove();
             if (wheel) { Vector2 after; camera.zoom*=powf(1.15f,wheel); if(camera.zoom<0.002f)camera.zoom=0.002f; if(camera.zoom>4)camera.zoom=4; after=GetScreenToWorld2D(mouse,camera); camera.target.x+=world.x-after.x; camera.target.y+=world.y-after.y; }
@@ -301,7 +327,28 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         if (!paused) gd_layout_step(layout,held);
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,72,100,25})) path_tab=0;
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+124,72,70,25})) path_tab=1;
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+204,72,140,25})) path_tab=path_tab>=2 && path_tab<4 ? path_tab+1:2;
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+204,72,140,25})) path_tab=path_tab>=2 && path_tab<5 ? path_tab+1:2;
+        if (path_tab==5) {
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) overview_controls.enabled=!overview_controls.enabled;
+            if (overview_controls.enabled) {
+                const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,1);
+                int row=overview_controls.row<0 ? 0:overview_controls.row,column=overview_controls.column<0 ? 0:overview_controls.column,changed=0;
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    if (overview->bins && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,140,150,25})) { row=(row+1)%overview->bins; changed=1; }
+                    if (overview->bins && CheckCollisionPointRec(mouse,(Rectangle){(float)split+174,140,170,25})) { column=(column+1)%overview->bins; changed=1; }
+                    if (overview->bins && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,172,340,25})) {
+                        int cells=overview->bins*overview->bins,start=overview_controls.row<0 ? -1:row*overview->bins+column;
+                        for (i=1;i<=cells;++i) { int next=(start+i)%cells; if (overview->counts[next]) { row=next/overview->bins; column=next%overview->bins; changed=1; break; } }
+                    }
+                    if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,204,340,25})) { row=column=-1; changed=1; }
+                }
+                if (overview->bins && (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_DOWN))) {
+                    column+=IsKeyPressed(KEY_RIGHT)-IsKeyPressed(KEY_LEFT); row+=IsKeyPressed(KEY_DOWN)-IsKeyPressed(KEY_UP);
+                    if (column<0) column=0; if (row<0) row=0; if (column>=overview->bins) column=overview->bins-1; if (row>=overview->bins) row=overview->bins-1; changed=1;
+                }
+                if (changed) { overview_controls.row=row; overview_controls.column=column; gd_graph_overview_select(analysis,row,column); }
+            }
+        }
         if (path_tab==4 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) shape_enabled=!shape_enabled;
             if (shape_enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,172,340,25})) {
@@ -357,6 +404,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls,1);
         const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selected,&reach_controls.peer):NULL;
         const GD_GraphShapes *shapes=resource_shapes(graph,analysis,shape_enabled);
+        const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,1);
         BeginDrawing(); ClearBackground(background);
         DrawText("Resource graph preview",18,14,26,foreground);
         DrawText("Incomplete: routes and composed outcomes are not implemented. Lines are declarations, not proof of flow.",18,49,16,selected_color);
@@ -368,6 +416,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             Color color=rel->kind==GD_RESOURCE_ROLE_BINDING ? role_color : rel->kind==GD_RESOURCE_INVOCATION ? selected_color :
                 rel->kind==GD_RESOURCE_EXCLUSION ? (Color){230,125,125,255} : rel->kind==GD_RESOURCE_REQUIREMENT ? (Color){81,194,178,255} :
                 rel->kind==GD_RESOURCE_PRESERVATION ? (Color){180,201,119,255} : facet_color;
+            if (overview && overview->selected_edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},21,selected_color);
             if (reach_pair && reach_pair->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},17,gd_graph_branch_color(reach_pair->edges[i]));
             if (bypass && bypass->complete && bypass->found && bypass->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},15,gd_bypass_color);
             if (path_selection && path_selection->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},11,gd_path_color);
@@ -393,6 +442,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                 }
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground);
             }
+            if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-106,n->y-40,212,80},2,selected_color);
             if (shapes) {
                 gd_graph_shape_badge(shapes,i,(int)n->x-83,(int)n->y+45,background);
                 if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){n->x-102,n->y-36,204,72},2,(Color){220,205,148,255});
@@ -407,10 +457,11 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             }
         }
         EndMode2D(); EndScissorMode();
+        gd_graph_overview_draw(analysis,&overview_controls,viewport,1);
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
         DrawText(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
         DrawText(path_tab==1 ? "[Paths]":"Paths",split+124,76,14,foreground);
-        DrawText(path_tab==4 ? "[Shapes]":path_tab==3 ? "[Typed paths]":path_tab==2 ? "[Foundations]":"Layers (click)",split+204,76,12,foreground);
+        DrawText(path_tab==5 ? "[Overview]":path_tab==4 ? "[Shapes]": path_tab==3 ? "[Typed paths]":path_tab==2 ? "[Foundations]":"Layers (click)",split+204,76,12,foreground);
         if (path_tab==2) {
             DrawText("Prerequisite foundations: unavailable",split+14,114,15,foreground);
             DrawText("This projection has resource/rule facets,",split+14,145,14,muted);
@@ -419,6 +470,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             DrawText("Resource incidences are not AND skills,",split+14,225,14,muted);
             DrawText("learning requirements or proof of flow.",split+14,245,14,muted);
         }
+        else if (path_tab==5) overview_details(graph,layout,analysis,&overview_controls,split+14);
         else if (path_tab==4) shape_details(graph,shapes,shape_enabled,selected,split+14);
         else if (path_tab==3) reach_details(graph,layout,analysis,&reach_controls,selected,split+14);
         else if (path_tab==1) path_details(graph,layout,analysis,paths,&path_controls,selected,split+14);

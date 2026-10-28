@@ -102,3 +102,46 @@ int gd_graph_shapes_panel(const GD_Model *model, const GD_Layout *layout, GD_Gra
     if (shapes->size[shapes->colors[selected]]>shown) igText("%d further members not listed",shapes->size[shapes->colors[selected]]-shown);
     return navigate;
 }
+int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                            GD_OverviewControls *controls, int undirected) {
+    const GD_GraphOverview *overview; bool enabled=controls->enabled!=0; int i,side;
+    igSeparator(); igCheckbox("Adjacency / incidence overview",&enabled); controls->enabled=enabled;
+    if (!enabled) return 0;
+    overview=gd_graph_overview(analysis,controls,undirected);
+    igTextWrapped(undirected ? "Symmetric incidence bins, NOT flow. Mirrored cells do not double total input rows.":"Rows -> columns follow shown arrows, not inferred traffic or causality.");
+    igTextWrapped("All shown identities, contiguous projection-index bins; not semantic clusters. Brightness uses log bands of projected link-row count, NOT strength, quantity or flow. Within-bin diagonal entries need not be self-links.");
+    igText("%d identities / %d bins / %d input link rows / peak %d",overview->node_count,overview->bins,overview->link_count,overview->peak);
+    igTextWrapped("Select inset cell or use bin controls. Gold graph marks are actual contributing endpoints/links, not every member of bin. Missing/filtered declarations stay outside scope.");
+    if (!overview->bins) return 0;
+    {
+        int row=controls->row<0 ? 0:controls->row,column=controls->column<0 ? 0:controls->column,changed;
+        changed=igSliderInt("Row bin",&row,0,overview->bins-1,"%d",0);
+        changed|=igSliderInt("Column bin",&column,0,overview->bins-1,"%d",0);
+        changed|=igButton("Inspect bin cell",(ImVec2_c){0,0});
+        if (changed) { controls->row=row; controls->column=column; gd_graph_overview_select(analysis,row,column); }
+    }
+    if (controls->row<0 || controls->column<0) return 0;
+    igText("Cell %d,%d: %d projected link rows",controls->row,controls->column,overview->selected_count);
+    for (side=0;side<2;++side) {
+        int bin=side ? controls->column:controls->row,begin=overview->start[bin],end=overview->start[bin+1];
+        igText("%s bin: source ordinals %d..%d (%d identities)",side ? "Column":"Row",begin,end-1,end-begin);
+        for (i=begin;i<end && i<begin+4;++i) {
+            int node=overview->nodes[i],key=layout->nodes[node].key;
+            igTextWrapped("%s",key>=0 && key<model->record_count ? model->records[key].reference:layout->nodes[node].label);
+        }
+        if (end-begin>4) igText("%d further bin identities",end-begin-4);
+    }
+    if (!igCollapsingHeader_TreeNodeFlags("Overview cell source evidence",0)) return 0;
+    {
+        int kinds[64],counts[64]={0},count=0,other=0,j;
+        for (i=0;i<analysis->edge_count;++i) if (overview->selected_edges[i]) {
+            int kind=analysis->edges[i].relation;
+            for (j=0;j<count && kinds[j]!=kind;++j) {}
+            if (j==count) { if (count==64) { ++other; continue; } kinds[count++]=kind; }
+            ++counts[j];
+        }
+        for (i=0;i<count;++i) igTextWrapped("%s: %d link rows",gd_graph_relation_name(kinds[i]),counts[i]);
+        if (other) igText("%d rows have unlisted kinds",other);
+    }
+    return 1;
+}
