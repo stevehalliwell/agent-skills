@@ -42,6 +42,23 @@ typedef struct {
 } GD_GraphPaths;
 /* Presentation keys, not node selection. Remap across source reload. */
 typedef struct { int keys[GD_MAX_RECORDS], count; int enabled, declared, lost, compare; } GD_PathControls;
+#define GD_CLOSURE_WORDS ((GD_MAX_RECORDS+63)/64)
+/* Strict transitive closure. Self reachability is retained only as cycle
+   evidence. Completed rows are exact for this shown typed projection;
+   boundary seeds describe missing source dependencies, not inferred edges.
+   About 2.7 MiB per cache, owned by view scratch, never a model snapshot. */
+typedef struct {
+    uint64_t rows[GD_MAX_RECORDS][GD_CLOSURE_WORDS];
+    int head[GD_MAX_RECORDS], next[2*GD_MAX_PAIRS], queue[GD_MAX_RECORDS];
+    int direct[GD_MAX_RECORDS], count[GD_MAX_RECORDS], users[GD_MAX_RECORDS];
+    unsigned char eligible[GD_MAX_RECORDS], boundary[GD_MAX_RECORDS];
+    unsigned char finished[GD_MAX_RECORDS], unknown[GD_MAX_RECORDS], cycle[GD_MAX_RECORDS];
+    int valid, complete, relation, reverse, undirected, work, limit, row_count;
+    uint64_t projected[GD_MAX_PAIRS];
+    int projection_valid, projected_count, projected_direction;
+    int selected, peer_count, peers[GD_MAX_RECORDS], shared[GD_MAX_RECORDS];
+    GD_GraphComparison comparison;
+} GD_GraphClosure;
 /* Caller-allocated scratch/result; not for a small thread stack. Owns no strings
    or model pointers. All node/edge indices refer to the current layout. Two
    incident links establish a shared neighbor, not equivalent semantic roles.
@@ -58,6 +75,7 @@ typedef struct {
     GD_GraphLens lens;
     GD_GraphComparison comparison;
     GD_GraphPaths paths;
+    GD_GraphClosure foundations;
     int shown_nodes, shown_edges, feature_count, pair_count, complete, work;
 } GD_GraphAnalysis;
 /* Zero-initialize once. NULL mask includes all nodes. Inactive edges count only
@@ -94,6 +112,26 @@ const GD_PathSelection *gd_graph_path_selection(GD_GraphAnalysis *analysis, int 
    branches; fork=-1 denotes separate starts via virtual root, not authored fork.
    Borrow until next bypass/selection/path recomputation or analyze invalidation. */
 const GD_PathBypass *gd_graph_path_bypass(GD_GraphAnalysis *analysis, int selected, int candidate, int work_limit);
+/* One typed relation. reverse follows b->a; undirected follows both endpoint
+   directions (connections, not flow). NULL eligible includes shown nodes;
+   NULL boundary means no external source-boundary facts. Cache is invalidated
+   with graph analysis; pass its foundations member. Work charges queue visits
+   and arcs; partial rows never establish absence. Counts/users are lower bounds
+   on exhaustion. No knowledge, mastery, source or path-budget mutation. */
+const GD_GraphClosure *gd_graph_closure(GD_GraphAnalysis *analysis, const unsigned char *eligible,
+    const unsigned char *boundary, int relation, int reverse, int undirected, int work_limit);
+int gd_graph_closure_contains(const GD_GraphClosure *closure, int root, int node);
+/* Pair branches cover entire strict closures, not just one supporting path.
+   Completed A/B rows required. b=-1 is unpaired A. Exact local results survive
+   partial global discovery. Borrow until next selection/closure/analyze. */
+const GD_GraphComparison *gd_graph_closure_compare(GD_GraphAnalysis *analysis, int a, int b);
+/* Automatically choose first source-order shared peer when old peer no longer
+   qualifies. NULL on unavailable local row; no selected-node re-rooting. */
+const GD_GraphComparison *gd_graph_closure_choose(GD_GraphAnalysis *analysis, int a, int *peer);
+/* Skills: reverse projected prerequisite->dependent. Relationships: forward
+   authored dependent->prerequisite. Other projections return NULL. Source
+   boundaries include unresolved/wrong-role/hidden/missing projected links. */
+const GD_GraphClosure *gd_graph_foundations(const GD_Model *model, GD_GraphAnalysis *analysis, int authored_direction);
 /* Sorted unique keys; 1 added, 0 duplicate, -1 capacity. No allocation. */
 int gd_graph_path_start(GD_PathControls *controls, int key);
 const GD_GraphPaths *gd_graph_paths_prepare(GD_GraphAnalysis *analysis, const GD_PathControls *controls,

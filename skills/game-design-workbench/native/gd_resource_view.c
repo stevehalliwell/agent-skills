@@ -237,7 +237,8 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         if (!paused) gd_layout_step(layout,held);
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,72,100,25})) path_tab=0;
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+124,72,100,25})) path_tab=1;
-        if (path_tab && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+234,72,120,25})) path_tab=2;
+        if (path_tab==1 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) path_controls.enabled=!path_controls.enabled;
             if (path_controls.enabled && selected>=0 && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,144,320,25})) gd_graph_path_start(&path_controls,selected);
             if (path_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,176,240,25})) path_controls.count=0;
@@ -302,9 +303,18 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         }
         EndMode2D(); EndScissorMode();
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
-        DrawText(path_tab ? "Context":"[Context]",split+14,76,14,foreground);
-        DrawText(path_tab ? "[Paths]":"Paths",split+124,76,14,foreground);
-        if (path_tab) path_details(graph,layout,analysis,paths,&path_controls,selected,split+14);
+        DrawText(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
+        DrawText(path_tab==1 ? "[Paths]":"Paths",split+124,76,14,foreground);
+        DrawText(path_tab==2 ? "[Foundations]":"Foundations",split+234,76,14,foreground);
+        if (path_tab==2) {
+            DrawText("Prerequisite foundations: unavailable",split+14,114,15,foreground);
+            DrawText("This projection has resource/rule facets,",split+14,145,14,muted);
+            DrawText("not shown skill-prerequisite declarations.",split+14,165,14,muted);
+            DrawText("No hidden skill graph is analyzed.",split+14,195,14,muted);
+            DrawText("Resource incidences are not AND skills,",split+14,225,14,muted);
+            DrawText("learning requirements or proof of flow.",split+14,245,14,muted);
+        }
+        else if (path_tab==1) path_details(graph,layout,analysis,paths,&path_controls,selected,split+14);
         else {
         DrawText(shared ? "[x] Shared neighbors (click)":"[ ] Shared neighbors (click)",split+14,114,16,foreground);
         if (shared) {

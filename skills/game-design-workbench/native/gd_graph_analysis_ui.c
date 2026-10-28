@@ -140,3 +140,50 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
     }
     return 1;
 }
+
+int gd_graph_foundations_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                              int selected, int authored_direction, bool *enabled, int *peer) {
+    const GD_GraphClosure *closure; const GD_GraphComparison *comparison;
+    int i,shown=0;
+    igSeparator(); igCheckbox("Prerequisite foundations layer",enabled);
+    if (!*enabled) return 0;
+    closure=gd_graph_foundations(model,analysis,authored_direction);
+    if (!closure) {
+        igTextWrapped("Unavailable: no shown skill-prerequisite projection. Use Skills or expand skill relationships; no hidden skill graph is analyzed here."); return 0;
+    }
+    igTextWrapped("F: other shown skills reaching this dependency. AND: distinct direct prerequisite branches, ALL required. Not route domination, alternatives, mastery or teaching quality.");
+    igTextWrapped("Purple: shared prerequisite closure; blue: A-required only; amber: B-required only. Every branch remains required. ? marks source/scope boundary; cycle means cyclic dependency, not a grounded base.");
+    if (!closure->complete) igTextWrapped("PARTIAL: closure work limit; F counts are lower bounds. Missing peers/rows are not disproved.");
+    if (selected<0 || selected>=layout->node_count || !closure->eligible[selected]) {
+        igTextWrapped("Select a shown skill. F badges discover reused foundations before pair selection."); return 0;
+    }
+    if (!closure->finished[selected]) { igTextWrapped("Selected closure unavailable: work limit. No complete dependency claim."); return 0; }
+    gd_graph_closure_choose(analysis,selected,peer);
+    igText("Selection: %d direct / %d inherited-or-direct prerequisites",closure->direct[selected],closure->count[selected]);
+    if (closure->unknown[selected]) igTextWrapped("UNKNOWN BOUNDARY: unresolved, wrong-role or outside-projection prerequisites occur in this closure. Counts cover shown paths only.");
+    if (igCollapsingHeader_TreeNodeFlags("Shared-foundation peers",0)) {
+        igBeginChild_Str("Foundation peers",(ImVec2_c){0,85},0,0);
+        for (i=0;i<closure->peer_count && shown<128;++i,++shown) {
+            int node=closure->peers[i]; char label[192];
+            snprintf(label,sizeof(label),"%.96s | %d shared prerequisites##foundation-%d",layout->nodes[node].label,closure->shared[node],node);
+            if (igButton(label,(ImVec2_c){0,0})) *peer=node;
+        }
+        if (closure->peer_count>shown) igText("%d further peers not listed",closure->peer_count-shown);
+        if (!shown) igTextWrapped(closure->complete ? "No shared prerequisite closure in shown graph.":"No completed shared peer retained; global result is partial.");
+        igEndChild();
+    }
+    comparison=gd_graph_closure_compare(analysis,selected,*peer);
+    if (*peer>=0) {
+        igTextWrapped("A: %s | B: %s",layout->nodes[selected].label,layout->nodes[*peer].label);
+        igText("Shared: %d | A-required only: %d | B-required only: %d",comparison->shared,comparison->a_only,comparison->b_only);
+    }
+    if (!igCollapsingHeader_TreeNodeFlags("Prerequisite-closure evidence",0)) return 0;
+    shown=0;
+    for (i=0;i<layout->node_count && shown<64;++i) if (comparison->nodes[i]) {
+        const char *category=comparison->nodes[i]==GD_GRAPH_SHARED ? "shared":comparison->nodes[i]==GD_GRAPH_A_ONLY ? "A-required only":"B-required only";
+        igTextWrapped("%s: %s%s%s",category,model->records[layout->nodes[i].key].reference,closure->unknown[i] ? " | ? boundary":"",closure->cycle[i] ? " | cycle":""); ++shown;
+    }
+    if (comparison->shared+comparison->a_only+comparison->b_only>shown) igText("%d further dependencies not listed",comparison->shared+comparison->a_only+comparison->b_only-shown);
+    igTextWrapped("Marked links cover complete shown dependency branches, not just one supporting path. Source examples follow. Existing route-opportunity witnesses remain separate from knowledge.");
+    return 1;
+}

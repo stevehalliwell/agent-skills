@@ -59,6 +59,14 @@ static inline void gd_graph_path_badge(const GD_GraphPaths *paths, const GD_Path
     else snprintf(label,sizeof(label),"D%d%s%s",paths->dominated[node],ancestor,witness);
     DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background); DrawText(label,x,y,12,*witness ? gd_bypass_color:gd_path_color);
 }
+static inline void gd_graph_foundation_badge(const GD_GraphClosure *closure, int node, int x, int y, Color background) {
+    char label[80],combination[32]="";
+    if (closure->direct[node]>=2) snprintf(combination,sizeof(combination)," AND%d%s",closure->direct[node],closure->finished[node] ? "":"+");
+    snprintf(label,sizeof(label),"F%d%s%s%s%s",closure->users[node],closure->complete ? "":"+",combination,
+             closure->unknown[node] ? " ?":"",closure->cycle[node] ? " cycle":"");
+    DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background);
+    DrawText(label,x,y,12,(Color){165,207,151,255});
+}
 static inline void gd_graph_path_start_marker(int x, int y) {
     DrawTriangleLines((Vector2){(float)x,(float)y-5},(Vector2){(float)x-5,(float)y+5},(Vector2){(float)x+5,(float)y+5},(Color){225,233,241,255});
 }

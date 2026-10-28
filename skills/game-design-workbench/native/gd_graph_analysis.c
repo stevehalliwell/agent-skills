@@ -87,7 +87,7 @@ int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
     analysis->initialized=1; analysis->include_inactive=include_inactive; analysis->lens=lens;
     analysis->node_count=layout->node_count; analysis->edge_count=layout->edge_count;
     analysis->shown_nodes=analysis->shown_edges=analysis->feature_count=analysis->pair_count=analysis->work=0;
-    analysis->complete=1; analysis->comparison.valid=0; analysis->paths.valid=0; memset(analysis->slots,0,sizeof(analysis->slots));
+    analysis->complete=1; analysis->comparison.valid=0; analysis->paths.valid=0; analysis->foundations.valid=analysis->foundations.projection_valid=0; memset(analysis->slots,0,sizeof(analysis->slots));
     for (i=0;i<layout->node_count;++i) {
         analysis->keys[i]=layout->nodes[i].key; analysis->shown[i]=(unsigned char)(shown ? shown[i]!=0:1);
         analysis->shown_nodes+=analysis->shown[i];

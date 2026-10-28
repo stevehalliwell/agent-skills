@@ -238,7 +238,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     GD_DiagnosticBrowser diagnostics={0};
     GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false; int shared_peer=-1,shared_selected=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
-    GD_PathControls path_controls={0};
+    GD_PathControls path_controls={0}; bool foundation_enabled=false; int foundation_peer=-1;
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context,sizeof(*layout));
     MdaDisplay display = {.record = -1,.link = -1,.held = -1,.roles = {true,true,true,true},.paused = true};
     Camera2D camera = {{0,0},{0,0},0,1};
@@ -313,6 +313,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
                 }
             }
         }
+        gd_graph_foundations_panel(model,layout,analysis,shared_selected,1,&foundation_enabled,&foundation_peer);
         if (path_controls.enabled) igTextWrapped("Path starts are independent of query root/traversal; follow authored arrows, not inferred causality.");
         if (igCollapsingHeader_TreeNodeFlags("Browse supplied MDA records",0)) {
             igBeginChild_Str("MDA records",(ImVec2_c){0,120},0,0);

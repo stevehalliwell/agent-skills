@@ -127,7 +127,8 @@ static int witness_edge(const GD_Routes *routes, int witness, int source, int ta
 }
 static void draw_graph(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection,
                        Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
-                       GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass) {
+                       GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass,
+                       const GD_GraphClosure *foundations, const GD_GraphComparison *foundation_pair) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selection->node,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
@@ -170,6 +171,10 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
         Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
         if (!edge->active && !other_pairs) continue;
         int conflict = !focused && !challenges && model->skill_mode && (model->skills[layout->nodes[edge->a].key].incomplete || model->skills[layout->nodes[edge->b].key].incomplete);
+        if (foundation_pair && foundation_pair->edges[i]) {
+            if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,28,gd_graph_branch_color(foundation_pair->edges[i]));
+            else gd_graph_underlay_line(a,b,9,gd_graph_branch_color(foundation_pair->edges[i]),!edge->active || conflict);
+        }
         if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_graph_underlay_line(a,b,15,gd_bypass_color,!edge->active || conflict);
         if (path_selection && path_selection->edges[i]) {
             if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,29,gd_path_color);
@@ -255,6 +260,13 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
                 }
                 if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text);
             } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)node->x+19,(int)node->y-8,13,shared_color);
+        }
+        if (foundations && foundations->eligible[i]) {
+            gd_graph_foundation_badge(foundations,i,(int)node->x+36,(int)node->y-23,graph_background);
+            if (foundation_pair) {
+                if (foundation_pair->nodes[i]) DrawCircleLines((int)node->x,(int)node->y,28,gd_graph_branch_color(foundation_pair->nodes[i]));
+                if (i==foundation_pair->a || i==foundation_pair->b) DrawText(i==foundation_pair->a ? "A":"B",(int)node->x-43,(int)node->y-23,13,graph_text);
+            }
         }
         if (paths) {
             gd_graph_path_badge(paths,path_selection,bypass,i,(int)node->x+36,(int)node->y+7,graph_background);
@@ -554,7 +566,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     unsigned char known[GD_MAX_RECORDS]={0};
     GD_SkillUnlocks *query=NULL;
     GD_Focus focus;
-    GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false; int shared_peer=-1;
+    GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false,foundation_enabled=false; int shared_peer=-1,foundation_peer=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls[3]={{0}};
     GD_DiagnosticBrowser diagnostics={0};
@@ -692,6 +704,14 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             }
             if (control->enabled && model->skill_mode && !focused && !challenges) igTextWrapped("Path domination is NOT AND prerequisite necessity. Every declared prerequisite remains required; one path is not an acquisition plan.");
         }
+        if (gd_graph_foundations_panel(model,layout,analysis,selection.node,focused,&foundation_enabled,&foundation_peer)) {
+            const GD_GraphComparison *comparison=gd_graph_closure_choose(analysis,selection.node,&foundation_peer); int i,shown=0,total=0;
+            igTextWrapped("Projected dependency links; first source per deduplicated Skills link, raw rows in Relationships:");
+            if (comparison) for (i=0;i<layout->edge_count;++i) if (comparison->edges[i]) {
+                ++total; if (shown<64) { projected_source(model,layout,i,focused,challenges); ++shown; }
+            }
+            if (total>shown) igText("%d further marked links not listed",total-shown);
+        }
         refresh = igButton("Refresh sources", (ImVec2_c){0,0});
         if (stale) igTextUnformatted("STALE: disk sources changed or could not be checked.", NULL);
         if (*failure) igTextWrapped("%s", failure);
@@ -767,7 +787,9 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         unsigned char entries[GD_MAX_RECORDS];
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls[focused ? 2:challenges ? 1:0],path_entries(model,layout,challenges,entries),!focused && !model->skill_mode);
         const GD_PathBypass *bypass=paths && path_controls[focused ? 2:challenges ? 1:0].compare ? gd_graph_path_bypass(analysis,selection.node,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
-        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass);
+        const GD_GraphClosure *foundations=foundation_enabled ? gd_graph_foundations(model,analysis,focused):NULL;
+        const GD_GraphComparison *foundation_pair=foundations ? gd_graph_closure_choose(analysis,selection.node,&foundation_peer):NULL;
+        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
             for (i=0;i<layout->node_count;++i) {

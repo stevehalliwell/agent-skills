@@ -73,7 +73,9 @@ Acceptance: independent bin-count oracle, direction/mirroring/self/parallel/mixe
 ## Progress and decisions
 
 - Paired-path checkpoint `301ccde`: committed existing verified work before new implementation. Prior checks: 75/75 native, CLI regression, 22 Node passed/4 skipped, strict C99/graph build. Existing interactive limitations remain recorded in `todo.md`.
-- Initial plan: assignment, operating limits, bounded contracts and provisional defaults recorded before code. No new game facts or permanent data/API migration selected.
+- Initial plan `5b4dbd2`: assignment, operating limits, bounded contracts and provisional defaults recorded before code. No new game facts or permanent data/API migration selected.
+- Step 1 implemented: graph-wide strict prerequisite closures, F/AND badges, shared full-closure peers/branches, propagated source boundaries, retained cycles and explicit unavailable adapters. Storage measured at 2,826,320 bytes/cache, including 2,097,152-byte bitsets. Keep fixed cache for now: graph-wide reuse requires all source traversals; bitsets bound pair intersection to 4,096 × 64 words. A single-source BFS remains cheaper for one query; no speed advantage claimed or benchmark invented.
+- Step 1 checks: 78/78 native plus CLI regression; independent boolean-matrix oracle covers 384 typed/direction/mask projections. Dedicated capacity, exact 16,777,216-unit chain budget, duplicate links, partial-global/exact-local, source orientation/boundaries/cache cases. Node: 22 passed, 4 external integrations skipped. Strict C99 and graph build pass. Manual activation and integrated reading usefulness unverified; no input automation used.
 
 ## Comments
 

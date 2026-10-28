@@ -9,4 +9,7 @@ int gd_graph_analysis_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis,
 /* Independent layer. Return 1 when selected witness provenance is expanded. */
 int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD_PathControls *controls,
                          int selected, const unsigned char *declared, int undirected);
+/* Independent AND layer; 1 requests source provenance for marked links. */
+int gd_graph_foundations_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                              int selected, int authored_direction, bool *enabled, int *peer);
 #endif
