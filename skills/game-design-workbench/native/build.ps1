@@ -1,6 +1,6 @@
 <#
 Build Windows/CJIT game-design tools. No downloads, installations, or project-data writes.
-Usage: ./build.ps1 [-View [-Graph] -RaylibDirectory PATH | -Test] [-Cjit PATH] [-OutputDirectory PATH]
+Usage: ./build.ps1 [-View [-Graph] -RaylibDirectory PATH | -Test | -ExplorerTest -RaylibDirectory PATH] [-Cjit PATH] [-OutputDirectory PATH]
 Alternate output preserves running views. Stdout returns executable path; no project-data writes.
 -Graph needs explicitly prepared gd-ui.dll from build-ui.ps1.
 RaylibDirectory is an extracted raylib 5.5 win64 SDK with lib/raylib.dll.
@@ -9,12 +9,14 @@ param(
     [switch]$View,
     [switch]$Graph,
     [switch]$Test,
+    [switch]$ExplorerTest,
     [string]$UiLibrary = '',
     [string]$RaylibDirectory = $env:RAYLIB_ROOT,
     [string]$Cjit = 'cjit',
     [string]$OutputDirectory = ''
 )
 $ErrorActionPreference = 'Stop'
+if ($ExplorerTest) { $Graph = $true }
 if ($Graph) { $View = $true }
 if ($View -and $Test) { throw 'Choose -View or -Test, not both.' }
 $root = $PSScriptRoot
@@ -24,8 +26,9 @@ New-Item -ItemType Directory -Force $output | Out-Null
 $arguments = @('-q', '-DHAVE_CONFIG_H=1', '-DYAML_DECLARE_STATIC=1',
     '-I', (Join-Path $root 'vendor/libyaml/include'),
     '-I', (Join-Path $root 'vendor/libyaml/src'),
-    (Join-Path $root 'gd_core.c'), (Join-Path $root 'gd_output.c'), (Join-Path $root 'gd_layout.c'), (Join-Path $root 'gd_layout_routes.c'), (Join-Path $root 'gd_focus.c'), (Join-Path $root 'gd_graph_analysis.c'), (Join-Path $root 'gd_graph_paths.c'), (Join-Path $root 'gd_graph_closure.c'), (Join-Path $root 'gd_graph_shapes.c'), (Join-Path $root 'gd_graph_overview.c'), (Join-Path $root 'gd_diagnostics.c'), (Join-Path $root 'gd_skills.c'), (Join-Path $root 'gd_skill_unlocks.c'), (Join-Path $root 'gd_draft.c'), (Join-Path $root 'gd_routes.c'), (Join-Path $root 'gd_mda.c'), (Join-Path $root 'gd_controls.c'), (Join-Path $root 'gd_control_import.c'), (Join-Path $root 'gd_rules.c'), (Join-Path $root 'gd_rule_axes.c'), (Join-Path $root 'gd_rule_logic.c'), (Join-Path $root 'gd_rule_quantities.c'), (Join-Path $root 'gd_rule_analysis.c'), (Join-Path $root 'gd_resource_graph.c'))
+    (Join-Path $root 'gd_core.c'), (Join-Path $root 'gd_output.c'), (Join-Path $root 'gd_layout.c'), (Join-Path $root 'gd_layout_routes.c'), (Join-Path $root 'gd_focus.c'), (Join-Path $root 'gd_graph_analysis.c'), (Join-Path $root 'gd_graph_paths.c'), (Join-Path $root 'gd_graph_closure.c'), (Join-Path $root 'gd_graph_shapes.c'), (Join-Path $root 'gd_graph_overview.c'), (Join-Path $root 'gd_diagnostics.c'), (Join-Path $root 'gd_skills.c'), (Join-Path $root 'gd_skill_unlocks.c'), (Join-Path $root 'gd_draft.c'), (Join-Path $root 'gd_routes.c'), (Join-Path $root 'gd_mda.c'), (Join-Path $root 'gd_controls.c'), (Join-Path $root 'gd_control_import.c'), (Join-Path $root 'gd_rules.c'), (Join-Path $root 'gd_rule_axes.c'), (Join-Path $root 'gd_rule_logic.c'), (Join-Path $root 'gd_rule_quantities.c'), (Join-Path $root 'gd_rule_analysis.c'), (Join-Path $root 'gd_resource_graph.c'), (Join-Path $root 'gd_explorer.c'))
 if ($Test) { $arguments += Join-Path $root 'test_core.c' }
+elseif ($ExplorerTest) { $arguments += @('-DGD_EXPLORER_TEST=1', (Join-Path $root 'test_explorer_view.c')) }
 else { $arguments += Join-Path $root 'gd_cli.c' }
 foreach ($file in @('api.c', 'parser.c', 'reader.c', 'scanner.c')) {
     $arguments += Join-Path $root "vendor/libyaml/src/$file"
@@ -41,11 +44,11 @@ if ($View) {
     if ($Graph) {
         if (-not $UiLibrary) { $UiLibrary = Join-Path $root 'build/gd-ui.dll' }
         if (-not (Test-Path -LiteralPath $UiLibrary -PathType Leaf)) { throw 'Graph view needs prepared gd-ui.dll. Run build-ui.ps1 explicitly first.' }
-        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'), (Join-Path $root 'gd_graph_view.c'), (Join-Path $root 'gd_mda_view.c'), (Join-Path $root 'gd_graph_analysis_ui.c'), (Join-Path $root 'gd_graph_reachability_ui.c'), (Join-Path $root 'gd_diagnostics_ui.c'), (Resolve-Path -LiteralPath $UiLibrary).Path)
+        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'), (Join-Path $root 'gd_graph_view.c'), (Join-Path $root 'gd_mda_view.c'), (Join-Path $root 'gd_explorer_view.c'), (Join-Path $root 'gd_graph_analysis_ui.c'), (Join-Path $root 'gd_graph_reachability_ui.c'), (Join-Path $root 'gd_diagnostics_ui.c'), (Resolve-Path -LiteralPath $UiLibrary).Path)
         $uiDestination = Join-Path $output (Split-Path $UiLibrary -Leaf)
         if ([IO.Path]::GetFullPath($UiLibrary) -ne [IO.Path]::GetFullPath($uiDestination)) { Copy-Item -LiteralPath $UiLibrary -Destination $uiDestination -Force }
     }
-    $name = 'gd-view.exe'
+    $name = if ($ExplorerTest) { 'test-explorer-view.exe' } else { 'gd-view.exe' }
 }
 $destination = Join-Path $output $name
 $arguments += @('-o', $destination)

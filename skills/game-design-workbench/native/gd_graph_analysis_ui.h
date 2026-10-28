@@ -9,7 +9,8 @@ int gd_graph_analysis_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis,
 /* Independent layer. Return 1 when selected witness provenance is expanded. */
 int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD_PathControls *controls,
                          int selected, const unsigned char *declared, int undirected);
-/* Returns 1 when selected-cell source provenance is expanded. */
+/* Returns 1 when selected-cell source provenance is expanded.
+   model may be NULL when layout keys identify derived nodes, not records. */
 int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
                             GD_OverviewControls *controls, int undirected);
 /* Returns chosen family representative node for ordinary source navigation. */

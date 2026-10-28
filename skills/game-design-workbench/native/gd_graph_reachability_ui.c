@@ -127,7 +127,7 @@ int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_G
         igText("%s bin: source ordinals %d..%d (%d identities)",side ? "Column":"Row",begin,end-1,end-begin);
         for (i=begin;i<end && i<begin+4;++i) {
             int node=overview->nodes[i],key=layout->nodes[node].key;
-            igTextWrapped("%s",key>=0 && key<model->record_count ? model->records[key].reference:layout->nodes[node].label);
+            igTextWrapped("%s",model && key>=0 && key<model->record_count ? model->records[key].reference:layout->nodes[node].label);
         }
         if (end-begin>4) igText("%d further bin identities",end-begin-4);
     }

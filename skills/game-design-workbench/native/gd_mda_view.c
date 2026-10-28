@@ -3,6 +3,7 @@
 #include "gd_graph_analysis_draw.h"
 #include "gd_graph_overview_draw.h"
 #include "gd_diagnostics_ui.h"
+#include "gd_explorer_ui.h"
 #include "raylib.h"
 #include "rlImGui.h"
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
@@ -13,12 +14,7 @@
 #include <string.h>
 
 static const Color background = {18,24,34,255}, foreground = {225,233,241,255}, muted = {150,169,190,255}, selected_color = {255,217,125,255};
-typedef struct {
-    int record, link, held;
-    bool roles[4], only_scope, paused, only_path;
-    char filter[129];
-    unsigned char path_nodes[GD_MAX_RECORDS], path_links[GD_MAX_EDGES];
-} MdaDisplay;
+typedef GD_ExplorerMdaDisplay MdaDisplay;
 static void mark_path(const GD_Mda *mda, MdaDisplay *display) {
     int v = display->record, count = 0;
     memset(display->path_nodes,0,sizeof(display->path_nodes)); memset(display->path_links,0,sizeof(display->path_links));
@@ -417,4 +413,34 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     if (model != initial) { gd_mda_destroy(mda); gd_destroy(model); }
     initial->allocator.release(initial->allocator.context,analysis);
     initial->allocator.release(initial->allocator.context,layout); return result;
+}
+
+int gd_explorer_mda_prepare(GD_ExplorerContext *context) {
+    return gd_mda_layout(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,
+                         context->pane->layout,!context->pane->layout_choice);
+}
+void gd_explorer_mda_mark(GD_ExplorerContext *context) {
+    mark_path(context->project->mda,&context->pane->mda);
+}
+int gd_explorer_mda_visible(GD_ExplorerContext *context, int record) {
+    return visible(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,&context->pane->mda,record);
+}
+void gd_explorer_mda_input(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane;
+    input(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,p->layout,&p->mda,&p->camera,context->viewport,
+          gd_graph_overview_hit(&p->overview,context->viewport,GetMousePosition()) || igGetIO_Nil()->WantCaptureMouse);
+    mark_path(context->project->mda,&p->mda);
+}
+void gd_explorer_mda_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *e) {
+    GD_ExplorerPane *p=context->pane; int i,selected=-1;
+    for (i=0;i<p->layout->node_count;++i) if (p->layout->nodes[i].key==p->mda.record) selected=i;
+    mark_path(context->project->mda,&p->mda);
+    draw(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,p->layout,&p->mda,p->camera,context->viewport,
+         context->analysis,p->shared,selected,p->peer,p->branches,e->paths,e->bypass,e->reachability,e->reach_pair,e->shapes,e->overview);
+}
+void gd_explorer_mda_details(GD_ExplorerContext *context) {
+    source_details(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,&context->pane->mda);
+}
+void gd_explorer_mda_source(GD_ExplorerContext *context, int edge) {
+    projected_source(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,context->pane->layout,edge);
 }

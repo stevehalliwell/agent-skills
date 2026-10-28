@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $name = if ($CommandArguments.Count -gt 0 -and $CommandArguments[0] -eq 'view') { 'gd-view.exe' } else { 'gd.exe' }
 $program = Join-Path $PSScriptRoot "build/$name"
 if (-not (Test-Path -LiteralPath $program -PathType Leaf)) {
-    [Console]::Error.WriteLine("Missing $program. Run native/build.ps1; add -View -RaylibDirectory PATH for matrix tables, or -Graph for matrix graphs, combined skill/progression explorer, and MDA explorer.")
+    [Console]::Error.WriteLine("Missing $program. Run native/build.ps1; add -View -RaylibDirectory PATH for matrix tables, or -Graph for unified explorer, matrix graphs, skill/progression, and MDA views.")
     exit 2
 }
 & $program @CommandArguments

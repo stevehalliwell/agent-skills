@@ -5,6 +5,7 @@
 #include "gd_rule_analysis.h"
 #include "gd_resource_graph.h"
 #include "gd_skill_unlocks.h"
+#include "gd_explorer.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
@@ -24,7 +25,12 @@ static void system_release(void *context, void *memory) { (void)context; free(me
 static void help(void) {
     puts("Game Design Workbench — native domain tools\n"
          "Usage: gd matrix|connectivity|skill-atoms|scaffolding|mda|controls|rules [options]\n"
-         "       gd view matrix|skill-atoms|mda|resources [options]\n\n"
+         "       gd view matrix|skill-atoms|mda|resources|explorer [options]\n\n"
+         "Unified explorer: gd view explorer with explicit collection bindings below.\n"
+         "  One window; six projections; unavailable views explain missing roles.\n"
+         "  --mode skills|challenges|relationships|matrix|mda|resources (default first available)\n"
+         "  Supports --frames, --screenshot, --output and error-output format flags.\n"
+         "  Existing view commands remain compatible. No automatic folder discovery.\n\n"
          "Matrix/connectivity collections (exactly one of each):\n"
          "  --nouns ALIAS=FOLDER\n  --verbs ALIAS=FOLDER\n  --interactions ALIAS=FOLDER\n"
          "Skill operations require: --skill-atoms ALIAS=FOLDER\n"
@@ -177,7 +183,7 @@ static int application(int argc, char **argv) {
     int i, count = 0, roles = 0, command = 0, first = 2, frames = 0, explicit_format = -1;
     GD_ViewLayout layout = GD_VIEW_TABLE;
     GD_ExplorerMode explorer_mode = GD_EXPLORE_SKILLS;
-    int explorer_mode_supplied = 0;
+    int explorer_mode_supplied = 0, unified_mode=-1;
     int layout_supplied = 0, other_pairs = 0, horizontal = 0, direction_supplied = 0;
     int skill_command, view_command;
     int json, status = 0;
@@ -204,6 +210,7 @@ static int application(int argc, char **argv) {
         if (argc > 2 && !strcmp(argv[2],"export")) { command = 9; first = 3; export_format = "json"; }
         else if (argc > 2 && !strcmp(argv[2],"import")) { command = 10; first = 3; }
     }
+    else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "explorer")) { command = 13; first = 3; }
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "resources")) { command = 12; first = 3; }
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "mda")) { command = 7; first = 3; layout = GD_VIEW_COLUMNS; }
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "skill-atoms")) { command = 4; first = 3; layout = GD_VIEW_PREREQUISITES; }
@@ -299,8 +306,16 @@ static int application(int argc, char **argv) {
             fields = argv[i];
         } else if (!strcmp(argv[i], "--mode")) {
             explorer_mode_supplied = 1;
-            if (++i == argc || (strcmp(argv[i],"skills") && strcmp(argv[i],"challenges") && strcmp(argv[i],"relationships"))) { error = "--mode requires skills, challenges, or relationships"; break; }
-            explorer_mode = !strcmp(argv[i],"relationships") ? GD_EXPLORE_RELATIONSHIPS : !strcmp(argv[i],"challenges") ? GD_EXPLORE_CHALLENGES : GD_EXPLORE_SKILLS;
+            if (++i == argc) { error="--mode requires a supported projection name"; break; }
+            if (command==13) {
+                const char *names[]={"skills","challenges","relationships","matrix","mda","resources"}; int m;
+                unified_mode=-1;
+                for (m=0;m<GD_EXPLORER_VIEWS;++m) if (!strcmp(argv[i],names[m])) unified_mode=m;
+                if (unified_mode<0) { error="Explorer --mode requires skills, challenges, relationships, matrix, mda or resources"; break; }
+            } else {
+                if (strcmp(argv[i],"skills") && strcmp(argv[i],"challenges") && strcmp(argv[i],"relationships")) { error="--mode requires skills, challenges, or relationships"; break; }
+                explorer_mode = !strcmp(argv[i],"relationships") ? GD_EXPLORE_RELATIONSHIPS : !strcmp(argv[i],"challenges") ? GD_EXPLORE_CHALLENGES : GD_EXPLORE_SKILLS;
+            }
         } else if (!strcmp(argv[i], "--layout")) {
             if (++i == argc) { error = "--layout requires table, graph, columns, prerequisites, or rank"; break; }
             layout_supplied = 1;
@@ -337,6 +352,30 @@ static int application(int argc, char **argv) {
             if (++i == argc) { error = "--screenshot requires a PNG path"; break; }
             screenshot = argv[i];
         } else error = "Unknown option; see --help";
+    }
+    if (command==13) {
+        if (!error && (!count || fields || from || known_count || analyze || case_name || assumption_count || context_assumption_count ||
+            import_option || as_supplied || override_count || control_filter.status_count || control_filter.include_count || control_filter.exclude_count ||
+            layout_supplied || direction_supplied || other_pairs))
+            error="view explorer requires explicit collections; supports only --mode, --frames, --screenshot, --output and error-output format flags";
+        if (!error && screenshot && (!frames || strlen(screenshot)<4 || strcmp(screenshot+strlen(screenshot)-4,".png")))
+            error="--screenshot requires bounded --frames and a .png path";
+        model=gd_create(allocator);
+        if (!model) { fputs("gd: cannot allocate diagnostic snapshot\n",stderr); return 2; }
+        if (error) gd_error(model,"cli.arguments",error,NULL,0);
+        else {
+#ifdef GD_WITH_GRAPH
+            status=gd_explorer_view(model,collections,count,unified_mode,frames,screenshot,output_path);
+#else
+            gd_error(model,"view.graph_unavailable","Unified explorer needs a -Graph build with prepared raylib and gd-ui.dll",NULL,0);
+#endif
+        }
+        if (model->error_count) {
+            gd_write_result(stdout,model,0,json,NULL);
+            for (i=0;i<model->error_count;++i) fprintf(stderr,"gd: %s: %s | %s:%d\n",model->errors[i].code,model->errors[i].message,model->errors[i].path ? model->errors[i].path:"runtime",model->errors[i].line);
+            status=2;
+        }
+        gd_destroy(model); return status;
     }
     if (!error && mda_command) {
         int required = (1 << GD_MDA_MECHANIC) | (1 << GD_MDA_DYNAMIC) | (1 << GD_MDA_AESTHETIC);

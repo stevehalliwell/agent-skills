@@ -5,6 +5,7 @@
 #include "gd_graph_overview_draw.h"
 #include "gd_skill_unlocks.h"
 #include "gd_diagnostics_ui.h"
+#include "gd_explorer_ui.h"
 #include "raylib.h"
 #include "rlImGui.h"
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
@@ -20,7 +21,7 @@ static const Color graph_muted = {150, 169, 190, 255};
 static const Color graph_active = {65, 180, 165, 255};
 static const Color graph_selected = {255, 217, 125, 255};
 
-typedef struct { int cell, node, interaction, linked, held; } GraphSelection;
+typedef GD_ExplorerSelection GraphSelection;
 static int measure_directed(GD_Layout *layout) {
     int i;
     if (layout->mode!=GD_LAYOUT_DIRECTED || !IsWindowReady()) return 1;
@@ -302,7 +303,7 @@ static void shared_source(const GD_Model *model, const GD_Layout *layout, const 
         projected_source(model,layout,feature->edge,focused,challenges);
     }
 }
-typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } SkillEditor;
+typedef GD_ExplorerSkillEditor SkillEditor;
 static int has_prerequisite(const GD_Model *model, int record, const char *reference) {
     int i;
     for (i = 0; i < model->edge_count; ++i) if (model->edges[i].source == record && model->edges[i].field == GD_PREREQUISITES && !strcmp(model->edges[i].reference, reference)) return 1;
@@ -382,8 +383,12 @@ static void route_details(const GD_Model *model, const GD_Routes *routes, int re
     }
     if (routes->witnesses_omitted) igText("%d additional witnesses omitted",routes->witnesses_omitted);
 }
-static int details(const GD_Model *model, const GD_Layout *layout, GraphSelection *selection, GD_Draft *draft, SkillEditor *editor, int challenges, int focused, const GD_Routes *routes, int *witness, int *navigate, int *focus_root, int *focus_expand) {
+static int details(const GD_Model *model, const GD_Layout *layout, GraphSelection *selection, GD_Draft *draft, SkillEditor *editor, int challenges, int focused, const GD_Routes *routes, int *witness, int *navigate, int *focus_root, int *focus_expand, int relationships_available) {
     int record_index = -1, i, changed = 0;
+    int edge_count=challenges || focused ? model->edge_count:model->skill_mode ? model->skill_link_count:model->cell_count;
+    if (selection->cell>=edge_count) selection->cell=-1;
+    if (selection->node>=layout->node_count) selection->node=-1;
+    if (selection->linked>=model->record_count) selection->linked=-1;
     if (selection->cell >= 0 && (challenges || focused)) {
         const GD_Edge *edge=&model->edges[selection->cell];
         igText("%s -> %s",model->records[edge->source].name,edge->reference);
@@ -395,7 +400,7 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
         igText("%s -> %s", model->records[link->prerequisite].name, model->records[link->dependent].name);
         igTextUnformatted("Prerequisite -> dependent. All declared statuses included.", NULL);
         record_index = link->dependent;
-        if (igButton("Inspect prerequisite", (ImVec2_c){0,0})) selection->linked = link->prerequisite;
+        if (igButton("Inspect prerequisite", (ImVec2_c){0,0})) *navigate = link->prerequisite;
     } else if (selection->cell >= 0) {
         const GD_Cell *cell = &model->cells[selection->cell];
         igText("%s x %s", model->records[cell->noun].name, model->records[cell->verb].name);
@@ -416,13 +421,19 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
     if (record_index<0 && selection->linked>=0) record_index=selection->linked;
     if (record_index < 0) { igTextUnformatted("Select a node or edge to inspect its source.", NULL); return 0; }
     if (selection->linked >= 0) {
-        if (igButton("Back to selection", (ImVec2_c){0,0})) selection->linked = -1;
-        else record_index = selection->linked;
+        if (igButton("Back to selection", (ImVec2_c){0,0})) {
+            int applied=draft && editor->record>=0 ? gd_draft_rank(draft,editor->record,editor->rank_text):0;
+            if (applied>=0) { selection->linked=-1; if (applied>0) changed=1; }
+            else record_index=selection->linked;
+        } else record_index=selection->linked;
     }
     igSeparator();
     igTextUnformatted(model->records[record_index].reference, NULL);
     igText("Status: %s", model->records[record_index].status ? model->records[record_index].status : "unset");
+    igBeginDisabled(!relationships_available);
     if (igButton(focused ? "Center relationships here" : "Explore relationships here",(ImVec2_c){0,0})) *focus_root=record_index;
+    igEndDisabled();
+    if (!relationships_available) igTextWrapped("Relationships unavailable: supply --skill-atoms ALIAS=FOLDER.");
     if (focused && igButton("Expand this record one hop (in + out)",(ImVec2_c){0,0})) *focus_expand=record_index;
     if (model->records[record_index].role == GD_SKILL) {
         const GD_Record *record = &model->records[record_index]; const GD_SkillState *state = &model->skills[record_index];
@@ -435,7 +446,7 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
         else igTextUnformatted("No declared rank conflict. Not evidence of learning.", NULL);
         if (draft) {
             igTextUnformatted(draft->rank_changed[record_index] || draft->prerequisites_changed[record_index] ? "MODIFIED IN MEMORY: differs from loaded disk baseline" : "Draft values match loaded disk baseline", NULL);
-            if (!focused && !challenges) changed = edit_skill(draft, record_index, editor);
+            if (!focused && !challenges && edit_skill(draft, record_index, editor)) changed=1;
         }
     }
     if (!focused && model->route_mode) {
@@ -473,7 +484,7 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
         igPushID_Int(i);
         label = TextFormat("%s: %s%s", gd_field_name(edge->field), edge->reference, edge->target < 0 ? " [not uniquely loaded]" : "");
         igTextUnformatted(label, NULL);
-        if (igIsItemClicked(ImGuiMouseButton_Left) && edge->target >= 0) selection->linked = edge->target;
+        if (igIsItemClicked(ImGuiMouseButton_Left) && edge->target >= 0) *navigate = edge->target;
         igPopID();
     }
     if (focused) {
@@ -482,7 +493,7 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
             const GD_Edge *edge=&model->edges[i];
             if (edge->target!=record_index) continue;
             igTextWrapped("%s: %s (source line %d)",gd_field_name(edge->field),model->records[edge->source].reference,edge->line);
-            if (igIsItemClicked(ImGuiMouseButton_Left)) selection->linked=edge->source;
+            if (igIsItemClicked(ImGuiMouseButton_Left)) *navigate=edge->source;
         }
     }
     igSeparator(); igTextUnformatted(model->records[record_index].body, NULL); igPopTextWrapPos();
@@ -492,12 +503,16 @@ static void graph_log(int level, const char *text, va_list arguments) {
     (void)level; vfprintf(stderr, text, arguments); fputc('\n', stderr);
 }
 static int selected_record(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection, int challenges, int focused) {
-    if (selection->linked>=0) return selection->linked;
-    if (selection->node>=0) return layout->nodes[selection->node].key;
+    const GD_Cell *cell;
+    if (selection->linked>=0 && selection->linked<model->record_count) return selection->linked;
+    if (selection->node>=0 && selection->node<layout->node_count) return layout->nodes[selection->node].key;
     if (selection->cell<0) return -1;
-    if (challenges || focused) return model->edges[selection->cell].source;
-    if (model->skill_mode) return model->skill_links[selection->cell].dependent;
-    return model->pairs[model->cells[selection->cell].first_pair+selection->interaction].interaction;
+    if (challenges || focused) return selection->cell<model->edge_count ? model->edges[selection->cell].source:-1;
+    if (model->skill_mode) return selection->cell<model->skill_link_count ? model->skill_links[selection->cell].dependent:-1;
+    if (selection->cell>=model->cell_count) return -1;
+    cell=&model->cells[selection->cell];
+    if (selection->interaction<0 || selection->interaction>=cell->pair_count) return -1;
+    return model->pairs[cell->first_pair+selection->interaction].interaction;
 }
 static void select_record(const GD_Layout *layout, GraphSelection *selection, int record) {
     int i; *selection=(GraphSelection){-1,-1,0,-1,-1};
@@ -759,7 +774,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             if (target>=0) navigate=target;
         }
         igBeginChild_Str("Selected source", (ImVec2_c){0,0}, 0, 0);
-        if (details(model, layout, &selection, draft, &editor, challenges, focused, routes, &witness, &navigate, &focus_root, &focus_expand)) draft_changed = 1;
+        if (details(model, layout, &selection, draft, &editor, challenges, focused, routes, &witness, &navigate, &focus_root, &focus_expand,1)) draft_changed = 1;
         igEndChild(); igEnd();
         if (draft && !igGetIO_Nil()->WantTextInput && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_Z)) {
             if (undo_edit(draft, layout, &selection, &editor)) draft_changed = 1;
@@ -896,4 +911,80 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     initial->allocator.release(initial->allocator.context,analysis);
     initial->allocator.release(initial->allocator.context, layout);
     return result;
+}
+
+/* Unified shell adapters reuse projection, source editing and drawing. Window,
+   input lifetime and per-view settings belong to the shell, not these helpers. */
+int gd_explorer_graph_prepare(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
+    return prepare_layout(model,p->layout,(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
+                          p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS ? &p->focus:NULL);
+}
+void gd_explorer_graph_input(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_ExplorerSelection before=p->selection,choice;
+    graph_input(p->layout,&p->selection,&p->camera,context->viewport,p->overlay,
+                gd_graph_overview_hit(&p->overview,context->viewport,GetMousePosition()) || igGetIO_Nil()->WantCaptureMouse);
+    choice=p->selection;
+    if (choice.node!=before.node || choice.cell!=before.cell || choice.linked!=before.linked || choice.interaction!=before.interaction) {
+        p->selection=before; gd_explorer_graph_select(context,&choice);
+    }
+    p->inspected_record=gd_explorer_graph_record(context);
+}
+int gd_explorer_graph_record(const GD_ExplorerContext *context) {
+    const GD_ExplorerPane *p=context->pane;
+    return selected_record(gd_explorer_model(context->project,p->view),p->layout,&p->selection,
+                           p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS);
+}
+int gd_explorer_graph_commit(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_Draft *draft=context->project->draft;
+    int applied=draft && p->editor.record>=0 ? gd_draft_rank(draft,p->editor.record,p->editor.rank_text):0;
+    if (applied>0 && !gd_explorer_edited(context->project)) return -1;
+    return applied;
+}
+int gd_explorer_graph_select(GD_ExplorerContext *context, const GD_ExplorerSelection *choice) {
+    if (gd_explorer_graph_commit(context)<0) return 0;
+    context->pane->selection=*choice;
+    context->pane->inspected_record=gd_explorer_graph_record(context);
+    return 1;
+}
+int gd_explorer_graph_details(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
+    int changed;
+    p->inspected_record=gd_explorer_graph_record(context);
+    changed=details(model,p->layout,&p->selection,gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA ? context->project->draft:NULL,
+        &p->editor,p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS,context->project->routes,
+        &p->witness,&p->navigate,&p->focus_root,&p->focus_expand,!!(context->project->available&(1u<<GD_EXPLORER_RELATIONSHIPS)));
+    if (!changed) p->inspected_record=gd_explorer_graph_record(context);
+    else if (p->editor.record>=0) p->inspected_record=p->editor.record;
+    return changed;
+}
+void gd_explorer_graph_source(GD_ExplorerContext *context, int edge) {
+    GD_ExplorerPane *p=context->pane;
+    projected_source(gd_explorer_model(context->project,p->view),p->layout,edge,
+                     p->view==GD_EXPLORER_RELATIONSHIPS,p->view==GD_EXPLORER_CHALLENGES);
+}
+void gd_explorer_graph_unlocks(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; int dirty=0;
+    GD_Model *model=gd_explorer_model(context->project,p->view);
+    gd_skill_unlocks(model,p->known,gd_explorer_graph_record(context),context->query);
+    unlock_panel(model,context->query,p->known,gd_explorer_graph_record(context),&dirty,&p->navigate);
+}
+void gd_explorer_graph_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *e) {
+    GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
+    draw_graph(model,p->layout,&p->selection,p->camera,context->viewport,p->overlay,
+        gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA ? context->project->draft:NULL,
+        p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS,context->project->routes,p->witness,
+        context->analysis,p->shared,p->peer,p->branches,e->paths,e->bypass,e->foundations,e->foundation_pair,
+        e->reachability,e->reach_pair,e->shapes,e->overview);
+    if (p->view==GD_EXPLORER_SKILLS) {
+        int i; gd_skill_unlocks(model,p->known,gd_explorer_graph_record(context),context->query);
+        BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height);
+        BeginMode2D(p->camera);
+        for (i=0;i<p->layout->node_count;++i) {
+            int record=p->layout->nodes[i].key; Vector2 point=node_point(&p->layout->nodes[i]);
+            if (context->query->known[record]) DrawCircleV(point,7,(Color){65,200,175,255});
+            if (context->query->ancestors[record] || context->query->descendants[record]) DrawCircleLines((int)point.x,(int)point.y,24,graph_selected);
+        }
+        EndMode2D(); EndScissorMode();
+    }
 }

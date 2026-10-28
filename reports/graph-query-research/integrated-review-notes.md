@@ -2,7 +2,7 @@
 
 ## Capture scope
 
-Notes captured, then discussed against remaining todo work. User requests coverage of new feedback in existing planned tasks and explicit review against these notes at next checkpoint after next implementation batch. Exact batch scope and implementation choices remain unrefined. Implementation paused; no commits requested.
+Notes captured, then discussed against remaining todo work. User requests coverage of new feedback in existing planned tasks and explicit review against these notes at next checkpoint after next implementation batch. User later authorized bounded unified-explorer implementation under Review 06. Interaction choices and technical contract live in `todo.md`; user accepted bounded unified-shell checkpoint, authorized commit and requested continuation through known steps until next review point unless material questions arise. Broader integrated acceptance remains open.
 
 ## User observations and questions
 
@@ -35,8 +35,19 @@ Notes captured, then discussed against remaining todo work. User requests covera
 - Reusable design questions, coordinated with discovery/gap/actor-state/resource tasks: original-question audit and matching visual/agent-usable analysis, not algorithm badges as substitute answers.
 - `todo.md`, Next integrated review checkpoint — current feedback coverage: account for every note at next post-batch review; demonstrate addressed items or explicitly retain outstanding ownership/status. Include dense-overview explanation/usefulness. Existing final gate remains.
 
+## Current implementation checkpoint
+
+- Review 06 first slice brings six existing projections into one window with shared controls/source inspection, independent view state, explicit cross-view Find and current-view reset. Ordinary switching does not follow selection. Find frames all visible source-associated matches, keeps destination filters and reports hidden matches. Reset never discards drafts or changes other views.
+- Source: `todo.md`, Review 06; operation guide: `skills/game-design-workbench/native/README.md#unified-explorer`. Legacy commands remain compatible.
+- Integration delivery addresses discoverability/control inconsistency for review; it does not accept Resource graph readability/usefulness. MDA full-graph Fit remains tiny; Resource cards still overlap in dense default layout.
+- Skills routing/group backgrounds, AA, jitter, selection-focused layout and Resource arrangement modes remain in Readable graphs and usable controls. Existing drawing retained in this slice, including rejected Skills squared routing.
+- Dense-overview usefulness and original design-question/agent-output audit remain pending. Reusing existing layers in one shell does not answer those questions by itself.
+- Engineering: 87/87 native + CLI regression; Node 24 passed / 4 external integrations skipped; strict C99 compilation of seven changed production units, two test units and test-enabled shell; graph and plain-view builds passed. Both examples pass app-local state/reload checks with zero owned allocations left and 322,213,476-byte measured peak during reload overlap. Original/private example hashes unchanged. Independent static review found cross-snapshot centering, stale-edge, rank-buffer and stdout-log issues; fixes include focused regressions and deferred active Undo repair. Focused static rechecks confirm reported issues resolved; no broad independent execution/acceptance claim.
+- Evidence under `skills/game-design-workbench/native/build/`: `unified-explorer-native-final.log`, `unified-explorer-node-final.log`, `unified-explorer-plain.log`, `unified-explorer-checks-final.log`; full state JSON/stderr/captures and source hashes in `explorer-checks-56ef2be86e6242f8a3658585fe2eb0a1/`. Twelve production default captures total, plus layered app-local captures. Strict objects in `unified-explorer-strict/`. Build artifacts remain ignored; check script reproduces checks with prepared SDK.
+- Next checkpoint must assess every note, including remaining objections and explicit outstanding ownership. App-local checks/captures are engineering evidence only; no real-pointer or user acceptance claimed.
+
 ## Comments
 
 - Preserve uncertainty about dataset quality and potentially escaping labels.
 - Do not treat rendering checks, report examples or successful launches as usefulness acceptance.
-- Discussion started. User chose to retain remaining planned work while ensuring new feedback is covered and next post-batch checkpoint reviews these notes. Original-question audit and next batch refinement remain outstanding.
+- Original-question audit and integrated user acceptance remain outstanding.

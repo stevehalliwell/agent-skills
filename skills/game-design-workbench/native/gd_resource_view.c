@@ -286,6 +286,62 @@ static void detail(const GD_ResourceGraph *graph, int selected, int x, int width
     }
     EndScissorMode();
 }
+static void draw_resource_graph(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+    Camera2D camera, Rectangle viewport, int selected, int shared, int pair, const GD_GraphComparison *comparison,
+    const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability,
+    const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
+    int i; const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selected):NULL;
+    BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
+    for (i=0;i<layout->edge_count;++i) {
+        const GD_LayoutEdge *edge=&layout->edges[i]; const GD_ResourceRelation *rel=&graph->relations[edge->key];
+        const GD_LayoutNode *a=&layout->nodes[edge->a],*b=&layout->nodes[edge->b];
+        Color color=rel->kind==GD_RESOURCE_ROLE_BINDING ? role_color : rel->kind==GD_RESOURCE_INVOCATION ? selected_color :
+            rel->kind==GD_RESOURCE_EXCLUSION ? (Color){230,125,125,255} : rel->kind==GD_RESOURCE_REQUIREMENT ? (Color){81,194,178,255} :
+            rel->kind==GD_RESOURCE_PRESERVATION ? (Color){180,201,119,255} : facet_color;
+        if (!analysis->shown[edge->a] || !analysis->shown[edge->b]) continue;
+        if (overview && overview->selected_edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},21,selected_color);
+        if (reach_pair && reach_pair->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},17,gd_graph_branch_color(reach_pair->edges[i]));
+        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},15,gd_bypass_color);
+        if (path_selection && path_selection->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},11,gd_path_color);
+        if (comparison && comparison->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},7,gd_graph_branch_color(comparison->edges[i]));
+        else if (!comparison && shared && pair>=0 && (i==analysis->features[analysis->pairs[pair].first_a].edge || i==analysis->features[analysis->pairs[pair].first_b].edge))
+            DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},7,role_color);
+        DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},1.5f,color);
+    }
+    for (i=0;i<layout->node_count;++i) {
+        const GD_LayoutNode *n=&layout->nodes[i]; const GD_ResourceNode *item=&graph->nodes[n->key];
+        Color color=item->kind==GD_RESOURCE_CASE ? case_color:item->kind==GD_RESOURCE_ROLE ? role_color:facet_color;
+        if (!analysis->shown[i]) continue;
+        DrawRectangleRounded((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,(Color){28,38,50,255});
+        DrawRectangleRoundedLinesEx((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,selected==n->key ? 3:1.5f,selected==n->key ? selected_color:color);
+        DrawText(item->kind==GD_RESOURCE_CASE ? "case":item->kind==GD_RESOURCE_ROLE ? "resource role":"facet",(int)n->x-83,(int)n->y-19,11,color);
+        DrawText(TextFormat("%.23s",node_label(graph,n->key)),(int)n->x-83,(int)n->y-3,14,foreground);
+        if (shared) DrawText(TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)n->x-83,(int)n->y+28,13,role_color);
+        if (comparison) {
+            unsigned category=comparison->nodes[i];
+            if (category) {
+                Color branch_color=gd_graph_branch_color(category);
+                DrawRectangle((int)n->x+86,(int)n->y-18,2,36,branch_color);
+                gd_graph_branch_badge(category,(int)n->x-35,(int)n->y+28,background);
+            }
+            if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground);
+        }
+        if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-106,n->y-40,212,80},2,selected_color);
+        if (shapes) {
+            gd_graph_shape_badge(shapes,i,(int)n->x-83,(int)n->y+45,background);
+            if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){n->x-102,n->y-36,204,72},2,(Color){220,205,148,255});
+        }
+        if (reachability) {
+            gd_graph_reachability_badge(reachability,i,(int)n->x-83,(int)n->y-43,background);
+            if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-98,n->y-32,196,64},2,gd_graph_branch_color(reach_pair->nodes[i]));
+        }
+        if (paths) {
+            gd_graph_path_badge(paths,path_selection,bypass,i,(int)n->x,(int)n->y-20,background);
+            if (paths->roots[i]) gd_graph_path_start_marker((int)n->x+76,(int)n->y-15);
+        }
+    }
+    EndMode2D(); EndScissorMode();
+}
 int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const char *screenshot) {
     GD_Layout *layout=model->allocator.allocate(model->allocator.context,sizeof(*layout));
     GD_GraphAnalysis *analysis=model->allocator.allocate(model->allocator.context,sizeof(*analysis));
@@ -400,7 +456,6 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         pair=shared_choice(analysis,selected,&peer,!path_tab && shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,242,190,25}));
         const GD_GraphComparison *comparison=shared && branches && pair>=0 ? gd_graph_compare(analysis,selected,peer):NULL;
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls,NULL,1);
-        const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selected):NULL;
         const GD_PathBypass *bypass=paths && path_controls.compare ? gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
         const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls,1);
         const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selected,&reach_controls.peer):NULL;
@@ -410,54 +465,8 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         DrawText("Resource graph preview",18,14,26,foreground);
         DrawText("Incomplete: routes and composed outcomes are not implemented. Lines are declarations, not proof of flow.",18,49,16,selected_color);
         DrawText(TextFormat("%d nodes | %d relations | %d unresolved facets | %d unexamined calls%s",graph->node_count,graph->relation_count,graph->unresolved_facets,graph->composition_unexamined,graph->limited ? " | GRAPH LIMIT REACHED":""),18,74,15,muted);
-        BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
-        for (i=0;i<layout->edge_count;++i) {
-            const GD_LayoutEdge *edge=&layout->edges[i]; const GD_ResourceRelation *rel=&graph->relations[edge->key];
-            const GD_LayoutNode *a=&layout->nodes[edge->a],*b=&layout->nodes[edge->b];
-            Color color=rel->kind==GD_RESOURCE_ROLE_BINDING ? role_color : rel->kind==GD_RESOURCE_INVOCATION ? selected_color :
-                rel->kind==GD_RESOURCE_EXCLUSION ? (Color){230,125,125,255} : rel->kind==GD_RESOURCE_REQUIREMENT ? (Color){81,194,178,255} :
-                rel->kind==GD_RESOURCE_PRESERVATION ? (Color){180,201,119,255} : facet_color;
-            if (overview && overview->selected_edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},21,selected_color);
-            if (reach_pair && reach_pair->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},17,gd_graph_branch_color(reach_pair->edges[i]));
-            if (bypass && bypass->complete && bypass->found && bypass->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},15,gd_bypass_color);
-            if (path_selection && path_selection->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},11,gd_path_color);
-            if (comparison && comparison->edges[i]) DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},7,gd_graph_branch_color(comparison->edges[i]));
-            else if (!comparison && shared && pair>=0 && (i==analysis->features[analysis->pairs[pair].first_a].edge || i==analysis->features[analysis->pairs[pair].first_b].edge))
-                DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},7,role_color);
-            DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},1.5f,color);
-        }
-        for (i=0;i<layout->node_count;++i) {
-            const GD_LayoutNode *n=&layout->nodes[i]; const GD_ResourceNode *item=&graph->nodes[n->key];
-            Color color=item->kind==GD_RESOURCE_CASE ? case_color:item->kind==GD_RESOURCE_ROLE ? role_color:facet_color;
-            DrawRectangleRounded((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,(Color){28,38,50,255});
-            DrawRectangleRoundedLinesEx((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,selected==n->key ? 3:1.5f,selected==n->key ? selected_color:color);
-            DrawText(item->kind==GD_RESOURCE_CASE ? "case":item->kind==GD_RESOURCE_ROLE ? "resource role":"facet",(int)n->x-83,(int)n->y-19,11,color);
-            DrawText(TextFormat("%.23s",node_label(graph,n->key)),(int)n->x-83,(int)n->y-3,14,foreground);
-            if (shared) DrawText(TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)n->x-83,(int)n->y+28,13,role_color);
-            if (comparison) {
-                unsigned category=comparison->nodes[i];
-                if (category) {
-                    Color branch_color=gd_graph_branch_color(category);
-                    DrawRectangle((int)n->x+86,(int)n->y-18,2,36,branch_color);
-                    gd_graph_branch_badge(category,(int)n->x-35,(int)n->y+28,background);
-                }
-                if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground);
-            }
-            if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-106,n->y-40,212,80},2,selected_color);
-            if (shapes) {
-                gd_graph_shape_badge(shapes,i,(int)n->x-83,(int)n->y+45,background);
-                if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){n->x-102,n->y-36,204,72},2,(Color){220,205,148,255});
-            }
-            if (reachability) {
-                gd_graph_reachability_badge(reachability,i,(int)n->x-83,(int)n->y-43,background);
-                if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-98,n->y-32,196,64},2,gd_graph_branch_color(reach_pair->nodes[i]));
-            }
-            if (paths) {
-                gd_graph_path_badge(paths,path_selection,bypass,i,(int)n->x,(int)n->y-20,background);
-                if (paths->roots[i]) gd_graph_path_start_marker((int)n->x+76,(int)n->y-15);
-            }
-        }
-        EndMode2D(); EndScissorMode();
+        draw_resource_graph(graph,layout,analysis,camera,viewport,selected,shared,pair,comparison,
+                            paths,bypass,reachability,reach_pair,shapes,overview);
         gd_graph_overview_draw(analysis,&overview_controls,viewport,1);
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
         DrawText(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
@@ -492,3 +501,81 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
     }
     CloseWindow(); model->allocator.release(model->allocator.context,analysis); model->allocator.release(model->allocator.context,layout); return result;
 }
+
+#ifdef GD_WITH_GRAPH
+#include "gd_explorer_ui.h"
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#define CIMGUI_NO_EXPORT
+#include "cimgui.h"
+int gd_explorer_resource_prepare(GD_ExplorerContext *context) {
+    int i;
+    if (!resource_layout(context->project->resources,context->pane->layout)) return 0;
+    for (i=0;i<120;++i) gd_layout_step(context->pane->layout,-1);
+    return 1;
+}
+void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *e) {
+    GD_ExplorerPane *p=context->pane;
+    int pair=p->shared ? gd_graph_match(context->analysis,p->selection.node,p->peer):-1;
+    const GD_GraphComparison *comparison=p->branches && pair>=0 ? gd_graph_compare(context->analysis,p->selection.node,p->peer):NULL;
+    draw_resource_graph(context->project->resources,p->layout,context->analysis,p->camera,context->viewport,p->selection.node,
+                        p->shared,pair,comparison,e->paths,e->bypass,e->reachability,e->reach_pair,e->shapes,e->overview);
+}
+void gd_explorer_resource_source(GD_ExplorerContext *context, int edge) {
+    const GD_ResourceGraph *graph=context->project->resources;
+    int key=context->pane->layout->edges[edge].key;
+    const GD_Record *source=relation_source(graph,key);
+    igTextWrapped("%s | line %d | %s",relation_name(graph->relations[key].kind),graph->relations[key].line,
+                  source ? source->reference:"unresolved source");
+    if (source) igTextWrapped("%s",source->source_path);
+}
+void gd_explorer_resource_details(GD_ExplorerContext *context) {
+    const GD_ResourceGraph *graph=context->project->resources;
+    int selected=context->pane->selection.node,record=gd_explorer_resource_record(graph,selected),i;
+    const GD_ResourceNode *node;
+    if (context->pane->selection.linked>=0) {
+        const GD_Record *source=&graph->model->records[context->pane->selection.linked];
+        igTextWrapped("Loaded source inspection (not a projected node): %s",source->reference);
+        igTextWrapped("Status: %s | %s",source->status ? source->status:"unspecified",source->source_path);
+        if (igButton("Copy source path",(ImVec2_c){0,0})) SetClipboardText(source->source_path);
+        igPushTextWrapPos(0); igTextUnformatted(source->body,NULL); igPopTextWrapPos(); return;
+    }
+    if (selected<0 || selected>=graph->node_count) { igTextWrapped("Select a case, facet or resource role to inspect source."); return; }
+    node=&graph->nodes[selected];
+    igTextWrapped("#%d %s | %s",selected,node_label(graph,selected),node->kind==GD_RESOURCE_CASE ? "Rule case":node->kind==GD_RESOURCE_ROLE ? "Resource role":"Actor facet");
+    if (node->pool_reference) igTextWrapped("Pool: %s | shared identity, not a unique case/participant",node->pool_reference);
+    if (node->case_index>=0 && !node->pool_reference) {
+        const GD_RuleCase *item=&graph->rules->cases[node->case_index];
+        igTextWrapped("Case line %d | context: %s",item->line,item->context ? item->context:"unspecified");
+    }
+    if (node->participant>=0 && !node->pool_reference) {
+        const GD_RuleParticipant *actor=&graph->rules->participants[node->participant];
+        igTextWrapped("Participant: %s | noun: %s",actor->name,actor->noun ? actor->noun:"unspecified");
+    }
+    if (node->axis>=0) igTextWrapped("Axis: %s",graph->model->records[node->axis].reference);
+    if (node->kind==GD_RESOURCE_ROLE) igTextWrapped("Resolution: %s",gd_rule_resolution_name(node->resolution));
+    if (record>=0) {
+        const GD_Record *source=&graph->model->records[record];
+        igTextWrapped("Source: %s | status: %s",source->reference,source->status ? source->status:"unspecified");
+        igTextWrapped("%s",source->source_path);
+        if (igButton("Copy source path",(ImVec2_c){0,0})) SetClipboardText(source->source_path);
+    }
+    igSeparator(); igTextUnformatted("Incident declarations (not composed outcomes):",NULL);
+    for (i=0;i<graph->relation_count;++i) {
+        const GD_ResourceRelation *edge=&graph->relations[i];
+        if (edge->facet!=selected && edge->activation!=selected) continue;
+        igPushID_Int(i); gd_explorer_resource_source(context,i);
+        if (edge->kind==GD_RESOURCE_QUANTITY_WRITE) {
+            igTextWrapped("%s",graph->rules->assignments[edge->declaration].expression);
+            if (edge->delta_recognized && edge->delta.known) igText("Signed delta: %g",edge->delta.number);
+        } else if (edge->kind==GD_RESOURCE_REQUIREMENT || edge->kind==GD_RESOURCE_EXCLUSION) {
+            const GD_RuleParticipant *actor=&graph->rules->participants[edge->participant];
+            const char *condition=edge->kind==GD_RESOURCE_REQUIREMENT ? actor->requires:actor->skip_if;
+            igTextWrapped("%s",condition ? condition:"unspecified condition");
+        }
+        igPopID();
+    }
+    if (record>=0) {
+        igSeparator(); igPushTextWrapPos(0); igTextUnformatted(graph->model->records[record].body,NULL); igPopTextWrapPos();
+    }
+}
+#endif

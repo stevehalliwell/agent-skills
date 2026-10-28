@@ -2443,6 +2443,7 @@ TEST(rules_allocation_failure,
 #include "test_graph_reachability.h"
 #include "test_graph_shapes.h"
 #include "test_graph_overview.h"
+#include "test_explorer.h"
 int main(int argc, char **argv) {
     int failed = 0;
     if (argc != 2 || strlen(argv[1]) >= sizeof(root)) { fputs("Usage: test-core NEW-FIXTURE-DIRECTORY\n", stderr); return 2; }
@@ -2470,6 +2471,7 @@ int main(int argc, char **argv) {
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_graph_analysis_projection(); failed += test_graph_analysis_roles(); failed += test_graph_comparison(); failed += test_graph_paths(); failed += test_graph_path_limits(); failed += test_graph_bypass_ordering(); failed += test_graph_analysis_limits();
     failed += test_graph_overview_oracle(); failed += test_graph_overview_limits();
+    failed += test_explorer_loading(); failed += test_explorer_allocation_failures();
     failed += test_graph_shapes_oracle(); failed += test_graph_shapes_limits();
     failed += test_typed_reachability_controls();
     failed += test_directed_drawing_order(); failed += test_directed_drawing_routes();
@@ -2477,6 +2479,6 @@ int main(int argc, char **argv) {
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/85 passed\n", 85-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/87 passed\n", 87-failed);
     return failed ? 1 : 0;
 }
