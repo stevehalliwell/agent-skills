@@ -1,0 +1,9 @@
+url,title,source_type,evidence_label,why_retain
+https://arxiv.org/abs/1807.04375,"AtDelfi: Automatically Designing Legible Full Instructions For Games",research paper,primary,Mechanic critical paths and generated tutorials
+https://centerforgamescience.org/files/assets/papers/chi2015_progression.pdf,Automatic Game Progression Design,research paper,primary,Player and puzzle progression graph method
+https://www.scss.tcd.ie/mads.haahr/papers/de-kegel-2020-transactions.pdf,Procedural Puzzle Generation A Survey,research survey,expert-secondary,Alternative puzzle methods and limits
+https://ojs.aaai.org/index.php/AIIDE/article/view/12477,Simulating Mechanics to Study Emergence in Games,research paper,primary,Machinations executable economy graphs
+https://arxiv.org/abs/2404.18574,GEEvo Game Economy Generation and Balancing with Evolutionary Algorithms,research paper,primary,Simulation-based alternative to topology-only economy advice
+https://arxiv.org/html/1807.04375v2,AtDelfi full text v2,research paper,primary,Full method and explicit failures in Plants and RealPortals
+https://arxiv.org/html/2404.18574v1,GEEvo full text v1,research paper,primary,Full simulation assumptions and limits
+https://centerforgamescience.org/files/assets/papers/chi2015_progression.pdf,Automatic Game Progression Design,research paper,primary,Read pp 4–9 graphlets plus counter-evidence missing random baseline and costly adaptation

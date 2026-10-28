@@ -1,0 +1,12 @@
+url,title,source_type,evidence_label,why_retain
+https://neo4j.com/docs/graph-data-science/current/algorithms/node-similarity/,Node Similarity,official documentation,primary,Verify neighborhood metrics and cost/topK caveats
+https://vldb.org/pvldb/vol4/p992-sun.pdf,PathSim,original research,primary,Typed meta paths and peer similarity
+https://jmlr2020.csail.mit.edu/papers/v12/shervashidze11a.html,Weisfeiler-Lehman Graph Kernels,original research,primary,Explainable iterative neighborhood signatures
+https://pmc.ncbi.nlm.nih.gov/articles/PMC5108654/,node2vec,original research,primary,Complex representation alternative and limits
+https://neo4j.com/docs/graph-data-science/current/algorithms/node-similarity/,Node Similarity,official documentation,primary,Read cost and output-limit warning; topK does not remove comparison work
+https://vldb.org/pvldb/vol4/p992-sun.pdf,PathSim,original research,primary,Read short typed path normalization and dense candidate-set limitations
+https://pmc.ncbi.nlm.nih.gov/articles/PMC5108654/,node2vec,original research,discovery-signal,Fetch failed as JavaScript-rendered; no verified source passage
+https://jmlr2020.csail.mit.edu/papers/volume12/shervashidze11a/shervashidze11a.pdf,Weisfeiler-Lehman Graph Kernels PDF,original research,primary,Follow abstract PDF link for algorithm and limitations
+https://arxiv.org/abs/1607.00653,node2vec original abstract,original research,primary,Alternative to failed PMC page for complex representation comparison
+https://jmlr2020.csail.mit.edu/papers/volume12/shervashidze11a/shervashidze11a.pdf,Weisfeiler-Lehman Graph Kernels PDF,original research,primary,Read label-refinement algorithm and exact-match/all-pairs caveats
+https://arxiv.org/abs/1607.00653,node2vec original abstract,original research,primary,Read abstract v1; evidence limited to learned neighborhoods and classification/link-prediction evaluations

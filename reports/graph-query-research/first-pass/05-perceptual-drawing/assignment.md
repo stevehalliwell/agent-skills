@@ -1,0 +1,9 @@
+# Perceptual graph drawing and comprehension
+
+Read `../brief.md` completely and follow its contract. Own only this folder.
+
+Research how to draw our structures to maximize human ability to see and understand relationships rather than manually decode diagrams. Investigate empirical graph-reading/perception evidence and authoritative drawing methods: task-matched layouts; spatial grouping/alignment; edge crossings, routing, direction and occlusion; labels/typography; visual hierarchy; colour/shape/size and redundant encodings; density limits; and perceptual overview/detail. Preserve study task, graph size, participant/context limits and trade-offs. Aesthetic preference is not comprehension evidence.
+
+Target skill prerequisite DAGs with cycles/incomplete references, challenge routes with branching/rejoins/backlinks, and actor/resource/state-flow structures. Do not assume one layout is best for all. Existing screenshots, if useful: `skills/game-design-workbench/native/build/skill-unlocks-review/unlocks-final.png` and resource-preview captures under native/build. They demonstrate current rendering, not user acceptance or measured usability.
+
+Sibling visual-exploration lane owns filters, selection, overlays and explanation workflow. You own how the drawing itself exploits human perception. Include concrete drawing recommendations for our target structures and source diagrams/links where publicly accessible. Do not download/copy third-party figures without clear attribution and permission; original illustrative sketches are allowed only in this folder and must be labelled illustrations, not measured results. Deliver required files within `reports/graph-query-research/first-pass/05-perceptual-drawing/`, then notify parent `w2:p1` as specified in the shared brief. No app implementation, additional agents or shared-file edits.

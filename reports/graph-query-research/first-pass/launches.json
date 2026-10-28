@@ -1,0 +1,352 @@
+[
+  {
+    "lane": "01-structure-dependencies",
+    "agent": "graph-structure",
+    "folder": "reports/graph-query-research/first-pass/01-structure-dependencies",
+    "started_at": "2026-10-28T00:47:12.191Z",
+    "tab": "w2:t1K",
+    "pane": "w2:p1K",
+    "start": {
+      "id": "cli:agent:start",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-12-865Z_01a17ff9-b1e0-753f-b1b4-8e7347f4005e.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-structure",
+          "pane_id": "w2:p1K",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 760,
+          "tab_id": "w2:t1K",
+          "terminal_id": "term_65edbe7550aff13",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "argv": [
+          "pi"
+        ],
+        "type": "agent_started"
+      }
+    },
+    "submission": {
+      "id": "cli:agent:prompt",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-12-865Z_01a17ff9-b1e0-753f-b1b4-8e7347f4005e.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-structure",
+          "pane_id": "w2:p1K",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 760,
+          "tab_id": "w2:t1K",
+          "terminal_id": "term_65edbe7550aff13",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "type": "agent_prompted"
+      }
+    },
+    "status": "submitted"
+  },
+  {
+    "lane": "02-similarity-discovery",
+    "agent": "graph-similarity",
+    "folder": "reports/graph-query-research/first-pass/02-similarity-discovery",
+    "started_at": "2026-10-28T00:47:15.630Z",
+    "tab": "w2:t1M",
+    "pane": "w2:p1M",
+    "start": {
+      "id": "cli:agent:start",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-16-264Z_01a17ff9-bf28-7747-84a9-c46fe5e8dcec.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-similarity",
+          "pane_id": "w2:p1M",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 762,
+          "tab_id": "w2:t1M",
+          "terminal_id": "term_65edbe7897da414",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "argv": [
+          "pi"
+        ],
+        "type": "agent_started"
+      }
+    },
+    "submission": {
+      "id": "cli:agent:prompt",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-16-264Z_01a17ff9-bf28-7747-84a9-c46fe5e8dcec.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-similarity",
+          "pane_id": "w2:p1M",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 762,
+          "tab_id": "w2:t1M",
+          "terminal_id": "term_65edbe7897da414",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "type": "agent_prompted"
+      }
+    },
+    "status": "submitted"
+  },
+  {
+    "lane": "03-game-design-applications",
+    "agent": "graph-game-design",
+    "folder": "reports/graph-query-research/first-pass/03-game-design-applications",
+    "started_at": "2026-10-28T00:47:19.063Z",
+    "tab": "w2:t1N",
+    "pane": "w2:p1N",
+    "start": {
+      "id": "cli:agent:start",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-19-858Z_01a17ff9-cd31-7783-b6fd-38411016ed8b.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-game-design",
+          "pane_id": "w2:p1N",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 764,
+          "tab_id": "w2:t1N",
+          "terminal_id": "term_65edbe7bdd25415",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "argv": [
+          "pi"
+        ],
+        "type": "agent_started"
+      }
+    },
+    "submission": {
+      "id": "cli:agent:prompt",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-19-858Z_01a17ff9-cd31-7783-b6fd-38411016ed8b.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-game-design",
+          "pane_id": "w2:p1N",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 764,
+          "tab_id": "w2:t1N",
+          "terminal_id": "term_65edbe7bdd25415",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "type": "agent_prompted"
+      }
+    },
+    "status": "submitted"
+  },
+  {
+    "lane": "04-visual-exploration",
+    "agent": "graph-exploration",
+    "folder": "reports/graph-query-research/first-pass/04-visual-exploration",
+    "started_at": "2026-10-28T00:47:22.499Z",
+    "tab": "w2:t1P",
+    "pane": "w2:p1P",
+    "start": {
+      "id": "cli:agent:start",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-23-117Z_01a17ff9-d9ed-779a-844b-790b19c6865a.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-exploration",
+          "pane_id": "w2:p1P",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 766,
+          "tab_id": "w2:t1P",
+          "terminal_id": "term_65edbe7f2412d16",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "argv": [
+          "pi"
+        ],
+        "type": "agent_started"
+      }
+    },
+    "submission": {
+      "id": "cli:agent:prompt",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-23-117Z_01a17ff9-d9ed-779a-844b-790b19c6865a.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-exploration",
+          "pane_id": "w2:p1P",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 766,
+          "tab_id": "w2:t1P",
+          "terminal_id": "term_65edbe7f2412d16",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "type": "agent_prompted"
+      }
+    },
+    "status": "submitted"
+  },
+  {
+    "lane": "05-perceptual-drawing",
+    "agent": "graph-perception",
+    "folder": "reports/graph-query-research/first-pass/05-perceptual-drawing",
+    "started_at": "2026-10-28T00:47:25.920Z",
+    "tab": "w2:t1Q",
+    "pane": "w2:p1Q",
+    "start": {
+      "id": "cli:agent:start",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-26-527Z_01a17ff9-e73e-769e-bc5d-1d617029ed38.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-perception",
+          "pane_id": "w2:p1Q",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 768,
+          "tab_id": "w2:t1Q",
+          "terminal_id": "term_65edbe826747817",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "argv": [
+          "pi"
+        ],
+        "type": "agent_started"
+      }
+    },
+    "submission": {
+      "id": "cli:agent:prompt",
+      "result": {
+        "agent": {
+          "agent": "pi",
+          "agent_session": {
+            "agent": "pi",
+            "kind": "path",
+            "source": "herdr:pi",
+            "value": "C:\\Users\\steve\\.pi\\agent\\sessions\\--D--Repos-agent-skills-game-design-workbench--\\2026-10-28T00-47-26-527Z_01a17ff9-e73e-769e-bc5d-1d617029ed38.jsonl"
+          },
+          "agent_status": "idle",
+          "cwd": "D:\\Repos\\agent-skills-game-design-workbench",
+          "focused": false,
+          "interactive_ready": true,
+          "name": "graph-perception",
+          "pane_id": "w2:p1Q",
+          "revision": 5,
+          "screen_detection_skipped": true,
+          "state_change_seq": 768,
+          "tab_id": "w2:t1Q",
+          "terminal_id": "term_65edbe826747817",
+          "terminal_title": "π - agent-skills-game-design-workbench",
+          "terminal_title_stripped": "π - agent-skills-game-design-workbench",
+          "workspace_id": "w2"
+        },
+        "type": "agent_prompted"
+      }
+    },
+    "status": "submitted"
+  }
+]
