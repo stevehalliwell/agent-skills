@@ -207,7 +207,6 @@ void gd_routes_destroy(GD_Routes *routes) {
 int gd_route_layout(const GD_Model *model, GD_Layout *layout, int horizontal, GD_LayoutSort sort) {
     int nodes[GD_MAX_RECORDS], head[GD_MAX_RECORDS], next[GD_MAX_EDGES];
     int distance[GD_MAX_RECORDS], queue[GD_MAX_RECORDS], read=0, write=0, i;
-    float spacing=2.5f;
     memset(layout,0,sizeof(*layout)); layout->horizontal=horizontal; layout->group_count=1;
     for (i=0;i<model->record_count;++i) { nodes[i]=head[i]=distance[i]=-1; }
     for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_CHALLENGE) {
@@ -234,18 +233,5 @@ int gd_route_layout(const GD_Model *model, GD_Layout *layout, int horizontal, GD
     }
     /* ponytail: shortest-entry-hop bands are display only; never flatten route
        cycles or infer a teaching order from rank or graph placement. */
-    if (!gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,sort)) return 0;
-    for (i=0;i<layout->node_count;++i) {
-        float required=(float)strlen(layout->nodes[i].label)*10.0f/80.0f+0.6f;
-        if (required>spacing) spacing=required;
-    }
-    /* Reserve lateral room for ASCII technical names and reachability captions.
-       Scale anchors too so later settling cannot collapse adjacent labels. */
-    for (i=0;i<layout->node_count;++i) {
-        GD_LayoutNode *node=&layout->nodes[i]; node->anchor*=spacing;
-        if (horizontal) node->y*=spacing; else node->x*=spacing;
-    }
-    if (horizontal) { layout->height*=spacing; layout->groups[0].height*=spacing; }
-    else { layout->width*=spacing; layout->groups[0].width*=spacing; }
-    return 1;
+    return gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,sort);
 }

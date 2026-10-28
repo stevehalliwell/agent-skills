@@ -5,7 +5,7 @@
 
 #define GD_REPULSION_SAMPLES 32
 
-typedef struct { int node, group, layer, degree, key; const char *label; } LayoutOrder;
+typedef struct { int node, group, layer, degree, key; const char *label; int64_t sum; int count,previous; } LayoutOrder;
 static int compare_order(const void *a, const void *b) {
     const LayoutOrder *left = a, *right = b;
     int order;
@@ -15,6 +15,7 @@ static int compare_order(const void *a, const void *b) {
     order = strcmp(left->label, right->label);
     return order ? order : (left->key > right->key) - (left->key < right->key);
 }
+#include "gd_layout_directed.h"
 int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort) {
     LayoutOrder order[GD_MAX_RECORDS];
     int i, pass, counts[GD_MAX_RECORDS][2] = {{0}};
@@ -29,6 +30,7 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
         GD_LayoutNode *node = &layout->nodes[i];
         if (!node->label || node->group < 0 || node->group >= layout->group_count ||
             node->side < 0 || node->side > 1 || node->degree < 0 ||
+            !isfinite(node->width) || !isfinite(node->height) || node->width<0 || node->height<0 ||
             (mode == GD_LAYOUT_DIRECTED && (node->layer < -1 || node->layer >= GD_MAX_RECORDS))) return 0;
         order[i].node = i; order[i].group = node->group; order[i].key = node->key;
         order[i].layer = mode == GD_LAYOUT_DIRECTED ? (node->layer < 0 ? GD_MAX_RECORDS+1 : node->layer) : 0;
@@ -38,6 +40,7 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
     for (i = 0; i < layout->edge_count; ++i)
         if (layout->edges[i].a < 0 || layout->edges[i].a >= layout->node_count ||
             layout->edges[i].b < 0 || layout->edges[i].b >= layout->node_count) return 0;
+    gd_layout_route_prepare(layout);
     qsort(order, layout->node_count, sizeof(order[0]), compare_order);
     for (i = 0; i < layout->node_count; ++i) {
         layout->order[i] = order[i].node;
@@ -45,60 +48,7 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
         if (!i || order[i-1].group != order[i].group) layout->groups[order[i].group].first = i;
     }
     layout->width = layout->height = 0;
-    if (mode == GD_LAYOUT_DIRECTED) {
-        int maximum = -1, layer_counts[GD_MAX_RECORDS+2], placed[GD_MAX_RECORDS+2];
-        int incoming[GD_MAX_RECORDS], next[GD_MAX_PAIRS];
-        float x = 0;
-        for (i = 0; i < layout->node_count; ++i) {
-            incoming[i] = -1;
-            if (layout->nodes[i].layer > maximum) maximum = layout->nodes[i].layer;
-        }
-        for (i = 0; i < layout->edge_count; ++i) {
-            const GD_LayoutEdge *edge = &layout->edges[i];
-            if (!edge->active || layout->nodes[edge->a].group != layout->nodes[edge->b].group ||
-                layout->nodes[edge->a].layer < 0 || layout->nodes[edge->a].layer >= layout->nodes[edge->b].layer) continue;
-            next[i] = incoming[edge->b]; incoming[edge->b] = i;
-        }
-        for (i = 0; i < layout->group_count; ++i) {
-            GD_LayoutGroup *group = &layout->groups[i];
-            int j, widest = 1, roots = 0, root_index = 0;
-            memset(layer_counts, 0, sizeof(layer_counts)); memset(placed, 0, sizeof(placed));
-            for (j = 0; j < group->count; ++j) {
-                const GD_LayoutNode *node = &layout->nodes[layout->order[group->first+j]];
-                int slot = node->layer < 0 ? maximum+2 : node->layer;
-                if (++layer_counts[slot] > widest) widest = layer_counts[slot];
-                if (incoming[layout->order[group->first+j]] < 0) ++roots;
-            }
-            if (roots > widest) widest = roots;
-            group->x = x; group->y = 0; group->width = 80+widest*170.0f;
-            group->height = 130*(maximum+3)+100.0f;
-            for (j = 0; j < group->count; ++j) {
-                GD_LayoutNode *node = &layout->nodes[layout->order[group->first+j]];
-                int slot = node->layer < 0 ? maximum+2 : node->layer;
-                int edge = incoming[layout->order[group->first+j]], parents = 0;
-                float anchor = 0;
-                /* Keep parallel root lanes through late bands. Without this,
-                   unrelated intermediate nodes can sit on a long edge. */
-                for (; edge >= 0; edge = next[edge]) { anchor += layout->nodes[layout->edges[edge].a].anchor; ++parents; }
-                node->anchor = parents ? anchor/parents+(placed[slot]-(layer_counts[slot]-1)/2.0f)*80 :
-                    x+group->width/2+(root_index++-(roots-1)/2.0f)*170;
-                ++placed[slot]; node->axis = 65+slot*130.0f;
-                node->x = node->anchor;
-                node->y = node->axis; node->vx = node->vy = 0;
-                if (layout->horizontal) { float swap = node->x; node->x = node->y; node->y = swap; }
-            }
-            x += group->width+24;
-            if (group->height > layout->height) layout->height = group->height;
-            if (layout->horizontal) {
-                float swap = group->x; group->x = group->y; group->y = swap;
-                swap = group->width; group->width = group->height; group->height = swap;
-            }
-        }
-        layout->width = x > 0 ? x-24 : 0;
-        if (layout->horizontal) { float swap = layout->width; layout->width = layout->height; layout->height = swap; }
-        layout->mode = mode; layout->sort = sort; layout->tick = 0;
-        return 1;
-    }
+    if (mode == GD_LAYOUT_DIRECTED) return directed_arrange(layout,order,sort);
     /* Linked groups first, singleton groups below. Every singleton retains its
        own component; sharing a visual shelf never merges topology. */
     for (pass = 0; pass < 2; ++pass) {
@@ -167,7 +117,9 @@ void gd_layout_step(GD_Layout *layout, int held_node) {
             }
         }
     }
-    for (i = 0; i < layout->edge_count; ++i) {
+    /* Directed placement already orders semantic bands. Generic edge springs
+       would pull distinct label lanes back onto their shared parent. */
+    for (i = 0; layout->mode!=GD_LAYOUT_DIRECTED && i < layout->edge_count; ++i) {
         const GD_LayoutEdge *edge = &layout->edges[i];
         GD_LayoutNode *a, *b;
         float dx, dy, distance, force;

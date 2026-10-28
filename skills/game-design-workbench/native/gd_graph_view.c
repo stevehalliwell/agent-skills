@@ -20,11 +20,20 @@ static const Color graph_active = {65, 180, 165, 255};
 static const Color graph_selected = {255, 217, 125, 255};
 
 typedef struct { int cell, node, interaction, linked, held; } GraphSelection;
+static int measure_directed(GD_Layout *layout) {
+    int i;
+    if (layout->mode!=GD_LAYOUT_DIRECTED || !IsWindowReady()) return 1;
+    for (i=0;i<layout->node_count;++i) {
+        layout->nodes[i].width=fmaxf(220,(float)MeasureText(layout->nodes[i].label,18)+44);
+        layout->nodes[i].height=120;
+    }
+    return gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,layout->sort);
+}
 static int prepare_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort, int rank_mode, int horizontal, int challenges, GD_Focus *focus) {
     int record_node[GD_MAX_RECORDS], i;
     if (focus) return gd_focus_layout(model,focus,layout,sort);
-    if (challenges) return gd_route_layout(model,layout,horizontal,sort);
-    if (model->skill_mode) return gd_skill_layout(model, layout, rank_mode, horizontal, sort);
+    if (challenges) return gd_route_layout(model,layout,horizontal,sort) && measure_directed(layout);
+    if (model->skill_mode) return gd_skill_layout(model, layout, rank_mode, horizontal, sort) && measure_directed(layout);
     memset(layout, 0, sizeof(*layout)); layout->group_count = model->component_count;
     for (i = 0; i < model->record_count; ++i) {
         const GD_Record *record = &model->records[i];
@@ -55,18 +64,18 @@ static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle view
         if (!i || node->y-65 < min_y) min_y = node->y-65;
         if (!i || node->y+50 > max_y) max_y = node->y+50;
     }
+    for (i=0;i<layout->edge_count;++i) {
+        GD_LayoutRoute route; int j; gd_layout_route(layout,i,&route);
+        for (j=0;j<route.count;++j) {
+            min_x=fminf(min_x,route.points[j].x); max_x=fmaxf(max_x,route.points[j].x);
+            min_y=fminf(min_y,route.points[j].y); max_y=fmaxf(max_y,route.points[j].y);
+        }
+    }
     camera->target = (Vector2){(min_x+max_x)/2, (min_y+max_y)/2};
     camera->offset = (Vector2){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
     camera->zoom = fminf(viewport.width/(max_x-min_x+130), viewport.height/(max_y-min_y+70));
     if (camera->zoom > 1.2f) camera->zoom = 1.2f;
     if (camera->zoom < 0.002f) camera->zoom = 0.002f;
-}
-static float segment_distance(Vector2 p, Vector2 a, Vector2 b) {
-    float dx = b.x-a.x, dy = b.y-a.y, square = dx*dx+dy*dy;
-    float t = square > 0 ? ((p.x-a.x)*dx+(p.y-a.y)*dy)/square : 0;
-    if (t < 0) t = 0; if (t > 1) t = 1;
-    dx = p.x-(a.x+t*dx); dy = p.y-(a.y+t*dy);
-    return sqrtf(dx*dx+dy*dy);
 }
 static void graph_input(GD_Layout *layout, GraphSelection *selection, Camera2D *camera,
                         Rectangle viewport, int other_pairs) {
@@ -104,9 +113,7 @@ static void graph_input(GD_Layout *layout, GraphSelection *selection, Camera2D *
     for (i = 0; i < layout->edge_count; ++i) {
         const GD_LayoutEdge *edge = &layout->edges[i];
         if (!edge->active && !other_pairs) continue;
-        Vector2 a = node_point(&layout->nodes[edge->a]), b = node_point(&layout->nodes[edge->b]);
-        float distance = segment_distance(world, a, b);
-        if (edge->a == edge->b) distance = fabsf(sqrtf((world.x-a.x-24)*(world.x-a.x-24)+(world.y-a.y+24)*(world.y-a.y+24))-24);
+        float distance = gd_layout_route_distance(layout,i,world.x,world.y);
         if (distance <= 7/camera->zoom) {
             selection->cell = edge->key; selection->node = selection->linked = -1;
             selection->interaction = 0; return;
@@ -167,55 +174,33 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
     }
     for (i = 0; i < layout->edge_count; ++i) {
         const GD_LayoutEdge *edge = &layout->edges[i];
-        Vector2 a = node_point(&layout->nodes[edge->a]), b = node_point(&layout->nodes[edge->b]);
+        GD_LayoutRoute route; Vector2 middle;
+        gd_layout_route(layout,i,&route);
+        middle=(Vector2){route.points[route.count/2].x,route.points[route.count/2].y};
+        if (route.count%2==0) { middle.x=(middle.x+route.points[route.count/2-1].x)/2; middle.y=(middle.y+route.points[route.count/2-1].y)/2; }
         Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
         if (!edge->active && !other_pairs) continue;
         int conflict = !focused && !challenges && model->skill_mode && (model->skills[layout->nodes[edge->a].key].incomplete || model->skills[layout->nodes[edge->b].key].incomplete);
-        if (foundation_pair && foundation_pair->edges[i]) {
-            if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,28,gd_graph_branch_color(foundation_pair->edges[i]));
-            else gd_graph_underlay_line(a,b,9,gd_graph_branch_color(foundation_pair->edges[i]),!edge->active || conflict);
-        }
-        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_graph_underlay_line(a,b,15,gd_bypass_color,!edge->active || conflict);
-        if (path_selection && path_selection->edges[i]) {
-            if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,29,gd_path_color);
-            else gd_graph_underlay_line(a,b,11,gd_path_color,!edge->active || conflict);
-        }
+        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_graph_route_line(&route,15,gd_bypass_color,!edge->active || conflict);
+        if (path_selection && path_selection->edges[i]) gd_graph_route_line(&route,11,gd_path_color,!edge->active || conflict);
+        if (foundation_pair && foundation_pair->edges[i]) gd_graph_route_line(&route,9,gd_graph_branch_color(foundation_pair->edges[i]),!edge->active || conflict);
         if ((comparison && comparison->edges[i]) || (!comparison && pair>=0 && (i==left->edge || i==right->edge))) {
             Color underlay=comparison ? gd_graph_branch_color(comparison->edges[i]):shared_color;
-            if (edge->a==edge->b) DrawCircleLines((int)a.x+24,(int)a.y-24,27,underlay);
-            else gd_graph_underlay_line(a,b,7,underlay,!edge->active || conflict);
+            gd_graph_route_line(&route,7,underlay,!edge->active || conflict);
         }
         if (challenges && witness_edge(routes,witness,layout->nodes[edge->a].key,layout->nodes[edge->b].key)) color=graph_selected;
         if (conflict && selection->cell != edge->key) color = (Color){238, 114, 120, 255};
-        if ((focused || model->skill_mode) && edge->a == edge->b) DrawCircleLines((int)a.x+24, (int)a.y-24, 24, color);
-        else if (edge->active && !conflict) DrawLineEx(a, b, 2.5f, color);
-        else {
-            int segment;
-            for (segment = 0; segment < 16; segment += 2) {
-                float start = segment/16.0f, end = (segment+1)/16.0f;
-                DrawLineEx((Vector2){a.x+(b.x-a.x)*start, a.y+(b.y-a.y)*start},
-                           (Vector2){a.x+(b.x-a.x)*end, a.y+(b.y-a.y)*end}, 1.5f, color);
-            }
-        }
+        gd_graph_route_line(&route,edge->active && !conflict ? 2.5f:1.5f,color,!edge->active || conflict);
         if (focused || model->skill_mode) {
-            float dx = b.x-a.x, dy = b.y-a.y, length = sqrtf(dx*dx+dy*dy);
-            if (length > 1) {
-                Vector2 tip;
-                dx /= length; dy /= length; tip = (Vector2){b.x-dx*20, b.y-dy*20};
-                DrawLineEx(tip, (Vector2){tip.x-dx*13-dy*6, tip.y-dy*13+dx*6}, 3, color);
-                DrawLineEx(tip, (Vector2){tip.x-dx*13+dy*6, tip.y-dy*13-dx*6}, 3, color);
-            } else {
-                DrawLineEx((Vector2){a.x+24,a.y}, (Vector2){a.x+34,a.y-9}, 3, color);
-                DrawLineEx((Vector2){a.x+24,a.y}, (Vector2){a.x+34,a.y+7}, 3, color);
-            }
+            gd_graph_route_arrow(&route,color);
             if (focused && selection->cell==edge->key) {
                 const char *label=gd_field_name(model->edges[edge->key].field);
-                int width=MeasureText(label,13), x=(int)((a.x+b.x-width)/2), y=(int)((a.y+b.y)/2)-8;
+                int width=MeasureText(label,13), x=(int)middle.x-width/2, y=(int)middle.y-8;
                 DrawRectangle(x-3,y-2,width+6,18,graph_background); DrawText(label,x,y,13,color);
             }
         } else {
             const char *label = TextFormat("%d cases", model->cells[edge->key].pair_count);
-            int width = MeasureText(label, 15), x = (int)((a.x+b.x-width)/2), y = (int)((a.y+b.y)/2)-9;
+            int width = MeasureText(label, 15), x = (int)middle.x-width/2, y = (int)middle.y-9;
             DrawRectangle(x-4, y-2, width+8, 20, graph_background); DrawText(label, x, y, 15, color);
         }
     }
@@ -619,6 +604,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     if (!analysis) { CloseWindow(); if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
     memset(analysis,0,sizeof(*analysis));
     if (draft) SetExitKey(KEY_NULL);
+    measure_directed(layout);
     SetWindowMinSize(1000, 650); SetTargetFPS(60); rlImGuiSetup(true);
     igGetIO_Nil()->IniFilename = NULL; igGetIO_Nil()->LogFilename = NULL;
     igGetStyle()->FontScaleMain = 1.1f;

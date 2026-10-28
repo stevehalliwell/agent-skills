@@ -173,7 +173,7 @@ int gd_mda_path(const GD_Mda *mda, int target, int *nodes, int *links, int capac
     return count;
 }
 int gd_mda_layout(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, int bands) {
-    int mapping[GD_MAX_RECORDS], counts[4] = {0}, placed[4] = {0}, i;
+    int mapping[GD_MAX_RECORDS], i;
     int has_systems = 0;
     memset(layout,0,sizeof(*layout)); layout->group_count = 1; layout->horizontal = 1;
     for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_MDA_SYSTEM) has_systems = 1;
@@ -182,18 +182,12 @@ int gd_mda_layout(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, i
         if (gd_mda_role(model->records[i].role)) {
             GD_LayoutNode *node = &layout->nodes[layout->node_count]; int role = model->records[i].role-GD_MDA_MECHANIC;
             mapping[i] = layout->node_count++; node->key = i; node->label = model->records[i].name;
-            node->layer = role-(!has_systems && role > 1); ++counts[node->layer];
+            node->layer = role-(!has_systems && role > 1); node->width=220; node->height=96;
         }
     }
     for (i = 0; i < mda->link_count; ++i) if (mda->links[i].resolution == GD_MDA_RESOLVED) {
         const GD_Edge *edge = &model->edges[mda->links[i].edge]; GD_LayoutEdge *line = &layout->edges[layout->edge_count++];
         line->a = mapping[edge->source]; line->b = mapping[edge->target]; line->key = i; line->active = 1; line->relation=edge->field;
     }
-    if (!gd_layout_arrange(layout,bands ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE,GD_SORT_NAME)) return 0;
-    if (bands) for (i = 0; i < layout->node_count; ++i) {
-        GD_LayoutNode *node = &layout->nodes[i];
-        node->x = node->axis = node->layer*280.0f;
-        node->y = node->anchor = (placed[node->layer]++-(counts[node->layer]-1)/2.0f)*105.0f;
-    }
-    return 1;
+    return gd_layout_arrange(layout,bands ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE,GD_SORT_NAME);
 }

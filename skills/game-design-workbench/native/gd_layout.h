@@ -11,16 +11,24 @@ typedef struct {
     int key, group, side, degree, layer;
     float axis, anchor;
     float x, y, vx, vy;
+    float width, height; /* Drawing bounds; zero uses documented text/card defaults. */
 } GD_LayoutNode;
 /* Opaque incident-role tags: authored GD_Field, derived case pair, or resource
    relation kind. Endpoint a/b is part of incident role, never inferred flow. */
 enum { GD_RELATION_CASE_PAIR=GD_FIELD_COUNT, GD_RELATION_RESOURCE_BASE };
 typedef struct { int a, b, key, active, relation; } GD_LayoutEdge;
 typedef struct { float x, y, width, height; int first, count; } GD_LayoutGroup;
+typedef struct { int a,b,edge,ordinal,count; } GD_LayoutLane;
+typedef struct { float x,y; } GD_LayoutPoint;
+typedef struct { GD_LayoutPoint points[8]; int count; } GD_LayoutRoute;
 typedef struct {
     GD_LayoutNode nodes[GD_MAX_RECORDS];
     GD_LayoutEdge edges[GD_MAX_PAIRS];
     GD_LayoutGroup groups[GD_MAX_RECORDS];
+    GD_LayoutLane lanes[GD_MAX_PAIRS];
+    int edge_lane[GD_MAX_PAIRS], route_lanes[GD_MAX_RECORDS];
+    float layer_span[GD_MAX_RECORDS+2];
+    int directed_shelf;
     int order[GD_MAX_RECORDS], position[GD_MAX_RECORDS];
     int node_count, edge_count, group_count;
     GD_LayoutMode mode;
@@ -33,6 +41,15 @@ typedef struct {
 /* Call after filling nodes/edges/counts; labels/topology must outlive layout.
    Rearrangement resets positions/velocities, not caller topology or identities. */
 int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort);
+/* Called by arrange after topology validation. Per-pair lanes retain source
+   index/direction; no allocation or authored-edge changes. */
+void gd_layout_route_prepare(GD_Layout *layout);
+float gd_layout_node_width(const GD_LayoutNode *node);
+/* At most eight polyline points. Geometry follows live dragged positions.
+   Directed long/back links use group-side corridors; not a complete obstacle
+   solver. MDA retains its card/Bezier renderer. No reachability semantics. */
+void gd_layout_route(const GD_Layout *layout, int edge, GD_LayoutRoute *route);
+float gd_layout_route_distance(const GD_Layout *layout, int edge, float x, float y);
 /* One fixed display step; at most 32 repulsion samples/node + all active edges.
    held_node is temporarily fixed by pointer drag, or -1. No wall-clock dependency. */
 void gd_layout_step(GD_Layout *layout, int held_node);

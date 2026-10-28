@@ -977,7 +977,10 @@ TEST(skill_chain,
     for (rank_mode = 0; rank_mode < 2; ++rank_mode) for (horizontal = 0; horizontal < 2; ++horizontal) {
         TEST_ASSERT(gd_skill_layout(model, layout, rank_mode, horizontal, GD_SORT_NAME));
         TEST_ASSERT(layout->node_count == 9 && layout->edge_count == 7);
-        if (rank_mode) TEST_ASSERT(horizontal ? layout->nodes[root_node].y != layout->nodes[late].y : layout->nodes[root_node].x != layout->nodes[late].x);
+        /* Routed long links, rather than distinct root columns, must avoid
+           false incidence with the late independent root. */
+        if (rank_mode) for (i=0;i<layout->edge_count;++i) if (layout->edges[i].a!=late && layout->edges[i].b!=late)
+            TEST_ASSERT(gd_layout_route_distance(layout,i,layout->nodes[late].x,layout->nodes[late].y)>20);
         for (step = 0; step < 120; ++step) {
             /* Pointer drag attempts to move a prerequisite past descendants,
                including paused input (before stepping) and held-node settling. */
@@ -2436,6 +2439,7 @@ TEST(rules_allocation_failure,
     gd_destroy(model);
 )
 #include "test_graph_closure.h"
+#include "test_graph_drawing.h"
 int main(int argc, char **argv) {
     int failed = 0;
     if (argc != 2 || strlen(argv[1]) >= sizeof(root)) { fputs("Usage: test-core NEW-FIXTURE-DIRECTORY\n", stderr); return 2; }
@@ -2462,10 +2466,11 @@ int main(int argc, char **argv) {
     failed += test_control_import_roundtrip(); failed += test_control_import_legacy_dependent(); failed += test_control_import_strings(); failed += test_control_import_failures();
     failed += test_skill_progression_modes(); failed += test_route_layout_capacity();
     failed += test_graph_analysis_projection(); failed += test_graph_analysis_roles(); failed += test_graph_comparison(); failed += test_graph_paths(); failed += test_graph_path_limits(); failed += test_graph_bypass_ordering(); failed += test_graph_analysis_limits();
+    failed += test_directed_drawing_order(); failed += test_directed_drawing_routes();
     failed += test_graph_closure_oracle(); failed += test_graph_closure_limits(); failed += test_graph_foundations_adapter();
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/78 passed\n", 78-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/80 passed\n", 80-failed);
     return failed ? 1 : 0;
 }

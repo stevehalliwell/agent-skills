@@ -3,6 +3,7 @@
 #include "gd_graph_analysis.h"
 #include "raylib.h"
 #include <stdio.h>
+#include <math.h>
 /* Shared palette for all graph adapters; source colors/arrowheads stay above
    these underlays. Mixed link classes remain explicit rather than choosing
    one endpoint's classification. Node classes are never mixed. */
@@ -37,6 +38,19 @@ static inline void gd_graph_underlay_line(Vector2 a, Vector2 b, float width, Col
         DrawLineEx((Vector2){a.x+(b.x-a.x)*start,a.y+(b.y-a.y)*start},
                    (Vector2){a.x+(b.x-a.x)*end,a.y+(b.y-a.y)*end},width,color);
     }
+}
+static inline void gd_graph_route_line(const GD_LayoutRoute *route, float width, Color color, int dashed) {
+    int i;
+    for (i=1;i<route->count;++i) gd_graph_underlay_line((Vector2){route->points[i-1].x,route->points[i-1].y},
+        (Vector2){route->points[i].x,route->points[i].y},width,color,dashed);
+}
+static inline void gd_graph_route_arrow(const GD_LayoutRoute *route, Color color) {
+    GD_LayoutPoint from=route->points[route->count-2],tip=route->points[route->count-1];
+    float dx=tip.x-from.x,dy=tip.y-from.y,length=sqrtf(dx*dx+dy*dy);
+    if (length<1) return;
+    dx/=length; dy/=length;
+    DrawLineEx((Vector2){tip.x,tip.y},(Vector2){tip.x-dx*13-dy*6,tip.y-dy*13+dx*6},3,color);
+    DrawLineEx((Vector2){tip.x,tip.y},(Vector2){tip.x-dx*13+dy*6,tip.y-dy*13-dx*6},3,color);
 }
 static const Color gd_path_color={230,142,180,255};
 static const Color gd_bypass_color={89,220,226,255};
