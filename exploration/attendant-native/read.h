@@ -629,6 +629,37 @@ static result_rows *collect_search(context *c, read_options *options) {
 #include "diagnostics-cli.h"
 #include "write-cli.h"
 
+/* Discovery only: never bootstrap or consume the managed feedback collection.
+   Count from the same prepared read snapshot used for the user's result. */
+static const char *with_meta_comments(context *c, const char *output) {
+    collection *table = NULL;
+    field *status = NULL;
+    const char *metadata, *tail;
+    char *extended;
+    size_t a, b;
+    int i, pending;
+    for (i = 0; i < c->collection_count; i++) if (!strcmp(c->collections[i].name, "_meta_comments")) table = &c->collections[i];
+    if (!table) return output;
+    for (i = 0; i < table->field_count; i++) if (!strcmp(table->fields[i].name, "status")) status = &table->fields[i];
+    if (!status || strcmp(status->kind, "enum") || status->declaration.count != 2 ||
+        status->declaration.items[0].kind != VALUE_STRING || status->declaration.items[1].kind != VALUE_STRING ||
+        strcmp(status->declaration.items[0].text, "pending") || strcmp(status->declaration.items[1].text, "resolved")) {
+        metadata = "{\"pending\":null,\"error\":\"incompatible-schema\"}";
+        fputs("_meta_comments reminder unavailable: expected status: [pending, resolved].\n", stderr);
+    } else {
+        sqlite3_stmt *s = prepare(c, "SELECT count(*) FROM \"_meta_comments\" WHERE status='pending'");
+        if (sqlite3_step(s) != SQLITE_ROW || sqlite3_column_type(s, 0) != SQLITE_INTEGER) fail(c, "Cannot count pending _meta_comments");
+        pending = sqlite3_column_int(s, 0);
+        if (pending < 0 || pending > MAX_RECORDS || finalize_builder(c, s) != SQLITE_OK) fail(c, "Cannot finish _meta_comments count");
+        metadata = format_text(c, "{\"pending\":%d}", pending);
+        if (pending) fprintf(stderr, "%d _meta_comments %s waiting for you.\n", pending, pending == 1 ? "is" : "are");
+    }
+    tail = format_text(c, ",\"meta_comments\":%s}", metadata);
+    a = strlen(output); b = strlen(tail);
+    if (a + b - 1 > OUTPUT_CAPACITY) fail(c, "Result plus _meta_comments report exceeds output capacity");
+    extended = allocate(c, a + b); memcpy(extended, output, a - 1); memcpy(extended + a - 1, tail, b + 1);
+    return extended;
+}
 static int native_read_main(context *c, int argc, char **argv) {
     read_options options = parse_read_options(c, argc, argv);
     const char *output;
@@ -658,6 +689,7 @@ static int native_read_main(context *c, int argc, char **argv) {
         sqlite3_finalize(s);
         output = result_json(c, rows);
     }
+    if (!strcmp(options.command, "query") || !strcmp(options.command, "search")) output = with_meta_comments(c, output);
     if (sqlite3_close(c->db) != SQLITE_OK) fail(c, "Cannot close read-only database");
     c->db = NULL;
     if (c->applied_corrections || c->diagnostic_count) {

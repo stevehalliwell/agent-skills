@@ -27,7 +27,7 @@ Proposed v1 schema, finalized here for implementation:
 ---
 status: [pending, resolved]
 target_path: ""
-source_hash: ""
+target_hash: ""
 range_start: 0
 range_end: 0
 range_unit: [unicode-codepoint]
@@ -35,10 +35,10 @@ selected_text: ""
 ---
 ```
 
-Use normal generated `id`, `name`, `created_at`, `desc`, `tags` metadata. Comment goes in Markdown body, not DB-only storage. `target_path` identifies selected saved file using core's absolute path convention; UI may display workspace-relative path. Built-in `source_path` continues to identify the comment Markdown itself. No automatic path rewriting after relocation.
+Use normal generated `id`, `name`, `created_at`, `desc`, `tags` metadata. Comment goes in Markdown body, not DB-only storage. `target_path` identifies selected saved file using core's absolute path convention; UI may display workspace-relative path. Built-in `source_path`/`source_hash` continue to identify/hash the comment Markdown itself; target fields must not collide with either. No automatic path rewriting after relocation.
 
 - Ranges: zero-based Unicode code-point offsets, end-exclusive, in complete saved Markdown including front matter. CR/LF each count as code points. Not UTF-8 byte or UTF-16 code-unit offsets. UI adapters translate explicitly; tests include non-ASCII/supplementary characters and CRLF.
-- `source_hash`: lowercase SHA-256 of exact saved UTF-8 file bytes. Verify selected text equals specified source range at submission. Validate integer range bounds and UTF-8 before publishing comment.
+- `target_hash`: lowercase SHA-256 of exact saved UTF-8 file bytes. Verify selected text equals specified source range at submission. Validate integer range bounds and UTF-8 before publishing comment.
 - Dirty document offers explicit **Save & Send** or Cancel. Failed save sends nothing. After successful save, create feedback against saved text/hash. Failed comment creation leaves source saved and reports failure; never imply comment was queued.
 - Reading does not consume feedback. Agent queries pending records, considers/responds in task context, then explicitly resolves through ordinary `update`. Resolution is not automatic source deletion or blanket approval for unrelated work.
 - Feedback can outlive source changes: stored selection remains readable; changed hash marks range stale. Do not silently apply old range to new content.
@@ -48,7 +48,7 @@ Example agent loop, against native executable:
 
 ```sh
 native query -p "$workspace" \
-  -s 'SELECT name,source_path,target_path,source_hash,range_start,range_end,range_unit,selected_text FROM _meta_comments WHERE status=:status ORDER BY created_at,name' \
+  -s 'SELECT name,source_path,target_path,target_hash,range_start,range_end,range_unit,selected_text FROM _meta_comments WHERE status=:status ORDER BY created_at,name' \
   -P '{"status":"pending"}'
 # Open returned comment Markdown to read body, inspect source, respond/act.
 native update -p "$workspace" -c _meta_comments \
@@ -80,8 +80,8 @@ Do not expand Unicode search or long-path/UNC qualification now: recorded corpus
 
 ## Ordered steps and observable acceptance
 
-- [ ] **0. Recent GUI dependency compatibility check.** Pin recent upstream ImGui/Markdown candidates, compare local versions and cimgui bindings, then compile minimal C99 host with both compilers. Verify text selection can expose Markdown source positions, not only clipboard text; examine narrow bridge if wrapper missing. Keep this investigation independent of feedback discovery, but do not build GUI on unverified old dependencies.
-- [ ] **1. Native pending-feedback discovery.** Add query/search sidecar and concise notice; compatible/absent/zero/incompatible cases. Ordinary querying must never create collection. Both compilers and relative/absolute configs; unchanged source/hash checks, reading does not consume, resolving clears count, body remains intact. Existing read/CLI/search-mode/real-data suites remain green.
+- [ ] **0. Recent GUI dependency compatibility check.** Build/link/render portion passed in [C99 GUI spike](../../spikes/cimgui-richmd-c99/RESULTS.md): pinned ImGui 1.93.0/RichMd 1.0.0, regenerated cimgui, Zig-built DLL, strict C99 Zig host and CJIT host. Actual editing, selection/copy and C link callbacks passed. Remaining gate: export and verify original-Markdown selection positions, not clipboard text alone. This does not block feedback core or source-selection GUI work; it blocks claiming preview feedback complete.
+- [x] **1. Native pending-feedback discovery.** Add query/search sidecar and concise notice; compatible/absent/zero/incompatible cases. Ordinary querying must never create collection. Both compilers and relative/absolute configs; unchanged source/hash checks, reading does not consume, resolving clears count, body remains intact. Existing read/CLI/search-mode/real-data suites remain green.
 - [ ] **2. Managed collection and feedback core.** Canonical schema/usage/template seeds; narrowly allow `_meta_comments` alias without relaxing normal record-name/path validation. First-Send bootstrap uses staged publication and rollback; no conflicting-file overwrite. Create one comment with generated identity, range/text/hash verification and Markdown body. Recoverable API for GUI, tested headlessly with both compilers. Failure tests cover save failure, schema/path conflict, invalid offsets, source change and comment publication after successful save. Ordinary `.mjs` and native query/update read/resolve same records.
 - [ ] **3. GUI build and read-only workspace.** Prove CJIT/Zig application compile/link with chosen dependency packaging; separate outputs, no CLI dependency on GUI/C++. Open owned fixture workspace, browse records and show document tabs/preview. Source reference clicks open/focus correct tabs; unresolved links visible. Check clean shutdown and bad-file errors without losing workspace.
 - [ ] **4. Editing and source-selection feedback.** Editable source, undo, save/discard/cancel, source selection and comment composer. Save & Send uses step 2; feedback pending badge/list opens source. End-to-end GUI send → CLI query → explicit resolution. Test UTF-8 offsets/CRLF and stale source markers. Preview-selection mapping follows as part of completing feedback surface, not guessed offsets.
@@ -91,4 +91,9 @@ Do not expand Unicode search or long-path/UNC qualification now: recorded corpus
 
 ## Checks
 
-Planning checkpoint precedes implementation commits. Put actual completed work and evidence here; step checkboxes describe whole outcomes, not intermediate experiments. Do not mark complete based only on compilation or headless checks when visual behavior remains untested.
+- Planning/research checkpoint committed as `26b7894` before implementation. Subsequent `spike/cimgui-richmd-c99` verifies dependency build/link/render through both compilers. Step 0 remains partial only because original-source selection-range export is not implemented. Spike documents compatibility patches and teardown/provenance checks; no further broad dependency research needed before step 2.
+- Step 1 implemented in `read.h`: query/search sidecar and notice, same read snapshot, no inbox bootstrap or FTS work solely for count. Existing output unchanged when collection absent. Lifecycle-only schema recognition; complete managed-schema/bootstrap validation belongs to step 2.
+- `meta-comments-check.mjs`: 11 cases × CJIT/Zig × relative/absolute paths = 44 passing cases. Covers absent/empty/pending/resolved/incompatible, inbox reads, external status edits, hidden/malformed records, non-notifying commands, legacy reuse, source preservation and cold query without FTS.
+- Both native builds pass existing read, CLI and 13-case search-mode suites in both config forms; 66 copied-real-data workflow cases and 21 harness/existing-runner tests pass. Evidence: `build/review/meta-comments-results.json`, `build/meta-comments-{results,read-results,cli-results,mode-results}.jsonl`, `build/meta-comments-real-data-results.json`.
+- Corrected managed selected-file hash field to `target_hash` during fixture validation: built-in `source_hash` is reserved for comment Markdown, just as built-in `source_path` is. No existing source schema or behavior changed.
+- Feedback discovery and GUI spike remain uncommitted after planning checkpoint. Spike has working standalone GUI window, not integrated Attendant workspace. No managed collection bootstrap, feedback creation, new benchmark or launcher change yet. Continue with step 2; defer preview-range proof until before preview feedback delivery.

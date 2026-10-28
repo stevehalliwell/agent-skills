@@ -25,6 +25,9 @@ node exploration/attendant-native/cli-check.mjs \
 node exploration/attendant-native/incremental-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
+node exploration/attendant-native/meta-comments-check.mjs \
+  exploration/attendant-native/build/projection-cjit.exe \
+  exploration/attendant-native/build/projection-zig.exe
 node exploration/attendant-native/search-mode-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
@@ -42,6 +45,7 @@ Suites replace generated copies under ignored `build/review/`, including paths w
 - `read-results.json`: 23 oracle comparisons and 27 rejection cases per scenario; both projection producers, input transports, live usage, duplicate parameter semantics, UTF-8, byte/row limits, budgets and deterministic ties.
 - `prepare-results.json`: 34 lifecycle cases per scenario; missing/changed/broken projection, equal-stat edits, collection changes, malformed-source skipping, SQL/build failures, bounded busy-writer refusal and genuine hot rollback journal preservation.
 - `incremental-results.json`: 11 focused cases per scenario; changed-only row/FTS writes, metadata-only refresh, mid-delta transaction rollback, ID swaps, global blocking/unblocking, held WAL snapshots, shared create/update refresh, non-writing doctor and full-rebuild refusal with active readers.
+- `meta-comments-results.json`: 11 cases per scenario; query/search pending sidecar, absent/empty/incompatible inbox, explicit resolution, unchanged reads, hidden/malformed comments, non-notifying commands, legacy reuse and cold lookup without FTS.
 - `search-mode-results.json`: 13 cases per scenario; cold commands without FTS, population/mode rollback, bounded competing writer, successful upgrade with old WAL reader, generation preservation, pending edits, private rebuild failure, persistent maintenance, enabled rebuilds and legacy handoff.
 - `cli-results.json`: 19 cases and 18 rejected batches per scenario. Covers read-only doctor/validation, strict parity, corrections, source/body preservation, Unicode encoding, defaults/templates/UUIDs, malformed and 5000-deep YAML, duplicate heuristics, schema errors, collection capacity, partial publication and post-write projection failure.
 
@@ -137,6 +141,12 @@ Demo create/add-table names must not already exist; rerun acceptance to reset ge
 - Query: `--sql`/`-s`, optional `--params`/`-P`. Search: `--query`/`-q`, optional `--collections`/`-c`. Both accept `--limit`/`-l`, default 100.
 - Writes: `--collection`/`-c`, `--items`/`-i`. Add-table: `--directory`/`-d`, optional `--alias`/`-a`.
 - `@path` and `-` read file/stdin for SQL, params, search text, collection filters and items. Only one option may consume stdin. JSON transport is strict, not JSON5. Parameters allow scalar/null values, bare or prefixed named keys and numbered `?1` names. Unbound parameters remain NULL.
+
+## Pending feedback discovery
+
+When configured `_meta_comments` has `status: [pending, resolved]`, native query/search append `meta_comments: {pending: N}` from same prepared read snapshot. Positive count prints concise reminder on stderr; reading does not resolve. Empty inbox reports zero silently; absent collection leaves output unchanged. Incompatible lifecycle reports `pending: null, error: "incompatible-schema"` with warning, not false zero. Count covers valid visible projected pending rows; malformed records retain normal diagnostics.
+
+This is discovery only: no automatic collection creation, extra FTS build, new messaging command or notices on doctor/validate/schema/sync/write/help. Full managed storage/GUI behavior and recent dependency gate: [GUI-PLAN.md](GUI-PLAN.md), [GUI-DEPENDENCIES.md](GUI-DEPENDENCIES.md). GUI/launcher not implemented by this slice.
 
 ## Diagnostics and corrections
 
