@@ -4,7 +4,7 @@
 
 Current tools answer declared relationships and selected conditional-rule hypotheses. They do not yet answer shared-outcome, actor-state, gameplay-role or resource-conversion questions end to end. Better layout does not close those gaps.
 
-- Inventory baseline: `8e6e5d7`, accepted focus/readability checkpoint. Later Grid and Resource-report continuations noted below; original nine CLI probes remain historical evidence, not rerun results.
+- Inventory baseline: `8e6e5d7`. Current independent review includes accepted Grid `89b54e3`, Resource report `f233e7c`, focus/pickup `5c1e17e` and conditional Resource witnesses. All original nine CLI probes were rerun, plus Resource overview/six route-frontier-identity probes; current evidence below.
 - Question authority: [original feedback](../../.pi/visualiser-review-notes.md). Current ownership: [todo.md](../../todo.md), Reviews 02–12 and Slice 6.
 - **Narrow answer:** stated operation returns the stated declared fact, with limits. Not acceptance of the broader design question.
 - **Partial:** source representation, kernel or inspection exists; requested question/result still lacks coverage.
@@ -14,10 +14,10 @@ Current tools answer declared relationships and selected conditional-rule hypoth
 
 ## Resource-report continuation
 
-- After accepted Grid checkpoint `89b54e3`, read-only `gd resources` report exposes existing C99 extraction to agents. No production direction, composed outcomes, route eligibility or actor-state applicability inferred.
+- Resource report checkpoint `f233e7c` exposed direct C99 extraction. Current continuation adds separate typed conditional structural witnesses and status eligibility, not production inferred from incidence. No feasibility, state compatibility, inventory or composed outcomes checked.
 - Live retained counts: crate 30 nodes / 17 relations, 2 known deltas; plumber 522 nodes / 462 relations, 42 known and 30 unknown deltas. Counts describe retained declarations, not role diversity, economic importance or complete outcomes. Explicit unknown-condition/effect declarations remain on 15 crate and 161 plumber cases.
 - Plumber coin supply report retains `this + 1[coin]` as checked delta +1; `this + 1[coin] - {control-vars/coins-for-life}` and capped `min(this + 1[life], {control-vars/life-capacity})` retain unknown/unrecognized deltas. No unconditional award or complete conversion inferred.
-- Evidence: `native/build/checks-1d2e38ad01004a36a3bfc17edda2a42e/resources-{crate-puzzle,little-plumber-guy-nes}.json`. Reproduce through `native/test.ps1`; new Node resource tests check guards, deltas/caps, source identities, scoped calls, missing/unloaded roles, malformed input and explicit route unavailability. Full Resource semantics remain Review 02/09 work.
+- Current headless evidence: `native/build/mario-question-review-final/`. Reproduce with `node scripts/audit-workbench-design-questions.mjs --output NEW_DIRECTORY` after native build. Sixteen read-only probes retain exact argv, executable/input hashes, JSON/stderr and typed declaration inventory. Source hashes unchanged. Current routes use stable IDs and explicit binding counts; unqueried overview is distinct from no known direct witness. Full composition-aware Resource semantics remain Review 02/09 work.
 
 ## Questions and current answers
 
@@ -34,7 +34,7 @@ Current tools answer declared relationships and selected conditional-rule hypoth
 
 **Partial representation; missing outcome-level query/view.**
 
-- Agent can inspect actor-qualified `axes/Life=dead` writes and origins. No existing command groups all causes into shared outcome destinations with retained gates and actor identity.
+- Current native-typed inventory retains 17 `axes/Life=dead` declaration writes across all participants, with actor/source/case provenance. This is not 17 hero-death causes. No existing command groups all causes into shared outcome destinations with retained gates and actor identity.
 - Visual Resource nodes represent case-local/shared facets and roles, not a general actor/state/value outcome graph. A `death-and-retry` mechanic record is not the same concept as a particular actor becoming dead.
 - Generic reachability, shape families and shared-neighbor marks do not supply missing outcome identity. Do not merge unrelated instances merely because noun/axis/state text matches.
 - Owner: Reviews 02/09 outcome derivation and identity; Review 10 reusable convergence query.
@@ -97,11 +97,12 @@ Current tools answer declared relationships and selected conditional-rule hypoth
 
 ### Q9 — How can one resource become another, through which rules and side inputs?
 
-**Partial extraction; missing route delivery.**
+**Narrow direct conditional witnesses; broader conversion question partial.**
 
-- Preview retains direct conditions, enum/quantity writes, checked signed deltas, preservation and guarded explicit invocation links. `gd_resource_graph.h` explicitly excludes route/composed-outcome expansion and production direction.
-- `rules --case` evaluates one simultaneous proposal with explicit mapped calls; it is not a sequence planner or resource-conversion route query.
-- `gd resources` now exposes direct nodes, incidence relations and findings, with `routes.available: false` and incomplete coverage. Directed `--from ... --to ...` queries remain unimplemented; unavailable is not no path. Current preview/overview is incidence, not flow; layout cannot create production edges.
+- `gd resources --from NODE_ID --to NODE_ID` and upstream `--to NODE_ID` now expose typed enabling/debit/credit/state-proposal witnesses, whole guards, all side declarations and bounded alternatives. Same kernel drives unified Resource selection/highlighting; optional witness-only display does not change query scope.
+- Synthetic silver → gold → key retains wood side debit and proposed alternative, distinguishes enabling keys from consumed inputs, and never joins separate merchant supplies. Calls and unknown-direction/capped writes remain frontiers; closed/self-return cycles are not enumerated.
+- Mario has zero explicit `pools:` bindings. Repeated Bank/Hero labels and noun types do not establish global pools. Its direct +1 coin declaration is queryable; capped life change stays unknown, and cross-case role chains remain an authored-identity gap. Three upstream structural prefixes of one coin activation are not three independent recipes.
+- `rules --case` still evaluates one simultaneous proposal with explicit mapped calls, not a sequence. Resource witnesses do not evaluate feasibility, state compatibility, inventory or composed/final outcomes. Current whole preview/overview remains incidence, not flow; no root-oriented Resource layout delivered.
 - Owner: Review 02 bounded headless graph/routes, then Review 09 presentation. Keep AND inputs, alternatives, pool identity, caps and unresolved conditions.
 
 ### Q10 — Which resources have few roles, and which connections are pivotal?
@@ -148,16 +149,20 @@ Current tools answer declared relationships and selected conditional-rule hypoth
 
 ## Concrete agent evidence
 
-Nine final CLI invocations completed with `ok=true`, exit 0. Inputs: shipped plumber example, read-only; before/after SHA-256 hashes unchanged. No game model, experiment, trial or viewer launched by this audit.
+Sixteen current CLI invocations completed with `ok=true`, exit 0. Inputs: shipped plumber example, read-only; before/after SHA-256 hashes unchanged. No game model, experiment, trial or viewer launched by audit script. Separate app-local viewer evidence is engineering-only.
 
-Evidence: `skills/game-design-workbench/native/build/question-audit-99f501cacdf2468e83127f12eb15f624/`. `metadata.json` retains exact argv, baseline commit, executable hash, input hashes and final exit/error results. Per-command JSON/stderr remain ignored build artifacts. Source definitions and code references below are durable evidence if artifacts are cleaned.
+Evidence: `skills/game-design-workbench/native/build/mario-question-review-final/`. `metadata.json` retains exact argv, commit, executable/input hashes and final exit/error results. Original nine-probe historical evidence remains at `question-audit-99f501cacdf2468e83127f12eb15f624/`. Per-command JSON/stderr remain ignored build artifacts. Durable script reproduces current probes; source definitions and anchors below remain if artifacts are cleaned.
 
 - **E1 — `powered-tall.json`:** `interactions/touch-walker-powered#powered-side-contact`, Player alive/tall/unprotected, Walker alive, explicit ordered side-contact fact. `applicability=true`; proposals include Form `small`, Protection `protected`, ProtectionTime `1` in declared axis unit, and Life preservation `alive`. Both `constraints_complete` and `values_complete` remain false; `limited=false`. No Walker result invented.
 - **E2 — `small-walker.json`:** small/unprotected Hero and explicit side-contact fact. Declared Life `dead` and `this - 1[life]` writes remain conditional; applicability/requirements `unknown`. Supplying known state/contact does not fill opaque authored conditions or deduplication semantics.
 - **E3 — `gap-tall.json`:** tall-form hypothesis and explicit lower-boundary contact. Declared Life `dead` and life debit remain conditional, applicability `unknown`; constraints/values incomplete. The authored rule ignores form/protection, but the tool does not prove a complete lethal transition from these facts alone.
 - **E4 — `skills.json`:** root `skill-atoms/fall-stomp`, known `stomp-walker` and `control-fall`. `fall-stomp`: two supplied prerequisites, none missing, `all_declared_prerequisites_supplied`. `jump-stomp`: `land-on-target` missing. Known `control-fall` does not auto-mark its prerequisite known; hypothetical knowledge is not observed learning.
 - **E5 — `mda.json`:** forward query from `mechanics/enemy-contact`; returned nine node/path entries. This is supplied-source trace evidence, not observed experience.
-- `matrix.json`, `connectivity.json`, `scaffolding.json` and `rules.json` retain corresponding source/case/role declarations and domain checks. They do not add the missing query surfaces listed above.
+- **E6 — `coin-upstream.json`, `coin-enables-credit.json`, `coin-accepted-only.json`:** target is below-threshold Bank/CoinAmount facet. Three upstream structural prefixes share one activation; explicit Coin/Availability → Bank query returns one enabling-plus-credit witness. Checked +1 coin is not final award; whole context, Bank guard, unknown collection/deduplication and all side writes remain. Accepted-only retains same source set for these accepted Mario declarations.
+- **E7 — `capped-life-frontier.json`:** no known direct witness to threshold Lives/Amount; capped expression appears in all-eligible-source frontiers. Not proof of no life award or impossible conversion. No starting value supplied, no final capped gain evaluated.
+- **E8 — `cross-case-identity-gap.json`, `unbound-coin-role.json`:** no cross-case witness from below-threshold Bank to threshold Score; selected coin-progress role expands zero explicit facet identities. This exposes missing identity bindings, not absence of intended resource behavior.
+- **E9 — `declaration-index.json`:** 17 death-state writes across participants, 42 known/30 unknown quantity writes, six guarded invocations, zero explicitly shared pool facets. Counts are declaration inventory, not gameplay prevalence, full outcomes or distinct hero-death causes.
+- `matrix.json`, `connectivity.json`, `scaffolding.json` and `rules.json` retain source/case/role declarations and domain checks. They do not add missing semantic query surfaces.
 
 Representative case invocation, from repository root:
 
@@ -196,9 +201,9 @@ Other retained authoring questions: separate run verb/air-control breakpoints; p
 
 ## Delivery consequences
 
-- Keep accepted focus/readability checkpoint separate from semantic-query completion. Animation, optional camera auto-fit and manual pins remain future tasks.
-- Review 07 matrix grid/zoom/font work remains open. Resource root-oriented layout requires genuinely directed data, not current incidence.
-- Review 02 is no longer waiting for Review 03 refinement: that bounded slice was accepted. Resource routes/composed outcomes still need delivery against the existing contract.
+- Keep visual repairs separate from semantic completion. Focus animation, optional camera auto-fit and pickup offset implemented in `5c1e17e`; manual comfort/pointer review remains open. Pins/font remain deferred UX choices.
+- Review 07 Grid/zoom accepted as `89b54e3`. Resource root-oriented layout remains open: selected directed witness overlay does not turn whole incidence projection into flow.
+- Review 02 now delivers direct conditional structural witnesses, not full composition-aware routes/outcomes. Its broader contract and Resource usefulness review remain open.
 - Review 08 must assess actual unresolved-reference display per consumer. Review 09 owns actor/state/outcome/role presentation; do not substitute graph family labels.
 - Review 10 needs named result/CLI contracts. Reusing a C99 kernel in a renderer does not alone expose a headless answer.
 - This audit completes the support/ownership inventory only. It does not complete those tasks or establish usefulness of dense overview, new query metrics or all original design questions.

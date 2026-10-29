@@ -21,7 +21,7 @@ TEST(resource_output_limits,
     out=fopen(path,"wb"); TEST_ASSERT(out && gd_write_resource_result(out,model,graph,1,NULL)); TEST_ASSERT(fclose(out)==0);
     out=fopen(path,"rb"); TEST_ASSERT(out && !fseek(out,0,SEEK_END)); size=ftell(out);
     TEST_ASSERT(size>4096 && !fseek(out,-4096,SEEK_END) && fread(tail,1,4096,out)==4096); tail[4096]=0;
-    TEST_ASSERT(strstr(tail,"\"graph_limited\":true") && strstr(tail,"\"unexamined_cases\":1") && strstr(tail,"\"routes_available\":false"));
+    TEST_ASSERT(strstr(tail,"\"graph_limited\":true") && strstr(tail,"\"unexamined_cases\":1") && strstr(tail,"\"routes_available\":true"));
     TEST_ASSERT(fclose(out)==0);
     /* Report I/O failure must propagate, not report a successful write. */
     out=fopen(path,"rb"); TEST_ASSERT(out && !gd_write_resource_result(out,model,graph,1,"routes")); fclose(out);

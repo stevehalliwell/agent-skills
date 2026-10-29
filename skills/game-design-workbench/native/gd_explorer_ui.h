@@ -4,11 +4,12 @@
 #include "gd_graph_analysis_ui.h"
 #include "gd_layout_focus.h"
 #include "gd_matrix_grid.h"
+#include "gd_resource_routes.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 
 typedef struct { int cell, node, interaction, linked, held; } GD_ExplorerSelection;
-enum { GD_EXPLORER_FIT_GRID_READABLE=4 };
+enum { GD_EXPLORER_FIT_GRID_READABLE=4, GD_EXPLORER_FIT_RESOURCE_WITNESS=5 };
 typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } GD_ExplorerSkillEditor;
 typedef struct {
     int record, link, held;
@@ -26,6 +27,10 @@ typedef struct {
     Vector2 right_origin;
     int right_started;
     GD_ExplorerSelection selection;
+    GD_ResourceRoutes *resource_routes;
+    int resource_from,resource_to,resource_witness;
+    bool resource_accepted,resource_only_witness;
+    char resource_message[160];
     GD_MatrixGrid grid; /* Caller-owned presentation, never typed snapshot data. */
     GD_ExplorerSkillEditor editor;
     GD_ExplorerMdaDisplay mda;
@@ -82,5 +87,7 @@ void gd_explorer_mda_source(GD_ExplorerContext *context, int edge);
 int gd_explorer_resource_prepare(GD_ExplorerContext *context);
 void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *evidence);
 void gd_explorer_resource_details(GD_ExplorerContext *context);
+int gd_explorer_resource_run(GD_ExplorerContext *context);
+void gd_explorer_resource_controls(GD_ExplorerContext *context);
 void gd_explorer_resource_source(GD_ExplorerContext *context, int edge);
 #endif

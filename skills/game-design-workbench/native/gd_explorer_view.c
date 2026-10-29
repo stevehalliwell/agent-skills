@@ -36,10 +36,10 @@ static const char *missing_roles(GD_ExplorerView view) {
 static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     GD_Layout *layout=p->layout;
     gd_diagnostics_clear(&p->diagnostics);
-    gd_layout_focus_destroy(p->distance_focus);
+    gd_layout_focus_destroy(p->distance_focus); gd_resource_routes_destroy(p->resource_routes);
     memset(p,0,sizeof(*p)); p->layout=layout; p->view=view;
     p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; p->editor.record=-1;
-    p->grid.noun=p->grid.verb=-1;
+    p->grid.noun=p->grid.verb=-1; p->resource_from=p->resource_to=p->resource_witness=-1;
     p->mda=(GD_ExplorerMdaDisplay){.record=-1,.link=-1,.held=-1,.roles={true,true,true,true},.paused=true};
     p->camera.zoom=1; p->focus_auto_fit=true; p->distance_focus_revision=UINT64_MAX; p->peer=p->foundation_peer=p->witness=-1;
     p->navigate=p->focus_root=p->focus_expand=p->inspected_record=-1;
@@ -101,6 +101,7 @@ static int visible(GD_ExplorerContext *c, int node) {
     if (p->view==GD_EXPLORER_MDA) return gd_explorer_mda_visible(c,record);
     if (p->view==GD_EXPLORER_RESOURCES) {
         const GD_ResourceNode *item=&c->project->resources->nodes[record];
+        if (p->resource_only_witness && p->resource_routes && p->resource_routes->witness_count && !p->resource_routes->marked_nodes[record]) return 0;
         int source=gd_explorer_resource_record(c->project->resources,record);
         const GD_Model *model=gd_explorer_model(c->project,p->view);
         return p->mda.roles[item->kind] && (!*p->filter || strstr(p->layout->nodes[node].label,p->filter) ||
@@ -191,7 +192,7 @@ static void matches(GD_ExplorerContext *c) {
 static void fit_view(GD_ExplorerContext *c, int only_matches) {
     GD_ExplorerPane *p=c->pane; int i,found=0; float left=0,right=1,top=0,bottom=1;
     if (grid_view(p)) { grid_fit(c,only_matches); return; }
-    for (i=0;i<p->layout->node_count;++i) if (visible(c,i) && (!only_matches || (only_matches==1 ? p->match_nodes[i]:
+    for (i=0;i<p->layout->node_count;++i) if (visible(c,i) && (!only_matches || (only_matches==1 ? p->match_nodes[i]:only_matches==3 ? p->resource_routes && p->resource_routes->marked_nodes[i]:
         p->distance_focus && p->distance_focus->active && p->distance_focus->distance[i]>=0 && p->distance_focus->distance[i]<=1))) {
         Vector2 point=position(p,i); float half=p->view==GD_EXPLORER_MDA ? 125:p->view==GD_EXPLORER_RESOURCES ? 110:
             fmaxf(110,(float)MeasureText(p->layout->nodes[i].label,18)/2+25);
@@ -441,7 +442,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
     }
     if (replacement) {
         memcpy(replacement,panes,GD_EXPLORER_VIEWS*sizeof(*replacement));
-        for (v=0;v<GD_EXPLORER_VIEWS;++v) { replacement[v].layout=NULL; replacement[v].distance_focus=NULL; memset(&replacement[v].diagnostics,0,sizeof(replacement[v].diagnostics)); }
+        for (v=0;v<GD_EXPLORER_VIEWS;++v) { replacement[v].layout=NULL; replacement[v].distance_focus=NULL; replacement[v].resource_routes=NULL; memset(&replacement[v].diagnostics,0,sizeof(replacement[v].diagnostics)); }
         candidate.project=fresh;
         if (old->mda) {
             int root=-1;
@@ -483,6 +484,9 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
                     if (key>=0) gd_graph_path_start(&mapped,key); else ++mapped.lost;
                 }
                 p->paths=mapped;
+                p->resource_from=gd_explorer_resource_remap(old->resources,fresh->resources,prior->resource_from);
+                p->resource_to=gd_explorer_resource_remap(old->resources,fresh->resources,prior->resource_to);
+                p->resource_witness=-1;
             } else gd_graph_paths_remap(&p->paths,model,next);
             p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
             if (v==GD_EXPLORER_RESOURCES) {
@@ -504,6 +508,11 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
             p->prepared=0; p->revision=0;
             candidate.pane=p;
             if (!pane_prepare(&candidate)) ready=0;
+            if (ready && v==GD_EXPLORER_RESOURCES && prior->resource_routes) {
+                if (p->resource_to<0 || (prior->resource_from>=0 && p->resource_from<0))
+                    snprintf(p->resource_message,sizeof(p->resource_message),"Endpoint disappeared on reload; select new endpoints before running.");
+                else if (!gd_explorer_resource_run(&candidate)) ready=0;
+            }
         }
         /* Preparing every visited layout is part of candidate validation. Never
            release last-good snapshots before all replacement allocations pass. */
@@ -512,7 +521,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
     if (ready) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) {
             gd_diagnostics_clear(&panes[v].diagnostics);
-            gd_layout_focus_destroy(panes[v].distance_focus);
+            gd_layout_focus_destroy(panes[v].distance_focus); gd_resource_routes_destroy(panes[v].resource_routes);
             if (panes[v].layout) old->allocator.release(old->allocator.context,panes[v].layout);
         }
         memcpy(panes,replacement,GD_EXPLORER_VIEWS*sizeof(*panes));
@@ -524,7 +533,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
              "Cannot prepare replacement, sources changed, or a query/focus root disappeared; clear root before retry");
     if (replacement) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) {
-            gd_layout_focus_destroy(replacement[v].distance_focus);
+            gd_layout_focus_destroy(replacement[v].distance_focus); gd_resource_routes_destroy(replacement[v].resource_routes);
             if (replacement[v].layout) old->allocator.release(old->allocator.context,replacement[v].layout);
         }
         old->allocator.release(old->allocator.context,replacement);
@@ -666,6 +675,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             if (p->distance_focus_enabled) igTextWrapped("Shown-link distance is layout only, not flow. Animated 220 ms transitions retain bands and directed roots; click again to interrupt. Auto-fit off keeps camera unchanged on focus selection/off. Off returns to regular pose, then resumes drag/settling. F and Find still frame explicitly.");
         }
         selected=analyze(&c);
+        if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_controls(&c);
         if (!grid_view(p) && p->distance_focus_enabled && distance_focus_node(p,selected)<0)
             igTextWrapped("No distance focus applied: select a visible node. Source-only or edge inspection has no focus anchor.");
         if (!grid_view(p) && igCollapsingHeader_TreeNodeFlags("Analysis layers",0)) analysis_controls(&c,selected);
@@ -771,7 +781,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (!pane_prepare(&c)) { gd_error(diagnostic,"explorer.projection","Cannot update bounded projection layout",NULL,0); result=2; rlImGuiEnd(); EndDrawing(); break; }
         selected=analyze(&c); matches(&c); distance_focus_update(&c,selected);
         p->camera.offset=(Vector2){c.viewport.x+c.viewport.width/2,c.viewport.y+c.viewport.height/2};
-        if (p->fit) { fit_view(&c,p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+        if (p->fit) { fit_view(&c,p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
         if (grid_view(p)) grid_input(&c);
         else if (is_graph(p->view)) gd_explorer_graph_input(&c);
         else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_input(&c);
@@ -821,7 +831,7 @@ cleanup:
     if (panes) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) {
             gd_diagnostics_clear(&panes[v].diagnostics);
-            gd_layout_focus_destroy(panes[v].distance_focus);
+            gd_layout_focus_destroy(panes[v].distance_focus); gd_resource_routes_destroy(panes[v].resource_routes);
             if (panes[v].layout) allocator.release(allocator.context,panes[v].layout);
         }
         allocator.release(allocator.context,panes);

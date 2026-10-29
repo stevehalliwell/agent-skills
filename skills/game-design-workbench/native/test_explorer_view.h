@@ -12,14 +12,16 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     choose_view(c->project,"Data / projection",p->view,1);
     igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34});
     match_details(c); layout_controls(c); selected=analyze(c);
+    if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_controls(c);
     if (grid_view(p)) {
         if (!grid_blank_details(c)) gd_explorer_graph_details(c);
     } else analysis_controls(c,selected);
+    if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_details(c);
     igEnd();
     matches(c); distance_focus_update(c,selected);
     if (p->distance_focus) gd_layout_focus_advance(p->distance_focus,p->layout,0.22f,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
     p->camera.offset=(Vector2){450,503};
-    if (p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+    if (p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
     {
         GD_ExplorerEvidence e=evidence(c,selected);
         if (grid_view(p)) grid_draw(c);
@@ -301,21 +303,39 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         EXPLORER_CHECK(gd_draft_undo(project->draft) && gd_explorer_edited(project));
     }
     for (v=0;v<GD_EXPLORER_VIEWS;++v) { c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c)); }
+    /* Actual Resource pane and CLI consume the same directed conditional kernel.
+       Keep result through candidate-allocation and reload/remapping checks. */
+    {
+        GD_ExplorerPane *p=&panes[GD_EXPLORER_RESOURCES]; int i,target=-1;
+        c.pane=p; p->resource_to=0;
+        EXPLORER_CHECK(gd_explorer_resource_run(&c));
+        for (i=0;i<p->resource_routes->arc_count;++i) if (p->resource_routes->arcs[i].kind==GD_RESOURCE_CREDIT || p->resource_routes->arcs[i].kind==GD_RESOURCE_STATE_PROPOSAL) { target=p->resource_routes->arcs[i].to; break; }
+        EXPLORER_CHECK(target>=0); p->resource_to=p->selection.node=target;
+        EXPLORER_CHECK(gd_explorer_resource_run(&c) && p->resource_routes->witness_count>0 && p->resource_routes->marked_nodes[target]);
+        p->shared=p->branches=p->foundations=p->shapes=false; p->paths.enabled=p->reach.enabled=p->overview.enabled=0;
+        p->resource_only_witness=true; p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;
+        explorer_test_render(&c);
+        for (i=0;i<p->layout->node_count;++i) EXPLORER_CHECK(visible(&c,i)==!!p->resource_routes->marked_nodes[i]);
+        EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/resource-witness.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
+    }
     /* Allocation failure in replacement layout preparation must retain every
        old snapshot, draft and visited layout, not just a stale pointer. */
     c.pane=&panes[GD_EXPLORER_MDA]; last_good=c.project;
     {
-        GD_ExplorerProject *probe; int before=*calls,needed,j,offsets[3]={2,7,8};
+        GD_ExplorerProject *probe; int before=*calls,needed,j,offsets[4]={2,7,8,9};
         GD_LayoutFocus *old_focus=panes[GD_EXPLORER_MDA].distance_focus;
+        GD_ResourceRoutes *old_routes=panes[GD_EXPLORER_RESOURCES].resource_routes;
+        EXPLORER_CHECK(old_routes);
         EXPLORER_CHECK(panes[GD_EXPLORER_MDA].distance_focus_enabled && old_focus);
         probe=gd_explorer_load(allocator,collections,count); EXPLORER_CHECK(probe && !gd_explorer_error(probe));
         needed=*calls-before; gd_explorer_destroy(probe);
         /* Pane array, six layouts in view order, plus active MDA scratch.
            Fail first layout, scratch itself, then following Resource layout. */
-        for (j=0;j<3;++j) {
+        for (j=0;j<4;++j) {
             *fail_at=*calls+needed+offsets[j];
             EXPLORER_CHECK(!reload_project(&c,panes,collections,count,failure,sizeof(failure)) && c.project==last_good);
             *fail_at=0;
+            EXPLORER_CHECK(panes[GD_EXPLORER_RESOURCES].resource_routes==old_routes);
             EXPLORER_CHECK(panes[GD_EXPLORER_MDA].distance_focus==old_focus && panes[GD_EXPLORER_MDA].distance_focus_enabled);
             for (v=0;v<GD_EXPLORER_VIEWS;++v) EXPLORER_CHECK(panes[v].layout && panes[v].prepared);
         }
@@ -362,6 +382,8 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     EXPLORER_CHECK(!reload_project(&c,panes,collections,count,failure,sizeof(failure)) && c.project==last_good);
     EXPLORER_CHECK(remove(invalid)==0); invalid_created=0;
     EXPLORER_CHECK(reload_project(&c,panes,collections,count,failure,sizeof(failure)) && c.project!=last_good);
+    EXPLORER_CHECK(panes[GD_EXPLORER_RESOURCES].resource_routes && panes[GD_EXPLORER_RESOURCES].resource_routes->graph==c.project->resources);
+    EXPLORER_CHECK(panes[GD_EXPLORER_RESOURCES].resource_routes->to==panes[GD_EXPLORER_RESOURCES].resource_to);
     project=c.project;
     EXPLORER_CHECK(grid_view(&panes[GD_EXPLORER_MATRIX]) && panes[GD_EXPLORER_MATRIX].grid.noun>=0 && panes[GD_EXPLORER_MATRIX].grid.verb>=0 && panes[GD_EXPLORER_MATRIX].selection.cell>=0);
     {
@@ -385,7 +407,7 @@ cleanup:
     if (grid_probe_created) remove(grid_probe_path);
     if (window) { rlImGuiShutdown(); CloseWindow(); }
     if (panes) {
-        for (v=0;v<GD_EXPLORER_VIEWS;++v) { gd_diagnostics_clear(&panes[v].diagnostics); gd_layout_focus_destroy(panes[v].distance_focus); if (panes[v].layout) allocator.release(allocator.context,panes[v].layout); }
+        for (v=0;v<GD_EXPLORER_VIEWS;++v) { gd_diagnostics_clear(&panes[v].diagnostics); gd_layout_focus_destroy(panes[v].distance_focus); gd_resource_routes_destroy(panes[v].resource_routes); if (panes[v].layout) allocator.release(allocator.context,panes[v].layout); }
         allocator.release(allocator.context,panes);
     }
     if (saved) allocator.release(allocator.context,saved);

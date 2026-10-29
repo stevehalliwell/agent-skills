@@ -91,6 +91,7 @@ GD_ExplorerProject *gd_explorer_load(GD_Allocator allocator, const GD_Collection
             project->mda=gd_analyze_mda(project->models[f]);
             if (!project->mda) { gd_error(project->models[f],"explorer.mda","Cannot prepare MDA projection",NULL,0); return project; }
         } else if (f==GD_EXPLORER_RULE_DATA) {
+            for (i=0;i<count;++i) project->models[f]->collections[i].role=collections[i].role;
             project->rules=gd_read_rules(project->models[f]);
             if (project->rules) project->calls=gd_analyze_rules(project->models[f],project->rules);
             if (project->calls) project->resources=gd_resource_graph_build(project->models[f],project->rules);
@@ -116,33 +117,6 @@ int gd_explorer_resource_record(const GD_ResourceGraph *graph, int index) {
     if (node->case_index>=0) return graph->rules->sources[graph->rules->cases[node->case_index].source].record;
     return node->axis;
 }
-static const char *record_reference(const GD_ResourceGraph *graph, int record) {
-    return record>=0 ? graph->model->records[record].reference:"";
-}
-static int same_resource_node(const GD_ResourceGraph *a, int ai, const GD_ResourceGraph *b, int bi) {
-    const GD_ResourceNode *x=&a->nodes[ai],*y=&b->nodes[bi];
-    if (x->kind!=y->kind) return 0;
-    if (x->kind==GD_RESOURCE_FACET && (x->pool_reference || y->pool_reference))
-        return x->pool_reference && y->pool_reference && !strcmp(x->pool_reference,y->pool_reference) &&
-            !strcmp(record_reference(a,x->axis),record_reference(b,y->axis));
-    if ((x->case_index>=0)!=(y->case_index>=0) || (x->participant>=0)!=(y->participant>=0)) return 0;
-    if (strcmp(record_reference(a,x->record),record_reference(b,y->record)) ||
-        strcmp(record_reference(a,x->axis),record_reference(b,y->axis)) ||
-        strcmp(x->pool_reference ? x->pool_reference:"",y->pool_reference ? y->pool_reference:"")) return 0;
-    if (x->case_index>=0) {
-        const GD_RuleCase *xc=&a->rules->cases[x->case_index],*yc=&b->rules->cases[y->case_index];
-        if (strcmp(xc->name,yc->name) || strcmp(record_reference(a,a->rules->sources[xc->source].record),
-                                             record_reference(b,b->rules->sources[yc->source].record))) return 0;
-    }
-    if (x->participant>=0 && strcmp(a->rules->participants[x->participant].name,b->rules->participants[y->participant].name)) return 0;
-    return 1;
-}
 int gd_explorer_resource_remap(const GD_ResourceGraph *old, const GD_ResourceGraph *fresh, int node) {
-    int i,found=-1;
-    if (!old || !fresh || node<0 || node>=old->node_count) return -1;
-    for (i=0;i<fresh->node_count;++i) if (same_resource_node(old,node,fresh,i)) {
-        if (found>=0) return -1;
-        found=i;
-    }
-    return found;
+    return gd_resource_node_remap(old,node,fresh);
 }

@@ -38,7 +38,7 @@ test('resource report exposes live retained declarations without implying routes
     const before=await readFile(sentinel);
     const value=report(args); endpoints(value);
     assert.ok(value.data.nodes.length>0 && value.data.relations.length>0);
-    assert.equal(value.data.routes.available,false); assert.match(value.data.routes.reason,/not a no-path result/);
+    assert.equal(value.data.routes.available,true); assert.equal(value.data.routes.queried,false); assert.match(value.data.routes.reason,/not a no-path result/);
     assert.equal(value.coverage.composed_outcomes_available,false);
     assert.ok(value.data.relations.some(row=>row.kind==='quantity_write'));
     const selected=report([...args,'--fields','routes']); assert.deepEqual(Object.keys(selected.data),['routes']);
@@ -111,7 +111,7 @@ case capped:
     assert.equal(value.data.relations.find(row=>row.expression==='this + 0[gold]').delta.number,0);
     const capped=value.data.relations.find(row=>row.expression==='min(this + 1[gold], 3[gold])');
     assert.equal(capped.delta.recognized,false); assert.equal(capped.delta.number,null);
-    assert.equal(value.coverage.routes_available,false); assert.ok(value.coverage.unresolved_facets>=3);
+    assert.equal(value.coverage.routes_available,true); assert.ok(value.coverage.unresolved_facets>=3);
     const unresolved=value.data.nodes.filter(row=>row.identity_scope==='unresolved_declaration_occurrence');
     assert.equal(new Set(unresolved.map(row=>row.id)).size,unresolved.length);
     const unknown=value.data.relations.find(row=>row.kind==='quantity_write' && row.declared_axis==='Missing');
@@ -144,7 +144,7 @@ test('resource CLI validates unsupported scope and empty designs without pretend
   const root=await mkdtemp(join(tmpdir(),'gd-resource-empty-'));
   try {
     const args=['--mechanics',`mechanics=${root}`]; const empty=report(args);
-    assert.deepEqual(empty.data.nodes,[]); assert.deepEqual(empty.data.relations,[]); assert.equal(empty.data.routes.available,false);
+    assert.deepEqual(empty.data.nodes,[]); assert.deepEqual(empty.data.relations,[]); assert.equal(empty.data.routes.available,true); assert.equal(empty.data.routes.queried,false);
     for (const extra of [['--fields','cases'],['--analyze'],['--case','mechanics/a#b'],['--from','some-node']]) {
       const value=JSON.parse(invoke([...args,...extra],2).stdout); assert.equal(value.ok,false); assert.equal(value.errors[0].code,'cli.arguments');
     }

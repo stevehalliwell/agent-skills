@@ -75,7 +75,7 @@ Checks use private copies of both examples, an owned bounded window and app-loca
 
 ## Resource declaration report
 
-`gd resources` exposes existing C99 direct-declaration graph without display, raylib or agent runtime. This is a bounded Review 02 report slice, **not directed resource-flow/routes delivery**.
+`gd resources` exposes shared C99 declarations and bounded **conditional structural witnesses** without display, raylib or agent runtime. This is not an executable conversion plan or composed-outcome solver.
 
 ```powershell
 $native = 'skills/game-design-workbench/native'
@@ -90,8 +90,36 @@ $game = 'skills/game-design-workbench/examples/little-plumber-guy-nes/game-desig
 - JSON `data`: `nodes`, `relations`, `routes`, `findings`; `--fields nodes,relations` selects sections. Standard `GD_AGENT=1`, piped JSON, explicit `--json`/`--format json|text`, error envelope and exit codes. Text prints scope summary plus JSON objects for retained nodes/relations; conditions/provenance remain available in either format.
 - Nodes retain case-local facets, explicit shared pool/axis facets, resource roles and supported unresolved placeholders. Opaque percent-escaped IDs derive from qualified source/case/participant/axis or explicit pool identity, never transient indices or machine paths. IDs survive unrelated source-index changes and project relocation. Unresolved axis occurrences stay distinct by field kind/local declaration position; no guessed axis identity or global actor merge. Duplicate consumed identities remain loader failures.
 - Case nodes retain whole raw context/participant guards and unknown declarations. Relations retain source/status/line, raw predicates/effects/expressions, typed target resolution, checked signed deltas, conditional preservation and case-specific call maps. Facet provenance is representative, not ownership. Role nodes retain declared noun and descriptive prose without converting it into constraints. Predicates are not consumed resources; incident rows are not independent AND requirements. Deltas are not final bounds-checked outcomes. Capped/unknown expressions retain unknown delta, not a promised award.
-- All supplied statuses/dispositions remain inspectable; no route eligibility implied. `ok: true` means report construction succeeded. `coverage.complete` stays **false**: routes, composed outcomes and applicability evaluation are unavailable. `data.routes.available: false` is **not** an empty/no-path result. `--from`/`--to`, route filtering and scenario options are not supported here; use `rules --case` for explicit conditional evaluation. Missing/unloaded scope remains distinct where readers support it; malformed syntax/types and invalid closed vocabularies remain errors.
-- Limits: 4,096 retained nodes, 32,768 relations, 67,108,864 construction work. Coverage reports retained counts, graph limits, unexamined cases/roles/invocation bindings/preservation, unknown facets/cases and typed-binding gaps. Serializer uses 16,384 bytes local endpoint-map scratch, no model/draft enlargement or dense allocation. Viewer does not yet display these opaque IDs or resource route witnesses.
+- All supplied statuses/dispositions remain inspectable. Route eligibility is separate. `ok: true` means report construction succeeded, not exhaustive analysis. `coverage.complete` stays **false**: composed outcomes and applicability remain unavailable. Missing/unloaded scope stays distinct where readers support it; malformed syntax/types and invalid closed vocabularies remain errors.
+- Graph limits: 4,096 retained nodes, 32,768 relations, 67,108,864 construction work. Coverage reports retained counts, graph limits, unexamined cases/roles/invocation bindings/preservation, unknown facets/cases and typed-binding gaps. Serializer uses 16,384 bytes local endpoint-map scratch, no model/draft enlargement or dense allocation.
+
+### Conditional structural witnesses
+
+- No endpoints: `routes.available:true`, `queried:false`; overview only. `--to NODE_ID` explores upstream declarations. `--from NODE_ID --to NODE_ID` finds bounded directed structural witnesses. `--from` alone is an argument error. Opaque IDs from report/viewer are preferred; ambiguous short selectors return `resources.selector_ambiguous` and candidate IDs, never select arbitrarily.
+- Route default admits accepted/proposed sources; `--accepted-only` excludes proposed. Interactions also require `coverage: defined`; mechanics do not require interaction coverage. Other statuses stay in graph output but do not become route authority. Each witness retains proposal reliance.
+- Requirement → activation means **enabling guard, not consumed**. Checked negative delta → activation means debit. Activation → checked positive delta means credit, **not final outcome**. State writes are proposals, not gains. Zero changes, preservation, exclusions, role bindings and raw incidence are not production arcs.
+- Every activation retains whole context/requirements/exclusions, unknown declarations and all direct side relations. OR stays OR; side rows are not independent required/consumed inputs. Queries do not evaluate applicability, state compatibility, starting inventory, timing, conservation, profitability or repeated exchanges. Even contradictory guards can occur in a structural witness; feasibility is explicitly `not_checked`.
+- Only explicit pool + axis identity joins cases. Local actor names and noun types do not establish shared supplies. Role endpoints expand explicit facet bindings only; `target_identity_count:0` reveals unbound target roles. Mario currently has **zero** explicit pool bindings. Resource prose still describes intended ownership/lifetime; no binding or flow is inferred from it.
+- Unknown-direction/capped writes and calls remain frontiers. `frontiers_all_eligible_sources` covers all eligible source declarations, not only the chosen witness. Calls retain compiled maps/provenance but are **not expanded by this route kernel**. Use `rules --case` for existing explicit scenario/composition checks, not sequence planning. No known direct witness is not an impossibility result.
+- Query limits: 64 retained alternatives, 64 arcs/32 activations per witness, 16,777,216 charged work units. Paths avoid repeated nodes; closed/self-return cycles are not returned. Cycles are counted, never interpreted as free production. Upstream witnesses include structural prefixes, not independent recipes. Limits retain known witnesses and explicit `limited`/`depth_limited`; successful partial construction can exit 0. Inspect graph coverage as well as query limits. No best-route ranking or all-pairs precomputation.
+- Unified **Resources** offers selected-node FROM/TO, any-upstream reset, accepted-only, Run, witness selection, whole guards/side inspector and Copy node ID. Teal arrows mark chosen witness; amber marks side declarations/bindings. Optional **Only witness + side declarations** filters display, not query snapshot. **Frame witness + side declarations** is explicit framing. Other filters remain intact; hidden highlighted nodes are counted. Changing query controls clears stale results; allocation/reload failure retains last good query/snapshot. Endpoint IDs remap before successful reload swap. Standalone preview below remains incidence-only.
+
+```powershell
+$inputs = foreach ($role in @('interactions','mechanics','nouns','axes','resources','control-vars')) {
+    "--$role"; "$role=$game/$role"
+}
+$target = 'facet:interactions%2Ftouch-coin#below-threshold:Bank:axes%2FCoinAmount'
+& "$native/build/gd.exe" resources @inputs --to $target --fields routes --json
+# One checked +1 coin declaration with whole guards, not a guaranteed collection/award.
+```
+
+Reusable read-only Mario audit retains exact argv, input/executable hashes, scenario outputs, route/frontier probes and native-typed declaration inventory:
+
+```powershell
+node scripts/audit-workbench-design-questions.mjs --output NEW_DIRECTORY
+```
+
+Script assembles native commands/selects native-typed facts; it does not parse rules or implement another evaluator. Run from repository root. Existing output directories are refused.
 
 ## Resource graph preview
 

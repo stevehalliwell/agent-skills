@@ -1,4 +1,4 @@
-#include "gd_resource_graph.h"
+#include "gd_resource_routes.h"
 #include <string.h>
 #include <assert.h>
 
@@ -17,53 +17,10 @@ static int selected(const char *fields, const char *key) {
     }
     return 0;
 }
-/* Opaque identity components: percent-escaped UTF-8, not array offsets, paths
-   or hashes. Loader rejects duplicate qualified source identities. Unresolved
-   facet occurrences stay distinct; no axis identity inferred from spelling. */
-static void component(FILE *out, const char *text) {
-    const unsigned char *p=(const unsigned char *)(text ? text:"");
-    for (;*p;++p) {
-        if ((*p>='a' && *p<='z') || (*p>='A' && *p<='Z') || (*p>='0' && *p<='9') || *p=='-' || *p=='_' || *p=='.') fputc(*p,out);
-        else fprintf(out,"%%%02X",(unsigned)*p);
-    }
-}
-static void record_identity(FILE *out, const GD_Model *model, int index) {
-    component(out,model->records[index].reference);
-}
 static int case_record(const GD_ResourceGraph *graph, int index) { return graph->rules->sources[graph->rules->cases[index].source].record; }
-static void case_identity(FILE *out, const GD_ResourceGraph *graph, int index) {
-    record_identity(out,graph->model,case_record(graph,index)); fputc('#',out); component(out,graph->rules->cases[index].name);
-}
-static int local_declaration(const GD_ResourceGraph *graph, const GD_ResourceRelation *edge) {
-    const GD_RuleParticipant *actor=&graph->rules->participants[edge->participant];
-    switch (edge->kind) {
-        case GD_RESOURCE_REQUIREMENT: return graph->rules->condition_tokens[edge->declaration].offset;
-        case GD_RESOURCE_EXCLUSION: return graph->rules->condition_tokens[edge->declaration].offset;
-        case GD_RESOURCE_STATE_WRITE: return edge->declaration-actor->first_state_effect;
-        case GD_RESOURCE_QUANTITY_WRITE: return edge->declaration-actor->first_assignment;
-        case GD_RESOURCE_PRESERVATION: return edge->declaration-actor->first_preservation;
-        default: return 0;
-    }
-}
 static void node_identity(FILE *out, const GD_ResourceGraph *graph, const int *first_relation, int index) {
-    const GD_ResourceNode *node=&graph->nodes[index];
-    fputc('"',out); fputs(node_names[node->kind],out); fputc(':',out);
-    if (node->kind==GD_RESOURCE_CASE) case_identity(out,graph,node->case_index);
-    else if (node->kind==GD_RESOURCE_ROLE) {
-        component(out,node->pool_reference);
-    } else {
-        if (node->pool_reference) { fputs("pool:",out); component(out,node->pool_reference); }
-        else { case_identity(out,graph,node->case_index); fputc(':',out); component(out,graph->rules->participants[node->participant].name); }
-        fputc(':',out);
-        if (node->axis>=0) record_identity(out,graph->model,node->axis);
-        else {
-            const GD_ResourceRelation *edge;
-            assert(first_relation[index]>=0 && first_relation[index]<graph->relation_count);
-            edge=&graph->relations[first_relation[index]];
-            fprintf(out,"unresolved:%s:%d",relation_names[edge->kind],local_declaration(graph,edge));
-        }
-    }
-    fputc('"',out);
+    char id[GD_MAX_PATH]; int valid=gd_resource_node_id(graph,index,first_relation[index],id,sizeof(id));
+    assert(valid); gd_json_string(out,valid ? id:NULL);
 }
 static void source(FILE *out, const GD_Model *model, int record, int line) {
     const GD_Record *item=&model->records[record];
@@ -171,7 +128,53 @@ static void relation(FILE *out, const GD_ResourceGraph *graph, const int *first_
     }
     fputc('}',out);
 }
-int gd_write_resource_result(FILE *out, const GD_Model *model, const GD_ResourceGraph *graph, int json, const char *fields) {
+static void query_result(FILE *out, const GD_ResourceGraph *graph, const GD_ResourceRoutes *query, const int *first_relation) {
+    int w,i,j,comma=0; unsigned char used[GD_RESOURCE_GRAPH_NODES]={0};
+    fprintf(out,"{\"available\":%s,\"queried\":%s,",graph ? "true":"false",query && query->queried ? "true":"false");
+    fputs("\"semantics\":\"Direct conditional structural witnesses, not applicability, starting-inventory plans, state compatibility or final outcomes. Whole activation bundles remain guards; OR is not AND. Invocation expansion and unknown-direction writes are frontiers, never implied production. Unavailable/limited is not no path.\"",out);
+    if (!query) { fputs(",\"reason\":\"No query requested; not a no-path result.\"}",out); return; }
+    fprintf(out,",\"limited\":%s,\"depth_limited\":%s,\"work\":%d,\"work_limit\":%d,\"unknown_direction_writes\":%d,\"unexpanded_invocations\":%d,\"excluded_cases\":%d,\"cycle_edges\":%d,\"accepted_only\":%s",
+        query->limited ? "true":"false",query->depth_limited ? "true":"false",query->work,query->work_limit,query->unknown_writes,query->unexpanded_calls,query->excluded_cases,query->cycle_edges,query->accepted_only ? "true":"false");
+    fprintf(out,",\"source_graph_limited\":%s",graph->limited ? "true":"false");
+    fprintf(out,",\"search_seed_count\":%d,\"target_identity_count\":%d,\"selected_from\":",query->from_bindings,query->to_bindings);
+    if (query->from>=0) node_identity(out,graph,first_relation,query->from); else fputs("null",out);
+    fputs(",\"selected_to\":",out); if (query->to>=0) node_identity(out,graph,first_relation,query->to); else fputs("null",out);
+    member(out,"status",query->limited || query->depth_limited ? "limited":query->witness_count ? "conditional_witnesses":"no_known_direct_witness");
+    fprintf(out,",\"selector_matches\":%d,\"selector_candidates\":[",query->selector_matches);
+    for (i=0;i<query->selector_matches && i<GD_RESOURCE_ROUTE_WITNESSES;++i) { if (i) fputc(',',out); node_identity(out,graph,first_relation,query->selector_candidates[i]); }
+    fputs("],\"witnesses\":[",out);
+    for (w=0;w<query->witness_count;++w) {
+        const GD_ResourceWitness *item=&query->witnesses[w]; if (w) fputc(',',out);
+        fprintf(out,"{\"conditional\":true,\"feasibility\":\"not_checked\",\"unresolved\":%s,\"proposal_reliance\":%s,\"nodes\":[",item->unresolved ? "true":"false",item->proposed ? "true":"false");
+        for (i=0;i<=item->count;++i) { if (i) fputc(',',out); node_identity(out,graph,first_relation,item->nodes[i]); used[item->nodes[i]]=1; }
+        fputs("],\"steps\":[",out);
+        for (i=0;i<item->count;++i) {
+            const GD_ResourceArc *arc=&query->arcs[item->arcs[i]]; if (i) fputc(',',out);
+            fputs("{\"meaning\":",out); gd_json_string(out,gd_resource_arc_name(arc->kind)); fprintf(out,",\"relation_index\":%d,\"declaration\":",arc->relation);
+            relation(out,graph,first_relation,arc->relation); fputc('}',out);
+        }
+        fputs("]}",out);
+    }
+    fputs("],\"activations\":[",out);
+    for (i=0;i<graph->node_count;++i) if (used[i] && graph->nodes[i].kind==GD_RESOURCE_CASE) {
+        if (comma++) fputc(',',out);
+        fputs("{\"id\":",out); node_identity(out,graph,first_relation,i);
+        fputs(",\"source\":",out); source(out,graph->model,case_record(graph,graph->nodes[i].case_index),graph->rules->cases[graph->nodes[i].case_index].line);
+        fputs(",\"whole_case_guards\":",out); case_declaration(out,graph,graph->nodes[i].case_index);
+        fputs(",\"all_direct_relations_including_side_inputs\":[",out);
+        for (j=query->case_head[i];j>=0;j=query->case_next[j]) { if (j!=query->case_head[i]) fputc(',',out); relation(out,graph,first_relation,j); }
+        fputs("]}",out);
+    }
+    fputs("],\"frontiers_all_eligible_sources\":[",out); comma=0;
+    for (i=0;i<graph->relation_count;++i) {
+        const GD_ResourceRelation *edge=&graph->relations[i]; const GD_ResourceNode *owner=&graph->nodes[edge->activation];
+        if (owner->kind!=GD_RESOURCE_CASE || !query->eligible[owner->case_index]) continue;
+        if (edge->kind!=GD_RESOURCE_INVOCATION && !(edge->kind==GD_RESOURCE_QUANTITY_WRITE && (!edge->delta_recognized || !edge->delta.known || !edge->delta.checks_complete))) continue;
+        if (comma++) fputc(',',out); relation(out,graph,first_relation,i);
+    }
+    fputs("]}",out);
+}
+int gd_write_resource_query(FILE *out, const GD_Model *model, const GD_ResourceGraph *graph, const GD_ResourceRoutes *query, int json, const char *fields) {
     int first_relation[GD_RESOURCE_GRAPH_NODES],i,comma=0;
     int ok=!model->error_count && !model->errors_omitted && graph;
     if (graph) {
@@ -180,7 +183,7 @@ int gd_write_resource_result(FILE *out, const GD_Model *model, const GD_Resource
     }
     if (!json) {
         fprintf(out,"Resources: %d retained nodes, %d retained relations. Direct declarations only; all supplied statuses retained.\n",graph ? graph->node_count:0,graph ? graph->relation_count:0);
-        fputs("Incidence is not production flow. Conditions remain whole-case guards; predicates are not consumed inputs. Directed routes and composed outcomes unavailable. Signed deltas are not final bounded outcomes; applicability not evaluated.\n",out);
+        fputs("Incidence is not production flow. Conditions remain whole-case guards; predicates are not consumed inputs. Direct conditional witnesses available; composed outcomes unavailable. Signed deltas are not final bounded outcomes; applicability not evaluated.\n",out);
         if (graph) {
             fprintf(out,"Graph limited: %s; construction work %d/%d; unexamined cases %d; roles %d; unresolved facets %d.\n",graph->limited ? "yes":"no",graph->work,GD_RESOURCE_GRAPH_WORK,graph->unexamined_cases,graph->unexamined_roles,graph->unresolved_facets);
             fprintf(out,"Unknown case coverage %d; unexamined invocation bindings %d; preservation %d; findings omitted %d. Call bindings attached: %s; call compile limited: %s; quantity limited: %s.\n",
@@ -192,6 +195,7 @@ int gd_write_resource_result(FILE *out, const GD_Model *model, const GD_Resource
             for (i=0;i<graph->node_count;++i) { node(out,graph,first_relation,i); fputc('\n',out); }
             for (i=0;i<graph->relation_count;++i) { relation(out,graph,first_relation,i); fputc('\n',out); }
             for (i=0;i<graph->rules->finding_count;++i) fprintf(out,"%s: %s\n",graph->rules->findings[i].code,graph->rules->findings[i].message);
+            if (query) { fputs("Conditional witness report: ",out); query_result(out,graph,query,first_relation); fputc('\n',out); }
         }
         return !ferror(out);
     }
@@ -206,7 +210,7 @@ int gd_write_resource_result(FILE *out, const GD_Model *model, const GD_Resource
     }
     if (selected(fields,"routes")) {
         if (comma++) fputc(',',out);
-        fputs("\"routes\":{\"available\":false,\"reason\":\"Directed conditional routes and composed outcomes are not implemented; this is a direct-declaration incidence report, not a no-path result.\"}",out);
+        fputs("\"routes\":",out); query_result(out,graph,query,first_relation);
     }
     if (selected(fields,"findings")) {
         if (comma++) fputc(',',out); fputs("\"findings\":[",out);
@@ -217,7 +221,7 @@ int gd_write_resource_result(FILE *out, const GD_Model *model, const GD_Resource
         }
         fputc(']',out);
     }
-    fprintf(out,"},\"coverage\":{\"operation\":\"resources\",\"complete\":false,\"scope\":\"direct_declarations_not_flow\",\"node_count\":%d,\"relation_count\":%d,\"graph_limited\":%s,\"work\":%d,",
+    fprintf(out,"},\"coverage\":{\"operation\":\"resources\",\"complete\":false,\"scope\":\"direct_declarations_and_conditional_structural_witnesses\",\"node_count\":%d,\"relation_count\":%d,\"graph_limited\":%s,\"work\":%d,",
         graph ? graph->node_count:0,graph ? graph->relation_count:0,graph && graph->limited ? "true":"false",graph ? graph->work:0);
     fprintf(out,"\"unexamined_cases\":%d,\"unexamined_roles\":%d,\"invocations_unexamined\":%d,\"preservation_unexamined\":%d,\"unresolved_facets\":%d,\"unknown_case_coverage\":%d,\"findings_omitted\":%d,",
         graph ? graph->unexamined_cases:0,graph ? graph->unexamined_roles:0,graph ? graph->composition_unexamined:0,graph ? graph->preservation_unexamined:0,
@@ -226,12 +230,16 @@ int gd_write_resource_result(FILE *out, const GD_Model *model, const GD_Resource
         graph && graph->rules->axis_definitions_complete ? "true":"false",graph && graph->rules->condition_bindings_complete ? "true":"false",
         graph && graph->rules->effect_bindings_complete ? "true":"false",graph && graph->rules->pool_bindings_complete ? "true":"false",graph && graph->rules->quantity_limited ? "true":"false");
     fprintf(out,"\"call_bindings_attached\":%s,\"call_compile_limited\":%s,",graph && graph->calls_bound ? "true":"false",graph && graph->calls && graph->calls->compile_limited ? "true":"false");
-    fputs("\"routes_available\":false,\"composed_outcomes_available\":false,\"applicability_evaluated\":false,\"deltas_are_final_outcomes\":false,\"condition_semantics\":\"Raw whole-case context, requirements and exclusions retained on case nodes; individual incidence relations are not independent AND requirements or applicable outcomes. All statuses retained, no route eligibility implied. Use rules for compiled conditions and explicit scenario evaluation.\",",out);
+    fprintf(out,"\"routes_available\":%s,",graph ? "true":"false");
+    fputs("\"composed_outcomes_available\":false,\"applicability_evaluated\":false,\"deltas_are_final_outcomes\":false,\"condition_semantics\":\"Raw whole-case context, requirements and exclusions retained on case nodes; individual incidence relations are not independent AND requirements or applicable outcomes. All statuses retained in declarations; route eligibility is separate. Use rules for compiled conditions and explicit scenario evaluation.\",",out);
     fprintf(out,"\"limits\":{\"nodes\":%d,\"relations\":%d,\"construction_work\":%d}},\"errors\":[",GD_RESOURCE_GRAPH_NODES,GD_RESOURCE_GRAPH_RELATIONS,GD_RESOURCE_GRAPH_WORK);
     for (i=0;i<model->error_count;++i) {
         const GD_Error *error=&model->errors[i]; if (i) fputc(',',out);
         fputs("{\"code\":",out); gd_json_string(out,error->code); member(out,"message",error->message); member(out,"source_path",error->path); fprintf(out,",\"line\":%d}",error->line);
     }
-    fprintf(out,"],\"errors_omitted\":%d,\"breadcrumbs\":[\"Use the same explicit bindings with rules for typed declarations and conditional scenario evaluation; resource routes remain unavailable.\"]}\n",model->errors_omitted);
+    fprintf(out,"],\"errors_omitted\":%d,\"breadcrumbs\":[\"Use the same explicit bindings with rules for typed declarations and conditional scenario evaluation; direct conditional witnesses are not applicability proofs or inventory plans.\"]}\n",model->errors_omitted);
     return !ferror(out);
+}
+int gd_write_resource_result(FILE *out, const GD_Model *model, const GD_ResourceGraph *graph, int json, const char *fields) {
+    return gd_write_resource_query(out,model,graph,NULL,json,fields);
 }

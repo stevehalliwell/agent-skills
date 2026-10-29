@@ -280,10 +280,10 @@ foreach ($resourceName in @('crate-puzzle', 'little-plumber-guy-nes')) {
     $resourceJson = & $executable resources @resourceInputs --json
     if ($LASTEXITCODE -ne 0) { throw "Resource declaration report failed: $resourceName" }
     $resourceData = $resourceJson | ConvertFrom-Json
-    if (-not $resourceData.ok -or $resourceData.coverage.complete -or $resourceData.data.routes.available -or $resourceData.coverage.composed_outcomes_available -or -not $resourceData.data.nodes.Count) {
+    if (-not $resourceData.ok -or $resourceData.coverage.complete -or -not $resourceData.data.routes.available -or $resourceData.coverage.composed_outcomes_available -or -not $resourceData.data.nodes.Count) {
         throw 'Resource incidence report overstated scope or lost retained nodes'
     }
     $resourceJson | Set-Content -LiteralPath (Join-Path $fixtures "resources-$resourceName.json") -Encoding UTF8
 }
 Write-Output "Resource declaration evidence: $fixtures/resources-*.json"
-Write-Output 'CLI checks passed: Resource direct declarations (routes unavailable), matrix/connectivity, components, cases/dispositions, skill prerequisites/ranks/findings, challenge/route opportunity/witnesses, MDA shared queries/aliases/direction/boundaries/duplicates/unknowns/partial identity errors, typed control resolution/overrides/scoped dependencies/status-name selection/JSON-CSV-INI export-import plans/false-enums/formula protection, cycles/missing targets, empty results, field selection, text, Unicode/space paths, structured failure.'
+Write-Output 'CLI checks passed: Resource direct declarations (conditional witnesses available), matrix/connectivity, components, cases/dispositions, skill prerequisites/ranks/findings, challenge/route opportunity/witnesses, MDA shared queries/aliases/direction/boundaries/duplicates/unknowns/partial identity errors, typed control resolution/overrides/scoped dependencies/status-name selection/JSON-CSV-INI export-import plans/false-enums/formula protection, cycles/missing targets, empty results, field selection, text, Unicode/space paths, structured failure.'

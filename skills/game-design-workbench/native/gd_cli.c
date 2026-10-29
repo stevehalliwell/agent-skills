@@ -3,7 +3,7 @@
 #endif
 #include "gd.h"
 #include "gd_rule_analysis.h"
-#include "gd_resource_graph.h"
+#include "gd_resource_routes.h"
 #include "gd_skill_unlocks.h"
 #include "gd_explorer.h"
 #include "gd_matrix_grid.h"
@@ -34,7 +34,8 @@ static void help(void) {
          "  Supports --frames, --screenshot, --output and error-output format flags.\n"
          "  Standalone view commands also available. No automatic folder discovery.\n\n"
          "Resources: gd resources uses explicit rule bindings; retained direct declarations only.\n"
-         "  --fields nodes,relations,routes,findings (JSON). Directed routes/composed outcomes unavailable.\n"
+         "  --fields nodes,relations,routes,findings (JSON). --to NODE_ID [--from NODE_ID] [--accepted-only].\n"
+         "  Direct conditional witnesses only; composed outcomes/applicability remain unavailable.\n"
          "Matrix/connectivity collections (exactly one of each):\n"
          "  --nouns ALIAS=FOLDER\n  --verbs ALIAS=FOLDER\n  --interactions ALIAS=FOLDER\n"
          "Skill operations require: --skill-atoms ALIAS=FOLDER\n"
@@ -159,7 +160,7 @@ static int absolute_folder(const char *path, char *result) {
 }
 static int application(int argc, char **argv) {
     GD_Allocator allocator = { NULL, system_allocate, system_release };
-    GD_Collection collections[GD_MAX_COLLECTIONS];
+    GD_Collection collections[GD_MAX_COLLECTIONS]; GD_Role source_roles[GD_MAX_COLLECTIONS];
     char aliases[GD_MAX_COLLECTIONS][129], folders[GD_MAX_COLLECTIONS][GD_MAX_PATH];
     const char *error = NULL, *fields = NULL, *screenshot = NULL, *output_path = NULL;
     GD_Model *model;
@@ -169,7 +170,8 @@ static int application(int argc, char **argv) {
     GD_ControlImport *import_plan = NULL;
     GD_Rules *rules = NULL;
     GD_RuleAnalysis *rule_analysis=NULL;
-    GD_ResourceGraph *resource_graph=NULL;
+    GD_ResourceGraph *resource_graph=NULL; GD_ResourceRoutes *resource_query=NULL;
+    const char *resource_to=NULL; int resource_accepted=0;
     GD_SkillUnlocks *skill_query=NULL;
     const char *known_names[64]; int known_count=0;
     GD_RuleScenario scenario={0};
@@ -254,6 +256,7 @@ static int application(int argc, char **argv) {
             memcpy(aliases[count], argv[i], length); aliases[count][length] = 0;
             if (!absolute_folder(equals + 1, folders[count])) { error = "Collection path is invalid or exceeds 4095 UTF-8 bytes"; break; }
             collections[count].alias = aliases[count]; collections[count].directory = folders[count];
+            source_roles[count]=role;
             collections[count].role = rule_command && (role == GD_CASE || role == GD_MDA_MECHANIC) ? GD_RULE :
                 (command == 12 || command == 14) && role == GD_MDA_SYSTEM ? GD_RELATED:role;
             if (role != GD_RELATED) roles |= 1 << role;
@@ -336,8 +339,14 @@ static int application(int argc, char **argv) {
             else if (!strcmp(argv[i], "prerequisites")) layout = GD_VIEW_PREREQUISITES;
             else if (!strcmp(argv[i], "rank")) layout = GD_VIEW_RANK;
             else error = "--layout requires table, graph, columns, prerequisites, or rank";
+        } else if (!strcmp(argv[i], "--to")) {
+            if (command!=14 || ++i==argc || !*argv[i] || strlen(argv[i])>=GD_MAX_PATH) { error="--to requires a Resource node ID (up to 4095 bytes)"; break; }
+            resource_to=argv[i];
+        } else if (!strcmp(argv[i], "--accepted-only")) {
+            if (command!=14) { error="--accepted-only applies to resources"; break; }
+            resource_accepted=1;
         } else if (!strcmp(argv[i], "--from")) {
-            if (++i == argc || !argv[i][0] || strlen(argv[i]) > 257) { error = "--from requires ALIAS/NAME (up to 257 bytes)"; break; }
+            if (++i == argc || !argv[i][0] || strlen(argv[i]) > (command==14 ? GD_MAX_PATH-1:257)) { error = "--from requires ALIAS/NAME (up to 257 bytes)"; break; }
             from = argv[i];
         } else if (!strcmp(argv[i], "--direction")) {
             direction_supplied = 1;
@@ -422,8 +431,8 @@ static int application(int argc, char **argv) {
     if (!error && command == 2 && layout > GD_VIEW_COLUMNS) error = "Matrix view requires table, graph, or columns layout";
     if (!error && command == 4 && (layout < GD_VIEW_PREREQUISITES || other_pairs)) error = "Skill view requires prerequisites or rank layout; no matrix-pair overlay";
     if (!error && direction_supplied && command != 4 && !mda_command) error = "--direction applies only to MDA or view skill-atoms";
-    if (!error && command==14 && from) error="resources currently reports direct declarations only; directed route selectors are unavailable";
-    if (!error && from && !mda_command && !control_command && command!=3 && command!=4) error = "--from applies only to MDA, controls, or skill exploration";
+    if (!error && command==14 && (from || resource_accepted) && !resource_to) error="Resource --from/--accepted-only requires --to";
+    if (!error && from && !mda_command && !control_command && command!=3 && command!=4 && command!=14) error = "--from applies only to MDA, controls, or skill exploration";
     if (!error && command == 7 && (layout != GD_VIEW_COLUMNS && layout != GD_VIEW_GRAPH)) error = "MDA view requires columns or graph layout";
     if (!error && mda_command && other_pairs) error = "--show-other-pairs applies only to matrix views";
     if (!error && other_pairs && layout == GD_VIEW_TABLE) error = "--show-other-pairs requires graph or columns layout";
@@ -437,6 +446,8 @@ static int application(int argc, char **argv) {
     if (error) gd_error(model, "cli.arguments", error, NULL, 0);
     else gd_load(model, collections, count);
     if (rule_command && !error) {
+        /* Generic rule records retain original explicit collection provenance. */
+        if (command==12 || command==14) for (i=0;i<model->collection_count;++i) model->collections[i].role=source_roles[i];
         rules=gd_read_rules(model);
         if (rules && (analyze || case_name || command == 12 || command == 14)) {
             rule_analysis=gd_analyze_rules(model,rules);
@@ -459,6 +470,20 @@ static int application(int argc, char **argv) {
         if ((command == 12 || command == 14) && rules && rule_analysis && !model->error_count) {
             resource_graph=gd_resource_graph_build(model,rules);
             if (resource_graph) gd_resource_graph_bind_calls(resource_graph,rule_analysis);
+        }
+    }
+    if (command==14 && resource_graph && resource_to && !model->error_count) {
+        int start=-1,target=-1;
+        resource_query=gd_resource_routes_create(allocator);
+        if (!resource_query) gd_error(model,"resources.memory","Cannot allocate bounded resource query scratch",NULL,0);
+        else {
+            if (from) start=gd_resource_select(resource_query,resource_graph,from);
+            if (from && start<0) gd_error(model,start==-2 ? "resources.selector_ambiguous":start==-3 ? "resources.selector_limit":"resources.selector_missing","Resource source selector is missing, ambiguous or limited; inspect node IDs/candidates",NULL,0);
+            else {
+                target=gd_resource_select(resource_query,resource_graph,resource_to);
+                if (target<0) gd_error(model,target==-2 ? "resources.selector_ambiguous":target==-3 ? "resources.selector_limit":"resources.selector_missing","Resource target selector is missing, ambiguous or limited; inspect node IDs/candidates",NULL,0);
+                else gd_resource_query(resource_query,resource_graph,start,target,resource_accepted,GD_RESOURCE_ROUTE_WORK);
+            }
         }
     }
     if ((command==3 || command==4) && !error && !model->error_count) {
@@ -516,7 +541,7 @@ static int application(int argc, char **argv) {
 #endif
     }
     if (!view_command || model->error_count) {
-        int written = command==14 ? gd_write_resource_result(stdout,model,resource_graph,json,error ? NULL:fields) : rule_command ? gd_write_rule_report(stdout,model,rules,rule_analysis,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
+        int written = command==14 ? gd_write_resource_query(stdout,model,resource_graph,resource_query,json,error ? NULL:fields) : rule_command ? gd_write_rule_report(stdout,model,rules,rule_analysis,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
             command==3 ? gd_write_skill_result(stdout,model,skill_query,json,error ? NULL:fields) : gd_write_result(stdout, model, skill_command ? 2 : command == 1, json, error ? NULL : fields);
         if (!written || fflush(stdout)) {
             fputs("gd: cannot write result\n", stderr); status = 2;
@@ -528,7 +553,7 @@ static int application(int argc, char **argv) {
     }
     if (model->error_count || model->errors_omitted) status = 2;
     if (skill_query) allocator.release(allocator.context,skill_query);
-    gd_resource_graph_destroy(resource_graph); gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
+    gd_resource_routes_destroy(resource_query); gd_resource_graph_destroy(resource_graph); gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
 }
 int main(int argc, char **argv) {
 #ifdef _WIN32

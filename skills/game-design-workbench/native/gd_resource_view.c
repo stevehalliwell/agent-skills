@@ -517,6 +517,29 @@ void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvi
     GD_ExplorerPane *p=context->pane;
     int pair=p->shared ? gd_graph_match(context->analysis,p->selection.node,p->peer):-1;
     const GD_GraphComparison *comparison=p->branches && pair>=0 ? gd_graph_compare(context->analysis,p->selection.node,p->peer):NULL;
+    if (p->resource_routes && p->resource_routes->graph==context->project->resources) {
+        const GD_ResourceRoutes *query=p->resource_routes; int i;
+        BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); BeginMode2D(p->camera);
+        for (i=0;i<p->layout->edge_count;++i) if (query->marked_relations[i] || query->side_relations[i]) {
+            const GD_LayoutEdge *edge=&p->layout->edges[i];
+            if (context->analysis->shown[edge->a] && context->analysis->shown[edge->b])
+                DrawLineEx((Vector2){p->layout->nodes[edge->a].x,p->layout->nodes[edge->a].y},(Vector2){p->layout->nodes[edge->b].x,p->layout->nodes[edge->b].y},
+                    (query->marked_relations[i] ? 9:5)/p->camera.zoom,query->marked_relations[i] ? (Color){45,214,199,150}:(Color){243,186,87,115});
+        }
+        if (p->resource_witness>=0 && p->resource_witness<query->witness_count) {
+            const GD_ResourceWitness *w=&query->witnesses[p->resource_witness];
+            for (i=0;i<w->count;++i) {
+                const GD_ResourceArc *arc=&query->arcs[w->arcs[i]];
+                const GD_LayoutNode *a=&p->layout->nodes[arc->from],*b=&p->layout->nodes[arc->to];
+                float dx=b->x-a->x,dy=b->y-a->y,length=hypotf(dx,dy),size=8/p->camera.zoom;
+                if (!context->analysis->shown[arc->from] || !context->analysis->shown[arc->to] || length<2*size) continue;
+                dx/=length; dy/=length;
+                { Vector2 tip={a->x+(b->x-a->x)*0.6f,a->y+(b->y-a->y)*0.6f};
+                  DrawTriangle(tip,(Vector2){tip.x-dx*size-dy*size/2,tip.y-dy*size+dx*size/2},(Vector2){tip.x-dx*size+dy*size/2,tip.y-dy*size-dx*size/2},(Color){45,214,199,255}); }
+            }
+        }
+        EndMode2D(); EndScissorMode();
+    }
     draw_resource_graph(context->project->resources,p->layout,context->analysis,p->camera,context->viewport,p->selection.node,
                         p->shared,pair,comparison,e->paths,e->bypass,e->reachability,e->reach_pair,e->shapes,e->overview);
 }
@@ -528,10 +551,71 @@ void gd_explorer_resource_source(GD_ExplorerContext *context, int edge) {
                   source ? source->reference:"unresolved source");
     if (source) igTextWrapped("%s",source->source_path);
 }
+int gd_explorer_resource_run(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_ResourceRoutes *next;
+    if (p->resource_to<0) { snprintf(p->resource_message,sizeof(p->resource_message),"Select a concrete target node first."); return 0; }
+    next=gd_resource_routes_create(context->project->allocator);
+    if (!next) { snprintf(p->resource_message,sizeof(p->resource_message),"Cannot allocate bounded route scratch; previous result retained."); return 0; }
+    if (!gd_resource_query(next,context->project->resources,p->resource_from,p->resource_to,p->resource_accepted,GD_RESOURCE_ROUTE_WORK)) {
+        gd_resource_routes_destroy(next); snprintf(p->resource_message,sizeof(p->resource_message),"Invalid endpoints; previous result retained."); return 0;
+    }
+    gd_resource_routes_destroy(p->resource_routes); p->resource_routes=next; p->resource_witness=next->witness_count ? 0:-1; *p->resource_message=0; return 1;
+}
+void gd_explorer_resource_controls(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; const GD_ResourceGraph *graph=context->project->resources;
+    int selected=p->selection.node,changed=0,i;
+    igSeparator(); igTextUnformatted("Direct conditional resource witnesses",NULL);
+    igTextWrapped("Whole loaded Resource snapshot, not camera/filter scope. Teal arrows: selected witness. Amber: side guard/write declarations, not necessarily consumed or AND inputs. Feasibility is not checked. Calls/unknown-direction writes remain frontiers.");
+    igTextWrapped("From: %s | To: %s",p->resource_from>=0 ? node_label(graph,p->resource_from):"any upstream declaration",p->resource_to>=0 ? node_label(graph,p->resource_to):"not selected");
+    igBeginDisabled(selected<0 || selected>=graph->node_count || p->selection.linked>=0);
+    if (igButton("Use selected as FROM",(ImVec2_c){0,0})) { p->resource_from=selected; changed=1; }
+    igSameLine(0,8);
+    if (igButton("Use selected as TO",(ImVec2_c){0,0})) { p->resource_to=selected; changed=1; }
+    igEndDisabled();
+    if (igButton("Any upstream (clear FROM)",(ImVec2_c){0,0})) { p->resource_from=-1; changed=1; }
+    if (igCheckbox("Accepted sources only",&p->resource_accepted)) changed=1;
+    if (changed) { gd_resource_routes_destroy(p->resource_routes); p->resource_routes=NULL; p->resource_witness=-1; snprintf(p->resource_message,sizeof(p->resource_message),"Query changed; run to refresh witness."); }
+    if (igButton("Run conditional witnesses",(ImVec2_c){0,0})) gd_explorer_resource_run(context);
+    if (*p->resource_message) igTextWrapped("%s",p->resource_message);
+    if (p->resource_routes) {
+        GD_ResourceRoutes *query=p->resource_routes;
+        igTextWrapped("%d retained witnesses | work %d/%d | work/witness limit %s | depth limit %s | cycles skipped %d",query->witness_count,query->work,query->work_limit,query->limited ? "yes":"no",query->depth_limited ? "yes":"no",query->cycle_edges);
+        igTextWrapped("Unknown-direction writes %d | unexpanded calls %d | excluded cases %d. No known direct witness is not impossibility; raw/capped expressions remain in source inspector.",query->unknown_writes,query->unexpanded_calls,query->excluded_cases);
+        if (!query->to_bindings || (query->from>=0 && !query->from_bindings)) igTextWrapped("Endpoint has no explicit facet binding. Resource noun/type alone does not identify a shared pool.");
+        if (query->witness_count && igSliderInt("Witness",&p->resource_witness,0,query->witness_count-1,"%d",0)) gd_resource_route_mark(query,p->resource_witness);
+        if (p->resource_witness>=0) {
+            if (igCheckbox("Only witness + side declarations (display filter)",&p->resource_only_witness)) p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;
+            if (igButton("Frame witness + side declarations",(ImVec2_c){0,0})) p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;
+            const GD_ResourceWitness *w=&query->witnesses[p->resource_witness]; int hidden=0;
+            for (i=0;i<graph->node_count;++i) if (query->marked_nodes[i] && !context->analysis->shown[i]) ++hidden;
+            igTextWrapped("Conditional, feasibility not checked | proposal reliance %s | unresolved side facts %s | %d highlighted nodes hidden by display filters",w->proposed ? "yes":"no",w->unresolved ? "yes":"no",hidden);
+            for (i=0;i<w->count;++i) {
+                const GD_ResourceArc *arc=&query->arcs[w->arcs[i]];
+                igTextWrapped("%s: %s -> %s",gd_resource_arc_name(arc->kind),node_label(graph,arc->from),node_label(graph,arc->to));
+            }
+            if (igCollapsingHeader_TreeNodeFlags("Whole activation guards + side declarations",0)) for (i=0;i<=w->count;++i) {
+                const GD_ResourceNode *node=&graph->nodes[w->nodes[i]]; int j;
+                if (node->kind!=GD_RESOURCE_CASE) continue;
+                { const GD_RuleCase *rule=&graph->rules->cases[node->case_index];
+                  igTextWrapped("Case %s | context %s | unknown conditions %s | unknown effects %s",rule->name,rule->context ? rule->context:"unspecified",rule->unknown_conditions ? rule->unknown_conditions:"none declared",rule->unknown_effects ? rule->unknown_effects:"none declared");
+                  for (j=rule->first_participant;j<rule->first_participant+rule->participant_count;++j) {
+                      const GD_RuleParticipant *actor=&graph->rules->participants[j];
+                      igTextWrapped("%s requires %s | excludes %s | preserves %s | calls %s",actor->name,actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"unspecified",actor->preserve ? actor->preserve:"unspecified",actor->causes ? actor->causes:"none");
+                  }
+                }
+                for (j=query->case_head[w->nodes[i]];j>=0;j=query->case_next[j]) {
+                    gd_explorer_resource_source(context,j);
+                    if (graph->relations[j].kind==GD_RESOURCE_QUANTITY_WRITE) igTextWrapped("%s",graph->rules->assignments[graph->relations[j].declaration].expression);
+                }
+            }
+        }
+    }
+    igSeparator();
+}
 void gd_explorer_resource_details(GD_ExplorerContext *context) {
     const GD_ResourceGraph *graph=context->project->resources;
     int selected=context->pane->selection.node,record=gd_explorer_resource_record(graph,selected),i;
-    const GD_ResourceNode *node;
+    const GD_ResourceNode *node; char identity[GD_MAX_PATH];
     if (context->pane->selection.linked>=0) {
         const GD_Record *source=&graph->model->records[context->pane->selection.linked];
         igTextWrapped("Loaded source inspection (not a projected node): %s",source->reference);
@@ -541,6 +625,10 @@ void gd_explorer_resource_details(GD_ExplorerContext *context) {
     }
     if (selected<0 || selected>=graph->node_count) { igTextWrapped("Select a case, facet or resource role to inspect source."); return; }
     node=&graph->nodes[selected];
+    if (gd_resource_node_id(graph,selected,-1,identity,sizeof(identity))) {
+        igTextWrapped("Node ID: %s",identity);
+        if (igButton("Copy node ID",(ImVec2_c){0,0})) SetClipboardText(identity);
+    }
     igTextWrapped("#%d %s | %s",selected,node_label(graph,selected),node->kind==GD_RESOURCE_CASE ? "Rule case":node->kind==GD_RESOURCE_ROLE ? "Resource role":"Actor facet");
     if (node->pool_reference) igTextWrapped("Pool: %s | shared identity, not a unique case/participant",node->pool_reference);
     if (node->case_index>=0 && !node->pool_reference) {
