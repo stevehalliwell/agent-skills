@@ -14,10 +14,12 @@ typedef struct attendant_result {
     int written_count;
     const char *const *written;
 } attendant_result;
+typedef enum attendant_feedback_mode { ATTENDANT_FEEDBACK_SOURCE, ATTENDANT_FEEDBACK_CONTEXT } attendant_feedback_mode;
 typedef struct attendant_feedback {
     const char *project, *target_path, *target_hash;
     uint64_t range_start, range_end; /* Unicode code points, zero-based/end-exclusive. */
     const char *selected_text, *comment;
+    attendant_feedback_mode mode; /* CONTEXT: zero source bounds/empty selected_text; rendered context in body. */
 } attendant_feedback;
 typedef struct attendant_comment {
     const char *status, *target_path, *target_hash, *selected_text, *body;

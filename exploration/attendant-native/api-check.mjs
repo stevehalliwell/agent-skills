@@ -122,6 +122,35 @@ try {
     snapshot = inventory(conflict);
     failure = child(probe, ['send', conflict, target, hash(later), String(start), String(end), selected, comment, 'probe'], 1);
     assert.equal(failure.code, 'feedback-conflict'); assert.deepEqual(inventory(conflict), snapshot); recordCase('unregistered nonempty managed directory conflicts without overwrite');
+    const contextual = join(report.run, `${compiler}-${spelling}-context`); mkdirSync(contextual);
+    const contextTarget = join(contextual, 'preview.md'), contextBody = 'Context note: caf\u00e9 \ud83d\ude00.\r\n\nRendered context lives in note body.\n';
+    writeFileSync(contextTarget, saved);
+    const contextSend = (options = {}) => child(probe, [options.operation ?? 'send-context', contextual, contextTarget, options.hash ?? hash(saved), String(options.start ?? 0), String(options.end ?? 0), options.selected ?? '', contextBody, 'probe'], options.status ?? 0, {ATTENDANT_FEEDBACK_FAULT: options.fault ?? ''});
+    snapshot = inventory(contextual);
+    for (const options of [{operation: 'send'}, {hash: '0'.repeat(64)}, {start: 1}, {end: 1}, {selected: 'invented'}]) {
+      failure = contextSend({...options, status: 1}); assert.equal(failure.recovered, true); assert.deepEqual(inventory(contextual), snapshot);
+    }
+    recordCase('absent anchor requires explicit context mode, zero bounds, empty source text and saved hash');
+    for (const fault of ['staged', 'seeds-published', 'comment-published']) {
+      failure = contextSend({fault, status: 1}); assert.deepEqual(failure.written, []); assert.deepEqual(inventory(contextual), snapshot);
+    }
+    recordCase('context-only first-send rollback preserves original source and leaves no seeds');
+    failure = contextSend({fault: 'target-change', status: 1}); assert.equal(failure.code, 'feedback-stale');
+    assert.equal(readFileSync(contextTarget, 'utf8'), saved + '\n# Concurrent external edit\n');
+    assert(!existsSync(join(contextual, '.pi')) && !existsSync(join(contextual, 'records'))); writeFileSync(contextTarget, saved);
+    recordCase('context-only target hash rechecked after staging without guessed source validation');
+    const contextResult = contextSend(); assert.equal(contextResult.written.length, 5);
+    assert(readFileSync(contextResult.path, 'utf8').endsWith('---\n' + contextBody)); assert.equal(readFileSync(contextTarget, 'utf8'), saved);
+    assert(!existsSync(join(contextual, '.attendant'))); recordCase('context-only first Send bootstraps same schema and preserves supplied body bytes');
+    const contextSQL = 'SELECT name,status,range_start,range_end,selected_text FROM _meta_comments';
+    const contextQuery = command => child(command === 'legacy' ? process.execPath : cli, [...(command === 'legacy' ? [legacy] : []), 'query', '-p', contextual, '-s', contextSQL]);
+    const contextRows = contextQuery('native'); assert.equal(contextRows.meta_comments.pending, 1);
+    assert.deepEqual([contextRows.rows[0].range_start, contextRows.rows[0].range_end, contextRows.rows[0].selected_text], [0, 0, '']);
+    assert.deepEqual(contextQuery('legacy').rows, contextRows.rows); recordCase('native and legacy query read explicit absent anchor without consuming');
+    child(cli, ['update', '-p', contextual, '-c', '_meta_comments', '-i', JSON.stringify([{name: contextRows.rows[0].name, fields: {status: 'resolved'}}])]);
+    assert.equal(contextQuery('legacy').rows[0].status, 'resolved'); assert.equal(contextQuery('native').meta_comments.pending, 0);
+    assert(readFileSync(contextResult.path, 'utf8').endsWith('---\n' + contextBody));
+    recordCase('explicit context-only resolution preserves body and absent anchor');
   }
   report.ok = true;
 } finally { writeFileSync(join(root, 'build/api-check-results.json'), JSON.stringify(report, null, 2) + '\n'); }

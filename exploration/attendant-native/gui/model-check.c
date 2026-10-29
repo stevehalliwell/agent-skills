@@ -86,12 +86,12 @@ int main(void) {
             DestroyWindow(client);
         }
         {
-            size_t bytes = offsetof(gui_inspection, text) + snapshot->header.length + 1;
+            size_t bytes = offsetof(gui_inspection, text) + snapshot->header.length + snapshot->header.context_length + 2;
             gui_inspection_header *packet = (gui_inspection_header *)external;
             memcpy(external, snapshot, bytes); CHECK(gui_inspection_accept(snapshot, workspace->root, external, bytes));
             memcpy(external + 1, snapshot, bytes); CHECK(gui_inspection_accept(snapshot, workspace->root, external + 1, bytes));
             CHECK(!gui_inspection_accept(snapshot, workspace->root, external + 1, bytes - 1));
-            memcpy(external, snapshot, bytes); packet->version = 2; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
+            memcpy(external, snapshot, bytes); packet->version = 3; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
             memcpy(external, snapshot, bytes); packet->end++; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
             memcpy(external, snapshot, bytes); packet->project[0] = '!'; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
             memcpy(external, snapshot, bytes); packet->view = 99; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
@@ -240,6 +240,53 @@ int main(void) {
         CHECK(gui_reveal_has_line("", 1)); CHECK(!gui_reveal_has_line("", 2)); CHECK(!gui_reveal_has_line("x", 0));
         CHECK(gui_reveal_has_line("a\r\nb\n", 3)); CHECK(!gui_reveal_has_line("a\r\nb\n", 4)); CHECK(!gui_reveal_has_line("a\rb", 1));
         CHECK(gui_reveal_has_line("caf\xc3\xa9 \xf0\x9f\x98\x80\r\nx", 2));
+    }
+    {
+        const char *context = "{\"sections\":[{\"text\":\"caf\xc3\xa9 section\",\"highlight_start\":0,\"highlight_end\":4,\"range_unit\":\"unicode-codepoint\"}]}";
+        int document = workspace->active, note_index;
+        gui_tab *current = &workspace->tabs[document];
+        gui_inspection *snapshot = VirtualAlloc(NULL, sizeof(*snapshot), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        attendant_feedback input = {0}; attendant_comment note;
+        char json[4096], note_path[GUI_PATH] = {0};
+        CHECK(snapshot != NULL);
+        CHECK(gui_selection_capture_preview(workspace, document, 0, 0, "caf\xc3\xa9", 5, context, strlen(context)));
+        CHECK(gui_selection_current(workspace).status == GUI_SELECTION_CONTEXT);
+        CHECK(gui_inspection_snapshot(workspace, snapshot) && snapshot->header.length == 5 && snapshot->header.context_length == strlen(context));
+        CHECK(gui_inspection_json(snapshot, json, sizeof(json)) && strstr(json, "\"status\":\"context\"") && strstr(json, "rendered_context"));
+        memcpy(external, snapshot, offsetof(gui_inspection, text) + 5 + strlen(context) + 2);
+        CHECK(gui_inspection_accept(snapshot, workspace->root, external, offsetof(gui_inspection, text) + 5 + strlen(context) + 2));
+        CHECK(gui_selection_capture_preview(workspace, document, 0, 8, "caf\xc3\xa9", 5, context, strlen(context)));
+        CHECK(gui_selection_current(workspace).status == GUI_SELECTION_MAPPED);
+        CHECK(gui_inspection_snapshot(workspace, snapshot) && snapshot->header.end == 8);
+        memcpy(external, snapshot, offsetof(gui_inspection, text) + 5 + strlen(context) + 2);
+        CHECK(gui_inspection_accept(snapshot, workspace->root, external, offsetof(gui_inspection, text) + 5 + strlen(context) + 2));
+        gui_selection_capture(workspace, document, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, 1, 3);
+        CHECK(!workspace->preview_text && !workspace->preview_context);
+        CHECK(!gui_selection_capture_preview(workspace, document, 0, 0, "bad", GUI_TEXT + 1u, context, strlen(context)));
+        CHECK(gui_selection_current(workspace).status == GUI_SELECTION_UNSUPPORTED && gui_selection_current(workspace).view == GUI_SELECTION_PREVIEW);
+        CHECK(gui_selection_capture_preview(workspace, document, 0, (int)current->length + 1, "caf\xc3\xa9", 5, context, strlen(context)));
+        CHECK(gui_selection_current(workspace).status == GUI_SELECTION_CONTEXT && workspace->preview_context);
+        input.project = workspace->root; input.target_path = current->path; input.target_hash = current->hash;
+        input.selected_text = ""; input.comment = "Context without source anchor";
+        CHECK(!attendant_send_feedback(workspace->session, &input).ok);
+        input.mode = ATTENDANT_FEEDBACK_CONTEXT; input.range_end = 1;
+        CHECK(!attendant_send_feedback(workspace->session, &input).ok);
+        CHECK(gui_send_preview_comment(workspace, document, 0, 0, context, "Context fallback probe\r\nKeep human bytes."));
+        for (i = 0; i < workspace->navigation->count; i++) if (workspace->navigation->documents[i].pending) {
+            result = attendant_read_comment(workspace->session, workspace->root, workspace->navigation->documents[i].path, &note);
+            if (result.ok && strstr(note.body, "Context fallback probe")) snprintf(note_path, sizeof(note_path), "%s", workspace->navigation->documents[i].path);
+        }
+        CHECK(*note_path);
+        result = attendant_read_comment(workspace->session, workspace->root, note_path, &note);
+        CHECK(result.ok && !note.range_start && !note.range_end && !*note.selected_text && !strcmp(note.status, "pending"));
+        CHECK(!strncmp(note.body, "Context fallback probe\r\nKeep human bytes.", strlen("Context fallback probe\r\nKeep human bytes.")) && strstr(note.body, context));
+        snprintf(edited, GUI_TEXT + 1, "%s", current->text);
+        CHECK(gui_set_document_text(workspace, document, edited));
+        current->selection_start = 1; current->selection_end = 3;
+        CHECK(gui_open_document(workspace, note_path)); note_index = workspace->active;
+        CHECK(gui_open_comment_target(workspace, note_index));
+        CHECK(workspace->active == document && current->dirty && current->selection_start == 1 && current->selection_end == 3 && strstr(workspace->notice, "No source anchor"));
+        VirtualFree(snapshot, 0, MEM_RELEASE);
     }
     gui_workspace_destroy(workspace); VirtualFree(workspace, 0, MEM_RELEASE);
     VirtualFree(edited, 0, MEM_RELEASE); VirtualFree(external, 0, MEM_RELEASE);

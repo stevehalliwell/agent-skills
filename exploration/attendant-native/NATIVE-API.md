@@ -25,13 +25,15 @@ Read checks stable before/after timestamp/size; read/save results carry raw Wind
 
 Save checks exact current hash, stages/flushed bytes, and rechecks original bytes before atomic per-file replacement. External dirty conflict returns failure without overwrite.
 
-Feedback requires saved target hash, nonempty selected range/text, and nonempty human comment. Range counts complete saved file's Unicode code points; CR and LF each count. Body retains exact supplied comment bytes. Feedback does not save target or refresh projection; ordinary CLI preparation discovers files later.
+Zero-initialize `attendant_feedback`. Default `ATTENDANT_FEEDBACK_SOURCE` requires saved target hash, nonempty selected source range/text and nonempty human comment. Range counts complete saved file's Unicode code points; CR and LF each count. Selected text must equal saved source span, which may enclose Markdown syntax between rendered pieces.
+
+`ATTENDANT_FEEDBACK_CONTEXT` explicitly has no source anchor: require both bounds zero and `selected_text: ""`. Saved target hash remains mandatory and rechecked before publication. GUI supplies rendered sections/local highlight ranges in comment body; these are not source positions. Core retains exact supplied body bytes in both modes. Feedback never saves target or refreshes projection; ordinary CLI preparation discovers files later.
 
 ## Workspace discovery
 
 `attendant_read_workspace(session, project, &workspace)` reads configured source records plus immediate nonhidden root `.md` files. Does not correct source, create projection or create feedback collection. Returns document paths/names/collection, invalid/pending/resolved markers, diagnostic count and schema-declared reference links; unresolved targets stay NULL. Per-record read/size/UTF-8/stat failures stay listed as invalid; other records remain browsable. CLI source loading remains strict. Output and nested strings/references use normal borrowed request lifetime. GUI copies snapshot before next API call; failed refresh retains previous GUI view.
 
-`attendant_read_comment(session, project, path, &comment)` validates registered managed schema, immediate comment path, lifecycle, lowercase hash and integral bounded code-point anchor. Returns borrowed status/target/hash/text/body without reading target or resolving status. GUI copies anchor before opening target, checks fresh saved hash and exact range/text, and never applies an old saved range to dirty/stale source.
+`attendant_read_comment(session, project, path, &comment)` validates registered managed schema, immediate comment path, lifecycle, lowercase hash and integral bounded code-point anchor or explicit absent-anchor state. Returns borrowed status/target/hash/text/body without reading target or resolving status. GUI copies anchor before opening target, checks fresh saved hash and exact source range/text, and never applies old saved range to dirty/stale source. Context-only note opens target without moving caret/selection or reloading dirty work. Existing anchored records remain unchanged; older readers may reject absent anchors rather than guess.
 
 ## Managed collection
 

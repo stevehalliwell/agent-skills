@@ -20,12 +20,13 @@ int main(int argc, char **argv) {
     LocalFree(arguments); argv = owned;
     if (argc == 3 && !strcmp(argv[1], "read")) { target = argv[2]; result = attendant_read_document(session, target); }
     else if (argc == 5 && !strcmp(argv[1], "save")) { target = argv[2]; result = attendant_save_document(session, target, argv[3], argv[4]); }
-    else if (argc == 10 && !strcmp(argv[1], "send")) {
+    else if (argc == 10 && (!strcmp(argv[1], "send") || !strcmp(argv[1], "send-context"))) {
         attendant_feedback input;
         memset(&input, 0, sizeof(input));
         input.project = argv[2]; input.target_path = target = argv[3]; input.target_hash = argv[4];
         input.range_start = _strtoui64(argv[5], NULL, 10); input.range_end = _strtoui64(argv[6], NULL, 10);
         input.selected_text = argv[7]; input.comment = argv[8];
+        input.mode = !strcmp(argv[1], "send-context") ? ATTENDANT_FEEDBACK_CONTEXT : ATTENDANT_FEEDBACK_SOURCE;
         if (strcmp(argv[9], "probe")) return 2;
         result = attendant_send_feedback(session, &input);
     } else return 2;

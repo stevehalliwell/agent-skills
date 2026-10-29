@@ -1,34 +1,34 @@
 {
   "ok": true,
-  "checkerSha256": "03c985a1432433af728d992dde4178d5fe4075d137c51a6218beb55fa0453e23",
-  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-YV43y6",
+  "checkerSha256": "cf9d5d5cec4bbc7e704d55bbfe8c31c6ef96693a355e7c4847ac597becb524db",
+  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-aYxU5Y",
   "results": [
     {
       "compiler": "cjit",
       "provenance": {
-        "builtAt": "2026-10-29T21:41:47.145Z",
+        "builtAt": "2026-10-29T23:37:22.254Z",
         "version": {
           "status": 0,
           "text": "CJIT v1.2.0 by Dyne.org\r\n\r\nSynopsis: cjit [options] files(*) -- app arguments\r\n  (*) can be any source (.c) or built object (dll, dylib, .so)\r\nOptions and values (+) mandatory (-) default (=) optional:\r\n -h \t print this help\r\n -v \t print runtime and compiler status information\r\n -q \t stay quiet and only print errors and output\r\n -C \t set interpreter/compiler flags (-) env var CFLAGS\r\n -c \t compile a single source file, do not execute\r\n -o exe\t do not run, compile an executable (+path)\r\n -D sym\t define a macro value (+) symbol or key=value\r\n -I dir\t also search folder (+) dir for header files\r\n -l lib\t link the shared library (+) lib\r\n -L dir\t add folder (+) dir to library search paths\r\n -e fun\t run starting from entry function (-) main\r\n -p pid\t write execution process ID to (+) pid\r\n --verb\t don't go quiet, verbose logs\r\n --xass\t just extract runtime assets (=) to path\r\n --xtgz\t extract all files in a USTAR (+) tar.gz\r\n\r\n"
         },
-        "inputSha256": "c9ab1dcb5af332c18d7c98a7dfb71ed4b83dac076b78ac3b5ee03771de57aa0d",
+        "inputSha256": "fe67f48792449dd87bd0b4447a4b9c5fc93aa4ec45e6f7455684e0df96bcbf58",
         "binaries": [
           {
-            "path": "build/gui/attendant-gui-cjit.exe",
-            "sha256": "52dcfe4295045b366ffea98c0b53c8325ec16ef1c249112e8364fc8c055bb910"
+            "path": "build/gui-preview/attendant-gui-cjit.exe",
+            "sha256": "5d5473e29670eb97cad8761c89c683dc2b4d2951f3e9752aeb4f3fb371e343b0"
           },
           {
-            "path": "build/gui/attendant-gui-cjit-check.exe",
-            "sha256": "cd2c34ddf6b7f2d44bd2c8607b7775dac7dfdbffb7006356f7460a767834a785"
+            "path": "build/gui-preview/attendant-gui-cjit-check.exe",
+            "sha256": "281b455eb8e55b6572c511144f5918f178ecbad4b34ddc2d9903d0f68d04a394"
           },
           {
-            "path": "build/gui/model-check-cjit.exe",
-            "sha256": "3f19be6af697c3950b45d0db7e0215dfe00aeca060fa0fdb364b3762ffb5fe53"
+            "path": "build/gui-preview/model-check-cjit.exe",
+            "sha256": "1148c5f5bb40c8e61b6543adfe35044aa6dc8eb2c5ad946ce91be71325fd6b57"
           }
         ],
         "stack": {
-          "sha256": "2e1d2cbdb5d69f58288ca6266d3fe5aa87921710a49d60dcd01518c696329315",
-          "dllSha256": "919c88a3c83ebb443b9bff8423eff830db2fbb0541f78fd455c10a11ed30cb54",
+          "sha256": "054f99520b16036cb51785d1c55b7f48a31f4c54d5e034e2129906e12650d456",
+          "dllSha256": "e37686e029b6cbd63aeaeae201b04039b73432f498c32bb0ce447492bdffc903",
           "dependencies": {
             "dependencies": [
               [
@@ -73,8 +73,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1981,
-        "sha256": "7249deb954bc9a7f8d2118ca43abfbc65d7794717df6b637914de26264c5ca0b"
+        "bright": 2007,
+        "sha256": "341440a7282a635fdfd0b29acd946f286d90976be08930e1c30d5bca5fc9233e"
       }
     },
     {
@@ -92,15 +92,15 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1415,
-        "sha256": "1c4e7d5336d2840f0ac1fa494ae37658305c175ed6446eb6b4cc2d05914ff579"
+        "bright": 1422,
+        "sha256": "0f2b6e19b9376cf051e0310613f985f82fcbb98ffc38d36f61d00686851e6522"
       }
     },
     {
       "compiler": "cjit",
       "model": {
         "ok": true,
-        "checks": 168
+        "checks": 193
       }
     },
     {
@@ -109,13 +109,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 2,
-        "vertices": 3016
+        "vertices": 3004
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1271,
-        "sha256": "ca79bad2890e5c9a210dcfba589172e5ee14266d2cd1df68359266659c75190e"
+        "bright": 1287,
+        "sha256": "f2e75239f75c2390d5572f938f4b943c53a86293389cc56ad446d59e9281ad8a"
       }
     },
     {
@@ -134,7 +134,7 @@
         "ok": true,
         "frames": 70,
         "tabs": 1,
-        "vertices": 3216
+        "vertices": 3212
       },
       "previewFeedback": {
         "rangeStart": 35,
@@ -148,8 +148,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1591,
-        "sha256": "7f8b61c03879a89dc62e33f973c295646d2e9051763cc9408c6b8fecb836d90f"
+        "bright": 1655,
+        "sha256": "3b00a536ce172f8ead8728a16ad3b860a9a5339dc5331d3f810565b5b8243210"
       }
     },
     {
@@ -163,8 +163,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1835,
-        "sha256": "26ee7be91742750e71adf46e131ec60e2d6ebf36d20109ba4ab650c4329576b0"
+        "bright": 1848,
+        "sha256": "9a0b9ff59d2b737cf7ea62b0c537a61f57628aedbed15534c0e0d0073838eefa"
       }
     },
     {
@@ -172,14 +172,14 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1394,
-        "sha256": "80a68d95971f5cdb03ad60818b39bbed236793e7768c8ecb3069114f1014557f",
+        "bright": 1413,
+        "sha256": "7c039f0b0b6ebc5a7573bfaab91e2c236cbc874cfad9f414ffe5936397b4a240",
         "commentInput": {
           "rectangle": [
-            307,
-            475,
-            967,
-            625
+            306,
+            488,
+            966,
+            638
           ],
           "visibleEdges": 4,
           "emptyInput": true
@@ -188,11 +188,13 @@
       "selectionInspection": {
         "mode": "plain-menu",
         "clientCompiler": "zig",
-        "status": "exact",
+        "status": "mapped",
         "priorSourceSelectionReplaced": true,
         "unifiedActionUsesLatestSelection": true,
         "retainedDuringCommentInputFocus": true,
-        "sourceAndProjectionUnchanged": true
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": false
       }
     },
     {
@@ -200,11 +202,13 @@
       "selectionInspection": {
         "mode": "markup-menu",
         "clientCompiler": "zig",
-        "status": "unsupported",
+        "status": "mapped",
         "priorSourceSelectionReplaced": true,
         "unifiedActionUsesLatestSelection": true,
-        "retainedDuringCommentInputFocus": false,
-        "sourceAndProjectionUnchanged": true
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
       }
     },
     {
@@ -212,11 +216,161 @@
       "selectionInspection": {
         "mode": "widget",
         "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "drag",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "reverse",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "context",
+        "clientCompiler": "zig",
+        "status": "context",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": false,
+        "contextSaveAndSend": true,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "multi",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "partial",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "reverse-partial",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "table",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "wrap",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "scroll",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "overflow",
+        "clientCompiler": "zig",
         "status": "unsupported",
         "priorSourceSelectionReplaced": true,
         "unifiedActionUsesLatestSelection": true,
-        "retainedDuringCommentInputFocus": false,
-        "sourceAndProjectionUnchanged": true
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": false
+      }
+    },
+    {
+      "compiler": "cjit",
+      "renderException": {
+        "controlledTermination": true,
+        "noNormalFrameTeardown": true,
+        "sourceUnchanged": true
       }
     },
     {
@@ -244,7 +398,7 @@
           },
           {
             "event": "complete",
-            "checks": 95,
+            "checks": 104,
             "markerDraws": 3,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -269,8 +423,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45279,
-        "sha256": "33dd7c2e731a4d85154bf846286f402e342e1939d40f2a9ed5b7fdcdf5b921a9"
+        "bright": 45286,
+        "sha256": "b56af394233ef054e48441e020e927cdcda7024562f5080632ade28917e21c4b"
       }
     },
     {
@@ -298,7 +452,7 @@
           },
           {
             "event": "complete",
-            "checks": 40,
+            "checks": 43,
             "markerDraws": 0,
             "dirty": true,
             "caretSelectionPreservedAfterGo": true,
@@ -323,8 +477,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45250,
-        "sha256": "78b707541d49bd883ff602365f85b4feb69800ad322c28a028f3bbf7f0ed3b44"
+        "bright": 45295,
+        "sha256": "8eacd5d27335b1340913686bce32e3e3333e112e5b546c3d6f7ce1ef07badffa"
       }
     },
     {
@@ -352,7 +506,7 @@
           },
           {
             "event": "complete",
-            "checks": 47,
+            "checks": 50,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -377,8 +531,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45278,
-        "sha256": "c449b17893fa8446f16429f0eafc491ba4212259b9acf34207fd0b5585ed0db4"
+        "bright": 45305,
+        "sha256": "aaaae65e35a891e16e6c96e093e0ef4f099ca110e7adb8d34a6c134d96783de3"
       }
     },
     {
@@ -406,7 +560,7 @@
           },
           {
             "event": "complete",
-            "checks": 42,
+            "checks": 46,
             "markerDraws": 2,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -431,8 +585,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45175,
-        "sha256": "ceed71faf7256be82d974bd1a29596dba3fc90994679809ca4d106468758ae41"
+        "bright": 45198,
+        "sha256": "bdd95078a711cf25e67604135563f18cba0da0b12c7dfca3c82368a853a68fa8"
       }
     },
     {
@@ -460,7 +614,7 @@
           },
           {
             "event": "complete",
-            "checks": 38,
+            "checks": 41,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -485,8 +639,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45349,
-        "sha256": "0e0efeeff881bc09fd77c5ac09280902fe71a4020bdea63a60cdfdbb43bc977f"
+        "bright": 45319,
+        "sha256": "fd7a3ac9b212a5bf56c3132b077d586f21a23a8de106793c35e74310c384fcc9"
       }
     },
     {
@@ -497,29 +651,29 @@
     {
       "compiler": "zig",
       "provenance": {
-        "builtAt": "2026-10-29T21:41:48.355Z",
+        "builtAt": "2026-10-29T23:37:23.483Z",
         "version": {
           "status": 0,
           "text": "0.17.0\n"
         },
-        "inputSha256": "c9ab1dcb5af332c18d7c98a7dfb71ed4b83dac076b78ac3b5ee03771de57aa0d",
+        "inputSha256": "fe67f48792449dd87bd0b4447a4b9c5fc93aa4ec45e6f7455684e0df96bcbf58",
         "binaries": [
           {
-            "path": "build/gui/attendant-gui-zig.exe",
-            "sha256": "7376f6fdca047a0b31effadedee7ec8f2e970ecd3a7dd864ed9e1da2b22522f0"
+            "path": "build/gui-preview/attendant-gui-zig.exe",
+            "sha256": "7593e9972061277a38415a43670f789c8f79e8416cf28a19e4b8dc25512196a7"
           },
           {
-            "path": "build/gui/attendant-gui-zig-check.exe",
-            "sha256": "c82ffbeeff372754cdb315f62ce40043be3fc02ed7055785b5089e67d8337201"
+            "path": "build/gui-preview/attendant-gui-zig-check.exe",
+            "sha256": "f09bc3856b7111e7f89142e82c19ef5597d99d389c9827d372054b868509deab"
           },
           {
-            "path": "build/gui/model-check-zig.exe",
-            "sha256": "0c6bd78c311a127c4863765708b6b22126447985b47c2b2bef9fa44401309d99"
+            "path": "build/gui-preview/model-check-zig.exe",
+            "sha256": "6537b19c18e27b600625c28dc58c71bd14ed1561e7c09dedad2751952734ce30"
           }
         ],
         "stack": {
-          "sha256": "2e1d2cbdb5d69f58288ca6266d3fe5aa87921710a49d60dcd01518c696329315",
-          "dllSha256": "919c88a3c83ebb443b9bff8423eff830db2fbb0541f78fd455c10a11ed30cb54",
+          "sha256": "054f99520b16036cb51785d1c55b7f48a31f4c54d5e034e2129906e12650d456",
+          "dllSha256": "e37686e029b6cbd63aeaeae201b04039b73432f498c32bb0ce447492bdffc903",
           "dependencies": {
             "dependencies": [
               [
@@ -564,8 +718,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1988,
-        "sha256": "5388fd53c21aabe8e417ccca3799db1cf49cd13533b2d4c68039c17abb4c6f0a"
+        "bright": 1986,
+        "sha256": "1ccfe992278d2c40bf16008f8d4fd08f804a47c269e7e5efb4b5e3f7e579f51a"
       }
     },
     {
@@ -583,15 +737,15 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1407,
-        "sha256": "606fb38526f77b7a57e817a6c30a1fe392a366b7e6d5742e71f6d948a80906eb"
+        "bright": 1416,
+        "sha256": "6329d9bdb2329a8fad7b81d692a191509418de104f04529f903195e291134c77"
       }
     },
     {
       "compiler": "zig",
       "model": {
         "ok": true,
-        "checks": 168
+        "checks": 193
       }
     },
     {
@@ -600,13 +754,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 2,
-        "vertices": 2996
+        "vertices": 3008
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1268,
-        "sha256": "7319faadad4030ac141055e4585fc0dfeecd7cc9df02478050613680e1ff3796"
+        "bright": 1273,
+        "sha256": "6f0831351d6f563faa7bf0c69bd00e8b3162abda5f1b988a3caccf0bf3bef36f"
       }
     },
     {
@@ -639,8 +793,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1629,
-        "sha256": "b1b694164650a12125af037fc9baa19b7bf9d3f73a3ff9ab634aa5ab5758e35c"
+        "bright": 1565,
+        "sha256": "30b0583c6cd10052536e6967f9e08b0a94644228c8044ba7463506195d3d3cea"
       }
     },
     {
@@ -654,8 +808,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1849,
-        "sha256": "cdbaec70b0e1bde7d9e5684967f4cb3aa939218cf8cfddf10268f384fb82f9c7"
+        "bright": 1845,
+        "sha256": "3008366b6ebc9269f0eed506cb264801f91405a8e94d4a8ab338c67df89944e0"
       }
     },
     {
@@ -663,14 +817,14 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1429,
-        "sha256": "8eeeb405235bc1413a65a8f075a07a0f13fc834b433dad6d957f6ffac8470c8d",
+        "bright": 1430,
+        "sha256": "8c8072752d4b670e126769708f8fbe1d835bfb32941c8b0f0899d5f85e54a247",
         "commentInput": {
           "rectangle": [
-            307,
-            475,
-            967,
-            625
+            306,
+            488,
+            966,
+            638
           ],
           "visibleEdges": 4,
           "emptyInput": true
@@ -679,11 +833,13 @@
       "selectionInspection": {
         "mode": "plain-menu",
         "clientCompiler": "cjit",
-        "status": "exact",
+        "status": "mapped",
         "priorSourceSelectionReplaced": true,
         "unifiedActionUsesLatestSelection": true,
         "retainedDuringCommentInputFocus": true,
-        "sourceAndProjectionUnchanged": true
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": false
       }
     },
     {
@@ -691,11 +847,13 @@
       "selectionInspection": {
         "mode": "markup-menu",
         "clientCompiler": "cjit",
-        "status": "unsupported",
+        "status": "mapped",
         "priorSourceSelectionReplaced": true,
         "unifiedActionUsesLatestSelection": true,
-        "retainedDuringCommentInputFocus": false,
-        "sourceAndProjectionUnchanged": true
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
       }
     },
     {
@@ -703,11 +861,161 @@
       "selectionInspection": {
         "mode": "widget",
         "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "drag",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "reverse",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "context",
+        "clientCompiler": "cjit",
+        "status": "context",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": false,
+        "contextSaveAndSend": true,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "multi",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "partial",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "reverse-partial",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "table",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "wrap",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "scroll",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "overflow",
+        "clientCompiler": "cjit",
         "status": "unsupported",
         "priorSourceSelectionReplaced": true,
         "unifiedActionUsesLatestSelection": true,
-        "retainedDuringCommentInputFocus": false,
-        "sourceAndProjectionUnchanged": true
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": false
+      }
+    },
+    {
+      "compiler": "zig",
+      "renderException": {
+        "controlledTermination": true,
+        "noNormalFrameTeardown": true,
+        "sourceUnchanged": true
       }
     },
     {
@@ -735,7 +1043,7 @@
           },
           {
             "event": "complete",
-            "checks": 95,
+            "checks": 103,
             "markerDraws": 3,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -760,8 +1068,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45302,
-        "sha256": "f504ae54f41cbd8ab40d150fad4135c994a62eecff655a40b979bdaf9a431944"
+        "bright": 45298,
+        "sha256": "49d2ea4df3aad451faa4024bd547a1c5a275c8b93f799e5f30ab7cea8bb89145"
       }
     },
     {
@@ -789,7 +1097,7 @@
           },
           {
             "event": "complete",
-            "checks": 41,
+            "checks": 43,
             "markerDraws": 0,
             "dirty": true,
             "caretSelectionPreservedAfterGo": true,
@@ -814,8 +1122,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45298,
-        "sha256": "d54a2ae8e92d9387134dad809b1ed5e3cf1e079c0934de96dbca294c1c06d65c"
+        "bright": 45300,
+        "sha256": "a49b57b0eeb68aa241cbfad6f881c85887b7c8da9040892d425033ec94312704"
       }
     },
     {
@@ -843,7 +1151,7 @@
           },
           {
             "event": "complete",
-            "checks": 42,
+            "checks": 44,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -868,8 +1176,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45293,
-        "sha256": "a7b2c4162de69e8869dc89e7eeace152aa8c6d2b4e1f974207cbbaef27de0e4b"
+        "bright": 45306,
+        "sha256": "793c3e2ed22f90fa93dce1ffd906ce878503e66bbc87b26569f9ae64858c5d22"
       }
     },
     {
@@ -897,7 +1205,7 @@
           },
           {
             "event": "complete",
-            "checks": 42,
+            "checks": 46,
             "markerDraws": 2,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -922,8 +1230,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45192,
-        "sha256": "05cd2a7bc4c922c4923a2b6ca4f2451e268dc42c24eaa0aff42da7e5c6800e43"
+        "bright": 45195,
+        "sha256": "de3216fe6cd03fe55b31d1a24e07509f2919f38c64939508d131e8910dbf4735"
       }
     },
     {
@@ -951,7 +1259,7 @@
           },
           {
             "event": "complete",
-            "checks": 38,
+            "checks": 41,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -976,8 +1284,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45358,
-        "sha256": "42b10add8c0109e6c18c34f5f8514a52125f4e6e2bfb487094a948396c572708"
+        "bright": 45336,
+        "sha256": "9c2c8dfafbe8729c4a0065275adc79003d8c96edc85f742066ec45b36a294570"
       }
     },
     {

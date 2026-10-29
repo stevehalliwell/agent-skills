@@ -20,6 +20,8 @@ static const char comment_usage[] =
     "- Selection/comment gives contextual intent, not permission for unrelated edits.\n"
     "- Compare target_hash with exact saved UTF-8 bytes before using range.\n"
     "- range_start/range_end count Unicode code points, zero-based/end-exclusive; CR and LF each count.\n"
+    "- Zero source bounds and empty selected_text mean no source anchor; read rendered sections/ranges in body.\n"
+    "- Rendered ranges count code points within their section, never positions in source Markdown.\n"
     "- Reading does not consume. Explicitly update status to resolved after handling.\n"
     "- Built-in source_path/source_hash identify this comment, not target document.\n";
 static context *request_begin(attendant_session *session) {
@@ -218,11 +220,12 @@ attendant_result attendant_read_comment(attendant_session *session, const char *
     selected = lookup(&front, "selected_text"); unit = lookup(&front, "range_unit");
     if (!status || status->kind != VALUE_STRING || (strcmp(status->text, "pending") && strcmp(status->text, "resolved")) ||
         !target || target->kind != VALUE_STRING || !*target->text || !hash || hash->kind != VALUE_STRING || strlen(hash->text) != 64 ||
-        !selected || selected->kind != VALUE_STRING || !*selected->text || !unit || unit->kind != VALUE_STRING || strcmp(unit->text, "unicode-codepoint"))
+        !selected || selected->kind != VALUE_STRING || !unit || unit->kind != VALUE_STRING || strcmp(unit->text, "unicode-codepoint"))
         fail(c, "Comment status, target, hash, selection or range unit is invalid");
     for (i = 0; i < 64; i++) if (!((hash->text[i] >= '0' && hash->text[i] <= '9') || (hash->text[i] >= 'a' && hash->text[i] <= 'f'))) fail(c, "Comment target_hash must be lowercase SHA-256");
     comment->range_start = comment_offset(c, lookup(&front, "range_start")); comment->range_end = comment_offset(c, lookup(&front, "range_end"));
-    if (comment->range_start >= comment->range_end) fail(c, "Comment selection must be nonempty");
+    if (*selected->text ? comment->range_start >= comment->range_end : comment->range_start || comment->range_end)
+        fail(c, "Expected verified source range or explicit empty source anchor");
     comment->status = status->text; comment->target_path = full_path(c, root, target->text);
     comment->target_hash = hash->text; comment->selected_text = selected->text; comment->body = body;
     return request_result(c, 1, absolute, digest(c, text), text);
@@ -288,7 +291,10 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
     root = full_path(c, ".", input->project); target = regular_document(c, input->target_path);
     source = read_text(c, target, NULL); c->error_code = "feedback-stale";
     if (strcmp(digest(c, source), input->target_hash)) fail(c, "Saved target hash changed; select text again");
-    verify_selection(c, input, source);
+    if (input->mode == ATTENDANT_FEEDBACK_SOURCE) verify_selection(c, input, source);
+    else if (input->mode != ATTENDANT_FEEDBACK_CONTEXT || input->range_start || input->range_end || *input->selected_text) {
+        c->error_code = "feedback-range"; fail(c, "Context feedback must not invent a source range");
+    }
     c->error_code = "feedback-conflict";
     config_path = full_path(c, root, ".pi/attendant.tables"); c->error_path = config_path;
     {

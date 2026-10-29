@@ -5,12 +5,13 @@ import { createHash } from 'node:crypto';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { verifyBuild } from './build-manifest.mjs';
+import { verifyBuild, guiDirectory } from './build-manifest.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const stack = resolve(root, '../../spikes/cimgui-richmd-c99');
 const legacy = resolve(root, '../../skills/attendant/scripts/attendant.mjs');
+const guiExecutable = (compiler, testing = false) => join(root, guiDirectory, `attendant-gui-${compiler}${testing ? '-check' : ''}.exe`);
 function childJSON(command, args) {
-  const child = spawnSync(command, args, { encoding: 'utf8', timeout: 60000 });
+  const child = spawnSync(command, args, { encoding: 'utf8', timeout: 60000, windowsHide: args.includes('--inspect') || args.includes('--reveal') });
   assert.equal(child.status, 0, child.stderr + child.stdout); return JSON.parse(child.stdout);
 }
 function inventory(folder) {
@@ -54,11 +55,22 @@ function commentBorder(path, rectangle) {
   return { rectangle, visibleEdges: 4, emptyInput: true };
 }
 async function checkSelectionInspection(report, compiler) {
+  const dragResults = {};
   const other = compiler === 'cjit' ? 'zig' : 'cjit';
   const cases = [
-    ['plain-menu', 'plain caf\u00e9 \u03a9 \ud83d\ude00 words', 'exact'],
-    ['markup-menu', 'plain **bold** trailing', 'unsupported'],
-    ['widget', 'plain\n\n```c\nx\n```', 'unsupported']
+    ['plain-menu', 'plain caf\u00e9 \u03a9 \ud83d\ude00 words', 'mapped'],
+    ['markup-menu', 'plain **bold** trailing', 'mapped'],
+    ['widget', 'plain\n\n```c\nx\n```', 'mapped'],
+    ['drag', 'plain **bold** trailing', 'mapped'],
+    ['reverse', 'plain **bold** trailing', 'mapped'],
+    ['context', 'plain  \nnext', 'context'],
+    ['multi', 'plain **bold**\n\nsecond *emphasis* and [link](https://example.invalid)\n\n```c\ncode\n```', 'mapped'],
+    ['partial', 'plain **bold** trailing', 'mapped'],
+    ['reverse-partial', 'plain **bold** trailing', 'mapped'],
+    ['table', 'plain **bold**\n\n| one | two |\n| --- | --- |\n| caf\u00e9 | \ud83d\ude00 |', 'mapped'],
+    ['wrap', 'plain **bold** ' + 'wrapped caf\u00e9 \ud83d\ude00 '.repeat(100), 'mapped'],
+    ['scroll', 'plain **bold**\n\n' + 'section caf\u00e9 \ud83d\ude00\n\n'.repeat(600), 'mapped'],
+    ['overflow', '"'.repeat(2200000), 'unsupported']
   ];
   for (const [mode, text, status] of cases) {
     const project = join(report.run, `${compiler} inspect ${mode}`);
@@ -66,8 +78,8 @@ async function checkSelectionInspection(report, compiler) {
     writeFileSync(join(project, '.gui-test-owned'), 'Owned selection inspection fixture.\n');
     writeFileSync(join(project, 'README.md'), text); const before = inventory(project);
     const shot = mode === 'plain-menu' ? join(report.run, `${compiler}-comment-input-empty.ppm`) : null;
-    const child = spawn(join(root, `build/gui/attendant-gui-${compiler}-check.exe`), ['--project', project,
-      '--assets', join(stack, 'build/deps/richmd/assets'), '--file', 'README.md', '--frames', '180', '--exercise-selection', mode, ...(shot ? ['--shot', shot] : [])], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(guiExecutable(compiler, true), ['--project', project,
+      '--assets', join(stack, 'build/deps/richmd/assets'), '--file', 'README.md', '--frames', mode === 'overflow' ? '60' : '180', '--exercise-selection', mode, ...(shot ? ['--shot', shot] : [])], { stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '', error = '';
     const ready = new Promise((resolve, reject) => {
       child.stdout.on('data', value => { output += value; if (output.includes('"event":"selection-ready"')) resolve(); });
@@ -83,23 +95,87 @@ async function checkSelectionInspection(report, compiler) {
     done.catch(() => {}); const timer = setTimeout(() => child.kill(), 30000);
     try {
       await ready;
-      const inspected = childJSON(join(root, `build/gui/attendant-gui-${other}.exe`), ['--project', project, '--inspect']);
+      const inspected = childJSON(guiExecutable(other), ['--project', project, '--inspect']);
       assert.equal(inspected.selection.view, 'preview'); assert.equal(inspected.selection.status, status);
-      assert.equal(inspected.selection.text, status === 'exact' ? text : null);
-      assert.equal(inspected.selection.range_start, status === 'exact' ? 0 : null);
-      assert.equal(inspected.selection.range_end, status === 'exact' ? Array.from(text).length : null);
+      assert.equal(inspected.document.dirty, mode === 'context', 'Context-only note freezes dirty buffer before explicit Save & Send');
+      if (status === 'unsupported') {
+        assert.deepEqual([inspected.selection.text, inspected.selection.range_start, inspected.selection.range_end], [null, null, null]);
+        assert.equal(inspected.selection.rendered_context, undefined);
+      } else {
+        const context = JSON.parse(inspected.selection.rendered_context), selected = inspected.selection.text;
+        assert(context.sections.length > 0);
+        assert.equal(context.sections.map(section => {
+          const points = Array.from(section.text);
+          assert(section.highlight_start >= 0 && section.highlight_end > section.highlight_start && section.highlight_end <= points.length);
+          return points.slice(section.highlight_start, section.highlight_end).join('');
+        }).join('\n'), selected);
+        if (mode === 'partial' || mode === 'reverse-partial') {
+          assert(inspected.selection.range_start > 0 && inspected.selection.range_end < Array.from(text).length);
+          assert(context.sections[0].highlight_start > 0 && context.sections.at(-1).highlight_end < Array.from(context.sections.at(-1).text).length);
+          assert(selected.includes('bold'));
+        } else assert.equal(inspected.selection.range_start, status === 'mapped' ? 0 : null);
+        if (status === 'mapped') assert(inspected.selection.range_end > 0 && inspected.selection.range_end <= Array.from(text).length);
+        else assert.equal(inspected.selection.range_end, null);
+        if (mode === 'plain-menu') assert.equal(selected, text);
+        if (['markup-menu', 'drag', 'reverse'].includes(mode)) assert.equal(selected, 'plain bold trailing');
+        if (mode === 'widget') assert(selected.includes('\nx'));
+        if (mode === 'context') assert.equal(selected, 'plain\nnext');
+        if (mode === 'multi') {
+          assert(selected.includes('second emphasis and link') && selected.includes('code')); assert(context.sections.length >= 3);
+          assert(inspected.selection.range_end >= Array.from(text.slice(0, text.indexOf('\ncode') + 5)).length);
+        }
+        if (mode === 'table') {
+          assert(selected.includes('one') && selected.includes('two') && selected.includes('caf\u00e9') && selected.includes('\ud83d\ude00')); assert(context.sections.length >= 3);
+          assert(inspected.selection.range_end >= Array.from(text.slice(0, text.indexOf('\ud83d\ude00') + 2)).length);
+        }
+        if (mode === 'wrap') assert(selected.length > 200 && inspected.selection.range_end > 200);
+        if (mode === 'scroll') {
+          assert(context.sections.length > 10);
+          const readyEvent = output.trim().split(/\r?\n/).map(line => JSON.parse(line)).find(event => event.event === 'selection-ready');
+          assert(readyEvent.previewScrollY > 0);
+        }
+        if (mode === 'drag' || mode === 'partial') dragResults[mode] = inspected.selection;
+        if (mode === 'reverse' || mode === 'reverse-partial') assert.deepEqual(inspected.selection, dragResults[mode === 'reverse' ? 'drag' : 'partial'], 'Reverse drag selects same rendered/source ranges');
+      }
       await actionReady;
-      const afterAction = childJSON(join(root, `build/gui/attendant-gui-${other}.exe`), ['--project', project, '--inspect']);
+      const afterAction = childJSON(guiExecutable(other), ['--project', project, '--inspect']);
       assert.deepEqual(afterAction, inspected, 'Unified action/comment-input focus preserves document selection');
-      await done; assert.deepEqual(inventory(project), before);
+      await done;
+      const after = inventory(project);
+      if (mode === 'plain-menu' || mode === 'overflow') assert.deepEqual(after, before);
+      else {
+        for (const [path, hash] of Object.entries(before)) if (path !== join(project, '.pi/attendant.tables') && !(mode === 'context' && path === join(project, 'README.md'))) assert.equal(after[path], hash, 'Preview note never changes unrelated source');
+        assert.equal(readFileSync(join(project, 'README.md'), 'utf8'), text + (mode === 'context' ? '\n' : ''), 'Only explicit dirty Save & Send changes target');
+        for (const path of Object.keys(after)) if (!(path in before)) assert(path.startsWith(join(project, 'records/_meta_comments') + '\\'), 'Only managed feedback created');
+        const sql = 'SELECT name,status,target_path,target_hash,range_start,range_end,range_unit,selected_text,source_path FROM _meta_comments';
+        const queried = childJSON(join(root, `build/projection-${compiler}.exe`), ['query', '-p', project, '-s', sql]);
+        assert.equal(queried.rows.length, 1); const row = queried.rows[0];
+        assert.equal(row.status, 'pending'); assert.equal(row.target_path.toLowerCase(), join(project, 'README.md').toLowerCase());
+        assert.equal(row.target_hash, createHash('sha256').update(readFileSync(join(project, 'README.md'))).digest('hex'));
+        if (status === 'context') assert.deepEqual([row.range_start, row.range_end, row.selected_text], [0, 0, '']);
+        else assert.equal(row.selected_text, Array.from(text).slice(row.range_start, row.range_end).join(''));
+        const record = readFileSync(row.source_path, 'utf8'), noteBody = record.slice(record.indexOf('\n---\n') + 5);
+        assert(noteBody.startsWith('Preview selection review note\nHuman body unchanged.\n\n---\n## Preview selection context'));
+        assert(noteBody.includes(inspected.selection.rendered_context));
+        const legacyRows = childJSON(process.execPath, [legacy, 'query', '-p', project, '-s', sql]); assert.deepEqual(legacyRows.rows, queried.rows);
+        childJSON(join(root, `build/projection-${compiler}.exe`), ['update', '-p', project, '-c', '_meta_comments', '-i', JSON.stringify([{name: row.name, fields: {status: 'resolved'}}])]);
+        assert.equal(childJSON(process.execPath, [legacy, 'query', '-p', project, '-s', sql]).rows[0].status, 'resolved');
+      }
       const appearance = shot ? { ...bitmap(shot, 0), commentInput: commentBorder(shot, output.trim().split(/\r?\n/).map(line => JSON.parse(line)).find(event => event.event === 'selection-action').commentRect) } : null;
-      report.results.push({ compiler, ...(appearance ? { screenshot: appearance } : {}), selectionInspection: { mode, clientCompiler: other, status, priorSourceSelectionReplaced: true, unifiedActionUsesLatestSelection: true, retainedDuringCommentInputFocus: status === 'exact', sourceAndProjectionUnchanged: true } });
+      report.results.push({ compiler, ...(appearance ? { screenshot: appearance } : {}), selectionInspection: { mode, clientCompiler: other, status, priorSourceSelectionReplaced: true, unifiedActionUsesLatestSelection: true, retainedDuringCommentInputFocus: true, sourceUnchanged: mode !== 'context', contextSaveAndSend: mode === 'context', feedbackSentAndResolved: mode !== 'plain-menu' && mode !== 'overflow' } });
     } finally { clearTimeout(timer); if (child.exitCode === null) child.kill(); }
   }
+  const project = join(report.run, `${compiler} render-failure`);
+  cpSync(join(root, 'fixtures/project'), project, {recursive: true}); writeFileSync(join(project, '.gui-test-owned'), 'Owned render failure fixture.\n');
+  writeFileSync(join(project, 'README.md'), 'plain **bold** trailing'); const before = inventory(project);
+  const failed = spawnSync(guiExecutable(compiler, true), ['--project', project, '--assets', join(stack, 'build/deps/richmd/assets'), '--file', 'README.md', '--frames', '40', '--exercise-selection', 'render-failure'], {encoding: 'utf8', timeout: 15000});
+  assert.equal(failed.status, 1, failed.stderr + failed.stdout); assert.match(failed.stderr, /Injected nested render failure/);
+  assert.match(failed.stderr, /frame abandoned without normal teardown/); assert.deepEqual(inventory(project), before);
+  report.results.push({compiler, renderException: {controlledTermination: true, noNormalFrameTeardown: true, sourceUnchanged: true}});
 }
 async function checkAgentReveal(report, compiler) {
   const other = compiler === 'cjit' ? 'zig' : 'cjit';
-  const executable = (name, testing = false) => join(root, `build/gui/attendant-gui-${name}${testing ? '-check' : ''}.exe`);
+  const executable = guiExecutable;
   function control(project, args, expectedCode = null, testing = false) {
     const result = spawnSync(executable(other, testing), ['--project', project, ...args], {
       encoding: 'utf8', timeout: 10000, windowsHide: true, env: { ...process.env, ATTENDANT_GUI_TEST_REVEAL_HASH: '0'.repeat(64) }
@@ -244,18 +320,18 @@ try {
     writeFileSync(first, readFileSync(first, 'utf8').replace('depends_on: [second]', 'depends_on: [second, missing]'));
     writeFileSync(join(project, 'records/tasks/unreadable.md'), Buffer.from([0xff, 0xfe, 0x00]));
     const before = inventory(project), shot = join(report.run, `${compiler}.ppm`);
-    const result = spawnSync(join(root, `build/gui/attendant-gui-${compiler}.exe`), ['--project', project, '--assets', join(stack, 'build/deps/richmd/assets'),
+    const result = spawnSync(guiExecutable(compiler), ['--project', project, '--assets', join(stack, 'build/deps/richmd/assets'),
       '--file', 'records/tasks/first.md', '--frames', '30', '--shot', shot], { encoding: 'utf8', timeout: 60000 });
     assert.equal(result.status, 0, result.stderr + result.stdout);
     const output = JSON.parse(result.stdout); assert.equal(output.frames, 30); assert.equal(output.tabs, 1); assert(output.vertices > 1000);
     assert.deepEqual(inventory(project), before, 'Read-only GUI never prepares DB or changes source');
     report.results.push({ compiler, output, screenshot: bitmap(shot) });
-    const badFile = childJSON(join(root, `build/gui/attendant-gui-${compiler}.exe`), ['--project', project, '--assets', join(stack, 'build/deps/richmd/assets'),
+    const badFile = childJSON(guiExecutable(compiler), ['--project', project, '--assets', join(stack, 'build/deps/richmd/assets'),
       '--file', 'records/tasks/unreadable.md', '--frames', '5']);
     assert.equal(badFile.tabs, 0); assert.equal(badFile.frames, 5); assert.deepEqual(inventory(project), before);
     report.results.push({ compiler, badFileRecovered: true });
     const interactionShot = join(report.run, `${compiler}-navigation.ppm`);
-    const interaction = spawnSync(join(root, `build/gui/attendant-gui-${compiler}-check.exe`), ['--project', project, '--assets', join(stack, 'build/deps/richmd/assets'),
+    const interaction = spawnSync(guiExecutable(compiler, true), ['--project', project, '--assets', join(stack, 'build/deps/richmd/assets'),
       '--file', 'records/tasks/first.md', '--frames', '30', '--shot', interactionShot, '--exercise'], { encoding: 'utf8', timeout: 60000 });
     assert.equal(interaction.status, 0, interaction.stderr + interaction.stdout);
     const interactionOutput = JSON.parse(interaction.stdout); assert.equal(interactionOutput.tabs, 2); assert.equal(interactionOutput.frames, 30);
@@ -263,7 +339,7 @@ try {
     report.results.push({ compiler, interaction: interactionOutput, screenshot: bitmap(interactionShot) });
     const modelProject = join(report.run, `${compiler} model`); cpSync(project, modelProject, { recursive: true });
     writeFileSync(join(modelProject, '.gui-test-owned'), 'Generated GUI acceptance fixture.\n');
-    const model = spawnSync(join(root, `build/gui/model-check-${compiler}.exe`), [modelProject], { encoding: 'utf8', timeout: 30000 });
+    const model = spawnSync(join(root, guiDirectory, `model-check-${compiler}.exe`), [modelProject], { encoding: 'utf8', timeout: 30000 });
     assert.equal(model.status, 0, model.stderr + model.stdout); report.results.push({ compiler, model: JSON.parse(model.stdout) });
     const editProject = join(report.run, `${compiler} edited`); cpSync(project, editProject, { recursive: true });
     // Missing-reference visibility uses separate fixture; resolution uses valid project.
@@ -273,7 +349,7 @@ try {
     writeFileSync(join(editProject, '.gui-test-owned'), 'Generated GUI acceptance fixture.\n');
     const originalSource = readFileSync(join(editProject, 'README.md'), 'utf8'), editedSource = originalSource + ' GUI edit';
     const editShot = join(report.run, `${compiler}-edited.ppm`);
-    const editing = childJSON(join(root, `build/gui/attendant-gui-${compiler}-check.exe`), ['--project', editProject, '--assets', join(stack, 'build/deps/richmd/assets'),
+    const editing = childJSON(guiExecutable(compiler, true), ['--project', editProject, '--assets', join(stack, 'build/deps/richmd/assets'),
       '--file', 'README.md', '--frames', '70', '--shot', editShot, '--exercise-edit']);
     assert.equal(editing.frames, 70); assert.equal(readFileSync(join(editProject, 'README.md'), 'utf8'), editedSource, 'Actual source edits preserve UTF-8, supplementary characters and CRLF');
     report.results.push({ compiler, editing, screenshot: bitmap(editShot) });
@@ -302,7 +378,7 @@ try {
     const previewSource = previewPrefix + 'Preview café Ω 😀 from GUI.', savedPreview = previewSource + '!';
     writeFileSync(previewFile, previewSource);
     const previewBefore = inventory(previewProject), previewShot = join(report.run, `${compiler}-preview-feedback.ppm`);
-    const previewEditing = childJSON(join(root, `build/gui/attendant-gui-${compiler}-check.exe`), ['--project', previewProject, '--assets', join(stack, 'build/deps/richmd/assets'),
+    const previewEditing = childJSON(guiExecutable(compiler, true), ['--project', previewProject, '--assets', join(stack, 'build/deps/richmd/assets'),
       '--file', 'preview.md', '--frames', '70', '--shot', previewShot, '--exercise-preview']);
     assert.equal(readFileSync(previewFile, 'utf8'), savedPreview, 'Preview Save & Send preserves BOM/CRLF/Unicode source bytes');
     const previewAfter = inventory(previewProject);
@@ -314,7 +390,7 @@ try {
     assert.equal(previewRow.target_path, previewFile); assert.equal(previewRow.target_hash, createHash('sha256').update(savedPreview).digest('hex'));
     assert.deepEqual([previewRow.range_start, previewRow.range_end, previewRow.selected_text, previewRow.range_unit],
       [[...previewPrefix].length, [...savedPreview].length, savedPreview.slice(previewPrefix.length), 'unicode-codepoint']);
-    assert.equal(body(previewComment), 'GUI preview context note\nSecond line.');
+    assert(body(previewComment).startsWith('GUI preview context note\nSecond line.\n\n---\n## Preview selection context'));
     assert.deepEqual(childJSON(process.execPath, [legacy, 'query', '-p', previewProject, '-s', sql]).rows, previewPending.rows);
     childJSON(cli, ['update', '-p', previewProject, '-c', '_meta_comments', '-i', JSON.stringify([{ name: previewRow.name, fields: { status: 'resolved' } }])]);
     assert.equal(childJSON(cli, ['query', '-p', previewProject, '-s', sql]).meta_comments.pending, 0);
@@ -326,7 +402,7 @@ try {
     writeFileSync(join(failedProject, '.gui-test-owned'), 'Generated GUI acceptance fixture.\n');
     const conflict = join(failedProject, 'records/_meta_comments'); mkdirSync(conflict); writeFileSync(join(conflict, 'user.md'), '# User-owned file\n');
     const failedBefore = inventory(failedProject), failedShot = join(report.run, `${compiler}-saved-not-queued.ppm`);
-    const savedNotQueued = childJSON(join(root, `build/gui/attendant-gui-${compiler}-check.exe`), ['--project', failedProject, '--assets', join(stack, 'build/deps/richmd/assets'),
+    const savedNotQueued = childJSON(guiExecutable(compiler, true), ['--project', failedProject, '--assets', join(stack, 'build/deps/richmd/assets'),
       '--file', 'README.md', '--frames', '70', '--shot', failedShot, '--exercise-save-fail']);
     assert.equal(savedNotQueued.frames, 70); assert.equal(readFileSync(join(failedProject, 'README.md'), 'utf8'), editedSource);
     const failedAfter = inventory(failedProject); delete failedBefore[join(failedProject, 'README.md')]; delete failedAfter[join(failedProject, 'README.md')];

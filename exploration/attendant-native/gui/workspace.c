@@ -93,6 +93,7 @@ void gui_workspace_destroy(gui_workspace *workspace) {
     int i;
     for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].text) VirtualFree(workspace->tabs[i].text, 0, MEM_RELEASE);
     if (workspace->navigation) VirtualFree(workspace->navigation, 0, MEM_RELEASE);
+    gui_selection_clear(workspace);
     attendant_close(workspace->session); memset(workspace, 0, sizeof(*workspace));
 }
 static void document_metadata(gui_tab *tab, attendant_result result) {
@@ -178,6 +179,9 @@ int gui_set_document_text(gui_workspace *workspace, int index, const char *text)
     memcpy(tab->text, text, length + 1); tab->length = length; tab->dirty = 1; tab->generation++; tab->text_revision = ++workspace->text_revision; return 1;
 }
 void gui_selection_clear(gui_workspace *workspace) {
+    if (workspace->preview_text) VirtualFree(workspace->preview_text, 0, MEM_RELEASE);
+    workspace->preview_text = workspace->preview_context = NULL;
+    workspace->preview_text_length = workspace->preview_context_length = 0;
     memset(&workspace->selection, 0, sizeof(workspace->selection)); workspace->selection.tab = -1;
 }
 void gui_selection_capture(gui_workspace *workspace, int index, gui_selection_view view, gui_selection_status status, int start, int end) {
@@ -185,8 +189,9 @@ void gui_selection_capture(gui_workspace *workspace, int index, gui_selection_vi
     const gui_tab *tab;
     if (index < 0 || index >= GUI_TABS || index != workspace->active || !workspace->tabs[index].used) return;
     tab = &workspace->tabs[index];
+    if (view != GUI_SELECTION_PREVIEW) gui_selection_clear(workspace);
     if (start > end) { int swap = start; start = end; end = swap; }
-    if (status == GUI_SELECTION_EXACT) {
+    if (status == GUI_SELECTION_EXACT || status == GUI_SELECTION_MAPPED) {
         if (start < 0 || end < start || (size_t)end > tab->length ||
             (start && ((unsigned char)tab->text[start] & 0xc0) == 0x80) ||
             (end && ((unsigned char)tab->text[end] & 0xc0) == 0x80)) status = GUI_SELECTION_UNSUPPORTED;
@@ -194,8 +199,31 @@ void gui_selection_capture(gui_workspace *workspace, int index, gui_selection_vi
     }
     selection->view = view; selection->status = status; selection->tab = index;
     selection->generation = tab->generation; selection->revision = tab->text_revision;
-    selection->start = status == GUI_SELECTION_EXACT ? start : 0;
-    selection->end = status == GUI_SELECTION_EXACT ? end : 0;
+    selection->start = status == GUI_SELECTION_EXACT || status == GUI_SELECTION_MAPPED ? start : 0;
+    selection->end = status == GUI_SELECTION_EXACT || status == GUI_SELECTION_MAPPED ? end : 0;
+}
+int gui_selection_capture_preview(gui_workspace *workspace, int index, int start, int end, const char *text, size_t text_length, const char *context, size_t context_length) {
+    char *copy;
+    if (index < 0 || index >= GUI_TABS || index != workspace->active || !workspace->tabs[index].used) return 0;
+    if (!text || !context || text_length > GUI_TEXT || context_length > GUI_TEXT || text[text_length] || context[context_length] ||
+        memchr(text, 0, text_length) || memchr(context, 0, context_length) || !string_view_utf8_valid(string_view_from_cstr(text)) || !string_view_utf8_valid(string_view_from_cstr(context))) {
+        gui_selection_capture(workspace, index, GUI_SELECTION_PREVIEW, GUI_SELECTION_UNSUPPORTED, 0, 0);
+        return problem(workspace, "Preview selection must be bounded UTF-8");
+    }
+    if (!text_length) { gui_selection_clear(workspace); gui_selection_capture(workspace, index, GUI_SELECTION_PREVIEW, GUI_SELECTION_NONE, 0, 0); return 1; }
+    if (!context_length) { gui_selection_capture(workspace, index, GUI_SELECTION_PREVIEW, GUI_SELECTION_UNSUPPORTED, 0, 0); return problem(workspace, "Preview selection has no rendered context"); }
+    if (!workspace->preview_text || workspace->preview_text_length != text_length || workspace->preview_context_length != context_length ||
+        memcmp(workspace->preview_text, text, text_length) || memcmp(workspace->preview_context, context, context_length)) {
+        copy = VirtualAlloc(NULL, text_length + context_length + 2, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        if (!copy) { gui_selection_capture(workspace, index, GUI_SELECTION_PREVIEW, GUI_SELECTION_UNSUPPORTED, 0, 0); return problem(workspace, "Cannot allocate preview selection context"); }
+        memcpy(copy, text, text_length + 1); memcpy(copy + text_length + 1, context, context_length + 1);
+        if (workspace->preview_text) VirtualFree(workspace->preview_text, 0, MEM_RELEASE);
+        workspace->preview_text = copy; workspace->preview_context = copy + text_length + 1;
+        workspace->preview_text_length = text_length; workspace->preview_context_length = context_length;
+    }
+    gui_selection_capture(workspace, index, GUI_SELECTION_PREVIEW, start >= 0 && end > start ? GUI_SELECTION_MAPPED : GUI_SELECTION_CONTEXT, start, end);
+    if (workspace->selection.status == GUI_SELECTION_UNSUPPORTED) gui_selection_capture(workspace, index, GUI_SELECTION_PREVIEW, GUI_SELECTION_CONTEXT, 0, 0);
+    return 1;
 }
 gui_selection gui_selection_current(const gui_workspace *workspace) {
     gui_selection selection = workspace->selection;
@@ -206,6 +234,12 @@ gui_selection gui_selection_current(const gui_workspace *workspace) {
     return selection;
 empty:
     memset(&selection, 0, sizeof(selection)); selection.tab = -1; return selection;
+}
+static int comment_result(gui_workspace *workspace, attendant_result result) {
+    if (!result.ok) return result_problem(workspace, result);
+    workspace->error[0] = workspace->failed_path[0] = 0; workspace->surviving_count = workspace->surviving_total = 0;
+    snprintf(workspace->notice, sizeof(workspace->notice), "Comment queued: %s", result.path);
+    gui_refresh(workspace); return 1;
 }
 int gui_send_comment(gui_workspace *workspace, int index, int start, int end, const char *comment) {
     gui_tab *tab = &workspace->tabs[index];
@@ -228,10 +262,29 @@ int gui_send_comment(gui_workspace *workspace, int index, int start, int end, co
         offset += width; point++;
     }
     input.range_end = point; result = attendant_send_feedback(workspace->session, &input); VirtualFree(selected, 0, MEM_RELEASE);
-    if (!result.ok) return result_problem(workspace, result);
-    workspace->error[0] = workspace->failed_path[0] = 0; workspace->surviving_count = workspace->surviving_total = 0;
-    snprintf(workspace->notice, sizeof(workspace->notice), "Comment queued: %s", result.path);
-    gui_refresh(workspace); return 1;
+    return comment_result(workspace, result);
+}
+int gui_send_preview_comment(gui_workspace *workspace, int index, int start, int end, const char *context, const char *comment) {
+    static const char prefix[] = "\n\n---\n## Preview selection context\n\n";
+    const char *anchor = end > start ? "Enclosing source span recorded in front matter; may include Markdown formatting.\n\n```json\n" : "Source anchor unavailable. Ranges below refer only to rendered sections.\n\n```json\n";
+    const char *suffix = "\n```\n";
+    size_t size; char *body; int ok;
+    if (index < 0 || index >= GUI_TABS || !workspace->tabs[index].used || workspace->tabs[index].dirty) return problem(workspace, "Save & Send or Cancel required for dirty source");
+    if (!context || !*context || !comment || strspn(comment, " \t\r\n\v\f") == strlen(comment)) return problem(workspace, "Comment and rendered selection context must not be empty");
+    if (strlen(context) > GUI_TEXT || strlen(comment) > GUI_TEXT) return problem(workspace, "Preview note exceeds 4 MiB");
+    size = strlen(comment) + strlen(prefix) + strlen(anchor) + strlen(context) + strlen(suffix);
+    if (size > GUI_TEXT) return problem(workspace, "Preview note exceeds 4 MiB; selection was not truncated");
+    body = VirtualAlloc(NULL, size + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!body) return problem(workspace, "Cannot allocate preview note");
+    snprintf(body, size + 1, "%s%s%s%s%s", comment, prefix, anchor, context, suffix);
+    if (end > start) ok = gui_send_comment(workspace, index, start, end, body);
+    else {
+        attendant_feedback input = {0}; gui_tab *tab = &workspace->tabs[index];
+        input.project = workspace->root; input.target_path = tab->path; input.target_hash = tab->hash;
+        input.selected_text = ""; input.comment = body; input.mode = ATTENDANT_FEEDBACK_CONTEXT;
+        ok = comment_result(workspace, attendant_send_feedback(workspace->session, &input));
+    }
+    VirtualFree(body, 0, MEM_RELEASE); return ok;
 }
 int gui_open_comment_target(gui_workspace *workspace, int comment_index) {
     attendant_comment comment;
@@ -249,6 +302,10 @@ int gui_open_comment_target(gui_workspace *workspace, int comment_index) {
     memcpy(selected, comment.selected_text, length + 1);
     if (!gui_open_document(workspace, target)) goto finished;
     tab = &workspace->tabs[workspace->active];
+    if (!range_start && !range_end && !length) {
+        snprintf(workspace->notice, sizeof(workspace->notice), "Opened %s preview note target. No source anchor; read rendered sections/ranges in comment body. Reading does not resolve feedback.", status);
+        ok = 1; goto finished;
+    }
     if (tab->dirty) { problem(workspace, "Target has unsaved edits; comment range was not applied"); goto finished; }
     if (!gui_reload_document(workspace, workspace->active, 0)) goto finished;
     if (strcmp(tab->hash, hash)) { tab->anchor_stale = 1; problem(workspace, "Comment anchor is stale: saved target hash differs; no selection applied"); goto finished; }

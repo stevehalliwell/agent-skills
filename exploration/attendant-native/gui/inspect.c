@@ -13,14 +13,20 @@ int gui_inspection_snapshot(const gui_workspace *workspace, gui_inspection *outp
     const gui_tab *tab;
     size_t offset = 0;
     uint32_t point = 0;
-    memset(header, 0, sizeof(*header)); output->text[0] = 0;
-    header->version = 1; snprintf(header->project, sizeof(header->project), "%s", workspace->root);
+    memset(header, 0, sizeof(*header)); output->text[0] = output->text[1] = 0;
+    header->version = 2; snprintf(header->project, sizeof(header->project), "%s", workspace->root);
     if (workspace->active < 0 || workspace->active >= GUI_TABS || !workspace->tabs[workspace->active].used) return 1;
     tab = &workspace->tabs[workspace->active];
     header->has_document = 1; header->dirty = tab->dirty != 0; header->revision = tab->text_revision;
     snprintf(header->path, sizeof(header->path), "%s", tab->path);
     header->view = selection.view; header->status = selection.status;
-    if (selection.status != GUI_SELECTION_EXACT) return 1;
+    if (selection.status == GUI_SELECTION_MAPPED || selection.status == GUI_SELECTION_CONTEXT) {
+        if (!workspace->preview_text || !workspace->preview_context || workspace->preview_text_length > GUI_TEXT || workspace->preview_context_length > GUI_TEXT) return 0;
+        header->length = (uint32_t)workspace->preview_text_length; header->context_length = (uint32_t)workspace->preview_context_length;
+        memcpy(output->text, workspace->preview_text, header->length + 1);
+        memcpy(output->text + header->length + 1, workspace->preview_context, header->context_length + 1);
+        if (selection.status == GUI_SELECTION_CONTEXT) return 1;
+    } else if (selection.status != GUI_SELECTION_EXACT) return 1;
     if (selection.start < 0 || selection.end <= selection.start || (size_t)selection.end > tab->length) return 0;
     while (offset < (size_t)selection.end) {
         size_t width = string_utf8_sequence_size((const u8 *)tab->text + offset, tab->length - offset);
@@ -28,14 +34,17 @@ int gui_inspection_snapshot(const gui_workspace *workspace, gui_inspection *outp
         if (offset == (size_t)selection.start) header->start = point;
         offset += width; point++;
     }
-    header->end = point; header->length = (uint32_t)(selection.end - selection.start);
-    memcpy(output->text, tab->text + selection.start, header->length); output->text[header->length] = 0;
+    header->end = point;
+    if (selection.status == GUI_SELECTION_EXACT) {
+        header->length = (uint32_t)(selection.end - selection.start);
+        memcpy(output->text, tab->text + selection.start, header->length); output->text[header->length] = output->text[header->length + 1] = 0;
+    }
     return 1;
 }
 int gui_inspection_json(const gui_inspection *snapshot, char *output, size_t capacity) {
     const gui_inspection_header *header = &snapshot->header;
     const char *view = header->view == GUI_SELECTION_SOURCE ? "source" : header->view == GUI_SELECTION_PREVIEW ? "preview" : "none";
-    const char *status = header->status == GUI_SELECTION_EXACT ? "exact" : header->status == GUI_SELECTION_UNSUPPORTED ? "unsupported" : "none";
+    const char *status = header->status == GUI_SELECTION_EXACT ? "exact" : header->status == GUI_SELECTION_UNSUPPORTED ? "unsupported" : header->status == GUI_SELECTION_MAPPED ? "mapped" : header->status == GUI_SELECTION_CONTEXT ? "context" : "none";
     char revision[32]; jsonb builder;
     jsonb_init(&builder);
 #define EMIT(expression) do { if ((expression) < 0) return 0; } while (0)
@@ -54,15 +63,16 @@ int gui_inspection_json(const gui_inspection *snapshot, char *output, size_t cap
     KEY("view"); EMIT(jsonb_string(&builder, output, capacity, view, strlen(view)));
     KEY("status"); EMIT(jsonb_string(&builder, output, capacity, status, strlen(status)));
     KEY("text");
-    if (header->status == GUI_SELECTION_EXACT) EMIT(jsonb_string(&builder, output, capacity, snapshot->text, header->length));
+    if (header->status == GUI_SELECTION_EXACT || header->status == GUI_SELECTION_MAPPED || header->status == GUI_SELECTION_CONTEXT) EMIT(jsonb_string(&builder, output, capacity, snapshot->text, header->length));
     else EMIT(jsonb_null(&builder, output, capacity));
     KEY("range_start");
-    if (header->status == GUI_SELECTION_EXACT) EMIT(jsonb_number(&builder, output, capacity, header->start));
+    if (header->status == GUI_SELECTION_EXACT || header->status == GUI_SELECTION_MAPPED) EMIT(jsonb_number(&builder, output, capacity, header->start));
     else EMIT(jsonb_null(&builder, output, capacity));
     KEY("range_end");
-    if (header->status == GUI_SELECTION_EXACT) EMIT(jsonb_number(&builder, output, capacity, header->end));
+    if (header->status == GUI_SELECTION_EXACT || header->status == GUI_SELECTION_MAPPED) EMIT(jsonb_number(&builder, output, capacity, header->end));
     else EMIT(jsonb_null(&builder, output, capacity));
     KEY("range_unit"); EMIT(jsonb_string(&builder, output, capacity, "unicode-codepoint", 17));
+    if (header->context_length) { KEY("rendered_context"); EMIT(jsonb_string(&builder, output, capacity, snapshot->text + header->length + 1, header->context_length)); }
     EMIT(jsonb_object_pop(&builder, output, capacity)); EMIT(jsonb_object_pop(&builder, output, capacity));
 #undef KEY
 #undef EMIT
@@ -75,7 +85,7 @@ uintptr_t gui_inspection_receive(HWND window, HWND client, const gui_workspace *
         !GetClassNameA(client, name, sizeof(name)) || strcmp(name, GUI_INSPECT_CLIENT_CLASS)) return 0;
     if (busy) return GUI_INSPECT_BUSY;
     if (!gui_inspection_snapshot(workspace, output)) return 0;
-    copy.dwData = GUI_INSPECT_RESULT; copy.cbData = (DWORD)(offsetof(gui_inspection, text) + output->header.length + 1); copy.lpData = output;
+    copy.dwData = GUI_INSPECT_RESULT; copy.cbData = (DWORD)(offsetof(gui_inspection, text) + output->header.length + output->header.context_length + 2); copy.lpData = output;
     /* Caller permits this bounded nested reply. Block further receiver reentry. */
     if (!SendMessageTimeoutA(client, WM_COPYDATA, (WPARAM)window, (LPARAM)&copy,
         SMTO_ABORTIFHUNG | SMTO_BLOCK, 250, &result) || result != GUI_INSPECT_RESULT) return 0;
@@ -83,23 +93,27 @@ uintptr_t gui_inspection_receive(HWND window, HWND client, const gui_workspace *
 }
 int gui_inspection_accept(gui_inspection *output, const char *project, const void *data, size_t size) {
     gui_inspection_header header;
-    const char *text;
+    const char *text, *context;
     size_t offset = 0;
     uint32_t points = 0;
-    if (!data || size < offsetof(gui_inspection, text) + 1 || size > sizeof(gui_inspection)) return 0;
+    if (!data || size < offsetof(gui_inspection, text) + 2 || size > sizeof(gui_inspection)) return 0;
     memcpy(&header, data, sizeof(header));
-    if (header.version != 1 || header.has_document > 1 || header.dirty > 1 || header.view > GUI_SELECTION_PREVIEW || header.status > GUI_SELECTION_UNSUPPORTED ||
-        header.length > GUI_TEXT || size != offsetof(gui_inspection, text) + header.length + 1 ||
+    if (header.version != 2 || header.has_document > 1 || header.dirty > 1 || header.view > GUI_SELECTION_PREVIEW || header.status > GUI_SELECTION_CONTEXT ||
+        header.length > GUI_TEXT || header.context_length > GUI_TEXT || size != offsetof(gui_inspection, text) + header.length + header.context_length + 2 ||
         !memchr(header.project, 0, GUI_PATH) || !memchr(header.path, 0, GUI_PATH) || _stricmp(header.project, project) ||
         !string_view_utf8_valid(string_view_from_cstr(header.path)) ||
         header.start > header.end || header.end > GUI_TEXT) return 0;
     if (header.has_document && !*header.path) return 0;
     if (!header.has_document && (*header.path || header.dirty || header.view || header.status || header.revision)) return 0;
-    if (header.status == GUI_SELECTION_EXACT) {
+    if (header.status == GUI_SELECTION_EXACT || header.status == GUI_SELECTION_MAPPED) {
         if (!header.has_document || !header.view || !header.length || header.start == header.end) return 0;
-    } else if (header.length || header.start || header.end) return 0;
-    text = (const char *)data + offsetof(gui_inspection, text);
-    if (text[header.length] || memchr(text, 0, header.length)) return 0;
+    } else if (header.start || header.end || (header.status != GUI_SELECTION_CONTEXT && header.length)) return 0;
+    if (header.status == GUI_SELECTION_MAPPED || header.status == GUI_SELECTION_CONTEXT) {
+        if (header.view != GUI_SELECTION_PREVIEW || !header.has_document || !header.length || !header.context_length) return 0;
+    } else if (header.context_length) return 0;
+    text = (const char *)data + offsetof(gui_inspection, text); context = text + header.length + 1;
+    if (text[header.length] || context[header.context_length] || memchr(text, 0, header.length) || memchr(context, 0, header.context_length) ||
+        !string_view_utf8_valid(string_view_from_cstr(context))) return 0;
     while (offset < header.length) {
         size_t width = string_utf8_sequence_size((const u8 *)text + offset, header.length - offset);
         if (!width) return 0;
@@ -134,7 +148,7 @@ int gui_inspect(const char *project) {
     DWORD_PTR reply = 0;
     int status = 1, attempt;
     char *json = NULL;
-    const size_t capacity = 6u * GUI_TEXT + 6u * GUI_PATH + 4096u;
+    const size_t capacity = 12u * GUI_TEXT + 6u * GUI_PATH + 4096u;
     memset(&request, 0, sizeof(request)); request.version = 1;
     memset(&client, 0, sizeof(client));
     if (!gui_full_path(NULL, project, request.project)) return gui_reveal_error(1, "invalid-project", "Cannot resolve bounded UTF-8 project path");

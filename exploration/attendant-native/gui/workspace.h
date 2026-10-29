@@ -28,11 +28,11 @@ typedef struct gui_navigation {
     void *memory;
 } gui_navigation;
 typedef enum gui_selection_view { GUI_SELECTION_NO_VIEW, GUI_SELECTION_SOURCE, GUI_SELECTION_PREVIEW } gui_selection_view;
-typedef enum gui_selection_status { GUI_SELECTION_NONE, GUI_SELECTION_EXACT, GUI_SELECTION_UNSUPPORTED } gui_selection_status;
+typedef enum gui_selection_status { GUI_SELECTION_NONE, GUI_SELECTION_EXACT, GUI_SELECTION_UNSUPPORTED, GUI_SELECTION_MAPPED, GUI_SELECTION_CONTEXT } gui_selection_status;
 typedef struct gui_selection {
     gui_selection_view view;
     gui_selection_status status;
-    int tab, generation, start, end; /* Full-buffer UTF-8 bytes; valid only for EXACT. */
+    int tab, generation, start, end; /* Full-buffer UTF-8 bytes; valid for EXACT/MAPPED. */
     uint64_t revision;
 } gui_selection;
 typedef struct gui_workspace {
@@ -43,6 +43,8 @@ typedef struct gui_workspace {
     gui_navigation *navigation;
     gui_tab tabs[GUI_TABS];
     gui_selection selection; /* Latest human document selection; never agent marker. */
+    char *preview_text, *preview_context; /* One allocation, owned by preview_text. */
+    size_t preview_text_length, preview_context_length;
     int active, tab_count, activation;
     uint64_t text_revision; /* Workspace-wide: tab reuse/reload/edit cannot reuse preview identity. */
     /* activation changes only after explicit human navigation, never refresh. */
@@ -61,7 +63,9 @@ int gui_set_document_text(gui_workspace *workspace, int index, const char *text)
 void gui_selection_clear(gui_workspace *workspace);
 void gui_selection_capture(gui_workspace *workspace, int index, gui_selection_view view, gui_selection_status status, int start, int end);
 gui_selection gui_selection_current(const gui_workspace *workspace);
+int gui_selection_capture_preview(gui_workspace *workspace, int index, int start, int end, const char *text, size_t text_length, const char *context, size_t context_length);
 int gui_send_comment(gui_workspace *workspace, int index, int start, int end, const char *comment);
+int gui_send_preview_comment(gui_workspace *workspace, int index, int start, int end, const char *context, const char *comment);
 int gui_open_link(gui_workspace *workspace, const char *url);
 int gui_open_comment_target(gui_workspace *workspace, int comment_index);
 size_t gui_body_offset(const char *text);

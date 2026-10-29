@@ -8,13 +8,13 @@
 /* Same-desktop read-only inspection, not authentication/edit authority.
  * Header and selected UTF-8 bytes only. No pointers. Snapshot uses live buffer. */
 typedef struct gui_inspection_header {
-    uint32_t version, has_document, dirty, view, status, start, end, length;
+    uint32_t version, has_document, dirty, view, status, start, end, length, context_length;
     uint64_t revision;
     char project[GUI_PATH], path[GUI_PATH];
 } gui_inspection_header;
 typedef struct gui_inspection {
     gui_inspection_header header;
-    char text[GUI_TEXT + 1];
+    char text[2 * GUI_TEXT + 2]; /* Selected text NUL, then rendered context NUL. */
 } gui_inspection;
 int gui_inspection_snapshot(const gui_workspace *workspace, gui_inspection *output);
 int gui_inspection_json(const gui_inspection *snapshot, char *output, size_t capacity);
