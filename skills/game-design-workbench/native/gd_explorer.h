@@ -38,6 +38,6 @@ int gd_explorer_resource_remap(const GD_ResourceGraph *old, const GD_ResourceGra
 int gd_explorer_edited(GD_ExplorerProject *project);
 #ifdef GD_WITH_GRAPH
 int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int count,
-                     int initial_view, int frames, const char *screenshot, const char *output_path);
+                     int initial_view, int matrix_layout, int frames, const char *screenshot, const char *output_path);
 #endif
 #endif

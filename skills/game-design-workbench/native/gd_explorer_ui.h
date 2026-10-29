@@ -3,10 +3,12 @@
 #include "gd_explorer.h"
 #include "gd_graph_analysis_ui.h"
 #include "gd_layout_focus.h"
+#include "gd_matrix_grid.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 
 typedef struct { int cell, node, interaction, linked, held; } GD_ExplorerSelection;
+enum { GD_EXPLORER_FIT_GRID_READABLE=4 };
 typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } GD_ExplorerSkillEditor;
 typedef struct {
     int record, link, held;
@@ -24,6 +26,7 @@ typedef struct {
     Vector2 right_origin;
     int right_started;
     GD_ExplorerSelection selection;
+    GD_MatrixGrid grid; /* Caller-owned presentation, never typed snapshot data. */
     GD_ExplorerSkillEditor editor;
     GD_ExplorerMdaDisplay mda;
     GD_Focus focus;

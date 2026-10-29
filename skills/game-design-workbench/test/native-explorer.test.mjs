@@ -1,5 +1,5 @@
 // Unified entry contract; no window/input automation. State/render checks live
-// in native/test-explorer.ps1. Existing native commands remain compatible.
+// in native/test-explorer.ps1. Working-branch command compatibility not required.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -18,7 +18,9 @@ test('unified explorer validates options without prompting or opening a window',
   for(const args of [[],['--frames','0'],['--mode','unknown'],['--mode','skills','--mode','unknown'],
     ['--related','context=.','--from','context/item'],['--related','context=.','--known','context/item'],
     ['--related','context=.','--screenshot','capture.png'],['--related','context=.','--frames','1','--screenshot','capture.jpg'],
-    ['--nouns','one=.','--nouns','two=.'],['--related','context=.','--fields','nodes']]) {
+    ['--nouns','one=.','--nouns','two=.'],['--related','context=.','--fields','nodes'],
+    ['--related','context=.','--layout','grid'],['--related','context=.','--mode','mda','--layout','grid'],
+    ['--related','context=.','--mode','matrix','--layout','table']]) {
     assert.equal(failure(args).errors[0].code,'cli.arguments',JSON.stringify(args));
   }
 });
@@ -29,4 +31,5 @@ test('unified entry reports absent graph build or unavailable projection structu
   assert.equal(help.status,0);
   assert.match(help.stdout,/view matrix\|skill-atoms\|mda\|resources\|explorer/);
   assert.match(help.stdout,/No automatic folder discovery/);
+  assert.match(help.stdout,/--layout grid\|graph\|columns/);
 });

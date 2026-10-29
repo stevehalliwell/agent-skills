@@ -916,7 +916,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
    input lifetime and per-view settings belong to the shell, not these helpers. */
 int gd_explorer_graph_prepare(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
-    return prepare_layout(model,p->layout,(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
+    return prepare_layout(model,p->layout,p->view==GD_EXPLORER_MATRIX && p->layout_choice==GD_MATRIX_GRID_CHOICE ? GD_LAYOUT_COLUMNS:(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
                           p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS ? &p->focus:NULL);
 }
 void gd_explorer_graph_input(GD_ExplorerContext *context) {

@@ -1,4 +1,5 @@
 #include "gd.h"
+#include "gd_matrix_grid.h"
 #include "raylib.h"
 #include <stdio.h>
 #include <string.h>
@@ -43,16 +44,6 @@ static const Color accent = {66, 178, 167, 255};
 static const Color selected_color = {66, 109, 162, 255};
 static const Color warning = {236, 190, 102, 255};
 
-static int cell_index(const GD_Model *model, int noun, int verb) {
-    int low = 0, high = model->cell_count;
-    while (low < high) {
-        int middle = low + (high-low)/2;
-        const GD_Cell *cell = &model->cells[middle];
-        if (cell->noun < noun || (cell->noun == noun && cell->verb < verb)) low = middle + 1;
-        else high = middle;
-    }
-    return low < model->cell_count && model->cells[low].noun == noun && model->cells[low].verb == verb ? low : -1;
-}
 static int button(Rectangle area, const char *label) {
     int hover = CheckCollisionPointRec(GetMousePosition(), area);
     DrawRectangleRec(area, hover ? selected_color : panel);
@@ -183,7 +174,7 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
             clipped_label(TextFormat("%s (%d)", model->records[nouns[i]].name, model->connectivity[nouns[i]].partners), 20, y+10, grid_left-30, 16, foreground);
             for (j = first_column; j < verb_count && j < first_column + visible_columns; ++j) {
                 Rectangle area = {(float)(grid_left+(j-first_column)*column_width), (float)y, column_width-3.0f, row_height-3.0f};
-                int index = cell_index(model, nouns[i], verbs[j]);
+                int index = gd_matrix_grid_cell(model, nouns[i], verbs[j]);
                 int is_selected = row == i && column == j;
                 Color color = index >= 0 && model->cells[index].active ? (Color){36, 85, 85, 255} : panel;
                 DrawRectangleRec(area, is_selected ? selected_color : color);
@@ -194,7 +185,7 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
             }
         }
         DrawLine(split, 102, split, height-42, muted);
-        cell = noun_count && verb_count ? cell_index(model, nouns[row], verbs[column]) : -1;
+        cell = noun_count && verb_count ? gd_matrix_grid_cell(model, nouns[row], verbs[column]) : -1;
         if (cell >= 0) {
             const GD_Cell *selected = &model->cells[cell];
             int x = split+18, detail_width = width-x-18, body_top = 294;

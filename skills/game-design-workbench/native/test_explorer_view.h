@@ -12,23 +12,70 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     choose_view(c->project,"Data / projection",p->view,1);
     igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34});
     match_details(c); layout_controls(c); selected=analyze(c);
-    analysis_controls(c,selected); igEnd();
+    if (grid_view(p)) {
+        if (!grid_blank_details(c)) gd_explorer_graph_details(c);
+    } else analysis_controls(c,selected);
+    igEnd();
     matches(c); distance_focus_update(c,selected); p->camera.offset=(Vector2){450,503};
-    if (p->fit) { fit_view(c,p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+    if (p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
     {
         GD_ExplorerEvidence e=evidence(c,selected);
-        if (is_graph(p->view)) gd_explorer_graph_draw(c,&e);
+        if (grid_view(p)) grid_draw(c);
+        else if (is_graph(p->view)) gd_explorer_graph_draw(c,&e);
         else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_draw(c,&e);
         else gd_explorer_resource_draw(c,&e);
     }
-    draw_matches(c); gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,0);
+    draw_matches(c); if (!grid_view(p)) gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,0);
     rlImGuiEnd(); EndDrawing();
+}
+static int explorer_test_grid_capacity(GD_ExplorerContext *c, const char *output) {
+    GD_ExplorerContext original=*c; GD_ExplorerProject synthetic=*c->project;
+    GD_Allocator allocator=c->project->allocator; GD_Model *model=gd_create(allocator);
+    GD_ExplorerPane *p=allocator.allocate(allocator.context,sizeof(*p));
+    char path[GD_MAX_PATH]; int i,result=0;
+    if (p) memset(p,0,sizeof(*p));
+    if (!model || !p) goto cleanup;
+    model->record_count=model->component_count=GD_MAX_RECORDS;
+    for (i=0;i<GD_MAX_RECORDS;++i) {
+        char *text=model->text+model->text_used;
+        int length=snprintf(text,GD_TEXT_CAPACITY-model->text_used,"wide/axis-%04d",i);
+        if (length<0 || (size_t)length>=GD_TEXT_CAPACITY-model->text_used) goto cleanup;
+        model->text_used+=(size_t)length+1;
+        model->records[i].reference=text; model->records[i].name=text+5;
+        model->records[i].role=i ? GD_VERB:GD_NOUN; model->component_of[i]=i;
+    }
+    synthetic.models[GD_EXPLORER_MATRIX_DATA]=model;
+    c->project=&synthetic; c->pane=p; pane_defaults(p,GD_EXPLORER_MATRIX); p->layout_choice=GD_MATRIX_GRID_CHOICE;
+    if (!pane_prepare(c) || p->grid.verbs!=GD_MAX_RECORDS-1) goto cleanup;
+    grid_choose(c,0,GD_MAX_RECORDS-2);
+    if (p->grid.verb!=GD_MAX_RECORDS-1 || p->selection.cell!=-1) goto cleanup;
+    p->camera.offset=(Vector2){450,503}; p->camera.zoom=1; p->fit=0; grid_frame_selection(c);
+    explorer_test_render(c);
+    {
+        Rectangle area=grid_bounds(&p->grid,p->grid.noun,p->grid.verb);
+        Vector2 center=GetWorldToScreen2D((Vector2){area.x+area.width/2,area.y+area.height/2},p->camera);
+        if (p->camera.zoom!=1 || !CheckCollisionPointRec(center,c->viewport)) goto cleanup;
+    }
+    if (snprintf(path,sizeof(path),"%s/grid-last-column.png",output)>=(int)sizeof(path) || !gd_save_screenshot(path)) goto cleanup;
+    /* Balanced maximum axes: 4,194,304 possible cells, no dense draw scan. */
+    for (i=0;i<GD_MAX_RECORDS;++i) model->records[i].role=i<GD_MAX_RECORDS/2 ? GD_NOUN:GD_VERB;
+    p->prepared=0; p->fit=1;
+    if (!pane_prepare(c) || p->grid.nouns!=GD_MAX_RECORDS/2 || p->grid.verbs!=GD_MAX_RECORDS/2) goto cleanup;
+    explorer_test_render(c);
+    if (snprintf(path,sizeof(path),"%s/grid-maximum-axes.png",output)>=(int)sizeof(path) || !gd_save_screenshot(path)) goto cleanup;
+    model->record_count=model->component_count=0; p->prepared=0;
+    if (!pane_prepare(c) || p->grid.nouns || p->grid.verbs) goto cleanup;
+    explorer_test_render(c); result=1;
+cleanup:
+    if (p) { gd_diagnostics_clear(&p->diagnostics); if (p->layout) allocator.release(allocator.context,p->layout); allocator.release(allocator.context,p); }
+    gd_destroy(model); *c=original; c->analysis->initialized=0; return result;
 }
 int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections, int count,
                        const char *output, int *fail_at, int *calls) {
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
     GD_ExplorerPane *panes=NULL,*saved=NULL; GD_ExplorerContext c={0};
-    int v,result=2,window=0,invalid_created=0,probe_created=0,resource_key=-1;
+    int v,result=2,window=0,invalid_created=0,probe_created=0,grid_probe_created=0,resource_key=-1;
+    char grid_probe_path[GD_MAX_PATH]="";
     char failure[GD_MAX_PATH+512]="",path[GD_MAX_PATH]="",invalid[GD_MAX_PATH]="",probe_path[GD_MAX_PATH]="",resource_source[260]="";
     GD_Model *model; GD_ExplorerProject *last_good; FILE *file;
     c.project=project;
@@ -95,6 +142,40 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         EXPLORER_CHECK(distance_focus_toggle(&c,0));
         p->rank=p->horizontal=p->layout_choice=0; p->prepared=0; EXPLORER_CHECK(pane_prepare(&c));
     }
+    /* Grid uses same cells/source inspector; graph-only layers remain dormant.
+       Keep this pane in Grid through later reload/failure checks. */
+    {
+        GD_ExplorerPane *p=&panes[GD_EXPLORER_MATRIX]; int i,j,chosen=0,blank=0;
+        c.pane=p; model=gd_explorer_model(project,p->view);
+        p->layout_choice=GD_MATRIX_GRID_CHOICE; p->peer=0; p->foundation_peer=1; p->prepared=0; EXPLORER_CHECK(pane_prepare(&c));
+        EXPLORER_CHECK(p->grid.nouns>0 && p->grid.verbs>0);
+        for (i=0;i<model->cell_count;++i) if (model->cells[i].pair_count>model->cells[chosen].pair_count) chosen=i;
+        grid_choose(&c,p->grid.slot[model->cells[chosen].noun],p->grid.slot[model->cells[chosen].verb]);
+        EXPLORER_CHECK(p->selection.cell==chosen);
+        for (j=0;j<model->cells[chosen].pair_count;++j) {
+            p->selection.interaction=j;
+            EXPLORER_CHECK(gd_explorer_graph_record(&c)==model->pairs[model->cells[chosen].first_pair+j].interaction);
+        }
+        snprintf(p->find_reference,sizeof(p->find_reference),"%s",model->records[gd_explorer_graph_record(&c)].reference);
+        matches(&c); EXPLORER_CHECK(p->visible_matches>0 && !p->hidden_matches);
+        c.viewport=(Rectangle){14,112,872,783}; grid_fit(&c,1); EXPLORER_CHECK(p->camera.zoom>0);
+        p->fit=GD_EXPLORER_FIT_GRID_READABLE; explorer_test_render(&c);
+        EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/grid-cases.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
+        for (i=0;i<p->grid.nouns && !blank;++i) for (j=0;j<p->grid.verbs;++j)
+            if (gd_matrix_grid_cell(model,p->grid.order[i],p->grid.order[p->grid.nouns+j])<0) {
+                grid_choose(&c,i,j); EXPLORER_CHECK(p->selection.cell<0 && gd_explorer_graph_record(&c)<0); blank=1; break;
+            }
+        EXPLORER_CHECK(blank); p->fit=GD_EXPLORER_FIT_GRID_READABLE; explorer_test_render(&c);
+        EXPLORER_CHECK(p->peer==0 && p->foundation_peer==1); /* Dormant graph settings retained. */
+        EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/grid-blank.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
+        *saved=*p;
+        EXPLORER_CHECK(change_view(&c,panes,GD_EXPLORER_SKILLS,NULL) && change_view(&c,panes,GD_EXPLORER_MATRIX,NULL));
+        EXPLORER_CHECK(!memcmp(saved,p,sizeof(*saved)));
+        EXPLORER_CHECK(reset_view(&c) && p->layout_choice==0 && p->grid.noun==-1 && p->grid.verb==-1);
+        p->layout_choice=GD_MATRIX_GRID_CHOICE; p->prepared=0; EXPLORER_CHECK(pane_prepare(&c));
+        grid_choose(&c,0,0);
+    }
+    EXPLORER_CHECK(explorer_test_grid_capacity(&c,output));
     /* Keep one active pose through switch/reload/failure/reset checks. */
     c.pane=&panes[GD_EXPLORER_MDA]; EXPLORER_CHECK(distance_focus_toggle(&c,1)); explorer_test_render(&c);
     /* Cross-family relationship roots resolve qualified source, not offsets.
@@ -227,6 +308,22 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             for (v=0;v<GD_EXPLORER_VIEWS;++v) EXPLORER_CHECK(panes[v].layout && panes[v].prepared);
         }
     }
+    /* A selected blank cell can gain a declaration on reload. Re-resolve its
+       axis identities and cell, rather than retaining a false blank inspector. */
+    {
+        GD_ExplorerPane *prior=c.pane,*p=&panes[GD_EXPLORER_MATRIX];
+        GD_Model *matrix=gd_explorer_model(c.project,GD_EXPLORER_MATRIX); int row,column,found=0;
+        c.pane=p;
+        for (row=0;row<p->grid.nouns && !found;++row) for (column=0;column<p->grid.verbs;++column)
+            if (gd_matrix_grid_cell(matrix,p->grid.order[row],p->grid.order[p->grid.nouns+column])<0) { grid_choose(&c,row,column); found=1; break; }
+        EXPLORER_CHECK(found && p->selection.cell<0);
+        EXPLORER_CHECK(snprintf(grid_probe_path,sizeof(grid_probe_path),"%s/a-grid-probe.md",collections[4].directory)<(int)sizeof(grid_probe_path));
+        file=fopen(grid_probe_path,"rb"); if (file) { fclose(file); EXPLORER_CHECK(0); }
+        file=fopen(grid_probe_path,"wb"); EXPLORER_CHECK(file);
+        fprintf(file,"---\nstatus: proposed\ncoverage: defined\nnouns: [%s]\nverb: %s\n---\nPrivate grid reload probe.\n",
+            matrix->records[p->grid.noun].reference,matrix->records[p->grid.verb].reference);
+        fclose(file); grid_probe_created=1; c.pane=prior;
+    }
     /* New case source shifts resource snapshot keys. Retain a chosen case/start
        by source identity, never by coincident record/native-node offsets. */
     {
@@ -254,6 +351,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     EXPLORER_CHECK(remove(invalid)==0); invalid_created=0;
     EXPLORER_CHECK(reload_project(&c,panes,collections,count,failure,sizeof(failure)) && c.project!=last_good);
     project=c.project;
+    EXPLORER_CHECK(grid_view(&panes[GD_EXPLORER_MATRIX]) && panes[GD_EXPLORER_MATRIX].grid.noun>=0 && panes[GD_EXPLORER_MATRIX].grid.verb>=0 && panes[GD_EXPLORER_MATRIX].selection.cell>=0);
     {
         GD_ExplorerPane *p=&panes[GD_EXPLORER_RESOURCES];
         int record=gd_explorer_resource_record(project->resources,p->selection.node);
@@ -261,8 +359,10 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         EXPLORER_CHECK(p->selection.node!=resource_key && p->paths.count==1 && p->paths.keys[0]==p->selection.node && !p->paths.lost);
     }
     EXPLORER_CHECK(remove(probe_path)==0); probe_created=0;
+    EXPLORER_CHECK(remove(grid_probe_path)==0); grid_probe_created=0;
     EXPLORER_CHECK(reload_project(&c,panes,collections,count,failure,sizeof(failure)));
     project=c.project;
+    EXPLORER_CHECK(panes[GD_EXPLORER_MATRIX].selection.cell<0 && panes[GD_EXPLORER_MATRIX].selection.linked<0);
     for (v=0;v<GD_EXPLORER_VIEWS;++v) { c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c)); explorer_test_render(&c); }
     fprintf(stderr,"Explorer checks passed: six projections; independent switching; multi-match Find; hidden counts; reset isolation; draft preservation; qualified roots; stale-edge recovery and deferred active Undo; validated selection; stderr logging; reload rollback and restoration.\n");
     result=0;
@@ -270,6 +370,7 @@ cleanup:
     *fail_at=0;
     if (invalid_created) remove(invalid);
     if (probe_created) remove(probe_path);
+    if (grid_probe_created) remove(grid_probe_path);
     if (window) { rlImGuiShutdown(); CloseWindow(); }
     if (panes) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) { gd_diagnostics_clear(&panes[v].diagnostics); gd_layout_focus_destroy(panes[v].distance_focus); if (panes[v].layout) allocator.release(allocator.context,panes[v].layout); }

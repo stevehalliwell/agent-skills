@@ -2441,6 +2441,7 @@ TEST(rules_allocation_failure,
 #include "test_graph_closure.h"
 #include "test_graph_drawing.h"
 #include "test_layout_focus.h"
+#include "test_matrix_grid.h"
 #include "test_graph_reachability.h"
 #include "test_graph_shapes.h"
 #include "test_graph_overview.h"
@@ -2458,6 +2459,7 @@ int main(int argc, char **argv) {
     failed += test_rule_condition_logic(); failed += test_rule_exclusion_limits(); failed += test_rule_effect_bindings();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
     failed += test_rules_declarations(); failed += test_resource_unloaded_call(); failed += test_rule_expression_delta(); failed += test_rule_pool_resolution(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
+    failed += test_matrix_grid();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
     failed += test_text_types(); failed += test_missing_endpoint();
     failed += test_input_limits();
@@ -2480,6 +2482,6 @@ int main(int argc, char **argv) {
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/89 passed\n", 89-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/90 passed\n", 90-failed);
     return failed ? 1 : 0;
 }

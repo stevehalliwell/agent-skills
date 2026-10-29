@@ -25,14 +25,14 @@ CJIT application code is unoptimized. Windows Zig 0.17.0 `zig cc -std=c99` headl
 ```sh
 zig cc -std=c99 -DHAVE_CONFIG_H=1 -DYAML_DECLARE_STATIC=1 \
   -I vendor/libyaml/include -I vendor/libyaml/src \
-  gd_core.c gd_output.c gd_layout.c gd_layout_routes.c gd_layout_focus.c gd_focus.c gd_graph_analysis.c gd_graph_paths.c gd_graph_closure.c gd_graph_shapes.c gd_graph_overview.c gd_diagnostics.c gd_skills.c gd_skill_unlocks.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_explorer.c gd_cli.c vendor/libyaml/src/api.c \
+  gd_core.c gd_output.c gd_layout.c gd_matrix_grid.c gd_layout_routes.c gd_layout_focus.c gd_focus.c gd_graph_analysis.c gd_graph_paths.c gd_graph_closure.c gd_graph_shapes.c gd_graph_overview.c gd_diagnostics.c gd_skills.c gd_skill_unlocks.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_explorer.c gd_cli.c vendor/libyaml/src/api.c \
   vendor/libyaml/src/parser.c vendor/libyaml/src/reader.c \
   vendor/libyaml/src/scanner.c -lshell32 -o build/gd-zig.exe
 ```
 
 ## Unified explorer
 
-`view explorer` opens Skills, Challenges, Relationships, Interactions, MDA and Resources in one window. Needs prepared `-Graph` build. Existing commands remain compatible; no new dependency, registry reader, schema change or automatic folder discovery.
+`view explorer` opens Skills, Challenges, Relationships, Interactions, MDA and Resources in one window. Needs prepared `-Graph` build. Working-branch command compatibility is not required. No new dependency, registry reader, schema change or automatic folder discovery.
 
 ```powershell
 $native = 'skills/game-design-workbench/native'
@@ -46,6 +46,9 @@ $inputs = foreach ($role in @('skill-atoms', 'challenges', 'nouns', 'verbs', 'in
 ```
 
 - **Data / projection** selects existing projection. **Layout** selects its supported presentation independently. New arbitrary data/view combinations remain out of scope. Unavailable projections explain missing explicit role bindings; empty valid folders remain valid.
+- **Interactions → Layout → Grid** shows noun rows, verb columns and all declared cells, including inactive pairs. Free graph and Noun / verb columns remain choices. `--mode matrix --layout grid|graph|columns` sets initial Interactions layout; default remains Free graph. Grid starts at readable scale; `F` fits full extent. Wheel zooms cells/labels around pointer; right/middle drag pans. Click cells or axis headers; arrows select with native held-repeat, PageUp/Down cycles cases. Sidebar reuses conditional-case/source inspector. Blank cells imply no rule, exclusion or defect.
+- Grid uses sparse cell drawing plus viewport-culling and level-of-detail labels/lines; never allocates or scans dense Cartesian product. All 4,096 axis records supported, without ImGui's 512-column cap. Below 8 screen-pixel text size, labels disappear with explicit zoom notice; subpixel cells merge pixels, not density counts or inferred clusters. Axes pan with canvas; hover identifies cells when headers leave viewport. Graph analysis/focus/overview layers are unavailable in Grid, explicitly disclosed; settings remain for graph layouts. Find highlights/frames source-associated cells/headers, including inactive cases. Reload remaps selected axes/case identity and re-resolves cells, including blank-to-declared and declared-to-blank changes.
+- `gd_matrix_grid.h/.c` keeps graphics-free ordering, sparse lookup, hit/range geometry and clamped navigation. Each pane reserves 32,784 bytes presentation state outside typed snapshots/drafts; total six-pane reservation 196,704 bytes. Rendering/input lives in `gd_matrix_grid_view.h`, included only by unified shell. Existing standalone table shares cell lookup; its fixed-size/scroll presentation remains separate, not a compatibility requirement.
 - Ordinary switching restores each view's own selection, camera, positions, layout, filters and analysis controls. No automatic selection following, re-rooting or filtering. Inactive views do not settle.
 - **Find selected in** dropdown or canvas right-click explicitly opens another view. Qualified source identity bridges independent snapshots; record/node offsets never do. Case-local Resource facets map to their case source; resolved shared-pool facets map to resource source, not first contributing case. Unresolved shared identities do not acquire a fabricated source.
 - Find highlights all visible source-associated representations and frames them together. Keep destination filters; report hidden matches. No visible matches leaves camera unchanged. No representation does not prove source absence or semantic equivalence. Interaction cases can match several matrix cells; case identity remains inspectable.
@@ -67,11 +70,11 @@ Implementation retains existing typed readers in at most four domain snapshots, 
 ./skills/game-design-workbench/native/test-explorer.ps1 -RaylibDirectory C:/Dependencies/raylib-5.5_win64_mingw-w64
 ```
 
-Checks use private copies of both examples, an owned bounded window and app-local state transitions. Verify six renderers, independent switching, multi-match Find/hidden counts, reset/draft isolation, qualified relationship centers, rank-validated selection, stale-edge recovery after edits/Undo, identity remapping and atomic reload rollback. Force raylib warning to stderr while stdout remains valid JSON. Allocation failures are injected; no OS input posted. Retain JSON/logs/screenshots and native source hashes in fresh ignored `build/explorer-checks-*`; original/private example hashes must stay unchanged. These checks do **not** establish real-pointer acceptance, layout readability or design usefulness. Review against [integrated notes](../../../reports/graph-query-research/integrated-review-notes.md); drawing/AA/jitter/selection-layout work and original-question audit remain open.
+Checks use private copies of both examples, an owned bounded window and app-local state transitions. Verify six projections plus Grid, 4,095-column access, balanced 2,048×2,048 axes and empty axes, case/blank inspection, Grid switching/reset/reload, independent switching, multi-match Find/hidden counts, reset/draft isolation, qualified relationship centers, rank-validated selection, stale-edge recovery after edits/Undo, identity remapping and atomic reload rollback. Force raylib warning to stderr while stdout remains valid JSON. Allocation failures are injected; no OS input posted. Retain JSON/logs/screenshots and native source hashes in fresh ignored `build/explorer-checks-*`; original/private example hashes must stay unchanged. These checks do **not** establish real-pointer acceptance, layout readability or design usefulness. Review against [integrated notes](../../../reports/graph-query-research/integrated-review-notes.md); drawing/AA/jitter/selection-layout work and original-question audit remain open.
 
 ## Resource graph preview
 
-Legacy separate-window command below remains compatible. Prefer [unified explorer](#unified-explorer) for shared controls, filtering, source inspection and refresh.
+Standalone preview command below is still available; retaining it is not a compatibility requirement. Prefer [unified explorer](#unified-explorer) for shared controls, filtering, source inspection and refresh.
 
 Review 02 is in progress. `gd view resources` shows direct declarations, explicit pool bindings and compiled invocation links from shared C99 graph. It does not implement resource routes, composed outcomes, source navigation, filtering or refresh. A line is not proof of a flow; omitted rules and unmodeled conditions remain unknown. Close and reopen if sources change. Unbound resource roles remain separate; the preview does not infer identity from matching names.
 

@@ -67,11 +67,14 @@ try {
             $draft = Get-Content -LiteralPath "$log.json" -Raw | ConvertFrom-Json
             if (-not $draft.ok -or $draft.data.changes.Count -ne 0 -or -not (Test-Path -LiteralPath $capture)) { throw "Capture/draft check failed: $mode" }
         }
+        Invoke-OwnedProbe (Join-Path $run 'gd-view.exe') (@('view', 'explorer') + $inputs + @('--mode', 'matrix', '--layout', 'grid', '--frames', '4', '--screenshot', (Join-Path $fixture 'matrix-grid.png'))) (Join-Path $fixture 'matrix-grid-draft')
+        $gridDraft = Get-Content -LiteralPath (Join-Path $fixture 'matrix-grid-draft.json') -Raw | ConvertFrom-Json
+        if (-not $gridDraft.ok -or $gridDraft.data.changes.Count -ne 0) { throw 'Grid capture changed draft' }
         if (@(Get-ChildItem -LiteralPath $game -Recurse -File).Count -ne $fixtureSources.Count) { throw "Private fixture inventory changed: $game" }
         foreach ($file in $fixtureSources) {
             if ((Get-FileHash -LiteralPath $file.Path -Algorithm SHA256).Hash -ne $file.Hash) { throw "Private fixture source changed: $($file.Path)" }
         }
-        $results += [pscustomobject]@{ example = $example; stateChecks = $checks; productionCaptures = 6; directory = $fixture }
+        $results += [pscustomobject]@{ example = $example; stateChecks = $checks; productionCaptures = 7; directory = $fixture }
     }
 } finally {
     $after = @(Get-ChildItem -LiteralPath $examples -Recurse -File | Sort-Object FullName)

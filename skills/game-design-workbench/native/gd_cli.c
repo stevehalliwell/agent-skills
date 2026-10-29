@@ -6,6 +6,7 @@
 #include "gd_resource_graph.h"
 #include "gd_skill_unlocks.h"
 #include "gd_explorer.h"
+#include "gd_matrix_grid.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
@@ -29,8 +30,9 @@ static void help(void) {
          "Unified explorer: gd view explorer with explicit collection bindings below.\n"
          "  One window; six projections; unavailable views explain missing roles.\n"
          "  --mode skills|challenges|relationships|matrix|mda|resources (default first available)\n"
+         "  --layout grid|graph|columns             Explorer: requires --mode matrix\n"
          "  Supports --frames, --screenshot, --output and error-output format flags.\n"
-         "  Existing view commands remain compatible. No automatic folder discovery.\n\n"
+         "  Standalone view commands also available. No automatic folder discovery.\n\n"
          "Matrix/connectivity collections (exactly one of each):\n"
          "  --nouns ALIAS=FOLDER\n  --verbs ALIAS=FOLDER\n  --interactions ALIAS=FOLDER\n"
          "Skill operations require: --skill-atoms ALIAS=FOLDER\n"
@@ -183,7 +185,7 @@ static int application(int argc, char **argv) {
     int i, count = 0, roles = 0, command = 0, first = 2, frames = 0, explicit_format = -1;
     GD_ViewLayout layout = GD_VIEW_TABLE;
     GD_ExplorerMode explorer_mode = GD_EXPLORE_SKILLS;
-    int explorer_mode_supplied = 0, unified_mode=-1;
+    int explorer_mode_supplied = 0, unified_mode=-1, matrix_layout=-1;
     int layout_supplied = 0, other_pairs = 0, horizontal = 0, direction_supplied = 0;
     int skill_command, view_command;
     int json, status = 0;
@@ -317,9 +319,13 @@ static int application(int argc, char **argv) {
                 explorer_mode = !strcmp(argv[i],"relationships") ? GD_EXPLORE_RELATIONSHIPS : !strcmp(argv[i],"challenges") ? GD_EXPLORE_CHALLENGES : GD_EXPLORE_SKILLS;
             }
         } else if (!strcmp(argv[i], "--layout")) {
-            if (++i == argc) { error = "--layout requires table, graph, columns, prerequisites, or rank"; break; }
+            if (++i == argc) { error = command==13 ? "Explorer --layout requires grid, graph or columns with --mode matrix":"--layout requires table, graph, columns, prerequisites, or rank"; break; }
             layout_supplied = 1;
-            if (!strcmp(argv[i], "table")) layout = GD_VIEW_TABLE;
+            if (command==13) {
+                matrix_layout=!strcmp(argv[i],"grid") ? GD_MATRIX_GRID_CHOICE:!strcmp(argv[i],"graph") ? GD_LAYOUT_FORCE:!strcmp(argv[i],"columns") ? GD_LAYOUT_COLUMNS:-1;
+                if (matrix_layout<0) error="Explorer --layout requires grid, graph or columns with --mode matrix";
+            }
+            else if (!strcmp(argv[i], "table")) layout = GD_VIEW_TABLE;
             else if (!strcmp(argv[i], "graph")) layout = GD_VIEW_GRAPH;
             else if (!strcmp(argv[i], "columns")) layout = GD_VIEW_COLUMNS;
             else if (!strcmp(argv[i], "prerequisites")) layout = GD_VIEW_PREREQUISITES;
@@ -356,8 +362,8 @@ static int application(int argc, char **argv) {
     if (command==13) {
         if (!error && (!count || fields || from || known_count || analyze || case_name || assumption_count || context_assumption_count ||
             import_option || as_supplied || override_count || control_filter.status_count || control_filter.include_count || control_filter.exclude_count ||
-            layout_supplied || direction_supplied || other_pairs))
-            error="view explorer requires explicit collections; supports only --mode, --frames, --screenshot, --output and error-output format flags";
+            (layout_supplied && unified_mode!=GD_EXPLORER_MATRIX) || direction_supplied || other_pairs))
+            error="view explorer requires explicit collections; supports --mode, matrix-only --layout grid|graph|columns, --frames, --screenshot, --output and error-output format flags";
         if (!error && screenshot && (!frames || strlen(screenshot)<4 || strcmp(screenshot+strlen(screenshot)-4,".png")))
             error="--screenshot requires bounded --frames and a .png path";
         model=gd_create(allocator);
@@ -365,7 +371,7 @@ static int application(int argc, char **argv) {
         if (error) gd_error(model,"cli.arguments",error,NULL,0);
         else {
 #ifdef GD_WITH_GRAPH
-            status=gd_explorer_view(model,collections,count,unified_mode,frames,screenshot,output_path);
+            status=gd_explorer_view(model,collections,count,unified_mode,matrix_layout,frames,screenshot,output_path);
 #else
             gd_error(model,"view.graph_unavailable","Unified explorer needs a -Graph build with prepared raylib and gd-ui.dll",NULL,0);
 #endif
