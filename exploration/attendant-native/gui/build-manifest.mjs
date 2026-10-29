@@ -19,7 +19,7 @@ function inputFiles() {
   function walk(folder) {
     for (const entry of readdirSync(join(root, folder), { withFileTypes: true })) {
       const path = join(folder, entry.name);
-      if (entry.isDirectory()) walk(path); else if (/\.(c|h|mjs|sh)$/.test(path)) paths.push(path);
+      if (entry.isDirectory()) walk(path); else if (/\.(c|h|sh)$/.test(path) || path.replaceAll('\\', '/') === 'gui/build-manifest.mjs') paths.push(path);
     }
   }
   for (const folder of ['gui', 'include', 'vendor']) walk(folder);

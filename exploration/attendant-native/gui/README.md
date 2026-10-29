@@ -2,7 +2,7 @@
 
 Windows C99 host. Zig-built DLL owns cimgui/ImGui/RichMd/Win32/D3D11. Native CLI remains GUI/C++-independent.
 
-Current UI: collection/root-file navigation, reusable document tabs, full source selection/copy, body preview, typed references, visible unresolved references and local Markdown links. Source editor remains read-only at this checkpoint. Editing/Send surface follows; document-state save/reload/conflict/comment operations already have headless acceptance.
+Current UI: collection/root-file navigation, reusable document tabs, editable source/undo, body preview, typed/local links, visible unresolved targets, save/reload/close safeguards and source-selection comment composer. Pending/resolved inbox views open comments and exact saved target ranges. Dirty Send requires explicit Save & Send; failed queue reports saved-but-not-queued. Reading never resolves feedback. Preview Send remains unavailable until exact source mapping passes.
 
 ## Build and run
 
@@ -32,17 +32,18 @@ node --test exploration/attendant-native/gui/tools.test.mjs
 node exploration/attendant-native/gui/check.mjs
 ```
 
-- `check.mjs`: unique generated copies only; Unicode/space paths, actual preview pixels, real reference-button mouse input, navigation/tab reuse, source inventory unchanged and no DB preparation.
-- Test-only input driver absent from production build. Headless model requires generated ownership marker. Both compilers run 42 always-on checks: navigation, missing refs, dirty retention, Unicode/CRLF Send, save, external clean reload, external dirty conflict, discard/cancel and missing-file recovery.
+- `check.mjs`: unique generated copies only; 10 real window/D3D runs across both compilers. Preview pixels, Unicode/space paths, real reference/tab input, invalid-record recovery, source edit/undo/redo, dirty-window-close Cancel, comment input, Save & Send, pending-comment navigation and exact source selection. Normal browsing does not prepare DB or change source.
+- Actual GUI Send → native/`.mjs` query → explicit resolution passes both compilers; complete source UTF-8/supplementary bytes, CRLF, 71-code-point selection and human body preserved. Reading does not consume. Separate actual GUI failure case saves source, preserves conflicting files/config, shows saved-but-not-queued and cancels composer.
+- Test-only input driver absent from production build. Mutable exercises/model require generated ownership marker. Both compilers run 81 always-on model checks, including stale/dirty target anchors, alternate absolute-directory spelling, per-file failures, injected read/metadata gap and surviving-write recovery evidence after refresh.
 - Build manifests bind C/build inputs, generated stack headers/dependency manifest, actual DLL and native executables. Guards reject stale source/substituted DLL before GUI execution. Acceptance replaces stale success with partial failure report.
 - Local evidence: `build/gui-check-results.json`, owned runs under `build/gui-check/`, source/toolchain manifests under `build/gui/`. Retained checkpoint: [evidence/windows-x64.json](evidence/windows-x64.json).
-- Real window/D3D validation requires interactive Windows desktop. Fixed 1440×1000 requested window; hardware/WARP choice not recorded. No long-running/device-loss/minimize, wider glyph/path, performance or release qualification yet.
+- Real window/D3D validation requires interactive Windows desktop. Fixed 1440×1000 requested window; hardware/WARP choice not recorded. No long-running/device-loss/minimize, wider glyph/path, performance or release qualification yet. Test emoji renders fallback glyph with current fonts/ImGui configuration; exact underlying supplementary bytes and offsets are preserved, not full glyph coverage.
 
 ## Model and ownership
 
 `workspace.c` owns tab buffers and navigation snapshots; core API results remain borrowed. Refresh never changes active selection or dirty source. Explicit navigation changes active tab; duplicate canonical paths reuse existing buffer. Clean external changes reload; dirty changes stay in memory and require explicit save/discard/cancel. Save verifies exact previously read hash even when metadata polling misses a change.
 
-Bounds: 16 tabs, 4 MiB UTF-8 per document, 4096 navigation files, 16 MiB navigation arena. Project/source API uses existing native capacities. Preview hides recognized leading front matter; full source remains unchanged. Source selection tracks UTF-8 byte endpoints; model converts to saved full-file Unicode code-point offsets for core verification.
+Bounds: 16 tabs, 4 MiB UTF-8 per document, 4096 navigation files, 16 MiB navigation arena. Project/source API uses existing native capacities. Preview hides recognized leading front matter; full source remains unchanged. Source selection tracks UTF-8 byte endpoints; model converts to saved full-file Unicode code-point offsets for core verification. Source API returns metadata associated with read/staged bytes; model never samples newer metadata after reading an older buffer. One bad collection record stays listed as invalid rather than blocking healthy files; CLI retains strict policy. Recovery path copies survive later requests/refresh.
 
 Preview text copying is not original-source range proof. Preview Send remains unavailable until exact mapping is verified.
 

@@ -1,23 +1,29 @@
 {
   "ok": true,
-  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-VbtQvZ",
+  "checkerSha256": "6efff2ad4ab9e40e64105045bf14c061058af679f4a99ca6bed514ddb62140aa",
+  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-JNHl9H",
   "results": [
     {
       "compiler": "cjit",
       "provenance": {
-        "builtAt": "2026-10-29T00:30:47.408Z",
+        "builtAt": "2026-10-29T01:25:29.840Z",
+        "version": {
+          "status": 1,
+          "text": "unknown opt: -:\r\n\r\nNo files specified on commandline\r\n"
+        },
+        "inputSha256": "ac003c1f6b74bae3319f0a665d532a69213f6dfaf9e1f45a307ce84961a1e573",
         "binaries": [
           {
             "path": "build/gui/attendant-gui-cjit.exe",
-            "sha256": "420eb075b9688f3881ada1aa4e329260c0b9331eb4197fd19c80f61f91d7a815"
+            "sha256": "1e9432061d5d9034cab934bdf944e71132d09ce3609bfc75e26ea8cf5f2e1100"
           },
           {
             "path": "build/gui/attendant-gui-cjit-check.exe",
-            "sha256": "979e0bdaa075f92a7aa91628bd76c0afdd7681c44c34b7420a542b59b81b0965"
+            "sha256": "819015822a11ece87298cbcfd9b02a45a6a0a52c49c51011716b09274c278565"
           },
           {
             "path": "build/gui/model-check-cjit.exe",
-            "sha256": "20fa57dfee1be2470c6aac2aebfbd70558aa099ea130b9542d8822fc63c82cce"
+            "sha256": "78f72d49626160f59b531d7b2c99393a1213eab024850fb3da4f04140f01e647"
           }
         ],
         "stack": {
@@ -62,14 +68,18 @@
         "ok": true,
         "frames": 30,
         "tabs": 1,
-        "vertices": 4502
+        "vertices": 4738
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1992,
-        "sha256": "09fa8c46b4d9328ae5b25e1daa40254c1e3aba704325972ef48ebaddf5f5d4f8"
+        "bright": 1994,
+        "sha256": "7c67fdf8eb53d057a7c672323a7e3f6962e64548190fc0a1f10a5da825c37dbd"
       }
+    },
+    {
+      "compiler": "cjit",
+      "badFileRecovered": true
     },
     {
       "compiler": "cjit",
@@ -77,38 +87,83 @@
         "ok": true,
         "frames": 30,
         "tabs": 2,
-        "vertices": 3106
+        "vertices": 3342
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1411,
-        "sha256": "89dcf4610b959127fa29799acd0565081755c6cc386fc7510cd039cdeccf8c85"
+        "bright": 1423,
+        "sha256": "a106c1255272cdcf160c9b2ad453ad68d6f8cff8dd9c0fd83402839fcf983d40"
       }
     },
     {
       "compiler": "cjit",
       "model": {
         "ok": true,
-        "checks": 42
+        "checks": 81
+      }
+    },
+    {
+      "compiler": "cjit",
+      "editing": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 2,
+        "vertices": 2884
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1272,
+        "sha256": "7b5d479f90c13e9c9325a5cf657fcb8262d56adff5fd799ae31afade28447860"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "feedbackLoop": {
+        "pending": 1,
+        "resolved": true,
+        "nativeAndLegacy": true,
+        "bodyPreserved": true,
+        "fullSavedSourceCodePoints": 71
+      }
+    },
+    {
+      "compiler": "cjit",
+      "savedNotQueued": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 1,
+        "vertices": 3310
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1851,
+        "sha256": "3a00d23b46f349b4e7b2e8edccb2b7a72da5c02b75da44bb89eb96be85616590"
       }
     },
     {
       "compiler": "zig",
       "provenance": {
-        "builtAt": "2026-10-29T00:30:48.465Z",
+        "builtAt": "2026-10-29T01:25:31.654Z",
+        "version": {
+          "status": 0,
+          "text": "0.17.0\n"
+        },
+        "inputSha256": "ac003c1f6b74bae3319f0a665d532a69213f6dfaf9e1f45a307ce84961a1e573",
         "binaries": [
           {
             "path": "build/gui/attendant-gui-zig.exe",
-            "sha256": "db60adf31ce84dee5209082e5ffc5fc070797b8dfbf1831fbc23f71d1b08261c"
+            "sha256": "d35ac944576e5857e15e24d9a6144199bbe29d7ff336c21e1106039756bc4346"
           },
           {
             "path": "build/gui/attendant-gui-zig-check.exe",
-            "sha256": "30ca296d2f74c188ec9d0762200f4ba480fc0fdb5df0a34fa379b3e175d06255"
+            "sha256": "cd3eee9016b4e9fbb9a7f5894765fd74b7717426387ffae8db66fac1dec74965"
           },
           {
             "path": "build/gui/model-check-zig.exe",
-            "sha256": "4d81d4d919bd88ae7b33a68ca1db5e9b419cb4783e7c98bd77e50f3eb40c8e28"
+            "sha256": "94413337fb4f4377101b482c12f96b9b209f7fb32a60daf5b8d899c37dec3b22"
           }
         ],
         "stack": {
@@ -153,14 +208,18 @@
         "ok": true,
         "frames": 30,
         "tabs": 1,
-        "vertices": 4494
+        "vertices": 4730
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1984,
-        "sha256": "7d2647fec9f738bdb35313bedf6d038e4fc250e85f065974002a69fb5508e2b4"
+        "bright": 1990,
+        "sha256": "da4ddc549c266a614686d124cfccb8c155c1bc64b95b9e580476e84f4cb43750"
       }
+    },
+    {
+      "compiler": "zig",
+      "badFileRecovered": true
     },
     {
       "compiler": "zig",
@@ -168,20 +227,60 @@
         "ok": true,
         "frames": 30,
         "tabs": 2,
-        "vertices": 3098
+        "vertices": 3334
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1412,
-        "sha256": "24e92dbf1681dbd657f6bb91f262ce3e87cff9090b004a82288c05d6f84f9ce3"
+        "bright": 1425,
+        "sha256": "6642174d3bbd191eb8ad2541717035587cea2a741e5fb563471287de6004560a"
       }
     },
     {
       "compiler": "zig",
       "model": {
         "ok": true,
-        "checks": 42
+        "checks": 81
+      }
+    },
+    {
+      "compiler": "zig",
+      "editing": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 2,
+        "vertices": 2876
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1287,
+        "sha256": "7aa975a0b4637948983db60182cfea026cc3021c4df1804f8fd6e3081fa2aa54"
+      }
+    },
+    {
+      "compiler": "zig",
+      "feedbackLoop": {
+        "pending": 1,
+        "resolved": true,
+        "nativeAndLegacy": true,
+        "bodyPreserved": true,
+        "fullSavedSourceCodePoints": 71
+      }
+    },
+    {
+      "compiler": "zig",
+      "savedNotQueued": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 1,
+        "vertices": 3298
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1841,
+        "sha256": "8a90e95e8dbb4c5dbe0c47e2e70c46d6fb11d346a84e3fb32c3614ea2b4f8d64"
       }
     }
   ]

@@ -93,7 +93,7 @@ attendant_result attendant_read_workspace(attendant_session *session, const char
     if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
     if (!workspace) fail(c, "Missing workspace output");
     input_text(c, project); root = full_path(c, ".", project);
-    load_source(c, root);
+    c->browse_source = 1; load_source(c, root);
     documents = allocate(c, MAX_RECORDS * sizeof(*documents)); count = c->record_count;
     for (i = 0; i < c->record_count; i++) {
         record *r = &c->records[i];
@@ -104,6 +104,7 @@ attendant_result attendant_read_workspace(attendant_session *session, const char
         document->name = r->validation_name ? r->validation_name : strrchr(r->path, '\\') + 1;
         document->invalid = r->blocked;
         document->pending = !strcmp(r->owner->name, "_meta_comments") && status && status->kind == VALUE_STRING && !strcmp(status->text, "pending");
+        document->resolved = !strcmp(r->owner->name, "_meta_comments") && status && status->kind == VALUE_STRING && !strcmp(status->text, "resolved");
         for (j = 0; j < r->owner->field_count; j++) {
             field *f = &r->owner->fields[j];
             value *v = lookup(&r->front, f->name);
@@ -145,25 +146,86 @@ attendant_result attendant_read_workspace(attendant_session *session, const char
     workspace->document_count = count; workspace->diagnostic_count = c->diagnostic_count;
     return request_result(c, 1, root, NULL, NULL);
 }
+static uint64_t attribute_time(const WIN32_FILE_ATTRIBUTE_DATA *attributes) {
+    return ((uint64_t)attributes->ftLastWriteTime.dwHighDateTime << 32) | attributes->ftLastWriteTime.dwLowDateTime;
+}
+static uint64_t attribute_size(const WIN32_FILE_ATTRIBUTE_DATA *attributes) {
+    return ((uint64_t)attributes->nFileSizeHigh << 32) | attributes->nFileSizeLow;
+}
+static void source_attributes(context *c, const char *path, WIN32_FILE_ATTRIBUTE_DATA *attributes) {
+    if (!GetFileAttributesExW(wide(c, path), GetFileExInfoStandard, attributes)) fail(c, "Cannot stat %s", path);
+}
 attendant_result attendant_read_document(attendant_session *session, const char *path) {
     context *c = request_begin(session);
     const char *absolute, *text;
+    WIN32_FILE_ATTRIBUTE_DATA before, after;
+    attendant_result result;
     if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
-    absolute = regular_document(c, path); text = read_text(c, absolute, NULL);
-    return request_result(c, 1, absolute, digest(c, text), text);
+    absolute = regular_document(c, path); source_attributes(c, absolute, &before);
+    text = read_text(c, absolute, NULL); source_attributes(c, absolute, &after);
+    if (attribute_time(&before) != attribute_time(&after) || attribute_size(&before) != attribute_size(&after)) {
+        c->error_code = "source-changed"; fail(c, "Document changed while reading; retry");
+    }
+    result = request_result(c, 1, absolute, digest(c, text), text);
+    result.write_time = attribute_time(&after); result.file_size = attribute_size(&after); return result;
 }
 attendant_result attendant_save_document(attendant_session *session, const char *path, const char *expected_hash, const char *text) {
     context *c = request_begin(session);
     const char *absolute, *original, *hash, *staged;
+    WIN32_FILE_ATTRIBUTE_DATA attributes;
+    attendant_result result;
     if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
     input_text(c, text); input_text(c, expected_hash);
     absolute = regular_document(c, path); original = read_text(c, absolute, NULL);
     c->error_code = "source-changed";
     if (strcmp(digest(c, original), expected_hash)) fail(c, "Document changed since it was loaded; reload or cancel save");
     hash = digest(c, text); c->error_code = "source-save";
-    staged = stage_source(c, absolute, text); publish_source(c, staged, absolute, original);
-    c->staged_count = 0;
-    return request_result(c, 1, absolute, hash, NULL);
+    staged = stage_source(c, absolute, text); source_attributes(c, staged, &attributes);
+    publish_source(c, staged, absolute, original); c->staged_count = 0;
+    result = request_result(c, 1, absolute, hash, NULL);
+    result.write_time = attribute_time(&attributes); result.file_size = attribute_size(&attributes); return result;
+}
+static uint64_t comment_offset(context *c, value *number) {
+    uint64_t result;
+    if (!number || number->kind != VALUE_NUMBER || number->number_kind == NUMBER_F64 ||
+        (number->number_kind == NUMBER_I64 && number->number.signed_integer < 0)) fail(c, "Comment range must contain nonnegative integers");
+    result = number->number_kind == NUMBER_U64 ? number->number.unsigned_integer : (uint64_t)number->number.signed_integer;
+    if (result > TEXT_CAPACITY) fail(c, "Comment range exceeds source capacity");
+    return result;
+}
+attendant_result attendant_read_comment(attendant_session *session, const char *project, const char *path, attendant_comment *comment) {
+    context *c = request_begin(session);
+    const char *absolute, *text, *body, *separator, *root;
+    mapping front, expected, actual;
+    collection *table = NULL;
+    value *status, *target, *hash, *selected, *unit;
+    int i;
+    if (comment) memset(comment, 0, sizeof(*comment));
+    if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
+    if (!comment) fail(c, "Missing comment output");
+    input_text(c, project); input_text(c, path); c->error_code = "feedback-read";
+    root = full_path(c, ".", project); load_config(c, root);
+    for (i = 0; i < c->collection_count; i++) if (!strcmp(c->collections[i].name, "_meta_comments")) table = &c->collections[i];
+    if (!table) fail(c, "No configured _meta_comments collection");
+    expected = read_mapping(c, comment_schema, NULL); actual = read_mapping(c, table->schema_text, NULL);
+    if (actual.problem || !mapping_equal(&expected, &actual)) fail(c, "Existing _meta_comments schema is not managed schema v1");
+    absolute = regular_document(c, full_path(c, root, path)); separator = strrchr(absolute, '\\');
+    if (!separator || _stricmp(copy_text(c, absolute, separator - absolute), full_path(c, root, table->directory)) || separator[1] == '.' ||
+        strlen(separator + 1) < 3 || strcmp(absolute + strlen(absolute) - 3, ".md")) fail(c, "Expected immediate managed comment Markdown file");
+    text = read_text(c, absolute, NULL); front = read_mapping(c, text, &body);
+    if (front.problem || !front.present) fail(c, "Comment front matter must be a valid mapping");
+    status = lookup(&front, "status"); target = lookup(&front, "target_path"); hash = lookup(&front, "target_hash");
+    selected = lookup(&front, "selected_text"); unit = lookup(&front, "range_unit");
+    if (!status || status->kind != VALUE_STRING || (strcmp(status->text, "pending") && strcmp(status->text, "resolved")) ||
+        !target || target->kind != VALUE_STRING || !*target->text || !hash || hash->kind != VALUE_STRING || strlen(hash->text) != 64 ||
+        !selected || selected->kind != VALUE_STRING || !*selected->text || !unit || unit->kind != VALUE_STRING || strcmp(unit->text, "unicode-codepoint"))
+        fail(c, "Comment status, target, hash, selection or range unit is invalid");
+    for (i = 0; i < 64; i++) if (!((hash->text[i] >= '0' && hash->text[i] <= '9') || (hash->text[i] >= 'a' && hash->text[i] <= 'f'))) fail(c, "Comment target_hash must be lowercase SHA-256");
+    comment->range_start = comment_offset(c, lookup(&front, "range_start")); comment->range_end = comment_offset(c, lookup(&front, "range_end"));
+    if (comment->range_start >= comment->range_end) fail(c, "Comment selection must be nonempty");
+    comment->status = status->text; comment->target_path = full_path(c, root, target->text);
+    comment->target_hash = hash->text; comment->selected_text = selected->text; comment->body = body;
+    return request_result(c, 1, absolute, digest(c, text), text);
 }
 static value offset_value(uint64_t number) {
     value v = {0}; v.kind = VALUE_NUMBER; v.number_kind = NUMBER_I64;
@@ -228,7 +290,7 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
     if (strcmp(digest(c, source), input->target_hash)) fail(c, "Saved target hash changed; select text again");
     verify_selection(c, input, source);
     c->error_code = "feedback-conflict";
-    config_path = full_path(c, root, ".pi/attendant.tables");
+    config_path = full_path(c, root, ".pi/attendant.tables"); c->error_path = config_path;
     {
         DWORD attributes = GetFileAttributesW(wide(c, config_path));
         if (attributes != INVALID_FILE_ATTRIBUTES) {
@@ -245,7 +307,7 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
     expected = read_mapping(c, comment_schema, NULL);
     if (bootstrap) {
         if (c->collection_count == MAX_COLLECTIONS) fail(c, "Collection capacity exceeded");
-        directory = full_path(c, root, "records/_meta_comments");
+        directory = full_path(c, root, "records/_meta_comments"); c->error_path = directory;
         for (i = 0; i < c->collection_count; i++) if (!lstrcmpiW(wide(c, directory), wide(c, full_path(c, ".", c->collections[i].directory))))
             fail(c, "Feedback directory already belongs to another collection");
         require_empty_directory(c, directory);
@@ -264,12 +326,14 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
             memcpy(joined + a, line, b); next_config = joined;
         }
     } else {
-        mapping actual = read_mapping(c, table->schema_text, NULL);
+        mapping actual;
+        c->error_path = table->schema_path; actual = read_mapping(c, table->schema_text, NULL);
         if (actual.problem || !mapping_equal(&expected, &actual)) fail(c, "Existing _meta_comments schema is not managed schema v1");
         directory = full_path(c, ".", table->directory);
     }
     {
         const char *state = full_path(c, root, ".attendant");
+        c->error_path = directory;
         if (!_stricmp(directory, root) || !_stricmp(directory, state) || inside_project(state, directory))
             fail(c, "Feedback directory must not be workspace root or disposable state");
     }

@@ -5,12 +5,24 @@
 #include "../include/base.h"
 #include <stdio.h>
 #include <string.h>
+#ifdef ATTENDANT_MODEL_TESTING
+void gui_model_after_read(const char *path);
+#endif
 
 static int problem(gui_workspace *workspace, const char *message) {
     snprintf(workspace->error, sizeof(workspace->error), "%s", message ? message : "Operation failed"); return 0;
 }
 static int result_problem(gui_workspace *workspace, attendant_result result) {
-    snprintf(workspace->error, sizeof(workspace->error), "%s: %s", result.code ? result.code : "source", result.message ? result.message : "Operation failed");
+    int i;
+    snprintf(workspace->error, sizeof(workspace->error), "%s: %s%s%s", result.code ? result.code : "source", result.message ? result.message : "Operation failed", result.path ? "\nFailed path: " : "", result.path ? result.path : "");
+    snprintf(workspace->failed_path, sizeof(workspace->failed_path), "%s", result.path ? result.path : "");
+    workspace->surviving_count = 0; workspace->surviving_total = result.written_count;
+    for (i = 0; i < result.written_count && i < GUI_RECOVERY_PATHS; i++) {
+        snprintf(workspace->surviving_paths[i], GUI_PATH, "%s", result.written[i]); workspace->surviving_count++;
+    }
+    fprintf(stderr, "%s\n", workspace->error);
+    if (result.path) fprintf(stderr, "Failed path: %s\n", result.path);
+    for (i = 0; i < result.written_count; i++) fprintf(stderr, "Written: %s\n", result.written[i]);
     return 0;
 }
 static int canonical_path(gui_workspace *workspace, const char *path, char *output) {
@@ -90,11 +102,9 @@ void gui_workspace_destroy(gui_workspace *workspace) {
     if (workspace->navigation) VirtualFree(workspace->navigation, 0, MEM_RELEASE);
     attendant_close(workspace->session); memset(workspace, 0, sizeof(*workspace));
 }
-static void document_stat(gui_tab *tab) {
-    wchar_t path[4096]; WIN32_FILE_ATTRIBUTE_DATA data;
-    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, tab->path, -1, path, 4096) && GetFileAttributesExW(path, GetFileExInfoStandard, &data)) {
-        tab->modified = data.ftLastWriteTime; tab->file_size = data.nFileSizeLow;
-    }
+static void document_metadata(gui_tab *tab, attendant_result result) {
+    tab->modified.dwLowDateTime = (DWORD)result.write_time;
+    tab->modified.dwHighDateTime = (DWORD)(result.write_time >> 32); tab->file_size = (DWORD)result.file_size;
 }
 int gui_open_document(gui_workspace *workspace, const char *path) {
     char absolute[GUI_PATH];
@@ -109,12 +119,15 @@ int gui_open_document(gui_workspace *workspace, const char *path) {
     if (slot < 0) return problem(workspace, "16 document tabs already open; close one first");
     result = attendant_read_document(workspace->session, absolute);
     if (!result.ok) return result_problem(workspace, result);
+#ifdef ATTENDANT_MODEL_TESTING
+    gui_model_after_read(result.path);
+#endif
     tab = &workspace->tabs[slot]; memset(tab, 0, sizeof(*tab));
     tab->text = VirtualAlloc(NULL, GUI_TEXT + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!tab->text) return problem(workspace, "Cannot allocate document text");
     snprintf(tab->path, sizeof(tab->path), "%s", result.path); snprintf(tab->hash, sizeof(tab->hash), "%s", result.hash);
     tab->length = strlen(result.text); memcpy(tab->text, result.text, tab->length + 1);
-    tab->used = 1; document_stat(tab); workspace->active = slot; workspace->tab_count++; workspace->activation++; return 1;
+    tab->used = 1; document_metadata(tab, result); workspace->active = slot; workspace->tab_count++; workspace->activation++; return 1;
 }
 int gui_save_document(gui_workspace *workspace, int index) {
     gui_tab *tab = &workspace->tabs[index];
@@ -122,7 +135,7 @@ int gui_save_document(gui_workspace *workspace, int index) {
     result = attendant_save_document(workspace->session, tab->path, tab->hash, tab->text);
     if (!result.ok) return result_problem(workspace, result);
     snprintf(tab->hash, sizeof(tab->hash), "%s", result.hash); tab->dirty = tab->external_change = 0;
-    document_stat(tab); snprintf(workspace->notice, sizeof(workspace->notice), "Saved %s", tab->path); return 1;
+    document_metadata(tab, result); snprintf(workspace->notice, sizeof(workspace->notice), "Saved %s", tab->path); return 1;
 }
 int gui_reload_document(gui_workspace *workspace, int index, int discard_dirty) {
     gui_tab *tab = &workspace->tabs[index];
@@ -130,9 +143,13 @@ int gui_reload_document(gui_workspace *workspace, int index, int discard_dirty) 
     if (tab->dirty && !discard_dirty) return problem(workspace, "Dirty document requires explicit discard or save");
     result = attendant_read_document(workspace->session, tab->path);
     if (!result.ok) return result_problem(workspace, result);
+#ifdef ATTENDANT_MODEL_TESTING
+    gui_model_after_read(result.path);
+#endif
     tab->length = strlen(result.text); memcpy(tab->text, result.text, tab->length + 1);
     snprintf(tab->hash, sizeof(tab->hash), "%s", result.hash); tab->dirty = tab->external_change = 0;
-    tab->selection_start = tab->selection_end = 0; tab->generation++; document_stat(tab); return 1;
+    tab->selection_start = tab->selection_end = tab->reveal_selection = tab->anchor_stale = 0;
+    tab->generation++; document_metadata(tab, result); return 1;
 }
 int gui_close_document(gui_workspace *workspace, int index, int discard_dirty) {
     gui_tab *tab = &workspace->tabs[index]; int i;
@@ -184,8 +201,42 @@ int gui_send_comment(gui_workspace *workspace, int index, const char *comment) {
     }
     input.range_end = point; result = attendant_send_feedback(workspace->session, &input); VirtualFree(selected, 0, MEM_RELEASE);
     if (!result.ok) return result_problem(workspace, result);
+    workspace->error[0] = workspace->failed_path[0] = 0; workspace->surviving_count = workspace->surviving_total = 0;
     snprintf(workspace->notice, sizeof(workspace->notice), "Comment queued: %s", result.path);
     gui_refresh(workspace); return 1;
+}
+int gui_open_comment_target(gui_workspace *workspace, int comment_index) {
+    attendant_comment comment;
+    attendant_result result = attendant_read_comment(workspace->session, workspace->root, workspace->tabs[comment_index].path, &comment);
+    char target[GUI_PATH], hash[65], status[16], *selected;
+    uint64_t range_start, range_end, point = 0;
+    size_t offset = 0, begin = 0, length;
+    gui_tab *tab;
+    int ok = 0;
+    if (!result.ok) return result_problem(workspace, result);
+    snprintf(target, sizeof(target), "%s", comment.target_path); snprintf(hash, sizeof(hash), "%s", comment.target_hash);
+    snprintf(status, sizeof(status), "%s", comment.status); range_start = comment.range_start; range_end = comment.range_end;
+    length = strlen(comment.selected_text); selected = VirtualAlloc(NULL, length + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!selected) return problem(workspace, "Cannot allocate feedback anchor");
+    memcpy(selected, comment.selected_text, length + 1);
+    if (!gui_open_document(workspace, target)) goto finished;
+    tab = &workspace->tabs[workspace->active];
+    if (tab->dirty) { problem(workspace, "Target has unsaved edits; comment range was not applied"); goto finished; }
+    if (!gui_reload_document(workspace, workspace->active, 0)) goto finished;
+    if (strcmp(tab->hash, hash)) { tab->anchor_stale = 1; problem(workspace, "Comment anchor is stale: saved target hash differs; no selection applied"); goto finished; }
+    while (offset < tab->length && point < range_end) {
+        size_t width = string_utf8_sequence_size((const u8 *)tab->text + offset, tab->length - offset);
+        if (point == range_start) begin = offset;
+        if (!width) break;
+        offset += width; point++;
+    }
+    if (point != range_end || offset - begin != length || memcmp(tab->text + begin, selected, length)) {
+        tab->anchor_stale = 1; problem(workspace, "Comment text/range does not match saved target; no selection applied"); goto finished;
+    }
+    tab->selection_start = (int)begin; tab->selection_end = (int)offset; tab->reveal_selection = 1;
+    snprintf(workspace->notice, sizeof(workspace->notice), "Opened %s comment target. Reading does not resolve feedback.", status); ok = 1;
+finished:
+    VirtualFree(selected, 0, MEM_RELEASE); return ok;
 }
 int gui_open_link(gui_workspace *workspace, const char *url) {
     int i;

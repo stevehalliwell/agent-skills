@@ -10,6 +10,7 @@ typedef struct attendant_session attendant_session;
 typedef struct attendant_result {
     int ok;
     const char *code, *message, *path, *hash, *text;
+    uint64_t write_time, file_size; /* Document bytes' Windows FILETIME and size. */
     int written_count;
     const char *const *written;
 } attendant_result;
@@ -18,12 +19,16 @@ typedef struct attendant_feedback {
     uint64_t range_start, range_end; /* Unicode code points, zero-based/end-exclusive. */
     const char *selected_text, *comment;
 } attendant_feedback;
+typedef struct attendant_comment {
+    const char *status, *target_path, *target_hash, *selected_text, *body;
+    uint64_t range_start, range_end;
+} attendant_comment;
 typedef struct attendant_reference {
     const char *field, *value, *target_path; /* NULL target: unresolved, never guessed. */
 } attendant_reference;
 typedef struct attendant_document_info {
     const char *path, *name, *collection;
-    int invalid, pending, reference_count;
+    int invalid, pending, resolved, reference_count;
     attendant_reference *references;
 } attendant_document_info;
 typedef struct attendant_workspace {
@@ -38,6 +43,8 @@ void attendant_close(attendant_session *session);
 attendant_result attendant_read_workspace(attendant_session *session, const char *project, attendant_workspace *workspace);
 attendant_result attendant_read_document(attendant_session *session, const char *path);
 attendant_result attendant_save_document(attendant_session *session, const char *path, const char *expected_hash, const char *text);
+/* Read/validate managed anchor without resolving status or reading target. */
+attendant_result attendant_read_comment(attendant_session *session, const char *project, const char *path, attendant_comment *comment);
 /* First Send creates/registers owned _meta_comments, publishing config last.
  * Does not save target, repair unrelated records, refresh DB, or consume feedback.
  * Failed bootstrap rolls back owned files; written reports any paths left behind. */

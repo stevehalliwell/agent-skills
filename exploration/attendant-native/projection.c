@@ -82,7 +82,7 @@ typedef struct context {
     collection collections[MAX_COLLECTIONS];
     int collection_count;
     record records[MAX_RECORDS];
-    int record_count, projected, allow_fts, fts_enabled, diagnostic_count, contract_diagnostic_count, auto_correct;
+    int record_count, projected, allow_fts, fts_enabled, diagnostic_count, contract_diagnostic_count, auto_correct, browse_source;
     const char *applied_corrections;
     diagnostic *diagnostics;
     const char *written[MAX_RECORDS], *staged[MAX_RECORDS];
@@ -286,24 +286,30 @@ static const char *full_path(context *c, const char *base, const char *path) {
     while (length > 3 && (output[length - 1] == L'\\' || output[length - 1] == L'/')) output[--length] = 0;
     return utf8(c, output);
 }
-static const char *read_text(context *c, const char *path, size_t *length) {
+/* Per-file failures can be listed by workspace browser; allocation failures remain fatal. */
+static const char *try_read_text(context *c, const char *path, size_t *length, const char **problem) {
     HANDLE file = CreateFileW(wide(c, path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     LARGE_INTEGER size;
     DWORD count;
     char *text;
-    if (file == INVALID_HANDLE_VALUE) fail(c, "Cannot read %s", path);
+    if (file == INVALID_HANDLE_VALUE) { *problem = format_text(c, "Cannot read %s", path); return NULL; }
     if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > TEXT_CAPACITY) {
-        CloseHandle(file); fail(c, "Source exceeds 4 MiB capacity: %s", path);
+        CloseHandle(file); *problem = format_text(c, "Source exceeds 4 MiB capacity: %s", path); return NULL;
     }
     c->reading_file = file;
     text = allocate(c, (size_t)size.QuadPart + 1);
     if (!ReadFile(file, text, (DWORD)size.QuadPart, &count, NULL) || count != size.QuadPart) {
-        CloseHandle(file); c->reading_file = NULL; fail(c, "Read failed: %s", path);
+        CloseHandle(file); c->reading_file = NULL; *problem = format_text(c, "Read failed: %s", path); return NULL;
     }
     CloseHandle(file); c->reading_file = NULL;
-    if (memchr(text, 0, count) || !string_view_utf8_valid(string_view_from_cstr(text))) fail(c, "Source must be NUL-free UTF-8: %s", path);
+    if (memchr(text, 0, count) || !string_view_utf8_valid(string_view_from_cstr(text))) { *problem = format_text(c, "Source must be NUL-free UTF-8: %s", path); return NULL; }
     if (length) *length = count;
+    return text;
+}
+static const char *read_text(context *c, const char *path, size_t *length) {
+    const char *problem = NULL, *text = try_read_text(c, path, length, &problem);
+    if (!text) fail(c, "%s", problem);
     return text;
 }
 static const char *digest(context *c, const char *text) {
@@ -645,8 +651,15 @@ static void load_records(context *c, collection *table) {
         if (c->record_count == MAX_RECORDS) fail(c, "Total record capacity exceeded");
         r = &c->records[c->record_count++];
         r->owner = table; r->path = paths[i];
-        r->text = read_text(c, r->path, &r->size);
-        if (!GetFileAttributesExW(wide(c, r->path), GetFileExInfoStandard, &attributes)) fail(c, "Cannot stat %s", r->path);
+        if (c->browse_source) {
+            const char *problem = NULL;
+            r->text = try_read_text(c, r->path, &r->size, &problem);
+            if (!r->text) { record_problem(c, r, "record-read", problem); continue; }
+        } else r->text = read_text(c, r->path, &r->size);
+        if (!GetFileAttributesExW(wide(c, r->path), GetFileExInfoStandard, &attributes)) {
+            if (c->browse_source) { record_problem(c, r, "record-read", format_text(c, "Cannot stat %s", r->path)); continue; }
+            fail(c, "Cannot stat %s", r->path);
+        }
         ticks.LowPart = attributes.ftLastWriteTime.dwLowDateTime; ticks.HighPart = attributes.ftLastWriteTime.dwHighDateTime;
         ticks.QuadPart -= 116444736000000000ULL;
         /* Match Node/libuv's seconds + nanosecond fraction arithmetic. */
