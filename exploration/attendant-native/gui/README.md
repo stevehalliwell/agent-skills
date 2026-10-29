@@ -13,11 +13,15 @@ From repo root:
 ```bash
 bash exploration/attendant-native/build-gui.sh cjit
 bash exploration/attendant-native/build-gui.sh zig
+workspace="$(mktemp -d "$PWD/exploration/attendant-native/build/review-XXXXXX")"
+cp -R "$PWD/exploration/attendant-native/fixtures/project/." "$workspace/"
 exploration/attendant-native/build/gui/attendant-gui-zig.exe \
-  --project "$PWD/exploration/attendant-native/fixtures/project" \
+  --project "$workspace" \
   --assets "$PWD/spikes/cimgui-richmd-c99/build/deps/richmd/assets" \
   --file records/tasks/first.md
 ```
+
+Current readiness verdict: copied-workspace evaluation only; see [whole-app review](../GUI-REVIEW.md). Do not treat smoke passes as approval for authoritative editing or launcher rollout.
 
 Keep copied `cimgui_richmd.dll` beside executable. Runtime assets remain external. Launcher/installed skill unchanged.
 
