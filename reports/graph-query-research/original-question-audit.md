@@ -4,7 +4,7 @@
 
 Current tools answer declared relationships and selected conditional-rule hypotheses. They do not yet answer shared-outcome, actor-state, gameplay-role or resource-conversion questions end to end. Better layout does not close those gaps.
 
-- Inventory baseline: `8e6e5d7`. Current independent review includes accepted Grid `89b54e3`, Resource report `f233e7c`, focus/pickup `5c1e17e` and conditional Resource witnesses. All original nine CLI probes were rerun, plus Resource overview/six route-frontier-identity probes; current evidence below.
+- Inventory baseline: `8e6e5d7`. Current independent review includes accepted Grid `89b54e3`, Resource report `f233e7c`, focus/pickup `5c1e17e` and conditional Resource witnesses `adae021`. All original nine CLI probes were rerun, plus Resource overview/six route-frontier-identity probes; current evidence below.
 - Question authority: [original feedback](../../.pi/visualiser-review-notes.md). Current ownership: [todo.md](../../todo.md), Reviews 02–12 and Slice 6.
 - **Narrow answer:** stated operation returns the stated declared fact, with limits. Not acceptance of the broader design question.
 - **Partial:** source representation, kernel or inspection exists; requested question/result still lacks coverage.
@@ -216,6 +216,10 @@ Other retained authoring questions: separate run verb/air-control breakpoints; p
 - Generic visual analysis interfaces: `native/gd_graph_analysis.h`, `gd_graph_analysis_ui.c`, `gd_explorer_view.c`.
 - Explicit skill assumptions/candidates: `native/gd_skill_unlocks.c`; scaffolding: `native/gd_routes.c`; MDA paths: `native/gd_mda.c`.
 - Plumber source: `game-design/interactions/touch-walker-{small,powered}.md`, `touch-gap-bottom.md`, `mechanics/shell-travel.md`, `axes/{Life,Form,Protection}.md`, `resources/retry-budget.md`. Paths relative to `skills/game-design-workbench/examples/little-plumber-guy-nes/`; native paths relative to the skill.
+
+## Review artifact
+
+[mario-question-review.html](mario-question-review.html) embeds current evidence, all 14 assessments, decisions/rejected alternatives and runnable human review path. Static and network-blocked Chromium checks pass; no user usefulness acceptance implied. Font choice and manual pins remain deferred.
 
 ## Comments
 
