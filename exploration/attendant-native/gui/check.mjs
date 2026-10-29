@@ -55,6 +55,11 @@ async function checkSelectionInspection(report, compiler) {
       child.stdout.on('data', value => { output += value; if (output.includes('"event":"selection-ready"')) resolve(); });
       child.on('error', reject); child.on('close', code => { if (!output.includes('"event":"selection-ready"')) reject(new Error(`Selection driver ${code}: ${error}`)); });
     });
+    const actionReady = new Promise((resolve, reject) => {
+      child.stdout.on('data', () => { if (output.includes('"event":"selection-action"')) resolve(); });
+      child.on('error', reject); child.on('close', code => { if (!output.includes('"event":"selection-action"')) reject(new Error(`Selection action driver ${code}: ${error}`)); });
+    });
+    actionReady.catch(() => {});
     child.stderr.on('data', value => { error += value; });
     const done = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', code => code === 0 ? resolve() : reject(new Error(error))); });
     done.catch(() => {}); const timer = setTimeout(() => child.kill(), 30000);
@@ -65,8 +70,11 @@ async function checkSelectionInspection(report, compiler) {
       assert.equal(inspected.selection.text, status === 'exact' ? text : null);
       assert.equal(inspected.selection.range_start, status === 'exact' ? 0 : null);
       assert.equal(inspected.selection.range_end, status === 'exact' ? Array.from(text).length : null);
+      await actionReady;
+      const afterAction = childJSON(join(root, `build/gui/attendant-gui-${other}.exe`), ['--project', project, '--inspect']);
+      assert.deepEqual(afterAction, inspected, 'Unified action/comment-input focus preserves document selection');
       await done; assert.deepEqual(inventory(project), before);
-      report.results.push({ compiler, selectionInspection: { mode, clientCompiler: other, status, priorSourceSelectionReplaced: true, sourceAndProjectionUnchanged: true } });
+      report.results.push({ compiler, selectionInspection: { mode, clientCompiler: other, status, priorSourceSelectionReplaced: true, unifiedActionUsesLatestSelection: true, retainedDuringCommentInputFocus: status === 'exact', sourceAndProjectionUnchanged: true } });
     } finally { clearTimeout(timer); if (child.exitCode === null) child.kill(); }
   }
 }

@@ -1,25 +1,25 @@
 {
   "ok": true,
-  "checkerSha256": "3b055a883585e324e822f9bead670f5c31c83b24aa8137029e41e9ab42e2999f",
-  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-BenL1m",
+  "checkerSha256": "3b3e9163c188bb84787eb99875926ca07feb2195b17c068e693e079c217facad",
+  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-6PM9aB",
   "results": [
     {
       "compiler": "cjit",
       "provenance": {
-        "builtAt": "2026-10-29T21:19:30.455Z",
+        "builtAt": "2026-10-29T21:32:38.933Z",
         "version": {
           "status": 0,
           "text": "CJIT v1.2.0 by Dyne.org\r\n\r\nSynopsis: cjit [options] files(*) -- app arguments\r\n  (*) can be any source (.c) or built object (dll, dylib, .so)\r\nOptions and values (+) mandatory (-) default (=) optional:\r\n -h \t print this help\r\n -v \t print runtime and compiler status information\r\n -q \t stay quiet and only print errors and output\r\n -C \t set interpreter/compiler flags (-) env var CFLAGS\r\n -c \t compile a single source file, do not execute\r\n -o exe\t do not run, compile an executable (+path)\r\n -D sym\t define a macro value (+) symbol or key=value\r\n -I dir\t also search folder (+) dir for header files\r\n -l lib\t link the shared library (+) lib\r\n -L dir\t add folder (+) dir to library search paths\r\n -e fun\t run starting from entry function (-) main\r\n -p pid\t write execution process ID to (+) pid\r\n --verb\t don't go quiet, verbose logs\r\n --xass\t just extract runtime assets (=) to path\r\n --xtgz\t extract all files in a USTAR (+) tar.gz\r\n\r\n"
         },
-        "inputSha256": "238f88111d15b9ba9e2874ad5aadcbed43b688f7ff4c93a2f599288726addbe3",
+        "inputSha256": "6f46d465041f4005ac98f2207510d12103ef6b038ec61ca9d912e6def58ee61a",
         "binaries": [
           {
             "path": "build/gui/attendant-gui-cjit.exe",
-            "sha256": "5bddc954217f3c5298d932683bfb5422a12e7036eec179e96da43e68937cb9a1"
+            "sha256": "6f0143d3d10fd5d72ee1f9043c2c1bbc4afdd4d6c7c1254be74c2d58d3c150ea"
           },
           {
             "path": "build/gui/attendant-gui-cjit-check.exe",
-            "sha256": "ab7ee0574c6f602588de65b6e7e25fb61f6eb5e21eaaf83925a40a200d34ff58"
+            "sha256": "a3ea896fc258a1fef5bfddb6811e2a571fe5c299c90bab838f43ed64a994e96f"
           },
           {
             "path": "build/gui/model-check-cjit.exe",
@@ -68,13 +68,13 @@
         "ok": true,
         "frames": 30,
         "tabs": 1,
-        "vertices": 5086
+        "vertices": 4914
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2759,
-        "sha256": "4161d10b987361247b622967239019990aaa2140d54db0c839548753825d1e20"
+        "bright": 2002,
+        "sha256": "dbbdbcd16494612dd6c812893355337e85a19e3084db8b3c9aff3a29f45b860f"
       }
     },
     {
@@ -87,13 +87,13 @@
         "ok": true,
         "frames": 30,
         "tabs": 2,
-        "vertices": 3690
+        "vertices": 3518
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2193,
-        "sha256": "ba2753c90ea4a948fe908707e59a1fa7c1ba591771886806159443a8b9505eca"
+        "bright": 1433,
+        "sha256": "06902bf17e1ec2cfd6016ccb775e3e4670627320c3389195e55c74b9d3e116aa"
       }
     },
     {
@@ -109,13 +109,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 2,
-        "vertices": 3228
+        "vertices": 3004
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2061,
-        "sha256": "80b7ae7cf654a8e97f0a589917866209b5961013e1c7b0f7e688bcc07ba5d632"
+        "bright": 1293,
+        "sha256": "12efb8892af229578a588e0eea29a8762706f6345b643c9d0a3837d56f874809"
       }
     },
     {
@@ -134,7 +134,7 @@
         "ok": true,
         "frames": 70,
         "tabs": 1,
-        "vertices": 3432
+        "vertices": 3212
       },
       "previewFeedback": {
         "rangeStart": 35,
@@ -148,8 +148,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2584,
-        "sha256": "ac718a41b86e61b29df0f93c9a4e67209a4cf8712a879066e7cdaa919f48964e"
+        "bright": 1640,
+        "sha256": "192b6cf767e5e6118b743b45000d0530d352900dae893bc3407ea8b98efaf79a"
       }
     },
     {
@@ -158,13 +158,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 1,
-        "vertices": 3658
+        "vertices": 3434
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2614,
-        "sha256": "68eba97eaae17624db89994fde7ad21170ca120656aaa917318ad1f026a22d0f"
+        "bright": 1867,
+        "sha256": "0125cb7560dd7841bc082b1e9a4a9dd5909cb655cf07659f51ce7a60fe30f953"
       }
     },
     {
@@ -174,6 +174,8 @@
         "clientCompiler": "zig",
         "status": "exact",
         "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
         "sourceAndProjectionUnchanged": true
       }
     },
@@ -184,6 +186,8 @@
         "clientCompiler": "zig",
         "status": "unsupported",
         "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": false,
         "sourceAndProjectionUnchanged": true
       }
     },
@@ -194,6 +198,8 @@
         "clientCompiler": "zig",
         "status": "unsupported",
         "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": false,
         "sourceAndProjectionUnchanged": true
       }
     },
@@ -222,7 +228,7 @@
           },
           {
             "event": "complete",
-            "checks": 93,
+            "checks": 100,
             "markerDraws": 3,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -237,7 +243,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 1,
-            "vertices": 17174
+            "vertices": 17766
           }
         ],
         "amberPixels": 1126,
@@ -247,8 +253,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43128,
-        "sha256": "47fdadf3d97e153dd6a73b68d8ab679e3f46da2597cd902051bbec16373c24a7"
+        "bright": 45299,
+        "sha256": "e16d9783f8f43df10f3f195b96fc743d9e24940688d14ab570a88010228e2db4"
       }
     },
     {
@@ -276,7 +282,7 @@
           },
           {
             "event": "complete",
-            "checks": 40,
+            "checks": 41,
             "markerDraws": 0,
             "dirty": true,
             "caretSelectionPreservedAfterGo": true,
@@ -291,7 +297,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 1,
-            "vertices": 17362
+            "vertices": 17954
           }
         ],
         "amberPixels": 0,
@@ -301,8 +307,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43131,
-        "sha256": "02ee38c38562d886b90c1f003363d5a8368c5920414ebbda7f6635b2113c9f56"
+        "bright": 45294,
+        "sha256": "3a51da48a1a5f972fee5f1f98db925fdcefb14ced85bef9e105143af0f312eaa"
       }
     },
     {
@@ -330,7 +336,7 @@
           },
           {
             "event": "complete",
-            "checks": 47,
+            "checks": 41,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -345,7 +351,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 1,
-            "vertices": 17354
+            "vertices": 17946
           }
         ],
         "amberPixels": 0,
@@ -355,8 +361,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43174,
-        "sha256": "b965f1ca6d2610c518ab58d4c4cbe2adba34db3cb01e5575a1d879e0120e981b"
+        "bright": 45316,
+        "sha256": "0542b77493b1000cafff241c81f5eaa8ea5da61a6a24c9c324460f2e67e574b2"
       }
     },
     {
@@ -384,7 +390,7 @@
           },
           {
             "event": "complete",
-            "checks": 42,
+            "checks": 45,
             "markerDraws": 2,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -399,7 +405,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 2,
-            "vertices": 17258
+            "vertices": 17902
           }
         ],
         "amberPixels": 1126,
@@ -409,8 +415,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43033,
-        "sha256": "20dca4217f5839715a0fd8f15c72210ababdce8361774aa29071d4386b5387b4"
+        "bright": 45189,
+        "sha256": "76885bacbdac4cc2d66e1fe981cfa43779f441f9cd142df26b62624ab42df92e"
       }
     },
     {
@@ -453,7 +459,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 1,
-            "vertices": 17358
+            "vertices": 17950
           }
         ],
         "amberPixels": 0,
@@ -463,8 +469,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43201,
-        "sha256": "e5bb933b02a1a9d84ec8b64cb9d72701453b88119da450f94416d8498c6793b1"
+        "bright": 45369,
+        "sha256": "ef97205b3370ce6a5cacaa56641ef50bfd7493b90c78128a22c71266d08b7e5a"
       }
     },
     {
@@ -475,24 +481,24 @@
     {
       "compiler": "zig",
       "provenance": {
-        "builtAt": "2026-10-29T21:19:31.997Z",
+        "builtAt": "2026-10-29T21:32:40.088Z",
         "version": {
           "status": 0,
           "text": "0.17.0\n"
         },
-        "inputSha256": "238f88111d15b9ba9e2874ad5aadcbed43b688f7ff4c93a2f599288726addbe3",
+        "inputSha256": "6f46d465041f4005ac98f2207510d12103ef6b038ec61ca9d912e6def58ee61a",
         "binaries": [
           {
             "path": "build/gui/attendant-gui-zig.exe",
-            "sha256": "60b010ee5ab111f9c40176a430f38663d4dded5ddeaf05da576704bb1499d43c"
+            "sha256": "90486a367870b7beae4b203a7ac97849c9490aa4d183c80dd1c6accc9959b6fb"
           },
           {
             "path": "build/gui/attendant-gui-zig-check.exe",
-            "sha256": "4db4e8b94d1fb43453a5966d8228bd699a977836ffb444e721560210d21c9a6a"
+            "sha256": "c4688cc2d55d5ddd0bdc330c3451a033af2e811e7424b55f3431d02a8144a42c"
           },
           {
             "path": "build/gui/model-check-zig.exe",
-            "sha256": "1194aec6f6a806de96ea59266129ef6d236f387b7853bdec3e31948231841e9e"
+            "sha256": "12017bfe452bd3735fd7ef555da6059beb2e646a1f5946fba4e8fb65d3a777aa"
           }
         ],
         "stack": {
@@ -537,13 +543,13 @@
         "ok": true,
         "frames": 30,
         "tabs": 1,
-        "vertices": 5078
+        "vertices": 4906
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2744,
-        "sha256": "8496bda95638ed53320348601c3be6befd0d5d4c6c319f4a3bf8e9c62d6e591d"
+        "bright": 2001,
+        "sha256": "f8667db61775493310586e1edc019486b4f3e05069ca846ce3894f28f5f6d9c8"
       }
     },
     {
@@ -556,13 +562,13 @@
         "ok": true,
         "frames": 30,
         "tabs": 2,
-        "vertices": 3682
+        "vertices": 3510
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2174,
-        "sha256": "18b25d57f8817073e98cb024382ea67a98a13c931675ab125fe9181fa75d4d38"
+        "bright": 1435,
+        "sha256": "3e1912369a1ca08ef45fd657c9b06171ee0c7bbc304376f8bd636e8d94a40e65"
       }
     },
     {
@@ -578,13 +584,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 2,
-        "vertices": 3220
+        "vertices": 3004
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2042,
-        "sha256": "d43386a470a4edcc7c6bd911a6b022640052656838fda57dc0b76c13c6c81b61"
+        "bright": 1291,
+        "sha256": "1f23991723a5beeaa3c675188cfee2eed12bd12e6e3a456c61c0e9cbbac549cf"
       }
     },
     {
@@ -603,7 +609,7 @@
         "ok": true,
         "frames": 70,
         "tabs": 1,
-        "vertices": 3420
+        "vertices": 3200
       },
       "previewFeedback": {
         "rangeStart": 35,
@@ -617,8 +623,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2539,
-        "sha256": "857404b74d5570915d2420ac08c18952f6b7dd56457a280f0fae7ab94f3206c2"
+        "bright": 1641,
+        "sha256": "dcf8a81b152a660913ea8c716c2126a65635c2d204050daab5849d1aa3c9f21d"
       }
     },
     {
@@ -627,13 +633,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 1,
-        "vertices": 3646
+        "vertices": 3422
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2604,
-        "sha256": "b64e50fc26d2ae8c1e9916df8f292eec07c38f026d843ea94957f490489dd344"
+        "bright": 1864,
+        "sha256": "260da69987bcf948eaa072a0672b5fa526845309fdab7aecaff486bd498c833b"
       }
     },
     {
@@ -643,6 +649,8 @@
         "clientCompiler": "cjit",
         "status": "exact",
         "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
         "sourceAndProjectionUnchanged": true
       }
     },
@@ -653,6 +661,8 @@
         "clientCompiler": "cjit",
         "status": "unsupported",
         "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": false,
         "sourceAndProjectionUnchanged": true
       }
     },
@@ -663,6 +673,8 @@
         "clientCompiler": "cjit",
         "status": "unsupported",
         "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": false,
         "sourceAndProjectionUnchanged": true
       }
     },
@@ -691,7 +703,7 @@
           },
           {
             "event": "complete",
-            "checks": 93,
+            "checks": 97,
             "markerDraws": 3,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -706,7 +718,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 1,
-            "vertices": 17166
+            "vertices": 17758
           }
         ],
         "amberPixels": 1126,
@@ -716,8 +728,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43161,
-        "sha256": "9e7a0815a2cda58fa85202bcec6e4953438ca4f4ea0764cc057e7768019657f9"
+        "bright": 45300,
+        "sha256": "7738d737fa614c8f57368b0e106f3b9cf0974df05eb7e4efd18082de56e42e18"
       }
     },
     {
@@ -745,7 +757,7 @@
           },
           {
             "event": "complete",
-            "checks": 40,
+            "checks": 43,
             "markerDraws": 0,
             "dirty": true,
             "caretSelectionPreservedAfterGo": true,
@@ -760,7 +772,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 1,
-            "vertices": 17354
+            "vertices": 17946
           }
         ],
         "amberPixels": 0,
@@ -770,8 +782,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43150,
-        "sha256": "7858bc6b886ec2cf9595daebc52d72c5ffe19e50ddc20a4015f7b56eb844d7dc"
+        "bright": 45271,
+        "sha256": "fd17246e39c67abce69144ea4d53454ede90005949b965966063dec101d964f2"
       }
     },
     {
@@ -799,7 +811,7 @@
           },
           {
             "event": "complete",
-            "checks": 41,
+            "checks": 43,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -814,7 +826,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 1,
-            "vertices": 17346
+            "vertices": 17938
           }
         ],
         "amberPixels": 0,
@@ -824,8 +836,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43167,
-        "sha256": "866e8f8a2fad3ee25e6cdf7285ab77dee4250267eb45f6a284c6ebd15fe1d540"
+        "bright": 45298,
+        "sha256": "462fb8acbd17b209dc25b8ba7a58223f89964fe484d4e6182765443d4380a0a9"
       }
     },
     {
@@ -853,7 +865,7 @@
           },
           {
             "event": "complete",
-            "checks": 44,
+            "checks": 42,
             "markerDraws": 2,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -868,7 +880,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 2,
-            "vertices": 17250
+            "vertices": 17894
           }
         ],
         "amberPixels": 1126,
@@ -878,8 +890,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43044,
-        "sha256": "588334f0f938366a89a8a7d34c73e58895035c42fc0e0a5c8489eaa4a60a691d"
+        "bright": 45199,
+        "sha256": "593da0aa59928bfaa61e9ddc65b9b98eb072aec74f9ebfc8eb1ec34958c3f870"
       }
     },
     {
@@ -922,7 +934,7 @@
             "ok": true,
             "frames": 400,
             "tabs": 1,
-            "vertices": 17350
+            "vertices": 17942
           }
         ],
         "amberPixels": 0,
@@ -932,8 +944,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43223,
-        "sha256": "5867ab23897165dffb5dcc99c004fd7b744e0aa0f4085bf8d1b064a6e13b7ed9"
+        "bright": 45368,
+        "sha256": "b1af97df957d8e23b8e397760ef2e5b0324945705d87b724142e0f456fbfcd37"
       }
     },
     {
