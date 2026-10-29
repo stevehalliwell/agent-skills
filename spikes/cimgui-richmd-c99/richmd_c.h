@@ -16,6 +16,11 @@ extern "C" {
 typedef void (*crmd_link_callback)(const char *url, void *user);
 CRMD_API const char *crmd_version(void);
 CRMD_API const char *crmd_error(void);
+/* Sticky render-phase exception: abandon current ImGui scopes/frame, then shut down.
+ * Do not end windows, render, present or begin another frame. Unsaved data is not saved. */
+CRMD_API int crmd_render_failed(void);
+/* Test diagnostic only: raises nested-scope render failure in active frame. */
+CRMD_API int crmd_check_render_failure(void);
 /* Six entries: sizeof + union offset for ImGuiStoragePair, ImGuiStyleMod,
  * ImGuiInputEvent. Checks patched C99 named unions against original C++ ABI. */
 CRMD_API int crmd_check_cimgui_layout(const size_t *layout, size_t count);
@@ -32,9 +37,21 @@ typedef struct crmd_source_selection {
 /* No unindent/transclusions. Full key/revision/input identity invalidates old selection.
  * Snapshot copied while named render input remains alive. Output cleared on failure. */
 CRMD_API int crmd_render_raw(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_source_selection *selection);
-/* Immediately after successful raw render: renderer selection-interaction serial.
- * Includes context menus and child-widget ownership; no text/range proof by itself. */
+/* After named render: renderer selection-interaction serial. Preview export failure
+ * retains this ownership signal; no text/range proof by itself. Includes menus/widgets. */
 CRMD_API uint64_t crmd_selection_interaction(void);
+/* Selectable raw preview: code stays selectable text rather than child widgets.
+ * Rendered sections/ranges are JSON; source span is optional and may include markup.
+ * Returned strings borrowed until next raw/preview render or shutdown. No C POD layout
+ * change to legacy crmd_source_selection. Caller copies before next frame. */
+typedef struct crmd_preview_selection {
+    uint64_t interaction;
+    int has_source_span;
+    size_t begin, end;
+    const char *text, *context;
+    size_t text_length, context_length;
+} crmd_preview_selection;
+CRMD_API int crmd_render_preview(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_preview_selection *selection, size_t selection_size);
 /* Borrowed multiline-input geometry, immediate frame-local use only.
  * Caller owns decoration/navigation policy. Query never changes focus/selection. */
 typedef struct crmd_text_view {

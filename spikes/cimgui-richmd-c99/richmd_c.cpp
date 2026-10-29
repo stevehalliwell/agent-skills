@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstring>
 #include <exception>
+#include <stdexcept>
 #include <string>
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -30,7 +31,23 @@ static crmd_link_callback on_link;
 static void *link_user;
 static std::string raw_document, raw_source;
 static uint64_t raw_revision, raw_interaction;
-static bool have_raw_input;
+static bool raw_selectable;
+static RichMd::PreviewSelection preview_snapshot;
+static bool have_raw_input, render_failed;
+/* Render exceptions can leave upstream ImGui scopes/splitters open. Do not resume
+ * normal frame teardown; caller shuts down context without rendering another frame. */
+static void render_named(const char *key, const std::string& input, bool selectable, bool inject_failure = false) {
+    try {
+        ImGui::PushID(key);
+        if (inject_failure) {
+            ImGui::PushID("nested-render-scope"); ImGui::BeginChild("render-failure", ImVec2(20, 20));
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+            throw std::runtime_error("Injected nested render failure; frame must be abandoned");
+        }
+        if (selectable) RichMd::RenderSelectable(input); else RichMd::RenderRaw(input);
+        ImGui::PopID();
+    } catch (...) { render_failed = true; throw; }
+}
 static_assert(static_cast<int>(RichMd::SourceSelectionStatus::None) == CRMD_SELECTION_NONE &&
     static_cast<int>(RichMd::SourceSelectionStatus::Exact) == CRMD_SELECTION_EXACT &&
     static_cast<int>(RichMd::SourceSelectionStatus::Unsupported) == CRMD_SELECTION_UNSUPPORTED, "selection status ABI");
@@ -79,7 +96,8 @@ int crmd_shutdown(void) {
     if (device) device->Release();
     target = nullptr; swap_chain = nullptr; commands = nullptr; device = nullptr;
     window_handle = nullptr; on_link = nullptr; link_user = nullptr;
-    std::string().swap(raw_document); std::string().swap(raw_source); have_raw_input = false; raw_revision = raw_interaction = 0;
+    std::string().swap(raw_document); std::string().swap(raw_source); preview_snapshot = {};
+    have_raw_input = raw_selectable = render_failed = false; raw_revision = raw_interaction = 0;
     return ok;
 }
 int crmd_init(void *window, const char *assets_folder, crmd_link_callback link, void *user) {
@@ -155,7 +173,7 @@ intptr_t crmd_message(void *window, unsigned int message, uintptr_t wparam, intp
     catch (...) { exception_error(); return 0; }
 }
 int crmd_begin_frame(void) {
-    if (!renderer_ready) return fail("Adapter is not initialized");
+    if (!renderer_ready || render_failed) return fail("Adapter is not initialized or render frame failed; shutdown required");
     try {
         RECT rect;
         if (!GetClientRect(window_handle, &rect)) return fail("Cannot read client size");
@@ -183,9 +201,10 @@ int crmd_render(const char *markdown, size_t length) {
         return fail("Expected initialized context and Markdown up to 4 MiB");
     have_raw_input = false;
     try { RichMd::Render(std::string(markdown, length)); return 1; }
-    catch (...) { return exception_error(); }
+    catch (...) { render_failed = true; return exception_error(); }
 }
 int crmd_render_raw(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_source_selection *selection) {
+    bool render_complete = false;
     if (selection) *selection = {};
     raw_interaction = 0;
     if (!markdown_context || !document_key || !*document_key || std::strlen(document_key) > 16384 || !markdown ||
@@ -193,18 +212,45 @@ int crmd_render_raw(const char *document_key, uint64_t revision, const char *mar
         return fail("Expected document identity, initialized context, NUL-free Markdown up to 4 MiB and selection output");
     try {
         const std::string input(markdown, length);
-        if (!have_raw_input || raw_document != document_key || raw_revision != revision || raw_source != input) {
+        if (raw_selectable || !have_raw_input || raw_document != document_key || raw_revision != revision || raw_source != input) {
+            raw_selectable = false;
             RichMd::ClearSourceSelection(); raw_document = document_key; raw_revision = revision; raw_source = input; have_raw_input = true;
         }
-        ImGui::PushID(document_key);
-        RichMd::RenderRaw(input);
+        render_named(document_key, input, false); render_complete = true;
         const auto result = RichMd::LastSourceSelection(input);
-        ImGui::PopID();
         selection->status = static_cast<int>(result.status); selection->begin = result.begin; selection->end = result.end; raw_interaction = result.interaction;
         return 1;
-    } catch (...) { have_raw_input = false; return exception_error(); }
+    } catch (...) { if (!render_complete) render_failed = true; have_raw_input = false; return exception_error(); }
 }
 uint64_t crmd_selection_interaction(void) { return raw_interaction; }
+int crmd_render_failed(void) { return render_failed ? 1 : 0; }
+int crmd_check_render_failure(void) {
+    if (!markdown_context || !GImGui || !GImGui->WithinFrameScope || !GImGui->CurrentWindow) return fail("Expected active test render frame");
+    try { render_named("failure-probe", "", true, true); }
+    catch (...) { return exception_error(); }
+    return fail("Render failure diagnostic did not throw");
+}
+int crmd_render_preview(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_preview_selection *selection, size_t selection_size) {
+    bool render_complete = false;
+    if (!selection || selection_size != sizeof(*selection)) return fail("Unexpected preview-selection layout");
+    *selection = {}; preview_snapshot = {}; raw_interaction = 0;
+    if (!markdown_context || !document_key || !*document_key || std::strlen(document_key) > 16384 || !markdown ||
+        length > 4 * 1024 * 1024 || std::memchr(markdown, 0, length)) return fail("Expected bounded named UTF-8 preview input");
+    try {
+        const std::string input(markdown, length);
+        if (!raw_selectable || !have_raw_input || raw_document != document_key || raw_revision != revision || raw_source != input) {
+            RichMd::ClearSourceSelection(); raw_document = document_key; raw_revision = revision; raw_source = input; have_raw_input = raw_selectable = true;
+        }
+        render_named(document_key, input, true); render_complete = true;
+        raw_interaction = selection->interaction = RichMd::LastSelectionInteraction();
+        preview_snapshot = RichMd::LastPreviewSelection(input);
+        selection->has_source_span = preview_snapshot.has_source_span;
+        selection->begin = preview_snapshot.begin; selection->end = preview_snapshot.end;
+        selection->text = preview_snapshot.text.c_str(); selection->context = preview_snapshot.context.c_str();
+        selection->text_length = preview_snapshot.text.size(); selection->context_length = preview_snapshot.context.size();
+        return 1;
+    } catch (...) { if (!render_complete) render_failed = true; preview_snapshot = {}; return exception_error(); }
+}
 int crmd_get_text_view(uint32_t widget_id, crmd_text_view *view, size_t view_size) {
     if (!view || view_size != sizeof(*view)) return fail("Unexpected C99 text-view layout");
     *view = {}; view->caret = view->selection_start = view->selection_end = -1;
@@ -228,6 +274,7 @@ int crmd_get_text_view(uint32_t widget_id, crmd_text_view *view, size_t view_siz
     } catch (...) { return exception_error(); }
 }
 int crmd_end_frame(void) {
+    if (render_failed) return 0;
     if (!renderer_ready || !target) return fail("Adapter has no render target");
     try {
         ImGui::Render();
@@ -240,11 +287,13 @@ int crmd_end_frame(void) {
     } catch (...) { return exception_error(); }
 }
 int crmd_present(void) {
+    if (render_failed) return 0;
     return swap_chain && SUCCEEDED(swap_chain->Present(1, 0)) ? 1 : fail("Cannot present frame");
 }
 int crmd_vertex_count(void) { return vertices; }
 int crmd_live_images(void) { return image_textures; }
 int crmd_screenshot(const char *path) {
+    if (render_failed) return 0;
     if (!swap_chain || !path) return fail("Expected initialized adapter and screenshot path");
     ID3D11Texture2D *source = nullptr, *staging = nullptr;
     if (FAILED(swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&source)))

@@ -4,7 +4,7 @@
 
 **Proceed with this stack for further GUI exploration.** Windows x64 CJIT can run C99 application against Zig-built DLL combining freshly regenerated cimgui, Dear ImGui 1.93.0, RichMd 1.0.0, and native Win32/D3D11 backends.
 
-This proves actual build, link, shared context, rendering, and C callbacks—not just C declarations. Follow-up now proves strict contiguous original-input selection export. It does not complete Attendant GUI or general transformed-source mapping.
+This proves actual build, link, shared context, rendering, and C callbacks—not just C declarations. Follow-up now proves strict contiguous original-input selection export. Additive selectable-preview API now supports integrated contextual feedback. This does not complete Attendant GUI or general transformed-source mapping.
 
 ## Original checkpoint: 2026-10-28
 
@@ -59,6 +59,10 @@ Current proof: **62 fresh real window/D3D runs**, both strict C99 hosts. Six ori
 
 Current build/checker/DLL identity and results: [evidence/source-selection-windows-x64.json](evidence/source-selection-windows-x64.json). Integrated GUI adds known body offset, freezes composer range without changing source selection, and validates against full saved Unicode-code-point range/hash; BOM/CRLF/supplementary Save & Send and native/`.mjs` resolution pass both compilers.
 
+## Selectable preview follow-up
+
+`crmd_render_preview()` adds borrowed rendered text/section JSON and optional enclosing source span without changing legacy C selection POD. Code stays in selectable flow; edge drag auto-scrolls. Full render identity and owned C99 snapshots preserve latest human selection through composer focus. Generated/unproven pieces retain context, never guessed source bounds. See [workspace contract and acceptance](../../exploration/attendant-native/gui/README.md#preview-selection-contract). Strict legacy tests above remain separate proof; integrated tests qualify new path.
+
 ## Limits
 
 - Rendering can use hardware D3D11 or WARP fallback. Driver choice not recorded; no hardware-only performance claim.
@@ -68,7 +72,7 @@ Current build/checker/DLL identity and results: [evidence/source-selection-windo
 - Upstream missing-font assertions/OS faults/allocation aborts remain possible. C++ exception containment is not universal failure recovery.
 - Standalone host edits memory only; it has no save, workspace tabs, collection feedback, file navigation or Git context. Integrated workspace has separate acceptance. Exact-range proof covers conservative raw spans, not general Markdown/transclusion mappings.
 - No speed, startup, memory, deployment footprint, or release-readiness benchmark. Recorded DLL size is not total distribution size; fonts/assets and notices also required.
-- Compatibility/source-selection patches need upkeep or upstream equivalents. Replacements, whitespace-normalized wraps, hidden syntax and independent code widgets remain unsupported for preview feedback; source editor is fallback.
+- Compatibility/selection patches need upkeep or upstream equivalents. Legacy raw API still rejects replacements, wraps, hidden syntax and independent widgets. Integrated selectable preview instead retains rendered context when source proof is unavailable. No general transclusion mapping.
 
 ## Comments
 

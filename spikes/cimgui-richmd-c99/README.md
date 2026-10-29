@@ -4,7 +4,7 @@ Branch: `spike/cimgui-richmd-c99`.
 
 **Result: viable Windows x64 build/link/render path.** C99 application runs through CJIT against one Zig-built DLL containing matching cimgui, Dear ImGui 1.93.0, RichMd 1.0.0, and Win32/D3D11 backends. No ImGui Bundle or HelloImGui runtime.
 
-Strict original-Markdown selection export now passes both C99 hosts: only proven contiguous raw-input spans. Unsupported mappings stay unclaimed. See [RESULTS.md](RESULTS.md).
+Strict original-Markdown selection export passes both C99 hosts. Additive selectable-preview API captures rendered sections/highlights plus optional verified enclosing source span. Missing source mapping does not disable contextual notes. See [RESULTS.md](RESULTS.md).
 
 ## Run
 
@@ -62,7 +62,7 @@ Required narrow compatibility changes:
 2. Remove seven identical duplicate typedef declarations from generated C header. Duplicates require C11 and fail strict C99.
 3. Give three C-view anonymous unions names: `ImGuiStoragePair.value`, `ImGuiStyleMod.backup`, `ImGuiInputEvent.event`. C99 lacks anonymous unions. C++ definitions remain untouched. Runtime probe compares sizes and union offsets between C99 consumer and C++ DLL.
 
-4. `patch-richmd.mjs` reconstructs four exact RichMd changes from pinned Git source: explicit genuine/synthetic run provenance, fail-closed selection snapshot, empty-input invalidation and child-widget ownership. Reapplication reproduces exact bytes; verification rejects missing patch or arbitrary edits even in allowlisted files.
+4. `patch-richmd.mjs` reconstructs four exact RichMd changes from pinned Git source: genuine/synthetic run provenance, strict legacy snapshot, selectable preview sections/local highlights, edge auto-scroll, empty-input invalidation and ownership. `preview-selection.cpp.inc` is maintained input, not generated dependency output. Reapplication reproduces exact bytes; verification rejects missing patch or arbitrary edits even in allowlisted files.
 
 Build rechecks revisions and tracked edits offline, then regenerates wrappers. Build manifest binds source-content hashes, generated headers, generator binary, Zig version, DLL, and native host. Check rejects changed inputs/binaries. Patch anchors fail closed on unexpected upstream content. Generated header's three named-union access paths are spike-specific; do not treat this as drop-in unmodified cimgui distribution.
 
@@ -74,13 +74,33 @@ DLL/core build uses `-O3`; generation tools use `-O2`. No fast-math or explicit 
 
 Full key/revision/input comparison invalidates prior selection; ImGui's small hash is not identity. Require genuine consecutive source runs, UTF-8 boundaries, no replacement and visible bytes exactly equal original interval. Never infer range from clipboard or search matching text. Generated/omitted/foreign content and widget-local interaction stay unclaimed. Source editor remains fallback; caller adds body offset and validates full saved file before feedback.
 
+## Selectable preview
+
+`crmd_render_preview(document_key, revision, markdown, length, &selection, sizeof(selection))` bypasses transformations and keeps code in selectable text flow. Legacy `crmd_source_selection` layout remains unchanged. Render identity includes full key/revision/input and rendering mode.
+
+`crmd_preview_selection` exports interaction serial, selected rendered text, JSON context and optional raw source bounds. Strings borrowed until next raw/preview render or shutdown; copy before next frame. Affected sections retain full rendered text and section-local zero-based/end-exclusive Unicode-code-point highlights:
+
+```json
+{"sections":[{"text":"plain bold trailing","highlight_start":2,"highlight_end":9,"range_unit":"unicode-codepoint"}]}
+```
+
+Ordered genuine source runs may prove enclosing source span despite intervening Markdown syntax. Generated/foreign pieces keep rendered context without source bounds. No clipboard inference or source searching. Snapshot text/context each capped at 4 MiB; failures report through `crmd_error()`, never truncate. Interaction serial is published before export, including nonfatal capacity failure; caller must invalidate older source ownership. Preview edge drag auto-scrolls only during human selection gesture.
+
+Integrated C99 workspace tests actual cross-format/reverse/partial/multi-section/table/code/wrap selection, owned snapshots, modal focus retention, mapped/context-only feedback and native/legacy resolution. Standalone host below deliberately retains strict legacy tests.
+
 ## Multiline input view
 
-`crmd_selection_interaction()` returns renderer selection-ownership serial immediately after successful raw render. Context-menu/keyboard actions and child-widget interaction update it; hosts must not infer ownership from mouse position. Serial grants no exact-source proof. Child/custom-widget context is explicitly unsupported, including plain code children without selectable text. C selection POD layout unchanged.
+`crmd_selection_interaction()` returns renderer selection-ownership serial after named render, including nonfatal preview-export failure. Context-menu/keyboard actions and child-widget interaction update it; hosts must not infer ownership from mouse position. Serial grants no exact-source proof. Child/custom-widget context is explicitly unsupported, including plain code children without selectable text. C selection POD layout unchanged.
 
 `crmd_get_text_view(widget_id, &view, sizeof(view))` adapts pinned ImGui multiline-child geometry to C POD: source text origin/line height, retained inner clip, scroll, opaque window/draw-list pointers and retained caret/selection state. Wrong POD size fails; unknown input state uses `-1`. Query immediately after widget, use only in same frame/context, never retain/free returned pointers.
 
 Getter never moves focus, caret, selection or scroll. C99 workspace owns agent-marker policy, clipped drawing and explicit-human-Go scroll. Use retained `InnerClipRect`: transient `ClipRect` has already been popped after `EndChild()` and can span sibling preview. Integrated GUI acceptance verifies actual caret preservation and marker pixels confined to source; standalone selection host does not test this adapter.
+
+## Render failure boundary
+
+`crmd_render_failed()` reports sticky render-phase exception. Abandon current ImGui scopes/frame and shut down adapter/context; do not continue ordinary window/frame teardown. Export-only capacity failure is nonfatal and keeps ownership. Context destruction does not save unsaved buffers; no universal allocation recovery promised.
+
+Diagnostic `crmd_check_render_failure()` deliberately throws inside nested render ID/child/style scopes. Only owned GUI test driver calls it; ordinary production data, environment and CLI cannot trigger diagnostic. Integrated acceptance verifies controlled termination without normal frame teardown and unchanged source.
 
 ## Enabled surface
 
