@@ -76,6 +76,8 @@ Full key/revision/input comparison invalidates prior selection; ImGui's small ha
 
 ## Multiline input view
 
+`crmd_selection_interaction()` returns renderer selection-ownership serial immediately after successful raw render. Context-menu/keyboard actions and child-widget interaction update it; hosts must not infer ownership from mouse position. Serial grants no exact-source proof. Child/custom-widget context is explicitly unsupported, including plain code children without selectable text. C selection POD layout unchanged.
+
 `crmd_get_text_view(widget_id, &view, sizeof(view))` adapts pinned ImGui multiline-child geometry to C POD: source text origin/line height, retained inner clip, scroll, opaque window/draw-list pointers and retained caret/selection state. Wrong POD size fails; unknown input state uses `-1`. Query immediately after widget, use only in same frame/context, never retain/free returned pointers.
 
 Getter never moves focus, caret, selection or scroll. C99 workspace owns agent-marker policy, clipped drawing and explicit-human-Go scroll. Use retained `InnerClipRect`: transient `ClipRect` has already been popped after `EndChild()` and can span sibling preview. Integrated GUI acceptance verifies actual caret preservation and marker pixels confined to source; standalone selection host does not test this adapter.
@@ -97,12 +99,12 @@ Windows links `d3dcompiler_47`, not generic `d3dcompiler` unavailable in tested 
 - Actual D3D11 buffer readback; extra preview geometry and bright pixels.
 - Byte-identical Zig/CJIT blank and rendered-preview images.
 - Edit source, click link through C callback, drag preview selection, copy through C callback. No global mouse/keyboard injection or test overwrite of Windows clipboard.
-- 54 raw-selection cases across Zig/CJIT: plain/Unicode/decomposed text, forward/reverse drag, repeated word, link-label interior, context-menu Copy, document/revision/input/empty invalidation, real source/key hash collisions, child-code ownership and unsupported markup/entities/breaks/tables/widgets/hidden/wrapped content.
+- 56 raw-selection cases across Zig/CJIT: plain/Unicode/decomposed text, forward/reverse drag, repeated word, link-label interior, context-menu Copy, document/revision/input/empty invalidation, real source/key hash collisions, child-code ownership and unsupported markup/entities/breaks/tables/widgets/hidden/wrapped content.
 - Reject invalid frame bound with exit 2.
 - Guard tests reject tracked dependency drift and changed build inputs, replacing stale smoke success with failure.
 - Inspect PE import table for external language/compiler runtime DLLs.
 
-`build/results.json` retains current result, verified build identity, dependency pins, tool versions, DLL hash/imports, screenshot hashes. `build/build-manifest.json` retains individual build-input hashes. Failure replaces stale success with partial failure report. `build/*.{ppm,bmp,txt}` retain visual/log evidence. [evidence/windows-x64.json](evidence/windows-x64.json) preserves original six-run checkpoint; [evidence/source-selection-windows-x64.json](evidence/source-selection-windows-x64.json) records current 60-run selection follow-up.
+`build/results.json` retains current result, verified build identity, dependency pins, tool versions, DLL hash/imports, screenshot hashes. `build/build-manifest.json` retains individual build-input hashes. Failure replaces stale success with partial failure report. `build/*.{ppm,bmp,txt}` retain visual/log evidence. [evidence/windows-x64.json](evidence/windows-x64.json) preserves original six-run checkpoint; [evidence/source-selection-windows-x64.json](evidence/source-selection-windows-x64.json) records current 62-run selection follow-up.
 
 Input exercise uses fixed test-window coordinates/default scale. It does not qualify arbitrary DPI, accessibility, real physical input routing, device loss, minimized-window loops, long paths, or production editing/save behavior. No performance benchmark claimed.
 

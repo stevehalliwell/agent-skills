@@ -27,6 +27,14 @@ typedef struct gui_navigation {
     attendant_document_info documents[GUI_DOCUMENTS];
     void *memory;
 } gui_navigation;
+typedef enum gui_selection_view { GUI_SELECTION_NO_VIEW, GUI_SELECTION_SOURCE, GUI_SELECTION_PREVIEW } gui_selection_view;
+typedef enum gui_selection_status { GUI_SELECTION_NONE, GUI_SELECTION_EXACT, GUI_SELECTION_UNSUPPORTED } gui_selection_status;
+typedef struct gui_selection {
+    gui_selection_view view;
+    gui_selection_status status;
+    int tab, generation, start, end; /* Full-buffer UTF-8 bytes; valid only for EXACT. */
+    uint64_t revision;
+} gui_selection;
 typedef struct gui_workspace {
     attendant_session *session;
     char root[GUI_PATH], error[8192], notice[8192];
@@ -34,6 +42,7 @@ typedef struct gui_workspace {
     int surviving_count, surviving_total; /* Owned last failure evidence; refresh never invalidates it. */
     gui_navigation *navigation;
     gui_tab tabs[GUI_TABS];
+    gui_selection selection; /* Latest human document selection; never agent marker. */
     int active, tab_count, activation;
     uint64_t text_revision; /* Workspace-wide: tab reuse/reload/edit cannot reuse preview identity. */
     /* activation changes only after explicit human navigation, never refresh. */
@@ -49,6 +58,9 @@ int gui_reload_document(gui_workspace *workspace, int index, int discard_dirty);
 int gui_close_document(gui_workspace *workspace, int index, int discard_dirty);
 void gui_check_external(gui_workspace *workspace, int index);
 int gui_set_document_text(gui_workspace *workspace, int index, const char *text);
+void gui_selection_clear(gui_workspace *workspace);
+void gui_selection_capture(gui_workspace *workspace, int index, gui_selection_view view, gui_selection_status status, int start, int end);
+gui_selection gui_selection_current(const gui_workspace *workspace);
 int gui_send_comment(gui_workspace *workspace, int index, int start, int end, const char *comment);
 int gui_open_link(gui_workspace *workspace, const char *url);
 int gui_open_comment_target(gui_workspace *workspace, int comment_index);

@@ -126,24 +126,40 @@ int gui_reveal_test_discovery_limits(void) {
     return find_window(NULL, (LPARAM)&discovery) && !discovery.failed && discovery.visited == 1;
 }
 #endif
-int gui_reveal_send(const char *project, const char *path, uint32_t line) {
+HWND gui_find_workspace(const char *project, int *status) {
     gui_reveal request;
     reveal_discovery discovery;
+    const char *code = NULL, *message = NULL;
+    memset(&request, 0, sizeof(request)); request.version = 1; *status = 1;
+    if (!gui_full_path(NULL, project, request.project)) {
+        *status = gui_reveal_error(1, "invalid-project", "Cannot resolve bounded UTF-8 project path"); return NULL;
+    }
+    memset(&discovery, 0, sizeof(discovery)); discovery.request = &request; discovery.started = GetTickCount();
+    SetLastError(0);
+    if (!EnumWindows(find_window, (LPARAM)&discovery) && !discovery.failed) {
+        code = "gui-discovery-failed"; message = "Cannot enumerate running GUI workspaces";
+    } else if (discovery.failed) {
+        code = "gui-unavailable"; message = "GUI discovery exceeded bounds or encountered an unresponsive instance; no hint sent";
+    } else if (discovery.matches > 1) {
+        code = "gui-ambiguous"; message = "Multiple GUI instances use this project; keep one instance before sending a hint";
+    } else if (!discovery.matches) {
+        code = "gui-not-running"; message = "No running GUI for project; open workspace first";
+    }
+    if (code) { *status = gui_reveal_error(1, code, message); return NULL; }
+    *status = 0; return discovery.window;
+}
+int gui_reveal_send(const char *project, const char *path, uint32_t line) {
+    gui_reveal request;
+    HWND window;
     attendant_session *session;
     attendant_result source;
     uintptr_t reply;
     int status;
     memset(&request, 0, sizeof(request)); request.version = 1; request.line = line;
     if (!gui_full_path(NULL, project, request.project)) return gui_reveal_error(1, "invalid-project", "Cannot resolve bounded UTF-8 project path");
-    memset(&discovery, 0, sizeof(discovery)); discovery.request = &request; discovery.started = GetTickCount();
-    SetLastError(0);
-    if (!EnumWindows(find_window, (LPARAM)&discovery) && !discovery.failed)
-        return gui_reveal_error(1, "gui-discovery-failed", "Cannot enumerate running GUI workspaces");
-    if (discovery.failed) return gui_reveal_error(1, "gui-unavailable", "GUI discovery exceeded bounds or encountered an unresponsive instance; no hint sent");
-    if (discovery.matches > 1) return gui_reveal_error(1, "gui-ambiguous", "Multiple GUI instances use this project; keep one instance before sending a hint");
-    if (!discovery.matches) return gui_reveal_error(1, "gui-not-running", "No running GUI for project; open workspace first");
+    window = gui_find_workspace(request.project, &status); if (!window) return status;
     if (!gui_full_path(request.project, path, request.path)) return gui_reveal_error(1, "invalid-path", "Cannot resolve bounded UTF-8 Markdown path");
-    if (!deliver(discovery.window, GUI_REVEAL_QUERY, &request, 1000, &reply) || reply != GUI_REVEAL_ALLOWED)
+    if (!deliver(window, GUI_REVEAL_QUERY, &request, 1000, &reply) || reply != GUI_REVEAL_ALLOWED)
         return gui_reveal_error(1, "reveal-not-allowed", "Target must be Markdown inside project or a registered/open document; recipient may also have closed");
     if (!line || line > GUI_TEXT + 1u) return gui_reveal_error(2, "invalid-line", "Line must be between 1 and 4194305");
     if (!gui_reveal_ordinary_path(request.project) || !gui_reveal_ordinary_path(request.path))
@@ -169,7 +185,7 @@ int gui_reveal_send(const char *project, const char *path, uint32_t line) {
         }
     }
 #endif
-    if (!deliver(discovery.window, GUI_REVEAL_SET, &request, 1000, &reply))
+    if (!deliver(window, GUI_REVEAL_SET, &request, 1000, &reply))
         return gui_reveal_error(1, "reveal-delivery-unknown", "Delivery failed or timed out; hint may have arrived. Retrying latest hint is safe");
     if (reply != GUI_REVEAL_ACCEPTED) return gui_reveal_error(1, "reveal-rejected", "Running GUI rejected hint; workspace or permitted target may have changed");
     puts("{\"ok\":true,\"hint_updated\":true,\"persistent\":false,\"focus_changed\":false}");

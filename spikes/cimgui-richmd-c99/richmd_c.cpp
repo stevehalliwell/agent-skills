@@ -29,7 +29,7 @@ static int vertices, image_textures;
 static crmd_link_callback on_link;
 static void *link_user;
 static std::string raw_document, raw_source;
-static uint64_t raw_revision;
+static uint64_t raw_revision, raw_interaction;
 static bool have_raw_input;
 static_assert(static_cast<int>(RichMd::SourceSelectionStatus::None) == CRMD_SELECTION_NONE &&
     static_cast<int>(RichMd::SourceSelectionStatus::Exact) == CRMD_SELECTION_EXACT &&
@@ -79,7 +79,7 @@ int crmd_shutdown(void) {
     if (device) device->Release();
     target = nullptr; swap_chain = nullptr; commands = nullptr; device = nullptr;
     window_handle = nullptr; on_link = nullptr; link_user = nullptr;
-    std::string().swap(raw_document); std::string().swap(raw_source); have_raw_input = false; raw_revision = 0;
+    std::string().swap(raw_document); std::string().swap(raw_source); have_raw_input = false; raw_revision = raw_interaction = 0;
     return ok;
 }
 int crmd_init(void *window, const char *assets_folder, crmd_link_callback link, void *user) {
@@ -187,6 +187,7 @@ int crmd_render(const char *markdown, size_t length) {
 }
 int crmd_render_raw(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_source_selection *selection) {
     if (selection) *selection = {};
+    raw_interaction = 0;
     if (!markdown_context || !document_key || !*document_key || std::strlen(document_key) > 16384 || !markdown ||
         length > 4 * 1024 * 1024 || !selection || std::memchr(markdown, 0, length))
         return fail("Expected document identity, initialized context, NUL-free Markdown up to 4 MiB and selection output");
@@ -199,10 +200,11 @@ int crmd_render_raw(const char *document_key, uint64_t revision, const char *mar
         RichMd::RenderRaw(input);
         const auto result = RichMd::LastSourceSelection(input);
         ImGui::PopID();
-        selection->status = static_cast<int>(result.status); selection->begin = result.begin; selection->end = result.end;
+        selection->status = static_cast<int>(result.status); selection->begin = result.begin; selection->end = result.end; raw_interaction = result.interaction;
         return 1;
     } catch (...) { have_raw_input = false; return exception_error(); }
 }
+uint64_t crmd_selection_interaction(void) { return raw_interaction; }
 int crmd_get_text_view(uint32_t widget_id, crmd_text_view *view, size_t view_size) {
     if (!view || view_size != sizeof(*view)) return fail("Unexpected C99 text-view layout");
     *view = {}; view->caret = view->selection_start = view->selection_end = -1;

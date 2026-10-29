@@ -36,6 +36,40 @@ function bitmap(path) {
   writeFileSync(path.replace('.ppm', '.bmp'), output);
   return { width, height, bright, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
+async function checkSelectionInspection(report, compiler) {
+  const other = compiler === 'cjit' ? 'zig' : 'cjit';
+  const cases = [
+    ['plain-menu', 'plain caf\u00e9 \u03a9 \ud83d\ude00 words', 'exact'],
+    ['markup-menu', 'plain **bold** trailing', 'unsupported'],
+    ['widget', 'plain\n\n```c\nx\n```', 'unsupported']
+  ];
+  for (const [mode, text, status] of cases) {
+    const project = join(report.run, `${compiler} inspect ${mode}`);
+    cpSync(join(root, 'fixtures/project'), project, { recursive: true });
+    writeFileSync(join(project, '.gui-test-owned'), 'Owned selection inspection fixture.\n');
+    writeFileSync(join(project, 'README.md'), text); const before = inventory(project);
+    const child = spawn(join(root, `build/gui/attendant-gui-${compiler}-check.exe`), ['--project', project,
+      '--assets', join(stack, 'build/deps/richmd/assets'), '--file', 'README.md', '--frames', '180', '--exercise-selection', mode], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '', error = '';
+    const ready = new Promise((resolve, reject) => {
+      child.stdout.on('data', value => { output += value; if (output.includes('"event":"selection-ready"')) resolve(); });
+      child.on('error', reject); child.on('close', code => { if (!output.includes('"event":"selection-ready"')) reject(new Error(`Selection driver ${code}: ${error}`)); });
+    });
+    child.stderr.on('data', value => { error += value; });
+    const done = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', code => code === 0 ? resolve() : reject(new Error(error))); });
+    done.catch(() => {}); const timer = setTimeout(() => child.kill(), 30000);
+    try {
+      await ready;
+      const inspected = childJSON(join(root, `build/gui/attendant-gui-${other}.exe`), ['--project', project, '--inspect']);
+      assert.equal(inspected.selection.view, 'preview'); assert.equal(inspected.selection.status, status);
+      assert.equal(inspected.selection.text, status === 'exact' ? text : null);
+      assert.equal(inspected.selection.range_start, status === 'exact' ? 0 : null);
+      assert.equal(inspected.selection.range_end, status === 'exact' ? Array.from(text).length : null);
+      await done; assert.deepEqual(inventory(project), before);
+      report.results.push({ compiler, selectionInspection: { mode, clientCompiler: other, status, priorSourceSelectionReplaced: true, sourceAndProjectionUnchanged: true } });
+    } finally { clearTimeout(timer); if (child.exitCode === null) child.kill(); }
+  }
+}
 async function checkAgentReveal(report, compiler) {
   const other = compiler === 'cjit' ? 'zig' : 'cjit';
   const executable = (name, testing = false) => join(root, `build/gui/attendant-gui-${name}${testing ? '-check' : ''}.exe`);
@@ -87,12 +121,25 @@ async function checkAgentReveal(report, compiler) {
     const outsideBefore = inventory(outside);
     const before = inventory(project), shot = join(report.run, `${compiler}-reveal-${mode}.ppm`);
     let swapped = false;
-    if (mode === 'clean') assert.equal(control(project, ['--reveal', 'README.md', '--line', '4'], 1).output.code, 'gui-not-running');
+    if (mode === 'clean') {
+      assert.equal(control(project, ['--reveal', 'README.md', '--line', '4'], 1).output.code, 'gui-not-running');
+      assert.equal(control(project, ['--inspect'], 1).output.code, 'gui-not-running');
+    }
     const running = receiver(project, mode, shot);
     try {
       await running.ready;
+      const inspected = control(project, ['--inspect'], 0).output;
+      const liveText = readFileSync(join(project, 'README.md'), 'utf8') + (mode === 'dirty' ? '!' : '');
+      assert.equal(inspected.document.path, join(project, 'README.md')); assert.equal(inspected.document.dirty, mode === 'dirty');
+      assert.equal(inspected.selection.status, 'exact'); assert.equal(inspected.selection.view, 'source');
+      assert.equal(inspected.selection.text, liveText); assert.equal(inspected.selection.range_start, 0);
+      assert.equal(inspected.selection.range_end, Array.from(liveText).length); assert.equal(inspected.selection.range_unit, 'unicode-codepoint');
+      assert.deepEqual(control(project, ['--inspect'], 0).output, inspected, 'Inspection reads without consuming selection');
       if (mode === 'clean') {
         const negative = [
+          [['--inspect', '--reveal', 'README.md'], 2, 'usage'],
+          [['--inspect', '--line', '4'], 2, 'usage'],
+          [['--inspect', '--assets', 'unused'], 2, 'usage'],
           [['--reveal', 'README.md', '--line', '0'], 2, 'usage'],
           [['--reveal', 'README.md', '--line', '-1'], 2, 'usage'],
           [['--reveal', 'README.md', '--line', '4x'], 2, 'usage'],
@@ -117,6 +164,7 @@ async function checkAgentReveal(report, compiler) {
       if (mode === 'reparse') { renameSync(changing, backup); symlinkSync(outside, changing, 'junction'); swapped = true; }
       assert.deepEqual(result.output, { ok: true, hint_updated: true, persistent: false, focus_changed: false });
       const events = await running.done, complete = events.find(event => event.event === 'complete');
+      assert(events.some(event => event.event === 'inspected' && event.documentSelectionScrollFocusPreserved));
       assert(events.some(event => event.event === 'received' && event.documentSelectionScrollFocusPreserved));
       assert(complete?.caretSelectionPreservedAfterGo); assert.equal(complete.dirty, mode === 'dirty');
       const marked = mode === 'clean' || mode === 'other';
@@ -133,7 +181,7 @@ async function checkAgentReveal(report, compiler) {
       }
       assert(marked ? amber > 500 : amber === 0, `Separate marker pixels: ${mode} ${amber}`);
       assert.equal(outsidePixels, 0, 'Agent marker cannot spill into preview, controls or outside source editor');
-      report.results.push({ compiler, reveal: { mode, clientCompiler: other, crossCompilerIPC: true, events, amberPixels: amber, markerPixelsOutsideSource: outsidePixels, sourceAndProjectionUnchanged: true }, screenshot: image });
+      report.results.push({ compiler, reveal: { mode, clientCompiler: other, crossCompilerIPC: true, inspection: { dirty: inspected.document.dirty, sourceRangeAndTextVerified: true, repeatableWithoutConsumption: true }, events, amberPixels: amber, markerPixelsOutsideSource: outsidePixels, sourceAndProjectionUnchanged: true }, screenshot: image });
     } finally {
       if (running.child.exitCode === null) running.child.kill();
       if (swapped) { unlinkSync(changing); renameSync(backup, changing); }
@@ -147,6 +195,7 @@ async function checkAgentReveal(report, compiler) {
   try {
     await Promise.all([first.ready, second.ready]);
     assert.equal(control(project, ['--reveal', 'README.md'], 1).output.code, 'gui-ambiguous');
+    assert.equal(control(project, ['--inspect'], 1).output.code, 'gui-ambiguous');
     await Promise.all([first.done, second.done]); assert.deepEqual(inventory(project), before);
     report.results.push({ compiler, ambiguousRevealRejected: true, sourceAndProjectionUnchanged: true });
   } finally { for (const item of [first, second]) if (item.child.exitCode === null) item.child.kill(); }
@@ -256,6 +305,7 @@ try {
     const failedAfter = inventory(failedProject); delete failedBefore[join(failedProject, 'README.md')]; delete failedAfter[join(failedProject, 'README.md')];
     assert.deepEqual(failedAfter, failedBefore, 'Failed queue leaves target saved and every other file unchanged');
     report.results.push({ compiler, savedNotQueued, screenshot: bitmap(failedShot) });
+    await checkSelectionInspection(report, compiler);
     await checkAgentReveal(report, compiler);
   }
   report.ok = true;

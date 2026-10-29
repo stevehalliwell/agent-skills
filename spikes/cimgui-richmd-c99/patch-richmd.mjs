@@ -13,11 +13,14 @@ const methods = `void Renderer::clear_source_selection()
         ImGui::ClearActiveID();
     m_selection_fragment = m_selection_text_hash = 0;
     m_selection_anchor = m_selection_focus = 0;
+    m_source_widget_selection = false;
 }
 
 SourceSelection Renderer::source_selection(const char* input, size_t length) const
 {
     SourceSelection result;
+    result.interaction = m_source_selection_interaction;
+    if (m_source_widget_selection) { result.status = SourceSelectionStatus::Unsupported; return result; }
     if (!length || !m_selection_fragment || m_selection_fragment != m_fragment_id || m_selection_anchor == m_selection_focus)
         return result;
     result.status = SourceSelectionStatus::Unsupported;
@@ -49,12 +52,13 @@ const patches = {
 
     // Local source-selection patch. Call snapshot while exact RenderRaw input remains alive.
     enum class SourceSelectionStatus { None = 0, Exact = 1, Unsupported = 2 };
-    struct SourceSelection { SourceSelectionStatus status = SourceSelectionStatus::None; std::size_t begin = 0, end = 0; };
+    struct SourceSelection { SourceSelectionStatus status = SourceSelectionStatus::None; std::size_t begin = 0, end = 0; std::uint64_t interaction = 0; };
     SourceSelection LastSourceSelection(const std::string& exactInput);
     void ClearSourceSelection();`);
   },
   'imgui_rich_md/internal/rich_md_renderer.h': source => {
     source = replace(source, '\tint print(const char* str, const char* str_end);', '\tint print(const char* str, const char* str_end);\n\tSourceSelection source_selection(const char* input, size_t length) const;\n\tvoid clear_source_selection();');
+    source = replace(source, '\tImGuiID m_selection_fragment = 0;', '\tstd::uint64_t m_source_selection_interaction = 0;\n\tbool m_source_widget_selection = false;\n\tImGuiID m_selection_fragment = 0;');
     return replace(source, '\t\tstd::string replacement;      // what it shows instead of its bytes, when not empty (a soft break, a formula)', '\t\tstd::string replacement;      // what it shows instead of its bytes, when not empty (a soft break, a formula)\n\t\tbool source_bytes = false;    // direct interval in current original-input buffer, not synthetic/foreign');
   },
   'imgui_rich_md/internal/rich_md_renderer.cpp': source => {
@@ -63,12 +67,20 @@ const patches = {
     if (str && str_end && address >= reinterpret_cast<std::uintptr_t>(m_fragment_begin) && address < finish && finish <= reinterpret_cast<std::uintptr_t>(m_fragment_end)) {
         run.source_bytes = true;`);
     source = replace(source, 'void Renderer::update_selection(ImGuiID fragmentId)\n{', methods + 'void Renderer::update_selection(ImGuiID fragmentId)\n{');
+    for (const signature of ['void Renderer::select_at(ImGuiID fragmentId, size_t offset, int clicks)', 'void Renderer::select_all(ImGuiID fragmentId)'])
+      source = replace(source, signature + '\n{', signature + '\n{\n    ++m_source_selection_interaction; m_source_widget_selection = false;');
+    source = replace(source, '\tif (mouseFree && ImGui::IsMouseClicked(0)) {', '\tif (mouseFree && ImGui::IsMouseClicked(0)) {\n        ++m_source_selection_interaction; m_source_widget_selection = false;');
+    source = replace(source, '\tif (mouseFree && onTextLine && ImGui::IsMouseReleased(1)) {', '\tif (mouseFree && onTextLine && ImGui::IsMouseReleased(1)) {\n        ++m_source_selection_interaction; m_source_widget_selection = false;');
     return replace(source, '\tbool mouseFree = ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && g.ActiveId == 0;', `\t// A child widget owns its own selection. Never export stale surrounding text.
     const bool childClick = ImGui::IsMouseClicked(0) && g.HoveredWindow && !(g.HoveredWindow->Flags & ImGuiWindowFlags_Popup) &&
         ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !ImGui::IsWindowHovered();
     if (childClick || (g.ActiveId && g.ActiveId != fragmentId && g.ActiveIdWindow && !(g.ActiveIdWindow->Flags & ImGuiWindowFlags_Popup) &&
-        (g.ActiveIdWindow == g.CurrentWindow || ImGui::IsWindowChildOf(g.ActiveIdWindow, g.CurrentWindow, true))))
+        (g.ActiveIdWindow == g.CurrentWindow || ImGui::IsWindowChildOf(g.ActiveIdWindow, g.CurrentWindow, true)))) {
         clear_source_selection();
+        // Child/custom widgets expose no original-source proof, even when their text is not selectable.
+        m_source_widget_selection = true;
+        ++m_source_selection_interaction;
+    }
 \tbool mouseFree = ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && g.ActiveId == 0;`);
   },
   'imgui_rich_md/rich_md.cpp': source => replace(source, '    const std::vector<Heading>& LastRenderHeadings()', `    SourceSelection LastSourceSelection(const std::string& exactInput)

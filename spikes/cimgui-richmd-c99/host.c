@@ -1,6 +1,6 @@
 /* Entire application is C99. DLL owns only C++ dependencies and native renderer.
  * Usage: host --assets DIR [--frames 1..6000 --shot FILE.ppm] [--no-preview] [--exercise]
- * Selection check: --raw-file FILE --selection all|forward|reverse|word|label|switch|revision|change|empty|widget|menu|collision|key-collision
+ * Selection check: --raw-file FILE --selection all|forward|reverse|word|label|switch|revision|change|empty|widget|widget-select|menu|collision|key-collision
  * No file writes except an explicitly requested screenshot. */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -34,13 +34,14 @@ static crmd_source_selection raw_snapshot;
 static int had_exact, widget_hovered;
 static void selection_input(HWND window, int frame, const char *mode) {
     ImGuiIO *io = igGetIO_Nil();
-    int drag = !strcmp(mode, "forward") || !strcmp(mode, "reverse") || !strcmp(mode, "widget");
+    int widget = !strcmp(mode, "widget") || !strcmp(mode, "widget-select");
+    int drag = !strcmp(mode, "forward") || !strcmp(mode, "reverse") || widget;
     int word = !strcmp(mode, "word") || !strcmp(mode, "label");
     int reverse = !strcmp(mode, "reverse");
     float x = raw_origin.x + 2, y = raw_origin.y + 10;
     if (drag) x = raw_origin.x + ((frame < 4) == reverse ? 300 : 2);
     if (word) x = raw_origin.x + (!strcmp(mode, "label") ? 20 : 65);
-    if (!strcmp(mode, "widget") && frame >= 12) { x = raw_origin.x + 60; y = raw_origin.y + 65; }
+    if (widget && frame >= 12) { x = raw_origin.x + 60; y = raw_origin.y + 65; }
     if (!strcmp(mode, "menu") && frame >= 16) { x += 20; y += 12; }
     if (frame >= 3) crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)x, (int)y));
     if (!strcmp(mode, "menu")) {
@@ -49,8 +50,12 @@ static void selection_input(HWND window, int frame, const char *mode) {
         if (frame == 16) ImGuiIO_AddMouseButtonEvent(io, 0, true);
         if (frame == 17) ImGuiIO_AddMouseButtonEvent(io, 0, false);
     }
-    if (frame == 3 || (word && frame == 5) || (!strcmp(mode, "widget") && frame == 12)) ImGuiIO_AddMouseButtonEvent(io, 0, true);
-    if (frame == (drag ? 5 : 4) || (word && frame == 6) || (!strcmp(mode, "widget") && frame == 13)) ImGuiIO_AddMouseButtonEvent(io, 0, false);
+    if (frame == 3 || (word && frame == 5) || (widget && frame == 12)) ImGuiIO_AddMouseButtonEvent(io, 0, true);
+    if (frame == (drag ? 5 : 4) || (word && frame == 6) || (widget && frame == 13)) ImGuiIO_AddMouseButtonEvent(io, 0, false);
+    if (!strcmp(mode, "widget-select")) {
+        if (frame == 16 || frame == 18) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, frame == 16);
+        if (frame == 16 || frame == 17) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 16);
+    }
     if (!drag && !word) {
         if (frame == 8) { ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, true); ImGuiIO_AddKeyEvent(io, ImGuiKey_A, true); }
         if (frame == 9) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, false);
@@ -103,7 +108,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
 }
 static int usage(void) {
     fprintf(stderr, "Usage: host --assets DIR [--frames 1..6000 --shot FILE.ppm] [--no-preview] [--exercise]\n"
-        "Selection check: --raw-file FILE --selection all|forward|reverse|word|label|switch|revision|change|empty|widget|menu|collision|key-collision\n");
+        "Selection check: --raw-file FILE --selection all|forward|reverse|word|label|switch|revision|change|empty|widget|widget-select|menu|collision|key-collision\n");
     return 2;
 }
 int main(int argc, char **argv) {
@@ -133,7 +138,7 @@ int main(int argc, char **argv) {
     if (raw_file || raw_mode) {
         FILE *file;
         size_t count;
-        const char *modes[] = {"all", "forward", "reverse", "word", "label", "switch", "revision", "change", "empty", "widget", "menu", "collision", "key-collision"};
+        const char *modes[] = {"all", "forward", "reverse", "word", "label", "switch", "revision", "change", "empty", "widget", "widget-select", "menu", "collision", "key-collision"};
         int known = 0;
         if (!raw_file || !raw_mode || exercise || !preview || frame_limit < 30) return usage();
         for (i = 0; i < (int)(sizeof(modes) / sizeof(modes[0])); ++i) if (!strcmp(raw_mode, modes[i])) known = 1;
@@ -226,7 +231,7 @@ int main(int argc, char **argv) {
                 if (!strcmp(raw_mode, "key-collision")) key = frame >= 12 && frame < 16 ? raw_second : raw_original;
                 if (!crmd_render_raw(key, revision, markdown, strlen(markdown), &raw_snapshot)) { igEndChild(); igEnd(); goto cleanup_adapter; }
                 if (frame == 11) had_exact = raw_snapshot.status == CRMD_SELECTION_EXACT;
-                if (frame == 12 && !strcmp(raw_mode, "widget")) widget_hovered = igIsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !igIsWindowHovered(0);
+                if (frame == 12 && (!strcmp(raw_mode, "widget") || !strcmp(raw_mode, "widget-select"))) widget_hovered = igIsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !igIsWindowHovered(0);
             } else if (preview && !crmd_render(markdown, strlen(markdown))) {
                 igEndChild(); igEnd(); goto cleanup_adapter;
             }

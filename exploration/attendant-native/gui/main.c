@@ -10,6 +10,7 @@
 #include "richmd_c.h"
 #include "workspace.h"
 #include "reveal.h"
+#include "inspect.h"
 __declspec(dllimport) LPWSTR *WINAPI CommandLineToArgvW(LPCWSTR, int *);
 
 typedef enum gui_action { GUI_ACTION_NONE, GUI_ACTION_CLOSE, GUI_ACTION_RELOAD, GUI_ACTION_EXIT } gui_action;
@@ -17,8 +18,10 @@ typedef struct gui_app {
     gui_workspace workspace;
     char open_path[GUI_PATH];
     gui_reveal hint, pending_hint;
+    gui_inspection *inspection;
+    int inspection_busy;
     int pending_hint_ready, scroll_hint, marker_valid, hint_path_ok;
-    uint64_t marker_revision;
+    uint64_t marker_revision, preview_interaction;
     char hint_notice[256];
     int request_exit, shown_activation, bound_reached, exit_cancelled;
     gui_action pending_action;
@@ -29,7 +32,8 @@ typedef struct gui_app {
     ImFont *source_font;
 #ifdef ATTENDANT_GUI_TESTING
     int exercise, reference_clicks, edit_exercise, save_fail_exercise, cancel_clicks, sent_comments, target_clicks, undo_seen, saved_not_queued;
-    int preview_exercise, preview_exact_seen, preview_dirty_send;
+    int preview_exercise, preview_exact_seen, preview_shared_seen, preview_dirty_send, inspection_requests, inspection_checked;
+    int selection_exercise, selection_ready, selection_source_seen;
     int reveal_exercise, test_frame, reveal_phase, reveal_frame, reveal_go, reveal_failed, reveal_checks, marker_draws, reparse_go_armed;
     int before_active, before_tabs, before_activation, before_start, before_end;
     uint64_t before_revision;
@@ -46,6 +50,16 @@ static void link_clicked(const char *url, void *user) { gui_open_link(&((gui_app
 static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
     if (message == WM_COPYDATA && application && lparam) {
         const COPYDATASTRUCT *copy = (const COPYDATASTRUCT *)lparam;
+        if (copy->dwData == GUI_INSPECT_REQUEST) {
+            uintptr_t result;
+            if (!application->inspection) application->inspection = VirtualAlloc(NULL, sizeof(*application->inspection), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            result = gui_inspection_receive(window, (HWND)wparam, &application->workspace,
+                application->inspection_busy, application->inspection, copy->lpData, copy->cbData);
+#ifdef ATTENDANT_GUI_TESTING
+            if (result == GUI_INSPECT_RESULT) application->inspection_requests++;
+#endif
+            return (LRESULT)result;
+        }
         return (LRESULT)gui_reveal_receive(&application->workspace, &application->pending_hint,
             &application->pending_hint_ready, (uintptr_t)copy->dwData, copy->lpData, copy->cbData);
     }
@@ -256,6 +270,14 @@ static void reveal_observe(gui_app *app, gui_tab *tab, ImGuiID widget) {
         app->before_focus = GetFocus(); app->before_foreground = GetForegroundWindow();
         app->reveal_phase = 1; puts("{\"event\":\"ready\"}"); fflush(stdout); return;
     }
+    if (app->reveal_phase == 1 && app->inspection_requests && !app->inspection_checked) {
+        REVEAL_CHECK(app->workspace.active == app->before_active && app->workspace.tab_count == app->before_tabs && app->workspace.activation == app->before_activation);
+        REVEAL_CHECK(view.active_id == app->before_view.active_id && GetFocus() == app->before_focus && GetForegroundWindow() == app->before_foreground);
+        REVEAL_CHECK(view.scroll_y == app->before_view.scroll_y && editor.x == app->before_editor.x && editor.y == app->before_editor.y);
+        REVEAL_CHECK(view.caret == app->before_view.caret && view.selection_start == app->before_view.selection_start && view.selection_end == app->before_view.selection_end);
+        REVEAL_CHECK(tab->selection_start == app->before_start && tab->selection_end == app->before_end && tab->text_revision == app->before_revision);
+        app->inspection_checked = 1; puts("{\"event\":\"inspected\",\"documentSelectionScrollFocusPreserved\":true}"); fflush(stdout);
+    }
     if (app->reveal_phase == 1 && app->hint.version) {
         REVEAL_CHECK(app->workspace.active == app->before_active && app->workspace.tab_count == app->before_tabs && app->workspace.activation == app->before_activation);
         REVEAL_CHECK(view.active_id == app->before_view.active_id && GetFocus() == app->before_focus && GetForegroundWindow() == app->before_foreground);
@@ -321,6 +343,7 @@ static void document_panel(gui_app *app, int index) {
         ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_AllowTabInput, source_selection, tab)) {
         tab->length = strlen(tab->text); tab->dirty = 1; tab->anchor_stale = 0; tab->text_revision = ++app->workspace.text_revision;
     }
+    if (igIsItemActive()) gui_selection_capture(&app->workspace, index, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, tab->selection_start, tab->selection_end);
 #ifdef ATTENDANT_GUI_TESTING
     { ImVec2 position = igGetItemRectMin(); app->editor_position.x = position.x + 30; app->editor_position.y = position.y + 12; }
 #endif
@@ -335,6 +358,7 @@ static void document_panel(gui_app *app, int index) {
         crmd_source_selection selected = {0};
         size_t offset = gui_body_offset(tab->text), length = tab->length - offset;
         int exact, rendered;
+        uint64_t interaction;
         ImVec2 content = igGetContentRegionAvail(); content.x = 0; content.y = content.y > 54 ? content.y - 54 : 1;
         igBeginChild_Str("preview-scroll", content, 0, 0);
 #ifdef ATTENDANT_GUI_TESTING
@@ -343,8 +367,24 @@ static void document_panel(gui_app *app, int index) {
         rendered = crmd_render_raw(tab->path, tab->text_revision, tab->text + offset, length, &selected);
         if (!rendered) snprintf(app->workspace.error, sizeof(app->workspace.error), "%s", crmd_error());
         exact = rendered && selected.status == CRMD_SELECTION_EXACT && selected.begin < selected.end && selected.end <= length;
+        interaction = rendered ? crmd_selection_interaction() : app->preview_interaction;
+        if (interaction != app->preview_interaction || gui_selection_current(&app->workspace).view == GUI_SELECTION_PREVIEW) {
+            gui_selection_capture(&app->workspace, index, GUI_SELECTION_PREVIEW,
+                exact ? GUI_SELECTION_EXACT : !rendered || selected.status == CRMD_SELECTION_UNSUPPORTED ? GUI_SELECTION_UNSUPPORTED : GUI_SELECTION_NONE,
+                exact ? (int)(offset + selected.begin) : 0, exact ? (int)(offset + selected.end) : 0);
+        }
+        app->preview_interaction = interaction;
 #ifdef ATTENDANT_GUI_TESTING
+        if (app->selection_exercise && app->test_frame >= 34 && !app->selection_ready) {
+            gui_selection current = gui_selection_current(&app->workspace);
+            if (!app->selection_source_seen || current.view != GUI_SELECTION_PREVIEW || current.status != (app->selection_exercise == 1 ? GUI_SELECTION_EXACT : GUI_SELECTION_UNSUPPORTED)) {
+                fprintf(stderr, "Preview context/widget did not replace older source selection: mode %d, view %d, status %d\n", app->selection_exercise, current.view, current.status);
+                app->reveal_failed = 1;
+            } else { app->selection_ready = 1; puts("{\"event\":\"selection-ready\"}"); fflush(stdout); }
+        }
         if (exact) app->preview_exact_seen = 1;
+        if (exact && gui_selection_current(&app->workspace).view == GUI_SELECTION_PREVIEW &&
+            gui_selection_current(&app->workspace).start == (int)offset && (size_t)gui_selection_current(&app->workspace).end == tab->length) app->preview_shared_seen = 1;
 #endif
         igEndChild();
         igBeginDisabled(!exact);
@@ -482,7 +522,10 @@ static void draw_workspace(gui_app *app) {
             if (igBeginTabItem(label, &opened, flags)) {
                 /* Navigation may queue another tab while old tab is still drawn.
                    Do not overwrite that human focus request with old render state. */
-                if (app->shown_activation == workspace->activation && (forced < 0 || forced == i)) workspace->active = i;
+                if (app->shown_activation == workspace->activation && (forced < 0 || forced == i)) {
+                    if (workspace->active != i) gui_selection_clear(workspace);
+                    workspace->active = i;
+                }
                 document_panel(app, i); igEndTabItem();
             }
             if (!opened) {
@@ -511,9 +554,31 @@ static int load_fonts(gui_app *app, const char *assets) {
 #ifdef ATTENDANT_GUI_TESTING
 static void exercise_input(gui_app *app, HWND window, int frame) {
     ImVec2 position;
+    app->test_frame = frame;
+    if (app->selection_exercise) {
+        ImGuiIO *io = igGetIO_Nil();
+        if (frame == 16) app->selection_source_seen = gui_selection_current(&app->workspace).view == GUI_SELECTION_SOURCE && gui_selection_current(&app->workspace).status == GUI_SELECTION_EXACT;
+        position = frame < 18 ? app->editor_position : app->preview_position;
+        if (frame >= 18) { position.x += 40; if (app->selection_exercise == 3) position.y += 55; }
+        /* Focus neutral project heading without replacing latest document selection. */
+        if (frame >= 14 && frame <= 17) { position.x = 12; position.y = 12; }
+        crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+        if (frame == 5 || frame == 6 || frame == 14 || frame == 15) ImGuiIO_AddMouseButtonEvent(io, 0, frame == 5 || frame == 14);
+        if (frame == 8 || frame == 10) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, frame == 8);
+        if (frame == 8 || frame == 9) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 8);
+        if (app->selection_exercise == 3) {
+            if (frame == 20 || frame == 21) ImGuiIO_AddMouseButtonEvent(io, 0, frame == 20);
+            if (frame == 24 || frame == 26) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, frame == 24);
+            if (frame == 24 || frame == 25) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 24);
+        } else {
+            if (frame == 20 || frame == 21) ImGuiIO_AddMouseButtonEvent(io, 1, frame == 20);
+            if (frame == 24 || frame == 25) ImGuiIO_AddKeyEvent(io, ImGuiKey_DownArrow, frame == 24);
+            if (frame == 28 || frame == 29) ImGuiIO_AddKeyEvent(io, ImGuiKey_Enter, frame == 28);
+        }
+        return;
+    }
     if (app->reveal_exercise) {
         ImGuiIO *io = igGetIO_Nil();
-        app->test_frame = frame;
         if (app->reveal_exercise == 6 && app->reveal_phase == 2 && !app->reparse_go_armed) {
             if (gui_reveal_ordinary_path(app->hint.path)) return;
             app->reparse_go_armed = 1; app->reveal_frame = frame - 4;
@@ -586,19 +651,19 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
 }
 #endif
 static int usage(FILE *output, int code) {
-    fprintf(output, "Usage: attendant-gui --project DIR --assets DIR [--file PATH] [--frames 1..6000 --shot FILE.ppm]\n       attendant-gui --project DIR --reveal FILE [--line N]\n");
-    if (code) gui_reveal_error(code, "usage", "Expected GUI startup arguments or --project DIR --reveal FILE [--line N]; control cannot combine startup/test flags");
+    fprintf(output, "Usage: attendant-gui --project DIR --assets DIR [--file PATH] [--frames 1..6000 --shot FILE.ppm]\n       attendant-gui --project DIR --reveal FILE [--line N]\n       attendant-gui --project DIR --inspect\n");
+    if (code) gui_reveal_error(code, "usage", "Expected GUI startup, --project DIR --inspect, or --project DIR --reveal FILE [--line N]; control cannot combine startup/test flags");
     return code;
 }
 int main(int argc, char **argv) {
     const char *project = NULL, *assets = NULL, *initial = NULL, *shot = NULL, *reveal = NULL;
     uint32_t reveal_line = 1;
-    int line_supplied = 0;
+    int line_supplied = 0, inspect = 0;
     char *owned[32] = {0};
     LPWSTR *arguments;
     int frame_limit = 0, frame = 0, code = 1, i, gui_ready = 0;
 #ifdef ATTENDANT_GUI_TESTING
-    int exercise = 0, edit_exercise = 0, save_fail_exercise = 0, preview_exercise = 0, reveal_exercise = 0;
+    int exercise = 0, edit_exercise = 0, save_fail_exercise = 0, preview_exercise = 0, reveal_exercise = 0, selection_exercise = 0;
 #endif
     bool running = true;
     HWND window = NULL;
@@ -621,6 +686,12 @@ int main(int argc, char **argv) {
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--help")) return usage(stdout, 0);
 #ifdef ATTENDANT_GUI_TESTING
+        if (!strcmp(argv[i], "--exercise-selection") && i + 1 < argc) {
+            const char *mode = argv[++i];
+            selection_exercise = !strcmp(mode, "plain-menu") ? 1 : !strcmp(mode, "markup-menu") ? 2 : !strcmp(mode, "widget") ? 3 : 0;
+            if (!selection_exercise) return usage(stderr, 2);
+            continue;
+        }
         if (!strcmp(argv[i], "--exercise-reveal") && i + 1 < argc) {
             const char *mode = argv[++i];
             reveal_exercise = !strcmp(mode, "clean") ? 1 : !strcmp(mode, "dirty") ? 2 : !strcmp(mode, "stale") ? 3 : !strcmp(mode, "idle") ? 4 : !strcmp(mode, "other") ? 5 : !strcmp(mode, "reparse") ? 6 : 0;
@@ -637,6 +708,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--file") && i + 1 < argc) initial = argv[++i];
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) shot = argv[++i];
         else if (!strcmp(argv[i], "--reveal") && i + 1 < argc) reveal = argv[++i];
+        else if (!strcmp(argv[i], "--inspect")) inspect = 1;
         else if (!strcmp(argv[i], "--line") && i + 1 < argc) {
             char *end; const char *value = argv[++i]; unsigned long number = strtoul(value, &end, 10);
             if (*value < '0' || *value > '9' || *end || !number || number > GUI_TEXT + 1u) return usage(stderr, 2);
@@ -648,12 +720,12 @@ int main(int argc, char **argv) {
             frame_limit = (int)value;
         } else return usage(stderr, 2);
     }
-    if (reveal) {
-        if (!project || !reveal || assets || initial || shot || frame_limit) return usage(stderr, 2);
+    if (reveal || inspect) {
+        if (!project || (reveal && inspect) || (inspect && line_supplied) || assets || initial || shot || frame_limit) return usage(stderr, 2);
 #ifdef ATTENDANT_GUI_TESTING
-        if (exercise || edit_exercise || preview_exercise || reveal_exercise) return usage(stderr, 2);
+        if (exercise || edit_exercise || preview_exercise || reveal_exercise || selection_exercise) return usage(stderr, 2);
 #endif
-        code = gui_reveal_send(project, reveal, reveal_line);
+        code = inspect ? gui_inspect(project) : gui_reveal_send(project, reveal, reveal_line);
         for (i = 0; i < argc; i++) HeapFree(GetProcessHeap(), 0, owned[i]);
         return code;
     }
@@ -663,13 +735,14 @@ int main(int argc, char **argv) {
     application->shown_activation = -1;
 #ifdef ATTENDANT_GUI_TESTING
     if (reveal_exercise && (exercise || edit_exercise || preview_exercise || !frame_limit)) { code = usage(stderr, 2); goto cleanup; }
-    application->reveal_exercise = reveal_exercise;
+    application->reveal_exercise = reveal_exercise; application->selection_exercise = selection_exercise;
+    if (selection_exercise && (exercise || edit_exercise || preview_exercise || reveal_exercise || !frame_limit)) { code = usage(stderr, 2); goto cleanup; }
     application->exercise = exercise; application->edit_exercise = edit_exercise; application->save_fail_exercise = save_fail_exercise; application->preview_exercise = preview_exercise;
 #endif
     if (!gui_workspace_init(&application->workspace, project)) { fprintf(stderr, "%s\n", application->workspace.error); goto cleanup; }
     if (initial) gui_open_document(&application->workspace, initial);
 #ifdef ATTENDANT_GUI_TESTING
-    if (edit_exercise || preview_exercise || reveal_exercise) {
+    if (edit_exercise || preview_exercise || reveal_exercise || selection_exercise) {
         char marker[GUI_PATH]; wchar_t wide[4096];
         snprintf(marker, sizeof(marker), "%s/.gui-test-owned", application->workspace.root);
         if (application->workspace.active < 0 || !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, marker, -1, wide, 4096) || GetFileAttributesW(wide) == INVALID_FILE_ATTRIBUTES) {
@@ -682,6 +755,9 @@ int main(int argc, char **argv) {
     description.hCursor = LoadCursorA(NULL, IDC_ARROW);
     if (!RegisterClassA(&description)) goto cleanup;
     context = igCreateContext(NULL); igGetIO_Nil()->IniFilename = NULL; igStyleColorsDark(NULL);
+#ifdef ATTENDANT_GUI_TESTING
+    if (selection_exercise) igGetIO_Nil()->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+#endif
     if (!load_fonts(application, assets)) { fprintf(stderr, "Missing GUI font assets\n"); goto cleanup; }
     if (!igDebugCheckVersionAndDataLayout(igGetVersion(), sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))) goto cleanup;
     {
@@ -710,6 +786,7 @@ int main(int argc, char **argv) {
 #ifdef ATTENDANT_GUI_TESTING
         exercise_input(application, window, frame);
 #endif
+        application->inspection_busy = 1;
         if (!crmd_begin_frame()) goto cleanup;
         /* Later human navigation cancels an unrendered Go; incoming hints do not. */
         if (application->scroll_hint && (application->workspace.active < 0 ||
@@ -729,18 +806,20 @@ int main(int argc, char **argv) {
         if (application->reveal_failed) goto cleanup;
 #endif
         if (!crmd_end_frame()) goto cleanup;
+        application->inspection_busy = 0;
         ++frame;
         if (shot && frame == frame_limit && !crmd_screenshot(shot)) goto cleanup;
         if (!crmd_present()) goto cleanup;
     }
 #ifdef ATTENDANT_GUI_TESTING
+    if (selection_exercise && !application->selection_ready) { fprintf(stderr, "Selection exercise did not complete\n"); goto cleanup; }
     if (reveal_exercise && (reveal_exercise == 4 ? application->hint.version != 0 : application->reveal_phase != 3)) {
         fprintf(stderr, "Reveal exercise did not complete expected delivery/navigation checks\n"); goto cleanup;
     }
     if (preview_exercise) {
         gui_workspace *workspace = &application->workspace;
         gui_tab *tab = workspace->active >= 0 ? &workspace->tabs[workspace->active] : NULL;
-        if (!tab || application->sent_comments != 1 || !application->preview_exact_seen || !application->preview_dirty_send || !application->composer_from_preview ||
+        if (!tab || application->sent_comments != 1 || !application->preview_exact_seen || !application->preview_shared_seen || !application->preview_dirty_send || !application->composer_from_preview ||
             application->composer_start != (int)gui_body_offset(tab->text) || (size_t)application->composer_end != tab->length ||
             tab->selection_start != tab->selection_end || dirty_documents(workspace)) {
             fprintf(stderr, "GUI preview source mapping/Save & Send changed selection or failed\n"); goto cleanup;
@@ -770,6 +849,7 @@ cleanup:
     if (context) igDestroyContext(context);
     if (!code) printf("{\"ok\":true,\"frames\":%d,\"tabs\":%d,\"vertices\":%d}\n", frame, application->workspace.tab_count, crmd_vertex_count());
     else fprintf(stderr, "GUI initialization, exercise, rendering or cleanup failed: %s\n", crmd_error());
+    if (application->inspection) VirtualFree(application->inspection, 0, MEM_RELEASE);
     gui_workspace_destroy(&application->workspace); VirtualFree(application, 0, MEM_RELEASE); application = NULL;
     UnregisterClassA(GUI_WINDOW_CLASS, GetModuleHandleA(NULL));
     for (i = 0; i < argc; i++) HeapFree(GetProcessHeap(), 0, owned[i]);

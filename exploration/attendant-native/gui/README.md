@@ -41,6 +41,23 @@ exploration/attendant-native/build/gui/attendant-gui-zig.exe \
 - Sender creates no GUI/renderer; assets not needed. Automation should inherit console or set `windowsHide: true` to avoid sender-console activation. No auto-start. Missing/ambiguous/unavailable GUI returns error; ambiguous workspace instances are not arbitrarily chosen.
 - Control stdout always one JSON object; failures also explain on stderr. Exit 0: hint delivered, not persistent/necessarily displayed yet. Exit 2: invalid invocation. Exit 1: source/recipient/transport failure. `reveal-delivery-unknown` means hint may have arrived; retry is safe. `--help` prints text. Control cannot combine startup/test flags. Native CLI unchanged.
 
+## Inspect current document selection
+
+```bash
+exploration/attendant-native/build/gui/attendant-gui-zig.exe --project "$workspace" --inspect
+```
+
+```json
+{"ok":true,"document":{"path":"D:\\workspace\\records\\tasks\\first.md","dirty":true,"buffer_revision":"7"},"selection":{"view":"source","status":"exact","text":"café Ω","range_start":20,"range_end":26,"range_unit":"unicode-codepoint"}}
+```
+
+- Inspect active document and latest human document selection, not OS keyboard focus or comment-box text. Selection remains queryable after switching focus to chat. Document switch/reload clears it; source edits invalidate old revisions. Agent marker is never a human selection.
+- Source and exact raw-preview spans share ownership state. `view`: `none`, `source`, `preview`. `status`: `none`, `exact`, `unsupported`. Empty/unmapped selection returns null text/range with exit 0, never older source fallback. Child/custom-widget interaction reports `unsupported`, including code children whose text is not selectable. Renderer ownership serial includes context-menu/keyboard actions; host does not infer ownership from mouse position. No open document returns `document:null`.
+- Exact range counts full live-buffer Unicode code points, including BOM/front matter and CR/LF separately. Unsaved text is allowed; `dirty:true` and decimal-string `buffer_revision` distinguish live state. This is not a saved-file feedback anchor or permission to edit.
+- No preparation, disk read/write, feedback consumption, tab/focus/selection/scroll change or auto-start. Requires one responsive inspection-capable GUI; legacy GUI returns `inspection-unavailable`. Same stdout/exit conventions and matching-window discovery as reveal. Startup/reveal flags cannot combine with `--inspect`.
+- Local desktop request/reply uses invisible message-only client window and bounded synchronous messages. Receiver snapshots stable C-owned buffers, never source API/ImGui from callback; busy rendering retries up to 16 attempts with 2000-ms budget checked before each request, each request at most 1000 ms and nested reply 250 ms. No hard real-time guarantee. No endpoint files, second transport or clipboard inference.
+- At most 4 MiB selected UTF-8, plus fixed path/header metadata. Only selected bytes copied; full-buffer prefix traversed on request for code-point range. JSON capacity covers worst-case escaping. Inspection response allocated lazily; no per-frame source copy. Same desktop/integrity and non-authenticated same-user signal limit as reveal.
+
 ## Acceptance
 
 ```bash
@@ -50,10 +67,11 @@ node --test exploration/attendant-native/gui/tools.test.mjs
 node exploration/attendant-native/gui/check.mjs
 ```
 
-- `check.mjs`: unique generated copies only; 26 real window/D3D runs across both compilers. Preview pixels, Unicode/space paths, real reference/tab input, invalid-record recovery, source edit/undo/redo, dirty-window-close Cancel, comment input, Save & Send, pending-comment navigation and exact source selection. Normal browsing does not prepare DB or change source.
+- `check.mjs`: unique generated copies only; 32 real window/D3D runs across both compilers. Preview pixels, Unicode/space paths, real reference/tab input, invalid-record recovery, source edit/undo/redo, dirty-window-close Cancel, comment input, Save & Send, pending-comment navigation and exact source selection. Normal browsing does not prepare DB or change source.
 - Actual GUI Send → native/`.mjs` query → explicit resolution passes both compilers; complete source UTF-8/supplementary bytes, CRLF, 71-code-point selection and human body preserved. Reading does not consume. Separate actual GUI failure case saves source, preserves conflicting files/config, shows saved-but-not-queued and cancels composer.
 - Preview GUI edit → exact body selection → Save & Send → native/`.mjs` query → explicit resolution passes. BOM/CRLF/supplementary bytes remain exact; full-file code-point range is `[35,62)`. Source editor selection stays collapsed and unchanged. No projection or unrelated source created by GUI.
-- Test-only input driver absent from production build. Mutable exercises/model require generated ownership marker. Both compilers run 134 always-on model checks, including stale/dirty target anchors, alternate absolute-directory spelling, per-file failures, injected read/metadata gap and surviving-write recovery evidence after refresh.
+- Test-only input driver absent from production build. Mutable exercises/model require generated ownership marker. Both compilers run 168 always-on model checks, including stale/dirty target anchors, alternate absolute-directory spelling, per-file failures, injected read/metadata gap and surviving-write recovery evidence after refresh.
+- Cross-compiler external-process inspection checks exact full selected UTF-8/code-point range for clean/dirty buffers, repeats without consumption, preserves actual caret/selection/geometry/scroll/focus and rejects absent/ambiguous GUI and invalid control combinations. Actual preview keyboard-menu Select All replaces older source selection for exact/plain and unsupported/markup spans; child-code interaction also reports unsupported. Model covers empty document/selection, preview ownership, UTF-8 boundaries, revision/document invalidation, JSON capacity, busy/malformed requests and malformed/unaligned response packets.
 - Cross-compiler external-process reveal checks preserve actual ImGui caret/selection/active ID, document, editor geometry, scroll and Win32 focus on receipt. Explicit Go preserves caret/selection in same/new tab. Dirty/stale source gets no marker/scroll. Amber pixel checks require source-only clipping. Reject absent/ambiguous GUI, malformed arguments/payload, out-of-scope paths and junctions; recheck when ordinary directory becomes outside junction after delivery. Production omits test driver/hash override.
 - Build manifests bind C/build inputs, generated stack headers/dependency manifest, actual DLL and native executables. Guards reject stale source/substituted DLL before GUI execution. Acceptance replaces stale success with partial failure report.
 - Local evidence: `build/gui-check-results.json`, owned runs under `build/gui-check/`, source/toolchain manifests under `build/gui/`. Retained checkpoint: [evidence/windows-x64.json](evidence/windows-x64.json).
@@ -73,7 +91,7 @@ Bounds: 16 tabs, 4 MiB UTF-8 per document, 4096 navigation files, 16 MiB navigat
 - Preview button enables only for current `EXACT` snapshot. Add known body byte offset and freeze composer range without changing source-editor selection/focus. Existing model converts full-file bytes to saved Unicode code points/hash; dirty source still requires Save & Send.
 - Plain/direct text and link-label interiors can pass. Crossing omitted markup, escaped syntax, generated breaks/wrap spaces, hidden content or code widgets fails closed. Rendered replacements/foreign-buffer content cannot pass. Use source editor for unsupported spans. LaTeX/transclusions are not enabled, so literal syntax is not transformed output.
 
-Stack proof: 54 actual source-selection cases across both C99 compilers, including forward/reverse drag, duplicate words, Unicode/decomposed text, link labels, menu Copy, child-widget ownership and exact source/key hash collisions. [Stack results](../../../spikes/cimgui-richmd-c99/RESULTS.md) retain pinned patch and separate compatibility evidence.
+Stack proof: 56 actual source-selection cases across both C99 compilers, including forward/reverse drag, duplicate words, Unicode/decomposed text, link labels, menu Copy, child-widget ownership and exact source/key hash collisions. [Stack results](../../../spikes/cimgui-richmd-c99/RESULTS.md) retain pinned patch and separate compatibility evidence.
 
 ## Comments
 

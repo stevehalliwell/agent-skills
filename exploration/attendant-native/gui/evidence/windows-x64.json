@@ -1,34 +1,34 @@
 {
   "ok": true,
-  "checkerSha256": "6941f2f70c89af56ca9820756c8dd93ef5148c9263ebb63b97c73ec746e23835",
-  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-aYn6uC",
+  "checkerSha256": "3b055a883585e324e822f9bead670f5c31c83b24aa8137029e41e9ab42e2999f",
+  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-BenL1m",
   "results": [
     {
       "compiler": "cjit",
       "provenance": {
-        "builtAt": "2026-10-29T08:04:42.295Z",
+        "builtAt": "2026-10-29T21:19:30.455Z",
         "version": {
           "status": 0,
           "text": "CJIT v1.2.0 by Dyne.org\r\n\r\nSynopsis: cjit [options] files(*) -- app arguments\r\n  (*) can be any source (.c) or built object (dll, dylib, .so)\r\nOptions and values (+) mandatory (-) default (=) optional:\r\n -h \t print this help\r\n -v \t print runtime and compiler status information\r\n -q \t stay quiet and only print errors and output\r\n -C \t set interpreter/compiler flags (-) env var CFLAGS\r\n -c \t compile a single source file, do not execute\r\n -o exe\t do not run, compile an executable (+path)\r\n -D sym\t define a macro value (+) symbol or key=value\r\n -I dir\t also search folder (+) dir for header files\r\n -l lib\t link the shared library (+) lib\r\n -L dir\t add folder (+) dir to library search paths\r\n -e fun\t run starting from entry function (-) main\r\n -p pid\t write execution process ID to (+) pid\r\n --verb\t don't go quiet, verbose logs\r\n --xass\t just extract runtime assets (=) to path\r\n --xtgz\t extract all files in a USTAR (+) tar.gz\r\n\r\n"
         },
-        "inputSha256": "a6db1aeea1f877f5c752b5bae1435d044cf682b2aa67a161b5f0c68fa887fac1",
+        "inputSha256": "238f88111d15b9ba9e2874ad5aadcbed43b688f7ff4c93a2f599288726addbe3",
         "binaries": [
           {
             "path": "build/gui/attendant-gui-cjit.exe",
-            "sha256": "f925f55de5a7602f72681b8bdade1ecc383a63928dc6ba79b6071e1d23fe61ed"
+            "sha256": "5bddc954217f3c5298d932683bfb5422a12e7036eec179e96da43e68937cb9a1"
           },
           {
             "path": "build/gui/attendant-gui-cjit-check.exe",
-            "sha256": "5ee97bfc67433735b9fd35e90567a78d556b313b3d465d10cc6232052643a0cc"
+            "sha256": "ab7ee0574c6f602588de65b6e7e25fb61f6eb5e21eaaf83925a40a200d34ff58"
           },
           {
             "path": "build/gui/model-check-cjit.exe",
-            "sha256": "4ffebd4d652a96b490b973c533ebfe9b94d0b2dee0c4370ad9a6c2acd8f755b1"
+            "sha256": "3f19be6af697c3950b45d0db7e0215dfe00aeca060fa0fdb364b3762ffb5fe53"
           }
         ],
         "stack": {
-          "sha256": "34ef7d52ce951ff4e6c5d45b60608615495288b204c448b28cac6ba733014ad1",
-          "dllSha256": "a1430129aadf7e55eee127e1905a192bb1b0aa55692e917f4c88d2ece8db80a7",
+          "sha256": "2e1d2cbdb5d69f58288ca6266d3fe5aa87921710a49d60dcd01518c696329315",
+          "dllSha256": "919c88a3c83ebb443b9bff8423eff830db2fbb0541f78fd455c10a11ed30cb54",
           "dependencies": {
             "dependencies": [
               [
@@ -73,8 +73,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2748,
-        "sha256": "13435cb3d2e39ea561b2607f11f22c90721ffaff4296412ab113ecea25368d39"
+        "bright": 2759,
+        "sha256": "4161d10b987361247b622967239019990aaa2140d54db0c839548753825d1e20"
       }
     },
     {
@@ -92,15 +92,15 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2183,
-        "sha256": "d40063bd6c59f379708ba2cf775eba94acbbbe534379cba3e763dba13d60a59a"
+        "bright": 2193,
+        "sha256": "ba2753c90ea4a948fe908707e59a1fa7c1ba591771886806159443a8b9505eca"
       }
     },
     {
       "compiler": "cjit",
       "model": {
         "ok": true,
-        "checks": 134
+        "checks": 168
       }
     },
     {
@@ -109,13 +109,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 2,
-        "vertices": 3232
+        "vertices": 3228
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2038,
-        "sha256": "651ad7d49ef3807fdcbf25a6d424212771018e76b55094889bc33e65f43f2850"
+        "bright": 2061,
+        "sha256": "80b7ae7cf654a8e97f0a589917866209b5961013e1c7b0f7e688bcc07ba5d632"
       }
     },
     {
@@ -148,8 +148,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2519,
-        "sha256": "bd6be2544898e0ae9a7e95593304b5901686954422153bc3093ec5461bb88577"
+        "bright": 2584,
+        "sha256": "ac718a41b86e61b29df0f93c9a4e67209a4cf8712a879066e7cdaa919f48964e"
       }
     },
     {
@@ -163,8 +163,38 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2593,
-        "sha256": "e22dc9b31848582afc6cf7cde1879dfe78d2be6003082a70ff3385f117db9a81"
+        "bright": 2614,
+        "sha256": "68eba97eaae17624db89994fde7ad21170ca120656aaa917318ad1f026a22d0f"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "plain-menu",
+        "clientCompiler": "zig",
+        "status": "exact",
+        "priorSourceSelectionReplaced": true,
+        "sourceAndProjectionUnchanged": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "markup-menu",
+        "clientCompiler": "zig",
+        "status": "unsupported",
+        "priorSourceSelectionReplaced": true,
+        "sourceAndProjectionUnchanged": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "widget",
+        "clientCompiler": "zig",
+        "status": "unsupported",
+        "priorSourceSelectionReplaced": true,
+        "sourceAndProjectionUnchanged": true
       }
     },
     {
@@ -173,9 +203,18 @@
         "mode": "clean",
         "clientCompiler": "zig",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -183,7 +222,7 @@
           },
           {
             "event": "complete",
-            "checks": 70,
+            "checks": 93,
             "markerDraws": 3,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -208,8 +247,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43119,
-        "sha256": "203aeec9ab44e6c98c51e05842e1d6630a4ee6c15740237d0349a63281902f28"
+        "bright": 43128,
+        "sha256": "47fdadf3d97e153dd6a73b68d8ab679e3f46da2597cd902051bbec16373c24a7"
       }
     },
     {
@@ -218,9 +257,18 @@
         "mode": "dirty",
         "clientCompiler": "zig",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": true,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -228,7 +276,7 @@
           },
           {
             "event": "complete",
-            "checks": 27,
+            "checks": 40,
             "markerDraws": 0,
             "dirty": true,
             "caretSelectionPreservedAfterGo": true,
@@ -253,8 +301,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43132,
-        "sha256": "2be2dcf9d982a68704bbe213cfcd61f9696d2bc3a929fc1d6bbb4b68f9c463e8"
+        "bright": 43131,
+        "sha256": "02ee38c38562d886b90c1f003363d5a8368c5920414ebbda7f6635b2113c9f56"
       }
     },
     {
@@ -263,9 +311,18 @@
         "mode": "stale",
         "clientCompiler": "zig",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -273,7 +330,7 @@
           },
           {
             "event": "complete",
-            "checks": 32,
+            "checks": 47,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -298,8 +355,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43163,
-        "sha256": "2627f6f235407a0c7fe917fe1b960e77c56fbeb930d5424eb04ba8c08b1451fb"
+        "bright": 43174,
+        "sha256": "b965f1ca6d2610c518ab58d4c4cbe2adba34db3cb01e5575a1d879e0120e981b"
       }
     },
     {
@@ -308,9 +365,18 @@
         "mode": "other",
         "clientCompiler": "zig",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -318,7 +384,7 @@
           },
           {
             "event": "complete",
-            "checks": 29,
+            "checks": 42,
             "markerDraws": 2,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -343,8 +409,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43024,
-        "sha256": "7dd4ebbf18636a6236c9a89d90dbb4cf1a85d54eb10840c2f484f2a3b82243f4"
+        "bright": 43033,
+        "sha256": "20dca4217f5839715a0fd8f15c72210ababdce8361774aa29071d4386b5387b4"
       }
     },
     {
@@ -353,9 +419,18 @@
         "mode": "reparse",
         "clientCompiler": "zig",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -363,7 +438,7 @@
           },
           {
             "event": "complete",
-            "checks": 25,
+            "checks": 38,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -388,8 +463,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43191,
-        "sha256": "3fc86e24624c123437fe6ba268328e88096bec8522a2f96e0c767e54d094afd8"
+        "bright": 43201,
+        "sha256": "e5bb933b02a1a9d84ec8b64cb9d72701453b88119da450f94416d8498c6793b1"
       }
     },
     {
@@ -400,29 +475,29 @@
     {
       "compiler": "zig",
       "provenance": {
-        "builtAt": "2026-10-29T08:04:43.352Z",
+        "builtAt": "2026-10-29T21:19:31.997Z",
         "version": {
           "status": 0,
           "text": "0.17.0\n"
         },
-        "inputSha256": "a6db1aeea1f877f5c752b5bae1435d044cf682b2aa67a161b5f0c68fa887fac1",
+        "inputSha256": "238f88111d15b9ba9e2874ad5aadcbed43b688f7ff4c93a2f599288726addbe3",
         "binaries": [
           {
             "path": "build/gui/attendant-gui-zig.exe",
-            "sha256": "29dd8eeba87c26beee09097ce1b3b3f263cbaaaad173813b96dba1de30927ad7"
+            "sha256": "60b010ee5ab111f9c40176a430f38663d4dded5ddeaf05da576704bb1499d43c"
           },
           {
             "path": "build/gui/attendant-gui-zig-check.exe",
-            "sha256": "0b86caf6d6c6c3495db985b964208f7b1d1db65e87101da27f11bfbc5741af5d"
+            "sha256": "4db4e8b94d1fb43453a5966d8228bd699a977836ffb444e721560210d21c9a6a"
           },
           {
             "path": "build/gui/model-check-zig.exe",
-            "sha256": "317f61ac3bfeb639b213ef31842099b4a02b532f65e8b97029fd7c1ce1b3a62e"
+            "sha256": "1194aec6f6a806de96ea59266129ef6d236f387b7853bdec3e31948231841e9e"
           }
         ],
         "stack": {
-          "sha256": "34ef7d52ce951ff4e6c5d45b60608615495288b204c448b28cac6ba733014ad1",
-          "dllSha256": "a1430129aadf7e55eee127e1905a192bb1b0aa55692e917f4c88d2ece8db80a7",
+          "sha256": "2e1d2cbdb5d69f58288ca6266d3fe5aa87921710a49d60dcd01518c696329315",
+          "dllSha256": "919c88a3c83ebb443b9bff8423eff830db2fbb0541f78fd455c10a11ed30cb54",
           "dependencies": {
             "dependencies": [
               [
@@ -467,8 +542,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2732,
-        "sha256": "45cfdd79ad493bacf64e43beed94152a8404ca50addb28c236f0736bdee3720c"
+        "bright": 2744,
+        "sha256": "8496bda95638ed53320348601c3be6befd0d5d4c6c319f4a3bf8e9c62d6e591d"
       }
     },
     {
@@ -486,15 +561,15 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2162,
-        "sha256": "0b968130bd1d4856952237b4eabbb310fabb494f11e0a858c9488b3f92f1bb32"
+        "bright": 2174,
+        "sha256": "18b25d57f8817073e98cb024382ea67a98a13c931675ab125fe9181fa75d4d38"
       }
     },
     {
       "compiler": "zig",
       "model": {
         "ok": true,
-        "checks": 134
+        "checks": 168
       }
     },
     {
@@ -503,13 +578,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 2,
-        "vertices": 3224
+        "vertices": 3220
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2028,
-        "sha256": "8a5c2cbe402558c91d4b6abfe7ded8d934e12545e970880098736257a3e33d3e"
+        "bright": 2042,
+        "sha256": "d43386a470a4edcc7c6bd911a6b022640052656838fda57dc0b76c13c6c81b61"
       }
     },
     {
@@ -542,8 +617,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2508,
-        "sha256": "ca083fd9cb3b1e979b3fb4ac2c0b06ce2877caa807fc5e7049014a16e849c91a"
+        "bright": 2539,
+        "sha256": "857404b74d5570915d2420ac08c18952f6b7dd56457a280f0fae7ab94f3206c2"
       }
     },
     {
@@ -557,8 +632,38 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2582,
-        "sha256": "48079b0b3c6cc028831c2530c2c1f89c62f21d577c29043bd7be04f1768a71f1"
+        "bright": 2604,
+        "sha256": "b64e50fc26d2ae8c1e9916df8f292eec07c38f026d843ea94957f490489dd344"
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "plain-menu",
+        "clientCompiler": "cjit",
+        "status": "exact",
+        "priorSourceSelectionReplaced": true,
+        "sourceAndProjectionUnchanged": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "markup-menu",
+        "clientCompiler": "cjit",
+        "status": "unsupported",
+        "priorSourceSelectionReplaced": true,
+        "sourceAndProjectionUnchanged": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "widget",
+        "clientCompiler": "cjit",
+        "status": "unsupported",
+        "priorSourceSelectionReplaced": true,
+        "sourceAndProjectionUnchanged": true
       }
     },
     {
@@ -567,9 +672,18 @@
         "mode": "clean",
         "clientCompiler": "cjit",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -577,7 +691,7 @@
           },
           {
             "event": "complete",
-            "checks": 72,
+            "checks": 93,
             "markerDraws": 3,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -602,8 +716,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43144,
-        "sha256": "b623225162c66851409dce806bb506f294c0d660759dd25a52982ccf37b0a120"
+        "bright": 43161,
+        "sha256": "9e7a0815a2cda58fa85202bcec6e4953438ca4f4ea0764cc057e7768019657f9"
       }
     },
     {
@@ -612,9 +726,18 @@
         "mode": "dirty",
         "clientCompiler": "cjit",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": true,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -622,7 +745,7 @@
           },
           {
             "event": "complete",
-            "checks": 27,
+            "checks": 40,
             "markerDraws": 0,
             "dirty": true,
             "caretSelectionPreservedAfterGo": true,
@@ -647,8 +770,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43140,
-        "sha256": "e7ce559f0b7d590b2ab5477b589e275090b7468a67ed67c706081b4448e3cad6"
+        "bright": 43150,
+        "sha256": "7858bc6b886ec2cf9595daebc52d72c5ffe19e50ddc20a4015f7b56eb844d7dc"
       }
     },
     {
@@ -657,9 +780,18 @@
         "mode": "stale",
         "clientCompiler": "cjit",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -667,7 +799,7 @@
           },
           {
             "event": "complete",
-            "checks": 27,
+            "checks": 41,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -692,8 +824,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43156,
-        "sha256": "586ea172f802de76783c9884ab85b6ab4bca38cddd31d9e8a8b87946cd1956bf"
+        "bright": 43167,
+        "sha256": "866e8f8a2fad3ee25e6cdf7285ab77dee4250267eb45f6a284c6ebd15fe1d540"
       }
     },
     {
@@ -702,9 +834,18 @@
         "mode": "other",
         "clientCompiler": "cjit",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -712,7 +853,7 @@
           },
           {
             "event": "complete",
-            "checks": 31,
+            "checks": 44,
             "markerDraws": 2,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -737,8 +878,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43034,
-        "sha256": "49ad0ee2b09f3553a6ff1bc049317c6db6785a9e89651fae0a8ad28324bc1203"
+        "bright": 43044,
+        "sha256": "588334f0f938366a89a8a7d34c73e58895035c42fc0e0a5c8489eaa4a60a691d"
       }
     },
     {
@@ -747,9 +888,18 @@
         "mode": "reparse",
         "clientCompiler": "cjit",
         "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
         "events": [
           {
             "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
           },
           {
             "event": "received",
@@ -757,7 +907,7 @@
           },
           {
             "event": "complete",
-            "checks": 25,
+            "checks": 38,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -782,8 +932,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 43212,
-        "sha256": "bf4d3c5a014645330ea15c56f5015ba94c2d151fc315168e029ee39949812422"
+        "bright": 43223,
+        "sha256": "5867ab23897165dffb5dcc99c004fd7b744e0aa0f4085bf8d1b064a6e13b7ed9"
       }
     },
     {

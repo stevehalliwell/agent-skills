@@ -13,7 +13,7 @@ if [[ ! -f "$stack/build/bin/cimgui_richmd.dll" ]]; then
 fi
 mkdir -p build/gui
 source build-inputs.sh
-sources=(gui/main.c gui/workspace.c gui/reveal.c native-api.c "${sources[@]:1}")
+sources=(gui/main.c gui/workspace.c gui/reveal.c gui/inspect.c native-api.c "${sources[@]:1}")
 includes=(-I"$stack/build/deps/cimgui" -I"$stack")
 suffix=""
 if [[ "${2:-}" == --check ]]; then includes+=(-DATTENDANT_GUI_TESTING); suffix=-check; fi
@@ -33,6 +33,9 @@ if [[ "${2:-}" == --check ]]; then
     "${ZIG:-zig}" cc -O3 "${flags[@]}" -DATTENDANT_MODEL_TESTING -DATTENDANT_TEST_FAULTS "${sources[@]}" -lbcrypt -lshell32 -luser32 -o build/gui/model-check-zig.exe
   fi
 fi
-cp "$stack/build/bin/cimgui_richmd.dll" build/gui/
+# Keep running viewer's identical mapped DLL untouched.
+if ! cmp -s "$stack/build/bin/cimgui_richmd.dll" build/gui/cimgui_richmd.dll; then
+  cp "$stack/build/bin/cimgui_richmd.dll" build/gui/
+fi
 node gui/build-manifest.mjs "$compiler" ${2:+"$2"}
 printf '%s\n' "$PWD/build/gui/attendant-gui-$compiler$suffix.exe"

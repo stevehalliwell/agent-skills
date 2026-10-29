@@ -17,6 +17,7 @@ typedef struct gui_reveal {
 uintptr_t gui_reveal_receive(const gui_workspace *workspace, gui_reveal *pending,
     int *ready, uintptr_t operation, const void *data, size_t size);
 int gui_reveal_error(int status, const char *code, const char *message);
+HWND gui_find_workspace(const char *project, int *status);
 int gui_reveal_send(const char *project, const char *path, uint32_t line);
 /* Lines follow InputTextMultiline: LF/CRLF. Bare CR cannot be mapped safely. */
 int gui_reveal_has_line(const char *text, uint32_t line);

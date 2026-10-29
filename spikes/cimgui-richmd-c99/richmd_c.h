@@ -32,6 +32,9 @@ typedef struct crmd_source_selection {
 /* No unindent/transclusions. Full key/revision/input identity invalidates old selection.
  * Snapshot copied while named render input remains alive. Output cleared on failure. */
 CRMD_API int crmd_render_raw(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_source_selection *selection);
+/* Immediately after successful raw render: renderer selection-interaction serial.
+ * Includes context menus and child-widget ownership; no text/range proof by itself. */
+CRMD_API uint64_t crmd_selection_interaction(void);
 /* Borrowed multiline-input geometry, immediate frame-local use only.
  * Caller owns decoration/navigation policy. Query never changes focus/selection. */
 typedef struct crmd_text_view {

@@ -1,13 +1,13 @@
 {
   "ok": true,
-  "runStartedAt": "2026-10-29T07:24:23.847Z",
+  "runStartedAt": "2026-10-29T21:07:08.542Z",
   "platform": "win32",
   "architecture": "x64",
   "build": {
-    "builtAt": "2026-10-29T07:14:50.233Z",
+    "builtAt": "2026-10-29T21:07:08.439Z",
     "zig": "0.17.0",
     "generatorZig": "0.17.0",
-    "sourceTreeSha256": "324a3961154d7cce17576f1ac071c792ae6d2981f2265598a8c4dbbe55cdac80"
+    "sourceTreeSha256": "3a6a07000082e971743b8289c22b8c52faf8706abe2672a0d8e45175e1f6dce4"
   },
   "cjit": "1.2.0",
   "dependencies": {
@@ -41,8 +41,8 @@
     "patch": "Guard IM_NODEBUGSTEP; strict original-input RichMd source-selection snapshot with explicit run provenance"
   },
   "dll": {
-    "bytes": 2647552,
-    "sha256": "a1430129aadf7e55eee127e1905a192bb1b0aa55692e917f4c88d2ece8db80a7",
+    "bytes": 2648064,
+    "sha256": "919c88a3c83ebb443b9bff8423eff830db2fbb0541f78fd455c10a11ed30cb54",
     "imports": [
       "d3d11.dll",
       "D3DCOMPILER_47.dll",
@@ -64,7 +64,7 @@
       "api-ms-win-crt-multibyte-l1-1-0.dll"
     ]
   },
-  "checkerSha256": "5c6648ed4e5e19082c663fea7fca76fd58fe6c84d326f2893544f07f5494fe2b",
+  "checkerSha256": "624461524c892ad2848d09dc2d6a44a7af5ebd8b62228fee58f1e408829165e5",
   "results": [
     {
       "name": "zig",
@@ -527,7 +527,7 @@
         "links": 0,
         "exercise": false,
         "copied_bytes": 0,
-        "raw_status": 0,
+        "raw_status": 2,
         "raw_begin": 0,
         "raw_end": 0,
         "had_exact": 1,
@@ -538,6 +538,25 @@
         "height": 901,
         "brightPreviewPixels": 91,
         "sha256": "5b903fb324e843226cf37f91da2e8e0ad790513f1bb0abd8b279ec9def89ab2b"
+      }
+    },
+    {
+      "name": "zig",
+      "case": "code-child-selected",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 482,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 1
       }
     },
     {
@@ -1058,7 +1077,7 @@
         "links": 0,
         "exercise": false,
         "copied_bytes": 0,
-        "raw_status": 0,
+        "raw_status": 2,
         "raw_begin": 0,
         "raw_end": 0,
         "had_exact": 1,
@@ -1069,6 +1088,25 @@
         "height": 901,
         "brightPreviewPixels": 91,
         "sha256": "5b903fb324e843226cf37f91da2e8e0ad790513f1bb0abd8b279ec9def89ab2b"
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "code-child-selected",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 482,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 1
       }
     },
     {

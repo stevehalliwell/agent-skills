@@ -7,6 +7,7 @@
 #include <wchar.h>
 #include "workspace.h"
 #include "reveal.h"
+#include "inspect.h"
 __declspec(dllimport) LPWSTR *WINAPI CommandLineToArgvW(LPCWSTR, int *);
 static int checks, edit_after_read;
 void gui_model_after_read(const char *path) {
@@ -38,6 +39,13 @@ int main(void) {
     edited = VirtualAlloc(NULL, GUI_TEXT + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     external = VirtualAlloc(NULL, GUI_TEXT + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     CHECK(workspace && edited && external && gui_workspace_init(workspace, project));
+    {
+        gui_inspection *empty = VirtualAlloc(NULL, sizeof(*empty), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        char json[1024]; CHECK(empty);
+        CHECK(gui_inspection_snapshot(workspace, empty) && !empty->header.has_document && !empty->header.length);
+        CHECK(gui_inspection_json(empty, json, sizeof(json)) && strstr(json, "\"document\":null"));
+        VirtualFree(empty, 0, MEM_RELEASE);
+    }
     CHECK(gui_open_document(workspace, "records/tasks/first.md")); first = workspace->active; tab = &workspace->tabs[first];
     for (i = 0; i < workspace->navigation->count; i++) if (!strcmp(workspace->navigation->documents[i].path, tab->path)) {
         int j; attendant_document_info *document = &workspace->navigation->documents[i];
@@ -54,6 +62,56 @@ int main(void) {
     CHECK(gui_set_document_text(workspace, first, edited));
     tab->selection_start = (int)(strstr(tab->text, "Model selection: ") - tab->text) + 17;
     tab->selection_end = tab->selection_start + (int)strlen(selected);
+    {
+        gui_inspection *snapshot = VirtualAlloc(NULL, sizeof(*snapshot), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        char json[8192]; int start = tab->selection_start, end = tab->selection_end;
+        CHECK(snapshot);
+        CHECK(gui_inspection_snapshot(workspace, snapshot) && snapshot->header.has_document && snapshot->header.status == GUI_SELECTION_NONE);
+        gui_selection_capture(workspace, first, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, end, start);
+        CHECK(gui_selection_current(workspace).start == start && gui_selection_current(workspace).end == end);
+        CHECK(gui_inspection_snapshot(workspace, snapshot));
+        CHECK(snapshot->header.dirty && snapshot->header.view == GUI_SELECTION_SOURCE && !strcmp(snapshot->text, selected));
+        CHECK(snapshot->header.end - snapshot->header.start == 10 && snapshot->header.start < (uint32_t)start);
+        CHECK(gui_inspection_json(snapshot, json, sizeof(json)) && strstr(json, "\"dirty\":true") && strstr(json, "unicode-codepoint"));
+        CHECK(!gui_inspection_json(snapshot, json, 10));
+        {
+            WNDCLASSA description = {0}; gui_reveal request = {0}; HWND client;
+            description.lpfnWndProc = DefWindowProcA; description.hInstance = GetModuleHandleA(NULL); description.lpszClassName = GUI_INSPECT_CLIENT_CLASS;
+            CHECK(RegisterClassA(&description));
+            client = CreateWindowExA(0, description.lpszClassName, "", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, description.hInstance, NULL);
+            CHECK(client != NULL); request.version = 1; snprintf(request.project, sizeof(request.project), "%s", workspace->root);
+            CHECK(gui_inspection_receive(NULL, client, workspace, 1, snapshot, &request, sizeof(request)) == GUI_INSPECT_BUSY);
+            CHECK(!gui_inspection_receive(NULL, client, workspace, 1, snapshot, &request, sizeof(request) - 1));
+            CHECK(!gui_inspection_receive(NULL, NULL, workspace, 1, snapshot, &request, sizeof(request)));
+            DestroyWindow(client);
+        }
+        {
+            size_t bytes = offsetof(gui_inspection, text) + snapshot->header.length + 1;
+            gui_inspection_header *packet = (gui_inspection_header *)external;
+            memcpy(external, snapshot, bytes); CHECK(gui_inspection_accept(snapshot, workspace->root, external, bytes));
+            memcpy(external + 1, snapshot, bytes); CHECK(gui_inspection_accept(snapshot, workspace->root, external + 1, bytes));
+            CHECK(!gui_inspection_accept(snapshot, workspace->root, external + 1, bytes - 1));
+            memcpy(external, snapshot, bytes); packet->version = 2; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
+            memcpy(external, snapshot, bytes); packet->end++; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
+            memcpy(external, snapshot, bytes); packet->project[0] = '!'; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
+            memcpy(external, snapshot, bytes); packet->view = 99; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
+            memcpy(external, snapshot, bytes); external[offsetof(gui_inspection, text)] = (char)0xff; CHECK(!gui_inspection_accept(snapshot, workspace->root, external, bytes));
+        }
+        gui_selection_capture(workspace, first, GUI_SELECTION_PREVIEW, GUI_SELECTION_UNSUPPORTED, 0, 0);
+        CHECK(gui_inspection_snapshot(workspace, snapshot) && snapshot->header.status == GUI_SELECTION_UNSUPPORTED && !snapshot->header.length && !*snapshot->text);
+        CHECK(gui_inspection_json(snapshot, json, sizeof(json)) && strstr(json, "\"text\":null"));
+        gui_selection_capture(workspace, first, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, start + 4, end);
+        CHECK(gui_selection_current(workspace).status == GUI_SELECTION_UNSUPPORTED);
+        gui_selection_capture(workspace, first, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, start, start);
+        CHECK(gui_selection_current(workspace).status == GUI_SELECTION_NONE);
+        gui_selection_capture(workspace, first, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, start, end);
+        CHECK(gui_open_document(workspace, workspace->tabs[second].path));
+        CHECK(gui_selection_current(workspace).status == GUI_SELECTION_NONE);
+        CHECK(gui_open_document(workspace, tab->path)); CHECK(gui_selection_current(workspace).status == GUI_SELECTION_NONE);
+        gui_selection_capture(workspace, first, GUI_SELECTION_PREVIEW, GUI_SELECTION_EXACT, start, end);
+        CHECK(gui_set_document_text(workspace, first, edited)); CHECK(gui_selection_current(workspace).status == GUI_SELECTION_NONE);
+        VirtualFree(snapshot, 0, MEM_RELEASE);
+    }
     CHECK(!gui_close_document(workspace, first, 0));
     CHECK(!gui_send_comment(workspace, first, tab->selection_start, tab->selection_end, "Must not send dirty text."));
     CHECK(gui_refresh(workspace)); CHECK(workspace->active == first && tab->dirty && !strcmp(tab->text, edited));

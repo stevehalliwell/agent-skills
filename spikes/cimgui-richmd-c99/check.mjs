@@ -55,7 +55,8 @@ const selectionCases = [
   { name: 'menu-copy', text: 'echo echo', mode: 'menu', range: [0, 9], copied: 9 },
   ...['switch', 'revision', 'change', 'empty'].map(mode => ({ name: mode, text: 'echo echo', mode, none: true, priorExact: true })),
   ...['collision', 'key-collision'].map(mode => ({ name: mode, text: collision, mode, none: true, priorExact: true })),
-  { name: 'code-child', text: 'plain\n\n```c\nx\n```', mode: 'widget', none: true, priorExact: true, child: true },
+  { name: 'code-child', text: 'plain\n\n```c\nx\n```', mode: 'widget', unsupported: true, priorExact: true, child: true },
+  { name: 'code-child-selected', text: 'plain\n\n```c\nx\n```', mode: 'widget-select', unsupported: true, priorExact: true, child: true },
   ...[
     ['bold-markup', '**echo**'], ['escape', 'echo \\* star'], ['entity', 'echo &nbsp; star'],
     ['soft-break', 'echo\nagain'], ['crlf-break', 'echo\r\nagain'], ['hard-break', 'echo  \nagain'],
@@ -120,6 +121,7 @@ for (const [name, command, prefix] of runners) {
       assert(test.none ? output.raw_status === 0 : output.raw_status !== 1, `${name}/${test.name}: never claim exact provenance`);
       assert.deepEqual([output.raw_begin, output.raw_end], [0, 0], 'Unclaimed output has no stale endpoints');
     }
+    if (test.unsupported) assert.equal(output.raw_status, 2, 'Widget-owned context is unsupported, not empty/source-mapped');
     if (test.priorExact) assert.equal(output.had_exact, 1, `${name}/${test.name}: started with a genuine exact selection`);
     if (test.child) assert.equal(output.widget_hovered, 1, 'Actual code child received click');
     if (test.copied) assert.equal(output.copied_bytes, test.copied, 'Context-menu Copy keeps genuine selection');

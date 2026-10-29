@@ -106,7 +106,10 @@ int gui_open_document(gui_workspace *workspace, const char *path) {
     int i, slot = -1;
     if (!gui_full_path(workspace->root, path, absolute)) return problem(workspace, "Cannot resolve bounded UTF-8 document path");
     for (i = 0; i < GUI_TABS; i++) {
-        if (workspace->tabs[i].used && !_stricmp(absolute, workspace->tabs[i].path)) { workspace->active = i; workspace->activation++; return 1; }
+        if (workspace->tabs[i].used && !_stricmp(absolute, workspace->tabs[i].path)) {
+            if (workspace->active != i) gui_selection_clear(workspace);
+            workspace->active = i; workspace->activation++; return 1;
+        }
         if (!workspace->tabs[i].used && slot < 0) slot = i;
     }
     if (slot < 0) return problem(workspace, "16 document tabs already open; close one first");
@@ -120,6 +123,7 @@ int gui_open_document(gui_workspace *workspace, const char *path) {
     if (!tab->text) return problem(workspace, "Cannot allocate document text");
     snprintf(tab->path, sizeof(tab->path), "%s", result.path); snprintf(tab->hash, sizeof(tab->hash), "%s", result.hash);
     tab->length = strlen(result.text); memcpy(tab->text, result.text, tab->length + 1);
+    gui_selection_clear(workspace);
     tab->used = 1; tab->text_revision = ++workspace->text_revision; document_metadata(tab, result); workspace->active = slot; workspace->tab_count++; workspace->activation++; return 1;
 }
 int gui_save_document(gui_workspace *workspace, int index) {
@@ -141,6 +145,7 @@ int gui_reload_document(gui_workspace *workspace, int index, int discard_dirty) 
 #endif
     tab->length = strlen(result.text); memcpy(tab->text, result.text, tab->length + 1);
     snprintf(tab->hash, sizeof(tab->hash), "%s", result.hash); tab->dirty = tab->external_change = 0;
+    if (workspace->selection.tab == index) gui_selection_clear(workspace);
     tab->selection_start = tab->selection_end = tab->reveal_selection = tab->anchor_stale = 0;
     tab->generation++; tab->text_revision = ++workspace->text_revision; document_metadata(tab, result); return 1;
 }
@@ -148,6 +153,7 @@ int gui_close_document(gui_workspace *workspace, int index, int discard_dirty) {
     gui_tab *tab = &workspace->tabs[index]; int i;
     if (!tab->used) return 1;
     if (tab->dirty && !discard_dirty) return problem(workspace, "Dirty document requires Save, Discard or Cancel");
+    if (workspace->selection.tab == index) gui_selection_clear(workspace);
     VirtualFree(tab->text, 0, MEM_RELEASE); memset(tab, 0, sizeof(*tab)); workspace->tab_count--;
     if (workspace->active == index) {
         workspace->active = -1;
@@ -170,6 +176,36 @@ int gui_set_document_text(gui_workspace *workspace, int index, const char *text)
     gui_tab *tab = &workspace->tabs[index]; size_t length = strlen(text);
     if (length > GUI_TEXT || !string_view_utf8_valid(string_view_from_cstr(text))) return problem(workspace, "Document must be valid UTF-8 up to 4 MiB");
     memcpy(tab->text, text, length + 1); tab->length = length; tab->dirty = 1; tab->generation++; tab->text_revision = ++workspace->text_revision; return 1;
+}
+void gui_selection_clear(gui_workspace *workspace) {
+    memset(&workspace->selection, 0, sizeof(workspace->selection)); workspace->selection.tab = -1;
+}
+void gui_selection_capture(gui_workspace *workspace, int index, gui_selection_view view, gui_selection_status status, int start, int end) {
+    gui_selection *selection = &workspace->selection;
+    const gui_tab *tab;
+    if (index < 0 || index >= GUI_TABS || index != workspace->active || !workspace->tabs[index].used) return;
+    tab = &workspace->tabs[index];
+    if (start > end) { int swap = start; start = end; end = swap; }
+    if (status == GUI_SELECTION_EXACT) {
+        if (start < 0 || end < start || (size_t)end > tab->length ||
+            (start && ((unsigned char)tab->text[start] & 0xc0) == 0x80) ||
+            (end && ((unsigned char)tab->text[end] & 0xc0) == 0x80)) status = GUI_SELECTION_UNSUPPORTED;
+        else if (start == end) status = GUI_SELECTION_NONE;
+    }
+    selection->view = view; selection->status = status; selection->tab = index;
+    selection->generation = tab->generation; selection->revision = tab->text_revision;
+    selection->start = status == GUI_SELECTION_EXACT ? start : 0;
+    selection->end = status == GUI_SELECTION_EXACT ? end : 0;
+}
+gui_selection gui_selection_current(const gui_workspace *workspace) {
+    gui_selection selection = workspace->selection;
+    const gui_tab *tab;
+    if (selection.tab < 0 || selection.tab >= GUI_TABS || selection.tab != workspace->active) goto empty;
+    tab = &workspace->tabs[selection.tab];
+    if (!tab->used || tab->generation != selection.generation || tab->text_revision != selection.revision) goto empty;
+    return selection;
+empty:
+    memset(&selection, 0, sizeof(selection)); selection.tab = -1; return selection;
 }
 int gui_send_comment(gui_workspace *workspace, int index, int start, int end, const char *comment) {
     gui_tab *tab = &workspace->tabs[index];
