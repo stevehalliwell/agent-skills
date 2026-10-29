@@ -2,7 +2,7 @@
 
 C99 domain tools over supplied Markdown folders. Source analysis stays read-only; skill graph supports transient rank/prerequisite edits and JSON handoff, never authoritative Markdown writes. Same `GD_Model` feeds matrix/connectivity and skill prerequisite/rank CLI results and views, plus challenge/route opportunity analysis shared with switchable Skills/Challenges exploration, focused exploration of already-consumed relationships, and MDA CLI/explorer queries. Shared graphics-free C99 layout handles transient positioning/sorting; cimgui supplies graph controls and source panel. No Node, agent, display, raylib, or `.attendant/` needed for headless commands.
 
-Sections: [Build](#build), [Unified explorer](#unified-explorer), [Commands](#commands), [Matrix meanings](#matrix-meanings), [View](#view), [Dynamic graph](#dynamic-graph), [Focused relationships](#focused-relationships), [Graph analysis layers](#graph-analysis-layers), [Diagnostics browser](#diagnostics-browser), [Skill prerequisites and ranks](#skill-prerequisites-and-ranks), [Challenge route opportunities](#challenge-route-opportunities), [MDA declared traces and questions](#mda-declared-traces-and-questions), [Draft editing and JSON handoff](#draft-editing-and-json-handoff), [Prepared experiments](#prepared-experiments), [Reader boundary](#reader-boundary), [Checks and dependencies](#checks-and-dependencies).
+Sections: [Build](#build), [Unified explorer](#unified-explorer), [Resource declaration report](#resource-declaration-report), [Commands](#commands), [Matrix meanings](#matrix-meanings), [View](#view), [Dynamic graph](#dynamic-graph), [Focused relationships](#focused-relationships), [Graph analysis layers](#graph-analysis-layers), [Diagnostics browser](#diagnostics-browser), [Skill prerequisites and ranks](#skill-prerequisites-and-ranks), [Challenge route opportunities](#challenge-route-opportunities), [MDA declared traces and questions](#mda-declared-traces-and-questions), [Draft editing and JSON handoff](#draft-editing-and-json-handoff), [Prepared experiments](#prepared-experiments), [Reader boundary](#reader-boundary), [Checks and dependencies](#checks-and-dependencies).
 
 ## Build
 
@@ -25,7 +25,7 @@ CJIT application code is unoptimized. Windows Zig 0.17.0 `zig cc -std=c99` headl
 ```sh
 zig cc -std=c99 -DHAVE_CONFIG_H=1 -DYAML_DECLARE_STATIC=1 \
   -I vendor/libyaml/include -I vendor/libyaml/src \
-  gd_core.c gd_output.c gd_layout.c gd_matrix_grid.c gd_layout_routes.c gd_layout_focus.c gd_focus.c gd_graph_analysis.c gd_graph_paths.c gd_graph_closure.c gd_graph_shapes.c gd_graph_overview.c gd_diagnostics.c gd_skills.c gd_skill_unlocks.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_explorer.c gd_cli.c vendor/libyaml/src/api.c \
+  gd_core.c gd_output.c gd_layout.c gd_matrix_grid.c gd_layout_routes.c gd_layout_focus.c gd_focus.c gd_graph_analysis.c gd_graph_paths.c gd_graph_closure.c gd_graph_shapes.c gd_graph_overview.c gd_diagnostics.c gd_skills.c gd_skill_unlocks.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_resource_output.c gd_explorer.c gd_cli.c vendor/libyaml/src/api.c \
   vendor/libyaml/src/parser.c vendor/libyaml/src/reader.c \
   vendor/libyaml/src/scanner.c -lshell32 -o build/gd-zig.exe
 ```
@@ -71,6 +71,26 @@ Implementation retains existing typed readers in at most four domain snapshots, 
 ```
 
 Checks use private copies of both examples, an owned bounded window and app-local state transitions. Verify six projections plus Grid, 4,095-column access, balanced 2,048×2,048 axes and empty axes, case/blank inspection, Grid switching/reset/reload, independent switching, multi-match Find/hidden counts, reset/draft isolation, qualified relationship centers, rank-validated selection, stale-edge recovery after edits/Undo, identity remapping and atomic reload rollback. Force raylib warning to stderr while stdout remains valid JSON. Allocation failures are injected; no OS input posted. Retain JSON/logs/screenshots and native source hashes in fresh ignored `build/explorer-checks-*`; original/private example hashes must stay unchanged. These checks do **not** establish real-pointer acceptance, layout readability or design usefulness. Review against [integrated notes](../../../reports/graph-query-research/integrated-review-notes.md); drawing/AA/jitter/selection-layout work and original-question audit remain open.
+
+## Resource declaration report
+
+`gd resources` exposes existing C99 direct-declaration graph without display, raylib or agent runtime. This is a bounded Review 02 report slice, **not directed resource-flow/routes delivery**.
+
+```powershell
+$native = 'skills/game-design-workbench/native'
+$game = 'skills/game-design-workbench/examples/little-plumber-guy-nes/game-design'
+& "$native/build/gd.exe" resources --interactions "interactions=$game/interactions" `
+    --mechanics "mechanics=$game/mechanics" --nouns "nouns=$game/nouns" `
+    --axes "axes=$game/axes" --resources "resources=$game/resources" `
+    --control-vars "control-vars=$game/control-vars" --json
+```
+
+- Require explicit `--interactions` and/or `--mechanics`. Optional `--nouns`, `--verbs`, `--axes`, `--resources`, `--control-vars`, `--systems` and `--related`. No discovery or source writes. Same reader, extraction and guarded call binding used by Resource views.
+- JSON `data`: `nodes`, `relations`, `routes`, `findings`; `--fields nodes,relations` selects sections. Standard `GD_AGENT=1`, piped JSON, explicit `--json`/`--format json|text`, error envelope and exit codes. Text prints scope summary plus JSON objects for retained nodes/relations; conditions/provenance remain available in either format.
+- Nodes retain case-local facets, explicit shared pool/axis facets, resource roles and supported unresolved placeholders. Opaque percent-escaped IDs derive from qualified source/case/participant/axis or explicit pool identity, never transient indices or machine paths. IDs survive unrelated source-index changes and project relocation. Unresolved axis occurrences stay distinct by field kind/local declaration position; no guessed axis identity or global actor merge. Duplicate consumed identities remain loader failures.
+- Case nodes retain whole raw context/participant guards and unknown declarations. Relations retain source/status/line, raw predicates/effects/expressions, typed target resolution, checked signed deltas, conditional preservation and case-specific call maps. Facet provenance is representative, not ownership. Role nodes retain declared noun and descriptive prose without converting it into constraints. Predicates are not consumed resources; incident rows are not independent AND requirements. Deltas are not final bounds-checked outcomes. Capped/unknown expressions retain unknown delta, not a promised award.
+- All supplied statuses/dispositions remain inspectable; no route eligibility implied. `ok: true` means report construction succeeded. `coverage.complete` stays **false**: routes, composed outcomes and applicability evaluation are unavailable. `data.routes.available: false` is **not** an empty/no-path result. `--from`/`--to`, route filtering and scenario options are not supported here; use `rules --case` for explicit conditional evaluation. Missing/unloaded scope remains distinct where readers support it; malformed syntax/types and invalid closed vocabularies remain errors.
+- Limits: 4,096 retained nodes, 32,768 relations, 67,108,864 construction work. Coverage reports retained counts, graph limits, unexamined cases/roles/invocation bindings/preservation, unknown facets/cases and typed-binding gaps. Serializer uses 16,384 bytes local endpoint-map scratch, no model/draft enlargement or dense allocation. Viewer does not yet display these opaque IDs or resource route witnesses.
 
 ## Resource graph preview
 

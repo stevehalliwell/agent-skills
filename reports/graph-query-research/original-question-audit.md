@@ -4,7 +4,7 @@
 
 Current tools answer declared relationships and selected conditional-rule hypotheses. They do not yet answer shared-outcome, actor-state, gameplay-role or resource-conversion questions end to end. Better layout does not close those gaps.
 
-- Baseline: `8e6e5d7`, accepted focus/readability checkpoint.
+- Inventory baseline: `8e6e5d7`, accepted focus/readability checkpoint. Later Grid and Resource-report continuations noted below; original nine CLI probes remain historical evidence, not rerun results.
 - Question authority: [original feedback](../../.pi/visualiser-review-notes.md). Current ownership: [todo.md](../../todo.md), Reviews 02–12 and Slice 6.
 - **Narrow answer:** stated operation returns the stated declared fact, with limits. Not acceptance of the broader design question.
 - **Partial:** source representation, kernel or inspection exists; requested question/result still lacks coverage.
@@ -12,13 +12,20 @@ Current tools answer declared relationships and selected conditional-rule hypoth
 - Visual support below comes from renderer/control inspection and prior review evidence. No new pointer test performed for this audit. CLI results below were run read-only.
 - No schemas, game facts, metrics, source winners or new canonical identities chosen.
 
+## Resource-report continuation
+
+- After accepted Grid checkpoint `89b54e3`, read-only `gd resources` report exposes existing C99 extraction to agents. No production direction, composed outcomes, route eligibility or actor-state applicability inferred.
+- Live retained counts: crate 30 nodes / 17 relations, 2 known deltas; plumber 522 nodes / 462 relations, 42 known and 30 unknown deltas. Counts describe retained declarations, not role diversity, economic importance or complete outcomes. Explicit unknown-condition/effect declarations remain on 15 crate and 161 plumber cases.
+- Plumber coin supply report retains `this + 1[coin]` as checked delta +1; `this + 1[coin] - {control-vars/coins-for-life}` and capped `min(this + 1[life], {control-vars/life-capacity})` retain unknown/unrecognized deltas. No unconditional award or complete conversion inferred.
+- Evidence: `native/build/checks-1d2e38ad01004a36a3bfc17edda2a42e/resources-{crate-puzzle,little-plumber-guy-nes}.json`. Reproduce through `native/test.ps1`; new Node resource tests check guards, deltas/caps, source identities, scoped calls, missing/unloaded roles, malformed input and explicit route unavailability. Full Resource semantics remain Review 02/09 work.
+
 ## Questions and current answers
 
 ### Q1 — What happens when A meets B, in particular states?
 
 **Partial.**
 
-- Visual: Interactions graph/legacy grid retains conditional cases and source inspection. Resource preview shows direct case/participant/axis declarations. No actor-pair/state explorer or automatic dispatch across all relevant rules.
+- Visual: unified Interactions Grid/graph retains conditional cases and source inspection. Resource preview shows direct case/participant/axis declarations. No actor-pair/state explorer or automatic dispatch across all relevant rules.
 - Agent: `rules` returns typed actors, predicates and effects. `rules --case ... --assume ... --context ...` evaluates a selected case under explicit hypotheses; returns provenance, unknowns and conditional writes.
 - Evidence E1–E3 below demonstrates actual outputs. A successful case evaluation is not a complete scene outcome or automatic case selection.
 - Owner: Review 01 foundations; Review 09 navigation; Review 10 question surface.
@@ -83,6 +90,7 @@ Current tools answer declared relationships and selected conditional-rule hypoth
 **Partial source model/inspection.**
 
 - Resource metadata references canonical nouns; definitions retain ownership/lifetime prose and control links. Mechanics own effects and existing resource references. MDA provides separate declared mechanic/system links.
+- Agent: `gd resources` now returns retained case/facet/role declarations, declared noun references and descriptive resource prose with provenance. This is not a resource-system participation/awareness/lifetime analysis.
 - No finished resource-system participation/awareness/lifetime question report. Player-held pools do not exhaust environmental opportunity framing.
 - Review 02 deliberately preserves existing frontmatter. Missing query coverage does not justify speculative system/axis mirrors or duplicate resource identities. Retain distinct roles/pools and unknown ownership.
 - Owner: Review 02 contract/consumer work; Review 09 integrated presentation. Frontmatter conformance remains Review 12, not a parallel validator here.
@@ -93,7 +101,7 @@ Current tools answer declared relationships and selected conditional-rule hypoth
 
 - Preview retains direct conditions, enum/quantity writes, checked signed deltas, preservation and guarded explicit invocation links. `gd_resource_graph.h` explicitly excludes route/composed-outcome expansion and production direction.
 - `rules --case` evaluates one simultaneous proposal with explicit mapped calls; it is not a sequence planner or resource-conversion route query.
-- Planned `gd resources --from ... --to ...` is not implemented. Do not present planned syntax as available. Current preview/overview is incidence, not flow; layout cannot create production edges.
+- `gd resources` now exposes direct nodes, incidence relations and findings, with `routes.available: false` and incomplete coverage. Directed `--from ... --to ...` queries remain unimplemented; unavailable is not no path. Current preview/overview is incidence, not flow; layout cannot create production edges.
 - Owner: Review 02 bounded headless graph/routes, then Review 09 presentation. Keep AND inputs, alternatives, pool identity, caps and unresolved conditions.
 
 ### Q10 — Which resources have few roles, and which connections are pivotal?

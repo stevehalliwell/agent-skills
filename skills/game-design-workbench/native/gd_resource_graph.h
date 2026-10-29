@@ -47,6 +47,9 @@ GD_ResourceGraph *gd_resource_graph_build(GD_Model *model, const GD_Rules *rules
    Call once; analysis must outlive graph and match its model/rules snapshots. */
 int gd_resource_graph_bind_calls(GD_ResourceGraph *graph, const GD_RuleAnalysis *analysis);
 void gd_resource_graph_destroy(GD_ResourceGraph *graph);
+/* Read-only retained incidence report, not directed routes/composed outcomes.
+   Valid graph from builder/bind_calls; borrowed snapshots must remain alive. */
+int gd_write_resource_result(FILE *output, const GD_Model *model, const GD_ResourceGraph *graph, int json, const char *fields);
 #ifdef GD_WITH_VIEW
 int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const char *screenshot);
 #endif

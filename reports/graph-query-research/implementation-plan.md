@@ -101,6 +101,24 @@ Acceptance: independent bin-count oracle, direction/mirroring/self/parallel/mixe
 - Step 6 final evidence: 60 current-source rendering probes at `422f843`, two examples x six views x five states. All source metadata matches HEAD; 30 explorer exits verify empty drafts; production view inputs/example trees remain unchanged. State seeding is confined to private rendering copies; active controls and input isolation are not accepted by this evidence.
 - Step 6 report: `reports/graph-query-research/graph-analysis-grand-tour.html`, template-derived self-contained file with 14 sections, 9 inline PNGs, selected authored-dependency diagram, exact commits, decision/rejected-option history, checks and open gates. Static checker passes. Actual file:// report passes network-blocked Chromium anchors/direct hash/Back-Forward, scroll progress/history, theme, keyboard, 320/390px mobile, reduced motion, no-JS reading and print PDF; 0 HTTP requests and 0 browser errors. No chart required; pinned inline Chart.js/license retained unchanged. Report committed separately; no merge/push/publication.
 
+## Mario-question review delivery — current independent assignment
+
+- Base: `89b54e3`; same dedicated branch/worktree above. User authorizes independent implementation and local checkpoint commits. No push/merge/publication. Existing verified Resource-report changes belong to assignment.
+- Goal: reach a review where user can test whether visual and headless tools help answer original Mario questions. Deliver source-backed demonstrations and explicit data/analysis gaps, not a claim that topology proves gameplay quality.
+- Keep `todo.md` as task authority. Font choice and manual pins deferred to UX review. Preserve existing windows, authoritative example facts/schemas, drafts/undo, typed meanings and atomic last-good reload.
+
+### Ordered steps
+
+1. Commit verified headless Resource report and this plan. Existing checks: 91/91 native+CLI, 27 Node passed/4 external skips, strict C99, graph/plain builds, source-hashed two-example app checks. Reports are direct incidence, routes explicitly unavailable.
+2. Pickup offset, focus animation and optional camera auto-fit. Reuse existing bounded focus scratch and renderer geometry. Provisional defaults: 220 ms smoothstep transitions, interrupt from displayed pose, interpolate only permitted coordinates, keep roots fixed; no overshoot. Toggle auto-fit defaults on to retain existing behavior; off suppresses focus-generated camera changes including focus-off restoration, not explicit F/Find. Per-pane state, resets local; no animation-driven analytical scope changes. Test endpoints, interruptions, bands/roots, finite time and camera guards; manually review later.
+3. Bounded Resource conditional witnesses and shared viewer controls. Follow Review 02 contract: typed debit/credit/enabling meanings, whole activation guards, side requirements, status eligibility, stable selectors, alternatives/cycles/depth/work limits. Reuse shared rule math/composition; never traverse raw incidence as production. Unknown/unsupported composition must remain explicit, not a validated/no-path claim. Test synthetic silver/gold/wood/key and original data without adding facts.
+4. Revisit all 14 original-question groups with current tools. Retain exact CLI examples, data coverage and source-backed visual evidence. Identify answered, conditional/partial and unavailable questions; distinguish tool gaps from missing authored information. Do not invent semantic joins merely to improve coverage.
+5. Combined checks and self-contained offline decision/review report, committed separately. Include exact implementation commits, provisional choices, rejected alternatives actually considered, runnable review scenarios, failed/unrun checks and remaining risks. Review gate: user evaluates visual/analytical usefulness against Mario questions; font/pins remain later.
+
+### Current progress
+
+- Initial plan: independent assignment and checkpoint permission recorded. No new implementation yet. Resource report already verified in prior slice; staged with plan checkpoint.
+
 ## Comments
 
 - Broader resource routes/composed outcomes remain incomplete and separate.
