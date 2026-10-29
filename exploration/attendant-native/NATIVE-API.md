@@ -25,6 +25,10 @@ Save checks exact current hash, stages/flushed bytes, and rechecks original byte
 
 Feedback requires saved target hash, nonempty selected range/text, and nonempty human comment. Range counts complete saved file's Unicode code points; CR and LF each count. Body retains exact supplied comment bytes. Feedback does not save target or refresh projection; ordinary CLI preparation discovers files later.
 
+## Workspace discovery
+
+`attendant_read_workspace(session, project, &workspace)` reads configured source records plus immediate nonhidden root `.md` files. Does not correct source, create projection or create feedback collection. Returns document paths/names/collection, invalid/pending markers, diagnostic count and schema-declared reference links; unresolved targets stay NULL. Output and nested strings/references use normal borrowed request lifetime. GUI copies snapshot before next API call; failed refresh retains previous GUI view.
+
 ## Managed collection
 
 Canonical schema in `native-api.c`; alias `_meta_comments`, default `records/_meta_comments`. Complete declaration mapping must match v1; field order/comments need not match. Configured compatible alternate directory allowed.

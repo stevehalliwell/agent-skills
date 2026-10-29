@@ -146,7 +146,7 @@ Demo create/add-table names must not already exist; rerun acceptance to reset ge
 
 When configured `_meta_comments` has `status: [pending, resolved]`, native query/search append `meta_comments: {pending: N}` from same prepared read snapshot. Positive count prints concise reminder on stderr; reading does not resolve. Empty inbox reports zero silently; absent collection leaves output unchanged. Incompatible lifecycle reports `pending: null, error: "incompatible-schema"` with warning, not false zero. Count covers valid visible projected pending rows; malformed records retain normal diagnostics.
 
-This is discovery only: no automatic collection creation, extra FTS build, new messaging command or notices on doctor/validate/schema/sync/write/help. Full managed storage/GUI behavior and recent dependency gate: [GUI-PLAN.md](GUI-PLAN.md), [GUI-DEPENDENCIES.md](GUI-DEPENDENCIES.md). GUI/launcher not implemented by this slice.
+This is discovery only: no automatic collection creation, extra FTS build, new messaging command or notices on doctor/validate/schema/sync/write/help. Full managed storage/GUI behavior and recent dependency gate: [GUI-PLAN.md](GUI-PLAN.md), [GUI-DEPENDENCIES.md](GUI-DEPENDENCIES.md). Separate [C99 workspace GUI](gui/README.md) now builds/runs through CJIT or Zig: navigation, source/preview tabs, typed reference links and missing-target visibility. GUI editing/composer and preview source-range mapping remain in progress; installed launcher unchanged.
 
 ## Diagnostics and corrections
 
@@ -202,7 +202,7 @@ This is discovery only: no automatic collection creation, extra FTS build, new m
 - Float JSON uses tested round-trip formatting, not full ECMAScript serialization equivalence. Retain float syntax when a plain integer token would change value or select a rejected unsigned scalar. Source YAML always retains float syntax. Readback compares typed values, not serialized JSON text. Private cache/FTS keeps prior float spelling to preserve search terms; cache is not source reconstruction. Integer-index key ordering matches runner for FTS content. Differential tests compare shared-fixture JSON arrays semantically; focused tests separately check exact typed numbers.
 - Configured path source spelling stays untouched. Resolve paths for local filesystem access; DB paths need not travel across machines or repositories. Windows NLS classifies search words; general Unicode-category/version, long-path and UNC behavior remain unverified. No locale collation or ICU dependency.
 - Intentional `.mjs` differences: strict canonical timestamps instead of general date parsing; restricted flat YAML; exact typed integer handling without JavaScript safe-integer limits; deterministic byte-order search ties. Layout reuse remains tested on shared fixtures, not every input the JavaScript runner accepts.
-- No cross-file source transaction, simultaneous CLI/GUI protocol, body editor, migration/import, Git invocation, viewer or skill launcher rollout. Diagnostic messages and unsupported-input behavior are not complete `.mjs` equivalence.
+- CLI has no cross-file source transaction, simultaneous CLI/GUI protocol, body editor, migration/import, Git invocation or skill launcher rollout. Separate workspace GUI follows its own staged acceptance. Diagnostic messages and unsupported-input behavior are not complete `.mjs` equivalence.
 
 ## Dependencies and review
 

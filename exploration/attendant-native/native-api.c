@@ -69,6 +69,82 @@ static const char *regular_document(context *c, const char *path) {
         fail(c, "Document must be an existing regular file");
     return absolute;
 }
+static const char *reference_path(context *c, record *source, field *declared, const char *text) {
+    const char *slash = strchr(text, '/'), *name = slash ? slash + 1 : text;
+    const char *table = slash ? copy_text(c, text, slash - text) : source->owner->name;
+    int i;
+    if ((!slash && strcmp(declared->name, "depends_on")) || !*name ||
+        (strcmp(table, declared->reference) && (strcmp(declared->name, "depends_on") || strcmp(table, source->owner->name)))) return NULL;
+    for (i = 0; i < c->record_count; i++) {
+        record *target = &c->records[i];
+        if (!strcmp(table, target->owner->name) && target->validation_name && !strcmp(name, target->validation_name) && !target->front.problem)
+            return target->path;
+    }
+    return NULL;
+}
+attendant_result attendant_read_workspace(attendant_session *session, const char *project, attendant_workspace *workspace) {
+    context *c = request_begin(session);
+    const char *root;
+    attendant_document_info *documents;
+    int i, j, k, count;
+    WIN32_FIND_DATAW entry;
+    HANDLE scan;
+    if (workspace) memset(workspace, 0, sizeof(*workspace));
+    if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
+    if (!workspace) fail(c, "Missing workspace output");
+    input_text(c, project); root = full_path(c, ".", project);
+    load_source(c, root);
+    documents = allocate(c, MAX_RECORDS * sizeof(*documents)); count = c->record_count;
+    for (i = 0; i < c->record_count; i++) {
+        record *r = &c->records[i];
+        attendant_document_info *document = &documents[i];
+        value *status = lookup(&r->front, "status");
+        int references = 0;
+        document->path = r->path; document->collection = r->owner->name;
+        document->name = r->validation_name ? r->validation_name : strrchr(r->path, '\\') + 1;
+        document->invalid = r->blocked;
+        document->pending = !strcmp(r->owner->name, "_meta_comments") && status && status->kind == VALUE_STRING && !strcmp(status->text, "pending");
+        for (j = 0; j < r->owner->field_count; j++) {
+            field *f = &r->owner->fields[j];
+            value *v = lookup(&r->front, f->name);
+            if (!f->reference || !v) continue;
+            if (v->kind == VALUE_STRING) references++;
+            if (v->kind == VALUE_ARRAY) for (k = 0; k < v->count; k++) if (v->items[k].kind == VALUE_STRING) references++;
+        }
+        document->references = allocate(c, references * sizeof(attendant_reference));
+        for (j = 0; j < r->owner->field_count; j++) {
+            field *f = &r->owner->fields[j];
+            value *v = lookup(&r->front, f->name);
+            if (!f->reference || !v) continue;
+            for (k = 0; k < (v->kind == VALUE_ARRAY ? v->count : 1); k++) {
+                value *item = v->kind == VALUE_ARRAY ? &v->items[k] : v;
+                attendant_reference *reference;
+                if (item->kind != VALUE_STRING) continue;
+                reference = &document->references[document->reference_count++];
+                reference->field = f->name; reference->value = item->text;
+                reference->target_path = reference_path(c, r, f, item->text);
+            }
+        }
+    }
+    scan = FindFirstFileW(wide(c, format_text(c, "%s\\*", root)), &entry);
+    if (scan == INVALID_HANDLE_VALUE) fail(c, "Cannot browse workspace directory");
+    c->scanning_directory = scan;
+    do {
+        const char *name = utf8(c, entry.cFileName), *path;
+        size_t length = strlen(name);
+        if ((entry.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) || *name == '.' || length < 3 || _stricmp(name + length - 3, ".md")) continue;
+        path = full_path(c, root, name);
+        for (i = 0; i < count; i++) if (!_stricmp(documents[i].path, path)) break;
+        if (i < count) continue;
+        if (count == MAX_RECORDS) fail(c, "Workspace document capacity exceeded");
+        documents[count].path = path; documents[count].name = name; documents[count++].collection = "(workspace)";
+    } while (FindNextFileW(scan, &entry));
+    if (GetLastError() != ERROR_NO_MORE_FILES) fail(c, "Cannot finish workspace enumeration");
+    FindClose(scan); c->scanning_directory = NULL;
+    workspace->root = root; workspace->documents = documents;
+    workspace->document_count = count; workspace->diagnostic_count = c->diagnostic_count;
+    return request_result(c, 1, root, NULL, NULL);
+}
 attendant_result attendant_read_document(attendant_session *session, const char *path) {
     context *c = request_begin(session);
     const char *absolute, *text;

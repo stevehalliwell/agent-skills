@@ -1,0 +1,188 @@
+{
+  "ok": true,
+  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-VbtQvZ",
+  "results": [
+    {
+      "compiler": "cjit",
+      "provenance": {
+        "builtAt": "2026-10-29T00:30:47.408Z",
+        "binaries": [
+          {
+            "path": "build/gui/attendant-gui-cjit.exe",
+            "sha256": "420eb075b9688f3881ada1aa4e329260c0b9331eb4197fd19c80f61f91d7a815"
+          },
+          {
+            "path": "build/gui/attendant-gui-cjit-check.exe",
+            "sha256": "979e0bdaa075f92a7aa91628bd76c0afdd7681c44c34b7420a542b59b81b0965"
+          },
+          {
+            "path": "build/gui/model-check-cjit.exe",
+            "sha256": "20fa57dfee1be2470c6aac2aebfbd70558aa099ea130b9542d8822fc63c82cce"
+          }
+        ],
+        "stack": {
+          "sha256": "1f0b445a6311f4ad0e0f44c41fcfbcaee360d754771fb8ac9ac1a62a7bf444ba",
+          "dllSha256": "f80b6d790dd100c0db6391da78150cbc3136d2ad62d3eca329b3cbab60ab0de2",
+          "dependencies": {
+            "dependencies": [
+              [
+                "cimgui",
+                "https://github.com/cimgui/cimgui.git",
+                "2a6a93fccd10f275ee9206167dc9698f6f00fac1"
+              ],
+              [
+                "cimgui/imgui",
+                "https://github.com/ocornut/imgui.git",
+                "c1aaac65e896a45f81f47a4d68f9959e0f86c859"
+              ],
+              [
+                "richmd",
+                "https://github.com/pthom/imgui_rich_md.git",
+                "609039721f838108251520079fff79011cf46659"
+              ],
+              [
+                "richmd/external/md4c",
+                "https://github.com/mity/md4c.git",
+                "481fbfbdf72daab2912380d62bb5f2187d438408"
+              ],
+              [
+                "luajit",
+                "https://github.com/LuaJIT/LuaJIT.git",
+                "a4c064539ea931274d407e1249b4bb575424a0f4"
+              ]
+            ],
+            "patch": "Guard IM_NODEBUGSTEP so generator can suppress debug-only attributes"
+          }
+        }
+      }
+    },
+    {
+      "compiler": "cjit",
+      "output": {
+        "ok": true,
+        "frames": 30,
+        "tabs": 1,
+        "vertices": 4502
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1992,
+        "sha256": "09fa8c46b4d9328ae5b25e1daa40254c1e3aba704325972ef48ebaddf5f5d4f8"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "interaction": {
+        "ok": true,
+        "frames": 30,
+        "tabs": 2,
+        "vertices": 3106
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1411,
+        "sha256": "89dcf4610b959127fa29799acd0565081755c6cc386fc7510cd039cdeccf8c85"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "model": {
+        "ok": true,
+        "checks": 42
+      }
+    },
+    {
+      "compiler": "zig",
+      "provenance": {
+        "builtAt": "2026-10-29T00:30:48.465Z",
+        "binaries": [
+          {
+            "path": "build/gui/attendant-gui-zig.exe",
+            "sha256": "db60adf31ce84dee5209082e5ffc5fc070797b8dfbf1831fbc23f71d1b08261c"
+          },
+          {
+            "path": "build/gui/attendant-gui-zig-check.exe",
+            "sha256": "30ca296d2f74c188ec9d0762200f4ba480fc0fdb5df0a34fa379b3e175d06255"
+          },
+          {
+            "path": "build/gui/model-check-zig.exe",
+            "sha256": "4d81d4d919bd88ae7b33a68ca1db5e9b419cb4783e7c98bd77e50f3eb40c8e28"
+          }
+        ],
+        "stack": {
+          "sha256": "1f0b445a6311f4ad0e0f44c41fcfbcaee360d754771fb8ac9ac1a62a7bf444ba",
+          "dllSha256": "f80b6d790dd100c0db6391da78150cbc3136d2ad62d3eca329b3cbab60ab0de2",
+          "dependencies": {
+            "dependencies": [
+              [
+                "cimgui",
+                "https://github.com/cimgui/cimgui.git",
+                "2a6a93fccd10f275ee9206167dc9698f6f00fac1"
+              ],
+              [
+                "cimgui/imgui",
+                "https://github.com/ocornut/imgui.git",
+                "c1aaac65e896a45f81f47a4d68f9959e0f86c859"
+              ],
+              [
+                "richmd",
+                "https://github.com/pthom/imgui_rich_md.git",
+                "609039721f838108251520079fff79011cf46659"
+              ],
+              [
+                "richmd/external/md4c",
+                "https://github.com/mity/md4c.git",
+                "481fbfbdf72daab2912380d62bb5f2187d438408"
+              ],
+              [
+                "luajit",
+                "https://github.com/LuaJIT/LuaJIT.git",
+                "a4c064539ea931274d407e1249b4bb575424a0f4"
+              ]
+            ],
+            "patch": "Guard IM_NODEBUGSTEP so generator can suppress debug-only attributes"
+          }
+        }
+      }
+    },
+    {
+      "compiler": "zig",
+      "output": {
+        "ok": true,
+        "frames": 30,
+        "tabs": 1,
+        "vertices": 4494
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1984,
+        "sha256": "7d2647fec9f738bdb35313bedf6d038e4fc250e85f065974002a69fb5508e2b4"
+      }
+    },
+    {
+      "compiler": "zig",
+      "interaction": {
+        "ok": true,
+        "frames": 30,
+        "tabs": 2,
+        "vertices": 3098
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1412,
+        "sha256": "24e92dbf1681dbd657f6bb91f262ce3e87cff9090b004a82288c05d6f84f9ce3"
+      }
+    },
+    {
+      "compiler": "zig",
+      "model": {
+        "ok": true,
+        "checks": 42
+      }
+    }
+  ]
+}
