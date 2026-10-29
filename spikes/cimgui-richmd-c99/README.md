@@ -4,7 +4,7 @@ Branch: `spike/cimgui-richmd-c99`.
 
 **Result: viable Windows x64 build/link/render path.** C99 application runs through CJIT against one Zig-built DLL containing matching cimgui, Dear ImGui 1.93.0, RichMd 1.0.0, and Win32/D3D11 backends. No ImGui Bundle or HelloImGui runtime.
 
-Exact original-Markdown selection ranges remain unimplemented. See [RESULTS.md](RESULTS.md).
+Strict original-Markdown selection export now passes both C99 hosts: only proven contiguous raw-input spans. Unsupported mappings stay unclaimed. See [RESULTS.md](RESULTS.md).
 
 ## Run
 
@@ -24,7 +24,7 @@ bash run-cjit.sh
 bash run-cjit.sh --frames 30 --shot build/manual.ppm
 ```
 
-Close window to exit interactive mode. Source editor changes memory only. Link clicks call C callback; they do not launch browser. Normal selection/copy uses Windows clipboard. Automated `--exercise` uses an in-process clipboard instead.
+Close window to exit interactive mode. Source editor changes memory only. Link clicks call C callback; they do not launch browser. Normal selection/copy uses Windows clipboard. Automated `--exercise` and `--selection` use an in-process clipboard instead.
 
 Zig-built C99 host uses same DLL:
 
@@ -62,9 +62,17 @@ Required narrow compatibility changes:
 2. Remove seven identical duplicate typedef declarations from generated C header. Duplicates require C11 and fail strict C99.
 3. Give three C-view anonymous unions names: `ImGuiStoragePair.value`, `ImGuiStyleMod.backup`, `ImGuiInputEvent.event`. C99 lacks anonymous unions. C++ definitions remain untouched. Runtime probe compares sizes and union offsets between C99 consumer and C++ DLL.
 
+4. `patch-richmd.mjs` reconstructs four exact RichMd changes from pinned Git source: explicit genuine/synthetic run provenance, fail-closed selection snapshot, empty-input invalidation and child-widget ownership. Reapplication reproduces exact bytes; verification rejects missing patch or arbitrary edits even in allowlisted files.
+
 Build rechecks revisions and tracked edits offline, then regenerates wrappers. Build manifest binds source-content hashes, generated headers, generator binary, Zig version, DLL, and native host. Check rejects changed inputs/binaries. Patch anchors fail closed on unexpected upstream content. Generated header's three named-union access paths are spike-specific; do not treat this as drop-in unmodified cimgui distribution.
 
 DLL/core build uses `-O3`; generation tools use `-O2`. No fast-math or explicit assertion removal. Keep `imgui_demo.cpp` because full generated cimgui exports reference demo entry points.
+
+## Raw source selection
+
+`crmd_render()` keeps upstream transformed rendering for compatibility. `crmd_render_raw(document_key, revision, markdown, length, &selection)` bypasses unindent/transclusions and copies `{status,begin,end}` while named render input remains alive. Status is `NONE`, `EXACT` or `UNSUPPORTED`; endpoints are end-exclusive UTF-8 bytes in current input and valid only for `EXACT`. Failure clears output.
+
+Full key/revision/input comparison invalidates prior selection; ImGui's small hash is not identity. Require genuine consecutive source runs, UTF-8 boundaries, no replacement and visible bytes exactly equal original interval. Never infer range from clipboard or search matching text. Generated/omitted/foreign content and widget-local interaction stay unclaimed. Source editor remains fallback; caller adds body offset and validates full saved file before feedback.
 
 ## Enabled surface
 
@@ -83,11 +91,12 @@ Windows links `d3dcompiler_47`, not generic `d3dcompiler` unavailable in tested 
 - Actual D3D11 buffer readback; extra preview geometry and bright pixels.
 - Byte-identical Zig/CJIT blank and rendered-preview images.
 - Edit source, click link through C callback, drag preview selection, copy through C callback. No global mouse/keyboard injection or test overwrite of Windows clipboard.
+- 54 raw-selection cases across Zig/CJIT: plain/Unicode/decomposed text, forward/reverse drag, repeated word, link-label interior, context-menu Copy, document/revision/input/empty invalidation, real source/key hash collisions, child-code ownership and unsupported markup/entities/breaks/tables/widgets/hidden/wrapped content.
 - Reject invalid frame bound with exit 2.
 - Guard tests reject tracked dependency drift and changed build inputs, replacing stale smoke success with failure.
 - Inspect PE import table for external language/compiler runtime DLLs.
 
-`build/results.json` retains current result, verified build identity, dependency pins, tool versions, DLL hash/imports, screenshot hashes. `build/build-manifest.json` retains individual build-input hashes. Failure replaces stale success with partial failure report. `build/*.{ppm,bmp,txt}` retain visual/log evidence. [evidence/windows-x64.json](evidence/windows-x64.json) records verified checkpoint.
+`build/results.json` retains current result, verified build identity, dependency pins, tool versions, DLL hash/imports, screenshot hashes. `build/build-manifest.json` retains individual build-input hashes. Failure replaces stale success with partial failure report. `build/*.{ppm,bmp,txt}` retain visual/log evidence. [evidence/windows-x64.json](evidence/windows-x64.json) preserves original six-run checkpoint; [evidence/source-selection-windows-x64.json](evidence/source-selection-windows-x64.json) records current 60-run selection follow-up.
 
 Input exercise uses fixed test-window coordinates/default scale. It does not qualify arbitrary DPI, accessibility, real physical input routing, device loss, minimized-window loops, long paths, or production editing/save behavior. No performance benchmark claimed.
 

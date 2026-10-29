@@ -101,6 +101,32 @@ try {
     assert.equal(body(readFileSync(commentPath, 'utf8')), body(comment));
     assert.equal(readFileSync(join(editProject, 'README.md'), 'utf8'), editedSource);
     report.results.push({ compiler, feedbackLoop: { pending: 1, resolved: true, nativeAndLegacy: true, bodyPreserved: true, fullSavedSourceCodePoints: [...editedSource].length } });
+    const previewProject = join(report.run, `${compiler} preview`); cpSync(join(root, 'fixtures/project'), previewProject, { recursive: true });
+    writeFileSync(join(previewProject, '.gui-test-owned'), 'Generated GUI acceptance fixture.\n');
+    const previewFile = join(previewProject, 'preview.md'), previewPrefix = '\ufeff---\r\ntitle: Preview mapping\r\n---\r\n';
+    const previewSource = previewPrefix + 'Preview café Ω 😀 from GUI.', savedPreview = previewSource + '!';
+    writeFileSync(previewFile, previewSource);
+    const previewBefore = inventory(previewProject), previewShot = join(report.run, `${compiler}-preview-feedback.ppm`);
+    const previewEditing = childJSON(join(root, `build/gui/attendant-gui-${compiler}-check.exe`), ['--project', previewProject, '--assets', join(stack, 'build/deps/richmd/assets'),
+      '--file', 'preview.md', '--frames', '70', '--shot', previewShot, '--exercise-preview']);
+    assert.equal(readFileSync(previewFile, 'utf8'), savedPreview, 'Preview Save & Send preserves BOM/CRLF/Unicode source bytes');
+    const previewAfter = inventory(previewProject);
+    for (const [path, hash] of Object.entries(previewBefore)) if (path !== previewFile && path !== join(previewProject, '.pi/attendant.tables')) assert.equal(previewAfter[path], hash);
+    for (const path of Object.keys(previewAfter)) if (!(path in previewBefore)) assert.equal(dirname(path), join(previewProject, 'records/_meta_comments'), 'GUI creates only managed source, never projection');
+    const previewPending = childJSON(cli, ['query', '-p', previewProject, '-s', sql]);
+    assert.equal(previewPending.meta_comments.pending, 1); assert.equal(previewPending.rows.length, 1);
+    const previewRow = previewPending.rows[0], previewComment = readFileSync(previewRow.source_path, 'utf8');
+    assert.equal(previewRow.target_path, previewFile); assert.equal(previewRow.target_hash, createHash('sha256').update(savedPreview).digest('hex'));
+    assert.deepEqual([previewRow.range_start, previewRow.range_end, previewRow.selected_text, previewRow.range_unit],
+      [[...previewPrefix].length, [...savedPreview].length, savedPreview.slice(previewPrefix.length), 'unicode-codepoint']);
+    assert.equal(body(previewComment), 'GUI preview context note\nSecond line.');
+    assert.deepEqual(childJSON(process.execPath, [legacy, 'query', '-p', previewProject, '-s', sql]).rows, previewPending.rows);
+    childJSON(cli, ['update', '-p', previewProject, '-c', '_meta_comments', '-i', JSON.stringify([{ name: previewRow.name, fields: { status: 'resolved' } }])]);
+    assert.equal(childJSON(cli, ['query', '-p', previewProject, '-s', sql]).meta_comments.pending, 0);
+    assert.equal(body(readFileSync(previewRow.source_path, 'utf8')), body(previewComment));
+    assert.equal(readFileSync(previewFile, 'utf8'), savedPreview);
+    report.results.push({ compiler, previewEditing, previewFeedback: { rangeStart: previewRow.range_start, rangeEnd: previewRow.range_end, selectedText: previewRow.selected_text,
+      bomCrLfUnicodePreserved: true, nativeAndLegacy: true, resolved: true, editorSelectionUnchanged: true }, screenshot: bitmap(previewShot) });
     const failedProject = join(report.run, `${compiler} saved-not-queued`); cpSync(project, failedProject, { recursive: true });
     writeFileSync(join(failedProject, '.gui-test-owned'), 'Generated GUI acceptance fixture.\n');
     const conflict = join(failedProject, 'records/_meta_comments'); mkdirSync(conflict); writeFileSync(join(conflict, 'user.md'), '# User-owned file\n');

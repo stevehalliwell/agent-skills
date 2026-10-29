@@ -16,6 +16,7 @@ typedef struct gui_tab {
     char *text;
     size_t length;
     int used, dirty, external_change, generation;
+    uint64_t text_revision;
     int selection_start, selection_end; /* Editor UTF-8 byte offsets. */
     int reveal_selection, anchor_stale;
     FILETIME modified;
@@ -34,6 +35,7 @@ typedef struct gui_workspace {
     gui_navigation *navigation;
     gui_tab tabs[GUI_TABS];
     int active, tab_count, activation;
+    uint64_t text_revision; /* Workspace-wide: tab reuse/reload/edit cannot reuse preview identity. */
     /* activation changes only after explicit human navigation, never refresh. */
 } gui_workspace;
 int gui_workspace_init(gui_workspace *workspace, const char *root);
@@ -45,7 +47,7 @@ int gui_reload_document(gui_workspace *workspace, int index, int discard_dirty);
 int gui_close_document(gui_workspace *workspace, int index, int discard_dirty);
 void gui_check_external(gui_workspace *workspace, int index);
 int gui_set_document_text(gui_workspace *workspace, int index, const char *text);
-int gui_send_comment(gui_workspace *workspace, int index, const char *comment);
+int gui_send_comment(gui_workspace *workspace, int index, int start, int end, const char *comment);
 int gui_open_link(gui_workspace *workspace, const char *url);
 int gui_open_comment_target(gui_workspace *workspace, int comment_index);
 size_t gui_body_offset(const char *text);

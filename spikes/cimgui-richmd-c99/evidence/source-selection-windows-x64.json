@@ -1,0 +1,1284 @@
+{
+  "ok": true,
+  "runStartedAt": "2026-10-29T02:24:27.361Z",
+  "platform": "win32",
+  "architecture": "x64",
+  "build": {
+    "builtAt": "2026-10-29T02:24:27.272Z",
+    "zig": "0.17.0",
+    "generatorZig": "0.17.0",
+    "sourceTreeSha256": "817084321dcda4805b3e4cbf8e2d53cebd18c756a1df39b669e097306f05c06d"
+  },
+  "cjit": "1.2.0",
+  "dependencies": {
+    "dependencies": [
+      [
+        "cimgui",
+        "https://github.com/cimgui/cimgui.git",
+        "2a6a93fccd10f275ee9206167dc9698f6f00fac1"
+      ],
+      [
+        "cimgui/imgui",
+        "https://github.com/ocornut/imgui.git",
+        "c1aaac65e896a45f81f47a4d68f9959e0f86c859"
+      ],
+      [
+        "richmd",
+        "https://github.com/pthom/imgui_rich_md.git",
+        "609039721f838108251520079fff79011cf46659"
+      ],
+      [
+        "richmd/external/md4c",
+        "https://github.com/mity/md4c.git",
+        "481fbfbdf72daab2912380d62bb5f2187d438408"
+      ],
+      [
+        "luajit",
+        "https://github.com/LuaJIT/LuaJIT.git",
+        "a4c064539ea931274d407e1249b4bb575424a0f4"
+      ]
+    ],
+    "patch": "Guard IM_NODEBUGSTEP; strict original-input RichMd source-selection snapshot with explicit run provenance"
+  },
+  "dll": {
+    "bytes": 2647040,
+    "sha256": "81b9b6617cee1567557c87bf55ef70aba7dd9f1703b5f49008f50400d8e0020b",
+    "imports": [
+      "d3d11.dll",
+      "D3DCOMPILER_47.dll",
+      "dwmapi.dll",
+      "GDI32.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-private-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "KERNEL32.dll",
+      "SHELL32.dll",
+      "USER32.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll",
+      "api-ms-win-crt-multibyte-l1-1-0.dll"
+    ]
+  },
+  "checkerSha256": "5c6648ed4e5e19082c663fea7fca76fd58fe6c84d326f2893544f07f5494fe2b",
+  "results": [
+    {
+      "name": "zig",
+      "preview": false,
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 2740,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 0,
+        "sha256": "b2ed71cb7954d24d03001fd2121411c85815b00f6e658e45a38a5bae43198ffc"
+      }
+    },
+    {
+      "name": "zig",
+      "preview": true,
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 4706,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 7615,
+        "sha256": "2f1cb2e453dfc6202322b9021e6ac62bf6d2b9517865b7ab779567d934967c0f"
+      }
+    },
+    {
+      "name": "cjit",
+      "preview": false,
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 2740,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 0,
+        "sha256": "b2ed71cb7954d24d03001fd2121411c85815b00f6e658e45a38a5bae43198ffc"
+      }
+    },
+    {
+      "name": "cjit",
+      "preview": true,
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 4706,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 7615,
+        "sha256": "2f1cb2e453dfc6202322b9021e6ac62bf6d2b9517865b7ab779567d934967c0f"
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "name": "zig",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 4766,
+        "links": 1,
+        "exercise": true,
+        "copied_bytes": 54,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 7642,
+        "sha256": "68eca1b5f818e89819e4d1d394d7f79bd31c7947105448a85543ee1c1f243228"
+      }
+    },
+    {
+      "name": "cjit",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 4766,
+        "links": 1,
+        "exercise": true,
+        "copied_bytes": 54,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 7642,
+        "sha256": "68eca1b5f818e89819e4d1d394d7f79bd31c7947105448a85543ee1c1f243228"
+      }
+    }
+  ],
+  "selections": [
+    {
+      "name": "zig",
+      "case": "plain",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 450,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 0,
+        "sha256": "f1939fecd996d7d5fb5de96955aa66e0cbe8ef4630aa0a4bbaab6ce60416f895"
+      }
+    },
+    {
+      "name": "zig",
+      "case": "unicode",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 434,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 13,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "literal-entity",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 498,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 15,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "decomposed",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 426,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 6,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "forward",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 450,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "reverse",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 450,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "repeated-word",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 454,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 5,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "link-label",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 586,
+        "links": 2,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 1,
+        "raw_end": 5,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "menu-copy",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 450,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 9,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 0,
+        "sha256": "f1939fecd996d7d5fb5de96955aa66e0cbe8ef4630aa0a4bbaab6ce60416f895"
+      }
+    },
+    {
+      "name": "zig",
+      "case": "switch",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 446,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "revision",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 446,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "change",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 438,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "empty",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 446,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "collision",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 542,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "key-collision",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 542,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "code-child",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 482,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 1
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 91,
+        "sha256": "5b903fb324e843226cf37f91da2e8e0ad790513f1bb0abd8b279ec9def89ab2b"
+      }
+    },
+    {
+      "name": "zig",
+      "case": "bold-markup",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 434,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "escape",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 470,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "entity",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 478,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "soft-break",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 466,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "crlf-break",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 466,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "hard-break",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 462,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "table",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 542,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "code",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 510,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "inline-code",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 438,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "hidden-details",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 618,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "zig",
+      "case": "wrapped-line",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 3890,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "plain",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 450,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 0,
+        "sha256": "f1939fecd996d7d5fb5de96955aa66e0cbe8ef4630aa0a4bbaab6ce60416f895"
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "unicode",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 434,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 13,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "literal-entity",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 498,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 15,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "decomposed",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 426,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 6,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "forward",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 450,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "reverse",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 450,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "repeated-word",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 454,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 5,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "link-label",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 586,
+        "links": 2,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 1,
+        "raw_begin": 1,
+        "raw_end": 5,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "menu-copy",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 450,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 9,
+        "raw_status": 1,
+        "raw_begin": 0,
+        "raw_end": 9,
+        "had_exact": 1,
+        "widget_hovered": 0
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 0,
+        "sha256": "f1939fecd996d7d5fb5de96955aa66e0cbe8ef4630aa0a4bbaab6ce60416f895"
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "switch",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 446,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "revision",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 446,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "change",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 438,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "empty",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 446,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "collision",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 542,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "key-collision",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 542,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "code-child",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 482,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 0,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 1,
+        "widget_hovered": 1
+      },
+      "screenshot": {
+        "width": 1264,
+        "height": 901,
+        "brightPreviewPixels": 91,
+        "sha256": "5b903fb324e843226cf37f91da2e8e0ad790513f1bb0abd8b279ec9def89ab2b"
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "bold-markup",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 434,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "escape",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 470,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "entity",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 478,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "soft-break",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 466,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "crlf-break",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 466,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "hard-break",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 462,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "table",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 542,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "code",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 510,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "inline-code",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 438,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "hidden-details",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 618,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    },
+    {
+      "name": "cjit",
+      "case": "wrapped-line",
+      "output": {
+        "ok": true,
+        "imgui": "1.93.0",
+        "richmd": "1.0.0",
+        "frames": 30,
+        "vertices": 3890,
+        "links": 0,
+        "exercise": false,
+        "copied_bytes": 0,
+        "raw_status": 2,
+        "raw_begin": 0,
+        "raw_end": 0,
+        "had_exact": 0,
+        "widget_hovered": 0
+      }
+    }
+  ]
+}

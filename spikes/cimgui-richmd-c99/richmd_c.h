@@ -2,7 +2,7 @@
 #define SPIKE_RICHMD_C_H
 /* C99 ABI. No C++ types, allocations, or exceptions cross this boundary.
  * Single UI thread/context. UTF-8 strings borrowed for duration of each call.
- * This experimental ABI does not export source selection ranges. */
+ * Raw selection export accepts only proven contiguous original-input spans. */
 #include <stddef.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -24,6 +24,14 @@ CRMD_API int crmd_init(void *window, const char *assets_folder, crmd_link_callba
 CRMD_API intptr_t crmd_message(void *window, unsigned int message, uintptr_t wparam, intptr_t lparam);
 CRMD_API int crmd_begin_frame(void);
 CRMD_API int crmd_render(const char *markdown, size_t length);
+typedef enum crmd_selection_status { CRMD_SELECTION_NONE, CRMD_SELECTION_EXACT, CRMD_SELECTION_UNSUPPORTED } crmd_selection_status;
+typedef struct crmd_source_selection {
+    int status;
+    size_t begin, end; /* Raw input UTF-8 byte offsets, end-exclusive; valid only for EXACT. */
+} crmd_source_selection;
+/* No unindent/transclusions. Full key/revision/input identity invalidates old selection.
+ * Snapshot copied while named render input remains alive. Output cleared on failure. */
+CRMD_API int crmd_render_raw(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_source_selection *selection);
 /* Render, then optionally screenshot, then present. */
 CRMD_API int crmd_end_frame(void);
 CRMD_API int crmd_present(void);

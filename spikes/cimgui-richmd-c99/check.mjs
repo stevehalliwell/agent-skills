@@ -3,7 +3,7 @@
 // Requires build.sh first. Saves PPM and BMP evidence in ignored build/.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, statSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, statSync, rmSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,11 +41,34 @@ function screenshot(path) {
   writeFileSync(path.replace(/\.ppm$/, '.bmp'), bitmap);
   return { width, height, brightPreviewPixels: bright, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
-const results = [], interactions = [];
+const results = [], interactions = [], selections = [];
+const collision = 'text 308a0945c21a0320\ntext 3d806b964d5618d8'; // Actual ImGui CRC32C collision; host verifies equality.
+const selectionCases = [
+  { name: 'plain', text: 'echo echo', mode: 'all', range: [0, 9] },
+  { name: 'unicode', text: 'café Ω 😀', mode: 'all', range: [0, Buffer.byteLength('café Ω 😀')] },
+  { name: 'literal-entity', text: 'echo &amp; star', mode: 'all', range: [0, 15] },
+  { name: 'decomposed', text: 'cafe\u0301', mode: 'all', range: [0, Buffer.byteLength('cafe\u0301')] },
+  { name: 'forward', text: 'echo echo', mode: 'forward', range: [0, 9] },
+  { name: 'reverse', text: 'echo echo', mode: 'reverse', range: [0, 9] },
+  { name: 'repeated-word', text: 'echo echo', mode: 'word', range: [5, 9] },
+  { name: 'link-label', text: '[echo](attendant://tasks/example)', mode: 'label', range: [1, 5] },
+  { name: 'menu-copy', text: 'echo echo', mode: 'menu', range: [0, 9], copied: 9 },
+  ...['switch', 'revision', 'change', 'empty'].map(mode => ({ name: mode, text: 'echo echo', mode, none: true, priorExact: true })),
+  ...['collision', 'key-collision'].map(mode => ({ name: mode, text: collision, mode, none: true, priorExact: true })),
+  { name: 'code-child', text: 'plain\n\n```c\nx\n```', mode: 'widget', none: true, priorExact: true, child: true },
+  ...[
+    ['bold-markup', '**echo**'], ['escape', 'echo \\* star'], ['entity', 'echo &nbsp; star'],
+    ['soft-break', 'echo\nagain'], ['crlf-break', 'echo\r\nagain'], ['hard-break', 'echo  \nagain'],
+    ['table', 'echo\n\n| a | b |\n|---|---|\n| c | d |'], ['code', 'echo\n\n```c\nint x;\n```'],
+    ['inline-code', 'echo `x`'], ['hidden-details', 'echo\n\n<details><summary>Hidden</summary>secret</details>'],
+    ['wrapped-line', 'echo '.repeat(200)],
+  ].map(([name, text]) => ({ name, text, mode: 'all' })),
+];
+mkdirSync('build/selection-fixtures', { recursive: true });
 const runStartedAt = new Date().toISOString();
 rmSync('build/results.json', { force: true });
 process.on('uncaughtException', error => {
-  writeFileSync('build/results.json', JSON.stringify({ ok: false, runStartedAt, error: error.message, results, interactions }, null, 2) + '\n');
+  writeFileSync('build/results.json', JSON.stringify({ ok: false, runStartedAt, error: error.message, results, interactions, selections }, null, 2) + '\n');
   console.error(error);
   process.exitCode = 1;
 });
@@ -78,6 +101,29 @@ for (const [name, command, prefix] of runners) {
   const interaction = JSON.parse(interactive.stdout.trim());
   assert.equal(interaction.exercise, true); assert.equal(interaction.links, 1); assert(interaction.copied_bytes > 0);
   interactions.push({ name, output: interaction, screenshot: screenshot(`build/${name}-interaction.ppm`) });
+  for (const test of selectionCases) {
+    const source = `build/selection-fixtures/${test.name}.md`;
+    writeFileSync(source, test.text);
+    const shot = ['plain', 'code-child', 'menu-copy'].includes(test.name) ? `build/${name}-selection-${test.name}.ppm` : null;
+    const run = spawnSync(command, [...prefix, ...common, '--frames', '30', '--raw-file', resolve(source), '--selection', test.mode,
+      ...(shot ? ['--shot', shot] : [])], { encoding: 'utf8', timeout: 60000, maxBuffer: 2 * 1024 * 1024 });
+    writeFileSync(`build/${name}-selection-${test.name}.txt`, run.stdout + run.stderr);
+    assert.equal(run.status, 0, `${name}/${test.name}: ${run.error || run.stderr}`);
+    const output = JSON.parse(run.stdout.trim());
+    const row = { name, case: test.name, output, ...(shot ? { screenshot: screenshot(shot) } : {}) };
+    selections.push(row);
+    assert.equal(readFileSync(source, 'utf8'), test.text, 'Selection check leaves source file unchanged');
+    if (test.range) {
+      assert.equal(output.raw_status, 1, `${name}/${test.name}: exact original-input span`);
+      assert.deepEqual([output.raw_begin, output.raw_end], test.range, `${name}/${test.name}: original byte endpoints`);
+    } else {
+      assert(test.none ? output.raw_status === 0 : output.raw_status !== 1, `${name}/${test.name}: never claim exact provenance`);
+      assert.deepEqual([output.raw_begin, output.raw_end], [0, 0], 'Unclaimed output has no stale endpoints');
+    }
+    if (test.priorExact) assert.equal(output.had_exact, 1, `${name}/${test.name}: started with a genuine exact selection`);
+    if (test.child) assert.equal(output.widget_hovered, 1, 'Actual code child received click');
+    if (test.copied) assert.equal(output.copied_bytes, test.copied, 'Context-menu Copy keeps genuine selection');
+  }
   const bad = spawnSync(command, [...prefix, ...common, '--frames', '0'], { encoding: 'utf8', timeout: 15000 });
   assert.equal(bad.status, 2, `${name}: invalid frame bound rejected`);
 }
@@ -116,6 +162,6 @@ const report = { ok: true, runStartedAt, platform: process.platform, architectur
   build: { builtAt: build.builtAt, zig: build.zig, generatorZig: build.generatorZig, sourceTreeSha256: build.sourceTreeSha256 },
   cjit: cjitVersion,
   dependencies: build.dependencies, dll: { bytes: statSync('build/bin/cimgui_richmd.dll').size,
-    sha256: createHash('sha256').update(dll).digest('hex'), imports: importedDlls }, results, interactions };
+    sha256: createHash('sha256').update(dll).digest('hex'), imports: importedDlls }, checkerSha256: hash('check.mjs'), results, interactions, selections };
 writeFileSync('build/results.json', JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify(report, null, 2));

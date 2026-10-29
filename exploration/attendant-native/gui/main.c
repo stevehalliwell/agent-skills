@@ -18,11 +18,14 @@ typedef struct gui_app {
     int request_exit, shown_activation, bound_reached, exit_cancelled;
     gui_action pending_action;
     int pending_tab, pending_open, composer_active, composer_open, composer_tab, feedback_filter;
+    int composer_start, composer_end, composer_from_preview;
     char comment[64 * 1024];
     DWORD last_poll;
     ImFont *source_font;
 #ifdef ATTENDANT_GUI_TESTING
     int exercise, reference_clicks, edit_exercise, save_fail_exercise, cancel_clicks, sent_comments, target_clicks, undo_seen, saved_not_queued;
+    int preview_exercise, preview_exact_seen, preview_dirty_send;
+    ImVec2 preview_position, preview_comment_position;
     ImVec2 first_position, depends_position, editor_position, comment_position, send_position, cancel_position, composer_cancel_position, feedback_position, target_position;
 #endif
 } gui_app;
@@ -164,6 +167,7 @@ static void document_panel(gui_app *app, int index) {
     igBeginDisabled(tab->selection_start == tab->selection_end);
     if (igButton("Comment on source selection", zero)) {
         app->composer_tab = index; app->composer_active = app->composer_open = 1; app->comment[0] = 0;
+        app->composer_start = tab->selection_start; app->composer_end = tab->selection_end; app->composer_from_preview = 0;
         app->workspace.notice[0] = 0;
     }
 #ifdef ATTENDANT_GUI_TESTING
@@ -179,7 +183,7 @@ static void document_panel(gui_app *app, int index) {
     if (tab->reveal_selection) igSetKeyboardFocusHere(0);
     if (igInputTextMultiline(editor_id, tab->text, GUI_TEXT + 1, editor,
         ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_AllowTabInput, source_selection, tab)) {
-        tab->length = strlen(tab->text); tab->dirty = 1; tab->anchor_stale = 0;
+        tab->length = strlen(tab->text); tab->dirty = 1; tab->anchor_stale = 0; tab->text_revision = ++app->workspace.text_revision;
     }
 #ifdef ATTENDANT_GUI_TESTING
     { ImVec2 position = igGetItemRectMin(); app->editor_position.x = position.x + 30; app->editor_position.y = position.y + 12; }
@@ -187,8 +191,34 @@ static void document_panel(gui_app *app, int index) {
     igPopFont();
     igSameLine(0, -1);
     igBeginChild_Str("preview", zero, ImGuiChildFlags_Borders, 0);
-    if (!crmd_render(tab->text + gui_body_offset(tab->text), strlen(tab->text + gui_body_offset(tab->text))))
-        snprintf(app->workspace.error, sizeof(app->workspace.error), "%s", crmd_error());
+    {
+        crmd_source_selection selected = {0};
+        size_t offset = gui_body_offset(tab->text), length = tab->length - offset;
+        int exact, rendered;
+        ImVec2 content = igGetContentRegionAvail(); content.x = 0; content.y = content.y > 54 ? content.y - 54 : 1;
+        igBeginChild_Str("preview-scroll", content, 0, 0);
+#ifdef ATTENDANT_GUI_TESTING
+        app->preview_position = igGetCursorScreenPos(); app->preview_position.x += 2; app->preview_position.y += 10;
+#endif
+        rendered = crmd_render_raw(tab->path, tab->text_revision, tab->text + offset, length, &selected);
+        if (!rendered) snprintf(app->workspace.error, sizeof(app->workspace.error), "%s", crmd_error());
+        exact = rendered && selected.status == CRMD_SELECTION_EXACT && selected.begin < selected.end && selected.end <= length;
+#ifdef ATTENDANT_GUI_TESTING
+        if (exact) app->preview_exact_seen = 1;
+#endif
+        igEndChild();
+        igBeginDisabled(!exact);
+        if (igButton("Comment on preview selection", zero)) {
+            app->composer_tab = index; app->composer_active = app->composer_open = 1; app->comment[0] = 0;
+            app->composer_start = (int)(offset + selected.begin); app->composer_end = (int)(offset + selected.end); app->composer_from_preview = 1;
+            app->workspace.notice[0] = 0;
+        }
+#ifdef ATTENDANT_GUI_TESTING
+        app->preview_comment_position = item_center();
+#endif
+        igEndDisabled();
+        show_text(selected.status == CRMD_SELECTION_UNSUPPORTED ? "Selection crosses generated/omitted content; use source." : "Only exact original-source spans can be sent.");
+    }
     igEndChild();
 }
 static void draw_dialogs(gui_app *app) {
@@ -233,9 +263,10 @@ static void draw_dialogs(gui_app *app) {
     if (app->composer_open) { igOpenPopup_Str("Comment on saved source", 0); app->composer_open = 0; }
     if (igBeginPopupModal("Comment on saved source", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         gui_tab *tab = &workspace->tabs[app->composer_tab];
-        int start = tab->selection_start, end = tab->selection_end;
+        int start = app->composer_start, end = app->composer_end;
         if (start > end) { int swap = start; start = end; end = swap; }
         show_text(tab->path);
+        if (app->composer_from_preview) show_text("Exact original-source selection from raw preview.");
         igBeginChild_Str("selected source", selected_size, ImGuiChildFlags_Borders, 0);
         if (start >= 0 && end >= start && (size_t)end <= tab->length) igTextUnformatted(tab->text + start, tab->text + end);
         igEndChild();
@@ -249,8 +280,11 @@ static void draw_dialogs(gui_app *app) {
         igBeginDisabled(!*app->comment);
         if (igButton(tab->dirty ? "Save & Send" : "Send", zero)) {
             int saved = tab->dirty;
+#ifdef ATTENDANT_GUI_TESTING
+            if (app->preview_exercise && saved) app->preview_dirty_send = 1;
+#endif
             if (!saved || gui_save_document(workspace, app->composer_tab)) {
-                if (gui_send_comment(workspace, app->composer_tab, app->comment)) {
+                if (gui_send_comment(workspace, app->composer_tab, app->composer_start, app->composer_end, app->comment)) {
                     app->composer_active = 0; igCloseCurrentPopup();
 #ifdef ATTENDANT_GUI_TESTING
                     app->sent_comments++;
@@ -336,6 +370,24 @@ static int load_fonts(gui_app *app, const char *assets) {
 #ifdef ATTENDANT_GUI_TESTING
 static void exercise_input(gui_app *app, HWND window, int frame) {
     ImVec2 position;
+    if (app->preview_exercise) {
+        ImGuiIO *io = igGetIO_Nil();
+        if (frame >= 5 && frame <= 16) position = app->editor_position;
+        else if (frame >= 20 && frame <= 28) position = app->preview_position;
+        else if (frame >= 30 && frame <= 34) position = app->preview_comment_position;
+        else if (frame >= 44 && frame <= 48) position = app->send_position;
+        else position.x = position.y = -100;
+        if (position.x >= 0) crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+        if (frame == 5 || frame == 20 || frame == 30 || frame == 44) ImGuiIO_AddMouseButtonEvent(io, 0, true);
+        if (frame == 6 || frame == 21 || frame == 31 || frame == 45) ImGuiIO_AddMouseButtonEvent(io, 0, false);
+        if (frame == 8 || frame == 24) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, true);
+        if (frame == 8 || frame == 9) ImGuiIO_AddKeyEvent(io, ImGuiKey_End, frame == 8);
+        if (frame == 10 || frame == 26) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, false);
+        if (frame == 12) ImGuiIO_AddInputCharactersUTF8(io, "!");
+        if (frame == 24 || frame == 25) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 24);
+        if (frame == 38) ImGuiIO_AddInputCharactersUTF8(io, "GUI preview context note\nSecond line.");
+        return;
+    }
     if (app->edit_exercise) {
         gui_tab *tab = &app->workspace.tabs[app->workspace.active];
         if (frame == 18) app->undo_seen = strstr(tab->text, " GUI edit") == NULL;
@@ -382,7 +434,7 @@ int main(int argc, char **argv) {
     LPWSTR *arguments;
     int frame_limit = 0, frame = 0, code = 1, i, gui_ready = 0;
 #ifdef ATTENDANT_GUI_TESTING
-    int exercise = 0, edit_exercise = 0, save_fail_exercise = 0;
+    int exercise = 0, edit_exercise = 0, save_fail_exercise = 0, preview_exercise = 0;
 #endif
     bool running = true;
     HWND window = NULL;
@@ -401,6 +453,7 @@ int main(int argc, char **argv) {
         if (!strcmp(argv[i], "--help")) return usage(stdout, 0);
 #ifdef ATTENDANT_GUI_TESTING
         if (!strcmp(argv[i], "--exercise")) { exercise = 1; continue; }
+        if (!strcmp(argv[i], "--exercise-preview")) { preview_exercise = 1; continue; }
         if (!strcmp(argv[i], "--exercise-edit")) { edit_exercise = 1; continue; }
         if (!strcmp(argv[i], "--exercise-save-fail")) { edit_exercise = save_fail_exercise = 1; continue; }
 #endif
@@ -419,12 +472,12 @@ int main(int argc, char **argv) {
     if (!application) return 3;
     application->shown_activation = -1;
 #ifdef ATTENDANT_GUI_TESTING
-    application->exercise = exercise; application->edit_exercise = edit_exercise; application->save_fail_exercise = save_fail_exercise;
+    application->exercise = exercise; application->edit_exercise = edit_exercise; application->save_fail_exercise = save_fail_exercise; application->preview_exercise = preview_exercise;
 #endif
     if (!gui_workspace_init(&application->workspace, project)) { fprintf(stderr, "%s\n", application->workspace.error); goto cleanup; }
     if (initial) gui_open_document(&application->workspace, initial);
 #ifdef ATTENDANT_GUI_TESTING
-    if (edit_exercise) {
+    if (edit_exercise || preview_exercise) {
         char marker[GUI_PATH]; wchar_t wide[4096];
         snprintf(marker, sizeof(marker), "%s/.gui-test-owned", application->workspace.root);
         if (application->workspace.active < 0 || !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, marker, -1, wide, 4096) || GetFileAttributesW(wide) == INVALID_FILE_ATTRIBUTES) {
@@ -469,6 +522,15 @@ int main(int argc, char **argv) {
         if (!crmd_present()) goto cleanup;
     }
 #ifdef ATTENDANT_GUI_TESTING
+    if (preview_exercise) {
+        gui_workspace *workspace = &application->workspace;
+        gui_tab *tab = workspace->active >= 0 ? &workspace->tabs[workspace->active] : NULL;
+        if (!tab || application->sent_comments != 1 || !application->preview_exact_seen || !application->preview_dirty_send || !application->composer_from_preview ||
+            application->composer_start != (int)gui_body_offset(tab->text) || (size_t)application->composer_end != tab->length ||
+            tab->selection_start != tab->selection_end || dirty_documents(workspace)) {
+            fprintf(stderr, "GUI preview source mapping/Save & Send changed selection or failed\n"); goto cleanup;
+        }
+    }
     if (edit_exercise && !save_fail_exercise) {
         gui_workspace *workspace = &application->workspace;
         gui_tab *tab = workspace->active >= 0 ? &workspace->tabs[workspace->active] : NULL;

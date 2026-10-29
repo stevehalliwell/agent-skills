@@ -127,7 +127,7 @@ int gui_open_document(gui_workspace *workspace, const char *path) {
     if (!tab->text) return problem(workspace, "Cannot allocate document text");
     snprintf(tab->path, sizeof(tab->path), "%s", result.path); snprintf(tab->hash, sizeof(tab->hash), "%s", result.hash);
     tab->length = strlen(result.text); memcpy(tab->text, result.text, tab->length + 1);
-    tab->used = 1; document_metadata(tab, result); workspace->active = slot; workspace->tab_count++; workspace->activation++; return 1;
+    tab->used = 1; tab->text_revision = ++workspace->text_revision; document_metadata(tab, result); workspace->active = slot; workspace->tab_count++; workspace->activation++; return 1;
 }
 int gui_save_document(gui_workspace *workspace, int index) {
     gui_tab *tab = &workspace->tabs[index];
@@ -149,7 +149,7 @@ int gui_reload_document(gui_workspace *workspace, int index, int discard_dirty) 
     tab->length = strlen(result.text); memcpy(tab->text, result.text, tab->length + 1);
     snprintf(tab->hash, sizeof(tab->hash), "%s", result.hash); tab->dirty = tab->external_change = 0;
     tab->selection_start = tab->selection_end = tab->reveal_selection = tab->anchor_stale = 0;
-    tab->generation++; document_metadata(tab, result); return 1;
+    tab->generation++; tab->text_revision = ++workspace->text_revision; document_metadata(tab, result); return 1;
 }
 int gui_close_document(gui_workspace *workspace, int index, int discard_dirty) {
     gui_tab *tab = &workspace->tabs[index]; int i;
@@ -176,12 +176,11 @@ void gui_check_external(gui_workspace *workspace, int index) {
 int gui_set_document_text(gui_workspace *workspace, int index, const char *text) {
     gui_tab *tab = &workspace->tabs[index]; size_t length = strlen(text);
     if (length > GUI_TEXT || !string_view_utf8_valid(string_view_from_cstr(text))) return problem(workspace, "Document must be valid UTF-8 up to 4 MiB");
-    memcpy(tab->text, text, length + 1); tab->length = length; tab->dirty = 1; tab->generation++; return 1;
+    memcpy(tab->text, text, length + 1); tab->length = length; tab->dirty = 1; tab->generation++; tab->text_revision = ++workspace->text_revision; return 1;
 }
-int gui_send_comment(gui_workspace *workspace, int index, const char *comment) {
+int gui_send_comment(gui_workspace *workspace, int index, int start, int end, const char *comment) {
     gui_tab *tab = &workspace->tabs[index];
     attendant_feedback input = {0}; attendant_result result;
-    int start = tab->selection_start, end = tab->selection_end;
     size_t offset = 0; uint64_t point = 0;
     char *selected;
     if (tab->dirty) return problem(workspace, "Save & Send or Cancel required for dirty source");
@@ -261,12 +260,14 @@ int gui_open_link(gui_workspace *workspace, const char *url) {
     return problem(workspace, "No active document for relative link");
 }
 size_t gui_body_offset(const char *text) {
-    const char *line;
-    if (strncmp(text, "---\n", 4) && strncmp(text, "---\r\n", 5)) return 0;
-    for (line = strchr(text, '\n') + 1; line && *line; ) {
-        if (!strncmp(line, "---\n", 4)) return (size_t)(line + 4 - text);
-        if (!strncmp(line, "---\r\n", 5)) return (size_t)(line + 5 - text);
-        line = strchr(line, '\n'); if (line) line++;
+    const char *line = text + (!strncmp(text, "\xef\xbb\xbf", 3) ? 3 : 0);
+    if (strncmp(line, "---", 3) || (line[3] != '\r' && line[3] != '\n')) return 0;
+    line += 3; if (*line == '\r') line++; if (*line == '\n') line++;
+    while (*line) {
+        const char *end = line + strcspn(line, "\r\n"), *next = end;
+        if (*next == '\r') next++; if (*next == '\n') next++;
+        if (end - line == 3 && !memcmp(line, "---", 3)) return (size_t)(next - text);
+        line = next;
     }
     return 0;
 }

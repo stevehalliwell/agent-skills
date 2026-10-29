@@ -13,7 +13,7 @@ function run(command, args, cwd = process.cwd()) {
 }
 const sha256 = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const dependencies = JSON.parse(readFileSync('build/dependencies.json', 'utf8'));
-const paths = new Set(['host.c', 'richmd_c.cpp', 'richmd_c.h', 'build.sh', 'prepare.mjs', 'fix-generated.mjs', 'build-manifest.mjs']);
+const paths = new Set(['host.c', 'richmd_c.cpp', 'richmd_c.h', 'build.sh', 'prepare.mjs', 'patch-richmd.mjs', 'fix-generated.mjs', 'build-manifest.mjs']);
 for (const [name] of dependencies.dependencies) {
   const folder = `build/deps/${name}`;
   for (const entry of run('git', ['ls-files', '-z'], resolve(folder)).split('\0').filter(Boolean)) {

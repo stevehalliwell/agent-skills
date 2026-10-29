@@ -18,6 +18,21 @@ test('offline verification accepts pins and rejects tracked dependency edits', (
     assert.match(result.stderr, /Unexpected tracked dependency edit/);
   } finally { writeFileSync(path, original); }
 });
+test('source-selection patch is reproducible and rejects drift within allowlisted files', () => {
+  const path = 'build/deps/richmd/imgui_rich_md/internal/rich_md_renderer.cpp', original = readFileSync(path);
+  const pinned = spawnSync('git', ['show', 'HEAD:imgui_rich_md/internal/rich_md_renderer.cpp'], { cwd: 'build/deps/richmd' });
+  assert.equal(pinned.status, 0);
+  try {
+    writeFileSync(path, pinned.stdout);
+    const missing = node(['prepare.mjs', '--verify']);
+    assert.notEqual(missing.status, 0); assert.match(missing.stderr, /Missing source-selection patch/);
+    assert.equal(node(['--input-type=module', '-e', "import { patchRichMd } from './patch-richmd.mjs'; patchRichMd(false)"]).status, 0);
+    assert.deepEqual(readFileSync(path), original, 'Reapplication reproduces exact patched bytes');
+    writeFileSync(path, Buffer.concat([original, Buffer.from('\n// Drift probe.\n')]));
+    const drift = node(['prepare.mjs', '--verify']);
+    assert.notEqual(drift.status, 0); assert.match(drift.stderr, /Unexpected local RichMd edits/);
+  } finally { writeFileSync(path, original); }
+});
 test('changed build input invalidates previous smoke success without launching GUI', () => {
   const path = 'host.c', original = readFileSync(path), report = readFileSync('build/results.json');
   assert.equal(JSON.parse(report).ok, true, 'Run successful check.mjs first');

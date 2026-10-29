@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { patchRichMd, richMdPatchedFiles } from './patch-richmd.mjs';
 process.chdir(dirname(fileURLToPath(import.meta.url)));
 const verifyOnly = process.argv[2] === '--verify';
 if (process.argv.length > (verifyOnly ? 3 : 2)) throw new Error('Usage: node prepare.mjs [--verify]');
@@ -32,7 +33,7 @@ for (const [name, url, commit] of dependencies) {
   if (git(['rev-parse', 'HEAD'], path) !== commit) throw new Error(`Wrong revision: ${path}`);
   const allowed = new Set(name === 'cimgui' ? ['imgui', 'cimgui.h', 'cimgui.cpp',
     ...['constants', 'definitions', 'structs_and_enums'].flatMap(base => ['json', 'lua'].map(extension => `generator/output/${base}.${extension}`)),
-    'generator/output/overloads.txt'] : name === 'cimgui/imgui' ? ['imgui.h'] : []);
+    'generator/output/overloads.txt'] : name === 'cimgui/imgui' ? ['imgui.h'] : name === 'richmd' ? richMdPatchedFiles : []);
   for (const changed of git(['diff', 'HEAD', '--name-only'], path).split('\n').filter(Boolean))
     if (!allowed.has(changed)) throw new Error(`Unexpected tracked dependency edit: ${name}/${changed}`);
 }
@@ -48,5 +49,6 @@ const current = readFileSync(header, 'utf8').trimEnd().replaceAll('\r\n', '\n');
 if (current !== original && current !== patched) throw new Error('Unexpected local ImGui header edits; refusing overwrite');
 if (verifyOnly && current !== patched) throw new Error('Missing expected ImGui attribute patch; run node prepare.mjs');
 if (!verifyOnly) writeFileSync(header, patched + '\n');
-writeFileSync('build/dependencies.json', JSON.stringify({ dependencies, patch: 'Guard IM_NODEBUGSTEP so generator can suppress debug-only attributes' }, null, 2) + '\n');
+patchRichMd(verifyOnly);
+writeFileSync('build/dependencies.json', JSON.stringify({ dependencies, patch: 'Guard IM_NODEBUGSTEP; strict original-input RichMd source-selection snapshot with explicit run provenance' }, null, 2) + '\n');
 console.log(verifyOnly ? 'Dependency revisions and tracked edits verified offline.' : 'Pinned sources ready. Next: bash build.sh');

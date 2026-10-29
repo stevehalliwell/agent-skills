@@ -3,6 +3,7 @@
 set -euo pipefail
 if [[ "${1:-}" == --help ]]; then
   echo 'Usage: bash run-cjit.sh [--frames 1..6000 --shot FILE.ppm] [--no-preview] [--exercise]'
+  echo 'Selection check: --raw-file FILE --selection MODE (see host.c/check.mjs for cases)'
   echo 'No options: open interactive source editor and Markdown preview; close window to exit.'
   exit 0
 fi

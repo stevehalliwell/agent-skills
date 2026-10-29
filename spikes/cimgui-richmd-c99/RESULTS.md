@@ -4,9 +4,11 @@
 
 **Proceed with this stack for further GUI exploration.** Windows x64 CJIT can run C99 application against Zig-built DLL combining freshly regenerated cimgui, Dear ImGui 1.93.0, RichMd 1.0.0, and native Win32/D3D11 backends.
 
-This proves actual build, link, shared context, rendering, and C callbacks—not just C declarations. It does not complete Attendant GUI or original-source selection anchors.
+This proves actual build, link, shared context, rendering, and C callbacks—not just C declarations. Follow-up now proves strict contiguous original-input selection export. It does not complete Attendant GUI or general transformed-source mapping.
 
-## Verified 2026-10-28
+## Original checkpoint: 2026-10-28
+
+Following six-run evidence belongs original build, retained separately from source-selection follow-up below.
 
 Environment: Windows x64, Zig 0.17.0, CJIT 1.2.0, Node 24.16.0. Native application compilation uses strict C99 with `-pedantic-errors`; dependency/bridge compilation uses C++17. DLL uses `-O3`, no fast-math/assertion removal.
 
@@ -35,7 +37,7 @@ Machine-readable checkpoint: [evidence/windows-x64.json](evidence/windows-x64.js
 4. **Link available Windows libraries.** Zig uses `d3dcompiler_47`; CJIT requires explicit System32 library search path for application `user32` symbols.
 5. **Own image teardown.** RichMd default uploader queues CPU texture deletion for later renderer sweep. Private D3D11 image uploader instead frees owned views with Markdown cache lifetime. Fonts remain managed by ImGui renderer.
 
-No changes to installed vendor trees. No tool installation, Attendant integration, launcher switch, or commits.
+No changes to installed vendor trees or tool installation. Integrated workspace lives under [Attendant GUI](../../exploration/attendant-native/gui/README.md); launcher unchanged.
 
 ## Source-range finding
 
@@ -47,7 +49,15 @@ Independent source inspection found useful internal mapping, not a public getter
 - `rich_md.cpp`: ordinary `Render()` unindents and resolves transclusions before `RenderRaw()`. Internal offsets therefore need not address original file.
 - Code widgets, formulas, synthetic breaks, hidden content, and transclusions complicate exact anchors. Searching extracted text back into source is ambiguous.
 
-Current bridge deliberately exports no range. Follow-up should retain original Markdown, use stable document/revision identity, expose internal selection snapshot immediately after matching raw render, distinguish exact versus synthetic mappings, and convert valid UTF-8 byte boundaries to planned Unicode-code-point offsets. A selection spanning transclusions may require several source spans.
+## Original-source selection follow-up
+
+`patch-richmd.mjs` maintains exact changes to four pinned RichMd files. `prepare.mjs --verify` accepts only reproducible patched bytes, not arbitrary edits in allowlisted paths. `crmd_render_raw()` uses named exact input and copies POD snapshot before destruction. Full document key/revision/input comparison clears old ownership; ImGui's 32-bit hash is not identity.
+
+Require current fragment, nonempty UTF-8 boundaries, consecutive genuine original-input runs, no replacement and visible bytes exactly equal source slice. Synthetic/foreign content, gaps/overlap and widget-local interaction stay unclaimed. Empty input clears selection. Child-widget interaction clears stale surrounding selection; context-menu Copy still works. No source searching or clipboard inference.
+
+Current proof: **60 fresh real window/D3D runs**, both strict C99 hosts. Six original workflows rerun plus **54 selection cases**: forward/reverse drag, duplicate words, Unicode/supplementary/decomposed bytes, link-label interior, menu Copy, document/revision/input/empty changes, actual source/key hash collisions, child-code ownership and rejection across markup, escapes, omitted entities, synthetic breaks, tables, code/widgets, hidden content and wrapped text. Three guard tests pass, including exact patch reconstruction and allowlisted-file drift rejection. Invalid-context output clearing tested; no injected allocation-failure certification.
+
+Current build/checker/DLL identity and results: [evidence/source-selection-windows-x64.json](evidence/source-selection-windows-x64.json). Integrated GUI adds known body offset, freezes composer range without changing source selection, and validates against full saved Unicode-code-point range/hash; BOM/CRLF/supplementary Save & Send and native/`.mjs` resolution pass both compilers.
 
 ## Limits
 
@@ -56,9 +66,9 @@ Current bridge deliberately exports no range. Follow-up should retain original M
 - Pixel checks establish visible output, not complete Markdown conformance. Named-union ABI probes cover changed unions, not every exported cimgui function.
 - Direct import inspection is not transitive dependency certification.
 - Upstream missing-font assertions/OS faults/allocation aborts remain possible. C++ exception containment is not universal failure recovery.
-- No Markdown save, workspace tabs, collection feedback, file navigation, source anchors, or Git context implemented here.
+- Standalone host edits memory only; it has no save, workspace tabs, collection feedback, file navigation or Git context. Integrated workspace has separate acceptance. Exact-range proof covers conservative raw spans, not general Markdown/transclusion mappings.
 - No speed, startup, memory, deployment footprint, or release-readiness benchmark. Recorded DLL size is not total distribution size; fonts/assets and notices also required.
-- Compatibility patches need upkeep or upstream equivalents before durable adoption.
+- Compatibility/source-selection patches need upkeep or upstream equivalents. Replacements, whitespace-normalized wraps, hidden syntax and independent code widgets remain unsupported for preview feedback; source editor is fallback.
 
 ## Comments
 

@@ -46,7 +46,7 @@ int main(void) {
             if (!strcmp(reference->value, "missing")) { CHECK(!reference->target_path); references++; }
         }
     }
-    CHECK(references == 2);
+    CHECK(references == 2); CHECK(tab->text_revision > 0);
     CHECK(gui_open_link(workspace, "second.md")); second = workspace->active; CHECK(second != first && workspace->tab_count == 2);
     CHECK(gui_open_link(workspace, "attendant://tasks/first")); CHECK(workspace->active == first && workspace->tab_count == 2);
     snprintf(edited, GUI_TEXT + 1, "%s\r\nModel selection: %s", tab->text, selected);
@@ -54,13 +54,17 @@ int main(void) {
     tab->selection_start = (int)(strstr(tab->text, "Model selection: ") - tab->text) + 17;
     tab->selection_end = tab->selection_start + (int)strlen(selected);
     CHECK(!gui_close_document(workspace, first, 0));
-    CHECK(!gui_send_comment(workspace, first, "Must not send dirty text."));
+    CHECK(!gui_send_comment(workspace, first, tab->selection_start, tab->selection_end, "Must not send dirty text."));
     CHECK(gui_refresh(workspace)); CHECK(workspace->active == first && tab->dirty && !strcmp(tab->text, edited));
     CHECK(gui_open_document(workspace, tab->path)); CHECK(workspace->tab_count == 2 && tab->dirty);
-    CHECK(gui_save_document(workspace, first)); CHECK(!tab->dirty);
+    { uint64_t revision = tab->text_revision; CHECK(gui_save_document(workspace, first)); CHECK(tab->text_revision == revision); }
+    CHECK(!tab->dirty);
     result = attendant_read_document(workspace->session, tab->path); CHECK(result.ok && !strcmp(result.text, edited));
+    CHECK(!gui_send_comment(workspace, first, -1, tab->selection_end, "Invalid range."));
+    CHECK(!gui_send_comment(workspace, first, tab->selection_start + 4, tab->selection_end, "Inside UTF-8 sequence."));
+    CHECK(!gui_send_comment(workspace, first, tab->selection_start, tab->selection_start + 11, "End inside supplementary sequence."));
     CHECK(SetEnvironmentVariableA("ATTENDANT_FEEDBACK_FAULT", "published-edit"));
-    CHECK(!gui_send_comment(workspace, first, "Failed bootstrap must retain surviving paths."));
+    CHECK(!gui_send_comment(workspace, first, tab->selection_start, tab->selection_end, "Failed bootstrap must retain surviving paths."));
     CHECK(SetEnvironmentVariableA("ATTENDANT_FEEDBACK_FAULT", NULL));
     CHECK(workspace->surviving_count == 1 && workspace->surviving_total == 1);
     snprintf(path, sizeof(path), "%s", workspace->surviving_paths[0]);
@@ -69,7 +73,7 @@ int main(void) {
     CHECK(result.ok && strstr(result.text, "# Concurrent external edit"));
     CHECK(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, 4096)); CHECK(DeleteFileW(wide));
     { wchar_t *separator = wcsrchr(wide, L'\\'); CHECK(separator); *separator = 0; CHECK(RemoveDirectoryW(wide)); }
-    CHECK(gui_send_comment(workspace, first, "Review this Unicode selection.\r\nKeep body exact.\n"));
+    CHECK(gui_send_comment(workspace, first, tab->selection_end, tab->selection_start, "Review this Unicode selection.\r\nKeep body exact.\n"));
     CHECK(workspace->active == first && !tab->dirty);
     for (i = 0; i < workspace->navigation->count; i++) if (workspace->navigation->documents[i].pending) snprintf(comment_path, sizeof(comment_path), "%s", workspace->navigation->documents[i].path);
     CHECK(*comment_path);
@@ -110,13 +114,21 @@ int main(void) {
     CHECK(gui_open_document(workspace, "README.md"));
     {
         int document = workspace->active; size_t length = workspace->tabs[document].length;
+        uint64_t revision = workspace->tabs[document].text_revision;
         edit_after_read = 1; CHECK(gui_reload_document(workspace, document, 0)); CHECK(workspace->tabs[document].length == length);
+        CHECK(workspace->tabs[document].text_revision > revision);
         gui_check_external(workspace, document); CHECK(workspace->tabs[document].length > length);
-        length = workspace->tabs[document].length; CHECK(gui_close_document(workspace, document, 0));
+        length = workspace->tabs[document].length; revision = workspace->tabs[document].text_revision; CHECK(gui_close_document(workspace, document, 0));
         edit_after_read = 1; CHECK(gui_open_document(workspace, "README.md")); document = workspace->active;
-        CHECK(workspace->tabs[document].length == length); gui_check_external(workspace, document); CHECK(workspace->tabs[document].length > length);
+        CHECK(workspace->tabs[document].length == length); CHECK(workspace->tabs[document].text_revision > revision); gui_check_external(workspace, document); CHECK(workspace->tabs[document].length > length);
     }
     CHECK(gui_body_offset("---\r\nname: a\r\n---\r\nBody") == 19);
+    CHECK(gui_body_offset("\xef\xbb\xbf---\r\nname: a\r\n---\r\nBody") == 22);
+    CHECK(gui_body_offset("---\rname: a\r---\rBody") == 16);
+    CHECK(gui_body_offset("---\n---") == 7);
+    CHECK(gui_body_offset("---\nnot closed") == 0);
+    CHECK(gui_body_offset("--") == 0);
+    CHECK(gui_body_offset("") == 0);
     gui_workspace_destroy(workspace); VirtualFree(workspace, 0, MEM_RELEASE);
     VirtualFree(edited, 0, MEM_RELEASE); VirtualFree(external, 0, MEM_RELEASE);
     printf("{\"ok\":true,\"checks\":%d}\n", checks); return 0;
