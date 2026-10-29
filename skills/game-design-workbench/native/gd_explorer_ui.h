@@ -21,7 +21,7 @@ typedef struct {
     GD_Layout *layout;
     Camera2D camera,regular_camera;
     GD_LayoutFocus *distance_focus;
-    bool distance_focus_enabled;
+    bool distance_focus_enabled,focus_auto_fit;
     uint64_t distance_focus_revision;
     Vector2 right_origin;
     int right_started;

@@ -20,7 +20,7 @@ void gd_layout_focus_capture(GD_LayoutFocus *focus, const GD_Layout *layout) {
         focus->captured=focus->active=0; return;
     }
     focus->node_count=layout->node_count; focus->group_count=layout->group_count;
-    focus->direct_routes=layout->direct_routes; focus->anchor_node=-1; focus->active=0;
+    focus->direct_routes=layout->direct_routes; focus->anchor_node=-1; focus->active=0; focus->animating=focus->returning=0;
     for (i=0;i<layout->node_count;++i) {
         const GD_LayoutNode *node=&layout->nodes[i];
         focus->base[i]=(GD_FocusPose){node->x,node->y,node->vx,node->vy,node->key};
@@ -74,6 +74,37 @@ void gd_layout_focus_reapply(GD_LayoutFocus *focus, GD_Layout *layout, float sca
         layout->nodes[i].x=focus->focused[i].x; layout->nodes[i].y=focus->focused[i].y;
     }
     focus_bounds(layout,scale);
+}
+void gd_layout_focus_begin(GD_LayoutFocus *focus, const GD_Layout *layout) {
+    int i;
+    if (!focus || !layout || !focus->captured || focus->node_count!=layout->node_count) return;
+    for (i=0;i<layout->node_count;++i) focus->transition_from[i]=(GD_LayoutPoint){layout->nodes[i].x,layout->nodes[i].y};
+    focus->transition_time=0; focus->animating=1; focus->returning=0;
+}
+void gd_layout_focus_advance(GD_LayoutFocus *focus, GD_Layout *layout, float seconds, float scale) {
+    int i; float t;
+    if (!focus || !layout || !focus->animating || focus->node_count!=layout->node_count ||
+        !isfinite(seconds) || seconds<0 || !isfinite(scale) || scale<=0) return;
+    for (i=0;i<layout->node_count;++i) if (focus->base[i].key!=layout->nodes[i].key) return;
+    focus->transition_time=fminf(0.22f,focus->transition_time+fminf(seconds,0.22f));
+    t=focus->transition_time/0.22f; t=t*t*(3-2*t);
+    for (i=0;i<layout->node_count;++i) {
+        GD_LayoutNode *node=&layout->nodes[i]; const GD_LayoutPoint *from=&focus->transition_from[i];
+        float x=focus->returning ? focus->base[i].x:focus->focused[i].x;
+        float y=focus->returning ? focus->base[i].y:focus->focused[i].y;
+        node->x=focus->fixed_roots[i] || t==1 ? x:from->x*(1-t)+x*t;
+        node->y=focus->fixed_roots[i] || t==1 ? y:from->y*(1-t)+y*t;
+        if (layout->mode!=GD_LAYOUT_FORCE) {
+            if (layout->mode==GD_LAYOUT_COLUMNS || layout->horizontal) node->x=focus->base[i].x;
+            else node->y=focus->base[i].y;
+        }
+        node->vx=node->vy=0;
+    }
+    focus_bounds(layout,scale);
+    if (focus->transition_time>=0.22f) {
+        focus->animating=0;
+        if (focus->returning) { gd_layout_focus_restore(focus,layout); focus->returning=0; }
+    }
 }
 static void focus_clearance(GD_LayoutFocus *focus, GD_Layout *layout, int count, float scale, int include_inactive) {
     int i,pass; unsigned work=0,limit=(unsigned)GD_MAX_RECORDS*GD_MAX_RECORDS;

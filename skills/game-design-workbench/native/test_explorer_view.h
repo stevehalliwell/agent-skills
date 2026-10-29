@@ -16,7 +16,9 @@ static void explorer_test_render(GD_ExplorerContext *c) {
         if (!grid_blank_details(c)) gd_explorer_graph_details(c);
     } else analysis_controls(c,selected);
     igEnd();
-    matches(c); distance_focus_update(c,selected); p->camera.offset=(Vector2){450,503};
+    matches(c); distance_focus_update(c,selected);
+    if (p->distance_focus) gd_layout_focus_advance(p->distance_focus,p->layout,0.22f,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
+    p->camera.offset=(Vector2){450,503};
     if (p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
     {
         GD_ExplorerEvidence e=evidence(c,selected);
@@ -116,8 +118,18 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             }
             EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/focus-%d.png",output,v)<(int)sizeof(path) && gd_save_screenshot(path));
             EXPLORER_CHECK(distance_focus_toggle(&c,0) && !memcmp(&regular,&panes[v].camera,sizeof(regular)));
+            gd_layout_focus_advance(panes[v].distance_focus,panes[v].layout,0.22f,v==GD_EXPLORER_MDA && panes[v].layout->mode==GD_LAYOUT_FORCE ? 3:1);
             for (i=0;i<panes[v].layout->node_count;++i)
                 EXPLORER_CHECK(panes[v].layout->nodes[i].x==panes[v].distance_focus->base[i].x && panes[v].layout->nodes[i].y==panes[v].distance_focus->base[i].y);
+            /* Auto-fit off preserves user camera through selection and focus-off. */
+            panes[v].focus_auto_fit=false; panes[v].camera.target=(Vector2){-123,789}; panes[v].camera.zoom=0.75f;
+            regular=panes[v].camera;
+            EXPLORER_CHECK(distance_focus_toggle(&c,1)); distance_focus_update(&c,analyze(&c));
+            EXPLORER_CHECK(!memcmp(&regular,&panes[v].camera,sizeof(regular)));
+            EXPLORER_CHECK(distance_focus_toggle(&c,0));
+            EXPLORER_CHECK(!memcmp(&regular,&panes[v].camera,sizeof(regular)));
+            gd_layout_focus_advance(panes[v].distance_focus,panes[v].layout,0.22f,1);
+            panes[v].focus_auto_fit=true;
         }
     }
     /* Alternate rank/direction, noun/verb columns and MDA free layout. */

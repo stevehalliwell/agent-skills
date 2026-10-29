@@ -377,9 +377,9 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) { Vector2 delta=GetMouseDelta(); camera.target.x-=delta.x/camera.zoom; camera.target.y-=delta.y/camera.zoom; }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) for (i=layout->node_count-1;i>=0;--i) {
                 const GD_LayoutNode *n=&layout->nodes[i];
-                if (CheckCollisionPointRec(world,(Rectangle){n->x-90,n->y-24,180,48})) { selected=n->key; held=i; break; }
+                if (CheckCollisionPointRec(world,(Rectangle){n->x-90,n->y-24,180,48})) { selected=n->key; held=i; gd_layout_pickup_node(layout,i,world.x,world.y); break; }
             }
-            if (held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_move_node(layout,held,world.x,world.y);
+            if (held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_drag_node(layout,held,world.x,world.y);
         }
         if (!paused) gd_layout_step(layout,held);
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,72,100,25})) path_tab=0;

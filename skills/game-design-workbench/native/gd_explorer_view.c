@@ -41,7 +41,7 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; p->editor.record=-1;
     p->grid.noun=p->grid.verb=-1;
     p->mda=(GD_ExplorerMdaDisplay){.record=-1,.link=-1,.held=-1,.roles={true,true,true,true},.paused=true};
-    p->camera.zoom=1; p->peer=p->foundation_peer=p->witness=-1;
+    p->camera.zoom=1; p->focus_auto_fit=true; p->distance_focus_revision=UINT64_MAX; p->peer=p->foundation_peer=p->witness=-1;
     p->navigate=p->focus_root=p->focus_expand=p->inspected_record=-1;
     p->reach=(GD_ReachControls){0,-1,0,-1,-1}; p->overview=(GD_OverviewControls){0,-1,-1};
     p->shared=true; p->paused=view==GD_EXPLORER_MDA || view==GD_EXPLORER_RESOURCES;
@@ -82,7 +82,7 @@ static int pane_prepare(GD_ExplorerContext *c) {
         p->distance_focus=gd_layout_focus_create(c->project->allocator);
         if (!p->distance_focus) return 0;
     }
-    if (p->distance_focus) gd_layout_focus_capture(p->distance_focus,p->layout);
+    if (p->distance_focus) { gd_layout_focus_capture(p->distance_focus,p->layout); p->distance_focus_revision=UINT64_MAX; }
     p->prepared=1; p->revision=revision; return 1;
 }
 static int selected_record(GD_ExplorerContext *c) {
@@ -121,15 +121,19 @@ static int analyze(GD_ExplorerContext *c) {
     }
     return selected>=0 && shown[selected] ? selected:-1;
 }
+static void fit_view(GD_ExplorerContext *c, int only_matches);
 static int distance_focus_toggle(GD_ExplorerContext *c, int enabled) {
     GD_ExplorerPane *p=c->pane;
     if (!!enabled==!!p->distance_focus_enabled) return 1;
     if (enabled) {
         if (!p->distance_focus) p->distance_focus=gd_layout_focus_create(c->project->allocator);
         if (!p->distance_focus) return 0;
-        gd_layout_focus_capture(p->distance_focus,p->layout); p->regular_camera=p->camera;
+        if (!(p->distance_focus->animating && p->distance_focus->returning)) gd_layout_focus_capture(p->distance_focus,p->layout);
+        p->regular_camera=p->camera; p->distance_focus_revision=UINT64_MAX;
     } else {
-        gd_layout_focus_restore(p->distance_focus,p->layout); p->camera=p->regular_camera;
+        gd_layout_focus_begin(p->distance_focus,p->layout); p->distance_focus->returning=1;
+        if (p->focus_auto_fit) p->camera=p->regular_camera;
+        if (p->fit==3) p->fit=0;
         p->distance_focus->active=0;
     }
     p->distance_focus_enabled=enabled!=0; p->selection.held=p->mda.held=-1;
@@ -143,15 +147,19 @@ static void distance_focus_update(GD_ExplorerContext *c, int selected) {
     if (grid_view(p) || !p->distance_focus_enabled || !p->distance_focus) return;
     /* A source-only or edge inspection is not an implicit canonical node. */
     selected=distance_focus_node(p,selected);
-    if (p->distance_focus->active && p->distance_focus->anchor_node==selected && p->distance_focus_revision==c->scope_revision) {
-        gd_layout_focus_reapply(p->distance_focus,p->layout,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
+    if (p->distance_focus->anchor_node==selected && p->distance_focus_revision==c->scope_revision) {
+        if (p->distance_focus->animating) gd_layout_focus_advance(p->distance_focus,p->layout,0,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
+        else gd_layout_focus_reapply(p->distance_focus,p->layout,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
         p->selection.held=p->mda.held=-1; return;
     }
+    gd_layout_focus_begin(p->distance_focus,p->layout);
     result=gd_layout_focus_apply(p->distance_focus,p->layout,c->analysis->shown,
         p->view==GD_EXPLORER_MATRIX ? p->overlay:1,!incidence(p->view),selected,
         p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
     p->distance_focus_revision=c->scope_revision;
-    if (result==2 && p->fit!=2) p->fit=3;
+    if (result==2 && p->focus_auto_fit && p->fit!=2) fit_view(c,2);
+    p->distance_focus->returning=!p->distance_focus->active;
+    gd_layout_focus_advance(p->distance_focus,p->layout,0,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
     p->selection.held=p->mda.held=-1;
 }
 static void matches(GD_ExplorerContext *c) {
@@ -324,9 +332,9 @@ static void resource_input(GD_ExplorerContext *c) {
         }
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) for (i=p->layout->node_count-1;i>=0;--i) if (visible(c,i)) {
             Vector2 point=position(p,i);
-            if (CheckCollisionPointRec(world,(Rectangle){point.x-90,point.y-24,180,48})) { p->selection.node=p->selection.held=i; p->selection.linked=-1; break; }
+            if (CheckCollisionPointRec(world,(Rectangle){point.x-90,point.y-24,180,48})) { p->selection.node=p->selection.held=i; p->selection.linked=-1; gd_layout_pickup_node(p->layout,i,world.x,world.y); break; }
         }
-        if (p->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_move_node(p->layout,p->selection.held,world.x,world.y);
+        if (p->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_drag_node(p->layout,p->selection.held,world.x,world.y);
     }
 }
 static int choose_view(const GD_ExplorerProject *project, const char *label, int active, int include_current) {
@@ -654,7 +662,8 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             bool enabled=p->distance_focus_enabled;
             if (igCheckbox("Focus layout by shown-link distance",&enabled) && !distance_focus_toggle(&c,enabled))
                 snprintf(failure,sizeof(failure),"Cannot allocate bounded distance-focus scratch; regular layout retained.");
-            if (p->distance_focus_enabled) igTextWrapped("Undirected shown-link distance for layout only, not flow. Bands stay fixed; free layouts use 2D. Directed views keep zero-incoming-shown-arrow roots fixed; incidence views have no roots. Unpinned context portions move intact. Static pose: click node to refocus. Off restores pose/camera and normal drag/settling. Pan/zoom unchanged; F fits all shown nodes.");
+            igCheckbox("Auto-fit camera on focus changes",&p->focus_auto_fit);
+            if (p->distance_focus_enabled) igTextWrapped("Shown-link distance is layout only, not flow. Animated 220 ms transitions retain bands and directed roots; click again to interrupt. Auto-fit off keeps camera unchanged on focus selection/off. Off returns to regular pose, then resumes drag/settling. F and Find still frame explicitly.");
         }
         selected=analyze(&c);
         if (!grid_view(p) && p->distance_focus_enabled && distance_focus_node(p,selected)<0)
@@ -767,11 +776,16 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         else if (is_graph(p->view)) gd_explorer_graph_input(&c);
         else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_input(&c);
         else resource_input(&c);
-        if (!grid_view(p) && !p->distance_focus_enabled && !p->paused && p->view!=GD_EXPLORER_CHALLENGES && p->view!=GD_EXPLORER_RELATIONSHIPS) {
+        if (!p->distance_focus_enabled && p->distance_focus && p->distance_focus->animating &&
+            (p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held)>=0)
+            p->distance_focus->animating=p->distance_focus->returning=0;
+        if (!grid_view(p) && !p->distance_focus_enabled && !(p->distance_focus && p->distance_focus->animating) && !p->paused && p->view!=GD_EXPLORER_CHALLENGES && p->view!=GD_EXPLORER_RELATIONSHIPS) {
             int held=p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held;
             gd_layout_step(p->layout,held);
         }
         selected=analyze(&c); distance_focus_update(&c,selected);
+        if (!grid_view(p) && p->distance_focus && p->distance_focus->animating)
+            gd_layout_focus_advance(p->distance_focus,p->layout,GetFrameTime(),p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
         if (p->fit==3) { fit_view(&c,2); p->fit=0; }
         {
             GD_ExplorerEvidence e=evidence(&c,selected);

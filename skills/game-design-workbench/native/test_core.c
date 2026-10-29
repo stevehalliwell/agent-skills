@@ -2441,6 +2441,7 @@ TEST(rules_allocation_failure,
 #include "test_graph_closure.h"
 #include "test_graph_drawing.h"
 #include "test_layout_focus.h"
+#include "test_layout_interaction.h"
 #include "test_matrix_grid.h"
 #include "test_resource_output.h"
 #include "test_graph_reachability.h"
@@ -2478,11 +2479,11 @@ int main(int argc, char **argv) {
     failed += test_explorer_loading(); failed += test_explorer_allocation_failures();
     failed += test_graph_shapes_oracle(); failed += test_graph_shapes_limits();
     failed += test_typed_reachability_controls();
-    failed += test_layout_settling(); failed += test_layout_distance_focus(); failed += test_directed_drawing_order(); failed += test_directed_drawing_routes();
+    failed += test_layout_settling(); failed += test_layout_distance_focus(); failed += test_layout_interaction(); failed += test_directed_drawing_order(); failed += test_directed_drawing_routes();
     failed += test_graph_closure_oracle(); failed += test_graph_closure_limits(); failed += test_graph_foundations_adapter();
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/91 passed\n", 91-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/92 passed\n", 92-failed);
     return failed ? 1 : 0;
 }

@@ -77,7 +77,7 @@ static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, M
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) display->held = -1;
     if (blocked) { display->held=-1; return; }
     if (display->held >= 0) {
-        world = GetScreenToWorld2D(mouse,*camera); gd_layout_move_node(layout,display->held,world.x/spacing(layout),world.y/spacing(layout));
+        world = GetScreenToWorld2D(mouse,*camera); gd_layout_drag_node(layout,display->held,world.x/spacing(layout),world.y/spacing(layout));
     }
     if (!CheckCollisionPointRec(mouse,viewport) || igGetIO_Nil()->WantCaptureMouse) return;
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
@@ -95,7 +95,8 @@ static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, M
         const GD_LayoutNode *node = &layout->nodes[i];
         Vector2 position = point(layout,node);
         if (visible(model,mda,display,node->key) && CheckCollisionPointRec(world,(Rectangle){position.x-105,position.y-32,210,64})) {
-            display->record = node->key; display->held = i; display->link = -1; return;
+            display->record = node->key; display->held = i; display->link = -1;
+            gd_layout_pickup_node(layout,i,world.x/spacing(layout),world.y/spacing(layout)); return;
         }
     }
     for (i = 0; i < layout->edge_count; ++i) {

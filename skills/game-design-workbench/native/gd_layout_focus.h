@@ -9,7 +9,9 @@ typedef struct { int node,distance,key; float band,angle,cross; } GD_FocusOrder;
 typedef struct {
     GD_Allocator allocator;
     GD_FocusPose base[GD_MAX_RECORDS];
-    GD_LayoutPoint focused[GD_MAX_RECORDS];
+    GD_LayoutPoint focused[GD_MAX_RECORDS],transition_from[GD_MAX_RECORDS];
+    float transition_time;
+    int animating,returning;
     GD_LayoutGroup groups[GD_MAX_RECORDS];
     GD_FocusOrder order[GD_MAX_RECORDS];
     int head[GD_MAX_RECORDS],next[2*GD_MAX_PAIRS],queue[GD_MAX_RECORDS],distance[GD_MAX_RECORDS];
@@ -30,6 +32,11 @@ void gd_layout_focus_restore(GD_LayoutFocus *focus, GD_Layout *layout);
    display_scale converts raw positions to renderer coordinates (MDA free: 3).
    Distances are -1 for disconnected and -2 for hidden nodes. */
 void gd_layout_focus_reapply(GD_LayoutFocus *focus, GD_Layout *layout, float display_scale);
+/* Begin before computing a new target; interrupt from currently displayed pose.
+   220 ms smoothstep, finite nonnegative time, no overshoot. Advance once/frame.
+   returning selects captured regular pose; camera is caller policy. */
+void gd_layout_focus_begin(GD_LayoutFocus *focus, const GD_Layout *layout);
+void gd_layout_focus_advance(GD_LayoutFocus *focus, GD_Layout *layout, float seconds, float display_scale);
 int gd_layout_focus_apply(GD_LayoutFocus *focus, GD_Layout *layout,
     const unsigned char *shown, int include_inactive, int directed, int root, float display_scale);
 #endif

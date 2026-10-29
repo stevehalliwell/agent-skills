@@ -117,7 +117,8 @@ Acceptance: independent bin-count oracle, direction/mirroring/self/parallel/mixe
 
 ### Current progress
 
-- Initial plan: independent assignment and checkpoint permission recorded. No new implementation yet. Resource report already verified in prior slice; staged with plan checkpoint.
+- Step 1 committed as `f233e7c`: verified Resource declaration report plus independent assignment/plan. No new game facts.
+- Step 2 implemented: shared raw-space pickup offset, zero-delta no-op, 220 ms interruptible focus transitions and per-pane camera-auto-fit toggle. Always animate node pose, not camera; auto-fit on retains immediate framing, off preserves user camera including focus-off. Considered animating camera too; deferred because requested toggle solves jump avoidance without coupling camera policy to pose kernel. Returning pose blocks settling until complete; new drag cancels return. Scope changes/new roots keep exact band/root coordinates. Scratch 663,616 bytes/activated view, no source-model growth. Checks: 92/92 native+CLI, 27 Node passed/4 external skips, strict C99 seven changed units, two-example app/state/capture checks with zero owned allocations; real-pointer/animation comfort remains review-owned. Evidence `native/build/interaction-{native,node,explorer}.log`, `interaction-strict/`, `explorer-checks-4c29827c19364ae0a6255128e6a6f397/`.
 
 ## Comments
 

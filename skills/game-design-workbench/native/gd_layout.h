@@ -28,6 +28,7 @@ typedef struct {
     GD_LayoutLane lanes[GD_MAX_PAIRS];
     int edge_lane[GD_MAX_PAIRS], route_lanes[GD_MAX_RECORDS];
     float layer_span[GD_MAX_RECORDS+2];
+    float pickup_x,pickup_y,pickup_cursor_x,pickup_cursor_y; /* Raw layout-space cursor offset, presentation only. */
     int directed_shelf;
     int order[GD_MAX_RECORDS], position[GD_MAX_RECORDS];
     int node_count, edge_count, group_count;
@@ -58,6 +59,8 @@ void gd_layout_step(GD_Layout *layout, int held_node);
 /* Directed layers lock the ordering axis, including paused pointer dragging.
    layer=-1 denotes an explicitly unplaced shelf; caller owns layer semantics. */
 void gd_layout_move_node(GD_Layout *layout, int node, float x, float y);
+void gd_layout_pickup_node(GD_Layout *layout, int node, float x, float y);
+void gd_layout_drag_node(GD_Layout *layout, int node, float x, float y);
 /* Skill-domain adapter in gd_skills.c. Rank bands compress numeric gaps and
    order same-rank prerequisites by depth. No source ranks are assigned. */
 int gd_skill_layout(const GD_Model *model, GD_Layout *layout, int rank_mode, int horizontal, GD_LayoutSort sort);

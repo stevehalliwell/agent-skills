@@ -88,7 +88,7 @@ static void graph_input(GD_Layout *layout, GraphSelection *selection, Camera2D *
     if (blocked) { selection->held=-1; return; }
     if (selection->held >= 0) {
         world = GetScreenToWorld2D(mouse, *camera);
-        gd_layout_move_node(layout, selection->held, world.x, world.y);
+        gd_layout_drag_node(layout, selection->held, world.x, world.y);
     }
     if (!CheckCollisionPointRec(mouse, viewport) || igGetIO_Nil()->WantCaptureMouse) return;
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
@@ -110,6 +110,7 @@ static void graph_input(GD_Layout *layout, GraphSelection *selection, Camera2D *
         float dx = point.x-world.x, dy = point.y-world.y;
         if (dx*dx+dy*dy <= 22*22) {
             selection->node = selection->held = i; selection->cell = selection->linked = -1;
+            gd_layout_pickup_node(layout,i,world.x,world.y);
             selection->interaction = 0; return;
         }
     }
