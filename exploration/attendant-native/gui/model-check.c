@@ -6,6 +6,7 @@
 #include <string.h>
 #include <wchar.h>
 #include "workspace.h"
+#include "reveal.h"
 __declspec(dllimport) LPWSTR *WINAPI CommandLineToArgvW(LPCWSTR, int *);
 static int checks, edit_after_read;
 void gui_model_after_read(const char *path) {
@@ -129,6 +130,59 @@ int main(void) {
     CHECK(gui_body_offset("---\nnot closed") == 0);
     CHECK(gui_body_offset("--") == 0);
     CHECK(gui_body_offset("") == 0);
+    {
+        gui_reveal request = {0}, pending = {0};
+        unsigned char packet[sizeof(request) + 1];
+        gui_tab *current = &workspace->tabs[workspace->active];
+        int ready = 0, active = workspace->active, count = workspace->tab_count, activation = workspace->activation;
+        int start = current->selection_start, end = current->selection_end;
+        uint64_t revision = current->text_revision;
+        request.version = 1; request.line = 1;
+        snprintf(request.project, sizeof(request.project), "%s", workspace->root);
+        CHECK(gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_QUERY, &request, sizeof(request)) == GUI_REVEAL_MATCH);
+        CHECK(!ready);
+        snprintf(request.path, sizeof(request.path), "%s", current->path); memcpy(request.hash, current->hash, 65);
+        CHECK(gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_QUERY, &request, sizeof(request)) == GUI_REVEAL_ALLOWED);
+        CHECK(!ready);
+        CHECK(gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request)) == GUI_REVEAL_ACCEPTED);
+        CHECK(ready && !memcmp(&request, &pending, sizeof(request)));
+        CHECK(workspace->active == active && workspace->tab_count == count && workspace->activation == activation);
+        CHECK(current->selection_start == start && current->selection_end == end && current->text_revision == revision);
+        CHECK(gui_reveal_matches(&request, current)); current->dirty = 1; CHECK(!gui_reveal_matches(&request, current)); current->dirty = 0;
+        current->external_change = 1; CHECK(!gui_reveal_matches(&request, current)); current->external_change = 0;
+        request.hash[0] = request.hash[0] == 'a' ? 'b' : 'a'; CHECK(!gui_reveal_matches(&request, current)); memcpy(request.hash, current->hash, 65);
+        ready = 0;
+        memcpy(packet + 1, &request, sizeof(request));
+        CHECK(gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, packet + 1, sizeof(request)) == GUI_REVEAL_ACCEPTED);
+        CHECK(ready); ready = 0;
+        CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request) - 1));
+        CHECK(!gui_reveal_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, NULL, sizeof(request)));
+        request.version = 2; CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request))); request.version = 1;
+        request.line = 0; CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request)));
+        request.line = GUI_TEXT + 2u; CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request))); request.line = 1;
+        request.hash[0] = 'G'; CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request))); memcpy(request.hash, current->hash, 65);
+        request.hash[1] = 0; CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request))); memcpy(request.hash, current->hash, 65);
+        memset(request.project, 'x', sizeof(request.project)); CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request)));
+        snprintf(request.project, sizeof(request.project), "%s", workspace->root);
+        snprintf(request.path, sizeof(request.path), "%s\\bad-\xff.md", workspace->root); CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request)));
+        CHECK(gui_full_path(NULL, "../outside.md", request.path));
+        CHECK(!gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request)));
+        {
+            const char *original = workspace->navigation->documents[0].path;
+            workspace->navigation->documents[0].path = request.path;
+            CHECK(gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_QUERY, &request, sizeof(request)) == GUI_REVEAL_ALLOWED);
+            workspace->navigation->documents[0].path = original;
+        }
+        CHECK(!ready);
+        CHECK(gui_reveal_test_discovery_limits());
+        CHECK(gui_reveal_ordinary_path(workspace->root)); CHECK(gui_reveal_ordinary_path(current->path));
+        CHECK(!gui_reveal_ordinary_path("\\\\server\\share\\file.md"));
+        CHECK(!gui_reveal_ordinary_path("\\\\?\\C:\\file.md"));
+        CHECK(gui_reveal_has_line("", 1)); CHECK(!gui_reveal_has_line("", 2)); CHECK(!gui_reveal_has_line("x", 0));
+        CHECK(gui_reveal_has_line("a\r\nb\n", 3)); CHECK(!gui_reveal_has_line("a\r\nb\n", 4)); CHECK(!gui_reveal_has_line("a\rb", 1));
+        CHECK(gui_reveal_has_line("caf\xc3\xa9 \xf0\x9f\x98\x80\r\nx", 2));
+    }
     gui_workspace_destroy(workspace); VirtualFree(workspace, 0, MEM_RELEASE);
     VirtualFree(edited, 0, MEM_RELEASE); VirtualFree(external, 0, MEM_RELEASE);
     printf("{\"ok\":true,\"checks\":%d}\n", checks); return 0;

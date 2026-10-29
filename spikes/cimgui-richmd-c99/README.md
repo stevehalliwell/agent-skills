@@ -74,6 +74,12 @@ DLL/core build uses `-O3`; generation tools use `-O2`. No fast-math or explicit 
 
 Full key/revision/input comparison invalidates prior selection; ImGui's small hash is not identity. Require genuine consecutive source runs, UTF-8 boundaries, no replacement and visible bytes exactly equal original interval. Never infer range from clipboard or search matching text. Generated/omitted/foreign content and widget-local interaction stay unclaimed. Source editor remains fallback; caller adds body offset and validates full saved file before feedback.
 
+## Multiline input view
+
+`crmd_get_text_view(widget_id, &view, sizeof(view))` adapts pinned ImGui multiline-child geometry to C POD: source text origin/line height, retained inner clip, scroll, opaque window/draw-list pointers and retained caret/selection state. Wrong POD size fails; unknown input state uses `-1`. Query immediately after widget, use only in same frame/context, never retain/free returned pointers.
+
+Getter never moves focus, caret, selection or scroll. C99 workspace owns agent-marker policy, clipped drawing and explicit-human-Go scroll. Use retained `InnerClipRect`: transient `ClipRect` has already been popped after `EndChild()` and can span sibling preview. Integrated GUI acceptance verifies actual caret preservation and marker pixels confined to source; standalone selection host does not test this adapter.
+
 ## Enabled surface
 
 Headings, lists, formatted/selectable text, tables, code blocks, admonitions, local bundled images, links, dynamic fonts/textures. Default asset reader loads fonts/images from RichMd assets folder. Private D3D11 image uploader owns shader-resource views through `shared_ptr`, capped at 4096×4096 pixels. This avoids RichMd default uploader's final-frame deferred CPU-texture cleanup gap. ImGui backend handles font textures. Host checks zero owned images after shutdown; success prints only after teardown.

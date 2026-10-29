@@ -203,6 +203,28 @@ int crmd_render_raw(const char *document_key, uint64_t revision, const char *mar
         return 1;
     } catch (...) { have_raw_input = false; return exception_error(); }
 }
+int crmd_get_text_view(uint32_t widget_id, crmd_text_view *view, size_t view_size) {
+    if (!view || view_size != sizeof(*view)) return fail("Unexpected C99 text-view layout");
+    *view = {}; view->caret = view->selection_start = view->selection_end = -1;
+    if (!ImGui::GetCurrentContext() || !GImGui->WithinFrameScope || !GImGui->CurrentWindow) return 0;
+    try {
+        for (ImGuiWindow *child : GImGui->CurrentWindow->DC.ChildWindows) {
+            if (child->ChildId != widget_id || child->SkipItems) continue;
+            view->window = child; view->draw_list = child->DrawList;
+            view->text_y = child->DC.CursorStartPos.y + ImGui::GetStyle().FramePadding.y;
+            view->line_height = ImGui::GetFontSize(); view->scroll_y = child->Scroll.y;
+            /* EndChild popped transient ClipRect; InnerClipRect retains widget bounds. */
+            view->clip_min_x = child->InnerClipRect.Min.x; view->clip_min_y = child->InnerClipRect.Min.y;
+            view->clip_max_x = child->InnerClipRect.Max.x; view->clip_max_y = child->InnerClipRect.Max.y;
+            view->active_id = GImGui->ActiveId;
+            if (ImGuiInputTextState *state = ImGui::GetInputTextState(widget_id)) {
+                view->caret = state->GetCursorPos(); view->selection_start = state->GetSelectionStart(); view->selection_end = state->GetSelectionEnd();
+            }
+            return 1;
+        }
+        return 0;
+    } catch (...) { return exception_error(); }
+}
 int crmd_end_frame(void) {
     if (!renderer_ready || !target) return fail("Adapter has no render target");
     try {

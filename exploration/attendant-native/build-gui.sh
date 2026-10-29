@@ -13,7 +13,7 @@ if [[ ! -f "$stack/build/bin/cimgui_richmd.dll" ]]; then
 fi
 mkdir -p build/gui
 source build-inputs.sh
-sources=(gui/main.c gui/workspace.c native-api.c "${sources[@]:1}")
+sources=(gui/main.c gui/workspace.c gui/reveal.c native-api.c "${sources[@]:1}")
 includes=(-I"$stack/build/deps/cimgui" -I"$stack")
 suffix=""
 if [[ "${2:-}" == --check ]]; then includes+=(-DATTENDANT_GUI_TESTING); suffix=-check; fi
@@ -28,9 +28,9 @@ fi
 if [[ "${2:-}" == --check ]]; then
   sources[0]=gui/model-check.c
   if [[ "$compiler" == cjit ]]; then
-    "${CJIT:-cjit}" -q -C '' "${flags[@]:1}" -DATTENDANT_MODEL_TESTING -DATTENDANT_TEST_FAULTS -o build/gui/model-check-cjit.exe "${sources[@]}" -lbcrypt -lshell32
+    "${CJIT:-cjit}" -q -C '' "${flags[@]:1}" -DATTENDANT_MODEL_TESTING -DATTENDANT_TEST_FAULTS -o build/gui/model-check-cjit.exe "${sources[@]}" -lbcrypt -lshell32 -luser32
   else
-    "${ZIG:-zig}" cc -O3 "${flags[@]}" -DATTENDANT_MODEL_TESTING -DATTENDANT_TEST_FAULTS "${sources[@]}" -lbcrypt -lshell32 -o build/gui/model-check-zig.exe
+    "${ZIG:-zig}" cc -O3 "${flags[@]}" -DATTENDANT_MODEL_TESTING -DATTENDANT_TEST_FAULTS "${sources[@]}" -lbcrypt -lshell32 -luser32 -o build/gui/model-check-zig.exe
   fi
 fi
 cp "$stack/build/bin/cimgui_richmd.dll" build/gui/

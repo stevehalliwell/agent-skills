@@ -39,7 +39,8 @@ export function verifyBuild(compiler, testing = false) {
 function writeManifest(compiler, testing) {
   const name = `attendant-gui-${compiler}${testing ? '-check' : ''}`;
   const executable = process.env[compiler === 'zig' ? 'ZIG' : 'CJIT'] || compiler;
-  const version = spawnSync(executable, [compiler === 'zig' ? 'version' : '--version'], { encoding: 'utf8' });
+  const version = spawnSync(executable, [compiler === 'zig' ? 'version' : '--help'], { encoding: 'utf8' });
+  assert.equal(version.status, 0, 'Compiler version probe failed');
   const binaries = [join(root, `build/gui/${name}.exe`)];
   if (testing) binaries.push(join(root, `build/gui/model-check-${compiler}.exe`));
   const manifest = { builtAt: new Date().toISOString(), compiler, testing, compilerCommand: executable,

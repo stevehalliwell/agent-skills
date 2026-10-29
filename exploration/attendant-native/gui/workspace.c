@@ -25,20 +25,21 @@ static int result_problem(gui_workspace *workspace, attendant_result result) {
     for (i = 0; i < result.written_count; i++) fprintf(stderr, "Written: %s\n", result.written[i]);
     return 0;
 }
-static int canonical_path(gui_workspace *workspace, const char *path, char *output) {
+int gui_full_path(const char *root, const char *path, char *output) {
     wchar_t input[4096], absolute[4096];
     char joined[GUI_PATH];
     const char *source = path;
     DWORD size;
-    if (!path || !*path) return problem(workspace, "Expected document path");
-    if (*workspace->root && !(path[0] == '/' || path[0] == '\\' || (strlen(path) > 2 && path[1] == ':'))) {
-        int length = snprintf(joined, sizeof(joined), "%s\\%s", workspace->root, path);
-        if (length < 0 || length >= (int)sizeof(joined)) return problem(workspace, "Document path too long");
+    if (!path || !*path || strlen(path) >= GUI_PATH) return 0;
+    if (root && *root && !(path[0] == '/' || path[0] == '\\' || (strlen(path) > 2 && path[1] == ':'))) {
+        int length = snprintf(joined, sizeof(joined), "%s\\%s", root, path);
+        if (length < 0 || length >= (int)sizeof(joined)) return 0;
         source = joined;
     }
-    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, source, -1, input, 4096)) return problem(workspace, "Invalid UTF-8 path");
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, source, -1, input, 4096)) return 0;
     size = GetFullPathNameW(input, 4096, absolute, NULL);
-    if (!size || size >= 4096 || !WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, absolute, -1, output, GUI_PATH, NULL, NULL)) return problem(workspace, "Cannot resolve document path");
+    if (!size || size >= 4096 || !WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, absolute, -1, output, GUI_PATH, NULL, NULL)) return 0;
+    { size_t length = strlen(output); while (length > 3 && output[length - 1] == '\\') output[--length] = 0; }
     return 1;
 }
 static char *navigation_text(arena *memory, const char *text) {
@@ -85,15 +86,7 @@ int gui_workspace_init(gui_workspace *workspace, const char *root) {
     memset(workspace, 0, sizeof(*workspace)); workspace->active = -1;
     workspace->session = attendant_open();
     if (!workspace->session) return problem(workspace, "Cannot allocate source session");
-    if (strlen(root) >= sizeof(workspace->root)) return problem(workspace, "Workspace path too long");
-    snprintf(workspace->root, sizeof(workspace->root), "%s", root);
-    {
-        char resolved[GUI_PATH];
-        /* Resolve project from process working directory, not relative to itself. */
-        workspace->root[0] = 0;
-        if (!canonical_path(workspace, root, resolved)) return 0;
-        snprintf(workspace->root, sizeof(workspace->root), "%s", resolved);
-    }
+    if (!gui_full_path(NULL, root, workspace->root)) return problem(workspace, "Cannot resolve bounded UTF-8 workspace path");
     return gui_refresh(workspace);
 }
 void gui_workspace_destroy(gui_workspace *workspace) {
@@ -111,7 +104,7 @@ int gui_open_document(gui_workspace *workspace, const char *path) {
     attendant_result result;
     gui_tab *tab;
     int i, slot = -1;
-    if (!canonical_path(workspace, path, absolute)) return 0;
+    if (!gui_full_path(workspace->root, path, absolute)) return problem(workspace, "Cannot resolve bounded UTF-8 document path");
     for (i = 0; i < GUI_TABS; i++) {
         if (workspace->tabs[i].used && !_stricmp(absolute, workspace->tabs[i].path)) { workspace->active = i; workspace->activation++; return 1; }
         if (!workspace->tabs[i].used && slot < 0) slot = i;

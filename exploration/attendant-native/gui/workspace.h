@@ -38,6 +38,8 @@ typedef struct gui_workspace {
     uint64_t text_revision; /* Workspace-wide: tab reuse/reload/edit cannot reuse preview identity. */
     /* activation changes only after explicit human navigation, never refresh. */
 } gui_workspace;
+/* Pure path resolution, no source/session operation. root NULL: process directory. */
+int gui_full_path(const char *root, const char *path, char output[GUI_PATH]);
 int gui_workspace_init(gui_workspace *workspace, const char *root);
 void gui_workspace_destroy(gui_workspace *workspace);
 int gui_refresh(gui_workspace *workspace);

@@ -6,6 +6,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyBuild } from './build-manifest.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+test('GUI provenance records successful compiler version probes', () => {
+  for (const compiler of ['cjit', 'zig']) {
+    const manifest = verifyBuild(compiler);
+    assert.equal(manifest.version.status, 0);
+    assert.match(manifest.version.text, compiler === 'cjit' ? /^CJIT v/m : /^\d+\.\d+\.\d+/);
+  }
+});
 test('GUI acceptance rejects stale C input before launching', () => {
   const path = resolve(root, 'gui/workspace.c'), original = readFileSync(path);
   try {

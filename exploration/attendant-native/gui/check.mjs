@@ -1,8 +1,8 @@
 // Real GUI acceptance in unique owned workspace copies; never uses live repos.
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyBuild } from './build-manifest.mjs';
@@ -35,6 +35,125 @@ function bitmap(path) {
   assert(bright > 1000, 'Preview emits actual text pixels');
   writeFileSync(path.replace('.ppm', '.bmp'), output);
   return { width, height, bright, sha256: createHash('sha256').update(bytes).digest('hex') };
+}
+async function checkAgentReveal(report, compiler) {
+  const other = compiler === 'cjit' ? 'zig' : 'cjit';
+  const executable = (name, testing = false) => join(root, `build/gui/attendant-gui-${name}${testing ? '-check' : ''}.exe`);
+  function control(project, args, expectedCode = null, testing = false) {
+    const result = spawnSync(executable(other, testing), ['--project', project, ...args], {
+      encoding: 'utf8', timeout: 10000, windowsHide: true, env: { ...process.env, ATTENDANT_GUI_TEST_REVEAL_HASH: '0'.repeat(64) }
+    });
+    if (expectedCode !== null) assert.equal(result.status, expectedCode, result.stderr + result.stdout);
+    return { status: result.status, output: JSON.parse(result.stdout), stderr: result.stderr };
+  }
+  function receiver(project, mode, shot, name = compiler) {
+    const child = spawn(executable(name, true), ['--project', project, '--assets', join(stack, 'build/deps/richmd/assets'),
+      '--file', 'README.md', '--frames', '400', ...(shot ? ['--shot', shot] : []), '--exercise-reveal', mode], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const events = []; let buffer = '', stderr = '', readyResolve, readyReject;
+    const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
+    child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8');
+    child.stdout.on('data', text => {
+      buffer += text;
+      for (;;) { const end = buffer.indexOf('\n'); if (end < 0) break;
+        const line = buffer.slice(0, end); buffer = buffer.slice(end + 1);
+        try { const event = JSON.parse(line); events.push(event); if (event.event === 'ready') readyResolve(); }
+        catch (error) { readyReject(error); }
+      }
+    });
+    child.stderr.on('data', text => { stderr += text; });
+    const timer = setTimeout(() => child.kill(), 30000);
+    const done = new Promise((resolve, reject) => {
+      child.on('error', error => { clearTimeout(timer); readyReject(error); reject(error); });
+      child.on('close', status => {
+        clearTimeout(timer);
+        if (status === 0) resolve(events);
+        else { const error = new Error(`Reveal receiver ${mode} exited ${status}: ${stderr}`); readyReject(error); reject(error); }
+      });
+    });
+    // Early failure must not leave an unhandled promise while waiting for readiness.
+    done.catch(() => {});
+    return { child, ready, done };
+  }
+  for (const mode of ['clean', 'dirty', 'stale', 'other', 'reparse']) {
+    const project = join(report.run, `${compiler} reveal ${mode} caf\u00e9 \u03a9`);
+    cpSync(join(root, 'fixtures/project'), project, { recursive: true });
+    writeFileSync(join(project, '.gui-test-owned'), 'Generated reveal acceptance fixture.\n');
+    writeFileSync(join(project, 'README.md'), '\ufeff# Agent marker test\r\n\r\n' + Array.from({ length: 180 }, (_, i) => `Line ${i + 1}: caf\u00e9 \u03a9 \ud83d\ude00 marker context.\r\n`).join(''));
+    writeFileSync(join(project, 'invalid.md'), Buffer.from([0xff]));
+    writeFileSync(join(project, 'other.md'), readFileSync(join(project, 'README.md'), 'utf8').replace('# Agent marker test', '# Other agent target'));
+    const outside = join(report.run, `${compiler} outside ${mode}`), changing = join(project, 'changing'), backup = join(project, 'changing-backup');
+    mkdirSync(outside); writeFileSync(join(outside, 'other.md'), readFileSync(join(project, 'other.md')));
+    if (mode === 'reparse') { mkdirSync(changing); writeFileSync(join(changing, 'other.md'), readFileSync(join(project, 'other.md'))); }
+    const outsideBefore = inventory(outside);
+    const before = inventory(project), shot = join(report.run, `${compiler}-reveal-${mode}.ppm`);
+    let swapped = false;
+    if (mode === 'clean') assert.equal(control(project, ['--reveal', 'README.md', '--line', '4'], 1).output.code, 'gui-not-running');
+    const running = receiver(project, mode, shot);
+    try {
+      await running.ready;
+      if (mode === 'clean') {
+        const negative = [
+          [['--reveal', 'README.md', '--line', '0'], 2, 'usage'],
+          [['--reveal', 'README.md', '--line', '-1'], 2, 'usage'],
+          [['--reveal', 'README.md', '--line', '4x'], 2, 'usage'],
+          [['--reveal', 'README.md', '--line', '4294967296'], 2, 'usage'],
+          [['--reveal', 'README.md', '--line', '4194306'], 2, 'usage'],
+          [['--reveal', 'README.md', '--line', '999'], 1, 'unmapped-line'],
+          [['--reveal', '../outside.md'], 1, 'reveal-not-allowed'],
+          [['--reveal', 'not-markdown.txt'], 1, 'reveal-not-allowed'],
+          [['--reveal', 'missing.md'], 1, 'source-read-failed'],
+          [['--reveal', 'invalid.md'], 1, 'source-read-failed'],
+          [['--reveal', 'README.md', '--unknown'], 2, 'usage'],
+          [['--reveal', 'README.md', '--assets', 'unused'], 2, 'usage'],
+          [['--reveal', 'README.md', ...Array(40).fill('--bad')], 2, 'usage']
+        ];
+        for (const [args, status, code] of negative) assert.equal(control(project, args, status).output.code, code);
+        const junction = join(project, 'linked'); symlinkSync(outside, junction, 'junction');
+        try { assert.equal(control(project, ['--reveal', 'linked/other.md'], 1).output.code, 'unsupported-path'); }
+        finally { unlinkSync(junction); }
+      }
+      const target = mode === 'reparse' ? 'changing/other.md' : mode === 'other' ? 'other.md' : 'README.md';
+      const result = control(project, ['--reveal', target, '--line', mode === 'other' || mode === 'reparse' ? '42' : '4'], 0, mode === 'stale');
+      if (mode === 'reparse') { renameSync(changing, backup); symlinkSync(outside, changing, 'junction'); swapped = true; }
+      assert.deepEqual(result.output, { ok: true, hint_updated: true, persistent: false, focus_changed: false });
+      const events = await running.done, complete = events.find(event => event.event === 'complete');
+      assert(events.some(event => event.event === 'received' && event.documentSelectionScrollFocusPreserved));
+      assert(complete?.caretSelectionPreservedAfterGo); assert.equal(complete.dirty, mode === 'dirty');
+      const marked = mode === 'clean' || mode === 'other';
+      assert(marked ? complete.markerDraws > 0 : complete.markerDraws === 0);
+      if (swapped) { unlinkSync(changing); renameSync(backup, changing); swapped = false; }
+      assert.deepEqual(inventory(project), before, 'Reveal and explicit Go never write source/projection; dirty test buffer discarded');
+      assert.deepEqual(inventory(outside), outsideBefore, 'Outside junction target stays unchanged');
+      const image = bitmap(shot), bytes = readFileSync(shot); let amber = 0, outsidePixels = 0;
+      const offset = /^P6\n\d+ \d+\n255\n/.exec(bytes.subarray(0, 80).toString('ascii'))[0].length;
+      for (let i = offset; i < bytes.length; i += 3) if (bytes[i] > 220 && bytes[i + 1] > 120 && bytes[i + 1] < 200 && bytes[i + 2] < 110) {
+        amber++;
+        const pixel = (i - offset) / 3, x = pixel % image.width, y = Math.floor(pixel / image.width), [left, top, right, bottom] = complete.sourceClip;
+        if (x < left || x >= right || y < top || y >= bottom) outsidePixels++;
+      }
+      assert(marked ? amber > 500 : amber === 0, `Separate marker pixels: ${mode} ${amber}`);
+      assert.equal(outsidePixels, 0, 'Agent marker cannot spill into preview, controls or outside source editor');
+      report.results.push({ compiler, reveal: { mode, clientCompiler: other, crossCompilerIPC: true, events, amberPixels: amber, markerPixelsOutsideSource: outsidePixels, sourceAndProjectionUnchanged: true }, screenshot: image });
+    } finally {
+      if (running.child.exitCode === null) running.child.kill();
+      if (swapped) { unlinkSync(changing); renameSync(backup, changing); }
+    }
+  }
+  const project = join(report.run, `${compiler} ambiguous reveal`);
+  cpSync(join(root, 'fixtures/project'), project, { recursive: true });
+  writeFileSync(join(project, '.gui-test-owned'), 'Generated ambiguous reveal fixture.\n');
+  writeFileSync(join(project, 'README.md'), '# Ambiguous workspace\n' + 'Long context line.\n'.repeat(180));
+  const before = inventory(project), first = receiver(project, 'idle'), second = receiver(project, 'idle', undefined, other);
+  try {
+    await Promise.all([first.ready, second.ready]);
+    assert.equal(control(project, ['--reveal', 'README.md'], 1).output.code, 'gui-ambiguous');
+    await Promise.all([first.done, second.done]); assert.deepEqual(inventory(project), before);
+    report.results.push({ compiler, ambiguousRevealRejected: true, sourceAndProjectionUnchanged: true });
+  } finally { for (const item of [first, second]) if (item.child.exitCode === null) item.child.kill(); }
+  for (const name of [compiler, other]) {
+    assert(!readFileSync(executable(name)).includes(Buffer.from('ATTENDANT_GUI_TEST_REVEAL_HASH')), 'Production omits stale-hash hook');
+    assert(!readFileSync(executable(name)).includes(Buffer.from('--exercise-reveal')), 'Production omits reveal driver');
+  }
 }
 mkdirSync(join(root, 'build/gui-check'), { recursive: true });
 const report = { ok: false, checkerSha256: createHash('sha256').update(readFileSync(fileURLToPath(import.meta.url))).digest('hex'), run: mkdtempSync(join(root, 'build/gui-check/run-')), results: [] };
@@ -137,6 +256,7 @@ try {
     const failedAfter = inventory(failedProject); delete failedBefore[join(failedProject, 'README.md')]; delete failedAfter[join(failedProject, 'README.md')];
     assert.deepEqual(failedAfter, failedBefore, 'Failed queue leaves target saved and every other file unchanged');
     report.results.push({ compiler, savedNotQueued, screenshot: bitmap(failedShot) });
+    await checkAgentReveal(report, compiler);
   }
   report.ok = true;
 } finally { writeFileSync(join(root, 'build/gui-check-results.json'), JSON.stringify(report, null, 2) + '\n'); }

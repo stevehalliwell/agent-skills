@@ -1,13 +1,13 @@
 {
   "ok": true,
-  "runStartedAt": "2026-10-29T02:24:27.361Z",
+  "runStartedAt": "2026-10-29T07:24:23.847Z",
   "platform": "win32",
   "architecture": "x64",
   "build": {
-    "builtAt": "2026-10-29T02:24:27.272Z",
+    "builtAt": "2026-10-29T07:14:50.233Z",
     "zig": "0.17.0",
     "generatorZig": "0.17.0",
-    "sourceTreeSha256": "817084321dcda4805b3e4cbf8e2d53cebd18c756a1df39b669e097306f05c06d"
+    "sourceTreeSha256": "324a3961154d7cce17576f1ac071c792ae6d2981f2265598a8c4dbbe55cdac80"
   },
   "cjit": "1.2.0",
   "dependencies": {
@@ -41,8 +41,8 @@
     "patch": "Guard IM_NODEBUGSTEP; strict original-input RichMd source-selection snapshot with explicit run provenance"
   },
   "dll": {
-    "bytes": 2647040,
-    "sha256": "81b9b6617cee1567557c87bf55ef70aba7dd9f1703b5f49008f50400d8e0020b",
+    "bytes": 2647552,
+    "sha256": "a1430129aadf7e55eee127e1905a192bb1b0aa55692e917f4c88d2ece8db80a7",
     "imports": [
       "d3d11.dll",
       "D3DCOMPILER_47.dll",
