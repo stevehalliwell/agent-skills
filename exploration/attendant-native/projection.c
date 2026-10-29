@@ -87,7 +87,7 @@ typedef struct context {
     diagnostic *diagnostics;
     const char *written[MAX_RECORDS], *staged[MAX_RECORDS];
     int written_count, staged_count;
-    const char *rollback_paths[MAX_RECORDS], *created_directories[128];
+    const char *rollback_paths[MAX_RECORDS], *rollback_expected[MAX_RECORDS], *created_directories[128];
     int rollback_count, created_directory_count;
     const char *error_code, *error_path;
     /* Embedded request boundary only; CLI keeps its existing fatal contract. */
@@ -110,9 +110,36 @@ static void json_check(jsonbcode status) {
         exit(1);
     }
 }
+/* Cleanup owns only the exact published bytes, not every future file at a path.
+   Open without write/delete sharing, compare, then delete through same handle. */
+static int rollback_source(const wchar_t *path, const char *expected) {
+    typedef BOOL (WINAPI *dispose_file)(HANDLE, int, LPVOID, DWORD);
+    dispose_file dispose = (dispose_file)GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetFileInformationByHandle");
+    HANDLE file;
+    LARGE_INTEGER size;
+    BY_HANDLE_FILE_INFORMATION info;
+    char bytes[4096];
+    size_t offset = 0, length;
+    int ok = 1;
+    struct { BOOL deleted; } disposition = {TRUE};
+    if (!expected || !dispose) return 0;
+    file = CreateFileW(path, GENERIC_READ | DELETE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+    if (file == INVALID_HANDLE_VALUE) return GetLastError() == ERROR_FILE_NOT_FOUND || GetLastError() == ERROR_PATH_NOT_FOUND;
+    length = strlen(expected);
+    if (!GetFileInformationByHandle(file, &info) || (info.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ||
+        !GetFileSizeEx(file, &size) || size.QuadPart != (LONGLONG)length) ok = 0;
+    while (ok && offset < length) {
+        DWORD count = 0, wanted = (DWORD)(length - offset > sizeof(bytes) ? sizeof(bytes) : length - offset);
+        if (!ReadFile(file, bytes, wanted, &count, NULL) || count != wanted || memcmp(bytes, expected + offset, wanted)) ok = 0;
+        offset += count;
+    }
+    if (ok) ok = dispose(file, 4 /* FileDispositionInfo */, &disposition, sizeof(disposition)) != 0;
+    CloseHandle(file); return ok;
+}
 static void fail(context *c, const char *format, ...) {
     char message[2048], cleaned[6144], output[16384];
     size_t raw_length, offset = 0, cleaned_length = 0;
+    int preserved_rollback = 0;
     jsonb b;
     va_list args;
     va_start(args, format);
@@ -144,12 +171,16 @@ static void fail(context *c, const char *format, ...) {
     while (c->rollback_count) {
         wchar_t path[PATH_CAPACITY];
         const char *owned = c->rollback_paths[--c->rollback_count];
-        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, owned, -1, path, PATH_CAPACITY) && DeleteFileW(path)) {
+        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, owned, -1, path, PATH_CAPACITY) && rollback_source(path, c->rollback_expected[c->rollback_count])) {
             int i;
             for (i = 0; i < c->written_count; i++) if (!strcmp(c->written[i], owned)) {
                 memmove(&c->written[i], &c->written[i + 1], (c->written_count - i - 1) * sizeof(char *)); c->written_count--; break;
             }
-        }
+        } else preserved_rollback = 1;
+    }
+    if (preserved_rollback) {
+        const char *note = " Cleanup preserved changed or busy files; inspect written paths.";
+        if (cleaned_length + strlen(note) < sizeof(cleaned)) { strcpy(cleaned + cleaned_length, note); cleaned_length += strlen(note); }
     }
     while (c->created_directory_count) {
         wchar_t path[PATH_CAPACITY];

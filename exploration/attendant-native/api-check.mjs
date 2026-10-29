@@ -64,6 +64,12 @@ try {
     assert.equal(readFileSync(join(project, '.pi/attendant.tables'), 'utf8'), '\n# Concurrent external edit\n');
     assert(!existsSync(join(project, 'records')));
     rmSync(join(project, '.pi'), { recursive: true }); recordCase('external config publication wins; owned bootstrap rolls back without deleting external config');
+    failure = send({ fault: 'published-edit', status: 1 });
+    const preservedSeed = join(project, 'records/_meta_comments/.schema.md');
+    assert.deepEqual(failure.written, [preservedSeed]); assert.match(failure.message, /preserved changed or busy files/);
+    assert(readFileSync(preservedSeed, 'utf8').endsWith('\n# Concurrent external edit\n'));
+    snapshot = inventory(project); send({ status: 1 }); assert.deepEqual(inventory(project), snapshot);
+    rmSync(join(project, 'records'), { recursive: true }); recordCase('rollback preserves changed published file, reports it, and retry conflicts without overwrite');
     result = send(); assert.equal(result.written.length, 5);
     const first = result.path, config = join(project, '.pi/attendant.tables'), comments = join(project, 'records/_meta_comments');
     assert(readFileSync(first, 'utf8').endsWith('---\n' + comment)); assert.equal(readFileSync(target, 'utf8'), saved);

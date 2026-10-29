@@ -96,7 +96,10 @@ static int native_add_table(context *c, read_options *options) {
     for (i = 0; i < 3; i++) staged[i] = stage_source(c, paths[i], texts[i]);
     staged_config = stage_source(c, config_path, next_config);
     if (strcmp(read_text(c, config_path, NULL), config)) fail(c, "Config changed since preflight");
-    for (i = 0; i < 3; i++) { publish_source(c, staged[i], paths[i], NULL); c->rollback_paths[c->rollback_count++] = paths[i]; }
+    for (i = 0; i < 3; i++) {
+        publish_source(c, staged[i], paths[i], NULL);
+        c->rollback_expected[c->rollback_count] = texts[i]; c->rollback_paths[c->rollback_count++] = paths[i];
+    }
     publish_source(c, staged_config, config_path, config);
     c->rollback_count = 0; c->created_directory_count = 0; c->staged_count = 0;
     puts(out); return 0;
@@ -318,7 +321,7 @@ static int native_write_records(context *c, read_options *options) {
     for (i = 0; i < c->record_count; i++) if (staged[i]) {
         record *r = &c->records[i];
         publish_source(c, staged[i], r->path, i < original_count ? r->text : NULL);
-        if (i >= original_count) c->rollback_paths[c->rollback_count++] = r->path;
+        if (i >= original_count) { c->rollback_expected[c->rollback_count] = r->next_text ? r->next_text : r->text; c->rollback_paths[c->rollback_count++] = r->path; }
     }
     c->rollback_count = 0; c->staged_count = 0;
     c->error_code = "projection-refresh";

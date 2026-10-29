@@ -113,22 +113,24 @@ static void feedback_fault(context *c, const char *point) {
     DWORD length = GetEnvironmentVariableA("ATTENDANT_FEEDBACK_FAULT", fault, sizeof(fault));
     if (length && length < sizeof(fault) && !strcmp(fault, point)) fail(c, "Injected feedback failure: %s", point);
 }
-static void feedback_external_edit(context *c, const char *target, const char *config) {
+static void feedback_external_edit(context *c, const char *target, const char *config, int after_publication) {
     char fault[128];
     DWORD length = GetEnvironmentVariableA("ATTENDANT_FEEDBACK_FAULT", fault, sizeof(fault)), written;
     const char *path, *edit = "\n# Concurrent external edit\n";
     HANDLE file;
     if (!length || length >= sizeof(fault)) return;
-    path = !strcmp(fault, "target-change") ? target : !strcmp(fault, "config-change") ? config : NULL;
+    path = after_publication ? (!strcmp(fault, "published-edit") ? target : NULL) :
+        !strcmp(fault, "target-change") ? target : !strcmp(fault, "config-change") ? config : NULL;
     if (!path) return;
     file = CreateFileW(wide(c, path), FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) fail(c, "Cannot inject external source edit");
     if (!WriteFile(file, edit, (DWORD)strlen(edit), &written, NULL) || written != strlen(edit)) { CloseHandle(file); fail(c, "Cannot inject external source bytes"); }
     CloseHandle(file);
+    if (after_publication) fail(c, "Injected failure after external edit of published seed");
 }
 #else
 #define feedback_fault(c, point) ((void)0)
-#define feedback_external_edit(c, target, config) ((void)0)
+#define feedback_external_edit(c, target, config, after_publication) ((void)0)
 #endif
 attendant_result attendant_send_feedback(attendant_session *session, const attendant_feedback *input) {
     context *c = request_begin(session);
@@ -221,18 +223,22 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
     }
     comment_stage = stage_source(c, comment_path, comment_text);
     feedback_fault(c, "staged");
-    feedback_external_edit(c, target, config_path);
+    feedback_external_edit(c, target, config_path, 0);
     c->error_code = "feedback-stale"; c->error_path = target;
     if (strcmp(read_text(c, target, NULL), source)) fail(c, "Target changed before feedback publication");
     c->error_code = "feedback-write";
     if (bootstrap) {
-        for (i = 0; i < 3; i++) { publish_source(c, seed_stages[i], seed_paths[i], NULL); c->rollback_paths[c->rollback_count++] = seed_paths[i]; }
+        for (i = 0; i < 3; i++) {
+            publish_source(c, seed_stages[i], seed_paths[i], NULL);
+            c->rollback_expected[c->rollback_count] = seeds[i]; c->rollback_paths[c->rollback_count++] = seed_paths[i];
+        }
         feedback_fault(c, "seeds-published");
     }
     publish_source(c, comment_stage, comment_path, NULL);
     if (bootstrap) {
-        c->rollback_paths[c->rollback_count++] = comment_path;
+        c->rollback_expected[c->rollback_count] = comment_text; c->rollback_paths[c->rollback_count++] = comment_path;
         feedback_fault(c, "comment-published");
+        feedback_external_edit(c, seed_paths[0], config_path, 1);
         publish_source(c, config_stage, config_path, config);
     }
     c->rollback_count = c->created_directory_count = c->staged_count = 0;

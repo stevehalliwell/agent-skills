@@ -29,7 +29,7 @@ Feedback requires saved target hash, nonempty selected range/text, and nonempty 
 
 Canonical schema in `native-api.c`; alias `_meta_comments`, default `records/_meta_comments`. Complete declaration mapping must match v1; field order/comments need not match. Configured compatible alternate directory allowed.
 
-First Send stages schema/template/usage/comment/config. Publishes owned files, then config last. On failure, remove only operation-owned bootstrap files/directories. Missing `.pi/attendant.tables` created only on first Send. Conflicts never overwrite existing collection files. Later Send publishes one comment only.
+First Send stages schema/template/usage/comment/config. Publishes owned files, then config last. On failure, remove only unchanged operation-owned bootstrap files. Cleanup opens without write/delete sharing, compares expected bytes and deletes through same handle; changed/busy files survive and remain in `written`. Remove only empty operation-created directories. Missing `.pi/attendant.tables` created only on first Send. Conflicts never overwrite existing collection files. Later Send publishes one comment only.
 
 Reading never creates collection or consumes pending status. Human comment is contextual intent, not blanket permission to edit. Agent explicitly resolves with ordinary `update`; native and existing `.mjs` can read/resolve same source.
 
