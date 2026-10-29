@@ -357,7 +357,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         gd_error(model,"resources.layout","Cannot allocate or arrange resource preview",NULL,0); return 2;
     }
     memset(analysis,0,sizeof(*analysis)); gd_graph_analyze(layout,NULL,1,shared_lens,analysis);
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE); InitWindow(1440,900,"Resource graph preview"); SetTargetFPS(60);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT); InitWindow(1440,900,"Resource graph preview"); SetTargetFPS(60);
     for (i=0;i<120;++i) gd_layout_step(layout,-1);
     fit(&camera,layout,(Rectangle){0,100,1060,755});
     while (!WindowShouldClose() && (!frames || frame<frames)) {

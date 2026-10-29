@@ -105,8 +105,12 @@ void gd_layout_step(GD_Layout *layout, int held_node) {
         if (samples > GD_REPULSION_SAMPLES) samples = GD_REPULSION_SAMPLES;
         local = layout->position[i]-group->first;
         for (sample = 0; sample < samples; ++sample) {
-            unsigned offset = 1 + ((layout->tick*GD_REPULSION_SAMPLES + (unsigned)sample) % (unsigned)(group->count-1));
-            int other_index = layout->order[group->first+(local+(int)offset)%group->count];
+            /* Fixed reciprocal partners avoid time-varying forces near rest.
+               Large groups retain the same bounded approximation, not all pairs. */
+            int forward=1+(sample/2)*((group->count-1)/2)/(GD_REPULSION_SAMPLES/2);
+            int offset=group->count-1<=GD_REPULSION_SAMPLES ? sample+1:
+                sample%2 ? group->count-forward:forward;
+            int other_index = layout->order[group->first+(local+offset)%group->count];
             const GD_LayoutNode *other = &layout->nodes[other_index];
             float dx = node->x-other->x, dy = node->y-other->y;
             float square = dx*dx+dy*dy;

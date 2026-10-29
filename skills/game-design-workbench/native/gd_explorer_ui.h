@@ -2,6 +2,7 @@
 #define GD_EXPLORER_UI_H
 #include "gd_explorer.h"
 #include "gd_graph_analysis_ui.h"
+#include "gd_layout_focus.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 
@@ -16,7 +17,10 @@ typedef struct {
 typedef struct {
     GD_ExplorerView view;
     GD_Layout *layout;
-    Camera2D camera;
+    Camera2D camera,regular_camera;
+    GD_LayoutFocus *distance_focus;
+    bool distance_focus_enabled;
+    uint64_t distance_focus_revision;
     Vector2 right_origin;
     int right_started;
     GD_ExplorerSelection selection;
@@ -51,6 +55,7 @@ typedef struct {
     GD_GraphAnalysis *analysis; /* One active-view scratch; never snapshot storage. */
     GD_SkillUnlocks *query;
     Rectangle viewport;
+    uint64_t scope_revision;
 } GD_ExplorerContext;
 
 int gd_explorer_graph_prepare(GD_ExplorerContext *context);

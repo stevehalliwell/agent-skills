@@ -264,7 +264,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     if (mda->root >= 0 && mda->direction == GD_MDA_FORWARD && mda->nodes[mda->root].aesthetic >= 0 && mda->selected[mda->nodes[mda->root].aesthetic]) display.record = mda->nodes[mda->root].aesthetic;
     mark_path(mda,&display);
     if (display.record < 0) { int i; for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_MDA_AESTHETIC) { display.record = i; break; } }
-    SetTraceLogCallback(mda_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetTraceLogCallback(mda_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);
     InitWindow(1500,940,"Game Design Workbench - MDA explorer");
     if (!IsWindowReady()) { initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.window","Cannot initialize MDA window",NULL,0); return 2; }
     analysis=initial->allocator.allocate(initial->allocator.context,sizeof(*analysis));

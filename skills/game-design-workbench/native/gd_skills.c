@@ -161,7 +161,7 @@ static int compare_skill_order(const void *a, const void *b) {
 int gd_skill_layout(const GD_Model *model, GD_Layout *layout, int rank_mode, int horizontal, GD_LayoutSort sort) {
     int record_node[GD_MAX_RECORDS], i, count = 0, layer = -1;
     SkillOrder order[GD_MAX_RECORDS];
-    memset(layout, 0, sizeof(*layout)); layout->horizontal = horizontal;
+    memset(layout, 0, sizeof(*layout)); layout->horizontal = horizontal; layout->direct_routes=1;
     layout->group_count = model->component_count;
     for (i = 0; i < model->record_count; ++i) {
         GD_LayoutNode *node;

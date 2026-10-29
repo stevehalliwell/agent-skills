@@ -14,7 +14,7 @@ static void explorer_log(int level, const char *text, va_list arguments) {
     (void)level; vfprintf(stderr,text,arguments); fputc('\n',stderr);
 }
 static int open_window(const char *title) {
-    SetTraceLogCallback(explorer_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetTraceLogCallback(explorer_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);
     InitWindow(1500,940,title);
     if (!IsWindowReady()) return 0;
     SetWindowMinSize(1000,700); SetExitKey(KEY_NULL); SetTargetFPS(60); rlImGuiSetup(true);
@@ -35,6 +35,7 @@ static const char *missing_roles(GD_ExplorerView view) {
 static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     GD_Layout *layout=p->layout;
     gd_diagnostics_clear(&p->diagnostics);
+    gd_layout_focus_destroy(p->distance_focus);
     memset(p,0,sizeof(*p)); p->layout=layout; p->view=view;
     p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; p->editor.record=-1;
     p->mda=(GD_ExplorerMdaDisplay){.record=-1,.link=-1,.held=-1,.roles={true,true,true,true},.paused=true};
@@ -74,6 +75,11 @@ static int pane_prepare(GD_ExplorerContext *c) {
         if (p->selection.node<0) p->selection.linked=record;
     }
     if (is_graph(p->view)) p->inspected_record=gd_explorer_graph_record(c);
+    if (p->distance_focus_enabled && !p->distance_focus) {
+        p->distance_focus=gd_layout_focus_create(c->project->allocator);
+        if (!p->distance_focus) return 0;
+    }
+    if (p->distance_focus) gd_layout_focus_capture(p->distance_focus,p->layout);
     p->prepared=1; p->revision=revision; return 1;
 }
 static int selected_record(GD_ExplorerContext *c) {
@@ -106,8 +112,43 @@ static int analyze(GD_ExplorerContext *c) {
         shown[i]=(unsigned char)visible(c,i);
         if (p->view==GD_EXPLORER_MDA ? p->layout->nodes[i].key==p->mda.record : i==p->selection.node) selected=i;
     }
-    if (gd_graph_analyze(p->layout,shown,p->view==GD_EXPLORER_MATRIX ? p->overlay:1,p->lens,c->analysis)) p->peer=p->foundation_peer=-1;
+    if (gd_graph_analyze(p->layout,shown,p->view==GD_EXPLORER_MATRIX ? p->overlay:1,p->lens,c->analysis)) {
+        p->peer=p->foundation_peer=-1; ++c->scope_revision;
+    }
     return selected>=0 && shown[selected] ? selected:-1;
+}
+static int distance_focus_toggle(GD_ExplorerContext *c, int enabled) {
+    GD_ExplorerPane *p=c->pane;
+    if (!!enabled==!!p->distance_focus_enabled) return 1;
+    if (enabled) {
+        if (!p->distance_focus) p->distance_focus=gd_layout_focus_create(c->project->allocator);
+        if (!p->distance_focus) return 0;
+        gd_layout_focus_capture(p->distance_focus,p->layout); p->regular_camera=p->camera;
+    } else {
+        gd_layout_focus_restore(p->distance_focus,p->layout); p->camera=p->regular_camera;
+        p->distance_focus->active=0;
+    }
+    p->distance_focus_enabled=enabled!=0; p->selection.held=p->mda.held=-1;
+    return 1;
+}
+static int distance_focus_node(const GD_ExplorerPane *p, int selected) {
+    return (p->view==GD_EXPLORER_MDA ? p->mda.link>=0:p->selection.linked>=0 || p->selection.cell>=0) ? -1:selected;
+}
+static void distance_focus_update(GD_ExplorerContext *c, int selected) {
+    GD_ExplorerPane *p=c->pane; int result;
+    if (!p->distance_focus_enabled || !p->distance_focus) return;
+    /* A source-only or edge inspection is not an implicit canonical node. */
+    selected=distance_focus_node(p,selected);
+    if (p->distance_focus->active && p->distance_focus->anchor_node==selected && p->distance_focus_revision==c->scope_revision) {
+        gd_layout_focus_reapply(p->distance_focus,p->layout,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
+        p->selection.held=p->mda.held=-1; return;
+    }
+    result=gd_layout_focus_apply(p->distance_focus,p->layout,c->analysis->shown,
+        p->view==GD_EXPLORER_MATRIX ? p->overlay:1,!incidence(p->view),selected,
+        p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
+    p->distance_focus_revision=c->scope_revision;
+    if (result==2 && p->fit!=2) p->fit=3;
+    p->selection.held=p->mda.held=-1;
 }
 static void matches(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view);
@@ -137,7 +178,8 @@ static void matches(GD_ExplorerContext *c) {
 }
 static void fit_view(GD_ExplorerContext *c, int only_matches) {
     GD_ExplorerPane *p=c->pane; int i,found=0; float left=0,right=1,top=0,bottom=1;
-    for (i=0;i<p->layout->node_count;++i) if (visible(c,i) && (!only_matches || p->match_nodes[i])) {
+    for (i=0;i<p->layout->node_count;++i) if (visible(c,i) && (!only_matches || (only_matches==1 ? p->match_nodes[i]:
+        p->distance_focus && p->distance_focus->active && p->distance_focus->distance[i]>=0 && p->distance_focus->distance[i]<=1))) {
         Vector2 point=position(p,i); float half=p->view==GD_EXPLORER_MDA ? 125:p->view==GD_EXPLORER_RESOURCES ? 110:
             fmaxf(110,(float)MeasureText(p->layout->nodes[i].label,18)/2+25);
         if (!found || point.x-half<left) left=point.x-half;
@@ -383,7 +425,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
     }
     if (replacement) {
         memcpy(replacement,panes,GD_EXPLORER_VIEWS*sizeof(*replacement));
-        for (v=0;v<GD_EXPLORER_VIEWS;++v) { replacement[v].layout=NULL; memset(&replacement[v].diagnostics,0,sizeof(replacement[v].diagnostics)); }
+        for (v=0;v<GD_EXPLORER_VIEWS;++v) { replacement[v].layout=NULL; replacement[v].distance_focus=NULL; memset(&replacement[v].diagnostics,0,sizeof(replacement[v].diagnostics)); }
         candidate.project=fresh;
         if (old->mda) {
             int root=-1;
@@ -441,6 +483,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
     if (ready) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) {
             gd_diagnostics_clear(&panes[v].diagnostics);
+            gd_layout_focus_destroy(panes[v].distance_focus);
             if (panes[v].layout) old->allocator.release(old->allocator.context,panes[v].layout);
         }
         memcpy(panes,replacement,GD_EXPLORER_VIEWS*sizeof(*panes));
@@ -451,7 +494,10 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
     snprintf(failure,failure_size,"Reload rejected: %s. Last good snapshot retained.",error ? error->message:
              "Cannot prepare replacement, sources changed, or a query/focus root disappeared; clear root before retry");
     if (replacement) {
-        for (v=0;v<GD_EXPLORER_VIEWS;++v) if (replacement[v].layout) old->allocator.release(old->allocator.context,replacement[v].layout);
+        for (v=0;v<GD_EXPLORER_VIEWS;++v) {
+            gd_layout_focus_destroy(replacement[v].distance_focus);
+            if (replacement[v].layout) old->allocator.release(old->allocator.context,replacement[v].layout);
+        }
         old->allocator.release(old->allocator.context,replacement);
     }
     gd_explorer_destroy(fresh); return 0;
@@ -579,7 +625,15 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             "Select source to enable Find selected in another view.");
         match_details(&c);
         if (layout_controls(&c)) { p->prepared=0; pane_prepare(&c); p->fit=1; }
+        {
+            bool enabled=p->distance_focus_enabled;
+            if (igCheckbox("Focus layout by shown-link distance",&enabled) && !distance_focus_toggle(&c,enabled))
+                snprintf(failure,sizeof(failure),"Cannot allocate bounded distance-focus scratch; regular layout retained.");
+            if (p->distance_focus_enabled) igTextWrapped("Undirected shown-link distance for layout only, not flow. Bands stay fixed; free layouts use 2D. Directed views keep zero-incoming-shown-arrow roots fixed; incidence views have no roots. Unpinned context portions move intact. Static pose: click node to refocus. Off restores pose/camera and normal drag/settling. Pan/zoom unchanged; F fits all shown nodes.");
+        }
         selected=analyze(&c);
+        if (p->distance_focus_enabled && distance_focus_node(p,selected)<0)
+            igTextWrapped("No distance focus applied: select a visible node. Source-only or edge inspection has no focus anchor.");
         if (igCollapsingHeader_TreeNodeFlags("Analysis layers",0)) analysis_controls(&c,selected);
         refresh=igButton("Refresh sources (F5)",(ImVec2_c){0,0});
         if (stale) igTextWrapped("STALE: source changed or could not be checked. Last good snapshot retained.");
@@ -681,17 +735,18 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (p->focus_root>=0) { relationship_root=p->focus_root; p->focus_root=-1; }
         if (p->focus_expand>=0) { gd_focus_expand(model,&p->focus,p->focus_expand); p->focus_expand=-1; p->prepared=0; p->fit=1; }
         if (!pane_prepare(&c)) { gd_error(diagnostic,"explorer.projection","Cannot update bounded projection layout",NULL,0); result=2; rlImGuiEnd(); EndDrawing(); break; }
-        selected=analyze(&c); matches(&c);
+        selected=analyze(&c); matches(&c); distance_focus_update(&c,selected);
         p->camera.offset=(Vector2){c.viewport.x+c.viewport.width/2,c.viewport.y+c.viewport.height/2};
-        if (p->fit) { fit_view(&c,p->fit==2); p->fit=0; }
+        if (p->fit) { fit_view(&c,p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
         if (is_graph(p->view)) gd_explorer_graph_input(&c);
         else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_input(&c);
         else resource_input(&c);
-        if (!p->paused && p->view!=GD_EXPLORER_CHALLENGES && p->view!=GD_EXPLORER_RELATIONSHIPS) {
+        if (!p->distance_focus_enabled && !p->paused && p->view!=GD_EXPLORER_CHALLENGES && p->view!=GD_EXPLORER_RELATIONSHIPS) {
             int held=p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held;
             gd_layout_step(p->layout,held);
         }
-        selected=analyze(&c);
+        selected=analyze(&c); distance_focus_update(&c,selected);
+        if (p->fit==3) { fit_view(&c,2); p->fit=0; }
         {
             GD_ExplorerEvidence e=evidence(&c,selected);
             if (is_graph(p->view)) gd_explorer_graph_draw(&c,&e);
@@ -699,7 +754,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             else gd_explorer_resource_draw(&c,&e);
         }
         draw_matches(&c); gd_graph_overview_draw(c.analysis,&p->overview,c.viewport,!igGetIO_Nil()->WantCaptureMouse);
-        DrawText("Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
+        DrawText(p->distance_focus_enabled ? "Distance focus: click node to refocus | Off: restore pose/drag | Pan/zoom unchanged | F: fit all":"Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
         DrawText(incidence(p->view) ? "Shown incidence only; not flow, causality or equivalence.":"Authored declarations only; not learning, causality or physical reachability.",20,height-18,13,muted);
         rlImGuiEnd(); EndDrawing(); ++frame;
         if (screenshot && frame==frames && !gd_save_screenshot(screenshot)) { gd_error(diagnostic,"view.screenshot","Explorer screenshot export failed",screenshot,0); result=2; break; }
@@ -725,6 +780,7 @@ cleanup:
     if (panes) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) {
             gd_diagnostics_clear(&panes[v].diagnostics);
+            gd_layout_focus_destroy(panes[v].distance_focus);
             if (panes[v].layout) allocator.release(allocator.context,panes[v].layout);
         }
         allocator.release(allocator.context,panes);

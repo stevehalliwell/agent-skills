@@ -34,7 +34,7 @@ typedef struct {
     GD_LayoutMode mode;
     GD_LayoutSort sort;
     unsigned tick;
-    int horizontal;
+    int horizontal, direct_routes;
     float width, height;
 } GD_Layout;
 
@@ -46,11 +46,13 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
 void gd_layout_route_prepare(GD_Layout *layout);
 float gd_layout_node_width(const GD_LayoutNode *node);
 /* At most eight polyline points. Geometry follows live dragged positions.
-   Directed long/back links use group-side corridors; not a complete obstacle
+   direct_routes uses node-to-node geometry, including directed Skills;
+   same-band bows and self-loops stay within bounded band clearance.
+   Other directed long/back links use group-side corridors; not a complete obstacle
    solver. MDA retains its card/Bezier renderer. No reachability semantics. */
 void gd_layout_route(const GD_Layout *layout, int edge, GD_LayoutRoute *route);
 float gd_layout_route_distance(const GD_Layout *layout, int edge, float x, float y);
-/* One fixed display step; at most 32 repulsion samples/node + all active edges.
+/* One fixed display step; at most 32 fixed reciprocal repulsion samples/node + all active edges.
    held_node is temporarily fixed by pointer drag, or -1. No wall-clock dependency. */
 void gd_layout_step(GD_Layout *layout, int held_node);
 /* Directed layers lock the ordering axis, including paused pointer dragging.

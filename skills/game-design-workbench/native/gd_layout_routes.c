@@ -46,12 +46,43 @@ void gd_layout_route(const GD_Layout *layout, int index, GD_LayoutRoute *route) 
     edge=&layout->edges[index]; a=&layout->nodes[edge->a]; b=&layout->nodes[edge->b]; lane=&layout->lanes[layout->edge_lane[index]];
     ordinal=(float)lane->ordinal; width_a=gd_layout_node_width(a); height_a=a->height>0 ? a->height:120;
     width_b=gd_layout_node_width(b); height_b=b->height>0 ? b->height:120;
-    if (edge->a==edge->b) {
+    if (edge->a==edge->b && layout->mode==GD_LAYOUT_DIRECTED && layout->direct_routes) {
+        int slot=a->layer<0 ? layout->directed_shelf:a->layer,i;
+        float extra=fminf(32,ordinal*12),band=layout->layer_span[slot]/2+24;
+        float right=a->x+fminf(width_a/2+36+extra,layout->horizontal ? band:width_a/2+68);
+        float top=a->y-fminf(height_a/2+36+extra,layout->horizontal ? height_a/2+68:band);
+        GD_LayoutPoint start={a->x+20,a->y},end={a->x,a->y-20};
+        route->count=8;
+        for (i=0;i<8;++i) {
+            float t=i/7.0f,u=1-t;
+            route->points[i]=(GD_LayoutPoint){u*u*u*start.x+3*u*u*t*right+3*u*t*t*right+t*t*t*end.x,
+                u*u*u*start.y+3*u*u*t*a->y+3*u*t*t*top+t*t*t*end.y};
+        }
+    } else if (edge->a==edge->b) {
         float right=a->x+width_a/2+32+ordinal*12,top=a->y-height_a/2-32-ordinal*12;
         route->count=5;
         route->points[0]=(GD_LayoutPoint){a->x+20,a->y}; route->points[1]=(GD_LayoutPoint){right,a->y};
         route->points[2]=(GD_LayoutPoint){right,top}; route->points[3]=(GD_LayoutPoint){a->x,top}; route->points[4]=(GD_LayoutPoint){a->x,a->y-20};
-    } else if (layout->mode!=GD_LAYOUT_DIRECTED) {
+    } else if (layout->mode==GD_LAYOUT_DIRECTED && layout->direct_routes &&
+        (layout->horizontal ? a->x==b->x:a->y==b->y)) {
+        /* Rounded bow stays inside own band clearance. Length-dependent
+           quadratic height could hit adjacent bands; straight chords could hit
+           intervening same-band nodes. Ports/ramp/flat span avoid both cases. */
+        int horizontal=layout->horizontal,slot=a->layer<0 ? layout->directed_shelf:a->layer;
+        float ac=horizontal ? a->y:a->x,bc=horizontal ? b->y:b->x,axis=horizontal ? a->x:a->y;
+        float direction=bc>=ac ? 1.0f:-1.0f,sign=edge->a<edge->b ? -1.0f:1.0f;
+        float rise=fminf(72+fminf(24,ordinal*8),layout->layer_span[slot]/2+24);
+        float corner=fminf(48,fabsf(bc-ac)/4),near=20+0.4f*(rise-20),far=20+0.85f*(rise-20);
+        route->count=8;
+        route->points[0]=oriented(ac,axis+sign*20,horizontal);
+        route->points[1]=oriented(ac,axis+sign*near,horizontal);
+        route->points[2]=oriented(ac+direction*corner/4,axis+sign*far,horizontal);
+        route->points[3]=oriented(ac+direction*corner,axis+sign*rise,horizontal);
+        route->points[4]=oriented(bc-direction*corner,axis+sign*rise,horizontal);
+        route->points[5]=oriented(bc-direction*corner/4,axis+sign*far,horizontal);
+        route->points[6]=oriented(bc,axis+sign*near,horizontal);
+        route->points[7]=oriented(bc,axis+sign*20,horizontal);
+    } else if (layout->mode!=GD_LAYOUT_DIRECTED || layout->direct_routes) {
         float dx=b->x-a->x,dy=b->y-a->y,length=sqrtf(dx*dx+dy*dy),offset=(ordinal-(lane->count-1)/2.0f)*22;
         float sign=edge->a<edge->b ? 1.0f:-1.0f;
         if (length<1) { dx=1; dy=0; length=1; }

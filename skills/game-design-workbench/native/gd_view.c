@@ -145,10 +145,10 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
             }
         }
         if (noun_count && verb_count) {
-            if (IsKeyPressed(KEY_DOWN) && row + 1 < noun_count) ++row;
-            if (IsKeyPressed(KEY_UP) && row > 0) --row;
-            if (IsKeyPressed(KEY_RIGHT) && column + 1 < verb_count) ++column;
-            if (IsKeyPressed(KEY_LEFT) && column > 0) --column;
+            if ((IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN)) && row + 1 < noun_count) ++row;
+            if ((IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP)) && row > 0) --row;
+            if ((IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) && column + 1 < verb_count) ++column;
+            if ((IsKeyPressed(KEY_LEFT) || IsKeyPressedRepeat(KEY_LEFT)) && column > 0) --column;
         }
         if (wheel && mouse.x < split) {
             if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) first_column -= (int)wheel;
@@ -199,8 +199,8 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
             const GD_Cell *selected = &model->cells[cell];
             int x = split+18, detail_width = width-x-18, body_top = 294;
             GD_Record *record;
-            if (IsKeyPressed(KEY_PAGE_DOWN)) ++case_number;
-            if (IsKeyPressed(KEY_PAGE_UP)) --case_number;
+            if (IsKeyPressed(KEY_PAGE_DOWN) || IsKeyPressedRepeat(KEY_PAGE_DOWN)) ++case_number;
+            if (IsKeyPressed(KEY_PAGE_UP) || IsKeyPressedRepeat(KEY_PAGE_UP)) --case_number;
             if (case_number < 0) case_number = selected->pair_count-1;
             case_number %= selected->pair_count;
             if (old_case != case_number) { linked = -1; scroll = 0; }

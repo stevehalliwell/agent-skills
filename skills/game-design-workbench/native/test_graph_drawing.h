@@ -1,4 +1,30 @@
 /* Drawing checks exercise geometry directly, without pointer automation. */
+TEST(layout_settling,
+    GD_Layout *layout=allocate(storage,sizeof(*layout)),*other=allocate(storage,sizeof(*other));
+    double square=0; float maximum=0; int i,step;
+    TEST_ASSERT(layout && other); memset(layout,0,sizeof(*layout));
+    layout->node_count=64; layout->group_count=1; layout->edge_count=64;
+    for (i=0;i<64;++i) {
+        layout->nodes[i].label="node"; layout->nodes[i].key=i;
+        layout->edges[i]=(GD_LayoutEdge){i,(i+1)%64,i,1,GD_NEXT};
+    }
+    TEST_ASSERT(gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME));
+    for (step=0;step<4096;++step) {
+        gd_layout_step(layout,-1);
+        if (step>=4096-120) for (i=0;i<64;++i) {
+            float speed=sqrtf(layout->nodes[i].vx*layout->nodes[i].vx+layout->nodes[i].vy*layout->nodes[i].vy);
+            square+=speed*speed; if (speed>maximum) maximum=speed;
+        }
+    }
+    fprintf(stderr,"settling probe: 64-node cycle / 4096 steps / last 120: RMS %.6f, max %.6f world units/step\n",sqrt(square/(64*120)),maximum);
+    /* Bound residual movement, not a promise of full convergence. Original
+       rotating sampler measured RMS 0.342987 / maximum 0.982166 here. */
+    TEST_ASSERT(sqrt(square/(64*120))<0.04 && maximum<0.1f);
+    memcpy(other,layout,sizeof(*layout)); other->tick+=17;
+    gd_layout_step(layout,-1); gd_layout_step(other,-1);
+    for (i=0;i<64;++i) TEST_ASSERT(layout->nodes[i].x==other->nodes[i].x && layout->nodes[i].y==other->nodes[i].y);
+    release(storage,other); release(storage,layout);
+)
 TEST(directed_drawing_order,
     static const char *labels[]={"a","b","c","d","e","f"};
     GD_Layout *layout=allocate(storage,sizeof(*layout)); GD_LayoutPoint saved[6];
@@ -70,6 +96,34 @@ TEST(directed_drawing_routes,
     }
     TEST_ASSERT(gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME));
     for (i=0;i<8;++i) { GD_LayoutRoute route; gd_layout_route(layout,i,&route); TEST_ASSERT(route.count==(from[i]==to[i] ? 5:3)); }
+    layout->direct_routes=1;
+    for (horizontal=0;horizontal<2;++horizontal) {
+        layout->horizontal=horizontal; TEST_ASSERT(gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,GD_SORT_NAME));
+        for (i=0;i<8;++i) {
+            GD_LayoutRoute route; gd_layout_route(layout,i,&route);
+            TEST_ASSERT(route.count==(from[i]==to[i] ? 8:
+                (horizontal ? layout->nodes[from[i]].x==layout->nodes[to[i]].x:layout->nodes[from[i]].y==layout->nodes[to[i]].y) ? 8:3));
+            for (j=1;j<route.count;++j) {
+                float x=(route.points[j-1].x+route.points[j].x)/2,y=(route.points[j-1].y+route.points[j].y)/2;
+                TEST_ASSERT(isfinite(x) && isfinite(y) && gd_layout_route_distance(layout,i,x,y)<0.001f);
+            }
+        }
+        TEST_ASSERT(!memcmp(saved,layout->edges,sizeof(saved)));
+    }
+    /* Long direct link bypasses an unrelated middle node in a populated band;
+       clearance must move the node, not reintroduce an orthogonal corridor. */
+    memset(layout,0,sizeof(*layout)); layout->direct_routes=1;
+    layout->node_count=5; layout->edge_count=1; layout->group_count=1;
+    for (i=0;i<5;++i) {
+        layout->nodes[i].key=i; layout->nodes[i].label=labels[i];
+        layout->nodes[i].layer=i==0 ? 0:i==4 ? 2:1;
+    }
+    layout->edges[0]=(GD_LayoutEdge){0,4,0,1,GD_PREREQUISITES};
+    for (horizontal=0;horizontal<2;++horizontal) {
+        layout->horizontal=horizontal; TEST_ASSERT(gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,GD_SORT_NAME));
+        for (i=1;i<4;++i) TEST_ASSERT(gd_layout_route_distance(layout,0,layout->nodes[i].x,layout->nodes[i].y)>20);
+        TEST_ASSERT(layout->nodes[1].layer==1 && layout->nodes[2].layer==1 && layout->nodes[3].layer==1);
+    }
     layout->node_count=layout->edge_count=layout->group_count=0; TEST_ASSERT(gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,GD_SORT_NAME));
     release(storage,layout);
 )

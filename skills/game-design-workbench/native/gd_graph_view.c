@@ -172,7 +172,6 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
         const char *prefix = group->member_count == 1 && !group->edge_count ? "Isolated: " : "Group: ";
         if (model->skill_mode && group->member_count == 1 && model->skills[group->anchor].incomplete)
             prefix = model->skills[group->anchor].cycle ? "Cycle: " : "Unresolved: ";
-        DrawRectangleRounded(bounds[i], 0.12f, 6, (Color){27, 36, 48, 255});
         DrawText(TextFormat("%s%s", prefix, model->records[group->anchor].name),
                  (int)bounds[i].x+10, (int)bounds[i].y+9, 14, graph_muted);
     }
@@ -630,7 +629,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (initial_query) memcpy(known,initial_query->known,sizeof(known));
         gd_skill_unlocks(model,known,-1,query);
     }
-    SetTraceLogCallback(graph_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetTraceLogCallback(graph_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);
     path_controls[1].declared=1;
     InitWindow(1440, 900, model->skill_mode ? "Game Design Workbench - skill and progression explorer" : "Game Design Workbench - matrix graph");
     if (!IsWindowReady()) { if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context, layout); gd_error(initial, "view.window", "Cannot initialize graph window", NULL, 0); return 2; }

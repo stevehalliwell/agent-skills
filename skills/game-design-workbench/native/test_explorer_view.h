@@ -13,8 +13,8 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34});
     match_details(c); layout_controls(c); selected=analyze(c);
     analysis_controls(c,selected); igEnd();
-    matches(c); p->camera.offset=(Vector2){450,503};
-    if (p->fit) { fit_view(c,p->fit==2); p->fit=0; }
+    matches(c); distance_focus_update(c,selected); p->camera.offset=(Vector2){450,503};
+    if (p->fit) { fit_view(c,p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
     {
         GD_ExplorerEvidence e=evidence(c,selected);
         if (is_graph(p->view)) gd_explorer_graph_draw(c,&e);
@@ -40,18 +40,63 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     c.query=allocator.allocate(allocator.context,sizeof(*c.query));
     EXPLORER_CHECK(panes && saved && c.analysis && c.query); memset(c.analysis,0,sizeof(*c.analysis));
     EXPLORER_CHECK(open_window("Workbench explorer app-local checks")); window=1;
+    EXPLORER_CHECK(IsWindowState(FLAG_MSAA_4X_HINT)); /* Requested hint, not proof of driver sample count. */
     TraceLog(LOG_WARNING,"Explorer structured stdout: stderr warning probe");
     for (v=0;v<GD_EXPLORER_VIEWS;++v) {
         pane_defaults(&panes[v],(GD_ExplorerView)v); c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c));
         if (v==GD_EXPLORER_MDA) panes[v].mda.record=panes[v].layout->node_count ? panes[v].layout->nodes[0].key:-1;
         else panes[v].selection.node=panes[v].layout->node_count ? 0:-1;
         if (is_graph((GD_ExplorerView)v)) panes[v].inspected_record=gd_explorer_graph_record(&c);
+        EXPLORER_CHECK(panes[v].layout->direct_routes==(v==GD_EXPLORER_SKILLS));
         panes[v].paused=true; panes[v].paths.enabled=1;
         if (panes[v].layout->node_count) gd_graph_path_start(&panes[v].paths,panes[v].layout->nodes[0].key);
         panes[v].shapes=panes[v].foundations=true; panes[v].reach.enabled=1; panes[v].overview.enabled=1;
         explorer_test_render(&c);
         EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/layers-%d.png",output,v)<(int)sizeof(path) && gd_save_screenshot(path));
+        {
+            Camera2D regular=panes[v].camera; int i;
+            EXPLORER_CHECK(distance_focus_toggle(&c,1)); explorer_test_render(&c);
+            EXPLORER_CHECK(panes[v].distance_focus && panes[v].distance_focus->active);
+            for (i=0;i<panes[v].layout->node_count;++i) {
+                if (incidence((GD_ExplorerView)v)) EXPLORER_CHECK(!panes[v].distance_focus->fixed_roots[i]);
+                if (panes[v].distance_focus->fixed_roots[i])
+                    EXPLORER_CHECK(panes[v].layout->nodes[i].x==panes[v].distance_focus->base[i].x && panes[v].layout->nodes[i].y==panes[v].distance_focus->base[i].y);
+            }
+            for (i=0;i<panes[v].layout->node_count;++i) if (panes[v].layout->mode!=GD_LAYOUT_FORCE) {
+                int horizontal=panes[v].layout->mode==GD_LAYOUT_COLUMNS || panes[v].layout->horizontal;
+                EXPLORER_CHECK(horizontal ? panes[v].layout->nodes[i].x==panes[v].distance_focus->base[i].x:
+                    panes[v].layout->nodes[i].y==panes[v].distance_focus->base[i].y);
+            }
+            EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/focus-%d.png",output,v)<(int)sizeof(path) && gd_save_screenshot(path));
+            EXPLORER_CHECK(distance_focus_toggle(&c,0) && !memcmp(&regular,&panes[v].camera,sizeof(regular)));
+            for (i=0;i<panes[v].layout->node_count;++i)
+                EXPLORER_CHECK(panes[v].layout->nodes[i].x==panes[v].distance_focus->base[i].x && panes[v].layout->nodes[i].y==panes[v].distance_focus->base[i].y);
+        }
     }
+    /* Alternate rank/direction, noun/verb columns and MDA free layout. */
+    for (v=0;v<3;++v) {
+        int views[3]={GD_EXPLORER_SKILLS,GD_EXPLORER_MATRIX,GD_EXPLORER_MDA},i;
+        GD_ExplorerPane *p=&panes[views[v]]; c.pane=p;
+        if (v==0) { p->rank=1; p->horizontal=1; } else p->layout_choice=1;
+        p->prepared=0; EXPLORER_CHECK(pane_prepare(&c) && distance_focus_toggle(&c,1));
+        explorer_test_render(&c); EXPLORER_CHECK(p->distance_focus->active);
+        for (i=0;i<p->layout->node_count;++i) if (p->layout->mode!=GD_LAYOUT_FORCE) {
+            int horizontal=p->layout->mode==GD_LAYOUT_COLUMNS || p->layout->horizontal;
+            EXPLORER_CHECK(horizontal ? p->layout->nodes[i].x==p->distance_focus->base[i].x:p->layout->nodes[i].y==p->distance_focus->base[i].y);
+        }
+        {
+            int root=p->distance_focus->anchor_node; GD_LayoutPoint point=p->distance_focus->focused[root];
+            uint64_t revision=p->distance_focus_revision;
+            gd_layout_move_node(p->layout,root,point.x+1000,point.y+1000);
+            distance_focus_update(&c,analyze(&c));
+            EXPLORER_CHECK(p->distance_focus_revision==revision && p->layout->nodes[root].x==point.x && p->layout->nodes[root].y==point.y);
+        }
+        EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/focus-alternate-%d.png",output,views[v])<(int)sizeof(path) && gd_save_screenshot(path));
+        EXPLORER_CHECK(distance_focus_toggle(&c,0));
+        p->rank=p->horizontal=p->layout_choice=0; p->prepared=0; EXPLORER_CHECK(pane_prepare(&c));
+    }
+    /* Keep one active pose through switch/reload/failure/reset checks. */
+    c.pane=&panes[GD_EXPLORER_MDA]; EXPLORER_CHECK(distance_focus_toggle(&c,1)); explorer_test_render(&c);
     /* Cross-family relationship roots resolve qualified source, not offsets.
        Missing destination roles must not mutate its pane or switch source. */
     {
@@ -167,13 +212,20 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
        old snapshot, draft and visited layout, not just a stale pointer. */
     c.pane=&panes[GD_EXPLORER_MDA]; last_good=c.project;
     {
-        GD_ExplorerProject *probe; int before=*calls,needed;
+        GD_ExplorerProject *probe; int before=*calls,needed,j,offsets[3]={2,7,8};
+        GD_LayoutFocus *old_focus=panes[GD_EXPLORER_MDA].distance_focus;
+        EXPLORER_CHECK(panes[GD_EXPLORER_MDA].distance_focus_enabled && old_focus);
         probe=gd_explorer_load(allocator,collections,count); EXPLORER_CHECK(probe && !gd_explorer_error(probe));
         needed=*calls-before; gd_explorer_destroy(probe);
-        *fail_at=*calls+needed+2; /* candidate pane array succeeds; first new layout fails */
-        EXPLORER_CHECK(!reload_project(&c,panes,collections,count,failure,sizeof(failure)) && c.project==last_good);
-        *fail_at=0;
-        for (v=0;v<GD_EXPLORER_VIEWS;++v) EXPLORER_CHECK(panes[v].layout && panes[v].prepared);
+        /* Pane array, six layouts in view order, plus active MDA scratch.
+           Fail first layout, scratch itself, then following Resource layout. */
+        for (j=0;j<3;++j) {
+            *fail_at=*calls+needed+offsets[j];
+            EXPLORER_CHECK(!reload_project(&c,panes,collections,count,failure,sizeof(failure)) && c.project==last_good);
+            *fail_at=0;
+            EXPLORER_CHECK(panes[GD_EXPLORER_MDA].distance_focus==old_focus && panes[GD_EXPLORER_MDA].distance_focus_enabled);
+            for (v=0;v<GD_EXPLORER_VIEWS;++v) EXPLORER_CHECK(panes[v].layout && panes[v].prepared);
+        }
     }
     /* New case source shifts resource snapshot keys. Retain a chosen case/start
        by source identity, never by coincident record/native-node offsets. */
@@ -220,7 +272,7 @@ cleanup:
     if (probe_created) remove(probe_path);
     if (window) { rlImGuiShutdown(); CloseWindow(); }
     if (panes) {
-        for (v=0;v<GD_EXPLORER_VIEWS;++v) { gd_diagnostics_clear(&panes[v].diagnostics); if (panes[v].layout) allocator.release(allocator.context,panes[v].layout); }
+        for (v=0;v<GD_EXPLORER_VIEWS;++v) { gd_diagnostics_clear(&panes[v].diagnostics); gd_layout_focus_destroy(panes[v].distance_focus); if (panes[v].layout) allocator.release(allocator.context,panes[v].layout); }
         allocator.release(allocator.context,panes);
     }
     if (saved) allocator.release(allocator.context,saved);
