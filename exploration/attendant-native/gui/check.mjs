@@ -19,7 +19,7 @@ function inventory(folder) {
     return entry.isDirectory() ? Object.entries(inventory(path)) : [[path, createHash('sha256').update(readFileSync(path)).digest('hex')]];
   }));
 }
-function bitmap(path) {
+function bitmap(path, minimumBright = 1000) {
   const bytes = readFileSync(path), header = /^P6\n(\d+) (\d+)\n255\n/.exec(bytes.subarray(0, 80).toString('ascii'));
   assert(header); const width = +header[1], height = +header[2], rgb = bytes.subarray(header[0].length);
   assert.equal(rgb.length, width * height * 3);
@@ -32,9 +32,26 @@ function bitmap(path) {
     output[target] = rgb[source + 2]; output[target + 1] = rgb[source + 1]; output[target + 2] = rgb[source];
     if (x > width * 0.65 && rgb[source] > 140 && rgb[source + 1] > 140 && rgb[source + 2] > 140) bright++;
   }
-  assert(bright > 1000, 'Preview emits actual text pixels');
+  assert(bright > minimumBright, 'Window emits actual text pixels');
   writeFileSync(path.replace('.ppm', '.bmp'), output);
   return { width, height, bright, sha256: createHash('sha256').update(bytes).digest('hex') };
+}
+function commentBorder(path, rectangle) {
+  const bytes = readFileSync(path), header = /^P6\n(\d+) (\d+)\n255\n/.exec(bytes.subarray(0, 80).toString('ascii'));
+  assert(header); const width = +header[1], height = +header[2], rgb = bytes.subarray(header[0].length);
+  const [left, top, right, bottom] = rectangle, middleX = (left + right) / 2, middleY = (top + bottom) / 2;
+  assert(right - left >= 600 && bottom - top >= 140, 'Visible editable field retains size');
+  for (const [x, y] of [[left, middleY], [right - 1, middleY], [middleX, top], [middleX, bottom - 1]]) {
+    let found = false;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const column = Math.floor(x) + dx, row = Math.floor(y) + dy;
+      if (column < 0 || column >= width || row < 0 || row >= height) continue;
+      const offset = (row * width + column) * 3;
+      if ([140, 148, 166].every((channel, index) => Math.abs(rgb[offset + index] - channel) <= 2)) found = true;
+    }
+    assert(found, 'Explicit comment-input border visible on each edge');
+  }
+  return { rectangle, visibleEdges: 4, emptyInput: true };
 }
 async function checkSelectionInspection(report, compiler) {
   const other = compiler === 'cjit' ? 'zig' : 'cjit';
@@ -48,8 +65,9 @@ async function checkSelectionInspection(report, compiler) {
     cpSync(join(root, 'fixtures/project'), project, { recursive: true });
     writeFileSync(join(project, '.gui-test-owned'), 'Owned selection inspection fixture.\n');
     writeFileSync(join(project, 'README.md'), text); const before = inventory(project);
+    const shot = mode === 'plain-menu' ? join(report.run, `${compiler}-comment-input-empty.ppm`) : null;
     const child = spawn(join(root, `build/gui/attendant-gui-${compiler}-check.exe`), ['--project', project,
-      '--assets', join(stack, 'build/deps/richmd/assets'), '--file', 'README.md', '--frames', '180', '--exercise-selection', mode], { stdio: ['ignore', 'pipe', 'pipe'] });
+      '--assets', join(stack, 'build/deps/richmd/assets'), '--file', 'README.md', '--frames', '180', '--exercise-selection', mode, ...(shot ? ['--shot', shot] : [])], { stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '', error = '';
     const ready = new Promise((resolve, reject) => {
       child.stdout.on('data', value => { output += value; if (output.includes('"event":"selection-ready"')) resolve(); });
@@ -74,7 +92,8 @@ async function checkSelectionInspection(report, compiler) {
       const afterAction = childJSON(join(root, `build/gui/attendant-gui-${other}.exe`), ['--project', project, '--inspect']);
       assert.deepEqual(afterAction, inspected, 'Unified action/comment-input focus preserves document selection');
       await done; assert.deepEqual(inventory(project), before);
-      report.results.push({ compiler, selectionInspection: { mode, clientCompiler: other, status, priorSourceSelectionReplaced: true, unifiedActionUsesLatestSelection: true, retainedDuringCommentInputFocus: status === 'exact', sourceAndProjectionUnchanged: true } });
+      const appearance = shot ? { ...bitmap(shot, 0), commentInput: commentBorder(shot, output.trim().split(/\r?\n/).map(line => JSON.parse(line)).find(event => event.event === 'selection-action').commentRect) } : null;
+      report.results.push({ compiler, ...(appearance ? { screenshot: appearance } : {}), selectionInspection: { mode, clientCompiler: other, status, priorSourceSelectionReplaced: true, unifiedActionUsesLatestSelection: true, retainedDuringCommentInputFocus: status === 'exact', sourceAndProjectionUnchanged: true } });
     } finally { clearTimeout(timer); if (child.exitCode === null) child.kill(); }
   }
 }

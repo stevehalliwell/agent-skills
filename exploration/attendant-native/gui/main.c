@@ -42,6 +42,7 @@ typedef struct gui_app {
     crmd_text_view before_view;
     ImVec2 before_editor, hint_go_position;
     ImVec2 preview_position;
+    ImVec4 comment_rect;
     ImVec2 first_position, depends_position, editor_position, comment_position, send_position, cancel_position, composer_cancel_position, feedback_position, target_position;
 #endif
 } gui_app;
@@ -395,6 +396,7 @@ static void document_panel(gui_app *app, int index) {
 static void draw_dialogs(gui_app *app) {
     gui_workspace *workspace = &app->workspace;
     ImVec2 zero = {0, 0}, selected_size = {660, 80}, comment_size = {660, 150};
+    const ImVec4 comment_border = {0.55f, 0.58f, 0.65f, 1.0f};
     if (app->request_exit && !app->composer_active && app->pending_action == GUI_ACTION_NONE) {
         int i;
         for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].used && workspace->tabs[i].dirty) { pending_action(app, GUI_ACTION_EXIT, i); break; }
@@ -438,11 +440,20 @@ static void draw_dialogs(gui_app *app) {
         if (start > end) { int swap = start; start = end; end = swap; }
         show_text(tab->path);
         if (app->composer_from_preview) show_text("Exact original-source selection from raw preview.");
+        show_text("Selected source:");
         igBeginChild_Str("selected source", selected_size, ImGuiChildFlags_Borders, 0);
         if (start >= 0 && end >= start && (size_t)end <= tab->length) igTextUnformatted(tab->text + start, tab->text + end);
         igEndChild();
+        show_text("Comment:");
         if (igIsWindowAppearing()) igSetKeyboardFocusHere(0);
+        igPushStyleVar_Float(ImGuiStyleVar_FrameBorderSize, 1.0f);
+        igPushStyleColor_Vec4(ImGuiCol_Border, comment_border);
         igInputTextMultiline("##comment", app->comment, sizeof(app->comment), comment_size, 0, NULL, NULL);
+#ifdef ATTENDANT_GUI_TESTING
+        { ImVec2 minimum = igGetItemRectMin(), maximum = igGetItemRectMax();
+          app->comment_rect.x = minimum.x; app->comment_rect.y = minimum.y; app->comment_rect.z = maximum.x; app->comment_rect.w = maximum.y; }
+#endif
+        igPopStyleColor(1); igPopStyleVar(1);
         show_text("Context note only. Reading never resolves it or authorizes unrelated edits.");
         if (tab->dirty) show_text("Save & Send writes this source first, then queues comment.");
         if (*workspace->error) show_text(workspace->error);
@@ -554,21 +565,19 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
         /* Focus neutral project heading without replacing latest document selection. */
         if (frame >= 14 && frame <= 17) { position.x = 12; position.y = 12; }
         if (frame >= 40 && frame <= 41) position = app->comment_position;
-        if (frame >= 48 && frame <= 49) position = app->composer_cancel_position;
         crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
         if (frame == 5 || frame == 6 || frame == 14 || frame == 15) ImGuiIO_AddMouseButtonEvent(io, 0, frame == 5 || frame == 14);
         if (frame == 8 || frame == 10) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, frame == 8);
         if (frame == 8 || frame == 9) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 8);
-        if (frame == 40 || frame == 41 || frame == 48 || frame == 49)
-            ImGuiIO_AddMouseButtonEvent(io, 0, frame == 40 || frame == 48);
+        if (frame == 40 || frame == 41) ImGuiIO_AddMouseButtonEvent(io, 0, frame == 40);
         if (frame == 46) {
             gui_tab *tab = &app->workspace.tabs[app->workspace.active];
             int expected = app->selection_exercise == 1;
-            if (app->composer_active != expected || (expected && (!app->composer_from_preview || app->composer_start != 0 || (size_t)app->composer_end != tab->length || !igIsAnyItemActive()))) {
+            if (app->composer_active != expected || (expected && (*app->comment || !app->composer_from_preview || app->composer_start != 0 || (size_t)app->composer_end != tab->length || !igIsAnyItemActive()))) {
                 fprintf(stderr, "Unified comment action did not follow latest preview ownership\n"); app->reveal_failed = 1;
             } else {
                 app->selection_action_checked = 1;
-                printf("{\"event\":\"selection-action\",\"enabled\":%s,\"olderSourceNotUsed\":true}\n", expected ? "true" : "false"); fflush(stdout);
+                printf("{\"event\":\"selection-action\",\"enabled\":%s,\"olderSourceNotUsed\":true,\"commentRect\":[%.1f,%.1f,%.1f,%.1f]}\n", expected ? "true" : "false", app->comment_rect.x, app->comment_rect.y, app->comment_rect.z, app->comment_rect.w); fflush(stdout);
             }
         }
         if (app->selection_exercise == 3) {

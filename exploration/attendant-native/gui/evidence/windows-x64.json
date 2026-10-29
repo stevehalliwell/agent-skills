@@ -1,25 +1,25 @@
 {
   "ok": true,
-  "checkerSha256": "3b3e9163c188bb84787eb99875926ca07feb2195b17c068e693e079c217facad",
-  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-6PM9aB",
+  "checkerSha256": "03c985a1432433af728d992dde4178d5fe4075d137c51a6218beb55fa0453e23",
+  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-YV43y6",
   "results": [
     {
       "compiler": "cjit",
       "provenance": {
-        "builtAt": "2026-10-29T21:32:38.933Z",
+        "builtAt": "2026-10-29T21:41:47.145Z",
         "version": {
           "status": 0,
           "text": "CJIT v1.2.0 by Dyne.org\r\n\r\nSynopsis: cjit [options] files(*) -- app arguments\r\n  (*) can be any source (.c) or built object (dll, dylib, .so)\r\nOptions and values (+) mandatory (-) default (=) optional:\r\n -h \t print this help\r\n -v \t print runtime and compiler status information\r\n -q \t stay quiet and only print errors and output\r\n -C \t set interpreter/compiler flags (-) env var CFLAGS\r\n -c \t compile a single source file, do not execute\r\n -o exe\t do not run, compile an executable (+path)\r\n -D sym\t define a macro value (+) symbol or key=value\r\n -I dir\t also search folder (+) dir for header files\r\n -l lib\t link the shared library (+) lib\r\n -L dir\t add folder (+) dir to library search paths\r\n -e fun\t run starting from entry function (-) main\r\n -p pid\t write execution process ID to (+) pid\r\n --verb\t don't go quiet, verbose logs\r\n --xass\t just extract runtime assets (=) to path\r\n --xtgz\t extract all files in a USTAR (+) tar.gz\r\n\r\n"
         },
-        "inputSha256": "6f46d465041f4005ac98f2207510d12103ef6b038ec61ca9d912e6def58ee61a",
+        "inputSha256": "c9ab1dcb5af332c18d7c98a7dfb71ed4b83dac076b78ac3b5ee03771de57aa0d",
         "binaries": [
           {
             "path": "build/gui/attendant-gui-cjit.exe",
-            "sha256": "6f0143d3d10fd5d72ee1f9043c2c1bbc4afdd4d6c7c1254be74c2d58d3c150ea"
+            "sha256": "52dcfe4295045b366ffea98c0b53c8325ec16ef1c249112e8364fc8c055bb910"
           },
           {
             "path": "build/gui/attendant-gui-cjit-check.exe",
-            "sha256": "a3ea896fc258a1fef5bfddb6811e2a571fe5c299c90bab838f43ed64a994e96f"
+            "sha256": "cd2c34ddf6b7f2d44bd2c8607b7775dac7dfdbffb7006356f7460a767834a785"
           },
           {
             "path": "build/gui/model-check-cjit.exe",
@@ -73,8 +73,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2002,
-        "sha256": "dbbdbcd16494612dd6c812893355337e85a19e3084db8b3c9aff3a29f45b860f"
+        "bright": 1981,
+        "sha256": "7249deb954bc9a7f8d2118ca43abfbc65d7794717df6b637914de26264c5ca0b"
       }
     },
     {
@@ -92,8 +92,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1433,
-        "sha256": "06902bf17e1ec2cfd6016ccb775e3e4670627320c3389195e55c74b9d3e116aa"
+        "bright": 1415,
+        "sha256": "1c4e7d5336d2840f0ac1fa494ae37658305c175ed6446eb6b4cc2d05914ff579"
       }
     },
     {
@@ -109,13 +109,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 2,
-        "vertices": 3004
+        "vertices": 3016
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1293,
-        "sha256": "12efb8892af229578a588e0eea29a8762706f6345b643c9d0a3837d56f874809"
+        "bright": 1271,
+        "sha256": "ca79bad2890e5c9a210dcfba589172e5ee14266d2cd1df68359266659c75190e"
       }
     },
     {
@@ -134,7 +134,7 @@
         "ok": true,
         "frames": 70,
         "tabs": 1,
-        "vertices": 3212
+        "vertices": 3216
       },
       "previewFeedback": {
         "rangeStart": 35,
@@ -148,8 +148,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1640,
-        "sha256": "192b6cf767e5e6118b743b45000d0530d352900dae893bc3407ea8b98efaf79a"
+        "bright": 1591,
+        "sha256": "7f8b61c03879a89dc62e33f973c295646d2e9051763cc9408c6b8fecb836d90f"
       }
     },
     {
@@ -163,12 +163,28 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1867,
-        "sha256": "0125cb7560dd7841bc082b1e9a4a9dd5909cb655cf07659f51ce7a60fe30f953"
+        "bright": 1835,
+        "sha256": "26ee7be91742750e71adf46e131ec60e2d6ebf36d20109ba4ab650c4329576b0"
       }
     },
     {
       "compiler": "cjit",
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1394,
+        "sha256": "80a68d95971f5cdb03ad60818b39bbed236793e7768c8ecb3069114f1014557f",
+        "commentInput": {
+          "rectangle": [
+            307,
+            475,
+            967,
+            625
+          ],
+          "visibleEdges": 4,
+          "emptyInput": true
+        }
+      },
       "selectionInspection": {
         "mode": "plain-menu",
         "clientCompiler": "zig",
@@ -228,7 +244,7 @@
           },
           {
             "event": "complete",
-            "checks": 100,
+            "checks": 95,
             "markerDraws": 3,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -253,8 +269,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45299,
-        "sha256": "e16d9783f8f43df10f3f195b96fc743d9e24940688d14ab570a88010228e2db4"
+        "bright": 45279,
+        "sha256": "33dd7c2e731a4d85154bf846286f402e342e1939d40f2a9ed5b7fdcdf5b921a9"
       }
     },
     {
@@ -282,7 +298,7 @@
           },
           {
             "event": "complete",
-            "checks": 41,
+            "checks": 40,
             "markerDraws": 0,
             "dirty": true,
             "caretSelectionPreservedAfterGo": true,
@@ -307,8 +323,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45294,
-        "sha256": "3a51da48a1a5f972fee5f1f98db925fdcefb14ced85bef9e105143af0f312eaa"
+        "bright": 45250,
+        "sha256": "78b707541d49bd883ff602365f85b4feb69800ad322c28a028f3bbf7f0ed3b44"
       }
     },
     {
@@ -336,7 +352,7 @@
           },
           {
             "event": "complete",
-            "checks": 41,
+            "checks": 47,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -361,8 +377,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45316,
-        "sha256": "0542b77493b1000cafff241c81f5eaa8ea5da61a6a24c9c324460f2e67e574b2"
+        "bright": 45278,
+        "sha256": "c449b17893fa8446f16429f0eafc491ba4212259b9acf34207fd0b5585ed0db4"
       }
     },
     {
@@ -390,7 +406,7 @@
           },
           {
             "event": "complete",
-            "checks": 45,
+            "checks": 42,
             "markerDraws": 2,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -415,8 +431,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45189,
-        "sha256": "76885bacbdac4cc2d66e1fe981cfa43779f441f9cd142df26b62624ab42df92e"
+        "bright": 45175,
+        "sha256": "ceed71faf7256be82d974bd1a29596dba3fc90994679809ca4d106468758ae41"
       }
     },
     {
@@ -469,8 +485,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45369,
-        "sha256": "ef97205b3370ce6a5cacaa56641ef50bfd7493b90c78128a22c71266d08b7e5a"
+        "bright": 45349,
+        "sha256": "0e0efeeff881bc09fd77c5ac09280902fe71a4020bdea63a60cdfdbb43bc977f"
       }
     },
     {
@@ -481,24 +497,24 @@
     {
       "compiler": "zig",
       "provenance": {
-        "builtAt": "2026-10-29T21:32:40.088Z",
+        "builtAt": "2026-10-29T21:41:48.355Z",
         "version": {
           "status": 0,
           "text": "0.17.0\n"
         },
-        "inputSha256": "6f46d465041f4005ac98f2207510d12103ef6b038ec61ca9d912e6def58ee61a",
+        "inputSha256": "c9ab1dcb5af332c18d7c98a7dfb71ed4b83dac076b78ac3b5ee03771de57aa0d",
         "binaries": [
           {
             "path": "build/gui/attendant-gui-zig.exe",
-            "sha256": "90486a367870b7beae4b203a7ac97849c9490aa4d183c80dd1c6accc9959b6fb"
+            "sha256": "7376f6fdca047a0b31effadedee7ec8f2e970ecd3a7dd864ed9e1da2b22522f0"
           },
           {
             "path": "build/gui/attendant-gui-zig-check.exe",
-            "sha256": "c4688cc2d55d5ddd0bdc330c3451a033af2e811e7424b55f3431d02a8144a42c"
+            "sha256": "c82ffbeeff372754cdb315f62ce40043be3fc02ed7055785b5089e67d8337201"
           },
           {
             "path": "build/gui/model-check-zig.exe",
-            "sha256": "12017bfe452bd3735fd7ef555da6059beb2e646a1f5946fba4e8fb65d3a777aa"
+            "sha256": "0c6bd78c311a127c4863765708b6b22126447985b47c2b2bef9fa44401309d99"
           }
         ],
         "stack": {
@@ -548,8 +564,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 2001,
-        "sha256": "f8667db61775493310586e1edc019486b4f3e05069ca846ce3894f28f5f6d9c8"
+        "bright": 1988,
+        "sha256": "5388fd53c21aabe8e417ccca3799db1cf49cd13533b2d4c68039c17abb4c6f0a"
       }
     },
     {
@@ -567,8 +583,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1435,
-        "sha256": "3e1912369a1ca08ef45fd657c9b06171ee0c7bbc304376f8bd636e8d94a40e65"
+        "bright": 1407,
+        "sha256": "606fb38526f77b7a57e817a6c30a1fe392a366b7e6d5742e71f6d948a80906eb"
       }
     },
     {
@@ -584,13 +600,13 @@
         "ok": true,
         "frames": 70,
         "tabs": 2,
-        "vertices": 3004
+        "vertices": 2996
       },
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1291,
-        "sha256": "1f23991723a5beeaa3c675188cfee2eed12bd12e6e3a456c61c0e9cbbac549cf"
+        "bright": 1268,
+        "sha256": "7319faadad4030ac141055e4585fc0dfeecd7cc9df02478050613680e1ff3796"
       }
     },
     {
@@ -623,8 +639,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1641,
-        "sha256": "dcf8a81b152a660913ea8c716c2126a65635c2d204050daab5849d1aa3c9f21d"
+        "bright": 1629,
+        "sha256": "b1b694164650a12125af037fc9baa19b7bf9d3f73a3ff9ab634aa5ab5758e35c"
       }
     },
     {
@@ -638,12 +654,28 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 1864,
-        "sha256": "260da69987bcf948eaa072a0672b5fa526845309fdab7aecaff486bd498c833b"
+        "bright": 1849,
+        "sha256": "cdbaec70b0e1bde7d9e5684967f4cb3aa939218cf8cfddf10268f384fb82f9c7"
       }
     },
     {
       "compiler": "zig",
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1429,
+        "sha256": "8eeeb405235bc1413a65a8f075a07a0f13fc834b433dad6d957f6ffac8470c8d",
+        "commentInput": {
+          "rectangle": [
+            307,
+            475,
+            967,
+            625
+          ],
+          "visibleEdges": 4,
+          "emptyInput": true
+        }
+      },
       "selectionInspection": {
         "mode": "plain-menu",
         "clientCompiler": "cjit",
@@ -703,7 +735,7 @@
           },
           {
             "event": "complete",
-            "checks": 97,
+            "checks": 95,
             "markerDraws": 3,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -728,8 +760,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45300,
-        "sha256": "7738d737fa614c8f57368b0e106f3b9cf0974df05eb7e4efd18082de56e42e18"
+        "bright": 45302,
+        "sha256": "f504ae54f41cbd8ab40d150fad4135c994a62eecff655a40b979bdaf9a431944"
       }
     },
     {
@@ -757,7 +789,7 @@
           },
           {
             "event": "complete",
-            "checks": 43,
+            "checks": 41,
             "markerDraws": 0,
             "dirty": true,
             "caretSelectionPreservedAfterGo": true,
@@ -782,8 +814,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45271,
-        "sha256": "fd17246e39c67abce69144ea4d53454ede90005949b965966063dec101d964f2"
+        "bright": 45298,
+        "sha256": "d54a2ae8e92d9387134dad809b1ed5e3cf1e079c0934de96dbca294c1c06d65c"
       }
     },
     {
@@ -811,7 +843,7 @@
           },
           {
             "event": "complete",
-            "checks": 43,
+            "checks": 42,
             "markerDraws": 0,
             "dirty": false,
             "caretSelectionPreservedAfterGo": true,
@@ -836,8 +868,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45298,
-        "sha256": "462fb8acbd17b209dc25b8ba7a58223f89964fe484d4e6182765443d4380a0a9"
+        "bright": 45293,
+        "sha256": "a7b2c4162de69e8869dc89e7eeace152aa8c6d2b4e1f974207cbbaef27de0e4b"
       }
     },
     {
@@ -890,8 +922,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45199,
-        "sha256": "593da0aa59928bfaa61e9ddc65b9b98eb072aec74f9ebfc8eb1ec34958c3f870"
+        "bright": 45192,
+        "sha256": "05cd2a7bc4c922c4923a2b6ca4f2451e268dc42c24eaa0aff42da7e5c6800e43"
       }
     },
     {
@@ -944,8 +976,8 @@
       "screenshot": {
         "width": 1424,
         "height": 961,
-        "bright": 45368,
-        "sha256": "b1af97df957d8e23b8e397760ef2e5b0324945705d87b724142e0f456fbfcd37"
+        "bright": 45358,
+        "sha256": "42b10add8c0109e6c18c34f5f8514a52125f4e6e2bfb487094a948396c572708"
       }
     },
     {
