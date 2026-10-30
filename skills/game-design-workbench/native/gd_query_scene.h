@@ -22,6 +22,11 @@ typedef struct {
    variant/ghost copies never supply convergence weights. Partial presentation
    remains marked; allocation/invalid input returns NULL, never mutates old scene. */
 GD_QueryScene *gd_query_scene_build(const GD_Query *query, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit);
+/* Canonical finite actor topology: all retained variants/excluded checks,
+   independent of drawing controls. Caller allocator owns scene, query borrowed. */
+GD_QueryScene *gd_query_scene_actor_topology(GD_Allocator allocator, const GD_Query *query, int work_limit);
+const char *gd_query_scene_node_kind_name(GD_QueryNodeKind kind);
+const char *gd_query_scene_edge_kind_name(GD_QueryEdgeKind kind);
 /* Exact contributor context plus all direct side effects. Counts use native
    context mask; scope must outlive scene. Wrapped rows are display, not time. */
 GD_QueryScene *gd_query_scene_effect_context(const GD_Query *query, const GD_EffectQuery *scope, int weighted, int work_limit);

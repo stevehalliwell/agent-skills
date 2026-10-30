@@ -4,6 +4,14 @@
 #include <stdarg.h>
 #include <string.h>
 
+const char *gd_query_scene_node_kind_name(GD_QueryNodeKind kind) {
+    static const char *const names[]={"selected_binding","state_hypothesis","checked_activation","effect_concept","partner_binding","coverage_value"};
+    return kind>=GD_QUERY_NODE_BINDING && kind<=GD_QUERY_NODE_COVERAGE ? names[kind]:NULL;
+}
+const char *gd_query_scene_edge_kind_name(GD_QueryEdgeKind kind) {
+    static const char *const names[]={"hypothesis_association","invocation","effect_proposal","partner_association","call_frontier"};
+    return kind>=GD_QUERY_EDGE_ASSUMPTION && kind<=GD_QUERY_EDGE_FRONTIER ? names[kind]:NULL;
+}
 static int charge(GD_QueryScene *scene, int amount) {
     if (scene->limited || amount>scene->work_limit-scene->work) { scene->limited=1; return 0; }
     scene->work+=amount; return 1;
@@ -29,7 +37,7 @@ static void add_edge(GD_QueryScene *scene, int a, int b, GD_QueryEdgeKind kind, 
     if (a<0 || b<0 || !charge(scene,1)) return;
     if (scene->layout.edge_count==GD_MAX_PAIRS) { scene->limited=scene->capacity_limited=1; return; }
     index=scene->layout.edge_count++;
-    scene->layout.edges[index]=(GD_LayoutEdge){a,b,index,1,GD_RELATION_RESOURCE_BASE+16+(int)kind};
+    scene->layout.edges[index]=(GD_LayoutEdge){a,b,index,1,GD_RELATION_QUERY_BASE+(int)kind};
     scene->edges[index]=(GD_QuerySceneEdge){kind,source,variant};
 }
 static int case_record(const GD_Query *query, int index) { return query->rules->sources[query->rules->cases[index].source].record; }
@@ -158,11 +166,11 @@ static void wrap_context(GD_QueryScene *scene) {
     }
     scene->layout.height=top;
 }
-static GD_QueryScene *build_scene(const GD_Query *query, const GD_EffectQuery *scope, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit) {
+static GD_QueryScene *build_scene(GD_Allocator allocator, const GD_Query *query, const GD_EffectQuery *scope, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit) {
     GD_QueryScene *scene;
-    if (!query || (scope && (!query->effects || scope->graph!=query->effects)) || (query->request.kind!=GD_QUERY_ACTOR_STATES && query->request.kind!=GD_QUERY_CONTRIBUTORS && query->request.kind!=GD_QUERY_STATE_COVERAGE) || ghosts<GD_QUERY_ALL_VARIANTS || ghosts>GD_QUERY_STACKED_VARIANTS || work_limit<0 || work_limit>GD_EFFECT_WORK || (query->variants && (primary<-1 || primary>=query->variants->variant_count))) return NULL;
-    scene=query->allocator.allocate(query->allocator.context,sizeof(*scene)); if (!scene) return NULL;
-    memset(scene,0,sizeof(*scene)); scene->allocator=query->allocator; scene->query=query; scene->effect_scope=scope; scene->ghosts=ghosts; scene->primary=primary; scene->weighted=weighted!=0; scene->include_excluded=include_excluded!=0; scene->work_limit=work_limit;
+    if (!query || !allocator.allocate || !allocator.release || (scope && (!query->effects || scope->graph!=query->effects)) || (query->request.kind!=GD_QUERY_ACTOR_STATES && query->request.kind!=GD_QUERY_CONTRIBUTORS && query->request.kind!=GD_QUERY_STATE_COVERAGE) || ghosts<GD_QUERY_ALL_VARIANTS || ghosts>GD_QUERY_STACKED_VARIANTS || work_limit<0 || work_limit>GD_EFFECT_WORK || (query->variants && (primary<-1 || primary>=query->variants->variant_count))) return NULL;
+    scene=allocator.allocate(allocator.context,sizeof(*scene)); if (!scene) return NULL;
+    memset(scene,0,sizeof(*scene)); scene->allocator=allocator; scene->query=query; scene->effect_scope=scope; scene->ghosts=ghosts; scene->primary=primary; scene->weighted=weighted!=0; scene->include_excluded=include_excluded!=0; scene->work_limit=work_limit;
     if (query->state_coverage) coverage_cards(scene); else if (query->effects) effects(scene); else actors(scene);
     if (scene->limited) scene->unexamined_items_upper_bound=query->effects ? query->effects->node_count+query->effects->link_count:query->variants ? query->variants->activation_count+query->variants->write_count+query->rules->participant_count+query->variants->effect_count+query->variants->variant_count+1:query->state_coverage ? query->state_coverage->value_count:0;
     scene->layout.group_count=scene->layout.node_count ? 1:0; scene->layout.horizontal=1; scene->layout.direct_routes=1;
@@ -178,8 +186,9 @@ static GD_QueryScene *build_scene(const GD_Query *query, const GD_EffectQuery *s
     }
     return scene;
 }
-GD_QueryScene *gd_query_scene_build(const GD_Query *query, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit) { return build_scene(query,NULL,ghosts,primary,weighted,include_excluded,work_limit); }
-GD_QueryScene *gd_query_scene_effect_context(const GD_Query *query, const GD_EffectQuery *scope, int weighted, int work_limit) { if (!scope) return NULL; return build_scene(query,scope,GD_QUERY_ALL_VARIANTS,-1,weighted,0,work_limit); }
+GD_QueryScene *gd_query_scene_build(const GD_Query *query, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit) { if (!query) return NULL; return build_scene(query->allocator,query,NULL,ghosts,primary,weighted,include_excluded,work_limit); }
+GD_QueryScene *gd_query_scene_effect_context(const GD_Query *query, const GD_EffectQuery *scope, int weighted, int work_limit) { if (!query || !scope) return NULL; return build_scene(query->allocator,query,scope,GD_QUERY_ALL_VARIANTS,-1,weighted,0,work_limit); }
+GD_QueryScene *gd_query_scene_actor_topology(GD_Allocator allocator, const GD_Query *query, int work_limit) { if (!query || !query->variants || query->request.kind!=GD_QUERY_ACTOR_STATES) return NULL; return build_scene(allocator,query,NULL,GD_QUERY_ALL_VARIANTS,-1,0,1,work_limit); }
 int gd_query_scene_compare(GD_QueryScene *scene, int first, int second) {
     const GD_ActorQuery *query; int i;
     if (!scene || !(query=scene->query->variants) || first<0 || first>=query->variant_count || second<0 || second>=query->variant_count || !charge(scene,scene->layout.node_count)) return 0;

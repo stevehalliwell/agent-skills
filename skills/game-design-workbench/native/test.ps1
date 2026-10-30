@@ -37,6 +37,16 @@ $left = @($inventory.data.nodes | Where-Object local_name -eq 'Left')[0]
 if ($left.counts.incoming -ne 1 -or $left.counts.outgoing -ne 3 -or $left.counts.distinct_partners -ne 3 -or $left.counts.incident_rows -ne 4) { throw 'Actor inventory parallel/map declarations conflated' }
 $inventorySelected = (& $executable query --question direct-connections --projection actor-inventory @actorInputs --from $left.id --relation declared_noun --fields nodes,evidence --json | ConvertFrom-Json)
 if ($LASTEXITCODE -ne 0 -or -not $inventorySelected.ok -or $inventorySelected.data.evidence.marked_links.Count -ne 1 -or @($inventorySelected.data.nodes | Where-Object id -eq $left.id)[0].counts.incident_rows -ne 1) { throw 'Actor inventory stable selector/relation mismatch' }
+$finiteInputs = @('--case', 'cases/rules#caller', '--participant', 'Left', '--axis', 'actions/Life')
+$finite = (& $executable query --question adjacency --projection actors @actorInputs @finiteInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $finite.ok -or -not $finite.coverage.identities_complete -or $finite.data.projection -ne 'actors' -or $finite.data.actor_query_context.question -ne 'actor-states' -or $finite.data.actor_query_context.data.variants.Count -ne 2 -or $finite.data.actor_topology_coverage.construction_limited -or $finite.data.PSObject.Properties.Name -contains 'actor_inventory_coverage') { throw 'Finite actor structural scope/native context mismatch' }
+$binding = @($finite.data.nodes | Where-Object native_kind -eq 'selected_binding')[0]
+$finiteSelected = (& $executable query --question reachability --projection actors @actorInputs @finiteInputs --from $binding.id --work-limit 0 --fields nodes,evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $finiteSelected.ok -or $finiteSelected.coverage.query_complete -or $finiteSelected.data.evidence.cycle -ne $null -or $finiteSelected.data.actor_query_context.data.variants.Count -ne 2) { throw 'Finite actor selector/zero-search scope mismatch' }
+$finiteReordered = (& $executable query --question direct-connections --projection actors @actorInputs @finiteInputs --value dead --value alive --from $binding.id --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $finiteReordered.ok -or @($finiteReordered.data.nodes | Where-Object id -eq $binding.id).Count -ne 1) { throw 'Finite actor identity depends on variant order' }
+$missingScope = (& $executable query --question adjacency --projection actors @actorInputs --json 2>$null | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $missingScope.ok) { throw 'Finite actor topology accepted missing native scope' }
 $example = Join-Path (Split-Path $root -Parent) 'examples/crate-puzzle/game-design'
 $inputs = @('--nouns', "nouns=$example/nouns", '--verbs', "verbs=$example/verbs", '--interactions', "interactions=$example/interactions")
 $result = (& $executable matrix @inputs --json | ConvertFrom-Json)

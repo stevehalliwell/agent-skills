@@ -100,6 +100,12 @@ int gd_explorer_query_prepare(GD_ExplorerContext *context) {
 int gd_explorer_query_run(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *fresh;
     *pane->query_message=0; fresh=build_state(context,&pane->query_options,0,NULL); if (!fresh) return 0;
+    if (pane->structure_state && pane->structure_state->result && pane->structure_state->result->actor_scene) {
+        GD_ExplorerPane candidate=*pane; GD_ExplorerContext next=*context;
+        candidate.query_state=fresh; candidate.structure_state=NULL; next.pane=&candidate;
+        if (!gd_explorer_structure_remap(&next,context->project,pane)) { snprintf(pane->query_message,sizeof(pane->query_message),"%s",*candidate.query_message ? candidate.query_message:"Cannot prepare dependent structural result; last good query retained."); gd_explorer_query_destroy(fresh); return 0; }
+        gd_explorer_structure_destroy(pane->structure_state); pane->structure_state=candidate.structure_state;
+    }
     gd_explorer_query_destroy(pane->query_state); pane->query_state=fresh; pane->query_options=fresh->applied; pane->layout=&fresh->scene->layout;
     pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; pane->fit=pane->view==GD_EXPLORER_EFFECTS || fresh->applied.coverage ? GD_EXPLORER_FIT_QUERY_READABLE:1; pane->prepared=1;
     snprintf(pane->query_message,sizeof(pane->query_message),"Query applied. Values are assumptions; no source writes or final outcome proof."); return 1;

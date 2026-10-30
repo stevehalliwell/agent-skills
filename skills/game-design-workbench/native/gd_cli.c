@@ -189,7 +189,8 @@ static int application(int argc, char **argv) {
     const char *resource_to=NULL; int resource_accepted=0;
     GD_SkillUnlocks *skill_query=NULL;
     GD_Query *query=NULL; GD_QueryRequest query_request={0};
-    GD_StructureOptions structural={0}; int structural_only=0,query_work_supplied=0;
+    GD_StructureOptions structural={0}; int structural_only=0,query_work_supplied=0,structural_actor=0;
+    GD_StructureResult *actor_structure=NULL; GD_ExplorerProject actor_project={0};
     structural.work_limit=GD_GRAPH_ANALYSIS_WORK;
     const char *question=NULL,*projection=NULL,*object_name=NULL,*axis_name=NULL;
     const char *error_code="cli.arguments"; int query_list=0;
@@ -441,13 +442,15 @@ static int application(int argc, char **argv) {
             screenshot = argv[i];
         } else error = "Unknown option; see --help";
     }
+    structural_actor=command==15 && !query_list && gd_structure_kind(question)>=0 && gd_structure_kind(question)!=GD_STRUCTURE_DECLARATIONS && projection && !strcmp(projection,"actors");
     if (command==15 && !query_list && gd_structure_kind(question)>=0) {
-        if (!error && (object_name || axis_name || query_request.participant || query_request.value_count || query_request.effect_kind>=0 || analyze || case_name || assumption_count || context_assumption_count || control_filter.include_count || control_filter.exclude_count || known_count || frames || screenshot || output_path || layout_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied)) error="Structural query does not accept actor/effect/scenario/control/view parameters";
+        if (!error && !structural_actor && (object_name || axis_name || query_request.participant || query_request.value_count || query_request.effect_kind>=0 || analyze || case_name || assumption_count || context_assumption_count || control_filter.include_count || control_filter.exclude_count || known_count || frames || screenshot || output_path || layout_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied)) error="Structural query does not accept actor/effect/scenario/control/view parameters";
         if (!error && gd_structure_kind(question)==GD_STRUCTURE_DECLARATIONS && structural_only) error="Declaration gaps inspect whole loaded reader context; graph filter/direction/lens parameters are unavailable";
         structural.question=question; structural.projection=projection; structural.from=from; structural.to=query_request.target_id; structural.status_count=control_filter.status_count;
         for (i=0;i<structural.status_count;++i) structural.statuses[i]=control_filter.statuses[i];
-        for (i=0;i<count;++i) collections[i].role=source_roles[i];
-        return gd_structure_cli(allocator,collections,count,&structural,json,fields,error);
+        if (!structural_actor) { for (i=0;i<count;++i) collections[i].role=source_roles[i]; return gd_structure_cli(allocator,collections,count,&structural,json,fields,error); }
+        if (!error && (query_request.effect_kind>=0 || analyze || control_filter.include_count || control_filter.exclude_count || known_count || frames || screenshot || output_path || layout_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied)) error="Finite actor structural questions accept actor-states inputs and structural selectors only";
+        query_request.target_id=NULL; query_request.work_limit=GD_ACTOR_WORK;
     }
     if (command==13) {
         if (!error && (!count || fields || from || known_count || analyze || case_name || assumption_count || context_assumption_count ||
@@ -478,14 +481,14 @@ static int application(int argc, char **argv) {
             if (!error && (structural_only || query_work_supplied || count || question || projection || object_name || axis_name || query_request.participant || query_request.target_id || query_request.value_count || query_request.effect_kind>=0 || case_name || assumption_count || context_assumption_count || control_filter.status_count || control_filter.include_count || control_filter.exclude_count || known_count || from || analyze || frames || screenshot || output_path || layout_supplied || direction_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied || (fields && (!json || strcmp(fields,"questions"))))) error="query --list supports only output format and --fields questions";
             if (!error) return gd_write_query_catalogue(stdout,json) && !fflush(stdout) ? 0:2;
         } else {
-            int kind=gd_query_kind(question);
-            if (!error && structural_only) error="Structural-only parameters do not apply to this query";
+            int kind=structural_actor ? GD_QUERY_ACTOR_STATES:gd_query_kind(question);
+            if (!error && structural_only && !structural_actor) error="Structural-only parameters do not apply to this query";
             if (!error && analyze) error="query does not accept --analyze; use rules for full branch comparison";
             if (!error && kind<0) error="--question needs an implemented name from query --list";
             if (!error && (!projection || strcmp(projection,gd_query_projection((GD_QueryKind)kind)))) { error="Operation unavailable on requested projection; inspect query --list"; error_code="query.projection_unavailable"; }
             query_request.kind=(GD_QueryKind)kind;
             if (!error && kind==GD_QUERY_STATE_COVERAGE && (!(roles & (1 << GD_NOUN)) || !(roles & (1 << GD_AXIS)))) error="state-coverage requires explicit --nouns and --axes collection bindings";
-            if (!error && fields && !gd_query_fields(query_request.kind,fields)) error="Unsupported query fields; inspect query --list";
+            if (!error && fields && !(structural_actor ? gd_structure_fields(fields):gd_query_fields(query_request.kind,fields))) error="Unsupported query fields; inspect query --list";
         }
     }
     if (!error && mda_command) {
@@ -517,13 +520,13 @@ static int application(int argc, char **argv) {
     if (!error && command == 4 && explicit_format == 0) error = "Skill view change report supports JSON only";
     if (command == 4) json = 1;
     if (!error && output_path && (strlen(output_path) >= GD_MAX_PATH || strlen(output_path) < 5 || strcmp(output_path+strlen(output_path)-5, ".json"))) error = "Report path must end in .json and fit 4095 UTF-8 bytes";
-    if (!error && fields && (!json || view_command || (command==15 ? !gd_query_fields(query_request.kind,fields):!fields_valid(fields, command==14 ? 8 : rule_command ? 7 : command == 10 ? 6 : control_command ? 5 : mda_command ? 4 : route_command ? 3 : skill_command ? 2 : command == 1)))) error = "--fields needs JSON and supported top-level data keys";
-    if (!error && !view_command && (frames || screenshot || layout_supplied || other_pairs || (direction_supplied && !mda_command))) error = "Layout/direction/frame/capture options apply only to views";
+    if (!error && fields && (!json || view_command || (command==15 ? !(structural_actor ? gd_structure_fields(fields):gd_query_fields(query_request.kind,fields)):!fields_valid(fields, command==14 ? 8 : rule_command ? 7 : command == 10 ? 6 : control_command ? 5 : mda_command ? 4 : route_command ? 3 : skill_command ? 2 : command == 1)))) error = "--fields needs JSON and supported top-level data keys";
+    if (!error && !view_command && (frames || screenshot || layout_supplied || other_pairs || (direction_supplied && !mda_command && !structural_actor))) error = "Layout/direction/frame/capture options apply only to views";
     if (!error && command == 2 && layout > GD_VIEW_COLUMNS) error = "Matrix view requires table, graph, or columns layout";
     if (!error && command == 4 && (layout < GD_VIEW_PREREQUISITES || other_pairs)) error = "Skill view requires prerequisites or rank layout; no matrix-pair overlay";
-    if (!error && direction_supplied && command != 4 && !mda_command) error = "--direction applies only to MDA or view skill-atoms";
+    if (!error && direction_supplied && command != 4 && !mda_command && !structural_actor) error = "--direction applies only to MDA or view skill-atoms";
     if (!error && command==14 && (from || resource_accepted) && !resource_to) error="Resource --from/--accepted-only requires --to";
-    if (!error && from && !mda_command && !control_command && command!=3 && command!=4 && command!=14) error = "--from applies only to MDA, controls, or skill exploration";
+    if (!error && from && !mda_command && !control_command && command!=3 && command!=4 && command!=14 && !structural_actor) error = "--from applies only to MDA, controls, or skill exploration";
     if (!error && command == 7 && (layout != GD_VIEW_COLUMNS && layout != GD_VIEW_GRAPH)) error = "MDA view requires columns or graph layout";
     if (!error && mda_command && other_pairs) error = "--show-other-pairs applies only to matrix views";
     if (!error && other_pairs && layout == GD_VIEW_TABLE) error = "--show-other-pairs requires graph or columns layout";
@@ -572,9 +575,13 @@ static int application(int argc, char **argv) {
         }
         query_request.case_index=case_name ? rule_analysis->requested_case:-1;
         if (assumption_count || context_assumption_count) query_request.fixed=&scenario;
-        query_request.status_count=control_filter.status_count;
-        for (i=0;i<control_filter.status_count;++i) query_request.statuses[i]=control_filter.statuses[i];
+        query_request.status_count=structural_actor ? 0:control_filter.status_count;
+        for (i=0;i<query_request.status_count;++i) query_request.statuses[i]=control_filter.statuses[i];
         if (valid) query=gd_query_build(model,rules,rule_analysis,&query_request);
+        if (structural_actor && query && !model->error_count) {
+            actor_project.allocator=allocator; actor_project.models[GD_EXPLORER_RULE_DATA]=model; actor_project.rules=rules; actor_project.calls=rule_analysis; actor_project.available=1u<<GD_EXPLORER_ACTORS;
+            structural.actor_query=query; actor_structure=gd_structure_result_build(model,&actor_project,&structural);
+        }
     }
     if (command==14 && resource_graph && resource_to && !model->error_count) {
         int start=-1,target=-1;
@@ -645,7 +652,7 @@ static int application(int argc, char **argv) {
 #endif
     }
     if (!view_command || model->error_count) {
-        int written = command==15 ? gd_write_query(stdout,model,query,json,error ? NULL:fields) : command==14 ? gd_write_resource_query(stdout,model,resource_graph,resource_query,json,error ? NULL:fields) : rule_command ? gd_write_rule_report(stdout,model,rules,rule_analysis,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
+        int written = structural_actor ? (actor_structure ? gd_write_structure_result(stdout,actor_structure,json,fields):gd_write_result(stdout,model,0,json,NULL)) : command==15 ? gd_write_query(stdout,model,query,json,error ? NULL:fields) : command==14 ? gd_write_resource_query(stdout,model,resource_graph,resource_query,json,error ? NULL:fields) : rule_command ? gd_write_rule_report(stdout,model,rules,rule_analysis,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
             command==3 ? gd_write_skill_result(stdout,model,skill_query,json,error ? NULL:fields) : gd_write_result(stdout, model, skill_command ? 2 : command == 1, json, error ? NULL : fields);
         if (!written || fflush(stdout)) {
             fputs("gd: cannot write result\n", stderr); status = 2;
@@ -657,7 +664,7 @@ static int application(int argc, char **argv) {
     }
     if (model->error_count || model->errors_omitted) status = 2;
     if (skill_query) allocator.release(allocator.context,skill_query);
-    gd_query_destroy(query); gd_resource_routes_destroy(resource_query); gd_resource_graph_destroy(resource_graph); gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
+    gd_structure_result_destroy(actor_structure); gd_query_destroy(query); gd_resource_routes_destroy(resource_query); gd_resource_graph_destroy(resource_graph); gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
 }
 int main(int argc, char **argv) {
 #ifdef _WIN32

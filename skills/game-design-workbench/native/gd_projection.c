@@ -3,7 +3,7 @@
 
 static const char *const names[]={"skills","challenges","relationships","matrix","mda","resources","actor-inventory"};
 const char *gd_projection_name(GD_ExplorerView view) { return view>=GD_EXPLORER_SKILLS && view<=GD_EXPLORER_ACTORS ? names[view]:NULL; }
-int gd_projection_find(const char *name) { int i; if (name) for (i=GD_EXPLORER_SKILLS;i<=GD_EXPLORER_ACTORS;++i) if (!strcmp(name,names[i])) return i; return -1; }
+int gd_projection_find(const char *name) { int i; if (name && !strcmp(name,"actors")) return GD_EXPLORER_ACTORS; if (name) for (i=GD_EXPLORER_SKILLS;i<=GD_EXPLORER_ACTORS;++i) if (!strcmp(name,names[i])) return i; return -1; }
 const char *gd_resource_label(const GD_ResourceGraph *graph, int index) {
     const GD_ResourceNode *node;
     if (!graph || index<0 || index>=graph->node_count) return NULL;

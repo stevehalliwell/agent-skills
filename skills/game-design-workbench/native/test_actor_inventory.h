@@ -1,5 +1,16 @@
 #include "gd_actor_inventory.h"
 #include "gd_structure_cli.h"
+#include "gd_actor_identity.h"
+/* Combined source/query topology exceeds the core harness's 64 MiB arena.
+   Keep source there; exercise explicit caller ownership/failures on heap. */
+typedef struct { int outstanding,remaining; } ActorTopologyMemory;
+static void *actor_topology_allocate(void *context, size_t size) {
+    ActorTopologyMemory *memory=context; void *result;
+    if (!memory->remaining) return NULL;
+    if (memory->remaining>0) --memory->remaining;
+    result=malloc(size); if (result) ++memory->outstanding; return result;
+}
+static void actor_topology_release(void *context, void *pointer) { ActorTopologyMemory *memory=context; if (pointer) { --memory->outstanding; free(pointer); } }
 TEST(actor_inventory_local_bindings_declarations_and_work,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ActorInventory *inventory,*partial;
     GD_Allocator allocator; RouteFailure failure; int i,j,root,first,second,kinds[6]={0},work;
@@ -70,6 +81,61 @@ TEST(actor_inventory_local_bindings_declarations_and_work,
             TEST_ASSERT(!result && model->error_count && !strcmp(model->errors[model->error_count-1].code,"query.memory")); model->error_count=0;
         }
         options.from="not-an-inventory-id"; TEST_ASSERT(!gd_structure_result_build(model,&project,&options) && !strcmp(model->errors[0].code,"query.selector_missing")); model->error_count=0;
+    }
+    {
+        GD_QueryRequest request={0}; GD_Query *query; GD_QueryScene *scene,*primary; int identity_work=0,alive=-1;
+        request.kind=GD_QUERY_ACTOR_STATES; request.case_index=root; request.noun=-1; request.axis=find_record(model,"actions/Life"); request.effect_kind=-1; request.participant="Left"; request.work_limit=GD_ACTOR_WORK;
+        query=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(query && query->variants && query->variants->variant_count==2);
+        scene=gd_query_scene_actor_topology(model->allocator,query,GD_ACTOR_WORK); primary=gd_query_scene_build(query,GD_QUERY_PRIMARY_VARIANT,0,0,0,GD_ACTOR_WORK);
+        TEST_ASSERT(scene && primary && scene->ghosts==GD_QUERY_ALL_VARIANTS && scene->include_excluded && scene->layout.node_count>primary->layout.node_count); gd_query_scene_destroy(primary);
+        for (i=0;i<scene->layout.node_count;++i) {
+            TEST_ASSERT(gd_actor_scene_node_id(scene,i,id,sizeof(id),&identity_work,GD_ACTOR_WORK));
+            for (j=0;j<i;++j) { TEST_ASSERT(gd_actor_scene_node_id(scene,j,other,sizeof(other),&identity_work,GD_ACTOR_WORK) && strcmp(id,other)); }
+            if (scene->nodes[i].kind==GD_QUERY_NODE_VARIANT && !strcmp(query->variants->variants[scene->nodes[i].variant].value,"alive")) alive=i;
+        }
+        TEST_ASSERT(alive>=0 && gd_actor_scene_node_id(scene,alive,id,sizeof(id),&identity_work,GD_ACTOR_WORK));
+        {
+            int effect=-1,axis=find_record(model,"actions/Contact"),prior_axis; const char *unit=model->records[axis].axis.unit,*type=model->records[axis].axis.type; char before[GD_MAX_PATH],after[GD_MAX_PATH];
+            for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) { effect=scene->nodes[i].source; break; }
+            TEST_ASSERT(effect>=0); prior_axis=query->variants->effects[effect].axis;
+            /* Synthetic side-effect axis metadata, distinct from selected Life.
+               Restore every field; no parser, authored file or source write. */
+            query->variants->effects[effect].axis=axis;
+            TEST_ASSERT(gd_actor_scene_node_id(scene,i,before,sizeof(before),&identity_work,GD_ACTOR_WORK));
+            model->records[axis].axis.unit="synthetic-unit"; TEST_ASSERT(gd_actor_scene_node_id(scene,i,after,sizeof(after),&identity_work,GD_ACTOR_WORK) && strcmp(before,after)); model->records[axis].axis.unit=unit;
+            model->records[axis].axis.type="number"; TEST_ASSERT(gd_actor_scene_node_id(scene,i,after,sizeof(after),&identity_work,GD_ACTOR_WORK) && strcmp(before,after)); model->records[axis].axis.type=type;
+            query->variants->effects[effect].axis=prior_axis;
+        }
+        { int zero=0; strcpy(other,"old"); TEST_ASSERT(!gd_actor_scene_node_id(scene,alive,other,sizeof(other),&zero,0) && !*other && !zero); }
+        gd_query_scene_destroy(scene);
+        {
+            GD_ExplorerProject project={0}; GD_StructureOptions options={0}; GD_StructureResult *result; char start[GD_MAX_PATH]; int kind; ActorTopologyMemory memory={0,-1};
+            project.allocator=(GD_Allocator){&memory,actor_topology_allocate,actor_topology_release}; project.models[GD_EXPLORER_RULE_DATA]=model; project.rules=rules; project.calls=analysis; project.available=1u<<GD_EXPLORER_ACTORS;
+            options.projection="actors"; options.actor_query=query; options.work_limit=GD_GRAPH_ANALYSIS_WORK;
+            for (kind=0;kind<GD_STRUCTURE_COUNT;++kind) {
+                options.question=gd_structure_name((GD_StructureKind)kind); options.from=options.to=NULL;
+                if (kind==GD_STRUCTURE_DECLARATIONS) options.actor_query=NULL; else options.actor_query=query;
+                if (kind==GD_STRUCTURE_REACHABILITY || kind==GD_STRUCTURE_DOMINATORS || kind==GD_STRUCTURE_BYPASS) options.from=start;
+                if (kind==GD_STRUCTURE_BYPASS) options.to=start;
+                result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(result && result->view==GD_EXPLORER_ACTORS && !model->error_count);
+                if (kind!=GD_STRUCTURE_DECLARATIONS) {
+                    TEST_ASSERT(result->actor_scene && !result->inventory && result->layout==&result->actor_scene->layout && result->actor_scene->ghosts==GD_QUERY_ALL_VARIANTS && result->actor_scene->include_excluded);
+                    TEST_ASSERT(gd_structure_result_node_id(result,result->layout->nodes[0].key,start,sizeof(start)));
+                    TEST_ASSERT(gd_structure_result_record(result,result->layout->nodes[0].key)>=0);
+                    for (i=0;i<result->layout->edge_count;++i) TEST_ASSERT(gd_structure_result_edge_record(result,result->layout->edges[i].key)>=0 && gd_graph_relation_name(result->layout->edges[i].relation));
+                } else TEST_ASSERT(result->gaps && !result->actor_scene);
+                gd_structure_result_destroy(result); TEST_ASSERT(!memory.outstanding);
+            }
+            options.question="adjacency"; options.actor_query=query;
+            for (i=0;i<4;++i) { memory.remaining=i; result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(!result && !memory.outstanding && model->error_count==1 && !strcmp(model->errors[0].code,"query.memory")); model->error_count=0; }
+            memory.remaining=-1; options.actor_query=NULL; result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(!result && model->error_count==1 && !strcmp(model->errors[0].code,"query.actor_scope")); model->error_count=0;
+        }
+        gd_query_destroy(query);
+        request.value_count=2; request.values[0]="dead"; request.values[1]="alive"; query=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(query);
+        scene=gd_query_scene_actor_topology(model->allocator,query,GD_ACTOR_WORK); TEST_ASSERT(scene); alive=-1;
+        for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_VARIANT && !strcmp(query->variants->variants[scene->nodes[i].variant].value,"alive")) alive=i;
+        TEST_ASSERT(alive>=0 && gd_actor_scene_node_id(scene,alive,other,sizeof(other),&identity_work,GD_ACTOR_WORK) && !strcmp(id,other));
+        gd_query_scene_destroy(scene); gd_query_destroy(query);
     }
     TEST_ASSERT(!gd_sources_changed(model)); gd_actor_inventory_destroy(inventory); gd_rule_analysis_destroy(analysis); gd_rules_destroy(rules); gd_destroy(model);
 )

@@ -15,7 +15,7 @@ typedef struct {
 } GD_LayoutNode;
 /* Opaque incident-role tags: authored GD_Field, derived case pair, or resource
    relation kind. Endpoint a/b is part of incident role, never inferred flow. */
-enum { GD_RELATION_CASE_PAIR=GD_FIELD_COUNT, GD_RELATION_RESOURCE_BASE, GD_RELATION_ACTOR_BASE=32 };
+enum { GD_RELATION_CASE_PAIR=GD_FIELD_COUNT, GD_RELATION_RESOURCE_BASE, GD_RELATION_ACTOR_BASE=32, GD_RELATION_QUERY_BASE=GD_RELATION_RESOURCE_BASE+16 };
 typedef struct { int a, b, key, active, relation; } GD_LayoutEdge;
 typedef struct { float x, y, width, height; int first, count; } GD_LayoutGroup;
 typedef struct { int a,b,edge,ordinal,count; } GD_LayoutLane;

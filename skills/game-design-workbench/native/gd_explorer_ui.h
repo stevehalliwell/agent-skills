@@ -33,7 +33,7 @@ typedef struct {
     char value_tokens[GD_MAX_RULE_LINE+1],fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1];
 } GD_ExplorerQueryState;
 typedef struct {
-    int kind,direction,lens,work_limit;
+    int kind,direction,lens,work_limit,actor_scope;
     bool include_inactive;
     char from[GD_MAX_PATH],to[GD_MAX_PATH],avoid[GD_MAX_PATH],scope_root[GD_MAX_PATH];
     char starts[GD_MAX_RULE_LINE+1],relations[GD_MAX_RULE_LINE+1],statuses[GD_MAX_RULE_LINE+1];

@@ -2,11 +2,13 @@
 #define GD_STRUCTURE_CLI_H
 #include "gd_projection.h"
 #include "gd_structure_query.h"
+#include "gd_actor_identity.h"
 typedef struct {
     const char *question,*projection,*from,*to,*avoid,*scope_root;
     const char *roots[GD_STRUCTURE_SELECTORS],*relations[GD_STRUCTURE_KINDS],*statuses[GD_STRUCTURE_SELECTORS];
     int root_count,relation_count,status_count,include_inactive,work_limit;
     GD_StructureDirection direction; GD_GraphLens lens;
+    const GD_Query *actor_query; /* Borrowed finite actors input; NULL for whole-reader declaration-gaps. */
 } GD_StructureOptions;
 typedef enum { GD_DECLARATION_RESOLVED, GD_DECLARATION_MISSING, GD_DECLARATION_UNLOADED, GD_DECLARATION_AMBIGUOUS, GD_DECLARATION_STATES } GD_DeclarationIdentity;
 typedef struct {
@@ -17,14 +19,16 @@ const char *gd_declaration_identity_name(GD_DeclarationIdentity identity);
 typedef struct {
     GD_Allocator allocator; const GD_ExplorerProject *project; GD_ExplorerView view;
     GD_StructureOptions options; /* Strings remain borrowed until destruction. */
-    GD_Layout *layout; GD_StructureQuery *query;
+    GD_Layout *layout; /* Owned separately except embedded actor_scene layout. */
+    GD_StructureQuery *query;
     GD_DeclarationGaps *gaps; /* Whole loaded reader context; no graph filters. */
     GD_ActorInventory *inventory; /* Canonical declarations, not finite hypotheses. */
+    GD_QueryScene *actor_scene; /* Own canonical all-variant topology; borrows options.actor_query. */
     int selector_work,source_incomplete;
 } GD_StructureResult;
 /* Shared native preparation for CLI and viewer. Owns canonical projection and
-   query; borrows immutable project/options strings. Diagnostic receives errors.
-   Destroy result before project. Failure retains no partial owned allocation. */
+   query; borrows immutable project/options strings and optional finite actor_query.
+   Diagnostic receives errors. Destroy result before borrowed query/project. Failure retains no partial owned allocation. */
 GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_ExplorerProject *project, const GD_StructureOptions *options);
 void gd_structure_result_destroy(GD_StructureResult *result);
 int gd_structure_result_record(const GD_StructureResult *result, int key);
