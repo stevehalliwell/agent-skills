@@ -61,25 +61,13 @@ int gd_resource_instance_actor(const GD_ResourceGraph *graph, int activation, in
     if (!graph || activation<0 || activation>=graph->node_count || graph->nodes[activation].kind!=GD_RESOURCE_CASE) return -1;
     while (graph->nodes[activation].instance) {
         const GD_ResourceNode *node=&graph->nodes[activation];
-        const GD_RuleCall *call; int low,high,found=-1;
+        int found;
         if (!graph->calls || ++depth>=GD_MAX_RULE_EXPANSION_DEPTH || node->call<0 || node->call>=graph->calls->call_count || node->parent<0 || node->parent>=activation) return -1;
         {
             const GD_RuleCase *item=&graph->rules->cases[node->case_index];
             if (participant<item->first_participant || participant>=item->first_participant+item->participant_count) return -1;
         }
-        call=&graph->calls->calls[node->call];
-        /* Compiler orders bindings by selected case and participant index.
-           A call may select many cases; binding_count is not capped at 64. */
-        low=call->first_binding; high=low+call->binding_count;
-        if (low<0 || call->binding_count<0 || high>graph->calls->binding_count) return -1;
-        while (low<high) {
-            int middle=low+(high-low)/2;
-            if (graph->calls->bindings[middle].callee<participant) low=middle+1; else high=middle;
-        }
-        if (low<call->first_binding+call->binding_count && graph->calls->bindings[low].callee==participant) {
-            if (low+1<call->first_binding+call->binding_count && graph->calls->bindings[low+1].callee==participant) return -1;
-            found=graph->calls->bindings[low].caller;
-        }
+        found=gd_rule_call_participant(graph->calls,node->call,participant);
         if (found<0) return -1;
         participant=found; activation=node->parent;
     }

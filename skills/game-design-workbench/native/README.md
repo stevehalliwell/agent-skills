@@ -134,7 +134,21 @@ Script assembles native commands/selects native-typed facts; it does not parse r
 - Stable typed IDs and reload remapping retain exact Resource placement checks; opaque digest equality is insufficient.
 - Owned storage: 770,120 bytes; 4,096 nodes / 32,768 links / 67,108,864 work. Allocation failure returns no candidate; projection truncation, upstream incompleteness and unexamined portions remain distinct. `source_incomplete` includes rejected effect spans, unknown source coverage and typed quantity/preservation incompleteness.
 
-Kernel only at this checkpoint. Headless actor/state selectors, finite variants, contributor query surface and integrated drawing remain pending; no new CLI/view mode advertised yet.
+Projection kernel only. CLI actor/state selectors, contributor query surface and integrated drawing remain pending; no new CLI/view mode advertised yet.
+
+## Finite actor variants — kernel
+
+`gd_actor_query.h/.c` queries one explicit root-case binding and axis. Participant `-1` selects authored A, never first participant. Borrow analysis/model/input strings until query destruction.
+
+- Enumerate declared enum values, or supply at most 64 explicit typed values. Numeric axes require a finite list in declared axis unit. No domain or Cartesian enumeration; values are assumptions, not initial/reachable states.
+- Keep other fixed state/context facts. Reject fixed facts assigning selected binding/axis; never silently override. Same-noun participants stay distinct.
+- Reuse `gd_rule_assume_value` and `gd_rule_evaluate_bounded`; ordinary CLI assumption parsing and evaluation delegate to those same operations. No second evaluator.
+- Retain checked activations, including excluded/no-effect cases, local/inherited applicability, exact compiled call paths, all proposals/targets, conflicts and incomplete scope. Direct and deferred preservation writes retain activation and declaration identity.
+- Compare not-excluded case/partner sets and effect-concept sets. Canonical state/change concepts exclude actor identity; targets remain on proposal rows. Absolute/unknown quantities and preservation keep exact declaration/placement identity. Comparison completeness is conservative; partial sets do not establish absence or equivalence.
+- Under explicit starting facts, checked numeric results may classify capped changes as gain/loss/no change within that query context. Unit/arithmetic errors remain declaration evidence, never checked changes. This does not establish unconditional flow or final outcome.
+- Owned storage: 5,103,888 bytes. Build bounds: 64 variants / 8,192 writes / 4,096 activations / 4,096 retained checks / 67,108,864 charged work. Capacity rejects next whole variant; work limits retain marked partial evidence. Each pair comparison performs at most 20,480 bit comparisons. Allocation failure returns no candidate.
+
+Native API only. CLI selectors, source/status filtering, stable query-selection remapping, actor/state drawing and ghosts remain pending. Variant contexts never inflate `gd_effect_incoming` declaration counts.
 
 ## Resource graph preview
 

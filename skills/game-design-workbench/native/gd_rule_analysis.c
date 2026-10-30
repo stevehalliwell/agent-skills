@@ -14,7 +14,7 @@ static int compile_charge(GD_RuleAnalysis *analysis, size_t amount) {
 }
 static int evaluation_charge(GD_RuleEvaluation *result, size_t amount) {
     if (result->limited) return 0;
-    if (amount>(size_t)(GD_RULE_EVALUATION_WORK_LIMIT-result->work)) {
+    if (amount>(size_t)(result->work_limit-result->work)) {
         result->limited=1; result->constraints_complete=result->values_complete=0; return 0;
     }
     result->work+=(int)amount; return 1;
@@ -368,13 +368,13 @@ static const char *current_state(GD_RuleEvaluation *result, GD_RuleAssumptions i
     return value;
 }
 static GD_RuleWrite *new_write(GD_RuleEvaluation *result, int actor, int axis, int origin_case, int participant,
-                               int line, int conditional, const int *path, int depth) {
+                               int line, int declaration, int conditional, const int *path, int depth) {
     GD_RuleWrite *write;
     if (!evaluation_charge(result,(size_t)depth+1)) return NULL;
     if (result->write_count==GD_MAX_RULE_WRITES) { result->limited=1; result->constraints_complete=result->values_complete=0; return NULL; }
     write=&result->writes[result->write_count++]; memset(write,0,sizeof(*write));
     write->actor=actor; write->axis=axis; write->origin_case=origin_case; write->origin_participant=participant;
-    write->line=line; write->quantity=-1; write->conditional=conditional; write->path_count=depth;
+    write->line=line; write->declaration=declaration; write->quantity=-1; write->conditional=conditional; write->path_count=depth;
     memcpy(write->path,path,(size_t)depth*sizeof(*path));
     if (actor<0 || axis<0 || conditional) result->constraints_complete=0;
     if (actor<0 || axis<0) result->opaque_effects=1;
@@ -392,7 +392,7 @@ static void case_writes(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *resu
         }
         for (i=participant->first_state_effect;i<participant->first_state_effect+participant->state_effect_count;++i) {
             const GD_RuleStateEffect *effect=&rules->state_effects[i];
-            GD_RuleWrite *write=new_write(result,result->actor_map[p],effect->target.resolution==GD_RULE_RESOLVED ? effect->target.axis_record:-1,case_index,p,effect->line,conditional,path,depth);
+            GD_RuleWrite *write=new_write(result,result->actor_map[p],effect->target.resolution==GD_RULE_RESOLVED ? effect->target.axis_record:-1,case_index,p,effect->line,i,conditional,path,depth);
             if (!write) return;
             write->kind=GD_WRITE_STATE; write->state=effect->target.resolution==GD_RULE_RESOLVED ? effect->target.state:NULL;
             if (!write->state) result->constraints_complete=result->values_complete=0;
@@ -401,7 +401,7 @@ static void case_writes(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *resu
             const GD_RuleAssignment *assignment=&rules->assignments[i];
             GD_RulePredicateFact facts[GD_MAX_RULE_CONDITION_ITEMS];
             int count=local_facts(result,inputs,p,facts), index=assignment->quantity;
-            GD_RuleWrite *write=new_write(result,result->actor_map[p],assignment->target.resolution==GD_RULE_RESOLVED ? assignment->target.axis_record:-1,case_index,p,assignment->line,conditional,path,depth);
+            GD_RuleWrite *write=new_write(result,result->actor_map[p],assignment->target.resolution==GD_RULE_RESOLVED ? assignment->target.axis_record:-1,case_index,p,assignment->line,i,conditional,path,depth);
             if (!write) return;
             write->kind=GD_WRITE_QUANTITY; write->quantity=index;
             if (index>=0 && rules->quantities[index].state==GD_CONDITION_PARSED) {
@@ -438,7 +438,7 @@ static void preserve_axis(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *re
             conditional=1; /* Candidate may write; remaining-axis promise is conditional too. */
         }
     }
-    write=new_write(result,promise->actor,axis,promise->origin_case,promise->origin_participant,source->line,conditional,promise->path,promise->path_count);
+    write=new_write(result,promise->actor,axis,promise->origin_case,promise->origin_participant,source->line,promise->preservation,conditional,promise->path,promise->path_count);
     if (!write) return;
     write->kind=GD_WRITE_PRESERVE;
     if (analysis->rules->axes[axis].type==GD_AXIS_ENUM) {
@@ -455,9 +455,10 @@ static void preserve_axis(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *re
         if (!starting.known) result->values_complete=0;
     } else result->constraints_complete=result->values_complete=0;
 }
-static void whole_case_preservation(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *result, GD_RuleAssumptions inputs) {
+static void whole_case_preservation(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *result, GD_RuleAssumptions inputs, GD_RuleTrace *trace) {
     int i,edge;
     for (i=0;i<result->deferred_count && !result->limited;++i) {
+        int first_write=result->write_count;
         const GD_RuleDeferredPreservation *promise=&result->deferred[i];
         const GD_RulePreservation *source=&analysis->rules->preservations[promise->preservation];
         if (promise->actor<0) { result->constraints_complete=0; continue; }
@@ -478,6 +479,7 @@ static void whole_case_preservation(const GD_RuleAnalysis *analysis, GD_RuleEval
                 preserve_axis(analysis,result,promise,axis,inputs);
             }
         }
+        if (trace) { int w; for (w=first_write;w<result->write_count;++w) trace->write_activation[w]=trace->deferred_activation[i]; }
     }
 }
 static GD_RuleTruth compatible_writes(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *budget, const GD_RuleWrite *a, const GD_RuleWrite *b) {
@@ -539,12 +541,26 @@ static void effect_scope(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *res
         }
     }
 }
+int gd_rule_call_participant(const GD_RuleAnalysis *analysis, int index, int participant) {
+    const GD_RuleCall *call; int low,high;
+    if (!analysis || index<0 || index>=analysis->call_count) return -1;
+    call=&analysis->calls[index]; low=call->first_binding;
+    if (low<0 || low>analysis->binding_count || call->binding_count<0 || call->binding_count>analysis->binding_count-low) return -1;
+    high=low+call->binding_count;
+    while (low<high) { int middle=low+(high-low)/2; if (analysis->bindings[middle].callee<participant) low=middle+1; else high=middle; }
+    if (low==call->first_binding+call->binding_count || analysis->bindings[low].callee!=participant ||
+        (low+1<call->first_binding+call->binding_count && analysis->bindings[low+1].callee==participant)) return -1;
+    return analysis->bindings[low].caller;
+}
 typedef struct { int case_index, entered, conditional, participant, call, next_case; } ExpansionFrame;
-void gd_rule_evaluate(const GD_RuleAnalysis *analysis, int case_index, GD_RuleAssumptions inputs, GD_RuleEvaluation *result) {
-    ExpansionFrame stack[GD_MAX_RULE_EXPANSION_DEPTH]; int path[GD_MAX_RULE_EXPANSION_DEPTH],depth=1,p;
+void gd_rule_evaluate_bounded(const GD_RuleAnalysis *analysis, int case_index, GD_RuleAssumptions inputs, GD_RuleEvaluation *result, int work_limit, GD_RuleTrace *trace) {
+    ExpansionFrame stack[GD_MAX_RULE_EXPANSION_DEPTH]; int path[GD_MAX_RULE_EXPANSION_DEPTH],calls[GD_MAX_RULE_EXPANSION_DEPTH],depth=1,p;
+    if (trace) trace->count=0;
     if (!result) return;
     memset(result,0,offsetof(GD_RuleEvaluation,writes)); result->root_case=case_index; result->input_valid=-1; result->exclusion.excluded_by=-1;
     result->constraints_complete=result->values_complete=1; result->deferred_count=0; result->generation=0;
+    if (work_limit<0 || work_limit>GD_RULE_EVALUATION_WORK_LIMIT) { result->input_valid=0; result->constraints_complete=result->values_complete=0; return; }
+    result->work_limit=work_limit;
     memset(result->seen,0,sizeof(result->seen));
     if (!analysis || case_index<0 || case_index>=analysis->rules->case_count) { result->input_valid=0; result->constraints_complete=0; return; }
     if (!evaluation_charge(result,GD_MAX_RECORDS)) return;
@@ -552,7 +568,7 @@ void gd_rule_evaluate(const GD_RuleAnalysis *analysis, int case_index, GD_RuleAs
     if (result->input_valid!=1) { result->constraints_complete=result->values_complete=0; return; }
     result->assumptions=inputs;
     for (p=analysis->rules->cases[case_index].first_participant;p<analysis->rules->cases[case_index].first_participant+analysis->rules->cases[case_index].participant_count;++p) result->actor_map[p]=p;
-    stack[0]=(ExpansionFrame){case_index,0,0,0,-1,0};
+    stack[0]=(ExpansionFrame){case_index,0,0,0,-1,0}; calls[0]=-1;
     while (depth && !result->limited) {
         ExpansionFrame *frame=&stack[depth-1];
         const GD_RuleCase *item=&analysis->rules->cases[frame->case_index];
@@ -563,10 +579,26 @@ void gd_rule_evaluate(const GD_RuleAnalysis *analysis, int case_index, GD_RuleAs
             ++result->expansions; path[depth-1]=frame->case_index;
             applicability=case_value(analysis,result,frame->case_index,inputs,depth==1);
             if (depth==1) result->applicability=applicability;
+            if (trace) {
+                GD_RuleActivation *activation; int step;
+                if (!evaluation_charge(result,(size_t)depth*2+1)) break;
+                activation=&trace->items[trace->count++]; activation->case_index=frame->case_index; activation->path_count=depth;
+                activation->local_applicability=applicability;
+                activation->applicability=applicability==GD_RULE_TRUTH_FALSE ? GD_RULE_TRUTH_FALSE:frame->conditional ? GD_RULE_TRUTH_UNKNOWN:applicability;
+                for (step=0;step<depth;++step) { activation->path[step]=path[step]; activation->calls[step]=calls[step]; }
+            }
             if (applicability==GD_RULE_TRUTH_FALSE) { --depth; continue; }
             frame->conditional=frame->conditional || applicability!=GD_RULE_TRUTH_TRUE;
             if (frame->conditional) result->constraints_complete=0;
-            case_writes(analysis,result,frame->case_index,frame->conditional,inputs,path,depth);
+            {
+                int first_write=result->write_count,first_deferred=result->deferred_count;
+                case_writes(analysis,result,frame->case_index,frame->conditional,inputs,path,depth);
+                if (trace) {
+                    int w;
+                    for (w=first_write;w<result->write_count;++w) trace->write_activation[w]=trace->count-1;
+                    for (w=first_deferred;w<result->deferred_count;++w) trace->deferred_activation[w]=trace->count-1;
+                }
+            }
             frame->entered=1; frame->participant=item->first_participant;
             frame->call=item->participant_count ? analysis->call_first[frame->participant]:-1;
         }
@@ -591,14 +623,17 @@ void gd_rule_evaluate(const GD_RuleAnalysis *analysis, int case_index, GD_RuleAs
                     analysis->bindings[i].callee<analysis->rules->cases[child].first_participant+analysis->rules->cases[child].participant_count)
                     result->actor_map[analysis->bindings[i].callee]=result->actor_map[analysis->bindings[i].caller];
             }
-            stack[depth]=(ExpansionFrame){child,0,frame->conditional,0,-1,0}; ++depth;
+            calls[depth]=frame->call; stack[depth]=(ExpansionFrame){child,0,frame->conditional,0,-1,0}; ++depth;
         }
     }
     if (result->applicability!=GD_RULE_TRUTH_FALSE) {
-        whole_case_preservation(analysis,result,inputs); effect_scope(analysis,result); write_checks(analysis,result);
+        whole_case_preservation(analysis,result,inputs,trace); effect_scope(analysis,result); write_checks(analysis,result);
     }
     if (result->conflict_count || result->uncertain_write_pairs || result->cycle_count) result->constraints_complete=0;
     if (result->limited) result->constraints_complete=result->values_complete=0;
+}
+void gd_rule_evaluate(const GD_RuleAnalysis *analysis, int case_index, GD_RuleAssumptions inputs, GD_RuleEvaluation *result) {
+    gd_rule_evaluate_bounded(analysis,case_index,inputs,result,GD_RULE_EVALUATION_WORK_LIMIT,NULL);
 }
 typedef struct { int first_actor,second_actor,axis,count; const char *values[GD_MAX_ENUM_VALUES]; } BranchAxis;
 static int comparison_charge(GD_RuleAnalysis *analysis, size_t amount) {
@@ -839,15 +874,23 @@ static int scenario_fact(GD_Model *model, GD_RuleScenario *scenario, GD_RulePred
     scenario->facts[scenario->fact_count++]=fact; return 1;
 }
 int gd_rule_assume(GD_Model *model, const GD_Rules *rules, int case_index, const char *text, GD_RuleScenario *scenario) {
-    const char *colon,*equals,*value; int actor,axis,edge,member=0,before;
+    const char *colon,*equals; int actor,axis;
     size_t length;
     if (!model || !rules || !scenario || !text) return 0;
-    before=scenario->fact_count; length=bounded_length(text,GD_MAX_RULE_LINE);
+    length=bounded_length(text,GD_MAX_RULE_LINE);
     if (case_index<0 || case_index>=rules->case_count || length>GD_MAX_RULE_LINE || !(colon=strchr(text,':')) || !(equals=strchr(colon+1,'=')) || !equals[1])
         return scenario_error(model,"--assume needs LOCAL:ALIAS/AXIS=VALUE in selected case; numeric VALUE uses declared axis unit");
     if (!scenario_charge(model,scenario,(size_t)rules->cases[case_index].participant_count*((size_t)(colon-text)+1))) return 0;
-    actor=participant_named(rules,case_index,text,(size_t)(colon-text)); axis=scenario_axis(model,scenario,colon+1,(size_t)(equals-colon-1)); value=equals+1;
-    if (actor<0 || axis<0 || rules->participants[actor].noun_resolution!=GD_RULE_RESOLVED || !rules->axes[axis].valid)
+    actor=participant_named(rules,case_index,text,(size_t)(colon-text)); axis=scenario_axis(model,scenario,colon+1,(size_t)(equals-colon-1));
+    return gd_rule_assume_value(model,rules,case_index,actor,axis,equals+1,scenario);
+}
+int gd_rule_assume_value(GD_Model *model, const GD_Rules *rules, int case_index, int actor, int axis, const char *value, GD_RuleScenario *scenario) {
+    int edge,member=0,before; size_t length;
+    if (!model || !rules || !scenario || !value) return 0;
+    length=bounded_length(value,GD_MAX_RULE_LINE); before=scenario->fact_count;
+    if (!length || length>GD_MAX_RULE_LINE || case_index<0 || case_index>=rules->case_count || before<0 || before>GD_MAX_RULE_CONDITION_ITEMS)
+        return scenario_error(model,"Typed assumption needs one bounded value and valid case/fact storage");
+    if (actor<rules->cases[case_index].first_participant || actor>=rules->cases[case_index].first_participant+rules->cases[case_index].participant_count || axis<0 || axis>=model->record_count || rules->participants[actor].noun_resolution!=GD_RULE_RESOLVED || !rules->axes[axis].valid)
         return scenario_error(model,"Assumption requires one declared local participant and unique loaded valid canonical axis");
     for (edge=rules->actor_first[rules->participants[actor].noun_record];edge>=0;edge=rules->next_axis[edge]) {
         if (!scenario_charge(model,scenario,1)) return 0;

@@ -26,6 +26,9 @@ typedef struct {
 } GD_RuleScenario;
 /* Query input strings/model values borrowed until scenario evaluation finishes. */
 int gd_rule_assume(GD_Model *model, const GD_Rules *rules, int case_index, const char *text, GD_RuleScenario *scenario);
+/* Typed binding path shared by CLI parsing and native finite variants. */
+int gd_rule_assume_value(GD_Model *model, const GD_Rules *rules, int case_index,
+                         int participant, int axis, const char *value, GD_RuleScenario *scenario);
 int gd_rule_assume_context(GD_Model *model, const GD_Rules *rules, int case_index, const char *text, GD_RuleTruth truth, GD_RuleScenario *scenario);
 typedef struct { int callee, caller; } GD_RuleBinding;
 typedef struct {
@@ -35,7 +38,7 @@ typedef struct {
 } GD_RuleCall;
 typedef enum { GD_WRITE_STATE, GD_WRITE_QUANTITY, GD_WRITE_PRESERVE } GD_RuleWriteKind;
 typedef struct {
-    int actor, axis, origin_case, origin_participant, line, quantity, conditional;
+    int actor, axis, origin_case, origin_participant, line, quantity, conditional, declaration;
     GD_RuleWriteKind kind;
     const char *state;
     GD_RuleQuantityValue value;
@@ -47,7 +50,7 @@ typedef struct {
     int path[GD_MAX_RULE_EXPANSION_DEPTH];
 } GD_RuleDeferredPreservation;
 typedef struct {
-    int root_case, input_valid, work, limited, expansions, cycle_count;
+    int root_case, input_valid, work, work_limit, limited, expansions, cycle_count;
     int constraints_complete, values_complete, write_count, conflict_count, uncertain_write_pairs, opaque_effects;
     int checked_write_pairs, checks_count, checks_omitted;
     GD_RuleTruth applicability, context, requirements;
@@ -60,6 +63,16 @@ typedef struct {
     GD_RuleDeferredPreservation deferred[GD_MAX_RULE_PRESERVATIONS];
     int seen[GD_MAX_RECORDS], generation;
 } GD_RuleEvaluation;
+/* Optional checked activation evidence. Calls/path indices belong to this
+   immutable snapshot; root call is -1. No log allocation in ordinary evaluation. */
+typedef struct {
+    int case_index, path_count, path[GD_MAX_RULE_EXPANSION_DEPTH], calls[GD_MAX_RULE_EXPANSION_DEPTH];
+    GD_RuleTruth local_applicability, applicability;
+} GD_RuleActivation;
+typedef struct {
+    int count; GD_RuleActivation items[GD_MAX_RULE_EXPANSIONS];
+    int write_activation[GD_MAX_RULE_WRITES], deferred_activation[GD_MAX_RULE_PRESERVATIONS];
+} GD_RuleTrace;
 typedef enum { GD_RULE_RELATION_UNDETERMINED, GD_RULE_RELATION_EQUIVALENT, GD_RULE_RELATION_REDUNDANT,
                GD_RULE_RELATION_COMPATIBLE, GD_RULE_RELATION_CONFLICT, GD_RULE_RELATION_DISJOINT } GD_RuleRelation;
 typedef struct {
@@ -93,8 +106,15 @@ typedef struct {
    Allocator owns analysis only. Caller destroys analysis before borrowed snapshots. */
 GD_RuleAnalysis *gd_analyze_rules(GD_Model *model, const GD_Rules *rules);
 void gd_rule_analysis_destroy(GD_RuleAnalysis *analysis);
+/* One compiled call's unique immediate participant substitution; -1 if absent. */
+int gd_rule_call_participant(const GD_RuleAnalysis *analysis, int call, int participant);
 void gd_rule_evaluate(const GD_RuleAnalysis *analysis, int case_index,
                       GD_RuleAssumptions assumptions, GD_RuleEvaluation *result);
+/* Same evaluator, caller-selected work ceiling and optional activation evidence.
+   Work limit must be within [0, GD_RULE_EVALUATION_WORK_LIMIT]. */
+void gd_rule_evaluate_bounded(const GD_RuleAnalysis *analysis, int case_index,
+                             GD_RuleAssumptions assumptions, GD_RuleEvaluation *result,
+                             int work_limit, GD_RuleTrace *trace);
 void gd_rule_compare(GD_RuleAnalysis *analysis);
 int gd_rule_case_find(const GD_Model *model, const GD_Rules *rules, const char *name);
 const char *gd_rule_truth_name(GD_RuleTruth truth);
