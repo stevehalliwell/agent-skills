@@ -1,4 +1,5 @@
 #include "gd_actor_query.h"
+#include "gd_query.h"
 TEST(actor_finite_variants_and_checked_activation_evidence,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ActorQuery *query,*numeric,*tiny;
     GD_ActorSelection selection={0}; GD_RuleScenario fixed={0}; GD_ActorComparison comparison;
@@ -38,6 +39,19 @@ TEST(actor_finite_variants_and_checked_activation_evidence,
     TEST_ASSERT(comparison.partners.shared==1 && !comparison.partners.first_only && !comparison.partners.second_only);
     TEST_ASSERT(comparison.effects.shared==1 && !comparison.effects.first_only && comparison.effects.second_only==1); /* Life.dead concept is shared; affected actors remain distinct proposal targets. */
     TEST_ASSERT(!gd_actor_compare(query,-1,big,&comparison));
+    {
+        GD_QueryRequest request={0}; GD_Query *surface;
+        request.kind=GD_QUERY_ACTOR_STATES; request.case_index=root; request.noun=request.effect_kind=-1; request.axis=form; request.fixed=&fixed; request.work_limit=GD_ACTOR_WORK;
+        surface=gd_query_build(model,rules,analysis,&request);
+        TEST_ASSERT(surface && surface->variants && surface->variants->variant_count==query->variant_count && surface->variants->write_count==query->write_count);
+        for (i=0;i<query->write_count;++i) TEST_ASSERT(surface->variants->writes[i].actor==query->writes[i].actor && surface->variants->writes[i].origin_case==query->writes[i].origin_case && surface->variants->writes[i].declaration==query->writes[i].declaration);
+        gd_query_destroy(surface);
+        request.kind=GD_QUERY_BINDINGS; request.case_index=-1; request.noun=rules->participants[actor].noun_record; request.fixed=NULL;
+        surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->binding_count==6); gd_query_destroy(surface);
+        request.participant="B"; surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->binding_count==1 && surface->bindings[0].participant==other); gd_query_destroy(surface);
+        request.work_limit=0; surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->limited && !surface->binding_count && surface->unexamined_bindings==rules->participant_count); gd_query_destroy(surface);
+        TEST_ASSERT(gd_query_fields(GD_QUERY_ACTOR_STATES,"variants,cases") && !gd_query_fields(GD_QUERY_ACTOR_STATES,"contributors"));
+    }
     tiny=gd_actor_query_build(model,analysis,&selection,0); TEST_ASSERT(tiny && tiny->limited && tiny->work==0 && !tiny->variant_count && tiny->unexamined_variants==2); gd_actor_query_destroy(tiny);
     memset(&fixed,0,sizeof(fixed)); TEST_ASSERT(gd_rule_assume(model,rules,root,"A:actions/Form=big",&fixed));
     selection.axis=points; selection.value_count=2; selection.values[0]="9"; selection.values[1]="10";

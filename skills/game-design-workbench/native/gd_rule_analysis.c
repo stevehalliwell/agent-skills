@@ -966,7 +966,7 @@ static void actor_json(FILE *output, const GD_RuleAnalysis *analysis, int index)
     fputs("{\"participant\":",output); gd_json_string(output,analysis->rules->participants[index].name);
     json_member(output,"noun",analysis->rules->participants[index].noun); fprintf(output,",\"snapshot_index\":%d}",index);
 }
-static void write_json(FILE *output, const GD_RuleAnalysis *analysis, const GD_RuleWrite *write) {
+void gd_write_rule_proposal(FILE *output, const GD_RuleAnalysis *analysis, const GD_RuleWrite *write) {
     int i;
     fputs("{\"actor\":",output); actor_json(output,analysis,write->actor);
     json_member(output,"axis",write->axis>=0 ? analysis->model->records[write->axis].reference:NULL);
@@ -1010,7 +1010,7 @@ static void evaluation_json(FILE *output, const GD_RuleAnalysis *analysis, const
     fprintf(output,",\"constraints_complete\":%s,\"values_complete\":%s,\"expansions\":%d,\"cycles\":%d,\"work\":%d,\"limited\":%s,\"conflicts\":%d,\"uncertain_overlap_pairs\":%d,\"checked_overlap_pairs\":%d,\"writes\":[",
         result->constraints_complete ? "true":"false",result->values_complete ? "true":"false",result->expansions,result->cycle_count,result->work,result->limited ? "true":"false",
         result->conflict_count,result->uncertain_write_pairs,result->checked_write_pairs);
-    for (i=0;i<result->write_count;++i) { if (i) fputc(',',output); write_json(output,analysis,&result->writes[i]); }
+    for (i=0;i<result->write_count;++i) { if (i) fputc(',',output); gd_write_rule_proposal(output,analysis,&result->writes[i]); }
     fputs("],\"write_checks\":[",output);
     for (i=0;i<result->checks_count;++i) {
         const GD_RuleWriteCheck *check=&result->checks[i]; if (i) fputc(',',output);
@@ -1050,7 +1050,7 @@ void gd_write_rule_analysis(FILE *output, const GD_RuleAnalysis *analysis) {
             fputs("{\"actor\":",output); actor_json(output,analysis,fact->actor); json_member(output,"axis",analysis->model->records[fact->axis].reference); json_member(output,"value",fact->value); fputc('}',output);
         }
         fputs("],\"conflicting_writes\":",output);
-        if (comparison->relation==GD_RULE_RELATION_CONFLICT) { fputc('[',output); write_json(output,analysis,&comparison->conflict_a); fputc(',',output); write_json(output,analysis,&comparison->conflict_b); fputc(']',output); }
+        if (comparison->relation==GD_RULE_RELATION_CONFLICT) { fputc('[',output); gd_write_rule_proposal(output,analysis,&comparison->conflict_a); fputc(',',output); gd_write_rule_proposal(output,analysis,&comparison->conflict_b); fputc(']',output); }
         else fputs("null",output);
         fputc('}',output);
     }

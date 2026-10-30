@@ -4,6 +4,7 @@
 #include "gd.h"
 #include "gd_rule_analysis.h"
 #include "gd_resource_routes.h"
+#include "gd_query.h"
 #include "gd_skill_unlocks.h"
 #include "gd_explorer.h"
 #include "gd_matrix_grid.h"
@@ -26,7 +27,18 @@ static void system_release(void *context, void *memory) { (void)context; free(me
 static void help(void) {
     puts("Game Design Workbench — native domain tools\n"
          "Usage: gd matrix|connectivity|skill-atoms|scaffolding|mda|controls|rules|resources [options]\n"
-         "       gd view matrix|skill-atoms|mda|resources|explorer [options]\n\n"
+         "       gd view matrix|skill-atoms|mda|resources|explorer [options]\n"
+         "       gd query --list | --question NAME --projection actors|effects [options]\n\n"
+         "Built-in queries: object-bindings, actor-states, effect-contributors. No query DSL.\n"
+         "  --object ALIAS/NOUN    Exact declared noun type; not a global runtime actor\n"
+         "  --axis ALIAS/AXIS      Exact typed axis; --participant LOCAL selects case binding\n"
+         "  --value VALUE          Finite variant list (repeatable), or one effect state\n"
+         "  --effect KIND          Effect family from query --list; alternative to --to ID\n"
+         "  --status STATUS        Query source filter; repeatable or all alone\n"
+         "  --work-limit N         Query-stage charged work, 0..67108864; construction separate\n"
+         "  Actor states require --case/--axis; default only authored A. Other facts stay fixed.\n"
+         "  Effect contributors include definitions/placements, whole guards and exact calls.\n"
+         "  Query --fields: see --list. Query views/ghosts remain pending.\n\n"
          "Unified explorer: gd view explorer with explicit collection bindings below.\n"
          "  One window; six projections; unavailable views explain missing roles.\n"
          "  --mode skills|challenges|relationships|matrix|mda|resources (default first available)\n"
@@ -91,7 +103,7 @@ static void help(void) {
          "  --frames N             Close view after N frames (bounded smoke test)\n"
          "  --screenshot FILE.png  View capture on final bounded frame\n"
          "  --help                 Show help\n  --version              Show version\n\n"
-         "No path defaults, registry, schema engine, generic queries, or source writes.\n"
+         "No path defaults, registry, schema engine, query language, or source writes.\n"
          "Immediate non-hidden .md files only. name or filename identifies a record.\n"
          "Connectivity counts distinct partners from accepted, defined cases.\n"
          "Scaffolding checks prior introduction/practice on declared entry/next routes,\n"
@@ -173,6 +185,11 @@ static int application(int argc, char **argv) {
     GD_ResourceGraph *resource_graph=NULL; GD_ResourceRoutes *resource_query=NULL;
     const char *resource_to=NULL; int resource_accepted=0;
     GD_SkillUnlocks *skill_query=NULL;
+    GD_Query *query=NULL; GD_QueryRequest query_request={0};
+    const char *question=NULL,*projection=NULL,*object_name=NULL,*axis_name=NULL;
+    const char *error_code="cli.arguments"; int query_list=0;
+    query_request.case_index=query_request.noun=query_request.axis=query_request.effect_kind=-1;
+    query_request.work_limit=GD_EFFECT_WORK;
     const char *known_names[64]; int known_count=0;
     GD_RuleScenario scenario={0};
     const char *case_name=NULL, *assumptions[64], *context_assumptions[64];
@@ -206,7 +223,7 @@ static int application(int argc, char **argv) {
         if (!strcmp(argv[i], "--help")) { help(); return 0; }
         if (!strcmp(argv[i], "--version")) { puts("gd native 0.1 (output schema 1)"); return 0; }
     }
-    if (argc < 2) error = "Supply matrix, connectivity, skill-atoms, scaffolding, mda, controls, rules, resources, or view; see --help";
+    if (argc < 2) error = "Supply matrix, connectivity, skill-atoms, scaffolding, mda, controls, rules, resources, query, or view; see --help";
     else if (!strcmp(argv[1], "connectivity")) command = 1;
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "matrix")) { command = 2; first = 3; }
     else if (!strcmp(argv[1], "skill-atoms")) command = 3;
@@ -214,6 +231,7 @@ static int application(int argc, char **argv) {
     else if (!strcmp(argv[1], "mda")) command = 6;
     else if (!strcmp(argv[1], "rules")) command = 11;
     else if (!strcmp(argv[1], "resources")) command = 14;
+    else if (!strcmp(argv[1], "query")) command = 15;
     else if (!strcmp(argv[1], "controls")) {
         command = 8;
         if (argc > 2 && !strcmp(argv[2],"export")) { command = 9; first = 3; export_format = "json"; }
@@ -223,11 +241,11 @@ static int application(int argc, char **argv) {
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "resources")) { command = 12; first = 3; }
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "mda")) { command = 7; first = 3; layout = GD_VIEW_COLUMNS; }
     else if (!strcmp(argv[1], "view") && argc > 2 && !strcmp(argv[2], "skill-atoms")) { command = 4; first = 3; layout = GD_VIEW_PREREQUISITES; }
-    else if (strcmp(argv[1], "matrix")) error = "Unsupported command; no generic inspect/validate/query commands exist";
+    else if (strcmp(argv[1], "matrix")) error = "Unsupported command; see --help and query --list";
     control_filter.root = -1; control_filter.accepted_default = command == 9 || command == 10;
     control_command = command >= 8 && command <= 10;
     route_command = command == 5;
-    rule_command = command == 11 || command == 12 || command == 14;
+    rule_command = command == 11 || command == 12 || command == 14 || command == 15;
     mda_command = command == 6 || command == 7;
     skill_command = command >= 3 && command <= 5; view_command = command == 2 || command == 4 || command == 7 || command == 12;
     for (i = first; i < argc && !error; ++i) {
@@ -258,9 +276,30 @@ static int application(int argc, char **argv) {
             collections[count].alias = aliases[count]; collections[count].directory = folders[count];
             source_roles[count]=role;
             collections[count].role = rule_command && (role == GD_CASE || role == GD_MDA_MECHANIC) ? GD_RULE :
-                (command == 12 || command == 14) && role == GD_MDA_SYSTEM ? GD_RELATED:role;
+                (command == 12 || command == 14 || command == 15) && role == GD_MDA_SYSTEM ? GD_RELATED:role;
             if (role != GD_RELATED) roles |= 1 << role;
             ++count;
+        } else if (!strcmp(argv[i],"--list") && command==15) {
+            query_list=1;
+        } else if (command==15 && (!strcmp(argv[i],"--question") || !strcmp(argv[i],"--projection") || !strcmp(argv[i],"--object") || !strcmp(argv[i],"--axis") || !strcmp(argv[i],"--participant"))) {
+            const char **destination=!strcmp(argv[i],"--question") ? &question:!strcmp(argv[i],"--projection") ? &projection:!strcmp(argv[i],"--object") ? &object_name:!strcmp(argv[i],"--axis") ? &axis_name:&query_request.participant;
+            if (++i==argc || *destination || !*argv[i] || strlen(argv[i])>386) { error="Query selector needs one nonempty value of at most 386 bytes"; break; }
+            *destination=argv[i];
+        } else if (command==15 && !strcmp(argv[i],"--value")) {
+            if (++i==argc || !*argv[i] || strlen(argv[i])>GD_MAX_RULE_LINE || query_request.value_count==GD_ACTOR_VARIANTS) { error="--value needs bounded literal, at most 64 values"; break; }
+            query_request.values[query_request.value_count++]=argv[i];
+        } else if (command==15 && !strcmp(argv[i],"--effect")) {
+            int kind;
+            if (++i==argc || query_request.effect_kind>=0) { error="--effect needs one native result kind"; break; }
+            for (kind=GD_EFFECT_STATE;kind<=GD_EFFECT_UNKNOWN;++kind) if (!strcmp(argv[i],gd_effect_kind_name((GD_EffectKind)kind))) break;
+            if (kind>GD_EFFECT_UNKNOWN) { error="--effect needs state, gain, loss, no_change, quantity_declaration, preservation or unresolved_declaration"; break; }
+            query_request.effect_kind=kind;
+        } else if (command==15 && !strcmp(argv[i],"--work-limit")) {
+            char *end; long value;
+            if (++i==argc) { error="--work-limit requires 0..67108864"; break; }
+            value=strtol(argv[i],&end,10);
+            if (end==argv[i] || *end || value<0 || value>GD_EFFECT_WORK) { error="--work-limit requires 0..67108864"; break; }
+            query_request.work_limit=(int)value;
         } else if (!strcmp(argv[i], "--status") || !strcmp(argv[i], "--include") || !strcmp(argv[i], "--exclude")) {
             const char *option = argv[i];
             int *length = !strcmp(option,"--status") ? &control_filter.status_count : !strcmp(option,"--include") ? &control_filter.include_count : &control_filter.exclude_count;
@@ -340,8 +379,9 @@ static int application(int argc, char **argv) {
             else if (!strcmp(argv[i], "rank")) layout = GD_VIEW_RANK;
             else error = "--layout requires table, graph, columns, prerequisites, or rank";
         } else if (!strcmp(argv[i], "--to")) {
-            if (command!=14 || ++i==argc || !*argv[i] || strlen(argv[i])>=GD_MAX_PATH) { error="--to requires a Resource node ID (up to 4095 bytes)"; break; }
-            resource_to=argv[i];
+            if ((command!=14 && command!=15) || ++i==argc || !*argv[i] || strlen(argv[i])>=(command==15 ? GD_EFFECT_ID_CAPACITY:GD_MAX_PATH)) { error="--to requires a bounded Resource/effect node ID"; break; }
+            if (command==15) { if (query_request.target_id) { error="Supply --to once"; break; } query_request.target_id=argv[i]; }
+            else resource_to=argv[i];
         } else if (!strcmp(argv[i], "--accepted-only")) {
             if (command!=14) { error="--accepted-only applies to resources"; break; }
             resource_accepted=1;
@@ -397,13 +437,26 @@ static int application(int argc, char **argv) {
         }
         gd_destroy(model); return status;
     }
+    if (command==15) {
+        if (query_list) {
+            if (!error && (count || question || projection || object_name || axis_name || query_request.participant || query_request.target_id || query_request.value_count || query_request.effect_kind>=0 || case_name || assumption_count || context_assumption_count || control_filter.status_count || control_filter.include_count || control_filter.exclude_count || known_count || from || analyze || frames || screenshot || output_path || layout_supplied || direction_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied || (fields && (!json || strcmp(fields,"questions"))))) error="query --list supports only output format and --fields questions";
+            if (!error) return gd_write_query_catalogue(stdout,json) && !fflush(stdout) ? 0:2;
+        } else {
+            int kind=gd_query_kind(question);
+            if (!error && analyze) error="query does not accept --analyze; use rules for full branch comparison";
+            if (!error && kind<0) error="--question needs an implemented name from query --list";
+            if (!error && (!projection || strcmp(projection,gd_query_projection((GD_QueryKind)kind)))) { error="Operation unavailable on requested projection; inspect query --list"; error_code="query.projection_unavailable"; }
+            query_request.kind=(GD_QueryKind)kind;
+            if (!error && fields && !gd_query_fields(query_request.kind,fields)) error="Unsupported query fields; inspect query --list";
+        }
+    }
     if (!error && mda_command) {
         int required = (1 << GD_MDA_MECHANIC) | (1 << GD_MDA_DYNAMIC) | (1 << GD_MDA_AESTHETIC);
         if (roles != required && roles != (required | (1 << GD_MDA_SYSTEM))) error = "MDA requires --mechanics, --dynamics, --aesthetics ALIAS=FOLDER; optional --systems and --related";
     }
     if (!error && rule_command) {
         int roots = (1 << GD_CASE) | (1 << GD_MDA_MECHANIC);
-        int permitted = roots | (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS) | (1 << GD_RESOURCE) | ((command == 12 || command == 14) ? (1 << GD_MDA_SYSTEM):0);
+        int permitted = roots | (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS) | (1 << GD_RESOURCE) | ((command == 12 || command == 14 || command == 15) ? (1 << GD_MDA_SYSTEM):0);
         if (!(roles & roots) || (roles & ~permitted)) error = "Rules require --interactions and/or --mechanics, optional --axes, --nouns, --verbs, --resources, --control-vars and --related";
     }
     if (!error && (command == 12 || command == 14) && (analyze || case_name || assumption_count || context_assumption_count)) error="Resource declaration inspection does not accept scenario or comparison options; use rules";
@@ -416,7 +469,7 @@ static int application(int argc, char **argv) {
     if (!error && command == 4 && explorer_mode == GD_EXPLORE_CHALLENGES && !(roles & (1 << GD_CHALLENGE))) error = "Challenges mode requires explicit --challenges ALIAS=FOLDER";
     if (!error && !rule_command && !control_command && !mda_command && !(command == 4 && roles == ((1 << GD_SKILL) | (1 << GD_CHALLENGE))) && roles != (route_command ? (1 << GD_SKILL) | (1 << GD_CHALLENGE) : skill_command ? 1 << GD_SKILL : 7))
         error = route_command ? "Supply exactly --skill-atoms and --challenges ALIAS=FOLDER, plus optional --related collections" : skill_command ? "Supply exactly --skill-atoms ALIAS=FOLDER, plus optional --related collections" : "Explicit --nouns, --verbs, and --interactions ALIAS=FOLDER inputs are required";
-    if (!error && !control_command && (control_filter.status_count || control_filter.include_count || control_filter.exclude_count)) error = "--status, --include, --exclude apply only to controls";
+    if (!error && !control_command && ((control_filter.status_count && command!=15) || control_filter.include_count || control_filter.exclude_count)) error = "--status applies to controls/queries; --include/--exclude only to controls";
     if (!error && override_count && !control_command) error = "--set applies only to controls";
     if (!error && import_option && command != 10) error = "--input and --input-format apply only to controls import";
     if (!error && command == 10 && (!input_path || override_count)) error = "Controls import requires --input FILE; edit that file instead of --set";
@@ -426,7 +479,7 @@ static int application(int argc, char **argv) {
     if (!error && command == 4 && explicit_format == 0) error = "Skill view change report supports JSON only";
     if (command == 4) json = 1;
     if (!error && output_path && (strlen(output_path) >= GD_MAX_PATH || strlen(output_path) < 5 || strcmp(output_path+strlen(output_path)-5, ".json"))) error = "Report path must end in .json and fit 4095 UTF-8 bytes";
-    if (!error && fields && (!json || view_command || !fields_valid(fields, command==14 ? 8 : rule_command ? 7 : command == 10 ? 6 : control_command ? 5 : mda_command ? 4 : route_command ? 3 : skill_command ? 2 : command == 1))) error = "--fields needs JSON and supported top-level data keys";
+    if (!error && fields && (!json || view_command || (command==15 ? !gd_query_fields(query_request.kind,fields):!fields_valid(fields, command==14 ? 8 : rule_command ? 7 : command == 10 ? 6 : control_command ? 5 : mda_command ? 4 : route_command ? 3 : skill_command ? 2 : command == 1)))) error = "--fields needs JSON and supported top-level data keys";
     if (!error && !view_command && (frames || screenshot || layout_supplied || other_pairs || (direction_supplied && !mda_command))) error = "Layout/direction/frame/capture options apply only to views";
     if (!error && command == 2 && layout > GD_VIEW_COLUMNS) error = "Matrix view requires table, graph, or columns layout";
     if (!error && command == 4 && (layout < GD_VIEW_PREREQUISITES || other_pairs)) error = "Skill view requires prerequisites or rank layout; no matrix-pair overlay";
@@ -443,13 +496,13 @@ static int application(int argc, char **argv) {
 #endif
     model = gd_create(allocator);
     if (!model) { fputs("gd: cannot allocate bounded model storage\n", stderr); return 2; }
-    if (error) gd_error(model, "cli.arguments", error, NULL, 0);
+    if (error) gd_error(model, error_code, error, NULL, 0);
     else gd_load(model, collections, count);
     if (rule_command && !error) {
         /* Generic rule records retain original explicit collection provenance. */
-        if (command==12 || command==14) for (i=0;i<model->collection_count;++i) model->collections[i].role=source_roles[i];
+        if (command==12 || command==14 || command==15) for (i=0;i<model->collection_count;++i) model->collections[i].role=source_roles[i];
         rules=gd_read_rules(model);
-        if (rules && (analyze || case_name || command == 12 || command == 14)) {
+        if (rules && (analyze || case_name || command == 12 || command == 14 || command == 15)) {
             rule_analysis=gd_analyze_rules(model,rules);
             if (rule_analysis && case_name) {
                 int selected_case=gd_rule_case_find(model,rules,case_name), valid=1;
@@ -458,7 +511,7 @@ static int application(int argc, char **argv) {
                     rule_analysis->requested_case=selected_case; rule_analysis->scenario.root_case=selected_case; rule_analysis->scenario.exclusion.excluded_by=-1;
                     for (i=0;i<assumption_count;++i) if (!gd_rule_assume(model,rules,selected_case,assumptions[i],&scenario)) valid=0;
                     for (i=0;i<context_assumption_count;++i) if (!gd_rule_assume_context(model,rules,selected_case,context_assumptions[i],context_truths[i],&scenario)) valid=0;
-                    if (valid) {
+                    if (valid && command!=15) {
                         GD_RuleAssumptions inputs={scenario.facts,scenario.fact_count,scenario.contexts,scenario.context_count};
                         gd_rule_evaluate(rule_analysis,selected_case,inputs,&rule_analysis->scenario);
                         if (rule_analysis->scenario.input_valid==0) gd_error(model,"rules.scenario","Contradictory/invalid typed assumptions; no case applicability claim",NULL,0);
@@ -471,6 +524,19 @@ static int application(int argc, char **argv) {
             resource_graph=gd_resource_graph_build(model,rules);
             if (resource_graph) gd_resource_graph_bind_calls(resource_graph,rule_analysis);
         }
+    }
+    if (command==15 && !error && rules && rule_analysis && !model->error_count) {
+        const char *references[2]={object_name,axis_name}; GD_Role kinds[2]={GD_NOUN,GD_AXIS}; int valid=1;
+        for (i=0;i<2;++i) if (references[i]) {
+            int index=gd_query_record(model,references[i],kinds[i]);
+            if (index<0) { gd_error(model,index==-2 ? "query.selector_ambiguous":"query.selector_missing","Object/axis must identify one exact loaded typed record",references[i],0); valid=0; }
+            else if (!i) query_request.noun=index; else query_request.axis=index;
+        }
+        query_request.case_index=case_name ? rule_analysis->requested_case:-1;
+        if (assumption_count || context_assumption_count) query_request.fixed=&scenario;
+        query_request.status_count=control_filter.status_count;
+        for (i=0;i<control_filter.status_count;++i) query_request.statuses[i]=control_filter.statuses[i];
+        if (valid) query=gd_query_build(model,rules,rule_analysis,&query_request);
     }
     if (command==14 && resource_graph && resource_to && !model->error_count) {
         int start=-1,target=-1;
@@ -541,7 +607,7 @@ static int application(int argc, char **argv) {
 #endif
     }
     if (!view_command || model->error_count) {
-        int written = command==14 ? gd_write_resource_query(stdout,model,resource_graph,resource_query,json,error ? NULL:fields) : rule_command ? gd_write_rule_report(stdout,model,rules,rule_analysis,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
+        int written = command==15 ? gd_write_query(stdout,model,query,json,error ? NULL:fields) : command==14 ? gd_write_resource_query(stdout,model,resource_graph,resource_query,json,error ? NULL:fields) : rule_command ? gd_write_rule_report(stdout,model,rules,rule_analysis,json,error ? NULL:fields) : command == 10 ? gd_write_control_import(stdout,model,import_plan,json,error ? NULL:fields) : control_command ? gd_write_controls_result(stdout,model,controls,json,error ? NULL:fields,error ? NULL:export_format) : mda_command ? gd_write_mda_result(stdout,model,mda,json,error ? NULL:fields) : route_command ? gd_write_routes_result(stdout,model,routes,json,error ? NULL : fields) :
             command==3 ? gd_write_skill_result(stdout,model,skill_query,json,error ? NULL:fields) : gd_write_result(stdout, model, skill_command ? 2 : command == 1, json, error ? NULL : fields);
         if (!written || fflush(stdout)) {
             fputs("gd: cannot write result\n", stderr); status = 2;
@@ -553,7 +619,7 @@ static int application(int argc, char **argv) {
     }
     if (model->error_count || model->errors_omitted) status = 2;
     if (skill_query) allocator.release(allocator.context,skill_query);
-    gd_resource_routes_destroy(resource_query); gd_resource_graph_destroy(resource_graph); gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
+    gd_query_destroy(query); gd_resource_routes_destroy(resource_query); gd_resource_graph_destroy(resource_graph); gd_rule_analysis_destroy(rule_analysis); gd_rules_destroy(rules); gd_control_import_destroy(import_plan); gd_controls_destroy(controls); gd_mda_destroy(mda); gd_routes_destroy(routes); gd_destroy(model); return status;
 }
 int main(int argc, char **argv) {
 #ifdef _WIN32

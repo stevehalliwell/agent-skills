@@ -398,8 +398,72 @@ static void context_result(FILE *output, const GD_Model *model, const GD_Rules *
     fprintf(output,",\"operator_offset\":%d",context->operator_offset);
     effect_target(output,model,context->target); fputc('}',output);
 }
+void gd_write_rule_case(FILE *output, const GD_Model *model, const GD_Rules *rules, int i) {
+    const GD_RuleCase *item=&rules->cases[i]; int j,k;
+    provenance(output,&model->records[rules->sources[item->source].record],item->line);
+    member(output,"case",item->name); member(output,"context",item->context);
+    member(output,"primary_target",item->primary_target);
+    fprintf(output,",\"primary_target_line\":%d,\"default_set_line\":%d",item->primary_target_line,item->default_set_line);
+    member(output,"unknown_conditions",item->unknown_conditions); member(output,"unknown_effects",item->unknown_effects);
+    fprintf(output,",\"unknown_conditions_line\":%d,\"unknown_effects_line\":%d",item->unknown_conditions_line,item->unknown_effects_line);
+    context_result(output,model,rules,&item->ordered_context);
+    fprintf(output,",\"context_line\":%d,\"skip_if_count\":%d,\"participants\":[",item->context_line,item->skip_if_count);
+    for (j=0;j<item->participant_count;++j) {
+        const GD_RuleParticipant *participant=&rules->participants[item->first_participant+j];
+        if (j) fputc(',',output); fputs("{\"name\":",output); gd_json_string(output,participant->name);
+        member(output,"noun",participant->noun); member(output,"noun_resolution",gd_rule_resolution_name(participant->noun_resolution));
+        fprintf(output,",\"applicable_axes_complete\":%s",participant->noun_resolution==GD_RULE_RESOLVED && rules->actor_axes_complete[participant->noun_record] ? "true":"false");
+        member(output,"requires",participant->requires); member(output,"skip_if",participant->skip_if); member(output,"other_axes",participant->other_axes);
+        member(output,"becomes",participant->becomes); member(output,"preserve",participant->preserve); member(output,"causes",participant->causes);
+        fprintf(output,",\"state_lists_complete\":%s,\"preservation_lists_complete\":%s",participant->incomplete_effect_fields & (1u<<4) ? "false":"true",participant->incomplete_effect_fields & (1u<<5) ? "false":"true");
+        fputs(",\"effect_declarations\":[",output);
+        {
+            int kind,n,comma=0;
+            for (kind=GD_RULE_EFFECT_STATE;kind<=GD_RULE_EFFECT_CALL;++kind) {
+                GD_RuleEffectSpan spans[2]; int count=gd_rule_effect_spans(rules,i,item->first_participant+j,(GD_RuleEffectKind)kind,spans);
+                for (n=0;n<count;++n) {
+                    if (comma++) fputc(',',output);
+                    fputs("{\"field\":",output); gd_json_string(output,kind==GD_RULE_EFFECT_STATE ? "becomes":kind==GD_RULE_EFFECT_PRESERVE ? "preserve":"causes");
+                    member(output,"text",spans[n].text); member(output,"target_origin",spans[n].from_primary ? "primary":"participant"); fprintf(output,",\"line\":%d}",spans[n].line);
+                }
+            }
+        }
+        fputc(']',output); member(output,"other_axes_mode",participant->other_axes_mode==GD_RULE_OTHER_ANY ? "any":participant->other_axes_mode==GD_RULE_OTHER_INVALID ? "invalid":"unspecified");
+        condition_result(output,model,rules,"requires_condition",&participant->required_condition,participant->lines[1]);
+        condition_result(output,model,rules,"skip_if_condition",&participant->skip_condition,participant->lines[2]);
+        fprintf(output,",\"line\":%d,\"field_lines\":{",participant->line);
+        fprintf(output,"\"noun\":%d,\"requires\":%d,\"skip_if\":%d,\"other_axes\":%d,\"becomes\":%d,\"preserve\":%d,\"causes\":%d,\"set\":%d,\"pools\":%d},\"set\":[",participant->lines[0],participant->lines[1],participant->lines[2],participant->lines[3],participant->lines[4],participant->lines[5],participant->lines[6],participant->lines[7],participant->lines[8]);
+        for (k=0;k<participant->assignment_count;++k) {
+            const GD_RuleAssignment *assignment=&rules->assignments[participant->first_assignment+k];
+            if (k) fputc(',',output); fputs("{\"axis\":",output); gd_json_string(output,assignment->axis);
+            member(output,"expression",assignment->expression); fprintf(output,",\"line\":%d",assignment->line); member(output,"target_origin",assignment->from_primary ? "primary":"participant");
+            effect_target(output,model,assignment->target); quantity_result(output,rules,assignment->quantity); fputc('}',output);
+        }
+        fputs("],\"pools\":[",output);
+        for (k=0;k<participant->pool_count;++k) {
+            const GD_RulePool *pool=&rules->pools[participant->first_pool+k];
+            if (k) fputc(',',output); fputs("{\"axis\":",output); gd_json_string(output,pool->axis);
+            member(output,"reference",pool->reference); fprintf(output,",\"line\":%d",pool->line); member(output,"resource_resolution",gd_rule_resolution_name(pool->resource_resolution));
+            member(output,"identity_resolution",gd_rule_resolution_name(pool->identity_resolution)); effect_target(output,model,pool->target); fputc('}',output);
+        }
+        fputs("],\"state_effects\":[",output);
+        for (k=0;k<participant->state_effect_count;++k) {
+            const GD_RuleStateEffect *effect=&rules->state_effects[participant->first_state_effect+k];
+            if (k) fputc(',',output); fputs("{\"text\":",output); gd_json_string_n(output,effect->text,effect->length);
+            fprintf(output,",\"line\":%d",effect->line); effect_target(output,model,effect->target); member(output,"control",effect->control_record>=0 ? model->records[effect->control_record].reference:NULL); fputc('}',output);
+        }
+        fputs("],\"preservations\":[",output);
+        for (k=0;k<participant->preservation_count;++k) {
+            const GD_RulePreservation *promise=&rules->preservations[participant->first_preservation+k];
+            if (k) fputc(',',output); fputs("{\"text\":",output); gd_json_string_n(output,promise->text,promise->length);
+            member(output,"kind",promise->kind==GD_PRESERVE_ALL ? "all":promise->kind==GD_PRESERVE_OTHER ? "other":"axis"); fprintf(output,",\"line\":%d",promise->line); effect_target(output,model,promise->target); fputc('}',output);
+        }
+        fputs("]}",output);
+    }
+    fputs("]}",output);
+}
 int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *rules, const GD_RuleAnalysis *analysis, int json, const char *fields) {
-    int i, j, k, comma = 0, parsed = 0;
+    int i, j, comma = 0, parsed = 0;
     int complete = rules && !model->error_count && !model->errors_omitted;
     if (rules) for (i = 0; i < rules->source_count; ++i) parsed += rules->sources[i].state == GD_RULE_PARSED;
     if (!json) {
@@ -475,82 +539,7 @@ int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *ru
     if (selected(fields,"cases")) {
         if (comma++) fputc(',',output); fputs("\"cases\":[",output);
         if (rules) for (i = 0; i < rules->case_count; ++i) {
-            const GD_RuleCase *item = &rules->cases[i]; if (i) fputc(',',output);
-            provenance(output,&model->records[rules->sources[item->source].record],item->line);
-            member(output,"case",item->name); member(output,"context",item->context);
-            member(output,"primary_target",item->primary_target);
-            fprintf(output,",\"primary_target_line\":%d,\"default_set_line\":%d",item->primary_target_line,item->default_set_line);
-            member(output,"unknown_conditions",item->unknown_conditions); member(output,"unknown_effects",item->unknown_effects);
-            fprintf(output,",\"unknown_conditions_line\":%d,\"unknown_effects_line\":%d",item->unknown_conditions_line,item->unknown_effects_line);
-            context_result(output,model,rules,&item->ordered_context);
-            fprintf(output,",\"context_line\":%d,\"skip_if_count\":%d,\"participants\":[",item->context_line,item->skip_if_count);
-            for (j = 0; j < item->participant_count; ++j) {
-                const GD_RuleParticipant *participant = &rules->participants[item->first_participant+j];
-                if (j) fputc(',',output); fputs("{\"name\":",output); gd_json_string(output,participant->name);
-                member(output,"noun",participant->noun);
-                member(output,"noun_resolution",gd_rule_resolution_name(participant->noun_resolution));
-                fprintf(output,",\"applicable_axes_complete\":%s",participant->noun_resolution == GD_RULE_RESOLVED && rules->actor_axes_complete[participant->noun_record] ? "true":"false");
-                member(output,"requires",participant->requires);
-                member(output,"skip_if",participant->skip_if); member(output,"other_axes",participant->other_axes);
-                member(output,"becomes",participant->becomes); member(output,"preserve",participant->preserve);
-                member(output,"causes",participant->causes);
-                fprintf(output,",\"state_lists_complete\":%s,\"preservation_lists_complete\":%s",participant->incomplete_effect_fields & (1u<<4) ? "false":"true",participant->incomplete_effect_fields & (1u<<5) ? "false":"true");
-                fputs(",\"effect_declarations\":[",output);
-                {
-                    int kind, n, declaration_comma=0;
-                    for (kind=GD_RULE_EFFECT_STATE;kind<=GD_RULE_EFFECT_CALL;++kind) {
-                        GD_RuleEffectSpan spans[2];
-                        int count=gd_rule_effect_spans(rules,i,item->first_participant+j,(GD_RuleEffectKind)kind,spans);
-                        for (n=0;n<count;++n) {
-                            if (declaration_comma++) fputc(',',output);
-                            fputs("{\"field\":",output); gd_json_string(output,kind==GD_RULE_EFFECT_STATE ? "becomes":kind==GD_RULE_EFFECT_PRESERVE ? "preserve":"causes");
-                            member(output,"text",spans[n].text); member(output,"target_origin",spans[n].from_primary ? "primary":"participant");
-                            fprintf(output,",\"line\":%d}",spans[n].line);
-                        }
-                    }
-                }
-                fputc(']',output);
-                member(output,"other_axes_mode",participant->other_axes_mode == GD_RULE_OTHER_ANY ? "any":
-                       participant->other_axes_mode == GD_RULE_OTHER_INVALID ? "invalid":"unspecified");
-                condition_result(output,model,rules,"requires_condition",&participant->required_condition,participant->lines[1]);
-                condition_result(output,model,rules,"skip_if_condition",&participant->skip_condition,participant->lines[2]);
-                fprintf(output,",\"line\":%d,\"field_lines\":{",participant->line);
-                fprintf(output,"\"noun\":%d,\"requires\":%d,\"skip_if\":%d,\"other_axes\":%d,\"becomes\":%d,\"preserve\":%d,\"causes\":%d,\"set\":%d,\"pools\":%d},\"set\":[",
-                        participant->lines[0],participant->lines[1],participant->lines[2],participant->lines[3],
-                        participant->lines[4],participant->lines[5],participant->lines[6],participant->lines[7],participant->lines[8]);
-                for (k = 0; k < participant->assignment_count; ++k) {
-                    const GD_RuleAssignment *assignment = &rules->assignments[participant->first_assignment+k];
-                    if (k) fputc(',',output); fputs("{\"axis\":",output); gd_json_string(output,assignment->axis);
-                    member(output,"expression",assignment->expression); fprintf(output,",\"line\":%d",assignment->line);
-                    member(output,"target_origin",assignment->from_primary ? "primary":"participant");
-                    effect_target(output,model,assignment->target); quantity_result(output,rules,assignment->quantity); fputc('}',output);
-                }
-                fputs("],\"pools\":[",output);
-                for (k = 0; k < participant->pool_count; ++k) {
-                    const GD_RulePool *pool = &rules->pools[participant->first_pool+k];
-                    if (k) fputc(',',output); fputs("{\"axis\":",output); gd_json_string(output,pool->axis);
-                    member(output,"reference",pool->reference); fprintf(output,",\"line\":%d",pool->line);
-                    member(output,"resource_resolution",gd_rule_resolution_name(pool->resource_resolution));
-                    member(output,"identity_resolution",gd_rule_resolution_name(pool->identity_resolution));
-                    effect_target(output,model,pool->target); fputc('}',output);
-                }
-                fputs("],\"state_effects\":[",output);
-                for (k = 0; k < participant->state_effect_count; ++k) {
-                    const GD_RuleStateEffect *effect = &rules->state_effects[participant->first_state_effect+k];
-                    if (k) fputc(',',output); fputs("{\"text\":",output); gd_json_string_n(output,effect->text,effect->length);
-                    fprintf(output,",\"line\":%d",effect->line); effect_target(output,model,effect->target);
-                    member(output,"control",effect->control_record>=0 ? model->records[effect->control_record].reference:NULL); fputc('}',output);
-                }
-                fputs("],\"preservations\":[",output);
-                for (k=0;k<participant->preservation_count;++k) {
-                    const GD_RulePreservation *promise=&rules->preservations[participant->first_preservation+k];
-                    if (k) fputc(',',output); fputs("{\"text\":",output); gd_json_string_n(output,promise->text,promise->length);
-                    member(output,"kind",promise->kind==GD_PRESERVE_ALL ? "all":promise->kind==GD_PRESERVE_OTHER ? "other":"axis");
-                    fprintf(output,",\"line\":%d",promise->line); effect_target(output,model,promise->target); fputc('}',output);
-                }
-                fputs("]}",output);
-            }
-            fputs("]}",output);
+            if (i) fputc(',',output); gd_write_rule_case(output,model,rules,i);
         }
         fputc(']',output);
     }

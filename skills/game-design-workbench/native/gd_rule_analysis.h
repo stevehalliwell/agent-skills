@@ -120,6 +120,8 @@ int gd_rule_case_find(const GD_Model *model, const GD_Rules *rules, const char *
 const char *gd_rule_truth_name(GD_RuleTruth truth);
 const char *gd_rule_relation_name(GD_RuleRelation relation);
 void gd_write_rule_analysis(FILE *output, const GD_RuleAnalysis *analysis);
+void gd_write_rule_case(FILE *output, const GD_Model *model, const GD_Rules *rules, int case_index);
+void gd_write_rule_proposal(FILE *output, const GD_RuleAnalysis *analysis, const GD_RuleWrite *write);
 int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *rules,
                          const GD_RuleAnalysis *analysis, int json, const char *fields);
 #endif

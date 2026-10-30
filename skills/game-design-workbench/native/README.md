@@ -2,7 +2,7 @@
 
 C99 domain tools over supplied Markdown folders. Source analysis stays read-only; skill graph supports transient rank/prerequisite edits and JSON handoff, never authoritative Markdown writes. Same `GD_Model` feeds matrix/connectivity and skill prerequisite/rank CLI results and views, plus challenge/route opportunity analysis shared with switchable Skills/Challenges exploration, focused exploration of already-consumed relationships, and MDA CLI/explorer queries. Shared graphics-free C99 layout handles transient positioning/sorting; cimgui supplies graph controls and source panel. No Node, agent, display, raylib, or `.attendant/` needed for headless commands.
 
-Sections: [Build](#build), [Unified explorer](#unified-explorer), [Resource declaration report](#resource-declaration-report), [Commands](#commands), [Matrix meanings](#matrix-meanings), [View](#view), [Dynamic graph](#dynamic-graph), [Focused relationships](#focused-relationships), [Graph analysis layers](#graph-analysis-layers), [Diagnostics browser](#diagnostics-browser), [Skill prerequisites and ranks](#skill-prerequisites-and-ranks), [Challenge route opportunities](#challenge-route-opportunities), [MDA declared traces and questions](#mda-declared-traces-and-questions), [Draft editing and JSON handoff](#draft-editing-and-json-handoff), [Prepared experiments](#prepared-experiments), [Reader boundary](#reader-boundary), [Checks and dependencies](#checks-and-dependencies).
+Sections: [Build](#build), [Unified explorer](#unified-explorer), [Resource declaration report](#resource-declaration-report), [Built-in actor/effect queries](#built-in-actoreffect-queries), [Commands](#commands), [Matrix meanings](#matrix-meanings), [View](#view), [Dynamic graph](#dynamic-graph), [Focused relationships](#focused-relationships), [Graph analysis layers](#graph-analysis-layers), [Diagnostics browser](#diagnostics-browser), [Skill prerequisites and ranks](#skill-prerequisites-and-ranks), [Challenge route opportunities](#challenge-route-opportunities), [MDA declared traces and questions](#mda-declared-traces-and-questions), [Draft editing and JSON handoff](#draft-editing-and-json-handoff), [Prepared experiments](#prepared-experiments), [Reader boundary](#reader-boundary), [Checks and dependencies](#checks-and-dependencies).
 
 ## Build
 
@@ -25,7 +25,7 @@ CJIT application code is unoptimized. Windows Zig 0.17.0 `zig cc -std=c99` headl
 ```sh
 zig cc -std=c99 -DHAVE_CONFIG_H=1 -DYAML_DECLARE_STATIC=1 \
   -I vendor/libyaml/include -I vendor/libyaml/src \
-  gd_core.c gd_output.c gd_layout.c gd_matrix_grid.c gd_layout_routes.c gd_layout_focus.c gd_focus.c gd_graph_analysis.c gd_graph_paths.c gd_graph_closure.c gd_graph_shapes.c gd_graph_overview.c gd_diagnostics.c gd_skills.c gd_skill_unlocks.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_resource_output.c gd_explorer.c gd_cli.c vendor/libyaml/src/api.c \
+  gd_core.c gd_output.c gd_layout.c gd_matrix_grid.c gd_layout_routes.c gd_layout_focus.c gd_focus.c gd_graph_analysis.c gd_graph_paths.c gd_graph_closure.c gd_graph_shapes.c gd_graph_overview.c gd_diagnostics.c gd_skills.c gd_skill_unlocks.c gd_draft.c gd_routes.c gd_mda.c gd_controls.c gd_control_import.c gd_rules.c gd_rule_axes.c gd_rule_logic.c gd_rule_quantities.c gd_rule_analysis.c gd_resource_graph.c gd_resource_identity.c gd_effect_graph.c gd_effect_query.c gd_query.c gd_query_output.c gd_actor_query.c gd_resource_routes.c gd_resource_output.c gd_explorer.c gd_cli.c vendor/libyaml/src/api.c \
   vendor/libyaml/src/parser.c vendor/libyaml/src/reader.c \
   vendor/libyaml/src/scanner.c -lshell32 -o build/gd-zig.exe
 ```
@@ -134,7 +134,7 @@ Script assembles native commands/selects native-typed facts; it does not parse r
 - Stable typed IDs and reload remapping retain exact Resource placement checks; opaque digest equality is insufficient.
 - Owned storage: 770,120 bytes; 4,096 nodes / 32,768 links / 67,108,864 work. Allocation failure returns no candidate; projection truncation, upstream incompleteness and unexamined portions remain distinct. `source_incomplete` includes rejected effect spans, unknown source coverage and typed quantity/preservation incompleteness.
 
-Projection kernel only. CLI actor/state selectors, contributor query surface and integrated drawing remain pending; no new CLI/view mode advertised yet.
+[Built-in queries](#built-in-actoreffect-queries) expose this kernel headlessly. Integrated drawing remains pending; catalogue reports `ui_available: false`.
 
 ## Finite actor variants — kernel
 
@@ -148,7 +148,37 @@ Projection kernel only. CLI actor/state selectors, contributor query surface and
 - Under explicit starting facts, checked numeric results may classify capped changes as gain/loss/no change within that query context. Unit/arithmetic errors remain declaration evidence, never checked changes. This does not establish unconditional flow or final outcome.
 - Owned storage: 5,103,888 bytes. Build bounds: 64 variants / 8,192 writes / 4,096 activations / 4,096 retained checks / 67,108,864 charged work. Capacity rejects next whole variant; work limits retain marked partial evidence. Each pair comparison performs at most 20,480 bit comparisons. Allocation failure returns no candidate.
 
-Native API only. CLI selectors, source/status filtering, stable query-selection remapping, actor/state drawing and ghosts remain pending. Variant contexts never inflate `gd_effect_incoming` declaration counts.
+[Built-in queries](#built-in-actoreffect-queries) expose selectors and source/status scope. Stable visual-selection remapping, drawing and ghosts remain pending. Variant contexts never inflate `gd_effect_incoming` declaration counts.
+
+## Built-in actor/effect queries
+
+`gd query --list --json` advertises implemented question names, projections, required bindings/parameters, repeatable options and fields. No natural-language DSL, saved recipes, source discovery or writes. Actor/effect UI parity remains pending and is explicitly unavailable in catalogue.
+
+Actual authored plumber examples, run from repository root:
+
+```powershell
+$native = 'skills/game-design-workbench/native'
+$game = 'skills/game-design-workbench/examples/little-plumber-guy-nes/game-design'
+$queryInputs = foreach ($role in @('nouns', 'axes', 'interactions', 'mechanics',
+    'systems', 'resources', 'control-vars')) { "--$role"; "$role=$game/$role" }
+& "$native/build/gd.exe" query --list --json
+& "$native/build/gd.exe" query --question object-bindings --projection actors @queryInputs --json
+& "$native/build/gd.exe" query --question actor-states --projection actors @queryInputs `
+    --case 'mechanics/enemy-contact#walker-small' --axis axes/Form --json
+& "$native/build/gd.exe" query --question effect-contributors --projection effects @queryInputs `
+    --object nouns/hero --axis axes/Life --value dead --json
+```
+
+- **object-bindings**: enumerate authored local participants, explicit A, resolved declared noun type, typed axes/domains/units/bounds and full case constraints. Optional exact `--object ALIAS/NOUN`, `--axis ALIAS/AXIS`, `--case ALIAS/RECORD#CASE`, `--participant LOCAL`. No global runtime actor inferred.
+- **actor-states**: require exact root case and applicable axis. Default only authored A; `--participant` selects another declared binding. Enumerate declared enum values or repeated finite `--value` literals. Numeric axes require explicit values in declared unit. `--assume`, `--context`, `--context-not` use existing native typed paths; fixed selected-axis facts are errors. Other facts stay fixed. Missing geometry, protection, deduplication or encounter facts remain unknown in example above.
+- Actor output retains whole-case truth, false/no-effect activations, mapped call provenance, target-labelled proposals, checks/conflicts, partners and effect concepts. Comparisons expose shared/first-only/second-only counts **and member indices**. Cases use `{index, declaration}`; `declaration` reuses full Rules JSON. Member references and participant/activation/effect indices are snapshot-local, not persistent selectors. Partial sets never establish absence or equivalence.
+- **effect-contributors**: inspect direct conditional source declarations and exact mapped-instantiation ancestry. Optional `--object` selects declared affected noun type, not actor instance. Filter enum result with `--axis/--value`, family with `--effect`, or exact opaque concept `--to ID` from same-boundings response. Do not combine `--to` with axis/value/family. Parallel targets/declarations stay separate; calls/contextual copies do not inflate incoming counts. Paths are not temporal sequences or sufficient executable recipes.
+- `--status` repeats, or `all` stands alone; default no status restriction. Actor filters select roots only and retain labelled invoked dependencies. Contributor filters require every exact placement ancestor. Excluded roots and unexamined variants do not validate supplied facts.
+- Standard JSON/text, `GD_AGENT`, exit 0/2 and structured errors. `--fields` selects advertised data sections; metadata, selectors, limits, coverage and diagnostics remain. Unsupported operation/projection is explicit `query.projection_unavailable`, never an empty successful answer. Empty valid scope succeeds; missing parameters, selectors or types fail.
+- `--work-limit 0..67108864` bounds query-stage work. Parsing, compiled rule analysis, Resource construction and Effect projection retain separate native bounds. Zero/exhausted work, retained partial construction and allocation failure stay distinct. Capacity retains known contributor evidence with limit/source-incomplete flags; no fabricated `query.memory`. No frequency, importance, feasibility or final-outcome claim.
+- `gd_query` delegates native actor and contributor kernels; `gd_effect_query` borrows Effect snapshot/value/mask. Adapter owns child queries, not model/rules/analysis/input strings/fixed scenario. Destroy queries before borrowed inputs. No new always-live explorer allocation.
+
+Checks: `test_actor_query.h`, `test_effect_query.h`, `test/native-queries.test.mjs`, `test/native-query-capacity.test.mjs`. Includes direct-kernel parity, local identity, typed enum/numeric variants, filters, exact selectors, comparison members, empty/limited scope, every adapter allocation stage and retained 32,768-relation partial construction. Existing Rules JSON remains byte-identical on extraction fixture. Current app captures exercise old panes only, not future actor/effect drawing.
 
 ## Resource graph preview
 
