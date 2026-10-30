@@ -29,6 +29,12 @@ TEST(rule_primary_partial_lists,
         }
         graph=gd_resource_graph_build(model,rules); TEST_ASSERT(graph && graph->unknown_case_coverage==1);
         if (kind) TEST_ASSERT(graph->preservation_unexamined==1);
+        TEST_ASSERT(gd_resource_graph_bind_calls(graph,analysis));
+        {
+            GD_EffectGraph *effects=gd_effect_graph_build(graph,GD_EFFECT_WORK);
+            TEST_ASSERT(effects && effects->source_incomplete && effects->link_count>0);
+            gd_effect_graph_destroy(effects);
+        }
         gd_resource_graph_destroy(graph); gd_rule_analysis_destroy(analysis); gd_rules_destroy(rules); gd_destroy(model);
     }
 )
@@ -60,6 +66,13 @@ TEST(rule_primary_partial_limits,
         gd_rule_evaluate(analysis,root_case,inputs,&analysis->scenario);
         TEST_ASSERT(!analysis->scenario.constraints_complete);
         if (!kind) TEST_ASSERT(!analysis->scenario.values_complete && analysis->scenario.opaque_effects);
+        {
+            GD_ResourceGraph *graph=gd_resource_graph_build(model,rules); GD_EffectGraph *effects;
+            TEST_ASSERT(graph && gd_resource_graph_bind_calls(graph,analysis));
+            effects=gd_effect_graph_build(graph,GD_EFFECT_WORK);
+            TEST_ASSERT(effects && effects->source_incomplete && effects->link_count>0);
+            gd_effect_graph_destroy(effects); gd_resource_graph_destroy(graph);
+        }
         gd_rule_analysis_destroy(analysis); gd_rules_destroy(rules); gd_destroy(model);
     }
 )

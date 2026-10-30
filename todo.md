@@ -1109,7 +1109,7 @@ Status: ready for implementation. Use 05 and shared kernels; manual usefulness r
 
 #### Review 09 — Explore actor states and resource flows
 
-Status: implementation underway; primary-target reader and source migration implemented, actor/effect exploration remains. Uses existing 01/02/03 contracts and viewer integration from 06; does not reopen parked encounter design. Manual usefulness remains a review gate.
+Status: implementation underway; primary-target reader/source migration and shared individual-effect projection kernel implemented. Actor/state queries, finite variants and integrated effect exploration remain. Uses existing 01/02/03 contracts and viewer integration from 06; does not reopen parked encounter design. Manual usefulness remains a review gate.
 
 - Result: actor/state navigation, state-specific ghosts, conditional comparisons, shared outcome nodes, resource flows and role changes in shared analysis and visual inspection.
 - Resource projection should expose Task 02's derived flows and conversion-path exploration across resources; query semantics belong to Task 02, not a second viewer evaluator.

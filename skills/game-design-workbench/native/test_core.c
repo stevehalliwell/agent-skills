@@ -2,6 +2,7 @@
 #include "gd.h"
 #include "gd_rule_analysis.h"
 #include "gd_resource_graph.h"
+#include "gd_effect_graph.h"
 #include "gd_skill_unlocks.h"
 #include "gd_layout.h"
 #include "gd_graph_analysis.h"
@@ -2448,6 +2449,7 @@ TEST(rules_allocation_failure,
 #include "test_resource_output.h"
 #include "test_resource_routes.h"
 #include "test_resource_instances.h"
+#include "test_effect_graph.h"
 #include "test_graph_reachability.h"
 #include "test_graph_shapes.h"
 #include "test_graph_overview.h"
@@ -2468,7 +2470,7 @@ int main(int argc, char **argv) {
     failed += test_rule_primary_partial_lists(); failed += test_rule_primary_partial_limits();
     failed += test_rules_declarations(); failed += test_resource_unloaded_call(); failed += test_rule_expression_delta(); failed += test_rule_pool_resolution(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
     failed += test_matrix_grid(); failed += test_resource_output_limits(); failed += test_resource_routes();
-    failed += test_resource_instance_identity_and_limits(); failed += test_resource_instance_depth_frontiers(); failed += test_resource_instance_unresolved_origins();
+    failed += test_resource_instance_identity_and_limits(); failed += test_resource_instance_depth_frontiers(); failed += test_resource_instance_unresolved_origins(); failed += test_effect_result_concepts_and_targeted_links(); failed += test_effect_projection_capacity_and_source_limits();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
     failed += test_text_types(); failed += test_missing_endpoint();
     failed += test_input_limits();
@@ -2491,6 +2493,6 @@ int main(int argc, char **argv) {
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/102 passed\n", 102-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/104 passed\n", 104-failed);
     return failed ? 1 : 0;
 }
