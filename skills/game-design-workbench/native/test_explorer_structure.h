@@ -15,8 +15,13 @@ static int explorer_test_structure(GD_ExplorerContext *c, GD_ExplorerPane *panes
             STRUCTURE_CHECK(c->pane->structure_state==state && state->result && gd_explorer_model(c->project,(GD_ExplorerView)v)->error_count==errors);
         }
         for (i=1;i<=2;++i) { *fail_at=*calls+i; STRUCTURE_CHECK(!reset_view(c)); *fail_at=0; STRUCTURE_CHECK(c->pane->structure_state==state && state->result); }
+        state->pending.kind=GD_STRUCTURE_DECLARATIONS; STRUCTURE_CHECK(gd_explorer_structure_run(c)); state=c->pane->structure_state;
+        STRUCTURE_CHECK(state->result->gaps && state->result->gaps->rows==gd_explorer_model(c->project,(GD_ExplorerView)v)->edge_count);
+        *fail_at=*calls+stages+1; STRUCTURE_CHECK(!gd_explorer_structure_run(c)); *fail_at=0; STRUCTURE_CHECK(c->pane->structure_state==state && state->result->gaps && gd_explorer_model(c->project,(GD_ExplorerView)v)->error_count==errors);
     }
     c->pane=&panes[GD_EXPLORER_SKILLS]; initial=c->pane->structure_state->pending;
+    STRUCTURE_CHECK(gd_explorer_structure_run(c));
+    explorer_test_render(c); STRUCTURE_CHECK(snprintf(path,sizeof(path),"%s/declaration-gaps.png",output)<(int)sizeof(path) && gd_save_screenshot(path)); initial.kind=GD_STRUCTURE_CONNECTIONS;
     {
         const GD_StructureResult *result=c->pane->structure_state->result; const GD_LayoutEdge *edge;
         STRUCTURE_CHECK(result->layout->edge_count>0); edge=&result->layout->edges[0];

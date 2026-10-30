@@ -21,7 +21,7 @@ async function fixture(t,records) {
 function record(name,fields='',status='accepted') { return `---\nid: structure-${name}\nname: ${name}\nstatus: ${status}\n${fields}---\nAuthored fixture ${name}.\n`; }
 function index(value,id) { const found=value.data.nodes.find(node=>node.id===id); assert.ok(found,id); return found.index; }
 async function digest(paths) { const hash=createHash('sha256'); for (const path of paths) hash.update(await readFile(path)); return hash.digest('hex'); }
-const structural=['direct-connections','related-structure','reachability','structural-dominators','support-bypass','role-shapes','adjacency'];
+const structural=['direct-connections','related-structure','reachability','structural-dominators','support-bypass','role-shapes','adjacency','declaration-gaps'];
 test('structural catalogue advertises only delivered parameters and narrower UI availability',{skip:!executable},()=>{
   const catalogue=run(['--list']); const questions=catalogue.data.questions.filter(item=>item.projections);
   assert.deepEqual(questions.map(item=>item.name),structural);

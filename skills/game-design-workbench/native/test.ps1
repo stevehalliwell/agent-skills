@@ -22,6 +22,9 @@ $emptyDraft = Get-Content -LiteralPath (Join-Path $fixtures 'draft-empty.json') 
 if (-not $emptyDraft.ok -or $emptyDraft.data.changes.Count -ne 0 -or $emptyDraft.coverage.disk_changed_since_load) { throw 'Return to disk sync point failed' }
 & (Join-Path $root 'build.ps1') -Cjit $Cjit | Out-Host
 $executable = Join-Path $root 'build/gd.exe'
+$gapFixture = Join-Path $fixtures 'declaration-gaps'
+$gaps = (& $executable query --question declaration-gaps --projection relationships --skill-atoms "things=$gapFixture/things" --related "actions=$gapFixture/actions" --fields findings --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $gaps.ok -or $gaps.data.declaration_gap_inventory.rows -ne 4 -or $gaps.data.declaration_gap_inventory.missing -ne 1 -or $gaps.data.declaration_gap_inventory.unloaded -ne 1 -or $gaps.data.declaration_gap_inventory.missing_metadata_checked -or -not $gaps.coverage.query_complete -or -not $gaps.coverage.source_incomplete) { throw 'Native declaration gap CLI contract failed' }
 $example = Join-Path (Split-Path $root -Parent) 'examples/crate-puzzle/game-design'
 $inputs = @('--nouns', "nouns=$example/nouns", '--verbs', "verbs=$example/verbs", '--interactions', "interactions=$example/interactions")
 $result = (& $executable matrix @inputs --json | ConvertFrom-Json)
@@ -77,6 +80,13 @@ New-Item -ItemType Directory -Path $emptySkills | Out-Null
 $emptySkillResult = (& $executable skill-atoms --skill-atoms "skills=$emptySkills" --json | ConvertFrom-Json)
 if ($LASTEXITCODE -ne 0 -or -not $emptySkillResult.ok -or $emptySkillResult.data.skills.Count -ne 0 -or $emptySkillResult.data.links.Count -ne 0) { throw 'Empty skill graph failed' }
 $log = Join-Path $root 'build/expected-error.txt'
+foreach ($flag in @('--lens', '--direction')) {
+    $value = if ($flag -eq '--lens') { 'any' } else { 'forward' }
+    $previousPreference = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    $badGap = (& $executable query --question declaration-gaps --projection relationships --skill-atoms "things=$gapFixture/things" $flag $value --json 2>$log | ConvertFrom-Json); $gapExit = $LASTEXITCODE
+    $ErrorActionPreference = $previousPreference
+    if ($gapExit -ne 2 -or $badGap.ok -or $badGap.errors[0].code -ne 'cli.arguments') { throw 'Declaration gap silently accepted graph parameter' }
+}
 $previousPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'
 $failureOutput = & $executable matrix --json 2>$log

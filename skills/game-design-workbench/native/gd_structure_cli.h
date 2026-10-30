@@ -8,10 +8,17 @@ typedef struct {
     int root_count,relation_count,status_count,include_inactive,work_limit;
     GD_StructureDirection direction; GD_GraphLens lens;
 } GD_StructureOptions;
+typedef enum { GD_DECLARATION_RESOLVED, GD_DECLARATION_MISSING, GD_DECLARATION_UNLOADED, GD_DECLARATION_AMBIGUOUS, GD_DECLARATION_STATES } GD_DeclarationIdentity;
+typedef struct {
+    int rows,counts[GD_DECLARATION_STATES];
+    unsigned char identities[GD_MAX_EDGES];
+} GD_DeclarationGaps;
+const char *gd_declaration_identity_name(GD_DeclarationIdentity identity);
 typedef struct {
     GD_Allocator allocator; const GD_ExplorerProject *project; GD_ExplorerView view;
     GD_StructureOptions options; /* Strings remain borrowed until destruction. */
     GD_Layout *layout; GD_StructureQuery *query;
+    GD_DeclarationGaps *gaps; /* Whole loaded reader context; no graph filters. */
     int selector_work,source_incomplete;
 } GD_StructureResult;
 /* Shared native preparation for CLI and viewer. Owns canonical projection and

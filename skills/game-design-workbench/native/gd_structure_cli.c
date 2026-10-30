@@ -23,6 +23,9 @@ int gd_write_structure_catalogue(FILE *out, int json, int comma) {
         if (comma++) fputc(',',out);
         fputs("{\"name\":",out); gd_json_string(out,gd_structure_name((GD_StructureKind)kind));
         fputs(",\"projections\":[\"skills\",\"challenges\",\"relationships\",\"matrix\",\"mda\",\"resources\"],\"required_bindings_by_projection\":{\"skills\":{\"all_of\":[\"skill-atoms\"],\"any_of\":[]},\"challenges\":{\"all_of\":[\"skill-atoms\",\"challenges\"],\"any_of\":[]},\"relationships\":{\"all_of\":[\"skill-atoms\"],\"any_of\":[]},\"matrix\":{\"all_of\":[\"nouns\",\"verbs\",\"interactions\"],\"any_of\":[]},\"mda\":{\"all_of\":[\"mechanics\",\"dynamics\",\"aesthetics\"],\"any_of\":[]},\"resources\":{\"all_of\":[],\"any_of\":[\"interactions\",\"mechanics\"]}}",out);
+        if (kind==GD_STRUCTURE_DECLARATIONS) {
+            fputs(",\"required_parameters\":[],\"parameters\":[\"--work-limit (search budget only; diagnostic inventory is fixed bounded work)\"],\"repeatable_parameters\":[],\"fields\":[\"nodes\",\"links\",\"evidence\",\"declarations\",\"findings\"],\"ui_available\":true,\"ui_scope\":\"canonical projection loaded-source diagnostic context, not canvas/graph filters; native identity gaps and findings, no new validation rules\",\"ui_unavailable_parameters\":[\"repeatable input beyond 8192 combined bytes per list\",\"graph selectors/status/relation/scope filters (rejected, not ignored)\"],\"ipc_available\":false,\"work_limit_max\":16777216}",out); continue;
+        }
         fputs(",\"required_parameters\":[",out); if (path) gd_json_string(out,"at least one --from or --start"); if (kind==GD_STRUCTURE_BYPASS) fputs(",\"--to\"",out); fputs("],\"parameters\":[\"--relation\",\"--scope-root (Relationships only)\",\"--status\",\"--include-inactive\",\"--work-limit\"",out);
         if (path || kind==GD_STRUCTURE_RELATED || kind==GD_STRUCTURE_CONNECTIONS) fputs(",\"--from\"",out);
         if (path || kind==GD_STRUCTURE_RELATED) fputs(",\"--to\"",out);
@@ -56,12 +59,24 @@ static const char *selector_error(int value) { return value==-2 ? "query.selecto
 static void integers(FILE *out, const unsigned char *values, int count) { int i,comma=0; fputc('[',out); for (i=0;i<count;++i) if (values[i]) { if (comma++) fputc(',',out); fprintf(out,"%d",i); } fputc(']',out); }
 static void arcs(FILE *out, const int *values, int count, int reversed) { int i; fputc('[',out); for (i=0;i<count;++i) { if (i) fputc(',',out); fprintf(out,"{\"link\":%d,\"reverse_traversal\":%s}",values[i]/2,(values[i]%2) ^ reversed ? "true":"false"); } fputc(']',out); }
 /* Reference identity only. Domain type errors remain native findings/errors. */
-static const char *identity_resolution(const GD_Model *model, const GD_Edge *edge) {
-    int i; if (edge->target>=0) return "resolved"; if (edge->target==-2) return "ambiguous";
-    for (i=0;i<model->collection_count;++i) { size_t length=strlen(model->collections[i].alias); if (!strncmp(edge->reference,model->collections[i].alias,length) && edge->reference[length]=='/') return "missing"; }
-    return "unloaded";
+const char *gd_declaration_identity_name(GD_DeclarationIdentity identity) {
+    static const char *const names[]={"resolved","missing","unloaded","ambiguous"}; return identity>=0 && identity<GD_DECLARATION_STATES ? names[identity]:NULL;
+}
+static GD_DeclarationIdentity identity_resolution(const GD_Model *model, const GD_Edge *edge) {
+    int i; if (edge->target>=0) return GD_DECLARATION_RESOLVED; if (edge->target==-2) return GD_DECLARATION_AMBIGUOUS;
+    for (i=0;i<model->collection_count;++i) { size_t length=strlen(model->collections[i].alias); if (!strncmp(edge->reference,model->collections[i].alias,length) && edge->reference[length]=='/') return GD_DECLARATION_MISSING; }
+    return GD_DECLARATION_UNLOADED;
 }
 static void findings(FILE *out, const GD_Finding *values, int count) { int i; fputc('[',out); for (i=0;i<count;++i) { if (i) fputc(',',out); fputs("{\"code\":",out); gd_json_string(out,values[i].code); member(out,"message",values[i].message); member(out,"reference",values[i].reference); fprintf(out,",\"record\":%d,\"line\":%d}",values[i].record,values[i].line); } fputc(']',out); }
+static void gap_inventory(FILE *out, const GD_StructureResult *result) {
+    const GD_DeclarationGaps *gaps=result->gaps; const GD_Model *model=gd_explorer_model(result->project,result->view); int i,comma=0;
+    fprintf(out,",\"declaration_gap_inventory\":{\"scope\":\"whole loaded reader context; consumed explicit references only, independent of graph/canvas filters\",\"missing_metadata_checked\":false,\"inventory_checked\":true,\"rows\":%d,\"resolved\":%d,\"missing\":%d,\"unloaded\":%d,\"ambiguous\":%d,\"gaps\":[",gaps->rows,gaps->counts[GD_DECLARATION_RESOLVED],gaps->counts[GD_DECLARATION_MISSING],gaps->counts[GD_DECLARATION_UNLOADED],gaps->counts[GD_DECLARATION_AMBIGUOUS]);
+    for (i=0;i<gaps->rows;++i) if (gaps->identities[i]!=GD_DECLARATION_RESOLVED) {
+        const GD_Edge *edge=&model->edges[i]; if (comma++) fputc(',',out);
+        fprintf(out,"{\"declaration_index\":%d,\"source\":",i); record_json(out,&model->records[edge->source]); fprintf(out,",\"line\":%d,\"field\":",edge->line); gd_json_string(out,gd_field_name(edge->field)); member(out,"reference",edge->reference); member(out,"identity_resolution",gd_declaration_identity_name((GD_DeclarationIdentity)gaps->identities[i])); fputc('}',out);
+    }
+    fputs("]}",out);
+}
 static int projection_incomplete(const GD_ExplorerProject *project, GD_ExplorerView view) {
     const GD_Model *model=gd_explorer_model(project,view); int i;
     if ((view==GD_EXPLORER_RESOURCES && gd_resource_graph_incomplete(project->resources)) || model->skill_incomplete || model->findings_omitted || (view==GD_EXPLORER_MDA && (!project->mda->graph_complete || project->mda->findings_omitted)) || (view==GD_EXPLORER_RESOURCES && project->rules->findings_omitted)) return 1;
@@ -74,6 +89,7 @@ int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int j
     const GD_Model *model=gd_explorer_model(project,view); const GD_GraphAnalysis *analysis=&query->analysis; int i,j,comma=0,ids_complete=1,hints[GD_MAX_RECORDS];
     const GD_StructureRequest *request=&query->request; int source_incomplete=result->source_incomplete;
     if (!json) {
+        if (result->gaps) fprintf(out,"Declaration inventory: %d explicit reference rows; resolved %d, missing %d, unloaded %d, ambiguous %d; native domain findings separate; no missing-metadata validator\n",result->gaps->rows,result->gaps->counts[GD_DECLARATION_RESOLVED],result->gaps->counts[GD_DECLARATION_MISSING],result->gaps->counts[GD_DECLARATION_UNLOADED],result->gaps->counts[GD_DECLARATION_AMBIGUOUS]);
         fprintf(out,"%s [%s]: %d shown nodes, %d shown rows, %d isolates; search %s; structural evidence, not gameplay frequency/feasibility\n",gd_structure_name(request->kind),gd_projection_name(view),query->shown_nodes,query->shown_edges,query->isolated,query->complete ? "complete in scope":"PARTIAL");
         for (i=0;i<analysis->node_count;++i) if (analysis->shown[i]) { fprintf(out,"%d %s | ",i,query->layout->nodes[i].label); if (!request->incidence) fprintf(out,"incoming %d outgoing %d ",query->nodes[i].incoming,query->nodes[i].outgoing); fprintf(out,"partners %d incident rows %d kinds %d\n",query->nodes[i].partners,query->nodes[i].incident,query->nodes[i].kinds); }
         fputs("Native evidence/source metadata (JSON; --json emits only this object):\n",out);
@@ -111,7 +127,7 @@ int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int j
     if (field(fields,"evidence")) {
         fputs(",\"evidence\":{\"marked_nodes\":",out); integers(out,query->marked_nodes,analysis->node_count); fputs(",\"marked_links\":",out); integers(out,query->marked_edges,analysis->edge_count);
         if (request->kind==GD_STRUCTURE_RELATED) { if (analysis->comparison.valid) { const GD_GraphComparison *comparison=&analysis->comparison; fprintf(out,",\"comparison\":{\"shared\":%d,\"first_only\":%d,\"second_only\":%d,\"other_role\":%d}",comparison->shared,comparison->a_only,comparison->b_only,comparison->other_role); } else { fputs(",\"pairs\":[",out); for (i=0;i<analysis->pair_count;++i) { if (i) fputc(',',out); fprintf(out,"{\"first\":%d,\"second\":%d,\"shared\":%d}",analysis->pairs[i].a,analysis->pairs[i].b,analysis->pairs[i].shared); } fputc(']',out); } }
-        if (request->kind==GD_STRUCTURE_REACHABILITY) { const GD_GraphClosure *closure=&analysis->reachability; fputs(",\"rows\":[",out); for (i=0;i<analysis->node_count;++i) if (query->roots[i]) { if (comma++) fputc(',',out); fprintf(out,"{\"root\":%d,\"finished\":%s,\"cycle\":%s,\"targets\":[",i,closure->finished[i] ? "true":"false",closure->cycle[i] ? "true":"false"); { int count=0; for (j=0;j<analysis->node_count;++j) if (gd_graph_closure_contains(closure,i,j)) { if (count++) fputc(',',out); fprintf(out,"%d",j); } } fputs("]}",out); } fputc(']',out); if (request->target>=0 && request->source>=0) { int values[64],count=gd_graph_closure_path(analysis,closure,0,request->target,values,64); fprintf(out,",\"support_length\":%d,\"support_suffix\":",count); arcs(out,values,count<0 ? 0:count<64 ? count:64,request->direction==GD_STRUCTURE_BACKWARD); } }
+        if (request->kind==GD_STRUCTURE_REACHABILITY) { const GD_GraphClosure *closure=&analysis->reachability; fputs(",\"rows\":[",out); for (i=0;i<analysis->node_count;++i) if (query->roots[i]) { if (comma++) fputc(',',out); fprintf(out,"{\"root\":%d,\"finished\":%s,\"cycle\":%s,\"targets\":[",i,closure->finished[i] ? "true":"false",!closure->finished[i] ? "null":closure->cycle[i] ? "true":"false"); { int count=0; for (j=0;j<analysis->node_count;++j) if (gd_graph_closure_contains(closure,i,j)) { if (count++) fputc(',',out); fprintf(out,"%d",j); } } fputs("]}",out); } fputc(']',out); if (request->target>=0 && request->source>=0) { int values[64],count=gd_graph_closure_path(analysis,closure,0,request->target,values,64); fprintf(out,",\"support_length\":%d,\"support_suffix\":",count); arcs(out,values,count<0 ? 0:count<64 ? count:64,request->direction==GD_STRUCTURE_BACKWARD); } }
         if (request->kind==GD_STRUCTURE_DOMINATORS || request->kind==GD_STRUCTURE_BYPASS) { const GD_GraphPaths *paths=&analysis->paths; const GD_PathBypass *bypass=&paths->bypass; fputs(",\"path_nodes\":[",out); for (i=0;i<analysis->node_count;++i) { if (i) fputc(',',out); fprintf(out,"{\"index\":%d,\"reachable\":%s,\"dominated_other_nodes\":",i,paths->reached[i] ? "true":paths->complete ? "false":"null"); if (paths->complete) fprintf(out,"%d",paths->dominated[i]); else fputs("null",out); fputs(",\"dominates_target\":",out); if (paths->complete && request->target>=0 && paths->selection.node==request->target) fputs(paths->selection.ancestors[i] ? "true":"false",out); else fputs("null",out); fputc('}',out); } fprintf(out,"],\"support_length\":%d,\"support_suffix\":",request->target>=0 && paths->selection.node==request->target ? paths->selection.length:-1); arcs(out,paths->selection.arcs,paths->selection.retained,request->direction==GD_STRUCTURE_BACKWARD); if (request->kind==GD_STRUCTURE_BYPASS) { if (!bypass->valid) { fputs(",\"bypass\":null,\"bypass_unavailable_reason\":",out); gd_json_string(out,paths->complete ? "Native bypass requires a nonmandatory selected support-path candidate":"Native start/path analysis incomplete"); } else { fprintf(out,",\"bypass\":{\"valid\":%s,\"complete\":%s,\"found\":%s,\"candidate\":%d,\"fork\":%d,\"rejoin\":%d,\"length\":%d,\"suffix\":",bypass->valid ? "true":"false",bypass->complete ? "true":"false",bypass->found ? "true":"false",bypass->candidate,bypass->fork,bypass->rejoin,bypass->length); arcs(out,bypass->arcs,bypass->retained,request->direction==GD_STRUCTURE_BACKWARD); fputc('}',out); } } }
         if (request->kind==GD_STRUCTURE_SHAPES) { fputs(",\"families\":[",out); for (i=0;i<analysis->node_count;++i) { if (i) fputc(',',out); if (analysis->shapes.valid && analysis->shapes.complete && analysis->shown[i]) fprintf(out,"%d",analysis->shapes.colors[i]); else fputs("null",out); } fputc(']',out); }
         if (request->kind==GD_STRUCTURE_ADJACENCY) { const GD_GraphOverview *overview=&analysis->overview; fprintf(out,",\"bins\":%d,\"input_link_rows\":%d,\"cells\":[",overview->bins,overview->link_count); for (i=0;i<overview->bins*overview->bins;++i) { if (i) fputc(',',out); fprintf(out,"%d",overview->counts[i]); } fputc(']',out); }
@@ -119,11 +135,11 @@ int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int j
     }
     if (field(fields,"declarations")) {
         fputs(",\"declarations\":[",out);
-        for (i=0;i<model->edge_count;++i) { const GD_Edge *edge=&model->edges[i]; if (i) fputc(',',out); fprintf(out,"{\"index\":%d,\"source_record\":%d,\"target_record\":%d,\"line\":%d,\"field\":",i,edge->source,edge->target,edge->line); gd_json_string(out,gd_field_name(edge->field)); member(out,"reference",edge->reference); member(out,"identity_resolution",identity_resolution(model,edge)); fputc('}',out); } fputc(']',out);
+        for (i=0;i<model->edge_count;++i) { const GD_Edge *edge=&model->edges[i]; if (i) fputc(',',out); fprintf(out,"{\"index\":%d,\"source_record\":%d,\"target_record\":%d,\"line\":%d,\"field\":",i,edge->source,edge->target,edge->line); gd_json_string(out,gd_field_name(edge->field)); member(out,"reference",edge->reference); member(out,"identity_resolution",gd_declaration_identity_name(identity_resolution(model,edge))); fputc('}',out); } fputc(']',out);
         if (view==GD_EXPLORER_RESOURCES) { fputs(",\"case_context\":[",out); for (i=0;i<project->rules->case_count;++i) { if (i) fputc(',',out); gd_write_rule_case(out,model,project->rules,i); } fputc(']',out); }
     }
     if (view==GD_EXPLORER_RESOURCES) { fputs(",\"native_resource_coverage\":",out); gd_write_resource_coverage(out,project->resources); }
-    if (field(fields,"findings")) { fputs(",\"findings\":",out); findings(out,model->findings,model->finding_count); if (view==GD_EXPLORER_MDA) { fputs(",\"mda_findings\":",out); findings(out,project->mda->findings,project->mda->finding_count); } if (view==GD_EXPLORER_RESOURCES) { fputs(",\"rule_findings\":",out); findings(out,project->rules->findings,project->rules->finding_count); } }
+    if (field(fields,"findings")) { if (result->gaps) gap_inventory(out,result); fputs(",\"findings\":",out); findings(out,model->findings,model->finding_count); if (view==GD_EXPLORER_MDA) { fputs(",\"mda_findings\":",out); findings(out,project->mda->findings,project->mda->finding_count); } if (view==GD_EXPLORER_RESOURCES) { fputs(",\"rule_findings\":",out); findings(out,project->rules->findings,project->rules->finding_count); } }
     fprintf(out,"},\"coverage\":{\"complete\":%s,\"query_complete\":%s,\"available\":%s,\"identities_complete\":%s,\"native_selector_work\":%d,\"native_search_work\":%d,\"native_search_limit\":%d,\"fixed_construction_rows\":%d,\"fixed_selection_rows\":%d,\"source_incomplete\":%s,\"scope\":\"explicit loaded projection/filter; status matches represented source records, not ancestor applicability; never camera\",\"final_outcomes_proven\":false},\"errors\":[],\"breadcrumbs\":[\"Parallel rows differ from distinct partners; raw declaration findings retain unresolved scope. Marked nodes are a union of support and mandatory ancestors, not the dominator set.\",\"Paths are structural relationships, not AND necessity, teaching, flow, gameplay frequency or final outcomes.\",\"Support paths retain at most 64 trailing arcs in target-to-root order; reverse_traversal refers to original links, never execution.\"]}\n",query->complete && ids_complete && !model->findings_omitted && !source_incomplete ? "true":"false",query->complete ? "true":"false",query->available ? "true":"false",ids_complete ? "true":"false",selector_work,query->work,request->work_limit,query->construction_rows,query->selection_rows,source_incomplete ? "true":"false");
     return !ferror(out);
 }
@@ -132,6 +148,7 @@ static int options_valid(GD_Model *diagnostic, const GD_StructureOptions *option
     int kind=options ? gd_structure_kind(options->question):-1,i; const char *selectors[4];
     if (!options || gd_projection_find(options->projection)<0) gd_error(diagnostic,"query.projection_unavailable","Structural operation requires supported typed projection; inspect query --list",NULL,0);
     else if (options->root_count<0 || options->root_count>GD_STRUCTURE_SELECTORS || options->relation_count<0 || options->relation_count>GD_STRUCTURE_KINDS || options->status_count<0 || options->status_count>GD_STRUCTURE_SELECTORS || options->work_limit<0 || options->work_limit>GD_GRAPH_ANALYSIS_WORK || kind<0 || kind>=GD_STRUCTURE_COUNT || (options->avoid && kind!=GD_STRUCTURE_BYPASS)) gd_error(diagnostic,"query.arguments","Explicit bindings, supported fields and bounded operation-specific structural parameters required",NULL,0);
+    if (!diagnostic->error_count && kind==GD_STRUCTURE_DECLARATIONS && (options->from || options->to || options->avoid || options->scope_root || options->root_count || options->relation_count || options->status_count || options->include_inactive || options->direction!=GD_STRUCTURE_FORWARD || options->lens!=GD_GRAPH_ANY)) gd_error(diagnostic,"query.arguments","Declaration gaps inspect whole loaded reader context; graph selectors/status/relation/scope filters are unavailable",NULL,0);
     if (diagnostic->error_count) return 0;
     selectors[0]=options->from; selectors[1]=options->to; selectors[2]=options->avoid; selectors[3]=options->scope_root;
     for (i=0;i<4;++i) if (selectors[i] && !bounded_text(selectors[i],GD_MAX_RULE_LINE)) gd_error(diagnostic,"query.arguments","Structural selectors require bounded nonempty identities",NULL,0);
@@ -142,6 +159,7 @@ static int options_valid(GD_Model *diagnostic, const GD_StructureOptions *option
 }
 void gd_structure_result_destroy(GD_StructureResult *result) {
     if (!result) return;
+    if (result->gaps) result->allocator.release(result->allocator.context,result->gaps);
     gd_structure_query_destroy(result->query); if (result->layout) result->allocator.release(result->allocator.context,result->layout);
     result->allocator.release(result->allocator.context,result);
 }
@@ -177,6 +195,13 @@ GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_Exp
     }
     gd_resource_routes_destroy(resolver); result->query=query; result->selector_work=selector_work;
     if (diagnostic->error_count || !query) { gd_structure_result_destroy(result); return NULL; }
+    if (request.kind==GD_STRUCTURE_DECLARATIONS) {
+        const GD_Model *model=gd_explorer_model(project,(GD_ExplorerView)view);
+        result->gaps=allocator.allocate(allocator.context,sizeof(*result->gaps));
+        if (!result->gaps) { gd_error(diagnostic,"query.memory","Cannot allocate bounded declaration inventory",NULL,0); gd_structure_result_destroy(result); return NULL; }
+        memset(result->gaps,0,sizeof(*result->gaps)); result->gaps->rows=model->edge_count;
+        for (i=0;i<model->edge_count;++i) { GD_DeclarationIdentity identity=identity_resolution(model,&model->edges[i]); result->gaps->identities[i]=(unsigned char)identity; ++result->gaps->counts[identity]; }
+    }
     result->source_incomplete=projection_incomplete(project,(GD_ExplorerView)view); return result;
 }
 int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, int count, const GD_StructureOptions *options, int json, const char *fields, const char *initial_error) {

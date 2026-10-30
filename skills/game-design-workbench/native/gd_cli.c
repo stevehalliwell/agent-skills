@@ -443,6 +443,7 @@ static int application(int argc, char **argv) {
     }
     if (command==15 && !query_list && gd_structure_kind(question)>=0) {
         if (!error && (object_name || axis_name || query_request.participant || query_request.value_count || query_request.effect_kind>=0 || analyze || case_name || assumption_count || context_assumption_count || control_filter.include_count || control_filter.exclude_count || known_count || frames || screenshot || output_path || layout_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied)) error="Structural query does not accept actor/effect/scenario/control/view parameters";
+        if (!error && gd_structure_kind(question)==GD_STRUCTURE_DECLARATIONS && structural_only) error="Declaration gaps inspect whole loaded reader context; graph filter/direction/lens parameters are unavailable";
         structural.question=question; structural.projection=projection; structural.from=from; structural.to=query_request.target_id; structural.status_count=control_filter.status_count;
         for (i=0;i<structural.status_count;++i) structural.statuses[i]=control_filter.statuses[i];
         for (i=0;i<count;++i) collections[i].role=source_roles[i];

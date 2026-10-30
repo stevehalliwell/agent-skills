@@ -159,9 +159,34 @@ static void witness(GD_ExplorerContext *context, const char *label, const int *a
     for (i=retained-1;i>=0;--i) link_row(context,arcs[i]/2,(arcs[i]%2) ^ (query->request.direction==GD_STRUCTURE_BACKWARD));
     igPopID();
 }
+static void finding_rows(GD_ExplorerContext *context, const char *label, const GD_Finding *findings, int count, int omitted) {
+    int i; if (!igTreeNode_Str(label)) return;
+    igText("%d retained findings; %d omitted by native reader",count,omitted);
+    for (i=0;i<count && i<64;++i) { const GD_Finding *finding=&findings[i]; igPushID_Int(i); igTextWrapped("%s: %s | %s | line %d",finding->code,finding->message,finding->reference ? finding->reference:"unspecified",finding->line); if (finding->record>=0 && igSmallButton("Inspect finding source")) navigate(context,finding->record,-1); igPopID(); }
+    if (count>64) igText("%d further findings in native result",count-64); igTreePop();
+}
+static void gap_panel(GD_ExplorerContext *context) {
+    GD_ExplorerStructureState *state=context->pane->structure_state; const GD_StructureResult *result=state->result; const GD_DeclarationGaps *gaps=result->gaps;
+    const GD_Model *model=gd_explorer_model(result->project,result->view); int i,total=gaps->rows-gaps->counts[GD_DECLARATION_RESOLVED],pages=(total+63)/64,ordinal=0;
+    igTextWrapped("Whole loaded reader diagnostic context, not graph/canvas filters. Only consumed explicit declarations and native findings; no new validation rules or required metadata inferred.");
+    igTextWrapped("%d declared references: %d resolved; %d missing; %d unloaded; %d ambiguous",gaps->rows,gaps->counts[GD_DECLARATION_RESOLVED],gaps->counts[GD_DECLARATION_MISSING],gaps->counts[GD_DECLARATION_UNLOADED],gaps->counts[GD_DECLARATION_AMBIGUOUS]);
+    igTextWrapped("Inventory checked; source %s. Domain/type findings below remain separate from identity resolution. Empty list is not a complete design or missing-metadata proof.",result->source_incomplete ? "incomplete":"checked within loaded scope");
+    if (state->page>=pages) state->page=pages ? pages-1:0;
+    if (pages) igSliderInt("Declaration gap page",&state->page,0,pages-1,"%d",0);
+    for (i=0;i<gaps->rows;++i) if (gaps->identities[i]!=GD_DECLARATION_RESOLVED) {
+        const GD_Edge *edge=&model->edges[i]; if (ordinal++<state->page*64 || ordinal>state->page*64+64) continue;
+        igPushID_Int(i); igTextWrapped("%s | %s: %s | %s | line %d",model->records[edge->source].reference,gd_field_name(edge->field),edge->reference,gd_declaration_identity_name((GD_DeclarationIdentity)gaps->identities[i]),edge->line);
+        if (igSmallButton("Inspect declaring source")) navigate(context,edge->source,-1); igPopID();
+    }
+    igText("%d identity gaps; 64 rows/page",total);
+    finding_rows(context,"Model native findings",model->findings,model->finding_count,model->findings_omitted);
+    if (result->view==GD_EXPLORER_MDA) finding_rows(context,"MDA native findings",result->project->mda->findings,result->project->mda->finding_count,result->project->mda->findings_omitted);
+    if (result->view==GD_EXPLORER_RESOURCES) finding_rows(context,"Rule native findings",result->project->rules->findings,result->project->rules->finding_count,result->project->rules->findings_omitted);
+}
 static void result_panel(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_StructureResult *result=state->result; const GD_StructureQuery *query=result->query; const GD_GraphAnalysis *analysis=&query->analysis; int i,count=0,indices[GD_MAX_RECORDS];
     igSeparator(); igText("Applied: %s [%s]",gd_structure_name(query->request.kind),gd_projection_name(result->view));
+    if (result->gaps) { gap_panel(context); return; }
     igTextWrapped("Applied from: %s",result->options.from ? result->options.from:"not selected (projection-wide context)");
     if (result->options.to) igTextWrapped("Applied to: %s",result->options.to);
     if (result->options.avoid) igTextWrapped("Applied avoid: %s",result->options.avoid);
@@ -232,7 +257,9 @@ void gd_explorer_structure_controls(GD_ExplorerContext *context) {
     if (!(state=pane->structure_state)) { igTextWrapped("Cannot allocate question inputs; other pane state retained."); return; }
     form=&state->pending;
     igTextWrapped("Result scope: canonical loaded projection plus explicit filters below, not camera or current canvas filters/revealed neighborhood. Result tables navigate existing source; no query overlay or gameplay proof.");
-    if (igBeginCombo("Question",gd_structure_name((GD_StructureKind)form->kind),0)) { for (i=0;i<GD_STRUCTURE_COUNT;++i) if (igSelectable_Bool(gd_structure_name((GD_StructureKind)i),form->kind==i,0,(ImVec2_c){0,0})) form->kind=i; igEndCombo(); }
+    if (igBeginCombo("Question",gd_structure_name((GD_StructureKind)form->kind),0)) { for (i=0;i<GD_STRUCTURE_COUNT;++i) if (igSelectable_Bool(gd_structure_name((GD_StructureKind)i),form->kind==i,0,(ImVec2_c){0,0})) { if (i==GD_STRUCTURE_DECLARATIONS) defaults(form); form->kind=i; } igEndCombo(); }
+    if (form->kind==GD_STRUCTURE_DECLARATIONS) igTextWrapped("Declaration inventory uses whole loaded reader context. Selecting it clears pending graph filters; no source changes or missing-metadata rules.");
+    else {
     igInputText("From identity",form->from,sizeof(form->from),0,NULL,NULL); igInputText("To identity",form->to,sizeof(form->to),0,NULL,NULL);
     if (form->kind==GD_STRUCTURE_BYPASS) igInputText("Avoid identity",form->avoid,sizeof(form->avoid),0,NULL,NULL);
     if (pane->view==GD_EXPLORER_RELATIONSHIPS) igInputText("Scope root (one hop; blank all)",form->scope_root,sizeof(form->scope_root),0,NULL,NULL);
@@ -244,6 +271,7 @@ void gd_explorer_structure_controls(GD_ExplorerContext *context) {
         if (igBeginCombo("Partner lens",form->lens==GD_GRAPH_ANY ? "any":form->lens==GD_GRAPH_SAME_ROLE ? "same-role":"changed-role",0)) { const char *names[]={"any","same-role","changed-role"}; for (i=0;i<3;++i) if (igSelectable_Bool(names[i],form->lens==i,0,(ImVec2_c){0,0})) form->lens=i; igEndCombo(); }
         igCheckbox("Include inactive structural rows",&form->include_inactive); igInputInt("Search work ceiling",&form->work_limit,0,0,0);
         igTextWrapped("Supply only parameters supported by question; unsupported combinations fail without replacing last result. Blank Relationships path relations exclude next; all explicitly includes continuation. Lists trim whitespace; 64 items / 8192 combined bytes each."); igTreePop();
+    }
     }
     if (igButton("Run named question",(ImVec2_c){0,0})) gd_explorer_structure_run(context);
     igSameLine(0,-1); if (igButton("Clear question",(ImVec2_c){0,0})) { GD_ExplorerStructureState *fresh=empty_state(context->project->allocator); if (fresh) { gd_explorer_structure_destroy(pane->structure_state); pane->structure_state=fresh; *pane->query_message=0; } else snprintf(pane->query_message,sizeof(pane->query_message),"Cannot clear question; last result/inputs retained"); }
