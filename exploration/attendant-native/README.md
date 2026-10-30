@@ -2,7 +2,40 @@
 
 C99 implements core commands: `doctor`, `validate`, `sync`, `schema`, `query`, `search`, `add-table`, `create`, and `update`. No Node runtime needed. Cold native caches omit FTS; first search populates both indexes in place, then keeps them current. Indexed layout-2 projections remain shared with `.mjs`; cold native layout 3 forces safe legacy rebuild. Use native consumers for lossless extended integer handling.
 
-Windows exploration, not full YAML parity or replacement rollout. **Reads can now correct Markdown metadata.** Use generated datasets for review; do not use live production collections yet. Migration/import, Git awareness, concurrent source writers and viewer remain excluded. Existing skill still uses `.mjs`.
+Windows exploration, not full YAML parity or replacement rollout. **Reads can now correct Markdown metadata.** Use generated datasets for review; do not use live production collections yet. Migration/import, Git awareness and universal concurrent-writer guarantees remain excluded. GUI is separate application; installed skill still uses `.mjs`.
+
+## Review map
+
+Start with application entry points, then shared source boundary and affected implementation. Tests/tools are separate; no need to read harnesses first.
+
+```text
+apps/cli/main.c         CLI startup and dispatch
+apps/cli/*.h            CLI options, query/search, diagnostics, write commands
+apps/gui/main.c         Win32/ImGui application, rendering and human actions
+apps/gui/workspace.*    Document buffers, save/reload, selections and feedback
+apps/gui/{reveal,inspect}.*  Agent hint and inspection IPC
+src/native-api.{h,c}    Recoverable source API used by GUI
+src/core/              Shared parsing, validation, source writes and SQLite projection
+src/include/base.h     Shared C support library
+
+tests/core/            CLI/API acceptance, fault injection and headless API probe
+tests/gui/            GUI model checks, synthetic input, acceptance and evidence
+tests/fixtures/       Owned test inputs; frozen historical SQLite baseline
+tests/tools/          Harness/layout unit tests
+tools/                Build inputs/provenance, API-test build, capture and benchmark tools
+experiments/sqlite/   Isolated SQLite comparison programs/generators/harnesses
+vendor/               Pinned third-party dependencies
+```
+
+Both apps retain C99 unity builds. CLI includes shared core plus CLI handlers; GUI links `src/native-api.c`, which includes core without CLI handlers. Shared core has no `main()` and no `ATTENDANT_EMBEDDED` switch. Four common directory/record-writing helpers moved from CLI into core unchanged.
+
+GUI test state/input/assertions live under `tests/gui/`. Guarded includes and small observation hooks remain in application; production preprocessing excludes test bodies. `.inc` files preserve existing caller scope, cleanup paths and test behavior rather than adding a new runtime API.
+
+GUI C ABI bridge/maintained RichMd patch still live in [GUI dependency stack](../../spikes/cimgui-richmd-c99/README.md): `richmd_c.{h,cpp}`, `preview-selection.cpp.inc`, `patch-richmd.mjs`. These are runtime integration code, not disposable test harnesses. Packaging that stack into final product is not part of this folder cleanup.
+
+Historical eager-baseline rebuilds currently fail against newer shared YAML/rollback ownership fields; see [experiment status](experiments/sqlite/README.md). No baseline repair or new timing claim included.
+
+Root `build.sh` and `build-gui.sh` remain application build entry points. Existing executable names/output paths remain unchanged. Generated output stays under ignored `build/`; installed skill/launcher unchanged.
 
 ## Build and check
 
@@ -13,31 +46,31 @@ From repository root:
 ```sh
 bash exploration/attendant-native/build.sh cjit
 bash exploration/attendant-native/build.sh zig
-node exploration/attendant-native/read-check.mjs \
+node exploration/attendant-native/tests/core/read-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
-node exploration/attendant-native/prepare-check.mjs \
+node exploration/attendant-native/tests/core/prepare-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
-node exploration/attendant-native/cli-check.mjs \
+node exploration/attendant-native/tests/core/cli-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
-node exploration/attendant-native/incremental-check.mjs \
+node exploration/attendant-native/tests/core/incremental-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
-node exploration/attendant-native/meta-comments-check.mjs \
+node exploration/attendant-native/tests/core/meta-comments-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
-node exploration/attendant-native/search-mode-check.mjs \
+node exploration/attendant-native/tests/core/search-mode-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
-node exploration/attendant-native/source-check.mjs \
+node exploration/attendant-native/tests/core/source-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
 node --test skills/attendant/test/attendant.test.js
 ```
 
-`read-check.mjs` runs `check.mjs` projection comparisons first. Other suites are independent. Node >=24.10.0 is test/oracle infrastructure only. CLI acceptance also uses Windows PowerShell for read locks and fixture creation timestamps; `hold-file.ps1` holds files read-only, never edits bytes. Native command checks restrict PATH to System32 to prove Node is not needed.
+`tests/core/read-check.mjs` runs `tests/core/check.mjs` projection comparisons first. Other suites are independent. Node >=24.10.0 is test/oracle infrastructure only. CLI acceptance also uses Windows PowerShell for read locks and fixture creation timestamps; `tools/hold-file.ps1` holds files read-only, never edits bytes. Native command checks restrict PATH to System32 to prove Node is not needed.
 
 Suites replace generated copies under ignored `build/review/`, including paths with spaces and Unicode. They never edit original fixture collections. Each executable runs relative and absolute config scenarios. Evidence:
 
@@ -58,7 +91,7 @@ SQLite file bytes need not match across builders. Source bytes and logical resul
 Capture current active datasets without running Attendant in originals:
 
 ```sh
-node exploration/attendant-native/capture-datasets.mjs \
+node exploration/attendant-native/tools/capture-datasets.mjs \
   D:/Repos/proto-framework D:/Repos/godot-proto
 ```
 
@@ -70,7 +103,7 @@ Initial capture: `build/real-data/capture-C41Ig7/`.
 - `.mjs`, CJIT and Zig strict validation passed both datasets: no diagnostics or pending corrections. `.mjs schema` passed without changing copied source. Pristine hashes stayed unchanged.
 - `manifest.json` records per-file hashes; `baseline-analysis.json` summarizes initial checks. Full command outputs stay alongside dataset workspaces.
 
-Capture alone is not final real-data acceptance. Copied workflow suite now passes 66 cases across both datasets and `.mjs`/CJIT/Zig: [REAL-DATA-CHECKS.md](REAL-DATA-CHECKS.md). Run `node exploration/attendant-native/real-data-check.mjs --manifest <capture/manifest.json>` for fresh owned copies, edits, queries/search, source preservation and cache/handoff checks. No affected Unicode category mismatches in captured data; defer wider Unicode and Windows path qualification. Copy-time filesystem timestamps/creation times need not match originals.
+Capture alone is not final real-data acceptance. Copied workflow suite now passes 66 cases across both datasets and `.mjs`/CJIT/Zig: [REAL-DATA-CHECKS.md](REAL-DATA-CHECKS.md). Run `node exploration/attendant-native/tools/real-data-check.mjs --manifest <capture/manifest.json>` for fresh owned copies, edits, queries/search, source preservation and cache/handoff checks. No affected Unicode category mismatches in captured data; defer wider Unicode and Windows path qualification. Copy-time filesystem timestamps/creation times need not match originals.
 
 ### CLI performance baseline
 
@@ -79,8 +112,8 @@ Compile separately, then benchmark prebuilt executables:
 ```sh
 bash exploration/attendant-native/build.sh cjit
 bash exploration/attendant-native/build.sh zig
-node --test exploration/attendant-native/benchmark.test.mjs
-node exploration/attendant-native/benchmark.mjs \
+node --test exploration/attendant-native/tests/tools/benchmark.test.mjs
+node exploration/attendant-native/tools/benchmark.mjs \
   --manifest exploration/attendant-native/build/real-data/capture-C41Ig7/manifest.json \
   --runs 20 --warmup 3
 ```
@@ -89,7 +122,7 @@ node exploration/attendant-native/benchmark.mjs \
 
 - Warm-filesystem CLI tests, not cold-disk tests or isolated language comparisons. Every command starts a fresh process. Warmups prime OS/file/executable caches, not a persistent VM. Runner order rotates each round; all timed commands run serially. Other machine activity is not controlled.
 - Six scenarios: fresh `sync`, unchanged `sync`/`query`/`search`, one-record body edit then `sync`, and mtime-only change then `sync`. Query returns 25 ordered tasks; search requests 20 `task` hits. Both workloads must return data.
-- Create fresh owned copies under ignored `build/bench/run-*`; never use manifest's original/working paths as mutation targets. Validate source hashes and config containment first. Share read-only inventory checks with capture tool through `dataset-files.mjs`.
+- Create fresh owned copies under ignored `build/bench/run-*`; never use manifest's original/working paths as mutation targets. Validate source hashes and config containment first. Share read-only inventory checks with capture tool through `tools/dataset-files.mjs`.
 - Normalize copied source mtimes to `2026-01-01T00:00:00.000Z`. Build each runner's baseline there; restore closed DB/sidecar snapshots and original target bytes before every trial. Mutation trials advance target mtime by 60 seconds. Mtime-only trial leaves bytes unchanged. Copies/reset work intentionally warm filesystem caches.
 - Validate strict sources and schemas/usage before timing. Compare query/search with `.mjs`, allowing documented score rounding; check record counts, projected source hashes, cached mtime/size/hash, edited-body FTS hits and source preservation outside timers. Pristine captures stay unchanged. Stop on failed checks; partial reports have `complete: false`.
 - Stdout: one JSON summary. Stderr: progress. `report.json` contains environment, executable/script hashes, SQLite versions, dataset sizes, state counts, medians, p90, min/max and means. `samples.jsonl` retains every warmup/measured sample, command, timing and stderr. Warmups never enter summary statistics; no outlier trimming. Retain generated workspaces for inspection.
@@ -146,7 +179,7 @@ Demo create/add-table names must not already exist; rerun acceptance to reset ge
 
 When configured `_meta_comments` has `status: [pending, resolved]`, native query/search append `meta_comments: {pending: N}` from same prepared read snapshot. Positive count prints concise reminder on stderr; reading does not resolve. Empty inbox reports zero silently; absent collection leaves output unchanged. Incompatible lifecycle reports `pending: null, error: "incompatible-schema"` with warning, not false zero. Count covers valid visible projected pending rows; malformed records retain normal diagnostics.
 
-This is discovery only: no automatic collection creation, extra FTS build, new messaging command or notices on doctor/validate/schema/sync/write/help. Full managed storage/GUI behavior and recent dependency gate: [GUI-PLAN.md](GUI-PLAN.md), [GUI-DEPENDENCIES.md](GUI-DEPENDENCIES.md). Separate [C99 workspace GUI](gui/README.md) now builds/runs through CJIT or Zig: navigation, source/preview tabs, typed reference links and missing-target visibility. Source editing/undo, save/discard/cancel, source-selection Save & Send, pending/resolved views and exact saved-target navigation now pass both builds. Preview feedback now accepts verified contiguous original-source spans, with source-editor fallback for unsupported markup/widgets. Non-focusing agent reveal now delivers transient saved-source line hints; explicit human Go shows separate highlight without moving caret/selection. Dirty/stale/unsupported paths fail closed. Git context deferred by user; installed launcher unchanged.
+This is discovery only: no automatic collection creation, extra FTS build, new messaging command or notices on doctor/validate/schema/sync/write/help. Full managed storage/GUI behavior and recent dependency gate: [GUI-PLAN.md](GUI-PLAN.md), [GUI-DEPENDENCIES.md](GUI-DEPENDENCIES.md). Separate [C99 workspace GUI](apps/gui/README.md) now builds/runs through CJIT or Zig: navigation, source/preview tabs, typed reference links and missing-target visibility. Source editing/undo, save/discard/cancel, source-selection Save & Send, pending/resolved views and exact saved-target navigation now pass both builds. Preview feedback now accepts verified contiguous original-source spans, with source-editor fallback for unsupported markup/widgets. Non-focusing agent reveal now delivers transient saved-source line hints; explicit human Go shows separate highlight without moving caret/selection. Dirty/stale/unsupported paths fail closed. Git context deferred by user; installed launcher unchanged.
 
 ## Diagnostics and corrections
 
@@ -172,7 +205,7 @@ This is discovery only: no automatic collection creation, extra FTS build, new m
 
 ## Projection and read safety
 
-`prepare.h` scans/hashes/parses/validates bounded source, then reuses, incrementally reconciles rows or rebuilds in process. Full source validation is retained: cached JSON cannot reconstruct all exact typed numbers; equal-stat edits still require hashes. No Node subprocess. Reuse checks search mode/layout/config/schema metadata, source path/collection/hash/size/mtime, decoded front matter, precision-sensitive scalar values and required table/cache counts. Compare large integers directly with SQLite INTEGER values, or exact decimal TEXT for string-first mixed enums: old float JSON can have identical digits yet a rounded projected value. Check floats stored in TEXT too; serialize numbers explicitly rather than use SQLite's lower-precision double-to-TEXT conversion. Changed interpretation invalidates stale projections even when source bytes/stat match.
+`src/core/prepare.h` scans/hashes/parses/validates bounded source, then reuses, incrementally reconciles rows or rebuilds in process. Full source validation is retained: cached JSON cannot reconstruct all exact typed numbers; equal-stat edits still require hashes. No Node subprocess. Reuse checks search mode/layout/config/schema metadata, source path/collection/hash/size/mtime, decoded front matter, precision-sensitive scalar values and required table/cache counts. Compare large integers directly with SQLite INTEGER values, or exact decimal TEXT for string-first mixed enums: old float JSON can have identical digits yet a rounded projected value. Check floats stored in TEXT too; serialize numbers explicitly rather than use SQLite's lower-precision double-to-TEXT conversion. Changed interpretation invalidates stale projections even when source bytes/stat match.
 
 - Detect additions, edits, deletion, rename and hidden/blocked transitions, including equal-size/equal-mtime edits. Delete affected set before reinserting rows/cache/FTS/trigram entries; untouched rows/index entries stay in place. Rebuild global diagnostics and reference edges when projected source changes. `create`/`update` use same incremental refresh after source publication.
 - Mtime-only changes update cache metadata without row/index churn and return `reused`, matching `.mjs`. Projected `updated_at` stays as last row projection until content changes or full rebuild. Usage text remains live without rebuild.
@@ -191,7 +224,7 @@ This is discovery only: no automatic collection creation, extra FTS build, new m
 
 ## Compatibility and limits
 
-`projection.c` uses cold layout `3` with `fts_enabled=0` and no FTS objects. Indexed layout `2` adds Unicode/trigram FTS5 and `fts_enabled=1`; missing flag on legacy layout `2` means already indexed. Both include collection columns, metadata/cache, diagnostics and reference edges. Schema hashes use literal `\\0` separators. Reuse needs configured directory spelling, absolute paths, SHA-256 and filesystem timestamps. Windows CNG supplies hashes and secure UUID randomness.
+`src/core/core.c` uses cold layout `3` with `fts_enabled=0` and no FTS objects. Indexed layout `2` adds Unicode/trigram FTS5 and `fts_enabled=1`; missing flag on legacy layout `2` means already indexed. Both include collection columns, metadata/cache, diagnostics and reference edges. Schema hashes use literal `\\0` separators. Reuse needs configured directory spelling, absolute paths, SHA-256 and filesystem timestamps. Windows CNG supplies hashes and secure UUID randomness.
 
 - Tested Windows x64, CJIT v1.2.0, Zig 0.17.0, SQLite 3.53.0, LibYAML 0.2.5, Node v24.16.0.
 - 128 MiB caller-owned arena plus 12 MiB JSON workspace; parser/SQLite allocate independently. Upper bounds: 32 collections, 128 schema fields each, 256 front-matter keys, 1024 scalar items per array, 4096 records total, 4 MiB per source file. Combined arena limits may fail earlier. SQL/path/output capacities also fail explicitly.

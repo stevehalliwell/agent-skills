@@ -1,6 +1,6 @@
 # Embedded source API
 
-`native-api.h` exposes C99 source read/save and selected-text feedback. CLI stays independent; no GUI/C++ dependency added to CLI.
+`src/native-api.h` exposes C99 source read/save and selected-text feedback. CLI stays independent; no GUI/C++ dependency added to CLI.
 
 ## Lifetime and errors
 
@@ -37,7 +37,7 @@ Zero-initialize `attendant_feedback`. Default `ATTENDANT_FEEDBACK_SOURCE` requir
 
 ## Managed collection
 
-Canonical schema in `native-api.c`; alias `_meta_comments`, default `records/_meta_comments`. Complete declaration mapping must match v1; field order/comments need not match. Configured compatible alternate directory allowed.
+Canonical schema in `src/native-api.c`; alias `_meta_comments`, default `records/_meta_comments`. Complete declaration mapping must match v1; field order/comments need not match. Configured compatible alternate directory allowed.
 
 First Send stages schema/template/usage/comment/config. Publishes owned files, then config last. On failure, remove only unchanged operation-owned bootstrap files. Cleanup opens without write/delete sharing, compares expected bytes and deletes through same handle; changed/busy files survive and remain in `written`. Remove only empty operation-created directories. Missing `.pi/attendant.tables` created only on first Send. Conflicts never overwrite existing collection files. Later Send publishes one comment only.
 
@@ -46,11 +46,11 @@ Reading never creates collection or consumes pending status. Human comment is co
 ## Validation
 
 ```bash
-bash build-api-check.sh cjit
-bash build-api-check.sh zig
+bash tools/build-api-check.sh cjit
+bash tools/build-api-check.sh zig
 bash build.sh cjit
 bash build.sh zig
-node api-check.mjs
+node tests/core/api-check.mjs
 ```
 
-`api-probe.c` is test executable, not public CLI. Test build alone enables `ATTENDANT_TEST_FAULTS`; production API does not accept environment-triggered failures/edits. Generated fixtures and evidence under ignored `build/api-check/`; report `build/api-check-results.json`.
+`tests/core/api-probe.c` is test executable, not public CLI. Test build alone enables `ATTENDANT_TEST_FAULTS`; production API does not accept environment-triggered failures/edits. Generated fixtures and evidence under ignored `build/api-check/`; report `build/api-check-results.json`.

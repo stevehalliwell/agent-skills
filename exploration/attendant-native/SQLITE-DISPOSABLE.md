@@ -17,7 +17,7 @@ Recommendation for next candidate: lazy FTS, bounded mmap and integrity checks a
 
 ## Implementation and isolation
 
-`sqlite-experiment-source.mjs` generates exact-checked source transformations under ignored `build/sqlite-experiments/<profile>/`. Assertion fails if expected source fragment changes. `sqlite-experiment-build.sh` compiles separate Zig `-O3` executables. No experimental policy macros or generated changes added to normal C sources. Node is generation/test infrastructure only; experimental CLI remains native.
+`experiments/sqlite/sqlite-experiment-source.mjs` generates exact-checked source transformations under ignored `build/sqlite-experiments/<profile>/`. Assertion fails if expected source fragment changes. `experiments/sqlite/sqlite-experiment-build.sh` compiles separate Zig `-O3` executables. No experimental policy macros or generated changes added to normal C sources. Node is generation/test infrastructure only; experimental CLI remains native.
 
 Profiles, all other settings held at current defaults:
 - `control`: current WAL/NORMAL, 4096-byte pages, eager FTS and routine integrity checks. Disabled fault hooks shared with other variants.
@@ -125,15 +125,15 @@ This is closer to supplied SQL/ripgrep-dominant workflow. Main ready-baseline ed
 ```sh
 for profile in control wal-off bulk-off memory lazy lazy-wal-off no-quick-check \
   page8 page16 page32 fts-deferred fts-optimize; do
-  bash exploration/attendant-native/sqlite-experiment-build.sh "$profile"
+  bash exploration/attendant-native/experiments/sqlite/sqlite-experiment-build.sh "$profile"
 done
-node exploration/attendant-native/sqlite-experiment-check.mjs \
+node exploration/attendant-native/experiments/sqlite/sqlite-experiment-check.mjs \
   --manifest exploration/attendant-native/build/real-data/capture-C41Ig7/manifest.json \
   --runs 13 --warmup 2
 # Same flags plus --unsearched-only for never-searched sync/edit cases.
-node exploration/attendant-native/lazy-search-check.mjs \
+node exploration/attendant-native/tests/core/lazy-search-check.mjs \
   exploration/attendant-native/build/real-data/capture-C41Ig7/manifest.json
-node exploration/attendant-native/sqlite-experiment-faults.mjs \
+node exploration/attendant-native/experiments/sqlite/sqlite-experiment-faults.mjs \
   exploration/attendant-native/build/real-data/capture-C41Ig7/manifest.json
 ```
 

@@ -2,42 +2,38 @@
 
 Verdict: copied-workspace evaluation only. Not ready for everyday authoritative-workspace editing or installed-launcher rollout.
 
-Preview-selection slice implemented and tested in `f279dec` and `6317608`. Whole-app review found three unresolved blockers. Review did not authorize or implement recovery architecture, editor-lifetime changes or diagnostic UI.
+Preview-selection slice implemented and tested in `f279dec` and `6317608`. User deferred renderer recovery until a real case needs solving, requested file-path undo isolation and accepted simple workspace-warning/CLI guidance. Review follow-up implements those bounded changes; no recovery architecture or launcher rollout.
 
-## Blockers
+## Review disposition
 
-### P1: Renderer failure loses drafts
+### Deferred: Renderer failure loses drafts
 
-- `gui/main.c:875-881` abandons broken render frame, warns user and enters cleanup.
-- `gui/main.c:931` and `gui/workspace.c:93-98` free all document buffers. Composer draft also freed during cleanup.
+- `apps/gui/main.c` abandons broken render frame, warns user and enters cleanup.
+- `gui_workspace_destroy()` frees document buffers. Host cleanup also frees composer draft.
 - Abandoning unsafe ImGui frame is correct. Losing still-valid C-owned edits in unrelated tabs is separate problem.
 - Current nested-failure test proves controlled termination and unchanged saved source, not draft recovery.
 
-Required result: retain exact dirty-tab and unsent-comment bytes without automatically overwriting authoritative Markdown. Options: restart renderer while retaining C model, or bounded recovery export outside broken frame. Recovery location, ownership, retention and failure reporting need explicit design.
+Decision: accept known unsaved-work loss for now; defer recovery until an ordinary failure supplies a real case. Injected exception is qualification evidence, not an observed ordinary trigger. No automatic source save, recovery export or renderer restart added. Recovery is no longer an active prerequisite for this evaluation.
 
-Acceptance: multiple dirty tabs plus unsent comment; inject nested render failure; recover exact bytes; saved source unchanged. Report export/restart failures, never claim successful recovery without evidence.
+### Fixed: Tab reuse can inherit another document's undo history
 
-### P2: Tab reuse can inherit another document's undo history
+- ImGui owns undo; application previously identified source editor by slot/generation only. Closed/reused tabs can reset generation to zero.
+- Pinned `imgui_widgets.cpp:4954-4978` preserves undo when widget ID and current bytes match.
+- Owned real-window reproduction: edit A to `undo shared`, save/close, open B containing identical bytes in same slot, then Undo. Before fix, B changed to `undo share` using A's character history.
+- Source editor ID now includes full file-path bytes through `igImHashData()` plus existing slot/generation. Raw-byte hashing avoids ImGui's special `###` string-ID handling. Ordinary edits/save keep identity; reload still advances generation.
+- No custom undo engine or persistent per-file undo stacks. Fresh undo lifetime on every reopening of same path is not promised; file-path ownership is agreed scope.
 
-- `gui/workspace.c:122` zeroes reused tab; `:158` zeroes closed tab. Generation can return to zero.
-- `gui/main.c:360` derives editor ID from slot/generation. Tab ID at `:562` also uses slot.
-- Pinned `imgui_widgets.cpp:4954-4978` preserves undo state when widget ID and current bytes match.
-- Static reproduction: edit A from X to Y, save/close A, open B containing Y into same slot, activate editor, Undo. Matching ID/bytes can recycle A's history into B. Saving B then passes its ordinary expected-hash check.
+Both compilers pass same-slot identical-content isolation, literal `###` paths, within-file Undo/Redo and return to A. B's saved bytes remain unchanged.
 
-Recommended fix: fresh workspace-wide editor-instance token per opening/reload. Keep token through ordinary edits/save. Include token in widget ID. Do not confuse preview text revision with editor lifetime.
+### Implemented: Workspace issue warning and CLI guidance
 
-Acceptance: real GUI close/reuse, identical-content documents, Undo/Redo, reopening same path and reload. Verify B never receives A's edits. Static path confirmed; runtime reproduction not run during review.
+- `src/core/core.c` records unreadable/omitted collections. `attendant_read_workspace()` returns successful healthy navigation plus diagnostic count.
+- Workspace header now shows count and warns that collections/records may be missing or invalid. Warning reads current navigation snapshot and remains until refreshed diagnostics clear.
+- Header directs user to native CLI `doctor -p <workspace>` for read-only details, then manual correction and **Refresh files**. No automatic repairs, source correction or projection preparation.
+- Count includes missing configuration during plain-folder browsing; Markdown remains usable. Detailed paths/messages stay in CLI, not new GUI diagnostics API. User accepted this smaller scope.
+- Partial discovery itself does not write source. Existing expected-hash save checks remain unchanged; this is not a universal no-corruption guarantee.
 
-### P2: Partial workspace discovery is invisible
-
-- `projection.c:635` records unreadable collection and returns without its documents.
-- `native-api.c:148-149` returns successful workspace plus diagnostic count.
-- GUI copies count but `gui/main.c:87-124` navigation does not display diagnostics. Workspace shell likewise lacks warning.
-- Per-record `[invalid]` cannot explain collection omitted before any document row exists.
-
-Required result: visible partial-workspace warning with affected paths/messages while healthy collections remain usable. Expose structured diagnostics if count alone cannot explain missing content. Distinguish unconfigured-folder browsing from broken configured collection.
-
-Acceptance: inaccessible configured collection plus healthy collection; retain healthy navigation and visibly explain omitted collection. No source correction or projection preparation from browsing.
+Both compilers pass configured collection pointing at regular file: two issues visible, healthy document opens, source/config inventory unchanged. Warning screenshots inspected. Access-denied ACL behavior was not newly qualified.
 
 ## Selection result
 
@@ -50,7 +46,7 @@ Acceptance: inaccessible configured collection plus healthy collection; retain h
 
 ## Validation
 
-Parent ran final source state through:
+Preview checkpoint, before this follow-up:
 
 - CJIT/Zig production and test GUI builds in isolated `build/gui-preview/`.
 - 193 always-on model checks per compiler.
@@ -61,13 +57,25 @@ Parent ran final source state through:
 - 62 legacy stack windows / 56 strict-selection cases. Three stack and three GUI provenance guards.
 - Both empty composer screenshots inspected; labels, collapsed context viewer, editable border and initial input focus retained.
 
-Evidence: `build/gui-check/run-aYxU5Y`, `gui/evidence/windows-x64.json`, `build/api-check/run-SzSjM1`, stack `evidence/source-selection-windows-x64.json`.
+Preview evidence: `build/gui-check/run-aYxU5Y`, `build/api-check/run-SzSjM1`, stack `evidence/source-selection-windows-x64.json`.
+
+Review follow-up: CJIT/Zig production/test builds isolated in `build/gui-review/`; 193 always-on model checks per compiler, 58 real window/D3D runs and three provenance guards pass. Includes new undo and partial-discovery cases plus existing selection/reveal/feedback loops. Before-fix undo failure retained in `build/review-before.log`; final run `build/gui-check/run-97NrzE`, retained `tests/gui/evidence/windows-x64.json`. Native API/legacy stack suites were not rerun; their source did not change.
 
 Independent reviewers traced selected-path fixes and whole-app ownership, save/close, navigation, API, IPC, renderer teardown, source/projection and build paths. Reviews were static: no independent builds/tests or GUI interaction. Parent checked cited ownership/undo/diagnostic paths. No new native CLI defect established in inspected paths; not whole-app correctness certification.
 
+## Layout cleanup validation
+
+- Runtime: `apps/cli/`, `apps/gui/`, `src/`. Tests/fixtures, tools and SQLite experiments separated. Review order in [README.md](README.md#review-map).
+- Separate mains; core has no entry point/exclusion macro. GUI API no longer compiles CLI handlers. Four shared directory/record helpers moved into core; test input/state/completion/fault logic moved out of runtime source.
+- Source comparison proves unchanged CLI main body, four shared helper bodies, three GUI driver bodies, two feedback-fault bodies and production GUI source after excluding test blocks. Evidence: `build/layout-source-proof.json`.
+- CJIT/Zig CLI, API probe and GUI production/test builds pass; GUI isolated in `build/gui-layout/`.
+- Existing read/projection, CLI, source, preparation, incremental, feedback-discovery and search-mode suites pass both compilers. Embedded API: 92 cases. GUI: 193 model checks/compiler, 58 real windows. Harness/layout: 18 tests; four provenance guards include extracted `.inc`/fault headers.
+- Current-policy `full` SQLite comparison builds. Historical eager-baseline experiment/tuning builds fail against newer shared YAML/rollback ownership fields; documented under `experiments/sqlite/README.md`, not repaired or used for new timing claims.
+- Final evidence: `build/layout-*.log`, `build/api-check/run-XLCDUj`, `build/gui-check/run-Emuyvo`, `tests/gui/evidence/windows-x64.json`. Legacy dependency-stack suite and copied-real-data workflows were not rerun. Installed launcher and protected viewer binaries unchanged.
+
 ## Remaining gates
 
-1. Resolve blockers above; recovery strategy remains undecided.
+1. Agreed review follow-up complete. Renderer draft-loss remains explicitly accepted/deferred, not recovered.
 2. Human confirmed two preview comments in separately opened latest build: cross-paragraph bold/italic selection and plain/bold selection within table cell. Continue remaining manual dirty-target/resolution cases; previous viewer was not silently upgraded.
 3. Complete copied-real-project GUI/CLI loop and agent guidance.
 4. Measure startup, idle, interaction and distribution footprint. No new performance claim from smoke tests.
@@ -76,4 +84,6 @@ Independent reviewers traced selected-path fixes and whole-app ownership, save/c
 
 ## Comments
 
-Protected manual viewer PID 21884 remained running. Original production executable/DLL hashes still match their retained manifest. Implementation/testing used separate binaries and owned copies; no close, restart or source edit targeted manual session. Unsent text was not inspected or modified.
+- Earlier checkpoint verified manual viewer PID 21884 remained running. This follow-up used separate binaries/owned copies; original `build/gui/` and manual-preview `build/gui-preview/` production binary/DLL hashes still match retained manifests. No close, restart or source edit targeted manual session. Unsent text was not inspected or modified.
+- One final-layout suite got `gui-not-running` during repeated inspection after receiver readiness. Same final-source full rerun passed; cause not isolated. Failure retained in `build/layout-gui-check-first-final.log`; final pass in `build/layout-gui-check.log`.
+- One early follow-up suite failed existing preview Save & Send exercise. Isolated rerun and later full suites passed; cause not isolated. Retained `build/review-after.log` failure and `build/review-final.log` final pass. No runtime-test claim attributed to static reviewers.

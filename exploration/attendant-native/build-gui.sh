@@ -17,8 +17,8 @@ if [[ -n "$variant" && ! "$variant" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
 fi
 output="build/gui${variant:+-$variant}"
 mkdir -p "$output"
-source build-inputs.sh
-sources=(gui/main.c gui/workspace.c gui/reveal.c gui/inspect.c native-api.c "${sources[@]:1}")
+source tools/build-inputs.sh
+sources=(apps/gui/main.c apps/gui/workspace.c apps/gui/reveal.c apps/gui/inspect.c src/native-api.c "${sources[@]:1}")
 includes=(-I"$stack/build/deps/cimgui" -I"$stack")
 suffix=""
 if [[ "${2:-}" == --check ]]; then includes+=(-DATTENDANT_GUI_TESTING); suffix=-check; fi
@@ -31,7 +31,7 @@ else
     -L"$stack/build/bin" -lcimgui_richmd -lbcrypt -lshell32 -luser32 -o "$output/attendant-gui-zig${suffix}.exe"
 fi
 if [[ "${2:-}" == --check ]]; then
-  sources[0]=gui/model-check.c
+  sources[0]=tests/gui/model-check.c
   if [[ "$compiler" == cjit ]]; then
     "${CJIT:-cjit}" -q -C '' "${flags[@]:1}" -DATTENDANT_MODEL_TESTING -DATTENDANT_TEST_FAULTS -o "$output/model-check-cjit.exe" "${sources[@]}" -lbcrypt -lshell32 -luser32
   else
@@ -42,5 +42,5 @@ fi
 if ! cmp -s "$stack/build/bin/cimgui_richmd.dll" "$output/cimgui_richmd.dll"; then
   cp "$stack/build/bin/cimgui_richmd.dll" "$output/"
 fi
-node gui/build-manifest.mjs "$compiler" ${2:+"$2"}
+node tools/gui-build-manifest.mjs "$compiler" ${2:+"$2"}
 printf '%s\n' "$PWD/$output/attendant-gui-$compiler$suffix.exe"

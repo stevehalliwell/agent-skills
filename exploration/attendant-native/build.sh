@@ -10,7 +10,7 @@ if [[ $# -gt 1 || ( "$compiler" != cjit && "$compiler" != zig ) ]]; then
     exit 2
 fi
 mkdir -p build
-source ./build-inputs.sh
+source ./tools/build-inputs.sh
 if [[ "$compiler" == cjit ]]; then
     # CJIT is not GCC-compatible; omit -std and pass an empty compiler flag set.
     "${CJIT:-cjit}" -q -C '' "${flags[@]:1}" -o build/projection-cjit.exe "${sources[@]}" -l bcrypt -l shell32

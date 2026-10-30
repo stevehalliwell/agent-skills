@@ -7,16 +7,16 @@
 Prebuild normal native binaries, then:
 
 ```sh
-node exploration/attendant-native/real-data-check.mjs \
+node exploration/attendant-native/tools/real-data-check.mjs \
   --manifest exploration/attendant-native/build/real-data/capture-C41Ig7/manifest.json
-node --test exploration/attendant-native/real-data-check.test.mjs \
-  exploration/attendant-native/benchmark.test.mjs \
+node --test exploration/attendant-native/tests/tools/real-data-check.test.mjs \
+  exploration/attendant-native/tests/tools/benchmark.test.mjs \
   skills/attendant/test/attendant.test.js
 ```
 
 Optional `--cjit <exe>` / `--zig <exe>` overrides. `--help` returns JSON usage. Argument errors exit 2; failed checks exit 1 with structured error and report directory. Every run creates unique `build/real-data-check/run-*/` with retained runner workspaces and `report.json`, including partial results on failure.
 
-Requires Windows PowerShell for NLS audit. Node is test infrastructure only. Uses existing `dataset-files.mjs` inventory, hash and containment checks. Reject changed capture before runner invocation. Copy only config and inventoried Markdown; reject escaping collection paths/links. Never invoke runners in live projects or pristine captures. Never use manifest `source`/`working` paths as mutation targets. Original capture inventory checked before/after each dataset.
+Requires Windows PowerShell for NLS audit. Node is test infrastructure only. Uses existing `tools/dataset-files.mjs` inventory, hash and containment checks. Reject changed capture before runner invocation. Copy only config and inventoried Markdown; reject escaping collection paths/links. Never invoke runners in live projects or pristine captures. Never use manifest `source`/`working` paths as mutation targets. Original capture inventory checked before/after each dataset.
 
 ## Eleven cases per runner/dataset
 

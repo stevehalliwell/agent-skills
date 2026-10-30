@@ -87,14 +87,14 @@ Checks:
 
 ```sh
 for profile in control cache mmap combined large vacuum; do
-  bash exploration/attendant-native/sqlite-tuning-build.sh "$profile"
+  bash exploration/attendant-native/experiments/sqlite/sqlite-tuning-build.sh "$profile"
 done
-node exploration/attendant-native/sqlite-tuning-check.mjs \
+node exploration/attendant-native/experiments/sqlite/sqlite-tuning-check.mjs \
   --manifest exploration/attendant-native/build/real-data/capture-C41Ig7/manifest.json \
   --runs 21 --warmup 3
 ```
 
-- Driver: `sqlite-tuning-check.mjs`; adapter: `sqlite-tuning.c`; compiler flags shared through `build-inputs.sh`. No new runtime dependency or production CLI option.
+- Driver: `experiments/sqlite/sqlite-tuning-check.mjs`; adapter: `experiments/sqlite/sqlite-tuning.c`; compiler flags shared through `tools/build-inputs.sh`. No new runtime dependency or production CLI option.
 - Interleaved evidence: `build/bench/run-x87VUS/report.json`, `samples.jsonl`, `sqlite-tuning.json`; entry summary `build/sqlite-tuning-interleaved.json`.
 - Initial screening retained: `build/sqlite-tuning-pilot.json`; do not compare its sequential profile times without accounting for drift.
 - Probe logging uses `ATTENDANT_TUNING_REPORT=1` only outside timers; normal timings disable it. Raw reports retain executable hashes, environment, states, distributions and per-profile workspaces. All evidence ignored/local; summary retained here.

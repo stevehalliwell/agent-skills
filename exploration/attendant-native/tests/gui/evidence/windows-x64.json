@@ -1,0 +1,1361 @@
+{
+  "ok": true,
+  "checkerSha256": "8c83e258e25aa36e74882cd3e503d1ebc4f4acc383ba6843b0383449a839210b",
+  "run": "D:\\Repos\\agent-skills-attendant-native\\exploration\\attendant-native\\build\\gui-check\\run-Emuyvo",
+  "results": [
+    {
+      "compiler": "cjit",
+      "provenance": {
+        "builtAt": "2026-10-30T06:59:57.324Z",
+        "version": {
+          "status": 0,
+          "text": "CJIT v1.2.0 by Dyne.org\r\n\r\nSynopsis: cjit [options] files(*) -- app arguments\r\n  (*) can be any source (.c) or built object (dll, dylib, .so)\r\nOptions and values (+) mandatory (-) default (=) optional:\r\n -h \t print this help\r\n -v \t print runtime and compiler status information\r\n -q \t stay quiet and only print errors and output\r\n -C \t set interpreter/compiler flags (-) env var CFLAGS\r\n -c \t compile a single source file, do not execute\r\n -o exe\t do not run, compile an executable (+path)\r\n -D sym\t define a macro value (+) symbol or key=value\r\n -I dir\t also search folder (+) dir for header files\r\n -l lib\t link the shared library (+) lib\r\n -L dir\t add folder (+) dir to library search paths\r\n -e fun\t run starting from entry function (-) main\r\n -p pid\t write execution process ID to (+) pid\r\n --verb\t don't go quiet, verbose logs\r\n --xass\t just extract runtime assets (=) to path\r\n --xtgz\t extract all files in a USTAR (+) tar.gz\r\n\r\n"
+        },
+        "inputSha256": "5ca78c64f626ef7f329c79b437a11695addb7497ded79816cf58e42ee971bd24",
+        "binaries": [
+          {
+            "path": "build/gui-layout/attendant-gui-cjit.exe",
+            "sha256": "56cf01438a0a298c8b76110cc0b739b1dfe6f384a0e3de6b33bdc7a77d0be025"
+          },
+          {
+            "path": "build/gui-layout/attendant-gui-cjit-check.exe",
+            "sha256": "e0290aa56b9f01c5b795490c9293133a4735c79952ec123eadb27248b9e1d076"
+          },
+          {
+            "path": "build/gui-layout/model-check-cjit.exe",
+            "sha256": "dee70a99e35f6aee55eaf8e52b12ff080067c294cfed4cd8fa1dad3141343640"
+          }
+        ],
+        "stack": {
+          "sha256": "054f99520b16036cb51785d1c55b7f48a31f4c54d5e034e2129906e12650d456",
+          "dllSha256": "e37686e029b6cbd63aeaeae201b04039b73432f498c32bb0ce447492bdffc903",
+          "dependencies": {
+            "dependencies": [
+              [
+                "cimgui",
+                "https://github.com/cimgui/cimgui.git",
+                "2a6a93fccd10f275ee9206167dc9698f6f00fac1"
+              ],
+              [
+                "cimgui/imgui",
+                "https://github.com/ocornut/imgui.git",
+                "c1aaac65e896a45f81f47a4d68f9959e0f86c859"
+              ],
+              [
+                "richmd",
+                "https://github.com/pthom/imgui_rich_md.git",
+                "609039721f838108251520079fff79011cf46659"
+              ],
+              [
+                "richmd/external/md4c",
+                "https://github.com/mity/md4c.git",
+                "481fbfbdf72daab2912380d62bb5f2187d438408"
+              ],
+              [
+                "luajit",
+                "https://github.com/LuaJIT/LuaJIT.git",
+                "a4c064539ea931274d407e1249b4bb575424a0f4"
+              ]
+            ],
+            "patch": "Guard IM_NODEBUGSTEP; strict original-input RichMd source-selection snapshot with explicit run provenance"
+          }
+        }
+      }
+    },
+    {
+      "compiler": "cjit",
+      "output": {
+        "ok": true,
+        "frames": 30,
+        "tabs": 1,
+        "vertices": 5594
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 2014,
+        "sha256": "c9c70f469fadbfb85de47a110a5745ac83f2ea9eac9b7a6c1cd7129a21c5c748"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "badFileRecovered": true
+    },
+    {
+      "compiler": "cjit",
+      "interaction": {
+        "ok": true,
+        "frames": 30,
+        "tabs": 2,
+        "vertices": 4198,
+        "issues_shown": 2
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1429,
+        "sha256": "cd456e4bf302698e57d0928899d275ef0ef92796a2b073044e5aada43d2490c3"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "model": {
+        "ok": true,
+        "checks": 193
+      }
+    },
+    {
+      "compiler": "cjit",
+      "partialDiscovery": {
+        "issuesShown": 2,
+        "healthyDocumentOpened": true,
+        "workspaceUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 2080,
+        "sha256": "8dbe0cf210cb764d75d13c8e998acfd1f9fbcbbb8a94fb8e424ba379ce0d0557"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "undo": {
+        "filePathIsolation": true,
+        "reusedSlot": true,
+        "sameFileUndoRedo": true,
+        "returnToFirstFileIsolated": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "editing": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 2,
+        "vertices": 3008,
+        "issues_shown": 0
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1297,
+        "sha256": "a7796fc353230907aa0fe2a037671ca7a3cf51b45c379609a26b1db58a2c0b22"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "feedbackLoop": {
+        "pending": 1,
+        "resolved": true,
+        "nativeAndLegacy": true,
+        "bodyPreserved": true,
+        "fullSavedSourceCodePoints": 71
+      }
+    },
+    {
+      "compiler": "cjit",
+      "previewEditing": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 1,
+        "vertices": 3212,
+        "issues_shown": 0
+      },
+      "previewFeedback": {
+        "rangeStart": 35,
+        "rangeEnd": 62,
+        "selectedText": "Preview café Ω 😀 from GUI.!",
+        "bomCrLfUnicodePreserved": true,
+        "nativeAndLegacy": true,
+        "resolved": true,
+        "editorSelectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1618,
+        "sha256": "a05ba75360d432e8d209b809d80e8eb0c8658875f65858d9810ba8824e3fadc3"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "savedNotQueued": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 1,
+        "vertices": 4114,
+        "issues_shown": 2
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1851,
+        "sha256": "8002b39e01f61724c52096f844ad715e2da923de0a86616563b68b619de6d525"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1416,
+        "sha256": "ba93301e86e2b149aab4f0f6ce603b32859a051c250a6b2f3babc4f10270065b",
+        "commentInput": {
+          "rectangle": [
+            306,
+            488,
+            966,
+            638
+          ],
+          "visibleEdges": 4,
+          "emptyInput": true
+        }
+      },
+      "selectionInspection": {
+        "mode": "plain-menu",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": false
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "markup-menu",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "widget",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "drag",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "reverse",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "context",
+        "clientCompiler": "zig",
+        "status": "context",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": false,
+        "contextSaveAndSend": true,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "multi",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "partial",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "reverse-partial",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "table",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "wrap",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "scroll",
+        "clientCompiler": "zig",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "selectionInspection": {
+        "mode": "overflow",
+        "clientCompiler": "zig",
+        "status": "unsupported",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": false
+      }
+    },
+    {
+      "compiler": "cjit",
+      "renderException": {
+        "controlledTermination": true,
+        "noNormalFrameTeardown": true,
+        "sourceUnchanged": true
+      }
+    },
+    {
+      "compiler": "cjit",
+      "reveal": {
+        "mode": "clean",
+        "clientCompiler": "zig",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 98,
+            "markerDraws": 3,
+            "dirty": false,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 1,
+            "vertices": 17766,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 1126,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45286,
+        "sha256": "129a47c6736ee15e6a1ed187cb3d1e7b135f94a163c4668db91e73f3dac9d7b0"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "reveal": {
+        "mode": "dirty",
+        "clientCompiler": "zig",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": true,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 40,
+            "markerDraws": 0,
+            "dirty": true,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 1,
+            "vertices": 17954,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 0,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45295,
+        "sha256": "4cc73e721faa9ee0bdb4cf20a6d60f4a60c4b1544697524187f6274bce7afb16"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "reveal": {
+        "mode": "stale",
+        "clientCompiler": "zig",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 47,
+            "markerDraws": 0,
+            "dirty": false,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 1,
+            "vertices": 17946,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 0,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45305,
+        "sha256": "78e4b53aa448a052c7869f8cb68766a6810a4df5adbc74e0c7b3bd6e051397de"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "reveal": {
+        "mode": "other",
+        "clientCompiler": "zig",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 43,
+            "markerDraws": 2,
+            "dirty": false,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 2,
+            "vertices": 17902,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 1126,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45198,
+        "sha256": "33cd42fcf901a0906b21e683b1e07bbccaabeaa86b027371cd27ad07735748ac"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "reveal": {
+        "mode": "reparse",
+        "clientCompiler": "zig",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 39,
+            "markerDraws": 0,
+            "dirty": false,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 1,
+            "vertices": 17950,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 0,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45319,
+        "sha256": "873e354152702dd9e76206c7e70e010eff9c3704db385536d417ad799f97ccf4"
+      }
+    },
+    {
+      "compiler": "cjit",
+      "ambiguousRevealRejected": true,
+      "sourceAndProjectionUnchanged": true
+    },
+    {
+      "compiler": "zig",
+      "provenance": {
+        "builtAt": "2026-10-30T07:00:00.396Z",
+        "version": {
+          "status": 0,
+          "text": "0.17.0\n"
+        },
+        "inputSha256": "5ca78c64f626ef7f329c79b437a11695addb7497ded79816cf58e42ee971bd24",
+        "binaries": [
+          {
+            "path": "build/gui-layout/attendant-gui-zig.exe",
+            "sha256": "559a457e02777ee55df415e1cb77f1e0e6703ef4482d8ef3bc60a327f0465a7e"
+          },
+          {
+            "path": "build/gui-layout/attendant-gui-zig-check.exe",
+            "sha256": "4df76cf009aa90cccea5c63cfed14b5106be120459e916e794c4e75e2c7d40d8"
+          },
+          {
+            "path": "build/gui-layout/model-check-zig.exe",
+            "sha256": "a9a07b5bf31bc094b507a9517e844e87dd541178f803938bf1f7cea450a5430b"
+          }
+        ],
+        "stack": {
+          "sha256": "054f99520b16036cb51785d1c55b7f48a31f4c54d5e034e2129906e12650d456",
+          "dllSha256": "e37686e029b6cbd63aeaeae201b04039b73432f498c32bb0ce447492bdffc903",
+          "dependencies": {
+            "dependencies": [
+              [
+                "cimgui",
+                "https://github.com/cimgui/cimgui.git",
+                "2a6a93fccd10f275ee9206167dc9698f6f00fac1"
+              ],
+              [
+                "cimgui/imgui",
+                "https://github.com/ocornut/imgui.git",
+                "c1aaac65e896a45f81f47a4d68f9959e0f86c859"
+              ],
+              [
+                "richmd",
+                "https://github.com/pthom/imgui_rich_md.git",
+                "609039721f838108251520079fff79011cf46659"
+              ],
+              [
+                "richmd/external/md4c",
+                "https://github.com/mity/md4c.git",
+                "481fbfbdf72daab2912380d62bb5f2187d438408"
+              ],
+              [
+                "luajit",
+                "https://github.com/LuaJIT/LuaJIT.git",
+                "a4c064539ea931274d407e1249b4bb575424a0f4"
+              ]
+            ],
+            "patch": "Guard IM_NODEBUGSTEP; strict original-input RichMd source-selection snapshot with explicit run provenance"
+          }
+        }
+      }
+    },
+    {
+      "compiler": "zig",
+      "output": {
+        "ok": true,
+        "frames": 30,
+        "tabs": 1,
+        "vertices": 5586
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1994,
+        "sha256": "975d73a2e5d8bdc903c04178e705b0dd10995f2cb78a14c64da60407616d2b95"
+      }
+    },
+    {
+      "compiler": "zig",
+      "badFileRecovered": true
+    },
+    {
+      "compiler": "zig",
+      "interaction": {
+        "ok": true,
+        "frames": 30,
+        "tabs": 2,
+        "vertices": 4190,
+        "issues_shown": 2
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1424,
+        "sha256": "4caa1eb3cbb11c713e0768edcfaa8aad4f01a328ff6a39664b74c13271002256"
+      }
+    },
+    {
+      "compiler": "zig",
+      "model": {
+        "ok": true,
+        "checks": 193
+      }
+    },
+    {
+      "compiler": "zig",
+      "partialDiscovery": {
+        "issuesShown": 2,
+        "healthyDocumentOpened": true,
+        "workspaceUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 2095,
+        "sha256": "1a7fe85adc8250a6f52b59deb4494a5be77842b7db1def0f65b77a0c9d244c7b"
+      }
+    },
+    {
+      "compiler": "zig",
+      "undo": {
+        "filePathIsolation": true,
+        "reusedSlot": true,
+        "sameFileUndoRedo": true,
+        "returnToFirstFileIsolated": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "editing": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 2,
+        "vertices": 3000,
+        "issues_shown": 0
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1273,
+        "sha256": "0d3bc77c9bf48b59b78f4082b134ce95a261dfaf5fb0eba452eed0c4db1f9940"
+      }
+    },
+    {
+      "compiler": "zig",
+      "feedbackLoop": {
+        "pending": 1,
+        "resolved": true,
+        "nativeAndLegacy": true,
+        "bodyPreserved": true,
+        "fullSavedSourceCodePoints": 71
+      }
+    },
+    {
+      "compiler": "zig",
+      "previewEditing": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 1,
+        "vertices": 3204,
+        "issues_shown": 0
+      },
+      "previewFeedback": {
+        "rangeStart": 35,
+        "rangeEnd": 62,
+        "selectedText": "Preview café Ω 😀 from GUI.!",
+        "bomCrLfUnicodePreserved": true,
+        "nativeAndLegacy": true,
+        "resolved": true,
+        "editorSelectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1587,
+        "sha256": "918ebf47cf78d8db5a5e267df8b053d7d85102d5e41d0bead2d5c7dbf7ec563f"
+      }
+    },
+    {
+      "compiler": "zig",
+      "savedNotQueued": {
+        "ok": true,
+        "frames": 70,
+        "tabs": 1,
+        "vertices": 4102,
+        "issues_shown": 2
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1847,
+        "sha256": "db07c75bffaab96da892822ddf89ff7b579e9fa2058cbdaa505d5d92e1e61f1f"
+      }
+    },
+    {
+      "compiler": "zig",
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 1432,
+        "sha256": "75b5470d4f28acd23b9e91e10349154a831ff60ce29f3aca2a8938b9def934e3",
+        "commentInput": {
+          "rectangle": [
+            306,
+            488,
+            966,
+            638
+          ],
+          "visibleEdges": 4,
+          "emptyInput": true
+        }
+      },
+      "selectionInspection": {
+        "mode": "plain-menu",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": false
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "markup-menu",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "widget",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "drag",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "reverse",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "context",
+        "clientCompiler": "cjit",
+        "status": "context",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": false,
+        "contextSaveAndSend": true,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "multi",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "partial",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "reverse-partial",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "table",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "wrap",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "scroll",
+        "clientCompiler": "cjit",
+        "status": "mapped",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "selectionInspection": {
+        "mode": "overflow",
+        "clientCompiler": "cjit",
+        "status": "unsupported",
+        "priorSourceSelectionReplaced": true,
+        "unifiedActionUsesLatestSelection": true,
+        "retainedDuringCommentInputFocus": true,
+        "sourceUnchanged": true,
+        "contextSaveAndSend": false,
+        "feedbackSentAndResolved": false
+      }
+    },
+    {
+      "compiler": "zig",
+      "renderException": {
+        "controlledTermination": true,
+        "noNormalFrameTeardown": true,
+        "sourceUnchanged": true
+      }
+    },
+    {
+      "compiler": "zig",
+      "reveal": {
+        "mode": "clean",
+        "clientCompiler": "cjit",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 95,
+            "markerDraws": 3,
+            "dirty": false,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 1,
+            "vertices": 17758,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 1126,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45298,
+        "sha256": "ae5b7503baf33be900af851b0fb10f7e24a685ac8b1f81d5798b9dd7306b5e4b"
+      }
+    },
+    {
+      "compiler": "zig",
+      "reveal": {
+        "mode": "dirty",
+        "clientCompiler": "cjit",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": true,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 40,
+            "markerDraws": 0,
+            "dirty": true,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 1,
+            "vertices": 17946,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 0,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45300,
+        "sha256": "e4a1902dbf7632b6051614c32af4d119300fd0e59bca5ef4ecfb728ad41f60ef"
+      }
+    },
+    {
+      "compiler": "zig",
+      "reveal": {
+        "mode": "stale",
+        "clientCompiler": "cjit",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 40,
+            "markerDraws": 0,
+            "dirty": false,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 1,
+            "vertices": 17938,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 0,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45306,
+        "sha256": "7c7a6603e864194fa69d19ea34a1c8a9de9107361195bf481e49b10981021310"
+      }
+    },
+    {
+      "compiler": "zig",
+      "reveal": {
+        "mode": "other",
+        "clientCompiler": "cjit",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 42,
+            "markerDraws": 2,
+            "dirty": false,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 2,
+            "vertices": 17894,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 1126,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45195,
+        "sha256": "436e7d61e0f762c4e52768d21009a0db5dc76690c11a072d16f01aeed66b9733"
+      }
+    },
+    {
+      "compiler": "zig",
+      "reveal": {
+        "mode": "reparse",
+        "clientCompiler": "cjit",
+        "crossCompilerIPC": true,
+        "inspection": {
+          "dirty": false,
+          "sourceRangeAndTextVerified": true,
+          "repeatableWithoutConsumption": true
+        },
+        "events": [
+          {
+            "event": "ready"
+          },
+          {
+            "event": "inspected",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "received",
+            "documentSelectionScrollFocusPreserved": true
+          },
+          {
+            "event": "complete",
+            "checks": 38,
+            "markerDraws": 0,
+            "dirty": false,
+            "caretSelectionPreservedAfterGo": true,
+            "sourceClip": [
+              276,
+              165,
+              820,
+              953
+            ]
+          },
+          {
+            "ok": true,
+            "frames": 400,
+            "tabs": 1,
+            "vertices": 17942,
+            "issues_shown": 0
+          }
+        ],
+        "amberPixels": 0,
+        "markerPixelsOutsideSource": 0,
+        "sourceAndProjectionUnchanged": true
+      },
+      "screenshot": {
+        "width": 1424,
+        "height": 961,
+        "bright": 45336,
+        "sha256": "44453e252db393787a90f4f543bb5389d75466a266816b9fd0f4955a6ba2ad5d"
+      }
+    },
+    {
+      "compiler": "zig",
+      "ambiguousRevealRejected": true,
+      "sourceAndProjectionUnchanged": true
+    }
+  ]
+}

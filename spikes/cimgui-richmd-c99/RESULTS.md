@@ -37,7 +37,7 @@ Machine-readable checkpoint: [evidence/windows-x64.json](evidence/windows-x64.js
 4. **Link available Windows libraries.** Zig uses `d3dcompiler_47`; CJIT requires explicit System32 library search path for application `user32` symbols.
 5. **Own image teardown.** RichMd default uploader queues CPU texture deletion for later renderer sweep. Private D3D11 image uploader instead frees owned views with Markdown cache lifetime. Fonts remain managed by ImGui renderer.
 
-No changes to installed vendor trees or tool installation. Integrated workspace lives under [Attendant GUI](../../exploration/attendant-native/gui/README.md); launcher unchanged.
+No changes to installed vendor trees or tool installation. Integrated workspace lives under [Attendant GUI](../../exploration/attendant-native/apps/gui/README.md); launcher unchanged.
 
 ## Source-range finding
 
@@ -61,7 +61,7 @@ Current build/checker/DLL identity and results: [evidence/source-selection-windo
 
 ## Selectable preview follow-up
 
-`crmd_render_preview()` adds borrowed rendered text/section JSON and optional enclosing source span without changing legacy C selection POD. Code stays in selectable flow; edge drag auto-scrolls. Full render identity and owned C99 snapshots preserve latest human selection through composer focus. Generated/unproven pieces retain context, never guessed source bounds. See [workspace contract and acceptance](../../exploration/attendant-native/gui/README.md#preview-selection-contract). Strict legacy tests above remain separate proof; integrated tests qualify new path.
+`crmd_render_preview()` adds borrowed rendered text/section JSON and optional enclosing source span without changing legacy C selection POD. Code stays in selectable flow; edge drag auto-scrolls. Full render identity and owned C99 snapshots preserve latest human selection through composer focus. Generated/unproven pieces retain context, never guessed source bounds. See [workspace contract and acceptance](../../exploration/attendant-native/apps/gui/README.md#preview-selection-contract). Strict legacy tests above remain separate proof; integrated tests qualify new path.
 
 ## Limits
 

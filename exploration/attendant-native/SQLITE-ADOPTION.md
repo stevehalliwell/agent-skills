@@ -105,13 +105,13 @@ Current-mode explicit SQL-failure and active-reader tests establish tested failu
 ```sh
 bash exploration/attendant-native/build.sh cjit
 bash exploration/attendant-native/build.sh zig
-node exploration/attendant-native/search-mode-check.mjs \
+node exploration/attendant-native/tests/core/search-mode-check.mjs \
   exploration/attendant-native/build/projection-cjit.exe \
   exploration/attendant-native/build/projection-zig.exe
 for profile in wal-off full full-wal-off; do
-  bash exploration/attendant-native/sqlite-adoption-build.sh "$profile"
+  bash exploration/attendant-native/experiments/sqlite/sqlite-adoption-build.sh "$profile"
 done
-node exploration/attendant-native/sqlite-adoption-check.mjs \
+node exploration/attendant-native/experiments/sqlite/sqlite-adoption-check.mjs \
   --manifest exploration/attendant-native/build/real-data/capture-C41Ig7/manifest.json \
   --runs 18 --warmup 2
 # Add --first-search-only for final matched first-search protocol.
@@ -121,6 +121,6 @@ node exploration/attendant-native/sqlite-adoption-check.mjs \
 - Final first-search evidence: `build/bench/run-hBsV60/`, entry `build/sqlite-adoption-first-search.json`.
 - Per-run `report.json`, every sample, `sqlite-adoption.json`, binary/source hashes and owned workspaces retained locally/ignored.
 - `build/review/search-mode-results.json` plus `build/population-{source,read,prepare,incremental,mode,cli}-results.jsonl` retain current correctness output; checkpoint results remain in `build/adoption-*.jsonl`.
-- Historical pre-adoption experiment C inputs frozen under `fixtures/sqlite-experiment-base/`; older generators/adapters use that baseline rather than silently measuring new defaults. Other source-contract/vendor headers remain shared; original binary hashes define exact historical measurement.
+- Historical pre-adoption experiment C inputs frozen under `tests/fixtures/sqlite-experiment-base/`; older generators/adapters use that baseline rather than silently measuring new defaults. Other source-contract/vendor headers remain shared; original binary hashes define exact historical measurement.
 
 Prior experiments: [SQLITE-DISPOSABLE.md](SQLITE-DISPOSABLE.md), [SQLITE-TUNING.md](SQLITE-TUNING.md). Historical native/CJIT/Node baselines: [BENCHMARK.md](BENCHMARK.md).
