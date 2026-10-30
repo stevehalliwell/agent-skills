@@ -1,4 +1,5 @@
 #include "gd_query.h"
+#include "gd_query_scene.h"
 TEST(state_coverage_whole_cases_local_hypotheses_and_limits,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_Query *query; GD_QueryRequest request={0}; int i;
     TEST_ASSERT(model && setup("state-coverage")); collections[1].role=GD_AXIS; collections[2].role=GD_RULE;
@@ -18,6 +19,13 @@ TEST(state_coverage_whole_cases_local_hypotheses_and_limits,
     TEST_ASSERT(query->state_coverage->values[2].excluded_bindings==3 && query->state_coverage->values[2].excluded_cases==2 && query->state_coverage->values[2].no_retained_candidate==GD_RULE_TRUTH_TRUE);
     TEST_ASSERT(query->state_coverage->values[0].no_retained_candidate==GD_RULE_TRUTH_FALSE && query->state_coverage->values[1].no_retained_candidate==GD_RULE_TRUTH_FALSE);
     TEST_ASSERT(query->state_coverage->work<=request.work_limit-query->work);
+    {
+        GD_QueryScene *scene=gd_query_scene_build(query,GD_QUERY_ALL_VARIANTS,-1,0,0,GD_EFFECT_WORK);
+        TEST_ASSERT(scene && !scene->limited && scene->layout.node_count==3 && !scene->layout.edge_count);
+        for (i=0;i<3;++i) TEST_ASSERT(scene->nodes[i].kind==GD_QUERY_NODE_COVERAGE && scene->nodes[i].source==i && !scene->nodes[i].ghost && scene->nodes[i].applicability==GD_RULE_TRUTH_UNKNOWN && gd_query_scene_record(scene,i)==request.axis && strstr(scene->layout.nodes[i].label,query->state_coverage->values[i].value));
+        gd_query_scene_destroy(scene); scene=gd_query_scene_build(query,GD_QUERY_ALL_VARIANTS,-1,0,0,0);
+        TEST_ASSERT(scene && scene->limited && !scene->layout.node_count && scene->unexamined_items_upper_bound==3); gd_query_scene_destroy(scene);
+    }
     printf("finite coverage owned storage: %llu bytes; query adapter: %llu bytes\n",(unsigned long long)sizeof(*query->state_coverage),(unsigned long long)sizeof(*query));
     gd_query_destroy(query);
     {

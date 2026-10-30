@@ -4,7 +4,7 @@
 #include "gd_layout.h"
 enum { GD_QUERY_SCENE_LABEL=192 };
 typedef enum { GD_QUERY_ALL_VARIANTS, GD_QUERY_PRIMARY_VARIANT, GD_QUERY_STACKED_VARIANTS } GD_QueryGhostMode;
-typedef enum { GD_QUERY_NODE_BINDING, GD_QUERY_NODE_VARIANT, GD_QUERY_NODE_ACTIVATION, GD_QUERY_NODE_EFFECT, GD_QUERY_NODE_PARTNER } GD_QueryNodeKind;
+typedef enum { GD_QUERY_NODE_BINDING, GD_QUERY_NODE_VARIANT, GD_QUERY_NODE_ACTIVATION, GD_QUERY_NODE_EFFECT, GD_QUERY_NODE_PARTNER, GD_QUERY_NODE_COVERAGE } GD_QueryNodeKind;
 typedef enum { GD_QUERY_EDGE_ASSUMPTION, GD_QUERY_EDGE_INVOCATION, GD_QUERY_EDGE_EFFECT, GD_QUERY_EDGE_PARTICIPANT, GD_QUERY_EDGE_FRONTIER } GD_QueryEdgeKind;
 typedef struct { GD_QueryNodeKind kind; int source,variant,incoming,ghost; GD_RuleTruth applicability; int comparison; } GD_QuerySceneNode;
 typedef struct { GD_QueryEdgeKind kind; int source,variant; } GD_QuerySceneEdge;

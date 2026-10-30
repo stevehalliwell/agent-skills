@@ -49,7 +49,7 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     gd_layout_focus_destroy(p->distance_focus); gd_resource_routes_destroy(p->resource_routes);
     memset(p,0,sizeof(*p)); p->layout=layout; p->view=view;
     p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; p->editor.record=-1;
-    p->query_options.root_case=p->query_options.participant=p->query_options.axis=p->query_options.compare=-1; p->query_options.weighted=true;
+    p->query_options.root_case=p->query_options.participant=p->query_options.axis=p->query_options.noun=p->query_options.compare=-1; p->query_options.weighted=true;
     p->grid.noun=p->grid.verb=-1; p->resource_from=p->resource_to=p->resource_witness=-1;
     p->mda=(GD_ExplorerMdaDisplay){.record=-1,.link=-1,.held=-1,.roles={true,true,true,true},.paused=true};
     p->camera.zoom=1; p->focus_auto_fit=true; p->distance_focus_revision=UINT64_MAX; p->peer=p->foundation_peer=p->witness=-1;
@@ -210,6 +210,7 @@ static void fit_view(GD_ExplorerContext *c, int only_matches) {
     if (only_matches==4 && query_view(p->view)) {
         const GD_ExplorerQueryState *state=p->query_state; fit_view(c,0);
         if (p->camera.zoom<0.8f) p->camera.zoom=0.8f;
+        if (state && state->query && state->query->state_coverage && p->layout->node_count) { int anchor=p->selection.node>=0 ? p->selection.node:0; p->camera.target=(Vector2){p->layout->nodes[anchor].x,p->layout->nodes[anchor].y-c->viewport.height/(p->camera.zoom*5)}; }
         if (state && state->selected) for (i=0;i<p->layout->node_count;++i) if (state->scene->nodes[i].source==state->selected->selection.target) p->camera.target=(Vector2){p->layout->nodes[i].x,p->layout->nodes[i].y-c->viewport.height/(p->camera.zoom*5)};
         return;
     }

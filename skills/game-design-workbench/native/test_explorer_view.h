@@ -78,6 +78,7 @@ cleanup:
     gd_destroy(model); *c=original; c->analysis->initialized=0; return result;
 }
 #include "test_explorer_structure.h"
+#include "test_explorer_coverage.h"
 int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections, int count,
                        const char *output, int *fail_at, int *calls) {
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
@@ -476,6 +477,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     project=c.project;
     EXPLORER_CHECK(panes[GD_EXPLORER_MATRIX].selection.cell<0 && panes[GD_EXPLORER_MATRIX].selection.linked<0);
     EXPLORER_CHECK(explorer_test_structure(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
+    EXPLORER_CHECK(explorer_test_coverage(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
     for (v=0;v<GD_EXPLORER_VIEWS;++v) { c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c)); explorer_test_render(&c); }
     fprintf(stderr,"Explorer checks passed: six projections; independent switching; multi-match Find; hidden counts; reset isolation; draft preservation; qualified roots; stale-edge recovery and deferred active Undo; validated selection; stderr logging; reload rollback and restoration.\n");
     result=0;

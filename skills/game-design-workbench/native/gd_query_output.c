@@ -175,12 +175,13 @@ int gd_write_query_catalogue(FILE *out, int json) {
         fputs("],\"repeatable_parameters\":[\"--status\"",out); if (i==GD_QUERY_ACTOR_STATES) fputs(",\"--value\",\"--assume\",\"--context\",\"--context-not\"",out); else if (i==GD_QUERY_STATE_COVERAGE) fputs(",\"--value\"",out);
         fputs("],\"fields\":[\"cases\",\"findings\"",out);
         fputs(i==GD_QUERY_BINDINGS ? ",\"bindings\"":i==GD_QUERY_ACTOR_STATES ? ",\"variants\",\"comparisons\"":i==GD_QUERY_STATE_COVERAGE ? ",\"axis_definition\",\"state_values\",\"state_bindings\"": ",\"concepts\",\"contributors\"",out);
-        fprintf(out,"],\"ui_available\":%s",i==GD_QUERY_BINDINGS || i==GD_QUERY_STATE_COVERAGE ? "false":"true");
-        member(out,"ui_mode",i==GD_QUERY_BINDINGS || i==GD_QUERY_STATE_COVERAGE ? NULL:i==GD_QUERY_ACTOR_STATES ? "actors":"effects");
-        member(out,"ui_scope",i==GD_QUERY_STATE_COVERAGE ? "CLI finite local-binding coverage; named-query viewer parity pending":i==GD_QUERY_BINDINGS ? "CLI inventory; viewer source/binding pickers are not full inventory results":i==GD_QUERY_ACTOR_STATES ? "explicit root/local participant/axis/finite values/fixed facts/context; all or accepted root; selected pair and ghosts":"result picker; exact contributors/ancestors/side effects; all or accepted placement ancestors; direct-count weighting");
-        fputs(",\"ui_unavailable_parameters\":[\"--object\",\"arbitrary --status list\",\"--work-limit\"",out);
+        fprintf(out,"],\"ui_available\":%s",i==GD_QUERY_BINDINGS ? "false":"true");
+        member(out,"ui_mode",i==GD_QUERY_BINDINGS ? NULL:i==GD_QUERY_ACTOR_STATES || i==GD_QUERY_STATE_COVERAGE ? "actors":"effects");
+        member(out,"ui_scope",i==GD_QUERY_STATE_COVERAGE ? "Actors finite state coverage mode: typed axis/finite values; optional object/case/local binding; all or accepted root cases; aggregate value cards and exact independent-binding inspection":i==GD_QUERY_BINDINGS ? "CLI inventory; viewer source/binding pickers are not full inventory results":i==GD_QUERY_ACTOR_STATES ? "explicit root/local participant/axis/finite values/fixed facts/context; all or accepted root; selected pair and ghosts":"result picker; exact contributors/ancestors/side effects; all or accepted placement ancestors; direct-count weighting");
+        fputs(",\"ui_unavailable_parameters\":[\"arbitrary --status list\",\"--work-limit\"",out);
+        if (i!=GD_QUERY_STATE_COVERAGE) fputs(",\"--object\"",out);
         if (i==GD_QUERY_CONTRIBUTORS) fputs(",\"--case placement filter\",\"--axis/--value/--effect filters (choose result instead)\"",out);
-        if (i==GD_QUERY_STATE_COVERAGE) fputs(",\"all state-coverage parameters (no viewer control yet)\"",out);
+        if (i==GD_QUERY_STATE_COVERAGE) fputs(",\"explicit values beyond 8192 combined input bytes\",\"explicit value literals containing semicolon or newline separators\"",out);
         fprintf(out,"],\"ipc_available\":false,\"work_limit_max\":%d}",GD_EFFECT_WORK);
     }
     gd_write_structure_catalogue(out,1,GD_QUERY_COUNT);

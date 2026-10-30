@@ -130,6 +130,19 @@ static void actors(GD_QueryScene *scene) {
     for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) scene->layout.nodes[i].layer=maximum+1;
     if (scene->ghosts==GD_QUERY_STACKED_VARIANTS && scene->primary>=0 && variants[scene->primary]>=0) scene->layout.nodes[variants[scene->primary]].degree+=source->variant_count;
 }
+/* Coverage cards summarize existing independent binding/value hypotheses.
+   No edges: an aggregate card is not a simultaneous assignment or invocation. */
+static void coverage_cards(GD_QueryScene *scene) {
+    const GD_StateCoverage *coverage=scene->query->state_coverage; int i;
+    for (i=0;i<coverage->value_count && !scene->limited;++i) {
+        const GD_StateCoverageValue *value=&coverage->values[i];
+        int node=add_node(scene,GD_QUERY_NODE_COVERAGE,i,-1,0,GD_RULE_TRUTH_UNKNOWN,
+            "Cases: definite %d | unknown %d\nExcluded %d | unfinished %d\nBindings: definite %d | unknown %d\nExcluded %d | unfinished %d\n%s",
+            value->definite_cases,value->undetermined_cases,value->excluded_cases,value->unfinished_cases,
+            value->definite_bindings,value->undetermined_bindings,value->excluded_bindings,value->unfinished_bindings,value->value);
+        if (node>=0) { scene->layout.nodes[node].width=440; scene->layout.nodes[node].height=112; }
+    }
+}
 static void wrap_context(GD_QueryScene *scene) {
     enum { BANDS=GD_MAX_RULE_EXPANSION_DEPTH+2 };
     int counts[BANDS]={0},i,band; float widths[BANDS]={0},heights[BANDS]={0},top=0;
@@ -147,16 +160,16 @@ static void wrap_context(GD_QueryScene *scene) {
 }
 static GD_QueryScene *build_scene(const GD_Query *query, const GD_EffectQuery *scope, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit) {
     GD_QueryScene *scene;
-    if (!query || (scope && (!query->effects || scope->graph!=query->effects)) || (query->request.kind!=GD_QUERY_ACTOR_STATES && query->request.kind!=GD_QUERY_CONTRIBUTORS) || ghosts<GD_QUERY_ALL_VARIANTS || ghosts>GD_QUERY_STACKED_VARIANTS || work_limit<0 || work_limit>GD_EFFECT_WORK || (query->variants && (primary<-1 || primary>=query->variants->variant_count))) return NULL;
+    if (!query || (scope && (!query->effects || scope->graph!=query->effects)) || (query->request.kind!=GD_QUERY_ACTOR_STATES && query->request.kind!=GD_QUERY_CONTRIBUTORS && query->request.kind!=GD_QUERY_STATE_COVERAGE) || ghosts<GD_QUERY_ALL_VARIANTS || ghosts>GD_QUERY_STACKED_VARIANTS || work_limit<0 || work_limit>GD_EFFECT_WORK || (query->variants && (primary<-1 || primary>=query->variants->variant_count))) return NULL;
     scene=query->allocator.allocate(query->allocator.context,sizeof(*scene)); if (!scene) return NULL;
     memset(scene,0,sizeof(*scene)); scene->allocator=query->allocator; scene->query=query; scene->effect_scope=scope; scene->ghosts=ghosts; scene->primary=primary; scene->weighted=weighted!=0; scene->include_excluded=include_excluded!=0; scene->work_limit=work_limit;
-    if (query->effects) effects(scene); else actors(scene);
-    if (scene->limited) scene->unexamined_items_upper_bound=query->effects ? query->effects->node_count+query->effects->link_count:query->variants ? query->variants->activation_count+query->variants->write_count+query->rules->participant_count+query->variants->effect_count+query->variants->variant_count+1:0;
+    if (query->state_coverage) coverage_cards(scene); else if (query->effects) effects(scene); else actors(scene);
+    if (scene->limited) scene->unexamined_items_upper_bound=query->effects ? query->effects->node_count+query->effects->link_count:query->variants ? query->variants->activation_count+query->variants->write_count+query->rules->participant_count+query->variants->effect_count+query->variants->variant_count+1:query->state_coverage ? query->state_coverage->value_count:0;
     scene->layout.group_count=scene->layout.node_count ? 1:0; scene->layout.horizontal=1; scene->layout.direct_routes=1;
     if (!gd_layout_arrange(&scene->layout,GD_LAYOUT_DIRECTED,GD_SORT_NAME)) { gd_query_scene_destroy(scene); return NULL; }
-    if (scope) {
+    if (scope || query->state_coverage) {
         if (charge(scene,scene->layout.node_count*(GD_MAX_RULE_EXPANSION_DEPTH+3))) wrap_context(scene);
-        else scene->unexamined_items_upper_bound=query->effects->node_count+query->effects->link_count;
+        else scene->unexamined_items_upper_bound=query->state_coverage ? query->state_coverage->value_count:query->effects->node_count+query->effects->link_count;
     }
     if (ghosts==GD_QUERY_STACKED_VARIANTS && query->variants && primary>=0) {
         int i,anchor=-1; float offset=0;
@@ -194,6 +207,7 @@ int gd_query_scene_record(const GD_QueryScene *scene, int node) {
     const GD_QuerySceneNode *item; const GD_Query *query;
     if (!scene || node<0 || node>=scene->layout.node_count) return -1;
     item=&scene->nodes[node]; query=scene->query;
+    if (query->state_coverage) return query->request.axis;
     if (query->effects) {
         const GD_EffectNode *effect=&query->effects->nodes[item->source];
         if (effect->kind==GD_EFFECT_ACTIVATION) return case_record(query,query->resource->nodes[effect->activation].case_index);

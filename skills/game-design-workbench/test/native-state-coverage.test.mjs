@@ -73,7 +73,7 @@ test('state coverage retains independent local hypotheses, whole cases, declared
 test('state coverage distinguishes empty scope, exhausted work, invalid selectors and finite numeric samples',{skip:!executable},async t=>{
   const {base,inputs,save}=await fixture(t);
   const catalogue=run(['--list']).data.questions.find(question=>question.name==='state-coverage');
-  assert.equal(catalogue.ui_available,false); assert.equal(catalogue.ipc_available,false); assert.deepEqual(catalogue.required_parameters,['--axis']);
+  assert.equal(catalogue.ui_available,true); assert.equal(catalogue.ui_mode,'actors'); assert.match(catalogue.ui_scope,/independent-binding/); assert.equal(catalogue.ipc_available,false); assert.deepEqual(catalogue.required_parameters,['--axis']);
   for (const limit of ['0','1024']) {
     const value=run([...base,'--work-limit',limit]); assert.equal(value.coverage.complete,false); assert.equal(value.coverage.limited,true);
     assert.ok(value.data.state_values.every(row=>row.no_retained_candidate===null && row.definite_cases===0 && row.undetermined_cases===0));

@@ -20,14 +20,15 @@ typedef struct {
     unsigned char path_nodes[GD_MAX_RECORDS], path_links[GD_MAX_EDGES];
 } GD_ExplorerMdaDisplay;
 typedef struct {
-    int root_case,participant,axis,ghosts,primary,compare;
-    bool accepted,weighted,include_excluded;
+    int root_case,participant,axis,noun,ghosts,primary,compare;
+    bool coverage,accepted,weighted,include_excluded;
     char values[GD_MAX_RULE_LINE+1],facts[GD_MAX_RULE_LINE+1],contexts[GD_MAX_RULE_LINE+1];
 } GD_ExplorerQueryOptions;
 typedef struct {
     GD_Allocator allocator; GD_ExplorerQueryOptions applied;
     GD_Query *query; GD_QueryScene *scene; GD_Layout *empty;
     GD_EffectQuery *selected;
+    int coverage_page;
     GD_RuleScenario fixed;
     char value_tokens[GD_MAX_RULE_LINE+1],fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1];
 } GD_ExplorerQueryState;
