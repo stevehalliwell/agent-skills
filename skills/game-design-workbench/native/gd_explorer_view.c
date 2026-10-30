@@ -485,6 +485,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
             if (query_view((GD_ExplorerView)v)) {
                 candidate.pane=p; p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; p->prepared=0;
                 if (!gd_explorer_query_remap(&candidate,old,prior) || !pane_prepare(&candidate)) ready=0;
+                if (ready && !gd_explorer_structure_remap(&candidate,old,prior)) { ready=0; question_failure=p->query_message; }
                 continue;
             }
             c->pane=&panes[v]; record=selected_record(c);

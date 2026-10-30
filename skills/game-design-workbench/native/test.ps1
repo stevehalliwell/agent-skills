@@ -25,6 +25,18 @@ $executable = Join-Path $root 'build/gd.exe'
 $gapFixture = Join-Path $fixtures 'declaration-gaps'
 $gaps = (& $executable query --question declaration-gaps --projection relationships --skill-atoms "things=$gapFixture/things" --related "actions=$gapFixture/actions" --fields findings --json | ConvertFrom-Json)
 if ($LASTEXITCODE -ne 0 -or -not $gaps.ok -or $gaps.data.declaration_gap_inventory.rows -ne 4 -or $gaps.data.declaration_gap_inventory.missing -ne 1 -or $gaps.data.declaration_gap_inventory.unloaded -ne 1 -or $gaps.data.declaration_gap_inventory.missing_metadata_checked -or -not $gaps.coverage.query_complete -or -not $gaps.coverage.source_incomplete) { throw 'Native declaration gap CLI contract failed' }
+$catalogue = (& $executable query --list --json | ConvertFrom-Json)
+foreach ($question in @($catalogue.data.questions | Where-Object { $_.projections -contains 'actor-inventory' })) {
+    if (($question.required_bindings_by_projection.'actor-inventory'.all_of -join ',') -ne 'nouns,axes') { throw 'Actor inventory catalogue omitted required typed bindings' }
+}
+$actorFixture = Join-Path $fixtures 'actor-inventory'
+$actorInputs = @('--nouns', "things=$actorFixture/things", '--axes', "actions=$actorFixture/actions", '--mechanics', "cases=$actorFixture/cases")
+$inventory = (& $executable query --question direct-connections --projection actor-inventory @actorInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $inventory.ok -or $inventory.data.nodes.Count -ne 10 -or $inventory.data.links.Count -ne 18 -or $inventory.data.actor_inventory_coverage.construction_limited -or -not $inventory.coverage.query_complete) { throw 'Actor inventory structural CLI contract failed' }
+$left = @($inventory.data.nodes | Where-Object local_name -eq 'Left')[0]
+if ($left.counts.incoming -ne 1 -or $left.counts.outgoing -ne 3 -or $left.counts.distinct_partners -ne 3 -or $left.counts.incident_rows -ne 4) { throw 'Actor inventory parallel/map declarations conflated' }
+$inventorySelected = (& $executable query --question direct-connections --projection actor-inventory @actorInputs --from $left.id --relation declared_noun --fields nodes,evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $inventorySelected.ok -or $inventorySelected.data.evidence.marked_links.Count -ne 1 -or @($inventorySelected.data.nodes | Where-Object id -eq $left.id)[0].counts.incident_rows -ne 1) { throw 'Actor inventory stable selector/relation mismatch' }
 $example = Join-Path (Split-Path $root -Parent) 'examples/crate-puzzle/game-design'
 $inputs = @('--nouns', "nouns=$example/nouns", '--verbs', "verbs=$example/verbs", '--interactions', "interactions=$example/interactions")
 $result = (& $executable matrix @inputs --json | ConvertFrom-Json)

@@ -19,6 +19,7 @@ typedef struct {
     GD_StructureOptions options; /* Strings remain borrowed until destruction. */
     GD_Layout *layout; GD_StructureQuery *query;
     GD_DeclarationGaps *gaps; /* Whole loaded reader context; no graph filters. */
+    GD_ActorInventory *inventory; /* Canonical declarations, not finite hypotheses. */
     int selector_work,source_incomplete;
 } GD_StructureResult;
 /* Shared native preparation for CLI and viewer. Owns canonical projection and
@@ -26,6 +27,9 @@ typedef struct {
    Destroy result before project. Failure retains no partial owned allocation. */
 GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_ExplorerProject *project, const GD_StructureOptions *options);
 void gd_structure_result_destroy(GD_StructureResult *result);
+int gd_structure_result_record(const GD_StructureResult *result, int key);
+int gd_structure_result_edge_record(const GD_StructureResult *result, int key);
+int gd_structure_result_node_id(const GD_StructureResult *result, int key, char *text, size_t size);
 int gd_write_structure_result(FILE *output, const GD_StructureResult *result, int json, const char *fields);
 /* CLI parser supplies explicit collections/original roles. No second parser. */
 int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, int count,

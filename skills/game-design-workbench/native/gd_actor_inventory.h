@@ -44,6 +44,8 @@ GD_ActorInventory *gd_actor_inventory_build(GD_Allocator allocator, const GD_Rul
 void gd_actor_inventory_destroy(GD_ActorInventory *inventory);
 const char *gd_actor_inventory_kind_name(GD_ActorInventoryKind kind);
 const char *gd_actor_inventory_link_name(GD_ActorInventoryLinkKind kind);
+/* Exact declaring line; 0 when unavailable. Noun field differs from binding header. */
+int gd_actor_inventory_link_line(const GD_ActorInventory *inventory, int link);
 /* Stable length-framed opaque identity: kind, qualified source reference, source
    ID, case name, local participant name. Not a source path or runtime actor ID.
    No snapshot offsets; overlong output fails with empty text, never truncates. */

@@ -126,6 +126,15 @@ GD_ActorInventory *gd_actor_inventory_build(GD_Allocator allocator, const GD_Rul
     return inventory;
 }
 void gd_actor_inventory_destroy(GD_ActorInventory *inventory) { if (inventory) inventory->allocator.release(inventory->allocator.context,inventory); }
+int gd_actor_inventory_link_line(const GD_ActorInventory *inventory, int index) {
+    const GD_ActorInventoryLink *edge; const GD_RuleAnalysis *source;
+    if (!inventory || index<0 || index>=inventory->link_count) return 0;
+    edge=&inventory->links[index]; source=inventory->source;
+    if (edge->kind==GD_ACTOR_CONTAINS_BINDING) return source->rules->participants[edge->declaration].line;
+    if (edge->kind==GD_ACTOR_DECLARED_NOUN) { const GD_RuleParticipant *binding=&source->rules->participants[edge->declaration]; return binding->lines[0]>0 ? binding->lines[0]:binding->line; }
+    if (edge->kind==GD_ACTOR_DECLARED_AXIS || edge->kind==GD_ACTOR_DECLARED_CONTEXT_AXIS) return source->model->edges[edge->declaration].line;
+    return source->calls[edge->declaration].line;
+}
 int gd_actor_inventory_node_id(const GD_ActorInventory *inventory, int index, char *text, size_t size) {
     const GD_ActorInventoryNode *item; const GD_Record *record; const char *kind,*id,*name="",*participant=""; int count;
     if (!text || !size) return 0; text[0]=0;

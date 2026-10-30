@@ -1,9 +1,9 @@
 #include "gd_projection.h"
 #include <string.h>
 
-static const char *const names[]={"skills","challenges","relationships","matrix","mda","resources"};
-const char *gd_projection_name(GD_ExplorerView view) { return view>=GD_EXPLORER_SKILLS && view<=GD_EXPLORER_RESOURCES ? names[view]:NULL; }
-int gd_projection_find(const char *name) { int i; if (name) for (i=GD_EXPLORER_SKILLS;i<=GD_EXPLORER_RESOURCES;++i) if (!strcmp(name,names[i])) return i; return -1; }
+static const char *const names[]={"skills","challenges","relationships","matrix","mda","resources","actor-inventory"};
+const char *gd_projection_name(GD_ExplorerView view) { return view>=GD_EXPLORER_SKILLS && view<=GD_EXPLORER_ACTORS ? names[view]:NULL; }
+int gd_projection_find(const char *name) { int i; if (name) for (i=GD_EXPLORER_SKILLS;i<=GD_EXPLORER_ACTORS;++i) if (!strcmp(name,names[i])) return i; return -1; }
 const char *gd_resource_label(const GD_ResourceGraph *graph, int index) {
     const GD_ResourceNode *node;
     if (!graph || index<0 || index>=graph->node_count) return NULL;
@@ -21,6 +21,22 @@ int gd_resource_layout(const GD_ResourceGraph *graph, GD_Layout *layout) {
     for (i=0;i<graph->node_count;++i) { layout->nodes[i].key=i; layout->nodes[i].label=gd_resource_label(graph,i); layout->nodes[i].group=0; layout->nodes[i].side=graph->nodes[i].kind==GD_RESOURCE_CASE ? 1:0; }
     for (i=0;i<graph->relation_count;++i) { const GD_ResourceRelation *source=&graph->relations[i]; layout->edges[i]=(GD_LayoutEdge){source->facet,source->activation,i,1,GD_RELATION_RESOURCE_BASE+source->kind}; }
     return gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME);
+}
+int gd_actor_inventory_layout(const GD_ActorInventory *inventory, GD_Layout *layout) {
+    const GD_Rules *rules; const GD_Model *model; int i;
+    if (!inventory || !layout) return 0;
+    rules=inventory->source->rules; model=inventory->source->model;
+    memset(layout,0,sizeof(*layout)); layout->node_count=inventory->node_count; layout->edge_count=inventory->link_count; layout->group_count=4;
+    for (i=0;i<inventory->node_count;++i) {
+        const GD_ActorInventoryNode *node=&inventory->nodes[i]; GD_LayoutNode *target=&layout->nodes[i];
+        target->key=i; target->group=(int)node->kind;
+        target->label=node->kind==GD_ACTOR_CASE ? rules->cases[node->case_index].name:node->kind==GD_ACTOR_LOCAL_BINDING ? rules->participants[node->participant].name:model->records[node->record].reference;
+    }
+    for (i=0;i<inventory->link_count;++i) {
+        const GD_ActorInventoryLink *edge=&inventory->links[i];
+        layout->edges[i]=(GD_LayoutEdge){edge->from,edge->to,i,1,GD_RELATION_ACTOR_BASE+(int)edge->kind};
+    }
+    return 1;
 }
 int gd_projection_layout(const GD_ExplorerProject *project, GD_ExplorerView view, const GD_Focus *focus, GD_Layout *layout) {
     GD_Model *model; GD_Focus all; int i;

@@ -1,4 +1,5 @@
 #include "gd_actor_inventory.h"
+#include "gd_structure_cli.h"
 TEST(actor_inventory_local_bindings_declarations_and_work,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ActorInventory *inventory,*partial;
     GD_Allocator allocator; RouteFailure failure; int i,j,root,first,second,kinds[6]={0},work;
@@ -32,6 +33,8 @@ TEST(actor_inventory_local_bindings_declarations_and_work,
             const GD_RuleBinding *map=&analysis->bindings[edge->binding];
             TEST_ASSERT(inventory->nodes[edge->from].participant==map->caller && inventory->nodes[edge->to].participant==map->callee && gd_rule_call_participant(analysis,edge->declaration,map->callee)==map->caller);
         }
+        if (edge->kind==GD_ACTOR_DECLARED_NOUN) TEST_ASSERT(gd_actor_inventory_link_line(inventory,i)==rules->participants[edge->declaration].lines[0] && gd_actor_inventory_link_line(inventory,i)>rules->participants[edge->declaration].line);
+        if (edge->kind==GD_ACTOR_CONTAINS_BINDING) TEST_ASSERT(gd_actor_inventory_link_line(inventory,i)==rules->participants[edge->declaration].line);
         if (edge->kind==GD_ACTOR_DECLARED_CONTEXT_AXIS) TEST_ASSERT(inventory->nodes[edge->from].kind==GD_ACTOR_CASE && inventory->nodes[edge->to].kind==GD_ACTOR_AXIS_DEFINITION);
     }
     TEST_ASSERT(kinds[GD_ACTOR_CONTAINS_BINDING]==4 && kinds[GD_ACTOR_DECLARED_NOUN]==4 && kinds[GD_ACTOR_DECLARED_AXIS]==2 && kinds[GD_ACTOR_DECLARED_CONTEXT_AXIS]==2 && kinds[GD_ACTOR_INVOKES]==2 && kinds[GD_ACTOR_MAPS_BINDING]==4);
@@ -47,6 +50,27 @@ TEST(actor_inventory_local_bindings_declarations_and_work,
     TEST_ASSERT(!gd_actor_inventory_build(model->allocator,NULL,0) && !gd_actor_inventory_build(model->allocator,analysis,-1) && !gd_actor_inventory_build(model->allocator,analysis,GD_ACTOR_INVENTORY_WORK+1));
     TEST_ASSERT(!gd_actor_inventory_kind_name((GD_ActorInventoryKind)-1) && !gd_actor_inventory_link_name((GD_ActorInventoryLinkKind)99) && !gd_actor_inventory_node_id(inventory,-1,id,sizeof(id)));
     printf("actor declaration inventory: %llu bytes; %d charged work units\n",(unsigned long long)sizeof(*inventory),work);
+    {
+        GD_ExplorerProject project={0}; GD_StructureOptions options={0}; GD_StructureResult *result; int stage;
+        project.allocator=model->allocator; project.models[GD_EXPLORER_RULE_DATA]=model; project.rules=rules; project.calls=analysis; project.available=1u<<GD_EXPLORER_ACTORS;
+        options.question="direct-connections"; options.projection="actor-inventory"; options.work_limit=GD_GRAPH_ANALYSIS_WORK;
+        TEST_ASSERT(gd_actor_inventory_node_id(inventory,first,id,sizeof(id))); options.from=id;
+        result=gd_structure_result_build(model,&project,&options);
+        TEST_ASSERT(result && result->inventory && result->view==GD_EXPLORER_ACTORS && result->query->complete && result->query->request.source==first);
+        TEST_ASSERT(result->query->nodes[first].incoming==1 && result->query->nodes[first].outgoing==3 && result->query->nodes[first].partners==3 && result->query->nodes[first].incident==4);
+        TEST_ASSERT(gd_structure_result_record(result,first)==inventory->nodes[first].record && gd_structure_result_node_id(result,first,other,sizeof(other)) && !strcmp(id,other));
+        for (i=0;i<result->layout->edge_count;++i) TEST_ASSERT(gd_structure_result_edge_record(result,i)==inventory->nodes[inventory->links[i].from].record && !strcmp(gd_graph_relation_name(result->layout->edges[i].relation),gd_actor_inventory_link_name(inventory->links[i].kind)));
+        { FILE *output=tmpfile(); char text[65536]; size_t length; TEST_ASSERT(output && gd_write_structure_result(output,result,1,"nodes,links,evidence,findings")); rewind(output); length=fread(text,1,sizeof(text)-1,output); text[length]=0; TEST_ASSERT(strstr(text,"\"projection\":\"actor-inventory\"") && strstr(text,"\"native_kind\":\"local_binding\"") && strstr(text,"\"compiled_binding\":") && strstr(text,"\"actor_inventory_coverage\":") && strstr(text,"\"rule_findings\":")); fclose(output); }
+        gd_structure_result_destroy(result);
+        options.relations[0]="declared_noun"; options.relation_count=1;
+        result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(result && result->query->nodes[first].incident==1 && result->query->nodes[first].partners==1); gd_structure_result_destroy(result); options.relation_count=0;
+        for (stage=0;stage<5;++stage) {
+            failure=(RouteFailure){model->allocator,stage}; project.allocator=(GD_Allocator){&failure,route_allocate,route_release};
+            result=gd_structure_result_build(model,&project,&options); project.allocator=model->allocator;
+            TEST_ASSERT(!result && model->error_count && !strcmp(model->errors[model->error_count-1].code,"query.memory")); model->error_count=0;
+        }
+        options.from="not-an-inventory-id"; TEST_ASSERT(!gd_structure_result_build(model,&project,&options) && !strcmp(model->errors[0].code,"query.selector_missing")); model->error_count=0;
+    }
     TEST_ASSERT(!gd_sources_changed(model)); gd_actor_inventory_destroy(inventory); gd_rule_analysis_destroy(analysis); gd_rules_destroy(rules); gd_destroy(model);
 )
 TEST(actor_inventory_capacity_and_whole_template_maps,
