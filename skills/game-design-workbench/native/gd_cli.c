@@ -483,6 +483,7 @@ static int application(int argc, char **argv) {
             if (!error && kind<0) error="--question needs an implemented name from query --list";
             if (!error && (!projection || strcmp(projection,gd_query_projection((GD_QueryKind)kind)))) { error="Operation unavailable on requested projection; inspect query --list"; error_code="query.projection_unavailable"; }
             query_request.kind=(GD_QueryKind)kind;
+            if (!error && kind==GD_QUERY_STATE_COVERAGE && (!(roles & (1 << GD_NOUN)) || !(roles & (1 << GD_AXIS)))) error="state-coverage requires explicit --nouns and --axes collection bindings";
             if (!error && fields && !gd_query_fields(query_request.kind,fields)) error="Unsupported query fields; inspect query --list";
         }
     }

@@ -2,7 +2,7 @@
 #define GD_QUERY_H
 #include "gd_actor_query.h"
 #include "gd_effect_query.h"
-typedef enum { GD_QUERY_BINDINGS, GD_QUERY_ACTOR_STATES, GD_QUERY_CONTRIBUTORS, GD_QUERY_COUNT } GD_QueryKind;
+typedef enum { GD_QUERY_BINDINGS, GD_QUERY_ACTOR_STATES, GD_QUERY_CONTRIBUTORS, GD_QUERY_STATE_COVERAGE, GD_QUERY_COUNT } GD_QueryKind;
 /* Case/noun/axis/effect_kind use -1 for no selector; zero work is valid.
    Status all must stand alone. Fixed inputs and strings remain borrowed. */
 typedef struct {
@@ -13,11 +13,27 @@ typedef struct {
 } GD_QueryRequest;
 typedef struct { int case_index, participant; } GD_QueryBinding;
 typedef struct {
+    const char *value;
+    int declared, definite_bindings, undetermined_bindings, excluded_bindings, unfinished_bindings;
+    int definite_cases, undetermined_cases, excluded_cases, unfinished_cases;
+    GD_RuleTruth no_retained_candidate; /* Unknown when absence cannot be checked. */
+} GD_StateCoverageValue;
+/* Each row is an independent local-binding hypothesis, never simultaneous
+   state assignment across cases/participants. Masks use finite-value indices. */
+typedef struct {
+    int value_count, evaluated_bindings, work, limited, source_incomplete;
+    GD_StateCoverageValue values[GD_ACTOR_VARIANTS];
+    uint64_t present[GD_MAX_RULE_PARTICIPANTS], definite[GD_MAX_RULE_PARTICIPANTS];
+    uint64_t undetermined[GD_MAX_RULE_PARTICIPANTS], finished[GD_MAX_RULE_PARTICIPANTS];
+    uint64_t case_definite[GD_MAX_RULE_CASES], case_undetermined[GD_MAX_RULE_CASES], case_unfinished[GD_MAX_RULE_CASES];
+} GD_StateCoverage;
+typedef struct {
     GD_Allocator allocator; const GD_Model *model; const GD_Rules *rules; const GD_RuleAnalysis *analysis;
     GD_QueryRequest request;
     int binding_count, work, limited, unexamined_bindings, excluded_roots;
     GD_QueryBinding bindings[GD_MAX_RULE_PARTICIPANTS];
     unsigned char cases[GD_MAX_RULE_CASES], activation_mask[GD_EFFECT_NODES];
+    GD_StateCoverage *state_coverage;
     GD_ActorQuery *variants; GD_ResourceGraph *resource; GD_EffectGraph *effects; GD_EffectQuery *contributors;
 } GD_Query;
 const char *gd_query_name(GD_QueryKind kind);

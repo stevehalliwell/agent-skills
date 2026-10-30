@@ -181,7 +181,7 @@ $inputs = @('--skill-atoms', "skill-atoms=$game/skill-atoms",
 
 ## Built-in actor/effect queries
 
-`gd query --list --json` advertises implemented question names, projections, required bindings/parameters, repeatable options and fields. No natural-language DSL, saved recipes, source discovery or writes. Catalogue advertises Actors/Effects UI modes and narrower supported UI parameters. Full binding-inventory result remains CLI-only; viewer pickers are not a substitute. Object filters, arbitrary status lists and custom work limits remain CLI-only; IPC is unavailable.
+`gd query --list --json` advertises implemented question names, projections, required bindings/parameters, repeatable options and fields. No natural-language DSL, saved recipes, source discovery or writes. Catalogue advertises Actors/Effects UI modes and narrower supported UI parameters. Full binding inventory and finite state coverage remain CLI-only; viewer pickers are not a substitute. Object filters, arbitrary status lists and custom work limits remain CLI-only; IPC is unavailable.
 
 Actual authored plumber examples, run from repository root:
 
@@ -208,6 +208,24 @@ $queryInputs = foreach ($role in @('nouns', 'axes', 'interactions', 'mechanics',
 - `gd_query` delegates native actor and contributor kernels; `gd_effect_query` borrows Effect snapshot/value/mask. Adapter owns child queries, not model/rules/analysis/input strings/fixed scenario. Destroy queries before borrowed inputs. No new always-live explorer allocation.
 
 Checks: `test_actor_query.h`, `test_effect_query.h`, `test/native-queries.test.mjs`, `test/native-query-capacity.test.mjs`. Includes direct-kernel parity, local identity, typed enum/numeric variants, filters, exact selectors, comparison members, empty/limited scope, every adapter allocation stage and retained 32,768-relation partial construction. Existing Rules JSON remains byte-identical on extraction fixture. App-local checks now exercise actual Actors/Effects panes and production entries; no real-pointer acceptance.
+
+### Finite state coverage
+
+```powershell
+& "$native/build/gd.exe" query --question state-coverage --projection actors @queryInputs `
+    --object nouns/hero --axis axes/Form --fields axis_definition,state_values --json
+```
+
+- Require explicit `--nouns`, `--axes` and at least one rule-source binding. Require typed `--axis`; optionally filter `--object`, `--case` and repeated `--status`. `--participant` requires exact case and unique local binding; missing/contradictory binding or inapplicable axis fails before status exclusion. No implicit A selection for inventory-wide coverage.
+- Each selected local binding gets an **independent** finite value hypothesis. Reuse native actor variants and whole root-case requirements/context/exclusions. Other bindings/context remain unknown; do not assign same-noun participants together. Counts concern matching root definitions, not invoked descendants, state-name mentions, effect destinations, compatible recipes or final outcomes.
+- `state_values` separates definite/undetermined/excluded/unfinished bindings from deduplicated case counts. Two local bindings in one case can count twice as bindings but once as case. Counts are not partner breadth, frequency or design quality. Unfinished counts may overlap known case membership when another binding remains unchecked.
+- `state_bindings` retains source ID/path/status/line, exact local participant, per-value native truth and examination flag. `axis_definition` retains source identity, type, unit, bounds, closed flag and allowed values. `cases` reuses full native declarations; `findings` retains whole-snapshot native diagnostics.
+- Enumerate declared enum values by default, or repeat `--value` for typed finite samples. Numeric axes require explicit samples in declared unit; never enumerate or claim exhaustive numeric ranges. Requested open-enum values outside authored vocabulary remain `declared:false`, not new game facts. Native integer parsing accepts exact integral decimal literals; no separate parser/coercion added.
+- `no_retained_candidate:true` means no definite or undetermined root case in fully checked selected binding scope with complete native source coverage. It is an inspection hint, **not a defect or universal no-case proof**. False means retained candidate exists; null means absence remains unchecked. Draft/participant-free sources, native incomplete bindings/definitions, omitted findings and work limits suppress absence claims. Unknown guards remain undetermined, never treated as false.
+- `state_query_complete` reports bounded enumeration independently from `state_source_incomplete`. `--work-limit` shares inventory plus child-variant matching budget. Native child outcome work can conservatively limit coverage even when only applicability is wanted; no second evaluator introduced. Input validation and fixed aggregation retain separate bounds: 64 literals, 8,192 bytes/literal, 64 KiB axis text, 8,192 local bindings and at most 786,432 binding/value plus case/value incidences.
+- Own coverage storage: 363,544 bytes; adapter: 74,920 bytes. Process/release one 5,136,656-byte native actor child at a time. Borrow model/rules/analysis/value strings until adapter destruction; no snapshot growth. CLI-only for now; named-query viewer parity and IPC remain unavailable.
+
+Checks: `test_state_coverage.h`, `test/native-state-coverage.test.mjs`. Native actor-result parity, whole-case AND/same-noun isolation, outcome-only values, case/binding deduplication, exact selectors/status exclusions, empty/limited/draft scope, typed units/samples, 64-value masks, native over-capacity errors, allocation failures and unchanged inputs.
 
 ## Integrated Actors/Effects panes
 

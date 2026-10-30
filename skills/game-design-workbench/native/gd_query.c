@@ -1,8 +1,8 @@
 #include "gd_query.h"
 #include <string.h>
 
-static const char *const names[]={"object-bindings","actor-states","effect-contributors"};
-static const char *const projections[]={"actors","actors","effects"};
+static const char *const names[]={"object-bindings","actor-states","effect-contributors","state-coverage"};
+static const char *const projections[]={"actors","actors","effects","actors"};
 const char *gd_query_name(GD_QueryKind kind) { return kind>=0 && kind<GD_QUERY_COUNT ? names[kind]:NULL; }
 const char *gd_query_projection(GD_QueryKind kind) { return kind>=0 && kind<GD_QUERY_COUNT ? projections[kind]:NULL; }
 int gd_query_kind(const char *name) { int i; if (name) for (i=0;i<GD_QUERY_COUNT;++i) if (!strcmp(name,names[i])) return i; return -1; }
@@ -34,7 +34,82 @@ static int axis_applies(const GD_Rules *rules, int participant, int axis, GD_Que
     }
     return 0;
 }
+static int local_participant(const GD_Rules *rules, int case_index, const char *name) {
+    const GD_RuleCase *item=&rules->cases[case_index]; int p,found=-1;
+    if (!name) return item->primary_participant;
+    for (p=item->first_participant;p<item->first_participant+item->participant_count;++p) if (!strcmp(name,rules->participants[p].name)) { if (found>=0) return -2; found=p; }
+    return found;
+}
 static int text_within(const char *text, size_t maximum) { size_t i=0; if (!text || !*text) return 0; while (i<=maximum && text[i]) ++i; return i<=maximum; }
+static int coverage_values(GD_Model *model, GD_Query *query) {
+    GD_StateCoverage *coverage=query->state_coverage; const GD_QueryRequest *request=&query->request;
+    const GD_ValueDefinition *definition=&model->records[request->axis].axis; const char *allowed=definition->allowed; int i,j;
+    if (!request->value_count && query->rules->axes[request->axis].type!=GD_AXIS_ENUM) { gd_error(model,"coverage.values","Numeric coverage requires finite explicit typed values",NULL,0); return 0; }
+    if (request->value_count) for (i=0;i<request->value_count;++i) coverage->values[coverage->value_count++].value=request->values[i];
+    else for (i=0;i<definition->allowed_count;++i) { for (j=0;j<coverage->value_count;++j) if (!strcmp(allowed,coverage->values[j].value)) break; if (j==coverage->value_count) { if (coverage->value_count==GD_ACTOR_VARIANTS) { gd_error(model,"coverage.values","Declared enum exceeds finite value bound; select explicit values",NULL,0); return 0; } coverage->values[coverage->value_count++].value=allowed; } allowed+=strlen(allowed)+1; }
+    for (i=0;i<coverage->value_count;++i) {
+        GD_StateCoverageValue *item=&coverage->values[i]; double number=0; allowed=definition->allowed;
+        if (!text_within(item->value,GD_MAX_RULE_LINE)) { gd_error(model,"coverage.value","Coverage value requires bounded nonempty native literal",NULL,0); return 0; }
+        for (j=0;j<definition->allowed_count;++j) { if (!strcmp(allowed,item->value)) item->declared=1; allowed+=strlen(allowed)+1; }
+        if (query->rules->axes[request->axis].type==GD_AXIS_ENUM) { if (!item->declared && model->records[request->axis].axis_closed) { gd_error(model,"coverage.value","Value absent from closed enum vocabulary",NULL,0); return 0; } }
+        else if (!gd_control_number(item->value,&number,query->rules->axes[request->axis].type==GD_AXIS_INTEGER)) { gd_error(model,"coverage.value","Numeric value must be finite declared-type literal in axis unit",NULL,0); return 0; }
+        for (j=0;j<i;++j) {
+            int duplicate;
+            if (query->rules->axes[request->axis].type==GD_AXIS_ENUM) duplicate=!strcmp(item->value,coverage->values[j].value);
+            else { double previous; gd_control_number(coverage->values[j].value,&previous,query->rules->axes[request->axis].type==GD_AXIS_INTEGER); duplicate=previous==number; }
+            if (duplicate) { gd_error(model,"coverage.duplicate_value","Finite coverage list repeats same typed value",NULL,0); return 0; }
+        }
+    }
+    return 1;
+}
+static int state_coverage(GD_Model *model, GD_Query *query) {
+    GD_StateCoverage *coverage; uint64_t all; int i,j;
+    query->state_coverage=model->allocator.allocate(model->allocator.context,sizeof(*coverage)); if (!query->state_coverage) { gd_error(model,"coverage.memory","Cannot allocate bounded finite state coverage",NULL,0); return 0; }
+    coverage=query->state_coverage; memset(coverage,0,sizeof(*coverage));
+    if (!coverage_values(model,query)) return 0;
+    coverage->source_incomplete=!query->rules->bindings_complete || !query->rules->axis_definitions_complete || !query->rules->condition_bindings_complete || query->rules->findings_omitted;
+    if (query->request.case_index<0) for (i=0;i<query->rules->source_count;++i) if (status_matches(&query->request,&model->records[query->rules->sources[i].record]) && query->rules->sources[i].state!=GD_RULE_PARSED) coverage->source_incomplete=1;
+    for (i=0;i<query->rules->case_count;++i) if ((query->request.case_index<0 || query->request.case_index==i) && case_matches(query,i) && !query->rules->cases[i].participant_count) coverage->source_incomplete=1;
+    all=coverage->value_count==64 ? UINT64_MAX:(UINT64_C(1)<<coverage->value_count)-1;
+    /* Reuse native finite variants, including whole-case guards/exclusions.
+       Outcome work is conservative overhead, not a second applicability engine. */
+    for (i=0;i<query->binding_count && coverage->value_count;++i) {
+        const GD_QueryBinding *binding=&query->bindings[i]; GD_ActorSelection selection={0}; GD_ActorQuery *variants; int remaining=query->request.work_limit-query->work-coverage->work;
+        if (remaining<=0) { coverage->limited=1; break; }
+        selection.case_index=binding->case_index; selection.participant=binding->participant; selection.axis=query->request.axis; selection.value_count=coverage->value_count;
+        for (j=0;j<coverage->value_count;++j) selection.values[j]=coverage->values[j].value;
+        variants=gd_actor_query_build(model,query->analysis,&selection,remaining); if (!variants) return 0;
+        coverage->work+=variants->work; ++coverage->evaluated_bindings;
+        for (j=0;j<variants->variant_count;++j) {
+            const GD_ActorVariant *variant=&variants->variants[j]; uint64_t bit=UINT64_C(1)<<j;
+            coverage->present[i]|=bit;
+            if (variant->applicability==GD_RULE_TRUTH_TRUE) coverage->definite[i]|=bit;
+            else if (variant->applicability==GD_RULE_TRUTH_UNKNOWN) coverage->undetermined[i]|=bit;
+            if (!variant->limited) coverage->finished[i]|=bit;
+        }
+        coverage->limited=variants->limited; gd_actor_query_destroy(variants); if (coverage->limited) break;
+    }
+    for (i=0;i<query->binding_count;++i) {
+        const GD_QueryBinding *binding=&query->bindings[i]; coverage->case_unfinished[binding->case_index]|=all^coverage->finished[i];
+        coverage->case_definite[binding->case_index]|=coverage->definite[i]&coverage->finished[i];
+        coverage->case_undetermined[binding->case_index]|=coverage->undetermined[i]&coverage->finished[i];
+        for (j=0;j<coverage->value_count;++j) {
+            uint64_t bit=UINT64_C(1)<<j; GD_StateCoverageValue *value=&coverage->values[j];
+            if (!(coverage->finished[i]&bit)) { ++value->unfinished_bindings; continue; }
+            if (coverage->definite[i]&bit) ++value->definite_bindings; else if (coverage->undetermined[i]&bit) ++value->undetermined_bindings; else if (coverage->present[i]&bit) ++value->excluded_bindings;
+        }
+    }
+    for (i=0;i<query->rules->case_count;++i) if (query->cases[i]) for (j=0;j<coverage->value_count;++j) {
+        uint64_t bit=UINT64_C(1)<<j; GD_StateCoverageValue *value=&coverage->values[j];
+        if (coverage->case_unfinished[i]&bit) ++value->unfinished_cases;
+        if (coverage->case_definite[i]&bit) ++value->definite_cases; else if (coverage->case_undetermined[i]&bit) ++value->undetermined_cases; else if (!(coverage->case_unfinished[i]&bit)) ++value->excluded_cases;
+    }
+    for (j=0;j<coverage->value_count;++j) {
+        GD_StateCoverageValue *value=&coverage->values[j];
+        value->no_retained_candidate=value->definite_cases || value->undetermined_cases ? GD_RULE_TRUTH_FALSE : query->limited || coverage->limited || coverage->source_incomplete ? GD_RULE_TRUTH_UNKNOWN : GD_RULE_TRUTH_TRUE;
+    }
+    return 1;
+}
 GD_Query *gd_query_build(GD_Model *model, const GD_Rules *rules, const GD_RuleAnalysis *analysis, const GD_QueryRequest *request) {
     GD_Query *query; int i,p;
     if (!model) return NULL;
@@ -54,13 +129,20 @@ GD_Query *gd_query_build(GD_Model *model, const GD_Rules *rules, const GD_RuleAn
     if (request->kind!=GD_QUERY_BINDINGS && (!analysis || analysis->model!=model || analysis->rules!=rules)) { gd_error(model,"query.analysis","Query requires matching compiled native rule analysis",NULL,0); return NULL; }
     if ((request->kind==GD_QUERY_BINDINGS && (request->value_count || request->target_id || request->effect_kind>=0 || request->fixed)) ||
         (request->kind==GD_QUERY_ACTOR_STATES && (request->target_id || request->effect_kind>=0 || request->case_index<0 || request->axis<0)) ||
+        (request->kind==GD_QUERY_STATE_COVERAGE && (request->axis<0 || request->target_id || request->effect_kind>=0 || request->fixed || (request->participant && request->case_index<0))) ||
         (request->kind==GD_QUERY_CONTRIBUTORS && (request->participant || request->fixed || request->value_count>1 || (request->target_id && (request->axis>=0 || request->value_count || request->effect_kind>=0))))) {
         gd_error(model,"query.parameters","Parameters do not match operation; inspect query --list",NULL,0); return NULL;
+    }
+    if (request->kind==GD_QUERY_STATE_COVERAGE && rules->axes[request->axis].type!=GD_AXIS_ENUM && rules->axes[request->axis].type!=GD_AXIS_INTEGER && rules->axes[request->axis].type!=GD_AXIS_NUMBER) { gd_error(model,"coverage.axis_type","Coverage requires explicit enum, integer or number axis type",NULL,0); return NULL; }
+    if (request->kind==GD_QUERY_STATE_COVERAGE && request->participant) {
+        p=local_participant(rules,request->case_index,request->participant);
+        if (p<0 || (request->noun>=0 && (rules->participants[p].noun_resolution!=GD_RULE_RESOLVED || rules->participants[p].noun_record!=request->noun))) { gd_error(model,"query.binding","Select one exact local participant matching optional object",NULL,0); return NULL; }
+        if (!axis_applies(rules,p,request->axis,NULL)) { gd_error(model,"query.axis","Selected axis is not explicitly applicable to selected binding",NULL,0); return NULL; }
     }
     query=model->allocator.allocate(model->allocator.context,sizeof(*query));
     if (!query) { gd_error(model,"query.memory","Cannot allocate bounded query adapter",NULL,0); return NULL; }
     memset(query,0,sizeof(*query)); query->allocator=model->allocator; query->model=model; query->rules=rules; query->analysis=analysis; query->request=*request;
-    if (request->kind==GD_QUERY_BINDINGS) {
+    if (request->kind==GD_QUERY_BINDINGS || request->kind==GD_QUERY_STATE_COVERAGE) {
         for (i=0;i<rules->case_count && !query->limited;++i) {
             const GD_RuleCase *item=&rules->cases[i];
             if (!charge(query,1)) break;
@@ -75,13 +157,10 @@ GD_Query *gd_query_build(GD_Model *model, const GD_Rules *rules, const GD_RuleAn
             }
         }
         if (query->limited) query->unexamined_bindings=rules->participant_count; /* Conservative upper bound, not an exact missing-match count. */
+        if (request->kind==GD_QUERY_STATE_COVERAGE && !state_coverage(model,query)) goto failure;
     } else if (request->kind==GD_QUERY_ACTOR_STATES) {
-        const GD_RuleCase *item=&rules->cases[request->case_index]; int participant=item->primary_participant;
+        int participant=local_participant(rules,request->case_index,request->participant);
         GD_ActorSelection selection={0};
-        if (request->participant) {
-            participant=-1;
-            for (p=item->first_participant;p<item->first_participant+item->participant_count;++p) if (!strcmp(request->participant,rules->participants[p].name)) { if (participant>=0) { participant=-2; break; } participant=p; }
-        }
         if (participant<0 || (request->noun>=0 && (rules->participants[participant].noun_resolution!=GD_RULE_RESOLVED || rules->participants[participant].noun_record!=request->noun))) {
             gd_error(model,"query.binding","Select one exact local participant or authored A matching optional object; no same-noun/order fallback",NULL,0); goto failure;
         }
@@ -131,6 +210,7 @@ failure:
 }
 void gd_query_destroy(GD_Query *query) {
     if (!query) return;
+    if (query->state_coverage) query->allocator.release(query->allocator.context,query->state_coverage);
     gd_effect_query_destroy(query->contributors); gd_effect_graph_destroy(query->effects); gd_resource_graph_destroy(query->resource); gd_actor_query_destroy(query->variants);
     query->allocator.release(query->allocator.context,query);
 }
