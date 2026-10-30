@@ -84,6 +84,13 @@ Notes captured, then discussed against remaining todo work. User requests covera
 - Verified 93/93 native+CLI, 28 Node passed/4 external skips, strict C99, two-example app/reload/capture checks with zero owned leaks/source changes. Independent static review found endpoint-remapping disagreement with stable IDs; shared identity-key serializer/remapper and missing-to-loaded/changed-occurrence regressions fix it. Full validation/limits in [implementation plan](implementation-plan.md), Step 3.
 - Reusable read-only audit script reruns original nine CLI questions plus Resource overview and six conditional/frontier/identity probes. [Original-question audit](original-question-audit.md) owns all 14 question assessments. [Offline decision report](mario-question-review.html) retains current evidence, actual decisions/rejected alternatives, all 14 question assessments and explicit review scenarios. Static/network-blocked browser checks pass; no user usefulness acceptance implied. User evaluates analytical/visual usefulness, not merely successful layer rendering.
 
+## Follow-up user review — Resource layout and shared context
+
+- User finds new conditional Resource inspection useful and confirmed same analysis is available through CLI. This is not acceptance of full Resource layout or semantic completion.
+- User reports full Resource view remains a “word cloud looking nightmare”: group force separation appears absent/ineffective and even small clusters overlap. Cause unverified. Repair captured under Review 07; existing witness-only display does not close this objection.
+- User requests bidirectional CLI/viewer IPC: agent shows what it is discussing; human points at current viewer context to ask what it is, why behavior differs from intent, or where new systems should join. Draft task under Review 06; transport/contract not selected.
+- User requires another review of partially answered original questions after remaining delivery is in. Explicit later review gate added to `todo.md`; current audit remains baseline, not final acceptance.
+
 ## Comments
 
 - Preserve uncertainty about dataset quality and potentially escaping labels.

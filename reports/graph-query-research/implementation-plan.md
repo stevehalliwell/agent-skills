@@ -10,7 +10,7 @@ Continue graph-analysis follow-ups through next integrated review. Commit each v
 - Task authority: `todo.md`; no root Attendant task configuration.
 - Preserve source/status identities, source directions, AND semantics, explicit knowledge, undo/drafts and last-good reload.
 - Generic graph layers analyze shown projection, not camera clipping or hidden graphs. Resource conditional queries explicitly use whole loaded Resource snapshot; controls disclose this separate scope.
-- No push, publication, schema migration, experiment rerun, global input automation or changes to example game facts.
+- No push, publication, unrelated schema migration, experiment rerun, global input automation or invented example game facts. Refined primary-target/source migrations and conformance repairs are authorized; preserve existing effects and frozen evidence.
 - Integrated manual review and whole-branch rights/history review remain final gates. Do not pause each code slice for deferred manual review.
 
 ## Ordered checkpoints
@@ -126,6 +126,39 @@ Acceptance: independent bin-count oracle, direction/mirroring/self/parallel/mixe
 
 - Step 4 complete as evidence inventory, not semantic acceptance: original nine CLI probes rerun plus Resource overview/six route/frontier/identity probes at `adae021`. Sixteen exit-0/ok results, exact argv/executable/native-source/input hashes, unchanged examples. Current evidence `native/build/mario-question-review-final/`; repeat with committed `scripts/audit-workbench-design-questions.mjs`. All 14 question groups revisited in original-question audit; narrow skills/MDA/direct Resource answers stay distinct from actor/state/role/outcome and gameplay-quality gaps.
 - Step 5 review artifact: [mario-question-review.html](mario-question-review.html), self-contained template-derived decision report with 11 sections, three embedded current-source captures, exact commits, 14-question table, runnable native review, actual trade-offs/rejected alternatives and explicit remaining gates. Static check and actual network-blocked Chromium file pass all anchors/direct hashes/Back-Forward, progress/history, theme/keyboard, 320/390px mobile, reduced motion, no-JS reading and print PDF; zero HTTP requests/browser errors. No chart required; pinned library/license retained unchanged. Browser evidence `native/build/mario-question-report-browser/`. Report gets separate local commit; no push/merge/publication.
+
+## Remaining delivery order — user revision
+
+1. Complete remaining functional additions and changes under the refined contracts in `todo.md`: existing Review 02 plus implementation-ready Reviews 08–12. Those sections own source targeting/migration, generic actor/state/effect operations, gap/key-connection inspection, built-in query parity, similarity mapping and conformance checks. Reopen refinement only for newly discovered material decisions; no implementation performed in this refinement pass.
+2. Leave bidirectional CLI/viewer IPC and Resource layout changes until just before UX review. No order selected between those two items.
+3. Run UX review and repeat all 14 original design-question groups against completed functionality, retaining partial/unavailable results and tool/data gaps.
+
+Before step 3, assess whether current data/tooling can classify or detect options, choices, calculations, puzzles, dilemmas, etc. See the pre-review capability-assessment item in `todo.md`; definitions and detection contracts remain unrefined. “Player choice” alone is not adequate design justification.
+
+This supersedes the proposed layout-first, then IPC sequence. Task authority remains `todo.md`.
+
+## Functional continuation — independent delivery
+
+- Assignment: implement the refined functional remainder through Reviews 02 and 08–12. Stop before bidirectional IPC and Resource layout repair. User remains available for real blockers; routine reversible engineering choices are delegated.
+- Branch/worktree: retain dedicated `feat/game-design-workbench` at `D:/Repos/agent-skills-game-design-workbench`. Functional base: `84706b5891113d105a13e57d43f842271ec3ee27`.
+- Existing local-checkpoint authority continues for this independent delivery. Commit this plan/refinement baseline, then each verified coherent step. No push/merge/publication. Canonical behavior/acceptance remains in `todo.md`.
+
+Ordered checkpoints:
+
+1. Primary-target reader/default effects, typed reporting and regression checks. Preserve explicitly scoped legacy input and all existing semantic evaluators.
+2. Both-example target migration, readable templates/usages/native docs and migration-equivalence checks. Public Attendant validates owning metadata; no guessed gameplay facts or frozen-evidence edits.
+3. Composition-aware conditional Resource graph/routes using existing explicit maps and outcome logic. Keep guards/side effects, strict pool identity, limits and frontiers.
+4. Shared effect/contributor projection and headless actor/state/variant queries. Separate source effects/calls from state-matched associations; direct incoming links retain target labels.
+5. Integrated actor/effect browsing, all/primary/stacked variants and incoming-weighted convergence drawing. Preserve other panes, drafts and atomic reload; no Resource spacing repair.
+6. Gap/key-connection inspection, supported typed joins and built-in native query catalogue with CLI/viewer parity. Delegate existing kernels; no query DSL or saved-recipe store.
+7. Native typed-feature distances and deterministic MDS plus similarity inspection. Missing entries stay outside comparison; optional display-only `?` context does not affect semantic counts.
+8. Full affected conformance inventory/checks and combined regressions; rerun read-only original-question evidence without claiming manual acceptance. Review diff/history and record outstanding tool/data limits.
+9. Self-contained offline decision report with exact checkpoint hashes, actual choices/alternatives, checks and remaining risks; validate and commit separately. Stop at the pre-IPC/Resource-layout boundary.
+
+Validation: focused native regressions per step, affected CLI/Node cases, strict C99 on changed units, graph/plain builds and app-local captures where relevant. Record external skips and manual gates. Failed allocation/reload and source hashes are acceptance, not optional polish. No OS input automation or experiment execution.
+
+Progress:
+- Plan/refinement baseline prepared; implementation not yet started. Current documentation changes preserve prior layout/IPC feedback and the pre-review options/choices/calculations/puzzles/dilemmas capability check.
 
 ## Comments
 
