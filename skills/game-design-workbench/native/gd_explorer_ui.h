@@ -6,6 +6,7 @@
 #include "gd_matrix_grid.h"
 #include "gd_resource_routes.h"
 #include "gd_query_scene.h"
+#include "gd_structure_cli.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 
@@ -31,6 +32,17 @@ typedef struct {
     char value_tokens[GD_MAX_RULE_LINE+1],fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1];
 } GD_ExplorerQueryState;
 typedef struct {
+    int kind,direction,lens,work_limit;
+    bool include_inactive;
+    char from[GD_MAX_PATH],to[GD_MAX_PATH],avoid[GD_MAX_PATH],scope_root[GD_MAX_PATH];
+    char starts[GD_MAX_RULE_LINE+1],relations[GD_MAX_RULE_LINE+1],statuses[GD_MAX_RULE_LINE+1];
+} GD_ExplorerStructureForm;
+typedef struct {
+    GD_Allocator allocator; GD_ExplorerStructureForm pending,applied;
+    GD_StructureResult *result; unsigned revision; int has_applied,page;
+    char start_tokens[GD_MAX_RULE_LINE+1],relation_tokens[GD_MAX_RULE_LINE+1],status_tokens[GD_MAX_RULE_LINE+1];
+} GD_ExplorerStructureState;
+typedef struct {
     GD_ExplorerView view;
     GD_Layout *layout;
     Camera2D camera,regular_camera;
@@ -42,6 +54,7 @@ typedef struct {
     GD_ExplorerSelection selection;
     GD_ExplorerQueryOptions query_options;
     GD_ExplorerQueryState *query_state;
+    GD_ExplorerStructureState *structure_state;
     char query_message[256];
     GD_ResourceRoutes *resource_routes;
     int resource_from,resource_to,resource_witness;
@@ -111,6 +124,13 @@ void gd_explorer_query_input(GD_ExplorerContext *context);
 void gd_explorer_query_details(GD_ExplorerContext *context);
 void gd_explorer_query_source(GD_ExplorerContext *context, int edge);
 int gd_explorer_query_record(const GD_ExplorerPane *pane);
+
+int gd_explorer_structure_prepare(GD_ExplorerContext *context);
+int gd_explorer_structure_run(GD_ExplorerContext *context);
+int gd_explorer_structure_pending(const GD_ExplorerPane *pane);
+int gd_explorer_structure_remap(GD_ExplorerContext *context, const GD_ExplorerProject *old, const GD_ExplorerPane *prior);
+void gd_explorer_structure_destroy(GD_ExplorerStructureState *state);
+void gd_explorer_structure_controls(GD_ExplorerContext *context);
 
 int gd_explorer_resource_prepare(GD_ExplorerContext *context);
 void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *evidence);

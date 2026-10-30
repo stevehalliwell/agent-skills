@@ -8,6 +8,18 @@ typedef struct {
     int root_count,relation_count,status_count,include_inactive,work_limit;
     GD_StructureDirection direction; GD_GraphLens lens;
 } GD_StructureOptions;
+typedef struct {
+    GD_Allocator allocator; const GD_ExplorerProject *project; GD_ExplorerView view;
+    GD_StructureOptions options; /* Strings remain borrowed until destruction. */
+    GD_Layout *layout; GD_StructureQuery *query;
+    int selector_work,source_incomplete;
+} GD_StructureResult;
+/* Shared native preparation for CLI and viewer. Owns canonical projection and
+   query; borrows immutable project/options strings. Diagnostic receives errors.
+   Destroy result before project. Failure retains no partial owned allocation. */
+GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_ExplorerProject *project, const GD_StructureOptions *options);
+void gd_structure_result_destroy(GD_StructureResult *result);
+int gd_write_structure_result(FILE *output, const GD_StructureResult *result, int json, const char *fields);
 /* CLI parser supplies explicit collections/original roles. No second parser. */
 int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, int count,
     const GD_StructureOptions *options, int json, const char *fields, const char *initial_error);

@@ -25,6 +25,7 @@ static int open_window(const char *title) {
 static int is_graph(GD_ExplorerView view) { return view<=GD_EXPLORER_MATRIX; }
 static int query_view(GD_ExplorerView view) { return view==GD_EXPLORER_ACTORS || view==GD_EXPLORER_EFFECTS; }
 static void pane_release_layout(GD_Allocator allocator, GD_ExplorerPane *pane) {
+    gd_explorer_structure_destroy(pane->structure_state); pane->structure_state=NULL;
     if (pane->query_state) gd_explorer_query_destroy(pane->query_state);
     else if (pane->layout) allocator.release(allocator.context,pane->layout);
     pane->query_state=NULL; pane->layout=NULL;
@@ -42,6 +43,7 @@ static const char *missing_roles(GD_ExplorerView view) {
 }
 static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     GD_Layout *layout=p->layout;
+    gd_explorer_structure_destroy(p->structure_state);
     if (p->query_state) { gd_explorer_query_destroy(p->query_state); layout=NULL; }
     gd_diagnostics_clear(&p->diagnostics);
     gd_layout_focus_destroy(p->distance_focus); gd_resource_routes_destroy(p->resource_routes);
@@ -60,6 +62,7 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
 static int pane_prepare(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int i,record=-1;
     unsigned revision=gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA ? c->project->revision:1;
+    gd_explorer_structure_prepare(c);
     if (p->prepared && p->revision==revision) return 1;
     if (query_view(p->view)) { if (!gd_explorer_query_prepare(c)) return 0; p->prepared=1; p->revision=revision; return 1; }
     if (!p->layout) {
@@ -455,7 +458,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
                           char *failure, size_t failure_size) {
     GD_ExplorerProject *old=c->project,*fresh=gd_explorer_load(old->allocator,collections,count);
     GD_ExplorerPane *replacement=NULL; GD_ExplorerContext candidate=*c;
-    const GD_Error *error=gd_explorer_error(fresh);
+    const GD_Error *error=gd_explorer_error(fresh); const char *question_failure=NULL;
     int v,ready=fresh && fresh->available==old->available && !error;
     if (ready) {
         replacement=old->allocator.allocate(old->allocator.context,GD_EXPLORER_VIEWS*sizeof(*replacement));
@@ -463,7 +466,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
     }
     if (replacement) {
         memcpy(replacement,panes,GD_EXPLORER_VIEWS*sizeof(*replacement));
-        for (v=0;v<GD_EXPLORER_VIEWS;++v) { replacement[v].layout=NULL; replacement[v].distance_focus=NULL; replacement[v].resource_routes=NULL; replacement[v].query_state=NULL; memset(&replacement[v].diagnostics,0,sizeof(replacement[v].diagnostics)); }
+        for (v=0;v<GD_EXPLORER_VIEWS;++v) { replacement[v].layout=NULL; replacement[v].distance_focus=NULL; replacement[v].resource_routes=NULL; replacement[v].query_state=NULL; replacement[v].structure_state=NULL; memset(&replacement[v].diagnostics,0,sizeof(replacement[v].diagnostics)); }
         candidate.project=fresh;
         if (old->mda) {
             int root=-1;
@@ -534,6 +537,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
             p->prepared=0; p->revision=0;
             candidate.pane=p;
             if (!pane_prepare(&candidate)) ready=0;
+            if (ready && !gd_explorer_structure_remap(&candidate,old,prior)) { ready=0; question_failure=p->query_message; }
             if (ready && v==GD_EXPLORER_RESOURCES && prior->resource_routes) {
                 if (p->resource_to<0 || (prior->resource_from>=0 && p->resource_from<0))
                     snprintf(p->resource_message,sizeof(p->resource_message),"Endpoint disappeared on reload; select new endpoints before running.");
@@ -555,7 +559,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
         c->project=fresh; c->analysis->initialized=0; gd_explorer_destroy(old); *failure=0;
         return 1;
     }
-    snprintf(failure,failure_size,"Reload rejected: %s. Last good snapshot retained.",error ? error->message:
+    snprintf(failure,failure_size,"Reload rejected: %s. Last good snapshot retained.",error ? error->message:question_failure ? question_failure:
              "Cannot prepare replacement, sources changed, or a query/focus root disappeared; clear root before retry");
     if (replacement) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) {
@@ -590,7 +594,7 @@ static int center_relationships(GD_ExplorerContext *c, GD_ExplorerPane *panes, i
 static int reset_view(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_ExplorerView view=p->view;
     if (is_graph(view) && gd_explorer_graph_commit(c)<0) return 0;
-    if (query_view(view)) {
+    if (query_view(view) || p->structure_state) {
         GD_Allocator allocator=c->project->allocator; GD_ExplorerContext context=*c;
         GD_ExplorerPane *candidate=allocator.allocate(allocator.context,sizeof(*candidate));
         if (!candidate) { snprintf(p->query_message,sizeof(p->query_message),"Cannot allocate reset candidate; last good query retained."); return 0; }
@@ -599,6 +603,7 @@ static int reset_view(GD_ExplorerContext *c) {
             pane_release_layout(allocator,candidate); gd_diagnostics_clear(&candidate->diagnostics); allocator.release(allocator.context,candidate);
             snprintf(p->query_message,sizeof(p->query_message),"Cannot prepare reset candidate; last good query retained."); return 0;
         }
+        if (view==GD_EXPLORER_MDA) gd_mda_query(gd_explorer_model(c->project,view),c->project->mda,-1,GD_MDA_BOTH);
         pane_release_layout(allocator,p); gd_diagnostics_clear(&p->diagnostics); gd_layout_focus_destroy(p->distance_focus); gd_resource_routes_destroy(p->resource_routes);
         *p=*candidate; allocator.release(allocator.context,candidate); c->analysis->initialized=0; return 1;
     }
@@ -717,6 +722,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (query_view(p->view)) gd_explorer_query_controls(&c);
         if (!grid_view(p) && p->distance_focus_enabled && distance_focus_node(p,selected)<0)
             igTextWrapped("No distance focus applied: select a visible node. Source-only or edge inspection has no focus anchor.");
+        gd_explorer_structure_controls(&c);
         if (!grid_view(p) && !query_view(p->view) && igCollapsingHeader_TreeNodeFlags("Analysis layers",0)) analysis_controls(&c,selected);
         refresh=igButton("Refresh sources (F5)",(ImVec2_c){0,0});
         if (stale) igTextWrapped("STALE: source changed or could not be checked. Last good snapshot retained.");

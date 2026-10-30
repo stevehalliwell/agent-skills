@@ -30,7 +30,7 @@ int gd_write_structure_catalogue(FILE *out, int json, int comma) {
         if (kind==GD_STRUCTURE_RELATED) fputs(",\"--lens any|same-role|changed-role\"",out);
         if (kind==GD_STRUCTURE_BYPASS) fputs(",\"--avoid\"",out);
         fputs("],\"repeatable_parameters\":[\"--relation\",\"--status\"",out); if (path) fputs(",\"--start\"",out);
-        fputs("],\"fields\":[\"nodes\",\"links\",\"evidence\",\"declarations\",\"findings\"],\"ui_available\":false,\"ui_scope\":\"existing layers share kernels; named-query controls pending\",\"ipc_available\":false,\"work_limit_max\":16777216,\"bypass_scope\":\"native nonmandatory support-path candidates only; other selections return unavailable, not no alternative\",\"relationship_path_default\":\"all consumed kinds except next; explicit --relation next or --relation all includes continuation\",\"maximum_resource_selectors\":67,\"native_resource_selector_limit_each\":16777216,\"fixed_construction\":\"4096 nodes, 32768 rows, at most 65536 typed incidences and bounded native sorts; separate from search budget\"}",out);
+        fputs("],\"fields\":[\"nodes\",\"links\",\"evidence\",\"declarations\",\"findings\"],\"ui_available\":true,\"ui_scope\":\"Built-in structural questions in six existing panes; canonical projection plus explicit filters; result tables and source navigation, not current canvas filters or a query overlay\",\"ui_parameter_encoding\":\"Repeated starts, relations and statuses: one trimmed literal per line\",\"ui_unavailable_parameters\":[\"repeatable input beyond 8192 combined bytes per list\",\"--fields JSON pruning (expand result tables instead)\"],\"ipc_available\":false,\"work_limit_max\":16777216,\"bypass_scope\":\"native nonmandatory support-path candidates only; other selections return unavailable, not no alternative\",\"relationship_path_default\":\"all consumed kinds except next; explicit --relation next or --relation all includes continuation\",\"maximum_resource_selectors\":67,\"native_resource_selector_limit_each\":16777216,\"fixed_construction\":\"4096 nodes, 32768 rows, at most 65536 typed incidences and bounded native sorts; separate from search budget\"}",out);
     }
     return !ferror(out);
 }
@@ -39,7 +39,7 @@ static int status_matches(const GD_StructureOptions *options, const GD_Record *r
     for (i=0;i<options->status_count;++i) if (record && record->status && !strcmp(options->statuses[i],record->status)) return 1;
     return 0;
 }
-static int selector(GD_ExplorerProject *project, GD_ExplorerView view, const GD_Layout *layout, GD_ResourceRoutes *resolver, const char *name, int *work) {
+static int selector(const GD_ExplorerProject *project, GD_ExplorerView view, const GD_Layout *layout, GD_ResourceRoutes *resolver, const char *name, int *work) {
     int i,record,found=-1;
     if (!name) return -1;
     if (view==GD_EXPLORER_RESOURCES) { int key=gd_resource_select(resolver,project->resources,name); *work+=resolver->work; if (key<0) return key; for (i=0;i<layout->node_count;++i) if (layout->nodes[i].key==key) return i; return -1; }
@@ -62,11 +62,17 @@ static const char *identity_resolution(const GD_Model *model, const GD_Edge *edg
     return "unloaded";
 }
 static void findings(FILE *out, const GD_Finding *values, int count) { int i; fputc('[',out); for (i=0;i<count;++i) { if (i) fputc(',',out); fputs("{\"code\":",out); gd_json_string(out,values[i].code); member(out,"message",values[i].message); member(out,"reference",values[i].reference); fprintf(out,",\"record\":%d,\"line\":%d}",values[i].record,values[i].line); } fputc(']',out); }
-static int write_result(FILE *out, const GD_ExplorerProject *project, GD_ExplorerView view, const GD_StructureQuery *query, const GD_StructureOptions *options, int selector_work, int json, const char *fields) {
+static int projection_incomplete(const GD_ExplorerProject *project, GD_ExplorerView view) {
+    const GD_Model *model=gd_explorer_model(project,view); int i;
+    if ((view==GD_EXPLORER_RESOURCES && gd_resource_graph_incomplete(project->resources)) || model->skill_incomplete || model->findings_omitted || (view==GD_EXPLORER_MDA && (!project->mda->graph_complete || project->mda->findings_omitted)) || (view==GD_EXPLORER_RESOURCES && project->rules->findings_omitted)) return 1;
+    for (i=0;i<model->edge_count;++i) if (model->edges[i].target<0) return 1;
+    return 0;
+}
+int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int json, const char *fields) {
+    if (!out || !result || !result->project || !result->query || !result->layout || (fields && (!json || !gd_structure_fields(fields)))) return 0;
+    const GD_ExplorerProject *project=result->project; GD_ExplorerView view=result->view; const GD_StructureQuery *query=result->query; const GD_StructureOptions *options=&result->options; int selector_work=result->selector_work;
     const GD_Model *model=gd_explorer_model(project,view); const GD_GraphAnalysis *analysis=&query->analysis; int i,j,comma=0,ids_complete=1,hints[GD_MAX_RECORDS];
-    const GD_StructureRequest *request=&query->request; int source_incomplete=view==GD_EXPLORER_RESOURCES && gd_resource_graph_incomplete(project->resources);
-    for (i=0;i<model->edge_count;++i) if (model->edges[i].target<0) source_incomplete=1;
-    if (model->skill_incomplete || model->findings_omitted || (view==GD_EXPLORER_MDA && (!project->mda->graph_complete || project->mda->findings_omitted)) || (view==GD_EXPLORER_RESOURCES && project->rules->findings_omitted)) source_incomplete=1;
+    const GD_StructureRequest *request=&query->request; int source_incomplete=result->source_incomplete;
     if (!json) {
         fprintf(out,"%s [%s]: %d shown nodes, %d shown rows, %d isolates; search %s; structural evidence, not gameplay frequency/feasibility\n",gd_structure_name(request->kind),gd_projection_name(view),query->shown_nodes,query->shown_edges,query->isolated,query->complete ? "complete in scope":"PARTIAL");
         for (i=0;i<analysis->node_count;++i) if (analysis->shown[i]) { fprintf(out,"%d %s | ",i,query->layout->nodes[i].label); if (!request->incidence) fprintf(out,"incoming %d outgoing %d ",query->nodes[i].incoming,query->nodes[i].outgoing); fprintf(out,"partners %d incident rows %d kinds %d\n",query->nodes[i].partners,query->nodes[i].incident,query->nodes[i].kinds); }
@@ -121,23 +127,37 @@ static int write_result(FILE *out, const GD_ExplorerProject *project, GD_Explore
     fprintf(out,"},\"coverage\":{\"complete\":%s,\"query_complete\":%s,\"available\":%s,\"identities_complete\":%s,\"native_selector_work\":%d,\"native_search_work\":%d,\"native_search_limit\":%d,\"fixed_construction_rows\":%d,\"fixed_selection_rows\":%d,\"source_incomplete\":%s,\"scope\":\"explicit loaded projection/filter; status matches represented source records, not ancestor applicability; never camera\",\"final_outcomes_proven\":false},\"errors\":[],\"breadcrumbs\":[\"Parallel rows differ from distinct partners; raw declaration findings retain unresolved scope. Marked nodes are a union of support and mandatory ancestors, not the dominator set.\",\"Paths are structural relationships, not AND necessity, teaching, flow, gameplay frequency or final outcomes.\",\"Support paths retain at most 64 trailing arcs in target-to-root order; reverse_traversal refers to original links, never execution.\"]}\n",query->complete && ids_complete && !model->findings_omitted && !source_incomplete ? "true":"false",query->complete ? "true":"false",query->available ? "true":"false",ids_complete ? "true":"false",selector_work,query->work,request->work_limit,query->construction_rows,query->selection_rows,source_incomplete ? "true":"false");
     return !ferror(out);
 }
-int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, int count, const GD_StructureOptions *options, int json, const char *fields, const char *initial_error) {
-    GD_Model *diagnostic=gd_create(allocator); GD_ExplorerProject *project=NULL; GD_Layout *layout=NULL; GD_ResourceRoutes *resolver=NULL; GD_StructureQuery *query=NULL;
-    GD_StructureRequest request={0}; GD_Focus focus; unsigned char shown[GD_MAX_RECORDS],eligible[GD_MAX_PAIRS]; int roles[GD_MAX_RECORDS]; int i,j,view,status=2,selector_work=0;
-    if (!diagnostic) { fputs("gd: cannot allocate structural diagnostic snapshot\n",stderr); return 2; }
-    view=gd_projection_find(options->projection); request.kind=(GD_StructureKind)gd_structure_kind(options->question); request.source=request.target=request.avoid=-1;
-    if (initial_error) gd_error(diagnostic,"cli.arguments",initial_error,NULL,0);
-    else if (view<0) gd_error(diagnostic,"query.projection_unavailable","Structural operation requires supported typed projection; inspect query --list",NULL,0);
-    else if (!count || (fields && (!json || !gd_structure_fields(fields))) || options->root_count<0 || options->root_count>GD_STRUCTURE_SELECTORS || options->relation_count<0 || options->relation_count>GD_STRUCTURE_KINDS || options->status_count<0 || options->status_count>GD_STRUCTURE_SELECTORS || options->work_limit<0 || options->work_limit>GD_GRAPH_ANALYSIS_WORK || request.kind<0 || request.kind>=GD_STRUCTURE_COUNT || (options->avoid && request.kind!=GD_STRUCTURE_BYPASS)) gd_error(diagnostic,"query.arguments","Explicit bindings, supported fields and bounded operation-specific structural parameters required",NULL,0);
-    for (i=0;!diagnostic->error_count && i<options->status_count;++i) if (!options->statuses[i] || !*options->statuses[i] || strlen(options->statuses[i])>128 || (options->status_count>1 && !strcmp(options->statuses[i],"all"))) gd_error(diagnostic,"query.status","Bounded status values required; all must stand alone",NULL,0);
-    if (!diagnostic->error_count) {
-        project=gd_explorer_load(allocator,collections,count);
-        if (!project) gd_error(diagnostic,"query.memory","Cannot prepare bounded typed snapshots",NULL,0);
-        else { const GD_Error *error=gd_explorer_error(project); if (error) gd_error(diagnostic,error->code,error->message,error->path,error->line); else if (!(project->available&(1u<<view))) gd_error(diagnostic,"query.projection_unavailable","Required explicit bindings for projection are unavailable",NULL,0); }
-    }
+static int bounded_text(const char *text, int maximum) { int i=0; if (!text || !*text) return 0; while (i<=maximum && text[i]) ++i; return i<=maximum; }
+static int options_valid(GD_Model *diagnostic, const GD_StructureOptions *options) {
+    int kind=options ? gd_structure_kind(options->question):-1,i; const char *selectors[4];
+    if (!options || gd_projection_find(options->projection)<0) gd_error(diagnostic,"query.projection_unavailable","Structural operation requires supported typed projection; inspect query --list",NULL,0);
+    else if (options->root_count<0 || options->root_count>GD_STRUCTURE_SELECTORS || options->relation_count<0 || options->relation_count>GD_STRUCTURE_KINDS || options->status_count<0 || options->status_count>GD_STRUCTURE_SELECTORS || options->work_limit<0 || options->work_limit>GD_GRAPH_ANALYSIS_WORK || kind<0 || kind>=GD_STRUCTURE_COUNT || (options->avoid && kind!=GD_STRUCTURE_BYPASS)) gd_error(diagnostic,"query.arguments","Explicit bindings, supported fields and bounded operation-specific structural parameters required",NULL,0);
+    if (diagnostic->error_count) return 0;
+    selectors[0]=options->from; selectors[1]=options->to; selectors[2]=options->avoid; selectors[3]=options->scope_root;
+    for (i=0;i<4;++i) if (selectors[i] && !bounded_text(selectors[i],GD_MAX_RULE_LINE)) gd_error(diagnostic,"query.arguments","Structural selectors require bounded nonempty identities",NULL,0);
+    for (i=0;i<options->root_count;++i) if (!bounded_text(options->roots[i],GD_MAX_RULE_LINE)) gd_error(diagnostic,"query.arguments","Starts require bounded nonempty identities",NULL,0);
+    for (i=0;i<options->relation_count;++i) if (!bounded_text(options->relations[i],128)) gd_error(diagnostic,"query.relation","Relations require bounded native names",NULL,0);
+    for (i=0;i<options->status_count;++i) if (!bounded_text(options->statuses[i],128) || (options->status_count>1 && !strcmp(options->statuses[i],"all"))) gd_error(diagnostic,"query.status","Bounded status values required; all must stand alone",NULL,0);
+    return !diagnostic->error_count;
+}
+void gd_structure_result_destroy(GD_StructureResult *result) {
+    if (!result) return;
+    gd_structure_query_destroy(result->query); if (result->layout) result->allocator.release(result->allocator.context,result->layout);
+    result->allocator.release(result->allocator.context,result);
+}
+GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_ExplorerProject *project, const GD_StructureOptions *options) {
+    GD_StructureResult *result; GD_Allocator allocator; GD_Layout *layout=NULL; GD_ResourceRoutes *resolver=NULL; GD_StructureQuery *query=NULL;
+    GD_StructureRequest request={0}; GD_Focus focus; unsigned char shown[GD_MAX_RECORDS],eligible[GD_MAX_PAIRS]; int roles[GD_MAX_RECORDS]; int i,j,view,selector_work=0;
+    if (!diagnostic || !options_valid(diagnostic,options)) return NULL;
+    view=gd_projection_find(options->projection);
+    if (!project || !(project->available&(1u<<view)) || !gd_explorer_model(project,(GD_ExplorerView)view)) { gd_error(diagnostic,"query.projection_unavailable","Required explicit bindings for projection are unavailable",NULL,0); return NULL; }
+    allocator=project->allocator; result=allocator.allocate(allocator.context,sizeof(*result));
+    if (!result) { gd_error(diagnostic,"query.memory","Cannot allocate shared structural result",NULL,0); return NULL; }
+    memset(result,0,sizeof(*result)); result->allocator=allocator; result->project=project; result->view=(GD_ExplorerView)view; result->options=*options;
+    request.kind=(GD_StructureKind)gd_structure_kind(options->question); request.source=request.target=request.avoid=-1;
     if (!diagnostic->error_count) {
         GD_Model *model=gd_explorer_model(project,(GD_ExplorerView)view); const char *selectors[3]={options->from,options->to,options->avoid}; int *destinations[3]={&request.source,&request.target,&request.avoid};
-        layout=allocator.allocate(allocator.context,sizeof(*layout)); if (view==GD_EXPLORER_RESOURCES) resolver=gd_resource_routes_create(allocator);
+        layout=allocator.allocate(allocator.context,sizeof(*layout)); result->layout=layout; if (view==GD_EXPLORER_RESOURCES) resolver=gd_resource_routes_create(allocator);
         if (!layout || (view==GD_EXPLORER_RESOURCES && !resolver)) gd_error(diagnostic,"query.memory","Cannot allocate native projection/selectors",NULL,0);
         if (!diagnostic->error_count && options->scope_root) { int root=gd_explorer_record(model,options->scope_root); if (view!=GD_EXPLORER_RELATIONSHIPS || root<0) gd_error(diagnostic,"query.scope","--scope-root requires one loaded Relationships source record",options->scope_root,0); else gd_focus_reset(model,&focus,root); }
         if (!diagnostic->error_count && !gd_projection_layout(project,(GD_ExplorerView)view,options->scope_root ? &focus:NULL,layout)) gd_error(diagnostic,"query.projection_unavailable","Cannot construct requested native projection",NULL,0);
@@ -155,7 +175,23 @@ int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, i
             if (!diagnostic->error_count) { if (!gd_structure_request_valid(layout,shown,&request)) gd_error(diagnostic,"query.arguments","Invalid structural parameters/hidden selectors; inspect required starts/direction/bounds",NULL,0); else { query=gd_structure_query_build(allocator,layout,shown,roles,&request); if (!query) gd_error(diagnostic,"query.memory","Cannot allocate bounded structural query/scope",NULL,0); } }
         }
     }
-    if (!diagnostic->error_count && query) status=write_result(stdout,project,(GD_ExplorerView)view,query,options,selector_work,json,fields) && !fflush(stdout) ? 0:2;
+    gd_resource_routes_destroy(resolver); result->query=query; result->selector_work=selector_work;
+    if (diagnostic->error_count || !query) { gd_structure_result_destroy(result); return NULL; }
+    result->source_incomplete=projection_incomplete(project,(GD_ExplorerView)view); return result;
+}
+int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, int count, const GD_StructureOptions *options, int json, const char *fields, const char *initial_error) {
+    GD_Model *diagnostic=gd_create(allocator); GD_ExplorerProject *project=NULL; GD_StructureResult *result=NULL; int i,status=2;
+    if (!diagnostic) { fputs("gd: cannot allocate structural diagnostic snapshot\n",stderr); return 2; }
+    if (initial_error) gd_error(diagnostic,"cli.arguments",initial_error,NULL,0);
+    else if (!options || gd_projection_find(options->projection)<0) (void)options_valid(diagnostic,options);
+    else if (!count || (fields && (!json || !gd_structure_fields(fields)))) gd_error(diagnostic,"query.arguments","Explicit bindings and supported fields required",NULL,0);
+    else (void)options_valid(diagnostic,options);
+    if (!diagnostic->error_count) {
+        project=gd_explorer_load(allocator,collections,count);
+        if (!project) gd_error(diagnostic,"query.memory","Cannot prepare bounded typed snapshots",NULL,0);
+        else { const GD_Error *error=gd_explorer_error(project); if (error) gd_error(diagnostic,error->code,error->message,error->path,error->line); else result=gd_structure_result_build(diagnostic,project,options); }
+    }
+    if (!diagnostic->error_count && result) status=gd_write_structure_result(stdout,result,json,fields) && !fflush(stdout) ? 0:2;
     else { gd_write_result(stdout,diagnostic,0,json,NULL); for (i=0;i<diagnostic->error_count;++i) fprintf(stderr,"gd: %s: %s\n",diagnostic->errors[i].code,diagnostic->errors[i].message); }
-    gd_structure_query_destroy(query); gd_resource_routes_destroy(resolver); if (layout) allocator.release(allocator.context,layout); gd_explorer_destroy(project); gd_destroy(diagnostic); return status;
+    gd_structure_result_destroy(result); gd_explorer_destroy(project); gd_destroy(diagnostic); return status;
 }

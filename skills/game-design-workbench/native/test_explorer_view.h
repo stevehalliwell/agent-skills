@@ -14,9 +14,10 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     match_details(c); layout_controls(c); selected=analyze(c);
     if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_controls(c);
     if (query_view(p->view)) { gd_explorer_query_controls(c); gd_explorer_query_details(c); }
+    if (p->structure_state) { igSetNextItemOpen(true,ImGuiCond_Always); gd_explorer_structure_controls(c); }
     if (grid_view(p)) {
         if (!grid_blank_details(c)) gd_explorer_graph_details(c);
-    } else if (!query_view(p->view)) analysis_controls(c,selected);
+    } else if (!query_view(p->view) && !p->structure_state) analysis_controls(c,selected);
     if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_details(c);
     igEnd();
     matches(c); distance_focus_update(c,selected);
@@ -76,6 +77,7 @@ cleanup:
     if (p) { gd_diagnostics_clear(&p->diagnostics); if (p->layout) allocator.release(allocator.context,p->layout); allocator.release(allocator.context,p); }
     gd_destroy(model); *c=original; c->analysis->initialized=0; return result;
 }
+#include "test_explorer_structure.h"
 int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections, int count,
                        const char *output, int *fail_at, int *calls) {
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
@@ -473,6 +475,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     EXPLORER_CHECK(reload_project(&c,panes,collections,count,failure,sizeof(failure)));
     project=c.project;
     EXPLORER_CHECK(panes[GD_EXPLORER_MATRIX].selection.cell<0 && panes[GD_EXPLORER_MATRIX].selection.linked<0);
+    EXPLORER_CHECK(explorer_test_structure(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
     for (v=0;v<GD_EXPLORER_VIEWS;++v) { c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c)); explorer_test_render(&c); }
     fprintf(stderr,"Explorer checks passed: six projections; independent switching; multi-match Find; hidden counts; reset isolation; draft preservation; qualified roots; stale-edge recovery and deferred active Undo; validated selection; stderr logging; reload rollback and restoration.\n");
     result=0;
