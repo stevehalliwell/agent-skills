@@ -1096,7 +1096,7 @@ Status: bounded readability repairs and band-preserving selection-focused layout
 
 #### Review 08 — Find gaps and key connections
 
-Status: ready for implementation. Use 05 and shared kernels; manual usefulness remains a review gate.
+Status: bounded structural native/CLI slice implemented across six existing projections. Gap/state-value coverage, actor/effect structural adapters and named-query viewer parity remain in progress. Use 05 and shared kernels; manual usefulness remains a review gate.
 
 - Result: shared CLI/viewer structural inspection over typed authored relationships and the actor/effect projections from 09. Reuse native readers/adapters, not prose interpretation or a second Attendant validator.
 - Relationship scope: existing consumed frontmatter references, explicit participant/axis/state bindings, predicates/effects and mapped invocation links. Advertise supported fields/relation kinds and unavailable inputs. Preserve kind, direction, operand order, source/status and whole-case conditions. Do not infer additional relationships from names or prose.
@@ -1106,6 +1106,8 @@ Status: ready for implementation. Use 05 and shared kernels; manual usefulness r
 - Topological queries use the selected projection/filter mask, not camera bounds. CLI constructs that same scope explicitly. Resource conditional route queries retain Review 02's whole-snapshot contract; do not substitute a display-filtered graph.
 - Retain unresolved placeholders and sourced findings; distinguish unloaded scope, known missing, ambiguity and invalid type. Missing optional metadata is not a broken reference. Respect existing parser/type failures and last-good reload safety; do not auto-create definitions or silently repair source.
 - Acceptance: fixtures distinguish parallel links from distinct partners, direct versus upstream contributors, sparse-but-valid data, unused declared values, missing versus unloaded targets, mixed-kind witnesses and explicit route boundaries. Check all supported projection adapters, capacity/work omissions and CLI/native/viewer parity. Negative claims remain local to checked scope.
+
+- Structural slice: seven named operations delegate native direct/partner/closure/dominator/bypass/shape/overview kernels. Graphics-free projection extraction preserves existing matrix/Resource geometry and original source edges. Filters select native projection, not camera; Relationships paths exclude `next` unless explicitly included. Native wrong-role/missing/unloaded coverage remains separate from completed retained-topology search. Resource/matrix incidence is never production. Native bypass supports nonmandatory support-path candidates only; other selections return unavailable/null, not no-alternative proof. Detailed contract/bounds in [native README](skills/game-design-workbench/native/README.md#built-in-structural-queries). State gaps, wider adapters/delegates and visual parity remain undelivered; do not accept Review 08 from catalogue alone.
 
 #### Review 09 — Explore actor states and resource flows
 
@@ -1168,7 +1170,7 @@ case example:
 
 #### Review 10 — Reusable design questions
 
-Status: ready for implementation. Uses 05, existing analysis kernels and 08/09; no new query language or storage platform.
+Status: actor/effect and seven structural CLI entries implemented; structural named-query UI, broader catalogue delegates and full parity remain in progress. Uses 05, existing analysis kernels and 08/09; no new query language or storage platform.
 
 - Result: named, reusable design questions for high traffic, linchpins, alternatives, transformations and other selected patterns, with matching CLI/viewer results.
 - Functional refinement: deliver a built-in catalogue of parameterized generic queries in this batch. No project-owned saved-recipe format, custom query language or natural-language evaluator. Reuse operations by supplying data selectors/filters through CLI or viewer; game-specific names are not dedicated native commands.

@@ -327,4 +327,7 @@ int gd_resource_graph_bind_calls(GD_ResourceGraph *graph, const GD_RuleAnalysis 
     if (graph->limited) ++graph->composition_unexamined;
     return !graph->limited;
 }
+int gd_resource_graph_incomplete(const GD_ResourceGraph *graph) {
+    return !graph || graph->limited || graph->unexamined_cases || graph->unexamined_roles || graph->composition_unexamined || graph->preservation_unexamined || graph->unknown_case_coverage || !graph->calls_bound || !graph->rules->effect_bindings_complete || !graph->rules->preservation_bindings_complete || !graph->rules->quantity_bindings_complete;
+}
 void gd_resource_graph_destroy(GD_ResourceGraph *graph) { if (graph) graph->allocator.release(graph->allocator.context,graph); }

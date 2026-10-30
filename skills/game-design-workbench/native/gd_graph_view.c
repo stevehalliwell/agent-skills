@@ -32,27 +32,10 @@ static int measure_directed(GD_Layout *layout) {
     return gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,layout->sort);
 }
 static int prepare_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort, int rank_mode, int horizontal, int challenges, GD_Focus *focus) {
-    int record_node[GD_MAX_RECORDS], i;
     if (focus) return gd_focus_layout(model,focus,layout,sort);
     if (challenges) return gd_route_layout(model,layout,horizontal,sort) && measure_directed(layout);
     if (model->skill_mode) return gd_skill_layout(model, layout, rank_mode, horizontal, sort) && measure_directed(layout);
-    memset(layout, 0, sizeof(*layout)); layout->group_count = model->component_count;
-    for (i = 0; i < model->record_count; ++i) {
-        const GD_Record *record = &model->records[i];
-        GD_LayoutNode *node;
-        record_node[i] = -1;
-        if (record->role != GD_NOUN && record->role != GD_VERB) continue;
-        record_node[i] = layout->node_count;
-        node = &layout->nodes[layout->node_count++];
-        node->key = i; node->label = record->name; node->group = model->component_of[i];
-        node->side = record->role == GD_VERB; node->degree = model->connectivity[i].partners;
-    }
-    for (i = 0; i < model->cell_count; ++i) {
-        GD_LayoutEdge *edge = &layout->edges[layout->edge_count++];
-        edge->a = record_node[model->cells[i].noun]; edge->b = record_node[model->cells[i].verb];
-        edge->key = i; edge->active = model->cells[i].active; edge->relation=GD_RELATION_CASE_PAIR;
-    }
-    return gd_layout_arrange(layout, mode, sort);
+    return gd_matrix_layout(model,layout,mode,sort);
 }
 static Vector2 node_point(const GD_LayoutNode *node) { return (Vector2){node->x, node->y}; }
 static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle viewport) {

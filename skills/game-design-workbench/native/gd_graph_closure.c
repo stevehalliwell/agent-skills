@@ -18,7 +18,7 @@ static int charge(GD_GraphClosure *closure) {
 const GD_GraphClosure *gd_graph_closure_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, const unsigned char *eligible,
     const unsigned char *boundary, int relation, int reverse, int undirected, int work_limit) {
     int i,root,same,words=(analysis->node_count+63)/64;
-    assert(analysis->initialized && relation>=0 && work_limit>=0 && work_limit<=GD_GRAPH_ANALYSIS_WORK);
+    assert(analysis->initialized && relation>=-1 && work_limit>=0 && work_limit<=GD_GRAPH_ANALYSIS_WORK);
     reverse=reverse!=0; undirected=undirected!=0;
     same=closure->valid && closure->relation==relation && closure->reverse==reverse &&
         closure->undirected==undirected && closure->limit==work_limit && closure->row_count==analysis->node_count;
@@ -39,7 +39,7 @@ const GD_GraphClosure *gd_graph_closure_into(GD_GraphAnalysis *analysis, GD_Grap
     /* Backward construction preserves projected declaration order in walks. */
     for (i=analysis->edge_count-1;i>=0;--i) {
         const GD_LayoutEdge *edge=&analysis->edges[i]; int side;
-        if (edge->relation!=relation || (!edge->active && !analysis->include_inactive) ||
+        if ((relation>=0 && edge->relation!=relation) || (!edge->active && !analysis->include_inactive) ||
             !closure->eligible[edge->a] || !closure->eligible[edge->b]) continue;
         for (side=0;side<2;++side) if (undirected || side==reverse) {
             int owner=side ? edge->b:edge->a,arc=2*i+side;
@@ -127,7 +127,7 @@ const GD_GraphComparison *gd_graph_closure_compare_into(GD_GraphAnalysis *analys
     for (i=0;i<analysis->edge_count;++i) {
         const GD_LayoutEdge *edge=&analysis->edges[i]; int side;
         comparison->edges[i]=0;
-        if (edge->relation!=closure->relation || (!edge->active && !analysis->include_inactive) ||
+        if ((closure->relation>=0 && edge->relation!=closure->relation) || (!edge->active && !analysis->include_inactive) ||
             !closure->eligible[edge->a] || !closure->eligible[edge->b]) continue;
         for (side=0;side<2;++side) if (closure->undirected || side==closure->reverse) {
             int owner=side ? edge->b:edge->a,has_a=owner==a || bit(closure,a,owner);

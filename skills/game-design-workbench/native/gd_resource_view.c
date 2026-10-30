@@ -1,4 +1,5 @@
 #include "gd_resource_graph.h"
+#include "gd_projection.h"
 #include "gd_layout.h"
 #include "gd_graph_analysis.h"
 #include "gd_graph_analysis_draw.h"
@@ -11,12 +12,7 @@ static const Color background={18,24,34,255}, foreground={225,233,241,255}, mute
 static const Color role_color={193,155,228,255}, facet_color={108,171,230,255}, case_color={224,160,109,255};
 static const Color selected_color={255,217,125,255};
 static const char *node_label(const GD_ResourceGraph *graph, int index) {
-    const GD_ResourceNode *node=&graph->nodes[index];
-    if (node->kind==GD_RESOURCE_ROLE) return node->pool_reference;
-    if (node->kind==GD_RESOURCE_CASE) return node->instance ? node->instance_label:graph->rules->cases[node->case_index].name;
-    if (node->pool_reference) return node->pool_reference;
-    if (node->axis>=0) return graph->model->records[node->axis].reference;
-    return "unresolved axis";
+    return gd_resource_label(graph,index);
 }
 static const char *relation_name(GD_ResourceRelationKind kind) {
     switch (kind) {
@@ -30,20 +26,7 @@ static const char *relation_name(GD_ResourceRelationKind kind) {
         default: return "unknown";
     }
 }
-static int resource_layout(const GD_ResourceGraph *graph, GD_Layout *layout) {
-    int i;
-    memset(layout,0,sizeof(*layout));
-    layout->node_count=graph->node_count; layout->edge_count=graph->relation_count; layout->group_count=graph->node_count ? 1:0;
-    for (i=0;i<graph->node_count;++i) {
-        layout->nodes[i].key=i; layout->nodes[i].label=node_label(graph,i);
-        layout->nodes[i].group=0; layout->nodes[i].side=graph->nodes[i].kind==GD_RESOURCE_CASE ? 1:0;
-    }
-    for (i=0;i<graph->relation_count;++i) {
-        layout->edges[i].a=graph->relations[i].facet; layout->edges[i].b=graph->relations[i].activation;
-        layout->edges[i].key=i; layout->edges[i].active=1; layout->edges[i].relation=GD_RELATION_RESOURCE_BASE+graph->relations[i].kind;
-    }
-    return gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME);
-}
+static int resource_layout(const GD_ResourceGraph *graph, GD_Layout *layout) { return gd_resource_layout(graph,layout); }
 static void fit(Camera2D *camera, const GD_Layout *layout, Rectangle viewport) {
     float left=0,right=1,top=0,bottom=1; int i;
     for (i=0;i<layout->node_count;++i) {

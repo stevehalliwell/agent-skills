@@ -231,6 +231,21 @@ static void query_result(FILE *out, const GD_ResourceGraph *graph, const GD_Reso
     }
     fputs("]}",out);
 }
+void gd_write_resource_coverage(FILE *out, const GD_ResourceGraph *graph) {
+    fprintf(out,"{\"operation\":\"resources\",\"complete\":false,\"scope\":\"direct_and_instantiated_conditional_structural_witnesses\",\"node_count\":%d,\"relation_count\":%d,\"graph_limited\":%s,\"work\":%d,",
+        graph ? graph->node_count:0,graph ? graph->relation_count:0,graph && graph->limited ? "true":"false",graph ? graph->work:0);
+    fprintf(out,"\"unexamined_cases\":%d,\"unexamined_roles\":%d,\"invocations_unexamined\":%d,\"preservation_unexamined\":%d,\"unresolved_facets\":%d,\"unknown_case_coverage\":%d,\"findings_omitted\":%d,",
+        graph ? graph->unexamined_cases:0,graph ? graph->unexamined_roles:0,graph ? graph->composition_unexamined:0,graph ? graph->preservation_unexamined:0,
+        graph ? graph->unresolved_facets:0,graph ? graph->unknown_case_coverage:0,graph ? graph->rules->findings_omitted:0);
+    fprintf(out,"\"axis_definitions_complete\":%s,\"condition_bindings_complete\":%s,\"effect_bindings_complete\":%s,\"pool_bindings_complete\":%s,\"quantity_limited\":%s,",
+        graph && graph->rules->axis_definitions_complete ? "true":"false",graph && graph->rules->condition_bindings_complete ? "true":"false",
+        graph && graph->rules->effect_bindings_complete ? "true":"false",graph && graph->rules->pool_bindings_complete ? "true":"false",graph && graph->rules->quantity_limited ? "true":"false");
+    fprintf(out,"\"call_bindings_attached\":%s,\"call_compile_limited\":%s,",graph && graph->calls_bound ? "true":"false",graph && graph->calls && graph->calls->compile_limited ? "true":"false");
+    fprintf(out,"\"routes_available\":%s,",graph ? "true":"false");
+    fprintf(out,"\"concrete_instances\":%d,\"cycle_frontiers\":%d,\"depth_frontiers\":%d,\"mapped_binding_conflicts\":%d,\"placement_identity_collisions\":%d,\"composed_declarations_available\":%s,",graph ? graph->instance_count:0,graph ? graph->cycle_frontiers:0,graph ? graph->depth_frontiers:0,graph ? graph->binding_conflicts:0,graph ? graph->identity_collisions:0,graph && graph->calls_bound ? "true":"false");
+    fputs("\"composed_outcomes_available\":false,\"applicability_evaluated\":false,\"deltas_are_final_outcomes\":false,\"condition_semantics\":\"Raw whole-case context, requirements and exclusions retained on case nodes; individual incidence relations are not independent AND requirements or applicable outcomes. All statuses retained in declarations; route eligibility is separate. Use rules for compiled conditions and explicit scenario evaluation.\",",out);
+    fprintf(out,"\"limits\":{\"nodes\":%d,\"relations\":%d,\"construction_work\":%d}}",GD_RESOURCE_GRAPH_NODES,GD_RESOURCE_GRAPH_RELATIONS,GD_RESOURCE_GRAPH_WORK);
+}
 int gd_write_resource_query(FILE *out, const GD_Model *model, const GD_ResourceGraph *graph, const GD_ResourceRoutes *query, int json, const char *fields) {
     int first_relation[GD_RESOURCE_GRAPH_NODES],i,comma=0;
     int ok=!model->error_count && !model->errors_omitted && graph;
@@ -286,19 +301,7 @@ int gd_write_resource_query(FILE *out, const GD_Model *model, const GD_ResourceG
         }
         fputc(']',out);
     }
-    fprintf(out,"},\"coverage\":{\"operation\":\"resources\",\"complete\":false,\"scope\":\"direct_and_instantiated_conditional_structural_witnesses\",\"node_count\":%d,\"relation_count\":%d,\"graph_limited\":%s,\"work\":%d,",
-        graph ? graph->node_count:0,graph ? graph->relation_count:0,graph && graph->limited ? "true":"false",graph ? graph->work:0);
-    fprintf(out,"\"unexamined_cases\":%d,\"unexamined_roles\":%d,\"invocations_unexamined\":%d,\"preservation_unexamined\":%d,\"unresolved_facets\":%d,\"unknown_case_coverage\":%d,\"findings_omitted\":%d,",
-        graph ? graph->unexamined_cases:0,graph ? graph->unexamined_roles:0,graph ? graph->composition_unexamined:0,graph ? graph->preservation_unexamined:0,
-        graph ? graph->unresolved_facets:0,graph ? graph->unknown_case_coverage:0,graph ? graph->rules->findings_omitted:0);
-    fprintf(out,"\"axis_definitions_complete\":%s,\"condition_bindings_complete\":%s,\"effect_bindings_complete\":%s,\"pool_bindings_complete\":%s,\"quantity_limited\":%s,",
-        graph && graph->rules->axis_definitions_complete ? "true":"false",graph && graph->rules->condition_bindings_complete ? "true":"false",
-        graph && graph->rules->effect_bindings_complete ? "true":"false",graph && graph->rules->pool_bindings_complete ? "true":"false",graph && graph->rules->quantity_limited ? "true":"false");
-    fprintf(out,"\"call_bindings_attached\":%s,\"call_compile_limited\":%s,",graph && graph->calls_bound ? "true":"false",graph && graph->calls && graph->calls->compile_limited ? "true":"false");
-    fprintf(out,"\"routes_available\":%s,",graph ? "true":"false");
-    fprintf(out,"\"concrete_instances\":%d,\"cycle_frontiers\":%d,\"depth_frontiers\":%d,\"mapped_binding_conflicts\":%d,\"placement_identity_collisions\":%d,\"composed_declarations_available\":%s,",graph ? graph->instance_count:0,graph ? graph->cycle_frontiers:0,graph ? graph->depth_frontiers:0,graph ? graph->binding_conflicts:0,graph ? graph->identity_collisions:0,graph && graph->calls_bound ? "true":"false");
-    fputs("\"composed_outcomes_available\":false,\"applicability_evaluated\":false,\"deltas_are_final_outcomes\":false,\"condition_semantics\":\"Raw whole-case context, requirements and exclusions retained on case nodes; individual incidence relations are not independent AND requirements or applicable outcomes. All statuses retained in declarations; route eligibility is separate. Use rules for compiled conditions and explicit scenario evaluation.\",",out);
-    fprintf(out,"\"limits\":{\"nodes\":%d,\"relations\":%d,\"construction_work\":%d}},\"errors\":[",GD_RESOURCE_GRAPH_NODES,GD_RESOURCE_GRAPH_RELATIONS,GD_RESOURCE_GRAPH_WORK);
+    fputs("},\"coverage\":",out); gd_write_resource_coverage(out,graph); fputs(",\"errors\":[",out);
     for (i=0;i<model->error_count;++i) {
         const GD_Error *error=&model->errors[i]; if (i) fputc(',',out);
         fputs("{\"code\":",out); gd_json_string(out,error->code); member(out,"message",error->message); member(out,"source_path",error->path); fprintf(out,",\"line\":%d}",error->line);

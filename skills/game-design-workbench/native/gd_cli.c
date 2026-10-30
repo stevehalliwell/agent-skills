@@ -5,6 +5,7 @@
 #include "gd_rule_analysis.h"
 #include "gd_resource_routes.h"
 #include "gd_query.h"
+#include "gd_structure_cli.h"
 #include "gd_skill_unlocks.h"
 #include "gd_explorer.h"
 #include "gd_matrix_grid.h"
@@ -28,19 +29,21 @@ static void help(void) {
     puts("Game Design Workbench — native domain tools\n"
          "Usage: gd matrix|connectivity|skill-atoms|scaffolding|mda|controls|rules|resources [options]\n"
          "       gd view matrix|skill-atoms|mda|resources|explorer [options]\n"
-         "       gd query --list | --question NAME --projection actors|effects [options]\n\n"
-         "Built-in queries: object-bindings, actor-states, effect-contributors. No query DSL.\n"
+         "       gd query --list | --question NAME --projection NAME [options]\n\n"
+         "Built-in actor/effect and structural queries: query --list for supported pairs/parameters. No DSL.\n"
          "  --object ALIAS/NOUN    Exact declared noun type; not a global runtime actor\n"
          "  --axis ALIAS/AXIS      Exact typed axis; --participant LOCAL selects case binding\n"
          "  --value VALUE          Finite variant list (repeatable), or one effect state\n"
          "  --effect KIND          Effect family from query --list; alternative to --to ID\n"
          "  --status STATUS        Query source filter; repeatable or all alone\n"
-         "  --work-limit N         Query-stage charged work, 0..67108864; construction separate\n"
+         "  --work-limit N         Search work: actor/effect 0..67108864, structural 0..16777216; construction separate\n"
          "  Actor states require --case/--axis; default only authored A. Other facts stay fixed.\n"
          "  Effect contributors include definitions/placements, whole guards and exact calls.\n"
-         "  Query --fields: see --list. Query views/ghosts remain pending.\n\n"
+         "  Query --fields and narrower Actors/Effects UI controls: see --list. IPC unavailable.\n"
+         "  Structural --relation/--start repeat; --scope-root restricts Relationships.\n"
+         "  Structural --direction forward|backward|both; --avoid only native support candidates.\n\n"
          "Unified explorer: gd view explorer with explicit collection bindings below.\n"
-         "  One window; six projections; unavailable views explain missing roles.\n"
+         "  One window; eight projections; unavailable views explain missing roles.\n"
          "  --mode skills|challenges|relationships|matrix|mda|resources|actors|effects (default first available)\n"
          "  --layout grid|graph|columns             Explorer: requires --mode matrix\n"
          "  Supports --frames, --screenshot, --output and error-output format flags.\n"
@@ -186,6 +189,8 @@ static int application(int argc, char **argv) {
     const char *resource_to=NULL; int resource_accepted=0;
     GD_SkillUnlocks *skill_query=NULL;
     GD_Query *query=NULL; GD_QueryRequest query_request={0};
+    GD_StructureOptions structural={0}; int structural_only=0,query_work_supplied=0;
+    structural.work_limit=GD_GRAPH_ANALYSIS_WORK;
     const char *question=NULL,*projection=NULL,*object_name=NULL,*axis_name=NULL;
     const char *error_code="cli.arguments"; int query_list=0;
     query_request.case_index=query_request.noun=query_request.axis=query_request.effect_kind=-1;
@@ -285,6 +290,23 @@ static int application(int argc, char **argv) {
             const char **destination=!strcmp(argv[i],"--question") ? &question:!strcmp(argv[i],"--projection") ? &projection:!strcmp(argv[i],"--object") ? &object_name:!strcmp(argv[i],"--axis") ? &axis_name:&query_request.participant;
             if (++i==argc || *destination || !*argv[i] || strlen(argv[i])>386) { error="Query selector needs one nonempty value of at most 386 bytes"; break; }
             *destination=argv[i];
+        } else if (command==15 && (!strcmp(argv[i],"--start") || !strcmp(argv[i],"--relation"))) {
+            int root=!strcmp(argv[i],"--start"); int *length=root ? &structural.root_count:&structural.relation_count; const char **items=root ? structural.roots:structural.relations;
+            structural_only=1;
+            if (++i==argc || !*argv[i] || strlen(argv[i])>=GD_MAX_PATH || *length>=GD_STRUCTURE_SELECTORS) { error="Structural selectors need bounded values, at most 64 roots/relation kinds"; break; }
+            items[(*length)++]=argv[i];
+        } else if (command==15 && (!strcmp(argv[i],"--avoid") || !strcmp(argv[i],"--scope-root"))) {
+            const char **destination=!strcmp(argv[i],"--avoid") ? &structural.avoid:&structural.scope_root; structural_only=1;
+            if (++i==argc || *destination || !*argv[i] || strlen(argv[i])>=GD_MAX_PATH) { error="Supply one bounded --avoid or --scope-root identity"; break; }
+            *destination=argv[i];
+        } else if (command==15 && !strcmp(argv[i],"--include-inactive")) { structural_only=1; structural.include_inactive=1;
+        } else if (command==15 && !strcmp(argv[i],"--lens")) {
+            structural_only=1;
+            if (++i==argc) { error="--lens needs any, same-role or changed-role"; break; }
+            if (!strcmp(argv[i],"any")) structural.lens=GD_GRAPH_ANY;
+            else if (!strcmp(argv[i],"same-role")) structural.lens=GD_GRAPH_SAME_ROLE;
+            else if (!strcmp(argv[i],"changed-role")) structural.lens=GD_GRAPH_CHANGED_ROLE;
+            else { error="--lens needs any, same-role or changed-role"; break; }
         } else if (command==15 && !strcmp(argv[i],"--value")) {
             if (++i==argc || !*argv[i] || strlen(argv[i])>GD_MAX_RULE_LINE || query_request.value_count==GD_ACTOR_VARIANTS) { error="--value needs bounded literal, at most 64 values"; break; }
             query_request.values[query_request.value_count++]=argv[i];
@@ -299,7 +321,7 @@ static int application(int argc, char **argv) {
             if (++i==argc) { error="--work-limit requires 0..67108864"; break; }
             value=strtol(argv[i],&end,10);
             if (end==argv[i] || *end || value<0 || value>GD_EFFECT_WORK) { error="--work-limit requires 0..67108864"; break; }
-            query_request.work_limit=(int)value;
+            query_request.work_limit=(int)value; structural.work_limit=(int)value; query_work_supplied=1;
         } else if (!strcmp(argv[i], "--status") || !strcmp(argv[i], "--include") || !strcmp(argv[i], "--exclude")) {
             const char *option = argv[i];
             int *length = !strcmp(option,"--status") ? &control_filter.status_count : !strcmp(option,"--include") ? &control_filter.include_count : &control_filter.exclude_count;
@@ -386,12 +408,18 @@ static int application(int argc, char **argv) {
             if (command!=14) { error="--accepted-only applies to resources"; break; }
             resource_accepted=1;
         } else if (!strcmp(argv[i], "--from")) {
-            if (++i == argc || !argv[i][0] || strlen(argv[i]) > (command==14 ? GD_MAX_PATH-1:257)) { error = "--from requires ALIAS/NAME (up to 257 bytes)"; break; }
+            if (++i == argc || !argv[i][0] || strlen(argv[i]) > ((command==14 || command==15) ? GD_MAX_PATH-1:257)) { error = "--from requires ALIAS/NAME (up to 257 bytes)"; break; }
             from = argv[i];
         } else if (!strcmp(argv[i], "--direction")) {
             direction_supplied = 1;
             if (++i == argc) { error = mda_command ? "--direction requires forward, backward, or both" : "--direction requires down or right"; break; }
-            if (mda_command) {
+            if (command==15) {
+                structural_only=1;
+                if (!strcmp(argv[i],"forward")) structural.direction=GD_STRUCTURE_FORWARD;
+                else if (!strcmp(argv[i],"backward")) structural.direction=GD_STRUCTURE_BACKWARD;
+                else if (!strcmp(argv[i],"both")) structural.direction=GD_STRUCTURE_BOTH;
+                else error="--direction needs forward, backward or both for structural queries";
+            } else if (mda_command) {
                 if (!strcmp(argv[i],"forward")) mda_direction = GD_MDA_FORWARD;
                 else if (!strcmp(argv[i],"backward")) mda_direction = GD_MDA_BACKWARD;
                 else if (!strcmp(argv[i],"both")) mda_direction = GD_MDA_BOTH;
@@ -412,6 +440,13 @@ static int application(int argc, char **argv) {
             if (++i == argc) { error = "--screenshot requires a PNG path"; break; }
             screenshot = argv[i];
         } else error = "Unknown option; see --help";
+    }
+    if (command==15 && !query_list && gd_structure_kind(question)>=0) {
+        if (!error && (object_name || axis_name || query_request.participant || query_request.value_count || query_request.effect_kind>=0 || analyze || case_name || assumption_count || context_assumption_count || control_filter.include_count || control_filter.exclude_count || known_count || frames || screenshot || output_path || layout_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied)) error="Structural query does not accept actor/effect/scenario/control/view parameters";
+        structural.question=question; structural.projection=projection; structural.from=from; structural.to=query_request.target_id; structural.status_count=control_filter.status_count;
+        for (i=0;i<structural.status_count;++i) structural.statuses[i]=control_filter.statuses[i];
+        for (i=0;i<count;++i) collections[i].role=source_roles[i];
+        return gd_structure_cli(allocator,collections,count,&structural,json,fields,error);
     }
     if (command==13) {
         if (!error && (!count || fields || from || known_count || analyze || case_name || assumption_count || context_assumption_count ||
@@ -439,10 +474,11 @@ static int application(int argc, char **argv) {
     }
     if (command==15) {
         if (query_list) {
-            if (!error && (count || question || projection || object_name || axis_name || query_request.participant || query_request.target_id || query_request.value_count || query_request.effect_kind>=0 || case_name || assumption_count || context_assumption_count || control_filter.status_count || control_filter.include_count || control_filter.exclude_count || known_count || from || analyze || frames || screenshot || output_path || layout_supplied || direction_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied || (fields && (!json || strcmp(fields,"questions"))))) error="query --list supports only output format and --fields questions";
+            if (!error && (structural_only || query_work_supplied || count || question || projection || object_name || axis_name || query_request.participant || query_request.target_id || query_request.value_count || query_request.effect_kind>=0 || case_name || assumption_count || context_assumption_count || control_filter.status_count || control_filter.include_count || control_filter.exclude_count || known_count || from || analyze || frames || screenshot || output_path || layout_supplied || direction_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied || (fields && (!json || strcmp(fields,"questions"))))) error="query --list supports only output format and --fields questions";
             if (!error) return gd_write_query_catalogue(stdout,json) && !fflush(stdout) ? 0:2;
         } else {
             int kind=gd_query_kind(question);
+            if (!error && structural_only) error="Structural-only parameters do not apply to this query";
             if (!error && analyze) error="query does not accept --analyze; use rules for full branch comparison";
             if (!error && kind<0) error="--question needs an implemented name from query --list";
             if (!error && (!projection || strcmp(projection,gd_query_projection((GD_QueryKind)kind)))) { error="Operation unavailable on requested projection; inspect query --list"; error_code="query.projection_unavailable"; }

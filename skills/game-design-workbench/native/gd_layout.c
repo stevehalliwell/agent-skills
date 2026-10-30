@@ -16,6 +16,22 @@ static int compare_order(const void *a, const void *b) {
     return order ? order : (left->key > right->key) - (left->key < right->key);
 }
 #include "gd_layout_directed.h"
+int gd_matrix_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort) {
+    int record_node[GD_MAX_RECORDS],i;
+    if (!model || !layout) return 0;
+    memset(layout,0,sizeof(*layout)); layout->group_count=model->component_count;
+    for (i=0;i<model->record_count;++i) {
+        const GD_Record *record=&model->records[i]; GD_LayoutNode *node; record_node[i]=-1;
+        if (record->role!=GD_NOUN && record->role!=GD_VERB) continue;
+        record_node[i]=layout->node_count; node=&layout->nodes[layout->node_count++];
+        node->key=i; node->label=record->name; node->group=model->component_of[i]; node->side=record->role==GD_VERB; node->degree=model->connectivity[i].partners;
+    }
+    for (i=0;i<model->cell_count;++i) {
+        GD_LayoutEdge *edge=&layout->edges[layout->edge_count++]; edge->a=record_node[model->cells[i].noun]; edge->b=record_node[model->cells[i].verb];
+        edge->key=i; edge->active=model->cells[i].active; edge->relation=GD_RELATION_CASE_PAIR;
+    }
+    return gd_layout_arrange(layout,mode,sort);
+}
 int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort) {
     LayoutOrder order[GD_MAX_RECORDS];
     int i, pass, counts[GD_MAX_RECORDS][2] = {{0}};

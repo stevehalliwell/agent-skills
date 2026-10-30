@@ -29,7 +29,7 @@ static int same_projection(const GD_Layout *layout, const unsigned char *shown,
     return 1;
 }
 static int charge(GD_GraphAnalysis *analysis) {
-    if (analysis->work==GD_GRAPH_ANALYSIS_WORK) return 0;
+    if (analysis->work==analysis->work_limit) return 0;
     ++analysis->work; return 1;
 }
 /* One owner group per shared identity. Alternatives retain distinct typed
@@ -76,14 +76,15 @@ static int add_match(GD_GraphAnalysis *analysis, int left, int right) {
     }
     return 0;
 }
-int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
-                     int include_inactive, GD_GraphLens lens, GD_GraphAnalysis *analysis) {
+int gd_graph_analyze_bounded(const GD_Layout *layout, const unsigned char *shown,
+                     int include_inactive, GD_GraphLens lens, int work_limit, GD_GraphAnalysis *analysis) {
     int i,kept,begin;
     assert(layout && analysis && layout->node_count>=0 && layout->node_count<=GD_MAX_RECORDS);
     assert(layout->edge_count>=0 && layout->edge_count<=GD_MAX_PAIRS);
-    assert(lens>=GD_GRAPH_ANY && lens<GD_GRAPH_LENS_COUNT);
+    assert(lens>=GD_GRAPH_ANY && lens<GD_GRAPH_LENS_COUNT && work_limit>=0 && work_limit<=GD_GRAPH_ANALYSIS_WORK);
     include_inactive=include_inactive!=0;
-    if (same_projection(layout,shown,include_inactive,lens,analysis)) return 0;
+    if (analysis->work_limit==work_limit && same_projection(layout,shown,include_inactive,lens,analysis)) return 0;
+    analysis->work_limit=work_limit;
     analysis->initialized=1; analysis->include_inactive=include_inactive; analysis->lens=lens;
     analysis->node_count=layout->node_count; analysis->edge_count=layout->edge_count;
     analysis->shown_nodes=analysis->shown_edges=analysis->feature_count=analysis->pair_count=analysis->work=0;
@@ -134,6 +135,10 @@ int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
         begin=end;
     }
     return 1;
+}
+int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
+                     int include_inactive, GD_GraphLens lens, GD_GraphAnalysis *analysis) {
+    return gd_graph_analyze_bounded(layout,shown,include_inactive,lens,GD_GRAPH_ANALYSIS_WORK,analysis);
 }
 /* A deduplicated owner group is sorted by relation/endpoint. Unlike global
    discovery, checking one pair needs no quadratic join or truncated result. */

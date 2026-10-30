@@ -1,4 +1,5 @@
 #include "gd_query.h"
+#include "gd_structure_cli.h"
 #include <math.h>
 #include <string.h>
 
@@ -162,7 +163,7 @@ static void contributor(FILE *out, const GD_Query *query, int row) {
 int gd_write_query_catalogue(FILE *out, int json) {
     int i;
     static const char *const parameters[]={"--object, --case, --participant, --axis, --status", "--case and --axis required; --participant (default authored A), --object, --value (repeatable), --assume, --context, --context-not, --status", "--to opaque result ID OR --axis/--value/--effect; --object, --case (root placement), --status"};
-    if (!json) { for (i=0;i<GD_QUERY_COUNT;++i) fprintf(out,"%s [%s]: %s\n",gd_query_name((GD_QueryKind)i),gd_query_projection((GD_QueryKind)i),parameters[i]); return !ferror(out); }
+    if (!json) { for (i=0;i<GD_QUERY_COUNT;++i) fprintf(out,"%s [%s]: %s\n",gd_query_name((GD_QueryKind)i),gd_query_projection((GD_QueryKind)i),parameters[i]); return gd_write_structure_catalogue(out,0,0); }
     fputs("{\"schema_version\":1,\"ok\":true,\"data\":{\"questions\":[",out);
     for (i=0;i<GD_QUERY_COUNT;++i) {
         if (i) fputc(',',out); fputs("{\"name\":",out); gd_json_string(out,gd_query_name((GD_QueryKind)i)); member(out,"projection",gd_query_projection((GD_QueryKind)i)); member(out,"parameters",parameters[i]);
@@ -180,7 +181,8 @@ int gd_write_query_catalogue(FILE *out, int json) {
         if (i==GD_QUERY_CONTRIBUTORS) fputs(",\"--case placement filter\",\"--axis/--value/--effect filters (choose result instead)\"",out);
         fprintf(out,"],\"ipc_available\":false,\"work_limit_max\":%d}",GD_EFFECT_WORK);
     }
-    fputs("]},\"coverage\":{\"scope\":\"implemented_builtin_catalogue_only\",\"complete\":true,\"source_data_loaded\":false},\"errors\":[],\"breadcrumbs\":[\"gd query --question NAME --projection actors|effects with explicit collection bindings; query --list advertises only implemented operations\"]}\n",out); return !ferror(out);
+    gd_write_structure_catalogue(out,1,GD_QUERY_COUNT);
+    fputs("]},\"coverage\":{\"scope\":\"implemented_builtin_catalogue_only\",\"complete\":true,\"source_data_loaded\":false},\"errors\":[],\"breadcrumbs\":[\"gd query --question NAME --projection NAME with explicit collection bindings; query --list advertises only implemented operations\"]}\n",out); return !ferror(out);
 }
 int gd_write_query(FILE *out, const GD_Model *model, const GD_Query *query, int json, const char *fields) {
     int i,j,comma=0,complete=model->error_count==0 && model->errors_omitted==0 && query!=NULL;

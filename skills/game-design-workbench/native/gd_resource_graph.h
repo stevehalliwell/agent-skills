@@ -55,6 +55,8 @@ GD_ResourceGraph *gd_resource_graph_build(GD_Model *model, const GD_Rules *rules
    Call once; analysis must outlive graph and match its model/rules snapshots. */
 int gd_resource_graph_bind_calls(GD_ResourceGraph *graph, const GD_RuleAnalysis *analysis);
 void gd_resource_graph_destroy(GD_ResourceGraph *graph);
+/* Conservative coverage, shared by derived queries; not outcome validation. */
+int gd_resource_graph_incomplete(const GD_ResourceGraph *graph);
 /* Resolve template participant to existing root-context participant; no new actor.
    At most expansion-depth * log2(total compiled bindings) comparisons. */
 int gd_resource_instance_actor(const GD_ResourceGraph *graph, int activation, int participant);
@@ -65,6 +67,7 @@ int gd_resource_node_id(const GD_ResourceGraph *graph, int node, int hint, char 
 int gd_resource_node_remap(const GD_ResourceGraph *old, int node, const GD_ResourceGraph *fresh);
 /* Read-only direct/instantiated incidence report, not final gameplay outcomes.
    Valid graph from builder/bind_calls; borrowed snapshots must remain alive. */
+void gd_write_resource_coverage(FILE *output, const GD_ResourceGraph *graph);
 int gd_write_resource_result(FILE *output, const GD_Model *model, const GD_ResourceGraph *graph, int json, const char *fields);
 #ifdef GD_WITH_VIEW
 int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const char *screenshot);

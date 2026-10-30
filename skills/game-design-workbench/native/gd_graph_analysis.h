@@ -93,7 +93,7 @@ typedef struct {
     GD_GraphClosure foundations, reachability;
     GD_GraphShapes shapes;
     GD_GraphOverview overview;
-    int shown_nodes, shown_edges, feature_count, pair_count, complete, work;
+    int shown_nodes, shown_edges, feature_count, pair_count, complete, work, work_limit;
 } GD_GraphAnalysis;
 /* Zero-initialize once. NULL mask includes all nodes. Inactive edges count only
    when include_inactive is true. Cached analysis->shown may serve as mask for
@@ -106,6 +106,10 @@ typedef struct {
    Alternatives may satisfy both lenses. Counts still deduplicate neighbors. */
 int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
                      int include_inactive, GD_GraphLens lens, GD_GraphAnalysis *analysis);
+/* Same fixed bounded incidence construction; limits only global pair discovery.
+   Zero still supplies exact direct counts/features, never a negative pair claim. */
+int gd_graph_analyze_bounded(const GD_Layout *layout, const unsigned char *shown,
+    int include_inactive, GD_GraphLens lens, int work_limit, GD_GraphAnalysis *analysis);
 /* Retained match, or -1. Partial result cannot establish absence of a match. */
 int gd_graph_match(const GD_GraphAnalysis *analysis, int node, int peer);
 /* Exact one-hop comparison over the shown projection, even when global pair
@@ -155,7 +159,8 @@ const GD_GraphClosure *gd_graph_reachability_prepare(GD_GraphAnalysis *analysis,
    Source arc = 2*projected link + reversed-endpoint bit. No route semantics. */
 int gd_graph_closure_path(const GD_GraphAnalysis *analysis, const GD_GraphClosure *closure, int side, int target, int *arcs, int capacity);
 const char *gd_graph_relation_name(int relation);
-/* One typed relation. reverse follows b->a; undirected follows both endpoint
+/* One typed relation, or -1 for all already-selected kinds (mixed-kind paths).
+   reverse follows b->a; undirected follows both endpoint
    directions (connections, not flow). NULL eligible includes shown nodes;
    NULL boundary means no external source-boundary facts. Cache is invalidated
    with graph analysis; pass its foundations member. Work charges queue visits

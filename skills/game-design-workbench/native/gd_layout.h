@@ -61,6 +61,8 @@ void gd_layout_step(GD_Layout *layout, int held_node);
 void gd_layout_move_node(GD_Layout *layout, int node, float x, float y);
 void gd_layout_pickup_node(GD_Layout *layout, int node, float x, float y);
 void gd_layout_drag_node(GD_Layout *layout, int node, float x, float y);
+/* Sparse noun/verb cells; active means at least one declared case. */
+int gd_matrix_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort);
 /* Skill-domain adapter in gd_skills.c. Rank bands compress numeric gaps and
    order same-rank prerequisites by depth. No source ranks are assigned. */
 int gd_skill_layout(const GD_Model *model, GD_Layout *layout, int rank_mode, int horizontal, GD_LayoutSort sort);

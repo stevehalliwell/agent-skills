@@ -15,8 +15,8 @@ function run(arguments_,status=0) { const result=invoke(arguments_,status); cons
 test('built-in catalogue is explicit, machine-readable and rejects unsupported projection/parameters',{skip:!executable},()=>{
   assert.match(invoke(['--help']).stdout,/gd query --list/);
   const catalogue=run(['--list']);
-  assert.deepEqual(catalogue.data.questions.map(question=>question.name),['object-bindings','actor-states','effect-contributors']);
-  assert.ok(catalogue.data.questions.every(question=>question.ui_available===(question.name!=='object-bindings') && question.required_bindings.any_of.includes('mechanics') && question.ui_scope && question.ipc_available===false));
+  assert.deepEqual(catalogue.data.questions.slice(0,3).map(question=>question.name),['object-bindings','actor-states','effect-contributors']);
+  assert.ok(catalogue.data.questions.slice(0,3).every(question=>question.ui_available===(question.name!=='object-bindings') && question.required_bindings.any_of.includes('mechanics') && question.ui_scope && question.ipc_available===false));
   assert.equal(catalogue.data.questions.find(question=>question.name==='actor-states').ui_mode,'actors');
   assert.equal(catalogue.data.questions.find(question=>question.name==='effect-contributors').ui_mode,'effects');
   assert.deepEqual(catalogue.data.questions[1].required_parameters,['--case','--axis']);

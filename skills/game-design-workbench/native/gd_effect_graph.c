@@ -56,7 +56,7 @@ GD_EffectGraph *gd_effect_graph_build(const GD_ResourceGraph *source, int work_l
     assert(source->relation_count>=0 && source->relation_count<=GD_RESOURCE_GRAPH_RELATIONS);
     graph=source->allocator.allocate(source->allocator.context,sizeof(*graph)); if (!graph) return NULL;
     memset(graph,0,sizeof(*graph)); graph->allocator=source->allocator; graph->source=source; graph->work_limit=work_limit;
-    graph->source_incomplete=source->limited || source->unexamined_cases || source->unexamined_roles || source->composition_unexamined || source->preservation_unexamined || source->unknown_case_coverage || !source->calls_bound || !source->rules->effect_bindings_complete || !source->rules->preservation_bindings_complete || !source->rules->quantity_bindings_complete;
+    graph->source_incomplete=gd_resource_graph_incomplete(source);
     for (i=0;i<source->node_count;++i) graph->activations[i]=-1;
     for (i=0;i<source->node_count;++i) {
         if (!charge(graph,1)) break;
