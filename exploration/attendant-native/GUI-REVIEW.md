@@ -68,7 +68,7 @@ Independent reviewers traced selected-path fixes and whole-app ownership, save/c
 ## Remaining gates
 
 1. Resolve blockers above; recovery strategy remains undecided.
-2. Repeat human preview review. Existing manual viewer remains previous build, not silently upgraded.
+2. Human confirmed two preview comments in separately opened latest build: cross-paragraph bold/italic selection and plain/bold selection within table cell. Continue remaining manual dirty-target/resolution cases; previous viewer was not silently upgraded.
 3. Complete copied-real-project GUI/CLI loop and agent guidance.
 4. Measure startup, idle, interaction and distribution footprint. No new performance claim from smoke tests.
 5. Keep wider glyph/Unicode, long-path, DPI, device-loss, long-run and power-loss limits explicit.
