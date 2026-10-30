@@ -23,6 +23,7 @@ Trigger is invisible in the world. Whether to add a HUD acknowledgement is open,
 
 ```gd-rule
 case cross-checkpoint:
+    target: Checkpoint
     context: Hero crossesTrigger Checkpoint
     unknown_conditions: checkpoint-strip progress trigger in current game, not every arbitrary checkpoint placement.
     unknown_effects: Store retry anchor; no life/Clock/power grant. Future death uses anchor with separate retry reset. Invisible trigger; HUD acknowledgement open.
@@ -32,6 +33,7 @@ case cross-checkpoint:
         noun: nouns/checkpoint
 
 case new-game:
+    target: Checkpoint
     unknown_conditions: New-game occurrence, not a retry.
     unknown_effects: Clear retry anchor; no persistent save file.
     Checkpoint:

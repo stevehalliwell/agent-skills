@@ -26,6 +26,8 @@ Defeat walker, credit its configured award and consume spark, freeing a live-sho
 
 ```gd-rule
 case spark-defeat:
+    target: Walker
+    becomes: dead
     context: Spark touches Walker
     unknown_conditions: Spark is Hero-owned; original defeat credited once; owner/instance identity and deduplication unencoded.
     unknown_effects: Remove Walker, consume Spark and free its live-shot slot; no second award from removed enemy. Owner-count association unencoded, not guessed.
@@ -35,7 +37,6 @@ case spark-defeat:
     Walker:
         noun: nouns/walker
         requires: alive
-        becomes: dead
     Score:
         noun: nouns/score
         set:

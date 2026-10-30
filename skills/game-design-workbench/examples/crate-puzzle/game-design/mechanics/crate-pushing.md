@@ -29,6 +29,7 @@ A successful push requires a free destination and energy at least push-cost. Mov
 
 ```gd-rule
 case successful-push:
+    target: Crate
     unknown_conditions: Push request with free destination; geometry, direction and input bindings unencoded.
     unknown_effects: Move Crate one cell into free destination; canonical push-duration describes duration. No Player-follow result supplied. Movement/spending are one occurrence, not sequential expression evaluation.
     Player:
@@ -42,6 +43,7 @@ case successful-push:
             Amount: this - {control-vars/push-cost}
 
 case wall-blocked:
+    target: Crate
     unknown_conditions: Wall occupies attempted push destination.
     unknown_effects: Move nothing; spend nothing for this push.
     Player:
@@ -55,6 +57,7 @@ case wall-blocked:
         preserve: Amount
 
 case insufficient-energy:
+    target: Crate
     unknown_conditions: Push attempted.
     unknown_effects: Move nothing; spend nothing. Pulling unavailable, not another invented no-effect rule.
     Player:

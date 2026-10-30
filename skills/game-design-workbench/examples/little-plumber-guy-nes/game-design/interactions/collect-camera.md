@@ -16,6 +16,7 @@ Camera is viewport state, not a world pickup, so hero overlap does not form a me
 
 ```gd-rule
 case not-applicable:
+    target: Camera
     unknown_conditions: Coverage not_applicable: Camera is viewport state, not a world pickup; collection overlap not meaningful. This is not a gameplay applicability case.
     unknown_effects: No collectible outcome declared; not unknown response, exclusion or a defined no-effect pickup.
     Camera:

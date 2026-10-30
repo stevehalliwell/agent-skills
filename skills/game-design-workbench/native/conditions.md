@@ -6,6 +6,7 @@ Review 01 slice. Shared C99 compiles participant `requires` and case-local `skip
 
 ```gd-rule
 case contact:
+    target: Player
     Player:
         noun: nouns/hero
         requires: alive AND (tall OR spark) AND NOT protected

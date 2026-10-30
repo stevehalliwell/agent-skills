@@ -27,6 +27,8 @@ Consume flower and become spark. Current live-shot count still gates shooting. A
 
 ```gd-rule
 case collect-tall:
+    target: Flower
+    becomes: consumed
     context: Hero overlaps Flower
     unknown_effects: Consume Flower and gain spark capability; current live-shot count still gates shooting.
     Hero:
@@ -36,9 +38,10 @@ case collect-tall:
     Flower:
         noun: nouns/spark-flower
         requires: available
-        becomes: consumed
 
 case collect-already-spark:
+    target: Flower
+    becomes: consumed
     context: Hero overlaps Flower
     unknown_effects: Consume another Flower without further form change; live-shot cap still applies.
     Hero:
@@ -47,5 +50,4 @@ case collect-already-spark:
         preserve: Form
     Flower:
         noun: nouns/spark-flower
-        becomes: consumed
 ```

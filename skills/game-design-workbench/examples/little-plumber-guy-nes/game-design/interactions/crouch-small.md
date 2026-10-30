@@ -24,6 +24,7 @@ No additional collision-size reduction. Do not grant movement through narrower p
 
 ```gd-rule
 case small-input:
+    target: Hero
     unknown_conditions: Crouch input received.
     unknown_effects: No additional collision-size reduction, narrower-passage capability or hidden immunity. Cosmetic pose optional; no dimensions supplied.
     Hero:

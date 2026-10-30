@@ -25,6 +25,7 @@ Choose whether stance remains low, motion is constrained, or another safe respon
 
 ```gd-rule
 case release-without-clearance:
+    target: Hero
     unknown_conditions: Tall/spark Hero releases crouch without enough standing clearance; geometry/predicate unencoded.
     unknown_effects: No response adopted; remain low, constrain motion or another response unselected.
     Hero:

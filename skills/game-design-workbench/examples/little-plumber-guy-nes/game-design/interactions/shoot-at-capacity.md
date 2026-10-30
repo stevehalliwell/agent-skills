@@ -24,6 +24,7 @@ Create nothing and queue nothing. Releasing a slot later does not retroactively 
 
 ```gd-rule
 case full-cap:
+    target: Hero
     unknown_conditions: Shoot request while already at live cap; event timing unencoded.
     unknown_effects: Create nothing, queue nothing; later slot release does not retroactively fire. Zero configured capacity deliberately disables requests.
     Hero:

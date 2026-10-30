@@ -26,6 +26,7 @@ Clear end-state acknowledgement is required; exact animation is not part of this
 
 ```gd-rule
 case hero-finish:
+    target: Finish
     context: Hero touches Finish
     unknown_conditions: Active course; same-frame lethal/expiry ordering unresolved.
     unknown_effects: Commit completion, stop Clock spending and disable further hazards. Clear end acknowledgement required; exact animation, post-height award, remaining-time conversion and next-level implementation unspecified.
@@ -38,6 +39,7 @@ case hero-finish:
         noun: nouns/clock
 
 case shot-not-finish:
+    target: Finish
     context: Spark touches Finish
     unknown_effects: Shot contact does not finish course. Other projectile collision response unspecified, not automatic ignore/pass-through.
     Spark:

@@ -25,6 +25,7 @@ No displacement from input; clock and enemies continue. Clock expiry can still e
 
 ```gd-rule
 case active-wait:
+    target: Hero
     unknown_conditions: Hero waits on safe floor while course active; elapsed interval unspecified.
     unknown_effects: No input displacement; Clock and enemies continue, expiry may kill. Waiting not pause/completion; no fixed drain or enemy update fabricated.
     Hero:

@@ -22,14 +22,16 @@ Standing up under insufficient clearance is unresolved and has an explicit unkno
 
 ```gd-rule
 case lower-profile:
+    target: Hero
+    becomes: lowered
     unknown_conditions: Crouch held while grounded.
     unknown_effects: Lower standing collision profile; no crawl. Exact dimensions unspecified.
     Hero:
         noun: nouns/hero
         requires: (tall OR spark) AND supported
-        becomes: lowered
 
 case small-no-reduction:
+    target: Hero
     unknown_conditions: Crouch input.
     unknown_effects: No additional collision-size reduction for small form; no narrower-passage or hidden-immunity capability.
     Hero:
@@ -37,6 +39,7 @@ case small-no-reduction:
         requires: small
 
 case airborne-input:
+    target: Hero
     unknown_conditions: Crouch input while airborne.
     unknown_effects: No crouch-jump capability granted; other motion unspecified.
     Hero:
@@ -44,6 +47,7 @@ case airborne-input:
         requires: unsupported
 
 case release-without-clearance:
+    target: Hero
     unknown_conditions: Tall/spark Hero releases crouch without sufficient standing clearance.
     unknown_effects: Standing response unselected; no automatic safe correction.
     Hero:

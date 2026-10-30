@@ -25,11 +25,12 @@ Begin unsupported fall. Death occurs only at lower boundary, not at the instant 
 
 ```gd-rule
 case lose-support:
+    target: Hero
+    becomes: unsupported, falling
     unknown_conditions: Horizontal movement passes beyond support without active jump; geometry unencoded.
     unknown_effects: Begin unsupported fall; death only at lower boundary, not instant support loss. No automatic rescue jump or physical trajectory.
     Hero:
         noun: nouns/hero
-        becomes: unsupported, falling
     Gap:
         noun: nouns/gap
 ```

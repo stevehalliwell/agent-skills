@@ -31,6 +31,7 @@ Apply [crate pushing](../mechanics/crate-pushing.md). Crate movement makes displ
 
 ```gd-rule
 case free-push:
+    target: Crate
     unknown_conditions: Push request into free destination; spatial placement, direction and destination binding unencoded.
     unknown_effects: Apply crate-pushing: move Crate one cell into free destination; visible displacement. Player-follow movement unspecified.
     Player:

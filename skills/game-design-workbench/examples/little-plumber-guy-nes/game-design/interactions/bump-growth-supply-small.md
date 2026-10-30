@@ -27,6 +27,8 @@ Release one moving grow-cap above the block; turn block spent. Reward can move a
 
 ```gd-rule
 case release-cap:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid underside hit on authored unspent growth supply.
     unknown_effects: Release one moving Grow-cap above Block; reward can move away/miss. Keep spent Block solid. Bump alone does not change Hero form; collection later. Spawn geometry/motion unconfigured.
@@ -36,5 +38,4 @@ case release-cap:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.growth
-        becomes: spent
 ```

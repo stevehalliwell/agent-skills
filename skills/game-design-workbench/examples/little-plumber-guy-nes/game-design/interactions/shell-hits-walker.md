@@ -27,6 +27,8 @@ Remove walker, award its configured points once and let shell continue. No chain
 
 ```gd-rule
 case sliding-defeat:
+    target: Walker
+    becomes: dead
     context: Shell touches Walker
     unknown_conditions: Credit original defeat once; event identity/deduplication unencoded.
     unknown_effects: Remove Walker; Shell continues sliding. No chain multiplier or ownership safety; continued motion magnitude unknown.
@@ -37,7 +39,6 @@ case sliding-defeat:
     Walker:
         noun: nouns/walker
         requires: alive
-        becomes: dead
     Score:
         noun: nouns/score
         set:

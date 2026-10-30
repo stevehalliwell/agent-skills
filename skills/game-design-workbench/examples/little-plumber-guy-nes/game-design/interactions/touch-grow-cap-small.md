@@ -27,6 +27,8 @@ Consume pickup and become tall. No life or safety window granted. Clearance hand
 
 ```gd-rule
 case collect:
+    target: Cap
+    becomes: consumed
     context: Hero overlaps Cap
     unknown_effects: Consume pickup; no life or safety-window grant. Growth under inadequate ceiling clearance unresolved; exact geometry unconfigured.
     Hero:
@@ -36,5 +38,4 @@ case collect:
     Cap:
         noun: nouns/grow-cap
         requires: available
-        becomes: consumed
 ```

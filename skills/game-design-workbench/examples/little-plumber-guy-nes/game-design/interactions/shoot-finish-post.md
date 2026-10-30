@@ -18,6 +18,7 @@ Remote projectile activation of finish-post is deliberately outside this design.
 
 ```gd-rule
 case excluded-remote-activation:
+    target: Finish
     unknown_conditions: Coverage excluded: remote projectile activation deliberately outside design, not gameplay applicability.
     unknown_effects: Hero must reach marker; no universal projectile-ignore collision behavior declared.
     Finish:

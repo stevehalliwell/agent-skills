@@ -25,6 +25,8 @@ Block remains solid and pays nothing. Brick-breaking rule does not apply to this
 
 ```gd-rule
 case spent-solid:
+    target: Block
+    preserve: SupplyState
     context: Hero undersideContacts Block
     unknown_effects: Remain solid and pay nothing; brick-breaking does not apply. Solid-collision response has no numeric geometry.
     Hero:
@@ -32,5 +34,4 @@ case spent-solid:
     Block:
         noun: nouns/supply-block
         requires: spent
-        preserve: SupplyState
 ```

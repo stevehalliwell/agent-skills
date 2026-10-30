@@ -27,6 +27,8 @@ Consume pickup while preserving form. No extra life, damage protection or invent
 
 ```gd-rule
 case collect-powered:
+    target: Cap
+    becomes: consumed
     context: Hero overlaps Cap
     unknown_effects: Consume pickup; no extra life, protection or invented score.
     Hero:
@@ -35,5 +37,4 @@ case collect-powered:
         preserve: Form
     Cap:
         noun: nouns/grow-cap
-        becomes: consumed
 ```

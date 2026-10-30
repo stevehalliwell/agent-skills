@@ -27,24 +27,26 @@ Advance toward input direction; update facing. This is successful movement, unli
 
 ```gd-rule
 case walk-target:
+    target: Hero
+    set:
+        TargetSpeed: {control-vars/walk-speed}
     unknown_conditions: Horizontal input on support, no blocking surface, Run not held; input/facing direction unencoded.
     unknown_effects: Advance toward input and update facing; target speed not instant actual velocity. Acceleration/braking/displacement unspecified.
     Hero:
         noun: nouns/hero
         requires: supported
-        set:
-            TargetSpeed: {control-vars/walk-speed}
     Ground:
         noun: nouns/ground
 
 case run-target:
+    target: Hero
+    set:
+        TargetSpeed: {control-vars/run-speed}
     unknown_conditions: Horizontal input on support, no blocking surface, Run held; direction unencoded.
     unknown_effects: Advance/update facing; actual motion/acceleration not configured or instant target attainment.
     Hero:
         noun: nouns/hero
         requires: supported
-        set:
-            TargetSpeed: {control-vars/run-speed}
     Ground:
         noun: nouns/ground
 ```

@@ -28,6 +28,7 @@ No additional enemy damage. Keep protection feedback visible until expiry. This 
 
 ```gd-rule
 case protected-walker:
+    target: Target
     context: Hero touches Target
     unknown_effects: No additional enemy damage; show protection feedback until expiry. Do not disable gaps, Clock or geometry; target result unspecified. This damage rule does not suppress separately authored stomps.
     Hero:
@@ -38,6 +39,7 @@ case protected-walker:
         noun: nouns/walker
 
 case protected-walking-shellback:
+    target: Target
     context: Hero touches Target
     unknown_effects: No additional enemy damage; feedback until expiry; gaps, Clock, geometry and separately authored stomps remain active. Target result unspecified.
     Hero:
@@ -49,6 +51,7 @@ case protected-walking-shellback:
         requires: walking
 
 case protected-sliding-shell:
+    target: Target
     context: Hero touches Target
     unknown_effects: No additional enemy damage; feedback until expiry; gaps, Clock, geometry and separately authored stomps remain active. Target result unspecified.
     Hero:

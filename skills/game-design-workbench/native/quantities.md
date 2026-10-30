@@ -4,13 +4,14 @@ Author readable rules. Shared C99 math handles controls and actor quantities; no
 
 ```gd-rule
 case spend:
+    target: Actor
+    set:
+        Amount: this - {control-vars/push-cost}
     context: ANY
     Actor:
         noun: nouns/player-energy
         requires: Amount >= {control-vars/push-cost}
         other_axes: ANY
-        set:
-            Amount: this - {control-vars/push-cost}
 ```
 
 - Predicate LHS names one numeric axis through owning participant's explicit inventory. Bare technical name or canonical axis reference; no global guesses.

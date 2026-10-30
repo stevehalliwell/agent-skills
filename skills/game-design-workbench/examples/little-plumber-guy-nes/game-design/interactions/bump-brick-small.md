@@ -27,6 +27,8 @@ End upward penetration and show a bump. Brick remains; no score or reward. The s
 
 ```gd-rule
 case small-bump:
+    target: Brick
+    preserve: BrickState
     context: Hero undersideContacts Brick
     unknown_effects: End upward penetration and show bump; no score/reward. Exact collision response unconfigured.
     Hero:
@@ -34,5 +36,4 @@ case small-bump:
         requires: small AND rising
     Brick:
         noun: nouns/brick
-        preserve: BrickState
 ```

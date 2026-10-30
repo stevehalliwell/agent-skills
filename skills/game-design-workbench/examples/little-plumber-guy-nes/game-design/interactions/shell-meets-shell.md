@@ -26,6 +26,7 @@ Stopping, reversal, destruction and pass-through are not selected. Coverage rema
 
 ```gd-rule
 case two-sliding-shells:
+    target: First
     context: First touches Second
     unknown_effects: Stopping, reversal, destruction and pass-through not selected.
     First:

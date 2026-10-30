@@ -26,6 +26,8 @@ Retract to stationary shell, credit original shellback award once and rebound he
 
 ```gd-rule
 case retract:
+    target: Target
+    becomes: resting
     context: Hero topContacts Target
     unknown_conditions: Descending top contact; original Shellback award once, event uniqueness unencoded.
     unknown_effects: Retract same persistent actor to stationary Shell; rebound Hero. Exact rebound magnitude unconfigured; Shell remains and may later become hazard.
@@ -36,7 +38,6 @@ case retract:
     Target:
         noun: nouns/shellback
         requires: walking
-        becomes: resting
     Score:
         noun: nouns/score
         set:

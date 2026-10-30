@@ -28,6 +28,7 @@ Spend the shared active clock. Coins are not free of time cost. If policy is cha
 
 ```gd-rule
 case active-cellar:
+    target: Hero
     unknown_conditions: Hero explores or waits in coin-cellar; room identity and elapsed active interval unencoded.
     unknown_effects: Spend shared active Clock for elapsed active play, not fixed tick. False cellar policy stops room spending; changing policy needs explicit adoption. Coins not free of time cost.
     Hero:

@@ -26,6 +26,7 @@ Hitbox dimensions, collision ordering and moving-platform behavior are not speci
 
 ```gd-rule
 case ground-solid:
+    target: Surface
     unknown_conditions: Contact with solid Ground; top/side/underside geometry, leaving-support event and collision order unencoded.
     unknown_effects: Prevent penetration; top supports landing, side stops obstructed travel, underside ends upward penetration. Leaving support begins falling. No numerical correction/tolerance or moving-platform behavior specified.
     Hero:
@@ -34,6 +35,7 @@ case ground-solid:
         noun: nouns/ground
 
 case step-solid:
+    target: Surface
     unknown_conditions: Contact with solid Step; contact direction/geometry and collision ordering unencoded.
     unknown_effects: Prevent penetration; top supports landing, side stops obstructed travel, underside ends upward penetration. Leaving support starts falling; no numerical correction/tolerance.
     Hero:
@@ -42,6 +44,7 @@ case step-solid:
         noun: nouns/step
 
 case pipe-solid:
+    target: Surface
     unknown_conditions: Contact with solid Pipe; contact direction/geometry and ordering unencoded.
     unknown_effects: Prevent penetration; top supports landing, side blocks travel, underside ends upward penetration; leaving support starts fall. Entering declared connector is separate rule, not every Pipe.
     Hero:
@@ -50,6 +53,7 @@ case pipe-solid:
         noun: nouns/pipe
 
 case ceiling-solid:
+    target: Surface
     unknown_conditions: Contact with solid Ceiling; geometry/direction/ordering unencoded.
     unknown_effects: Prevent penetration; top landing/side stop/underside upward stop apply according to contact direction. Ceiling not necessarily reward block; leaving support falls. No collision dimensions supplied.
     Hero:
@@ -58,6 +62,7 @@ case ceiling-solid:
         noun: nouns/ceiling
 
 case intact-brick-solid:
+    target: Hero
     unknown_conditions: Contact with intact Brick; contact direction/geometry unencoded.
     unknown_effects: Prevent penetration; top supports landing, side stops travel, underside stops upward penetration and may invoke separately authored brick response. Leaving support falls; no automatic invocation from link or file order.
     Hero:
@@ -67,6 +72,7 @@ case intact-brick-solid:
         requires: intact
 
 case supply-solid:
+    target: Hero
     unknown_conditions: Contact with solid Supply Block, including spent view; exact contact direction/geometry unencoded.
     unknown_effects: Prevent penetration; top supports landing, side stops travel, underside stops upward penetration and may invoke authored supply response on valid hit. Spent Block remains solid; leaving support falls. No moving platforms in this course.
     Hero:

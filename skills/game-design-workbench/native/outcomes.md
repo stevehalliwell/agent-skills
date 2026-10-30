@@ -30,11 +30,12 @@ Each proposal retains root participant/noun, canonical axis, state or numeric va
 
 ```gd-rule
 case contact:
+    target: Player
+    causes: mechanics/power-loss#small with Victim=Player, Budget=Lives
     context: ANY
     Player:
         noun: nouns/hero
         requires: ANY
-        causes: mechanics/power-loss#small with Victim=Player, Budget=Lives
     Lives:
         noun: nouns/lives
         requires: ANY
@@ -43,7 +44,8 @@ case contact:
 Invocation: `ALIAS/NAME[#CASE] with Callee=Caller, Other=OtherCaller`. Separate calls with semicolons. Reference without case selects all callee cases, still unordered.
 
 - Every selected callee participant needs explicit map to a local caller. No label/type-based guessing. Known noun types must agree; unknown bindings remain incomplete rather than authorize a transformation.
-- Shorthand `causes: mechanics/power-loss#small` inside participant binds only when every selected callee case has exactly one participant. Local spelling need not match.
+- Case-level calls use explicit primary target as caller; scoped calls keep their participant. Neither scope overrides the other.
+- Shorthand `causes: mechanics/power-loss#small` inside participant or at case level binds only when every selected callee case has exactly one participant. Local spelling need not match.
 - Expand iteratively. Active-path cycles, unavailable calls, work/depth limits and opaque effects remain incomplete. No implicit repeated application, later tick, automatic repair or sequential mutation.
 - All direct/invoked quantity expressions read same immutable starting facts. Mapping changes participant identity, never values or time.
 - Composition preserves every declared source/effect. Explicit reference agreement is not independent corroboration.

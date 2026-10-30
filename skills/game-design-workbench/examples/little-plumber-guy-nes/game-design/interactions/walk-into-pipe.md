@@ -26,6 +26,7 @@ Prevent penetration; hero remains adjacent. No damage, transfer, reward or autom
 
 ```gd-rule
 case solid-side:
+    target: Hero
     context: Hero sideContacts Pipe
     unknown_conditions: Horizontal travel meets solid Pipe side.
     unknown_effects: Prevent penetration; remain adjacent. No damage, transfer, reward or automatic climb; exact separation unknown.

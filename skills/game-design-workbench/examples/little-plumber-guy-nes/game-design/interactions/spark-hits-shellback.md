@@ -26,6 +26,8 @@ Defeat enemy and consume spark; grant shellback award once. Do not leave a resti
 
 ```gd-rule
 case spark-defeat:
+    target: Target
+    becomes: dead
     context: Spark touches Target
     unknown_conditions: Hero-owned Spark contacts unretracted walking Shellback; original award once, event identity unencoded.
     unknown_effects: Remove defeated enemy, consume Spark/free slot. Do not leave resting Shell; existing-shell impact remains unknown. Owner-count association unencoded.
@@ -35,7 +37,6 @@ case spark-defeat:
     Target:
         noun: nouns/shellback
         requires: walking
-        becomes: dead
     Score:
         noun: nouns/score
         set:

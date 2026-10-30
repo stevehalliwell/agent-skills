@@ -30,12 +30,13 @@ Defeat and projectile removal should be visible; these rules do not imply a comp
 
 ```gd-rule
 case walker-defeat:
+    target: Spark
+    becomes: consumed
     context: Spark touches Target
     unknown_conditions: Hero-owned Spark contacts eligible Walker; original defeat once, owner/event identity unencoded.
     unknown_effects: Remove defeated enemy, consume Spark/free live slot; visible defeat/removal. Owner-count association unencoded.
     Spark:
         noun: nouns/spark
-        becomes: consumed
     Target:
         noun: nouns/walker
         becomes: dead
@@ -45,12 +46,13 @@ case walker-defeat:
             ScoreAmount: this + {control-vars/walker-points}
 
 case walking-shellback-defeat:
+    target: Spark
+    becomes: consumed
     context: Spark touches Target
     unknown_conditions: Hero-owned Spark, original eligible enemy event once; owner/event identity unencoded.
     unknown_effects: Remove enemy, consume Spark/free live slot. Do not leave resting Shell; visible defeat/removal, count association unspecified.
     Spark:
         noun: nouns/spark
-        becomes: consumed
     Target:
         noun: nouns/shellback
         requires: walking
@@ -61,22 +63,25 @@ case walking-shellback-defeat:
             ScoreAmount: this + {control-vars/shellback-points}
 
 case wall-removal:
+    target: Spark
+    becomes: removed
     unknown_conditions: Spark contacts wall; no canonical Wall noun or geometry supplied.
     unknown_effects: Remove Spark/free live slot; owner/count binding unencoded, no wall damage invented.
     Spark:
         noun: nouns/spark
-        becomes: removed
 
 case viewport-removal:
+    target: Spark
+    becomes: removed
     unknown_conditions: Spark leaves active viewport; boundary coordinates/owner binding unencoded.
     unknown_effects: Remove Spark/free live slot; viewport exit is not guessed maximum range.
     Spark:
         noun: nouns/spark
-        becomes: removed
     Camera:
         noun: nouns/camera
 
 case floor-bounce:
+    target: Spark
     context: Spark touches Ground
     unknown_conditions: Floor contact.
     unknown_effects: Bounce Spark; no speed or arc magnitude supplied.
@@ -86,6 +91,7 @@ case floor-bounce:
         noun: nouns/ground
 
 case existing-shell-unknown:
+    target: Spark
     context: Spark touches Shell
     unknown_effects: Existing-Shell response unspecified; do not reuse walking-Shellback defeat.
     Spark:

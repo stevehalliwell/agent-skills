@@ -22,10 +22,11 @@ No second launch. Preserve current motion apart from other active rules. This is
 
 ```gd-rule
 case no-second-launch:
+    target: Hero
+    preserve: Motion
     unknown_conditions: Repeat jump press while unsupported.
     unknown_effects: No second launch; preserve current motion against this action only. Other active gravity/collision/movement continue; exact continuing quantities not configured.
     Hero:
         noun: nouns/hero
         requires: unsupported
-        preserve: Motion
 ```

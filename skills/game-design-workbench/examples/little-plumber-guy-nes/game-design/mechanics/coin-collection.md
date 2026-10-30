@@ -30,6 +30,8 @@ HUD bank and score change. Collection does not restore clock, grow hero or prote
 
 ```gd-rule
 case world-below:
+    target: Coin
+    becomes: consumed
     context: Hero overlaps Coin
     unknown_conditions: Hero collection of original world Coin once; event identity unencoded.
     unknown_effects: Remove token/update HUD. No Clock restoration, growth or enemy protection.
@@ -37,7 +39,6 @@ case world-below:
         noun: nouns/hero
     Coin:
         noun: nouns/coin
-        becomes: consumed
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount < {control-vars/coins-for-life} - 1[coin]
@@ -49,6 +50,8 @@ case world-below:
             ScoreAmount: this + {control-vars/coin-points}
 
 case world-threshold:
+    target: Coin
+    becomes: consumed
     context: Hero overlaps Coin
     unknown_conditions: Original world Coin collection credited once; event identity unencoded.
     unknown_effects: Remove token/update HUD, immediate conversion even at life cap; no sequential second credit. Multiple thresholds from unstable initial bank unspecified. No Clock restoration/growth/protection.
@@ -56,7 +59,6 @@ case world-threshold:
         noun: nouns/hero
     Coin:
         noun: nouns/coin
-        becomes: consumed
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount >= {control-vars/coins-for-life} - 1[coin]
@@ -72,6 +74,9 @@ case world-threshold:
             Amount: min(this + 1[life], {control-vars/life-capacity})
 
 case direct-below:
+    target: Bank
+    set:
+        CoinAmount: this + 1[coin]
     unknown_conditions: Hero collection consumes one direct block payout, not second world Coin; once-only event identity unencoded.
     unknown_effects: Consume payout/update HUD. No Clock restoration, growth or protection.
     Hero:
@@ -79,14 +84,15 @@ case direct-below:
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount < {control-vars/coins-for-life} - 1[coin]
-        set:
-            CoinAmount: this + 1[coin]
     Score:
         noun: nouns/score
         set:
             ScoreAmount: this + {control-vars/coin-points}
 
 case direct-threshold:
+    target: Bank
+    set:
+        CoinAmount: this + 1[coin] - {control-vars/coins-for-life}
     unknown_conditions: Hero consumes original direct block payout once, not second world Coin; event identity unencoded.
     unknown_effects: Consume payout/update HUD; immediate conversion even at life cap. Multiple thresholds from unstable bank unspecified; no restoration/growth/protection.
     Hero:
@@ -94,8 +100,6 @@ case direct-threshold:
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount >= {control-vars/coins-for-life} - 1[coin]
-        set:
-            CoinAmount: this + 1[coin] - {control-vars/coins-for-life}
     Score:
         noun: nouns/score
         set:

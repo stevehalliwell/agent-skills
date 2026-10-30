@@ -27,6 +27,8 @@ Release one stationary spark-flower above block and mark block spent. Current po
 
 ```gd-rule
 case release-flower:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid underside hit on authored unspent growth supply.
     unknown_effects: Release one stationary Spark-flower above Block; keep spent Block solid. No randomized drop; exact placement unspecified.
@@ -36,5 +38,4 @@ case release-flower:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.growth
-        becomes: spent
 ```

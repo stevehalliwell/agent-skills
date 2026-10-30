@@ -28,6 +28,8 @@ Stationary shell state must contrast with a live walker and a sliding shell.
 
 ```gd-rule
 case retract:
+    target: Target
+    becomes: resting
     context: Hero topContacts Target
     unknown_conditions: Descending top contact; original Shellback award once, event uniqueness unencoded.
     unknown_effects: Retract same persistent actor into stationary Shell and rebound Hero. Rebound magnitude/trajectory unknown; stationary/walking/sliding visuals must contrast.
@@ -38,13 +40,13 @@ case retract:
     Target:
         noun: nouns/shellback
         requires: walking
-        becomes: resting
     Score:
         noun: nouns/score
         set:
             ScoreAmount: this + {control-vars/shellback-points}
 
 case later-kick-or-stop:
+    target: Target
     unknown_conditions: Later kick/stop of already retracted original Shellback; event identity unencoded.
     unknown_effects: No repeated original award; shell-travel owns detailed kick/stop transitions, not silently inherited.
     Target:
@@ -54,6 +56,7 @@ case later-kick-or-stop:
         preserve: ScoreAmount
 
 case unretracted-small-side:
+    target: Target
     context: Hero sideContacts Target
     unknown_conditions: Harmful side contact, not valid stomp; original enemy-contact behavior explicitly composed.
     Hero:
@@ -66,6 +69,7 @@ case unretracted-small-side:
         noun: nouns/lives
 
 case unretracted-powered-side:
+    target: Target
     context: Hero sideContacts Target
     unknown_conditions: Harmful side contact, not valid stomp.
     Hero:
@@ -78,6 +82,7 @@ case unretracted-powered-side:
         noun: nouns/lives
 
 case unretracted-protected-side:
+    target: Target
     context: Hero sideContacts Target
     Hero:
         noun: nouns/hero

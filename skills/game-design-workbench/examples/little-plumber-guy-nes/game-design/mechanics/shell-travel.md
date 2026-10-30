@@ -28,6 +28,8 @@ Two-shell collision, shell contact with another walking shellback, and precise l
 
 ```gd-rule
 case kick-resting:
+    target: Shell
+    becomes: sliding
     context: Hero sideContacts Shell
     unknown_effects: Launch away from Hero; speed/hazard separation unresolved; no extra kick button or repeat award.
     Hero:
@@ -35,38 +37,42 @@ case kick-resting:
     Shell:
         noun: nouns/shellback
         requires: resting
-        becomes: sliding
 
 case walker-impact:
+    target: Shell
+    preserve: ShellState
     context: Shell touches Walker
     unknown_effects: Defeat Walker and continue sliding; score award belongs to separate explicit score-awards/interaction declaration, not inherited or duplicated here.
     Shell:
         noun: nouns/shellback
         requires: sliding
-        preserve: ShellState
     Walker:
         noun: nouns/walker
         becomes: dead
 
 case pipe-reversal:
+    target: Shell
+    preserve: ShellState
     context: Shell sideContacts Pipe
     unknown_effects: Reverse horizontal direction, remain sliding; speed/separation unknown.
     Shell:
         noun: nouns/shellback
         requires: sliding
-        preserve: ShellState
     Pipe:
         noun: nouns/pipe
 
 case wall-reversal:
+    target: Shell
+    preserve: ShellState
     unknown_conditions: Sliding Shell reaches solid wall; no canonical Wall noun in this example, no guessed binding to another noun.
     unknown_effects: Reverse horizontal direction, remain sliding; magnitude/separation unconfigured.
     Shell:
         noun: nouns/shellback
         requires: sliding
-        preserve: ShellState
 
 case descending-stop:
+    target: Shell
+    becomes: resting
     context: Hero topContacts Shell
     unknown_effects: Stop Shell, rebound Hero; magnitude/trajectory unknown, no repeated original-enemy award.
     Hero:
@@ -76,9 +82,9 @@ case descending-stop:
     Shell:
         noun: nouns/shellback
         requires: sliding
-        becomes: resting
 
 case small-side:
+    target: Shell
     context: Hero sideContacts Shell
     unknown_conditions: Harmful side contact outside valid stomp; apply enemy-contact, one lethal event; deduplication unresolved.
     unknown_effects: One life spent; later retry separate. Shell result unspecified; original ownership gives no safety.
@@ -95,6 +101,7 @@ case small-side:
             Amount: this - 1[life]
 
 case powered-side:
+    target: Shell
     context: Hero sideContacts Shell
     unknown_conditions: Harmful side contact outside valid stomp; apply enemy-contact.
     unknown_effects: Power loss/protection feedback, no life charge; Shell result and expiration law unspecified.
@@ -112,6 +119,7 @@ case powered-side:
         preserve: Amount
 
 case protected-side:
+    target: Shell
     context: Hero sideContacts Shell
     unknown_conditions: Harmful side contact outside valid stomp; apply enemy-contact.
     unknown_effects: No additional enemy damage; gaps/Clock/geometry remain active, not frozen protection duration.
@@ -124,14 +132,16 @@ case protected-side:
         requires: sliding
 
 case no-automatic-waking:
+    target: Shell
+    preserve: ShellState
     unknown_conditions: No kick/contact occurrence triggering another authored transition; this forbids automatic waking, not other active effects.
     unknown_effects: Resting Shell never automatically re-emerges.
     Shell:
         noun: nouns/shellback
         requires: resting
-        preserve: ShellState
 
 case two-shell-unknown:
+    target: First
     context: First touches Second
     unknown_effects: Two-Shell collision response unresolved.
     First:
@@ -142,6 +152,7 @@ case two-shell-unknown:
         requires: sliding
 
 case walking-shellback-unknown:
+    target: Shell
     context: Shell touches Other
     unknown_effects: Shell contact with walking Shellback unresolved.
     Shell:

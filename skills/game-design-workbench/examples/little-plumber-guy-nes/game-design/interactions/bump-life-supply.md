@@ -27,6 +27,8 @@ Reveal block, release life-cap and mark spent. Discovery is optional, not requir
 
 ```gd-rule
 case reveal-life:
+    target: Block
+    becomes: spent, revealed
     context: Hero undersideContacts Block
     unknown_conditions: Valid rising head hit on authored concealed life supply near brick-canopy; location/valid-hit predicate unencoded.
     unknown_effects: Release Life-cap, not immediate life award; reveal spent solid Block. Discovery optional; not every hidden location encoded.
@@ -36,5 +38,4 @@ case reveal-life:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.life AND concealed
-        becomes: spent, revealed
 ```

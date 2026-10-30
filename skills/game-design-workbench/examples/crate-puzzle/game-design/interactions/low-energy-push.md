@@ -32,6 +32,7 @@ Shared pushing rule prevents displacement and spending. Walking remains governed
 
 ```gd-rule
 case insufficient-energy:
+    target: Crate
     unknown_conditions: Push attempted; action/placement unencoded.
     unknown_effects: No displacement or spending for this push; walking remains independently governed by grid-walking.
     Player:

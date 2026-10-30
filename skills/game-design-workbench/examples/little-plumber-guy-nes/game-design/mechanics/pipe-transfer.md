@@ -25,6 +25,7 @@ Challenge next links show route alternatives, not the alignment predicate or tra
 
 ```gd-rule
 case entrance:
+    target: Connector
     unknown_conditions: Aligned Down input on pipe-steps declared entrance; instance/alignment predicate unencoded.
     unknown_effects: Transfer to coin-cellar, clear transient shots, reset Camera anchor. Transition time not active play. Other reset axes unspecified.
     Hero:
@@ -50,6 +51,7 @@ case entrance:
         preserve: TimeRemaining
 
 case one-way-return:
+    target: Connector
     unknown_conditions: Use coin-cellar exit connector; no reverse transfer. Instance/coordinates unencoded.
     unknown_effects: Transfer to bonus-return near shell-lane; clear shots and reset Camera anchor. No recovery of skipped course opportunities through reverse transfer. Other reset dimensions unspecified.
     Hero:
@@ -75,6 +77,7 @@ case one-way-return:
         preserve: TimeRemaining
 
 case ordinary-solid-pipe:
+    target: Pipe
     unknown_conditions: Pipe lacks authored entrance connection.
     unknown_effects: Ordinary Pipe remains solid; no transfer or invented destination.
     Hero:

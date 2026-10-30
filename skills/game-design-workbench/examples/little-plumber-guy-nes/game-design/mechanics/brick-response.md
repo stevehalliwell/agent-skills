@@ -28,6 +28,8 @@ A bump and actual break must look distinct. Removing geometry changes available 
 
 ```gd-rule
 case small-bump:
+    target: Brick
+    preserve: BrickState
     context: Hero undersideContacts Brick
     unknown_effects: Bump/end upward penetration; Brick remains; no reward. Geometry/collision response unconfigured.
     Hero:
@@ -35,9 +37,10 @@ case small-bump:
         requires: rising AND small
     Brick:
         noun: nouns/brick
-        preserve: BrickState
 
 case powered-break:
+    target: Brick
+    becomes: destroyed
     context: Hero undersideContacts Brick
     unknown_conditions: Original destruction credited once; event identity/deduplication unencoded.
     unknown_effects: Remove geometry/landing support; break feedback distinct from bump, no hidden item. Not pickup collection.
@@ -46,13 +49,13 @@ case powered-break:
         requires: rising AND (tall OR spark)
     Brick:
         noun: nouns/brick
-        becomes: destroyed
     Score:
         noun: nouns/score
         set:
             ScoreAmount: this + {control-vars/brick-points}
 
 case other-contact-solid:
+    target: Brick
     unknown_conditions: Other contact with ordinary Brick, excluding valid destructive underside branch; exact geometry unencoded.
     unknown_effects: Solid collision, not reward collection; numerical response unspecified.
     Hero:

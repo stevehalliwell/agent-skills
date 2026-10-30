@@ -28,6 +28,7 @@ Accepted authoring specimen. Native `gd rules` reads this block as declarations.
 
 ```gd-rule
 case powered-side-contact:
+    target: Walker
     context: Player sideContacts Walker
 
     Player:

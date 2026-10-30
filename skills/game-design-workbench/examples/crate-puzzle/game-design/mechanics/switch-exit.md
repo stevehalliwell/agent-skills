@@ -7,24 +7,26 @@ A crate occupying the switch opens the exit; removing it closes the exit. Closed
 
 ```gd-rule
 case occupied:
+    target: Switch
+    becomes: occupied
     context: Crate occupies Switch
     Crate:
         noun: nouns/crate
     Switch:
         noun: nouns/switch
-        becomes: occupied
     Exit:
         noun: nouns/exit
         becomes: open
 
 case crate-removed:
+    target: Switch
+    becomes: empty
     unknown_conditions: Crate removed from this Switch; event and geometry unencoded.
     unknown_effects: Closed-exit walking remains unspecified.
     Crate:
         noun: nouns/crate
     Switch:
         noun: nouns/switch
-        becomes: empty
     Exit:
         noun: nouns/exit
         becomes: closed

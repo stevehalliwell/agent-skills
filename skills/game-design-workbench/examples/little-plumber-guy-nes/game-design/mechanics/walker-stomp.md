@@ -27,6 +27,8 @@ Rebound height and simultaneous contact arbitration remain unspecified.
 
 ```gd-rule
 case descending-defeat:
+    target: Walker
+    becomes: dead
     context: Hero topContacts Walker
     unknown_conditions: Original descending top defeat once; event identity/deduplication unencoded.
     unknown_effects: Remove Walker, rebound Hero; height/impulse/trajectory and simultaneous arbitration unknown; geometry/later hazards active, no chain multiplier.
@@ -36,13 +38,13 @@ case descending-defeat:
         becomes: rising
     Walker:
         noun: nouns/walker
-        becomes: dead
     Score:
         noun: nouns/score
         set:
             ScoreAmount: this + {control-vars/walker-points}
 
 case small-side:
+    target: Walker
     context: Hero sideContacts Walker
     unknown_conditions: Harmful side contact outside valid stomp; explicit selected enemy-contact case.
     Hero:
@@ -54,6 +56,7 @@ case small-side:
         noun: nouns/lives
 
 case powered-side:
+    target: Walker
     context: Hero sideContacts Walker
     unknown_conditions: Harmful side contact outside valid stomp.
     Hero:
@@ -65,6 +68,7 @@ case powered-side:
         noun: nouns/lives
 
 case protected-side:
+    target: Walker
     context: Hero sideContacts Walker
     Hero:
         noun: nouns/hero
@@ -73,6 +77,7 @@ case protected-side:
         noun: nouns/walker
 
 case patrol:
+    target: Walker
     unknown_conditions: Walker patrol on support; wall/edge coordinates and geometry unencoded.
     unknown_effects: Reverse at walls, may fall off edges; no intelligent gap avoidance. Direction/speed/trajectory unknown.
     Walker:

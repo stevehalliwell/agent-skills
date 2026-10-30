@@ -31,6 +31,9 @@ Show life count change when one occurs; capacity must not wrap to zero.
 
 ```gd-rule
 case coin-threshold:
+    target: Lives
+    set:
+        Amount: min(this + 1[life], {control-vars/life-capacity})
     unknown_conditions: Threshold-conversion occurrence, not repeated application to same original event. Multiple thresholds from unstable bank state unspecified.
     unknown_effects: Convert coins even at life cap; capped award lost there. Show life count change when any; no score-based life rule or wrapping lives.
     Bank:
@@ -40,10 +43,11 @@ case coin-threshold:
             CoinAmount: this - {control-vars/coins-for-life}
     Lives:
         noun: nouns/lives
-        set:
-            Amount: min(this + 1[life], {control-vars/life-capacity})
 
 case life-cap:
+    target: Lives
+    set:
+        Amount: min(this + 1[life], {control-vars/life-capacity})
     context: Hero overlaps Cap
     unknown_conditions: Original Life-cap collection once; instance identity unencoded.
     unknown_effects: Consume even at cap; award lost there without bank change. No score-based life or wrap; show count change when any.
@@ -57,6 +61,4 @@ case life-cap:
         preserve: CoinAmount
     Lives:
         noun: nouns/lives
-        set:
-            Amount: min(this + 1[life], {control-vars/life-capacity})
 ```

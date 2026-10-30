@@ -30,6 +30,8 @@ Remove brick, award configured brick-points once and show break feedback. New em
 
 ```gd-rule
 case powered-break:
+    target: Brick
+    becomes: destroyed
     context: Hero undersideContacts Brick
     unknown_conditions: Credit original destruction once; event identity/deduplication unencoded.
     unknown_effects: Remove Brick geometry/landing support, show break feedback; no hidden item.
@@ -38,7 +40,6 @@ case powered-break:
         requires: rising AND (tall OR spark)
     Brick:
         noun: nouns/brick
-        becomes: destroyed
     Score:
         noun: nouns/score
         set:

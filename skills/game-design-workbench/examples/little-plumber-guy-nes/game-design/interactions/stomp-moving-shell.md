@@ -26,6 +26,8 @@ Stop shell and rebound hero. Do not grant another original-enemy award. Stopped 
 
 ```gd-rule
 case descending-stop:
+    target: Shell
+    becomes: resting
     context: Hero topContacts Shell
     unknown_effects: Stop persistent Shell and rebound Hero; exact rebound magnitude/trajectory unconfigured. No repeated original-enemy award; Shell can be kicked later, not destroyed.
     Hero:
@@ -35,5 +37,4 @@ case descending-stop:
     Shell:
         noun: nouns/shellback
         requires: sliding
-        becomes: resting
 ```

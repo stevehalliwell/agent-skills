@@ -26,6 +26,7 @@ Commit course completion, stop clock and disable later hazards. Show clear end f
 
 ```gd-rule
 case finish:
+    target: Finish
     context: Hero touches Finish
     unknown_conditions: Course active; marker beyond final-gap. Same-frame death/finish priority unresolved.
     unknown_effects: Commit completion, stop Clock spending and disable later hazards. Clear end acknowledgement; exact animation and simultaneous ordering unspecified.

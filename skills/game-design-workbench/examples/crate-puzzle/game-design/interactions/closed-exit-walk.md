@@ -28,6 +28,7 @@ What occurs when player attempts to enter a closed exit? Leave consequence unkno
 
 ```gd-rule
 case closed-entry:
+    target: Exit
     unknown_conditions: Player attempts entry into closed Exit; input and geometry unencoded.
     unknown_effects: No consequence selected for closed-exit walking.
     Player:

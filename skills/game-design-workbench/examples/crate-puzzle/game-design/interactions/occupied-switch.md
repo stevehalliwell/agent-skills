@@ -11,13 +11,14 @@ Apply [switch and exit](../mechanics/switch-exit.md). Exit state is visible; sou
 
 ```gd-rule
 case occupied:
+    target: Switch
+    becomes: occupied
     context: Crate occupies Switch
     unknown_effects: Apply switch-exit; make Exit state visible. Sound feedback unspecified.
     Crate:
         noun: nouns/crate
     Switch:
         noun: nouns/switch
-        becomes: occupied
     Exit:
         noun: nouns/exit
         becomes: open

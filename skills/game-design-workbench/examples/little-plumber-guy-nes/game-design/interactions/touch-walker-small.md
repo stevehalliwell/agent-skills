@@ -28,6 +28,7 @@ Invoke one lethal event through death-and-retry. Do not also process a stomp for
 
 ```gd-rule
 case lethal-side:
+    target: Walker
     context: Hero sideContacts Walker
     unknown_conditions: Harmful side contact, not valid stomp; one lethal occurrence. Simultaneous lethal deduplication required but unresolved.
     unknown_effects: One lethal event spends one life; later retry/game-end is separate death-and-retry occurrence, not simultaneous resurrection. Do not also process stomp. Walker result unspecified.

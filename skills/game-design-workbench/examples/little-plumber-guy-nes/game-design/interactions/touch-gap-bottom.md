@@ -26,12 +26,13 @@ Invoke lethal retry rule regardless of power form or enemy-contact protection. A
 
 ```gd-rule
 case gap-lethal:
+    target: Hero
+    becomes: dead
     context: Hero crossesLowerBoundary Gap
     unknown_conditions: Cross authored floor-gap lower death boundary regardless of form/protection. One death must not repeatedly charge overlapping lethal events; deduplication unresolved.
     unknown_effects: One lethal occurrence spends one life; later retry/game-end separate in death-and-retry. Enemy protection is not general invulnerability.
     Hero:
         noun: nouns/hero
-        becomes: dead
     Gap:
         noun: nouns/gap
     Lives:

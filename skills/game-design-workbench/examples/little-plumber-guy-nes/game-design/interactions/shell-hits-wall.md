@@ -28,22 +28,24 @@ Reverse horizontal direction and remain sliding. Returning shell can threaten it
 
 ```gd-rule
 case pipe-side:
+    target: Shell
+    preserve: ShellState
     context: Shell sideContacts Pipe
     unknown_effects: Reverse horizontal direction, remain sliding. No reward, transport or destruction; returning Shell can threaten kicker. No speed or separation supplied.
     Shell:
         noun: nouns/shellback
         requires: sliding
-        preserve: ShellState
     Pipe:
         noun: nouns/pipe
 
 case step-side:
+    target: Shell
+    preserve: ShellState
     context: Shell sideContacts Step
     unknown_effects: Reverse horizontal direction, remain sliding; no reward, transport or destruction. Speed/separation unspecified.
     Shell:
         noun: nouns/shellback
         requires: sliding
-        preserve: ShellState
     Step:
         noun: nouns/step
 ```

@@ -27,6 +27,7 @@ Apply enemy-contact according to form and protection. A shell launched by hero i
 
 ```gd-rule
 case small-side:
+    target: Shell
     context: Hero sideContacts Shell
     unknown_conditions: Harmful side contact outside valid stomp; original ownership gives no safety. One lethal occurrence; deduplication unresolved.
     unknown_effects: One life spent; later retry separate. Shell result unspecified.
@@ -43,6 +44,7 @@ case small-side:
             Amount: this - 1[life]
 
 case powered-side:
+    target: Shell
     context: Hero sideContacts Shell
     unknown_conditions: Outside valid stomp; apply enemy-contact; ownership does not suppress hazard.
     unknown_effects: Show power loss and temporary protection; no life charge for powered damage. Shell result and protection expiration law unspecified.
@@ -60,6 +62,7 @@ case powered-side:
         preserve: Amount
 
 case protected-side:
+    target: Shell
     context: Hero sideContacts Shell
     unknown_conditions: Outside valid stomp during enemy-contact safety window.
     unknown_effects: No further enemy damage; Clock, gaps and geometry remain active. Do not freeze protection duration or infer Shell result.

@@ -27,6 +27,8 @@ Credit one coin through coin-collection and show payout; turn block spent. Visua
 
 ```gd-rule
 case direct-below-threshold:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid unspent coin-supply underside hit; credit original payout once. Rising-hit qualifier supplied by supply-release, not inferred from noun.
     unknown_effects: Consume direct payout and show coin feedback/HUD; no second collectible world Coin.
@@ -35,7 +37,6 @@ case direct-below-threshold:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.coin
-        becomes: spent
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount < {control-vars/coins-for-life} - 1[coin]
@@ -47,6 +48,8 @@ case direct-below-threshold:
             ScoreAmount: this + {control-vars/coin-points}
 
 case direct-threshold:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid unspent coin-supply underside hit; original payout once. Rising-hit qualifier from supply-release.
     unknown_effects: Direct payout consumed, HUD feedback; immediate threshold conversion even at life cap. Not another world Coin or sequential double assignment. Multiple thresholds from unstable initial banks unspecified.
@@ -55,7 +58,6 @@ case direct-threshold:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.coin
-        becomes: spent
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount >= {control-vars/coins-for-life} - 1[coin]

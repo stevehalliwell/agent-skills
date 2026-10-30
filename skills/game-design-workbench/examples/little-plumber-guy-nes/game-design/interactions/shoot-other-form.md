@@ -24,10 +24,11 @@ No projectile and no resource cost. Preserve form. This is defined no effect, no
 
 ```gd-rule
 case other-form:
+    target: Hero
+    preserve: Form
     unknown_conditions: Shoot input received.
     unknown_effects: No projectile and no resource cost; not a blanket unchanged-actor result.
     Hero:
         noun: nouns/hero
         requires: small OR tall
-        preserve: Form
 ```

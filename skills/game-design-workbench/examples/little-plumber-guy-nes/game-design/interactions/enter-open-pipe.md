@@ -24,6 +24,7 @@ Transfer to coin-cellar with carried state and remaining clock. Camera anchor ch
 
 ```gd-rule
 case entrance-transfer:
+    target: Pipe
     unknown_conditions: Hero aligned/supported on pipe-steps declared entrance and presses Down. Instance identity/alignment geometry unencoded.
     unknown_effects: Transfer to coin-cellar, reanchor Camera, clear active shots. Transition time not active Clock time. Carry values explicitly preserved by pipe-transfer; other reset axes unspecified.
     Hero:

@@ -21,6 +21,7 @@ Arc change should be visible. Exact cutoff law and attainable heights remain ope
 
 ```gd-rule
 case ascending-release:
+    target: Hero
     unknown_conditions: Jump released during ascent.
     unknown_effects: Reduce remaining upward travel, visibly lower arc; not new jump type. Exact cutoff law/heights unspecified.
     Hero:
@@ -28,10 +29,11 @@ case ascending-release:
         requires: rising
 
 case descending-release:
+    target: Hero
+    preserve: Motion
     unknown_conditions: Jump released during descent.
     unknown_effects: Jump-cut leaves descent unchanged against release; gravity/collision continue, not frozen motion.
     Hero:
         noun: nouns/hero
         requires: falling
-        preserve: Motion
 ```

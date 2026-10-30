@@ -27,6 +27,8 @@ Show release and spent state clearly. No randomized drop table or repeated coin 
 
 ```gd-rule
 case coin-below:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid original payout hit once; event identity/geometry unencoded.
     unknown_effects: Direct coin-collection payout, not second world Coin; show payout/spent state and retain solid Block. No randomized/repeated payout.
@@ -36,7 +38,6 @@ case coin-below:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.coin
-        becomes: spent
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount < {control-vars/coins-for-life} - 1[coin]
@@ -48,6 +49,8 @@ case coin-below:
             ScoreAmount: this + {control-vars/coin-points}
 
 case coin-threshold:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid original payout hit once; event identity/geometry unencoded.
     unknown_effects: Direct credit and immediate conversion even at life cap; show spent/payout/HUD, keep solid Block. No second Coin or repeated payout. Multiple thresholds from unstable initial bank unspecified.
@@ -57,7 +60,6 @@ case coin-threshold:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.coin
-        becomes: spent
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount >= {control-vars/coins-for-life} - 1[coin]
@@ -73,6 +75,8 @@ case coin-threshold:
             Amount: min(this + 1[life], {control-vars/life-capacity})
 
 case growth-small:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid authored single-use hit.
     unknown_effects: Release one moving Grow-cap above Block, keep spent solid geometry. Not collection or random drop; spawn geometry/motion unconfigured.
@@ -82,9 +86,10 @@ case growth-small:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.growth
-        becomes: spent
 
 case growth-powered:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid authored single-use hit.
     unknown_effects: Release one stationary Spark-flower above Block, keep spent solid geometry. No random drop or immediate form upgrade; exact placement unknown.
@@ -94,9 +99,10 @@ case growth-powered:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.growth
-        becomes: spent
 
 case life-release:
+    target: Block
+    becomes: spent
     context: Hero undersideContacts Block
     unknown_conditions: Valid authored single-use hit.
     unknown_effects: Release Life-cap, not immediate life award; keep spent Block solid. Exact spawn geometry unknown.
@@ -106,9 +112,10 @@ case life-release:
     Block:
         noun: nouns/supply-block
         requires: unspent AND SupplyContent.life
-        becomes: spent
 
 case concealed-reveal:
+    target: Block
+    becomes: revealed
     context: Hero undersideContacts Block
     unknown_conditions: Same valid single-use rising payout hit on concealed authored supply; not independent second payout.
     unknown_effects: Make concealed supply visible; selected content case supplies same-occurrence payout/spending. Partial compatible declaration, no implicit invocation or duplicate coins.
@@ -118,13 +125,13 @@ case concealed-reveal:
     Block:
         noun: nouns/supply-block
         requires: unspent AND concealed
-        becomes: revealed
 
 case spent-no-payout:
+    target: Block
+    preserve: SupplyState
     unknown_conditions: Later hit after original payout.
     unknown_effects: Remain solid and dispense nothing; no Brick-rule break. Show release/spent state clearly.
     Block:
         noun: nouns/supply-block
         requires: spent
-        preserve: SupplyState
 ```

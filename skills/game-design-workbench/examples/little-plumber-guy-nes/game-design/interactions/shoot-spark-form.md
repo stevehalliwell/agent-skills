@@ -26,11 +26,12 @@ Create one spark in facing direction and show firing feedback. Projectiles are t
 
 ```gd-rule
 case fire:
+    target: Hero
+    set:
+        LiveSparks: this + 1[spark]
     unknown_conditions: Fresh shoot press; input/facing/spawn geometry unencoded.
     unknown_effects: Create one Hero-owned Spark in facing direction and firing feedback. Concurrent count, not persistent ammo; speed, bounce arc and range unspecified.
     Hero:
         noun: nouns/hero
         requires: spark AND LiveSparks < {control-vars/spark-capacity}
-        set:
-            LiveSparks: this + 1[spark]
 ```

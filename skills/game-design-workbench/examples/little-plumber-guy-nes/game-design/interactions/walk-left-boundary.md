@@ -24,6 +24,7 @@ Stop at boundary without moving camera backward. No damage or course reset. Pipe
 
 ```gd-rule
 case left-limit:
+    target: Hero
     unknown_conditions: Hero requests leftward movement beyond current Camera boundary; coordinate unencoded.
     unknown_effects: Stop at boundary without backward Camera scroll; no damage/reset. Transfer/retry can set another anchor through their own rules.
     Hero:

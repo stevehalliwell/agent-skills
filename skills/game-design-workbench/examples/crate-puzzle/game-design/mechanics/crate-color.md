@@ -23,6 +23,7 @@ Former decisions/crate-color; record_kind proposal; alternative_group crate-feed
 
 ```gd-rule
 case proposal-only:
+    target: Crate
     unknown_conditions: Proposed, not adopted: whether next push leaves a recovery option; test undefined.
     unknown_effects: Crate color could communicate recovery availability; no color mapping or accessibility behavior selected.
     Crate:

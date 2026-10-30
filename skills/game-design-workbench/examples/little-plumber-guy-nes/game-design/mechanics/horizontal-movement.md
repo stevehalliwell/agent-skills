@@ -25,41 +25,46 @@ Movement and facing should follow input visibly. No inference that target speed 
 
 ```gd-rule
 case walk-target:
+    target: Hero
+    set:
+        TargetSpeed: {control-vars/walk-speed}
     unknown_conditions: Supported directional input toward facing/input direction with Run not held; walls/Camera constrain travel.
     unknown_effects: Move toward target and visibly follow input/facing; actual displacement, acceleration/braking and instant target attainment not specified.
     Hero:
         noun: nouns/hero
         requires: supported
-        set:
-            TargetSpeed: {control-vars/walk-speed}
     Ground:
         noun: nouns/ground
 
 case run-target:
+    target: Hero
+    set:
+        TargetSpeed: {control-vars/run-speed}
     unknown_conditions: Supported directional input with Run held; walls/Camera constrain displacement.
     unknown_effects: Move toward input/facing target; actual velocity/acceleration unconfigured, not instant attainment.
     Hero:
         noun: nouns/hero
         requires: supported
-        set:
-            TargetSpeed: {control-vars/run-speed}
     Ground:
         noun: nouns/ground
 
 case opposite-inputs:
+    target: Hero
     unknown_conditions: Opposite horizontal inputs held together.
     unknown_effects: Inputs cancel; not invented immediate stop of actual velocity.
     Hero:
         noun: nouns/hero
 
 case leave-support:
+    target: Hero
+    becomes: unsupported, falling
     unknown_conditions: Step beyond support without another authored jump launch.
     unknown_effects: Begin fall; no automatic hop or premature death; geometry unencoded.
     Hero:
         noun: nouns/hero
-        becomes: unsupported, falling
 
 case air-steering:
+    target: Hero
     unknown_conditions: Horizontal input while airborne.
     unknown_effects: Air steering allowed; acceleration, braking and strength unspecified.
     Hero:

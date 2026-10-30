@@ -27,6 +27,8 @@ Consume flower and become tall only. This can happen after damage between releas
 
 ```gd-rule
 case collect-small:
+    target: Flower
+    becomes: consumed
     context: Hero overlaps Flower
     unknown_conditions: Flower already released in world; form at collection, not release time. Same object gives one upgrade only.
     unknown_effects: Consume Flower, become tall only; no sequential second upgrade. Damage may have occurred since release.
@@ -36,5 +38,4 @@ case collect-small:
         becomes: tall
     Flower:
         noun: nouns/spark-flower
-        becomes: consumed
 ```

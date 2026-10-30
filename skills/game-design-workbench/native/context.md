@@ -10,6 +10,7 @@ context_axes: [axes/Contact]
 ---
 ```gd-rule
 case contact:
+    target: Walker
     context: Player sideContacts Walker
     Player:
         noun: nouns/hero
@@ -27,6 +28,7 @@ case contact:
 
 ## Body fragment
 
+- Primary `target` and ordered context are independent declarations. Context operands do not infer A; A does not reverse or fill context.
 - `context: LEFT OPERATOR RIGHT` is ordered. LEFT/RIGHT must exactly name participants declared in this case. Same-type participants remain distinct. Names from another case or noun-reference spelling do not bind implicitly.
 - Keep `A touches B` distinct from `B touches A`. Self-relations are retained; no physical impossibility or reflexivity rule is invented.
 - Bare operator resolves only among the rule's declared context axes. Use `AXIS.VALUE` or `ALIAS/AXIS.VALUE` for disambiguation. Axis/value spelling is exact and case-sensitive.

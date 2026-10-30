@@ -26,6 +26,8 @@ Launch shell away from hero. No extra kick-button input or repeated shellback aw
 
 ```gd-rule
 case kick:
+    target: Shell
+    becomes: sliding
     context: Hero sideContacts Shell
     unknown_effects: Launch Shell away from Hero; no extra kick-button or repeated original-enemy award. Precise separation before hazard and launch speed unresolved.
     Hero:
@@ -33,5 +35,4 @@ case kick:
     Shell:
         noun: nouns/shellback
         requires: resting
-        becomes: sliding
 ```

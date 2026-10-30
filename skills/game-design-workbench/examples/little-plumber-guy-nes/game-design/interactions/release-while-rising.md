@@ -22,6 +22,7 @@ Reduce remaining rise and produce a visibly lower arc. Exact cutoff is open in j
 
 ```gd-rule
 case cut-rise:
+    target: Hero
     unknown_conditions: Jump released during ascent.
     unknown_effects: Reduce remaining upward travel, produce visibly lower arc. Exact cutoff law/magnitude unknown; do not invent trajectory or ground support.
     Hero:

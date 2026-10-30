@@ -26,6 +26,7 @@ Store retry anchor for current game. No immediate time, power or life refill. Tr
 
 ```gd-rule
 case cross-trigger:
+    target: Checkpoint
     context: Hero crossesTrigger Checkpoint
     unknown_conditions: checkpoint-strip progress trigger, not arbitrary placement.
     unknown_effects: Store current-game retry anchor; no immediate Clock/power/life refill. Visibility/HUD acknowledgement unresolved, not proof player noticed.

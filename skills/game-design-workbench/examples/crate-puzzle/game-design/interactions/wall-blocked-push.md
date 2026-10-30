@@ -32,6 +32,7 @@ Apply shared blocked-push rule: no movement or spending. Additional blocked-acti
 
 ```gd-rule
 case wall-blocked:
+    target: Crate
     unknown_conditions: Wall occupies attempted push destination; destination and spatial bindings unencoded.
     unknown_effects: Shared blocked-push rule: no movement or spending. Additional feedback unspecified.
     Player:

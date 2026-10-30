@@ -24,37 +24,40 @@ Distinguish visible form from actual shooting availability; live-shot capacity s
 
 ```gd-rule
 case small-collection:
+    target: Hero
+    becomes: tall
     context: Hero overlaps Flower
     unknown_conditions: Original pickup consumed once; same object cannot apply two upgrades in this occurrence.
     unknown_effects: Consume Flower for tall form only; upgrade persists until damage/retry, not timer. Live shot cap still applies; collection form not release form.
     Hero:
         noun: nouns/hero
         requires: small
-        becomes: tall
     Flower:
         noun: nouns/spark-flower
         becomes: consumed
 
 case tall-collection:
+    target: Hero
+    becomes: spark
     context: Hero overlaps Flower
     unknown_conditions: Original Flower consumed once.
     unknown_effects: Consume Flower; upgrade persists until damage/retry, not timer; live shot cap still applies.
     Hero:
         noun: nouns/hero
         requires: tall
-        becomes: spark
     Flower:
         noun: nouns/spark-flower
         becomes: consumed
 
 case spark-collection:
+    target: Hero
+    preserve: Form
     context: Hero overlaps Flower
     unknown_conditions: Original Flower consumed once.
     unknown_effects: Consume Flower without further form upgrade; live shot capacity still gates launch.
     Hero:
         noun: nouns/hero
         requires: spark
-        preserve: Form
     Flower:
         noun: nouns/spark-flower
         becomes: consumed

@@ -27,6 +27,8 @@ Consume item and award one life up to configured capacity. At capacity, consume 
 
 ```gd-rule
 case collect:
+    target: Cap
+    becomes: consumed
     context: Hero overlaps Cap
     unknown_effects: Consume even at life capacity; capped award lost there. No enemy protection; show life count change when it occurs.
     Hero:
@@ -35,7 +37,6 @@ case collect:
         preserve: Form
     Cap:
         noun: nouns/life-cap
-        becomes: consumed
     Lives:
         noun: nouns/lives
         set:

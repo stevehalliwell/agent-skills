@@ -26,6 +26,8 @@ Remove token, credit bank and score, then process threshold conversion. Update H
 
 ```gd-rule
 case below-threshold:
+    target: Coin
+    becomes: consumed
     context: Hero overlaps Coin
     unknown_conditions: Collect original world Coin once; event identity/deduplication unencoded. Enemy/projectile contacts do not collect for Hero.
     unknown_effects: Remove token, credit bank/score and update HUD; no clock restoration, growth or protection.
@@ -35,7 +37,6 @@ case below-threshold:
     Coin:
         noun: nouns/coin
         requires: available
-        becomes: consumed
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount < {control-vars/coins-for-life} - 1[coin]
@@ -47,6 +48,8 @@ case below-threshold:
             ScoreAmount: this + {control-vars/coin-points}
 
 case threshold:
+    target: Coin
+    becomes: consumed
     context: Hero overlaps Coin
     unknown_conditions: Original world Coin credited once; event identity unencoded. Enemy/projectile contacts cannot collect.
     unknown_effects: Remove token, update HUD; immediate threshold conversion even at life cap. This final result is not two conflicting writes or repeated collection; multiple thresholds from unstable initial banks unspecified.
@@ -56,7 +59,6 @@ case threshold:
     Coin:
         noun: nouns/coin
         requires: available
-        becomes: consumed
     Bank:
         noun: nouns/coin-bank
         requires: CoinAmount >= {control-vars/coins-for-life} - 1[coin]

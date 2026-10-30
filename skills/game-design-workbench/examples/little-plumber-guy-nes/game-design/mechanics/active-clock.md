@@ -26,6 +26,7 @@ Same-frame expiry versus finish priority is unresolved. Time units here are auth
 
 ```gd-rule
 case active-overworld:
+    target: Clock
     unknown_conditions: Active movement/waiting outside cellar, not pause/menu/room-transfer transition. Elapsed active interval unencoded.
     unknown_effects: Spend remaining course seconds for elapsed active play; no fixed tick or implicit clamp.
     Hero:
@@ -34,6 +35,7 @@ case active-overworld:
         noun: nouns/clock
 
 case active-cellar:
+    target: Clock
     unknown_conditions: Active cellar exploration/waiting, not pause/menu/transfer; room identity and elapsed interval unencoded.
     unknown_effects: Spend same shared Clock, not second room clock. False cellar policy would stop room spending.
     Hero:
@@ -43,6 +45,7 @@ case active-cellar:
         noun: nouns/clock
 
 case expiry:
+    target: Clock
     unknown_conditions: Clock-expiry occurrence, not every observation of expired value. Same-frame finish priority and lethal deduplication unresolved. Applies across forms/protection.
     unknown_effects: One lethal occurrence spends one life; later retry separate, no simultaneous resurrection.
     Hero:
@@ -57,6 +60,7 @@ case expiry:
             Amount: this - 1[life]
 
 case finish-stops-spending:
+    target: Clock
     unknown_conditions: Course finish has committed; simultaneous expiry order unresolved.
     unknown_effects: Stop spending after finish. Pause/menu/transfer are not active spending occurrences; no interval fabricated.
     Clock:

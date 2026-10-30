@@ -27,12 +27,14 @@ Player walks into free adjacent cells; walls block movement. Walking remains pos
 
 ```gd-rule
 case free-adjacent-cell:
+    target: Player
     unknown_conditions: Walk request into free adjacent cell; zero energy does not disable walking. Geometry/direction unencoded.
     unknown_effects: Move Player into cell; duration references tile-distance, walk-speed and walk-duration. No current/initial coordinates supplied.
     Player:
         noun: nouns/player
 
 case wall-blocked:
+    target: Player
     unknown_conditions: Wall blocks requested walking.
     unknown_effects: Prevent this movement; unrelated results unspecified.
     Player:

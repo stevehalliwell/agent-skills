@@ -24,6 +24,7 @@ No transfer; pipe remains solid support. Correct alignment does not create a mis
 
 ```gd-rule
 case no-connection:
+    target: Pipe
     unknown_conditions: Down pressed on Pipe without authored entrance; correct alignment cannot create connection.
     unknown_effects: No transfer; Pipe remains solid support. No invented destination.
     Hero:

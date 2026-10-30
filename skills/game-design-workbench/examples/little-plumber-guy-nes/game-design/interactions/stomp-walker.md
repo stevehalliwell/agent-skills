@@ -26,6 +26,8 @@ Defeat walker, credit its fixed award and rebound hero. Geometry and later hazar
 
 ```gd-rule
 case descending-defeat:
+    target: Walker
+    becomes: dead
     context: Hero topContacts Walker
     unknown_conditions: Descending top contact, not side contact; award once per original defeat, uniqueness unencoded.
     unknown_effects: Remove Walker and rebound Hero; rebound height/trajectory unspecified. Geometry and later hazards stay active.
@@ -35,7 +37,6 @@ case descending-defeat:
         becomes: rising
     Walker:
         noun: nouns/walker
-        becomes: dead
     Score:
         noun: nouns/score
         set:

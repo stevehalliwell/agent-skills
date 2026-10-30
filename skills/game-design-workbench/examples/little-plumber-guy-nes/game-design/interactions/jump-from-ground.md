@@ -24,12 +24,13 @@ Launch upward; horizontal input can influence travel. Physical impulse and timin
 
 ```gd-rule
 case launch:
+    target: Hero
+    becomes: rising
     unknown_conditions: New jump press while course-active; input timing and support geometry unencoded.
     unknown_effects: Launch upward; horizontal input may influence travel. No impulse/tolerance/trajectory supplied; opportunity not proof of gap clearance.
     Hero:
         noun: nouns/hero
         requires: supported
-        becomes: rising
     Ground:
         noun: nouns/ground
 ```
