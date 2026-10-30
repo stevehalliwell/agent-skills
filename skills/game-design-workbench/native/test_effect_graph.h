@@ -1,4 +1,6 @@
 #include "gd_effect_graph.h"
+#include "gd_structure_cli.h"
+#include "test_structure_memory.h"
 TEST(effect_result_concepts_and_targeted_links,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ResourceGraph *source;
     GD_EffectGraph *graph,*tiny,*empty; GD_Allocator allocator; RouteFailure failure;
@@ -61,6 +63,32 @@ TEST(effect_result_concepts_and_targeted_links,
         for (i=0;i<graph->node_count;++i) if (graph->nodes[i].relation>=0 && source->relations[graph->nodes[i].relation].activation==graph->nodes[instance].activation) { declaration=i; break; }
         TEST_ASSERT(declaration>=0 && gd_effect_node_remap(graph,declaration,fresh)==-1);
         gd_effect_graph_destroy(fresh); gd_resource_graph_destroy(collision);
+    }
+    {
+        StructureMemory memory={0,-1}; GD_ExplorerProject project={0}; GD_StructureOptions options={0}; GD_StructureResult *result; int kind;
+        project.allocator=(GD_Allocator){&memory,structure_allocate,structure_release}; project.models[GD_EXPLORER_RULE_DATA]=model; project.rules=rules; project.calls=analysis; project.resources=source; project.available=1u<<GD_EXPLORER_EFFECTS;
+        TEST_ASSERT(gd_projection_find("effects")==GD_EXPLORER_EFFECTS && !strcmp(gd_projection_name(GD_EXPLORER_EFFECTS),"effects"));
+        TEST_ASSERT(gd_effect_node_id(graph,caller,first,sizeof(first)) && gd_effect_node_id(graph,gain,second,sizeof(second)));
+        options.projection="effects"; options.work_limit=GD_GRAPH_ANALYSIS_WORK;
+        for (kind=0;kind<GD_STRUCTURE_COUNT;++kind) {
+            options.question=gd_structure_name((GD_StructureKind)kind); options.from=options.to=NULL;
+            if (kind==GD_STRUCTURE_RELATED || kind==GD_STRUCTURE_REACHABILITY || kind==GD_STRUCTURE_DOMINATORS || kind==GD_STRUCTURE_BYPASS) { options.from=first; options.to=second; }
+            result=gd_structure_result_build(model,&project,&options);
+            TEST_ASSERT(result && result->effects && result->layout->node_count==graph->node_count && result->layout->edge_count==graph->link_count && !model->error_count && result->source_incomplete);
+            TEST_ASSERT(result->query->request.incidence==0 && result->query->nodes[gain].incoming==4 && result->query->nodes[life].incoming==6);
+            for (i=0;i<result->layout->node_count;++i) { TEST_ASSERT(gd_structure_result_node_id(result,i,first,sizeof(first)) && gd_effect_node_id(graph,i,second,sizeof(second)) && !strcmp(first,second)); TEST_ASSERT(gd_structure_result_record(result,i)>=0); }
+            for (i=0;i<result->layout->edge_count;++i) TEST_ASSERT(gd_structure_result_edge_record(result,i)>=0 && result->layout->edges[i].relation==GD_RELATION_EFFECT_BASE+(int)graph->links[i].kind);
+            if (kind==GD_STRUCTURE_CONNECTIONS) {
+                FILE *output=tmpfile(); char text[131072]; size_t length; TEST_ASSERT(output && gd_write_structure_result(output,result,1,"nodes,links,evidence")); rewind(output); length=fread(text,1,sizeof(text)-1,output); text[length]=0;
+                TEST_ASSERT(strstr(text,"\"effect_topology_coverage\":") && strstr(text,"\"effect_source_context\":") && strstr(text,"\"native_kind\":\"gain\"") && strstr(text,"\"target\":\"Two\"") && strstr(text,"\"native_relation\":")); fclose(output);
+            }
+            gd_structure_result_destroy(result); TEST_ASSERT(!memory.outstanding);
+            TEST_ASSERT(gd_effect_node_id(graph,caller,first,sizeof(first)) && gd_effect_node_id(graph,gain,second,sizeof(second)));
+        }
+        options.question="direct-connections"; options.from=first; options.to=NULL; options.relations[0]="effect_invocation"; options.relation_count=1;
+        result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(result && result->query->shown_edges==1 && result->query->nodes[caller].outgoing==1); gd_structure_result_destroy(result); TEST_ASSERT(!memory.outstanding); options.relation_count=0;
+        for (i=0;i<5;++i) { memory.remaining=i; result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(!result && !memory.outstanding && model->error_count==1 && !strcmp(model->errors[0].code,"query.memory")); model->error_count=0; }
+        memory.remaining=-1; options.from="not-an-effect-id"; TEST_ASSERT(!gd_structure_result_build(model,&project,&options) && !memory.outstanding && !strcmp(model->errors[0].code,"query.selector_missing")); model->error_count=0;
     }
     tiny=gd_effect_graph_build(source,1); TEST_ASSERT(tiny && tiny->limited && tiny->work<=1 && tiny->unexamined_source_nodes>0 && tiny->unexamined_relations==source->relation_count);
     gd_effect_graph_destroy(tiny);

@@ -28,6 +28,7 @@ if ($LASTEXITCODE -ne 0 -or -not $gaps.ok -or $gaps.data.declaration_gap_invento
 $catalogue = (& $executable query --list --json | ConvertFrom-Json)
 foreach ($question in @($catalogue.data.questions | Where-Object { $_.projections -contains 'actor-inventory' })) {
     if (($question.required_bindings_by_projection.'actor-inventory'.all_of -join ',') -ne 'nouns,axes') { throw 'Actor inventory catalogue omitted required typed bindings' }
+    if ($question.name -ne 'declaration-gaps' -and $question.parameters_by_projection.actors -notcontains '--context-not (repeat)') { throw 'Actor catalogue advertises wrong negative-context flag' }
 }
 $actorFixture = Join-Path $fixtures 'actor-inventory'
 $actorInputs = @('--nouns', "things=$actorFixture/things", '--axes', "actions=$actorFixture/actions", '--mechanics', "cases=$actorFixture/cases")
@@ -47,6 +48,18 @@ $finiteReordered = (& $executable query --question direct-connections --projecti
 if ($LASTEXITCODE -ne 0 -or -not $finiteReordered.ok -or @($finiteReordered.data.nodes | Where-Object id -eq $binding.id).Count -ne 1) { throw 'Finite actor identity depends on variant order' }
 $missingScope = (& $executable query --question adjacency --projection actors @actorInputs --json 2>$null | ConvertFrom-Json)
 if ($LASTEXITCODE -ne 2 -or $missingScope.ok) { throw 'Finite actor topology accepted missing native scope' }
+$effectFixture = Join-Path $fixtures 'effect-concepts'
+$effectInputs = @('--nouns', "things=$effectFixture/things", '--axes', "actions=$effectFixture/actions", '--mechanics', "cases=$effectFixture/cases")
+$effect = (& $executable query --question adjacency --projection effects @effectInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $effect.ok -or -not $effect.coverage.identities_complete -or $effect.data.projection -ne 'effects' -or $effect.data.effect_topology_coverage.construction_limited -or @($effect.data.nodes | Where-Object native_kind -eq gain).Count -ne 1 -or @($effect.data.links | Where-Object target -eq Two).Count -lt 1) { throw 'Effect structural scope/provenance mismatch' }
+$gain = @($effect.data.nodes | Where-Object native_kind -eq gain)[0]
+$invocation = @($effect.data.links | Where-Object kind -eq effect_invocation)[0]
+if ($invocation.participant_role -ne 'call_owner' -or $invocation.call_owner -ne 'One' -or $invocation.target -ne $null) { throw 'Effect invocation owner mislabelled as effect target' }
+if ($gain.counts.incoming -ne 4) { throw 'Effect direct links lost parallel targets or counted runtime frequency' }
+$effectSelected = (& $executable query --question direct-connections --projection effects @effectInputs --from $gain.id --fields nodes,evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $effectSelected.ok -or @($effectSelected.data.nodes | Where-Object id -eq $gain.id).Count -ne 1 -or -not $effectSelected.data.effect_source_context.ok) { throw 'Effect structural opaque selector/native source mismatch' }
+$nativeResource = (& $executable resources @effectInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($nativeResource | ConvertTo-Json -Depth 100 -Compress) -cne ($effect.data.effect_source_context | ConvertTo-Json -Depth 100 -Compress)) { throw 'Effect source context differs from native Resource serializer' }
 $example = Join-Path (Split-Path $root -Parent) 'examples/crate-puzzle/game-design'
 $inputs = @('--nouns', "nouns=$example/nouns", '--verbs', "verbs=$example/verbs", '--interactions', "interactions=$example/interactions")
 $result = (& $executable matrix @inputs --json | ConvertFrom-Json)

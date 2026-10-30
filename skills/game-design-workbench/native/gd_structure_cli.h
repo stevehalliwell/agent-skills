@@ -22,6 +22,7 @@ typedef struct {
     GD_Layout *layout; /* Owned separately except embedded actor_scene layout. */
     GD_StructureQuery *query;
     GD_DeclarationGaps *gaps; /* Whole loaded reader context; no graph filters. */
+    GD_EffectGraph *effects; /* Canonical declaration concepts, independent of focused contributors. */
     GD_ActorInventory *inventory; /* Canonical declarations, not finite hypotheses. */
     GD_QueryScene *actor_scene; /* Own canonical all-variant topology; borrows options.actor_query. */
     int selector_work,source_incomplete;

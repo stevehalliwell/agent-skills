@@ -6,6 +6,10 @@ const char *gd_effect_kind_name(GD_EffectKind kind) {
     static const char *const names[]={"activation","state","gain","loss","no_change","quantity_declaration","preservation","unresolved_declaration"};
     return kind>=GD_EFFECT_ACTIVATION && kind<=GD_EFFECT_UNKNOWN ? names[kind]:NULL;
 }
+const char *gd_effect_link_kind_name(GD_EffectLinkKind kind) {
+    static const char *const names[]={"effect_declaration","effect_invocation","effect_call_frontier"};
+    return kind>=GD_EFFECT_DECLARATION && kind<=GD_EFFECT_CALL_FRONTIER ? names[kind]:NULL;
+}
 static int charge(GD_EffectGraph *graph, size_t work) {
     if (graph->limited || work>(size_t)(graph->work_limit-graph->work)) { graph->limited=1; return 0; }
     graph->work+=(int)work; return 1;
@@ -49,13 +53,13 @@ static int result_node(GD_EffectGraph *graph, int relation) {
        A common state/change concept never joins resource supplies or actors. */
     return add_node(graph,kind,-1,axis,shared ? -1:relation,value);
 }
-GD_EffectGraph *gd_effect_graph_build(const GD_ResourceGraph *source, int work_limit) {
+GD_EffectGraph *gd_effect_graph_build_allocated(GD_Allocator allocator, const GD_ResourceGraph *source, int work_limit) {
     GD_EffectGraph *graph; int i;
-    if (!source || !source->allocator.allocate || !source->allocator.release || work_limit<0 || work_limit>GD_EFFECT_WORK) return NULL;
+    if (!source || !allocator.allocate || !allocator.release || work_limit<0 || work_limit>GD_EFFECT_WORK) return NULL;
     assert(source->node_count>=0 && source->node_count<=GD_RESOURCE_GRAPH_NODES);
     assert(source->relation_count>=0 && source->relation_count<=GD_RESOURCE_GRAPH_RELATIONS);
-    graph=source->allocator.allocate(source->allocator.context,sizeof(*graph)); if (!graph) return NULL;
-    memset(graph,0,sizeof(*graph)); graph->allocator=source->allocator; graph->source=source; graph->work_limit=work_limit;
+    graph=allocator.allocate(allocator.context,sizeof(*graph)); if (!graph) return NULL;
+    memset(graph,0,sizeof(*graph)); graph->allocator=allocator; graph->source=source; graph->work_limit=work_limit;
     graph->source_incomplete=gd_resource_graph_incomplete(source);
     for (i=0;i<source->node_count;++i) graph->activations[i]=-1;
     for (i=0;i<source->node_count;++i) {
@@ -84,6 +88,7 @@ GD_EffectGraph *gd_effect_graph_build(const GD_ResourceGraph *source, int work_l
     graph->unexamined_relations=source->relation_count-i;
     return graph;
 }
+GD_EffectGraph *gd_effect_graph_build(const GD_ResourceGraph *source, int work_limit) { return source ? gd_effect_graph_build_allocated(source->allocator,source,work_limit):NULL; }
 void gd_effect_graph_destroy(GD_EffectGraph *graph) { if (graph) graph->allocator.release(graph->allocator.context,graph); }
 void gd_effect_incoming(const GD_EffectGraph *graph, const unsigned char *mask, int *restrict counts) {
     int i;

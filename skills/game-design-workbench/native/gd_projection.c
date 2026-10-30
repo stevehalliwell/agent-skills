@@ -1,9 +1,9 @@
 #include "gd_projection.h"
 #include <string.h>
 
-static const char *const names[]={"skills","challenges","relationships","matrix","mda","resources","actor-inventory"};
-const char *gd_projection_name(GD_ExplorerView view) { return view>=GD_EXPLORER_SKILLS && view<=GD_EXPLORER_ACTORS ? names[view]:NULL; }
-int gd_projection_find(const char *name) { int i; if (name && !strcmp(name,"actors")) return GD_EXPLORER_ACTORS; if (name) for (i=GD_EXPLORER_SKILLS;i<=GD_EXPLORER_ACTORS;++i) if (!strcmp(name,names[i])) return i; return -1; }
+static const char *const names[]={"skills","challenges","relationships","matrix","mda","resources","actor-inventory","effects"};
+const char *gd_projection_name(GD_ExplorerView view) { return view>=GD_EXPLORER_SKILLS && view<=GD_EXPLORER_EFFECTS ? names[view]:NULL; }
+int gd_projection_find(const char *name) { int i; if (name && !strcmp(name,"actors")) return GD_EXPLORER_ACTORS; if (name) for (i=GD_EXPLORER_SKILLS;i<=GD_EXPLORER_EFFECTS;++i) if (!strcmp(name,names[i])) return i; return -1; }
 const char *gd_resource_label(const GD_ResourceGraph *graph, int index) {
     const GD_ResourceNode *node;
     if (!graph || index<0 || index>=graph->node_count) return NULL;
@@ -36,6 +36,17 @@ int gd_actor_inventory_layout(const GD_ActorInventory *inventory, GD_Layout *lay
         const GD_ActorInventoryLink *edge=&inventory->links[i];
         layout->edges[i]=(GD_LayoutEdge){edge->from,edge->to,i,1,GD_RELATION_ACTOR_BASE+(int)edge->kind};
     }
+    return 1;
+}
+int gd_effect_projection_layout(const GD_EffectGraph *graph, GD_Layout *layout) {
+    const GD_ResourceGraph *source; int i;
+    if (!graph || !layout) return 0;
+    source=graph->source; memset(layout,0,sizeof(*layout)); layout->node_count=graph->node_count; layout->edge_count=graph->link_count; layout->group_count=graph->node_count ? 1:0;
+    for (i=0;i<graph->node_count;++i) {
+        const GD_EffectNode *node=&graph->nodes[i]; GD_LayoutNode *target=&layout->nodes[i];
+        target->key=i; target->group=0; target->label=node->kind==GD_EFFECT_ACTIVATION ? gd_resource_label(source,node->activation):node->axis>=0 ? source->model->records[node->axis].reference:gd_effect_kind_name(node->kind);
+    }
+    for (i=0;i<graph->link_count;++i) { const GD_EffectLink *edge=&graph->links[i]; layout->edges[i]=(GD_LayoutEdge){edge->from,edge->to,i,1,GD_RELATION_EFFECT_BASE+(int)edge->kind}; }
     return 1;
 }
 int gd_projection_layout(const GD_ExplorerProject *project, GD_ExplorerView view, const GD_Focus *focus, GD_Layout *layout) {

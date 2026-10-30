@@ -176,6 +176,7 @@ const char *gd_graph_relation_name(int relation) {
     if (relation<GD_FIELD_COUNT) return gd_field_name((GD_Field)relation);
     if (relation==GD_RELATION_CASE_PAIR) return "derived case pair";
     if (relation>=GD_RELATION_ACTOR_BASE && relation<=GD_RELATION_ACTOR_BASE+GD_ACTOR_MAPS_BINDING) return gd_actor_inventory_link_name((GD_ActorInventoryLinkKind)(relation-GD_RELATION_ACTOR_BASE));
+    if (relation>=GD_RELATION_EFFECT_BASE && relation<=GD_RELATION_EFFECT_BASE+GD_EFFECT_CALL_FRONTIER) return gd_effect_link_kind_name((GD_EffectLinkKind)(relation-GD_RELATION_EFFECT_BASE));
     if (relation>=GD_RELATION_QUERY_BASE && relation<=GD_RELATION_QUERY_BASE+GD_QUERY_EDGE_FRONTIER) return gd_query_scene_edge_kind_name((GD_QueryEdgeKind)(relation-GD_RELATION_QUERY_BASE));
     switch (relation-GD_RELATION_RESOURCE_BASE) {
         case GD_RESOURCE_REQUIREMENT:return "condition incidence";

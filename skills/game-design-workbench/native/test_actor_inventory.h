@@ -1,16 +1,7 @@
 #include "gd_actor_inventory.h"
 #include "gd_structure_cli.h"
 #include "gd_actor_identity.h"
-/* Combined source/query topology exceeds the core harness's 64 MiB arena.
-   Keep source there; exercise explicit caller ownership/failures on heap. */
-typedef struct { int outstanding,remaining; } ActorTopologyMemory;
-static void *actor_topology_allocate(void *context, size_t size) {
-    ActorTopologyMemory *memory=context; void *result;
-    if (!memory->remaining) return NULL;
-    if (memory->remaining>0) --memory->remaining;
-    result=malloc(size); if (result) ++memory->outstanding; return result;
-}
-static void actor_topology_release(void *context, void *pointer) { ActorTopologyMemory *memory=context; if (pointer) { --memory->outstanding; free(pointer); } }
+#include "test_structure_memory.h"
 TEST(actor_inventory_local_bindings_declarations_and_work,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ActorInventory *inventory,*partial;
     GD_Allocator allocator; RouteFailure failure; int i,j,root,first,second,kinds[6]={0},work;
@@ -109,8 +100,8 @@ TEST(actor_inventory_local_bindings_declarations_and_work,
         { int zero=0; strcpy(other,"old"); TEST_ASSERT(!gd_actor_scene_node_id(scene,alive,other,sizeof(other),&zero,0) && !*other && !zero); }
         gd_query_scene_destroy(scene);
         {
-            GD_ExplorerProject project={0}; GD_StructureOptions options={0}; GD_StructureResult *result; char start[GD_MAX_PATH]; int kind; ActorTopologyMemory memory={0,-1};
-            project.allocator=(GD_Allocator){&memory,actor_topology_allocate,actor_topology_release}; project.models[GD_EXPLORER_RULE_DATA]=model; project.rules=rules; project.calls=analysis; project.available=1u<<GD_EXPLORER_ACTORS;
+            GD_ExplorerProject project={0}; GD_StructureOptions options={0}; GD_StructureResult *result; char start[GD_MAX_PATH]; int kind; StructureMemory memory={0,-1};
+            project.allocator=(GD_Allocator){&memory,structure_allocate,structure_release}; project.models[GD_EXPLORER_RULE_DATA]=model; project.rules=rules; project.calls=analysis; project.available=1u<<GD_EXPLORER_ACTORS;
             options.projection="actors"; options.actor_query=query; options.work_limit=GD_GRAPH_ANALYSIS_WORK;
             for (kind=0;kind<GD_STRUCTURE_COUNT;++kind) {
                 options.question=gd_structure_name((GD_StructureKind)kind); options.from=options.to=NULL;

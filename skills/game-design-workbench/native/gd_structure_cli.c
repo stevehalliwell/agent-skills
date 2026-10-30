@@ -19,14 +19,14 @@ int gd_write_structure_catalogue(FILE *out, int json, int comma) {
     int kind;
     for (kind=0;kind<GD_STRUCTURE_COUNT;++kind) {
         int path=kind==GD_STRUCTURE_REACHABILITY || kind==GD_STRUCTURE_DOMINATORS || kind==GD_STRUCTURE_BYPASS;
-        if (!json) { fprintf(out,"%s [skills|challenges|relationships|matrix|mda|resources|actor-inventory|actors]: operation-specific parameters in query --list --json; structural evidence only\n",gd_structure_name((GD_StructureKind)kind)); continue; }
+        if (!json) { fprintf(out,"%s [skills|challenges|relationships|matrix|mda|resources|actor-inventory|actors|effects]: operation-specific parameters in query --list --json; structural evidence only\n",gd_structure_name((GD_StructureKind)kind)); continue; }
         if (comma++) fputc(',',out);
         fputs("{\"name\":",out); gd_json_string(out,gd_structure_name((GD_StructureKind)kind));
-        fputs(",\"projections\":[\"skills\",\"challenges\",\"relationships\",\"matrix\",\"mda\",\"resources\",\"actor-inventory\",\"actors\"],\"required_bindings_by_projection\":{\"skills\":{\"all_of\":[\"skill-atoms\"],\"any_of\":[]},\"challenges\":{\"all_of\":[\"skill-atoms\",\"challenges\"],\"any_of\":[]},\"relationships\":{\"all_of\":[\"skill-atoms\"],\"any_of\":[]},\"matrix\":{\"all_of\":[\"nouns\",\"verbs\",\"interactions\"],\"any_of\":[]},\"mda\":{\"all_of\":[\"mechanics\",\"dynamics\",\"aesthetics\"],\"any_of\":[]},\"resources\":{\"all_of\":[],\"any_of\":[\"interactions\",\"mechanics\"]},\"actor-inventory\":{\"all_of\":[\"nouns\",\"axes\"],\"any_of\":[\"interactions\",\"mechanics\"]},\"actors\":{\"all_of\":[\"nouns\",\"axes\"],\"any_of\":[\"interactions\",\"mechanics\"]}}",out);
+        fputs(",\"projections\":[\"skills\",\"challenges\",\"relationships\",\"matrix\",\"mda\",\"resources\",\"actor-inventory\",\"actors\",\"effects\"],\"required_bindings_by_projection\":{\"skills\":{\"all_of\":[\"skill-atoms\"],\"any_of\":[]},\"challenges\":{\"all_of\":[\"skill-atoms\",\"challenges\"],\"any_of\":[]},\"relationships\":{\"all_of\":[\"skill-atoms\"],\"any_of\":[]},\"matrix\":{\"all_of\":[\"nouns\",\"verbs\",\"interactions\"],\"any_of\":[]},\"mda\":{\"all_of\":[\"mechanics\",\"dynamics\",\"aesthetics\"],\"any_of\":[]},\"resources\":{\"all_of\":[],\"any_of\":[\"interactions\",\"mechanics\"]},\"actor-inventory\":{\"all_of\":[\"nouns\",\"axes\"],\"any_of\":[\"interactions\",\"mechanics\"]},\"actors\":{\"all_of\":[\"nouns\",\"axes\"],\"any_of\":[\"interactions\",\"mechanics\"]},\"effects\":{\"all_of\":[],\"any_of\":[\"interactions\",\"mechanics\"]}}",out);
         if (kind==GD_STRUCTURE_DECLARATIONS) {
             fputs(",\"required_parameters\":[],\"parameters\":[\"--work-limit (search budget only; diagnostic inventory is fixed bounded work)\"],\"repeatable_parameters\":[],\"fields\":[\"nodes\",\"links\",\"evidence\",\"declarations\",\"findings\"],\"ui_available\":true,\"ui_scope\":\"canonical projection loaded-source diagnostic context, not canvas/graph filters; native identity gaps and findings, no new validation rules\",\"ui_unavailable_parameters\":[\"repeatable input beyond 8192 combined bytes per list\",\"graph selectors/status/relation/scope filters (rejected, not ignored)\"],\"ipc_available\":false,\"work_limit_max\":16777216}",out); continue;
         }
-        fputs(",\"required_parameters_by_projection\":{\"actors\":[\"--case\",\"--axis\"]},\"parameters_by_projection\":{\"actors\":[\"--object\",\"--participant (default authored A)\",\"--value (repeat; numeric requires explicit samples)\",\"--assume (repeat)\",\"--context (repeat)\",\"--not-context (repeat)\"]}",out);
+        fputs(",\"required_parameters_by_projection\":{\"actors\":[\"--case\",\"--axis\"]},\"parameters_by_projection\":{\"actors\":[\"--object\",\"--participant (default authored A)\",\"--value (repeat; numeric requires explicit samples)\",\"--assume (repeat)\",\"--context (repeat)\",\"--context-not (repeat)\"]}",out);
         fputs(",\"required_parameters\":[",out); if (path) gd_json_string(out,"at least one --from or --start"); if (kind==GD_STRUCTURE_BYPASS) fputs(",\"--to\"",out); fputs("],\"parameters\":[\"--relation\",\"--scope-root (Relationships only)\",\"--status\",\"--include-inactive\",\"--work-limit\"",out);
         if (path || kind==GD_STRUCTURE_RELATED || kind==GD_STRUCTURE_CONNECTIONS) fputs(",\"--from\"",out);
         if (path || kind==GD_STRUCTURE_RELATED) fputs(",\"--to\"",out);
@@ -34,7 +34,7 @@ int gd_write_structure_catalogue(FILE *out, int json, int comma) {
         if (kind==GD_STRUCTURE_RELATED) fputs(",\"--lens any|same-role|changed-role\"",out);
         if (kind==GD_STRUCTURE_BYPASS) fputs(",\"--avoid\"",out);
         fputs("],\"repeatable_parameters\":[\"--relation\",\"--status\"",out); if (path) fputs(",\"--start\"",out);
-        fputs("],\"fields\":[\"nodes\",\"links\",\"evidence\",\"declarations\",\"findings\"],\"ui_available\":true,\"ui_scope\":\"Built-in structural questions in seven existing panes; Actors explicitly selects declaration inventory or applied finite actor-states topology, independent of ghosts/primary/compare/excluded drawing controls; canonical projection plus explicit filters; result tables and source navigation, not current canvas filters or a query overlay\",\"ui_parameter_encoding\":\"Repeated starts, relations and statuses: one trimmed literal per line\",\"ui_unavailable_parameters\":[\"repeatable input beyond 8192 combined bytes per list\",\"--fields JSON pruning (expand result tables instead)\"],\"ipc_available\":false,\"work_limit_max\":16777216,\"bypass_scope\":\"native nonmandatory support-path candidates only; other selections return unavailable, not no alternative\",\"relationship_path_default\":\"all consumed kinds except next; explicit --relation next or --relation all includes continuation\",\"maximum_resource_selectors\":67,\"native_resource_selector_limit_each\":16777216,\"native_actor_inventory_selector_limit_each\":16777216,\"fixed_construction\":\"4096 nodes, 32768 rows, at most 65536 typed incidences and bounded native sorts; separate from search budget\"}",out);
+        fputs("],\"fields\":[\"nodes\",\"links\",\"evidence\",\"declarations\",\"findings\"],\"ui_available\":true,\"ui_scope\":\"Built-in structural questions in eight existing panes; Effects uses whole canonical declarations, not selected contributor/weight display; Actors explicitly selects declaration inventory or applied finite actor-states topology, independent of ghosts/primary/compare/excluded drawing controls; canonical projection plus explicit filters; result tables and source navigation, not current canvas filters or a query overlay\",\"ui_parameter_encoding\":\"Repeated starts, relations and statuses: one trimmed literal per line\",\"ui_unavailable_parameters\":[\"repeatable input beyond 8192 combined bytes per list\",\"--fields JSON pruning (expand result tables instead)\"],\"ipc_available\":false,\"work_limit_max\":16777216,\"bypass_scope\":\"native nonmandatory support-path candidates only; other selections return unavailable, not no alternative\",\"relationship_path_default\":\"all consumed kinds except next; explicit --relation next or --relation all includes continuation\",\"maximum_resource_selectors\":67,\"native_resource_selector_limit_each\":16777216,\"native_actor_inventory_selector_limit_each\":16777216,\"fixed_construction\":\"4096 nodes, 32768 rows, at most 65536 typed incidences and bounded native sorts; separate from search budget\"}",out);
     }
     return !ferror(out);
 }
@@ -45,12 +45,19 @@ static int status_matches(const GD_StructureOptions *options, const GD_Record *r
 }
 int gd_structure_result_record(const GD_StructureResult *result, int key) {
     if (!result) return -1;
+    if (result->effects) {
+        const GD_EffectNode *node; if (key<0 || key>=result->effects->node_count) return -1; node=&result->effects->nodes[key];
+        if (node->kind==GD_EFFECT_ACTIVATION) return gd_explorer_resource_record(result->project->resources,node->activation);
+        if (node->relation>=0) { int source=result->project->resources->relations[node->relation].source_case; return source>=0 ? result->project->rules->sources[result->project->rules->cases[source].source].record:-1; }
+        return node->axis;
+    }
     if (result->actor_scene) return gd_query_scene_record(result->actor_scene,key);
     if (result->inventory) return key>=0 && key<result->inventory->node_count ? result->inventory->nodes[key].record:-1;
     return gd_projection_record(result->project,result->view,key);
 }
 int gd_structure_result_edge_record(const GD_StructureResult *result, int key) {
     if (!result) return -1;
+    if (result->effects) return key>=0 && key<result->effects->link_count ? gd_structure_result_record(result,result->effects->links[key].from):-1;
     if (result->actor_scene) return key>=0 && key<result->actor_scene->layout.edge_count ? gd_query_scene_record(result->actor_scene,result->actor_scene->layout.edges[key].a):-1;
     if (result->inventory) return key>=0 && key<result->inventory->link_count ? result->inventory->nodes[result->inventory->links[key].from].record:-1;
     return gd_projection_edge_record(result->project,result->view,key);
@@ -59,6 +66,7 @@ int gd_structure_result_node_id(const GD_StructureResult *result, int key, char 
     const GD_Model *model; int count;
     if (!text || !size) return 0; text[0]=0;
     if (!result) return 0;
+    if (result->effects) { if (gd_effect_node_id(result->effects,key,text,size)) return 1; if (text && size) *text=0; return 0; }
     if (result->actor_scene) { int work=0; return gd_actor_scene_node_id(result->actor_scene,key,text,size,&work,GD_ACTOR_WORK); }
     if (result->inventory) return gd_actor_inventory_node_id(result->inventory,key,text,size);
     if (result->view==GD_EXPLORER_RESOURCES) return gd_resource_node_id(result->project->resources,key,-1,text,size);
@@ -69,6 +77,16 @@ int gd_structure_result_node_id(const GD_StructureResult *result, int key, char 
 static int selector(const GD_StructureResult *result, const GD_Layout *layout, GD_ResourceRoutes *resolver, const char *name, int *work) {
     const GD_ExplorerProject *project=result->project; GD_ExplorerView view=result->view; int i,record,found=-1;
     if (!name) return -1;
+    if (result->effects) {
+        char identity[GD_EFFECT_ID_CAPACITY]; int local_work=0;
+        for (i=0;i<layout->node_count;++i) {
+            size_t cost;
+            if (!gd_structure_result_node_id(result,layout->nodes[i].key,identity,sizeof(identity))) { *work+=local_work; return -3; }
+            cost=1+strlen(identity); if (cost>(size_t)(GD_RESOURCE_ROUTE_WORK-local_work)) { *work+=local_work; return -3; } local_work+=(int)cost;
+            if (!strcmp(identity,name)) { if (found>=0) { *work+=local_work; return -2; } found=i; }
+        }
+        *work+=local_work; return found;
+    }
     if (result->inventory || result->actor_scene) {
         char identity[GD_MAX_RULE_LINE+1]; int local_work=0;
         for (i=0;i<layout->node_count;++i) {
@@ -137,7 +155,7 @@ int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int j
         fputs("Native evidence/source metadata (JSON; --json emits only this object):\n",out);
     }
     for (i=0;i<GD_MAX_RECORDS;++i) hints[i]=-1;
-    if (result->inventory || result->actor_scene) for (i=0;i<result->layout->node_count;++i) { char identity[GD_MAX_PATH]; if (!gd_structure_result_node_id(result,i,identity,sizeof(identity))) ids_complete=0; }
+    if (result->inventory || result->actor_scene || result->effects) for (i=0;i<result->layout->node_count;++i) { char identity[GD_MAX_PATH]; if (!gd_structure_result_node_id(result,i,identity,sizeof(identity))) ids_complete=0; }
     if (view==GD_EXPLORER_RESOURCES) for (i=0;i<project->resources->relation_count;++i) if (hints[project->resources->relations[i].facet]<0) hints[project->resources->relations[i].facet]=i;
     fputs("{\"schema_version\":1,\"ok\":true,\"data\":{\"question\":",out); gd_json_string(out,gd_structure_name(request->kind)); member(out,"projection",options->projection);
     fputs(",\"selectors\":{\"from\":",out); gd_json_string(out,options->from); member(out,"to",options->to); member(out,"avoid",options->avoid); member(out,"scope_root",options->scope_root); fputs(",\"statuses\":[",out); for (i=0;i<options->status_count;++i) { if (i) fputc(',',out); gd_json_string(out,options->statuses[i]); } fputs("],\"starts\":[",out); for (i=0;i<options->root_count;++i) { if (i) fputc(',',out); gd_json_string(out,options->roots[i]); } fputs("]},\"records\":[",out); for (i=0;i<model->record_count;++i) { if (i) fputc(',',out); fprintf(out,"{\"index\":%d,\"declaration\":",i); record_json(out,&model->records[i]); fputc('}',out); } fputc(']',out);
@@ -148,7 +166,7 @@ int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int j
         for (i=0;i<analysis->node_count;++i) {
             const GD_LayoutNode *node=&query->layout->nodes[i]; const GD_StructureNode *summary=&query->nodes[i]; int source=gd_structure_result_record(result,node->key); char id[GD_MAX_PATH];
             if (i) fputc(',',out); fprintf(out,"{\"index\":%d,\"id\":",i);
-            if (result->inventory || result->actor_scene) { if (gd_structure_result_node_id(result,node->key,id,sizeof(id))) gd_json_string(out,id); else { fputs("null",out); ids_complete=0; } }
+            if (result->inventory || result->actor_scene || result->effects) { if (gd_structure_result_node_id(result,node->key,id,sizeof(id))) gd_json_string(out,id); else { fputs("null",out); ids_complete=0; } }
             else if (view==GD_EXPLORER_RESOURCES) { if (gd_resource_node_id(project->resources,node->key,hints[node->key],id,sizeof(id))) gd_json_string(out,id); else { fputs("null",out); ids_complete=0; } } else gd_json_string(out,model->records[node->key].reference);
             member(out,"label",node->label); fprintf(out,",\"shown\":%s,\"source\":",analysis->shown[i] ? "true":"false"); if (source>=0) record_json(out,&model->records[source]); else fputs("null",out);
             if (view==GD_EXPLORER_RESOURCES) { const GD_ResourceNode *resource=&project->resources->nodes[node->key]; fprintf(out,",\"case\":%d,\"parent_placement\":%d,\"instance\":%s,\"frontier\":%s",resource->kind==GD_RESOURCE_CASE ? resource->case_index:-1,resource->kind==GD_RESOURCE_CASE && resource->instance ? resource->parent:-1,resource->instance ? "true":"false",resource->frontier ? "true":"false"); }
@@ -157,6 +175,7 @@ int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int j
                 fprintf(out,",\"case\":%d,\"local_participant\":%d",item->case_index,item->participant);
                 if (item->participant>=0) { const GD_RuleParticipant *binding=&project->rules->participants[item->participant]; member(out,"local_name",binding->name); member(out,"noun_reference",binding->noun); member(out,"noun_resolution",gd_rule_resolution_name(binding->noun_resolution)); }
             }
+            if (result->effects) { const GD_EffectNode *item=&result->effects->nodes[node->key]; member(out,"native_kind",gd_effect_kind_name(item->kind)); member(out,"axis",item->axis>=0 ? model->records[item->axis].reference:NULL); member(out,"value",item->value); fprintf(out,",\"native_activation\":%d,\"native_relation\":%d",item->activation,item->relation); }
             if (result->actor_scene) { const GD_QuerySceneNode *item=&result->actor_scene->nodes[node->key]; member(out,"native_kind",gd_query_scene_node_kind_name(item->kind)); member(out,"applicability",gd_rule_truth_name(item->applicability)); fprintf(out,",\"native_source\":%d,\"variant\":%d",item->source,item->variant); }
             fputs(",\"counts\":",out);
             if (!analysis->shown[i]) fputs("null",out); else { fputs("{\"incoming\":",out); if (request->incidence) fputs("null",out); else fprintf(out,"%d",summary->incoming); fputs(",\"outgoing\":",out); if (request->incidence) fputs("null",out); else fprintf(out,"%d",summary->outgoing); fprintf(out,",\"distinct_partners\":%d,\"incident_rows\":%d,\"incident_kinds\":%d}",summary->partners,summary->incident,summary->kinds); }
@@ -175,6 +194,7 @@ int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int j
                 const GD_ActorInventoryLink *item=&result->inventory->links[edge->key]; int line=gd_actor_inventory_link_line(result->inventory,edge->key);
                 fprintf(out,",\"native_declaration\":%d,\"compiled_binding\":%d,\"line\":%d",item->declaration,item->binding,line);
             }
+            if (result->effects) { const GD_EffectLink *item=&result->effects->links[edge->key]; const GD_ResourceRelation *source=&result->project->resources->relations[item->relation]; fprintf(out,",\"native_relation\":%d,\"line\":%d",item->relation,source->line); member(out,"participant_role",item->kind==GD_EFFECT_DECLARATION ? "effect_target":"call_owner"); member(out,"target",item->kind==GD_EFFECT_DECLARATION && item->participant>=0 ? project->rules->participants[item->participant].name:NULL); member(out,"target_noun",item->kind==GD_EFFECT_DECLARATION && item->participant>=0 ? project->rules->participants[item->participant].noun:NULL); member(out,"call_owner",item->kind!=GD_EFFECT_DECLARATION && item->participant>=0 ? project->rules->participants[item->participant].name:NULL); }
             if (result->actor_scene) { const GD_QuerySceneEdge *item=&result->actor_scene->edges[edge->key]; fprintf(out,",\"native_source\":%d,\"variant\":%d",item->source,item->variant); }
             fputc('}',out);
         } fputc(']',out);
@@ -191,13 +211,18 @@ int gd_write_structure_result(FILE *out, const GD_StructureResult *result, int j
     if (field(fields,"declarations")) {
         fputs(",\"declarations\":[",out);
         for (i=0;i<model->edge_count;++i) { const GD_Edge *edge=&model->edges[i]; if (i) fputc(',',out); fprintf(out,"{\"index\":%d,\"source_record\":%d,\"target_record\":%d,\"line\":%d,\"field\":",i,edge->source,edge->target,edge->line); gd_json_string(out,gd_field_name(edge->field)); member(out,"reference",edge->reference); member(out,"identity_resolution",gd_declaration_identity_name(identity_resolution(model,edge))); fputc('}',out); } fputc(']',out);
-        if (view==GD_EXPLORER_RESOURCES || result->inventory || result->actor_scene) { fputs(",\"case_context\":[",out); for (i=0;i<project->rules->case_count;++i) { if (i) fputc(',',out); gd_write_rule_case(out,model,project->rules,i); } fputc(']',out); }
+        if (view==GD_EXPLORER_RESOURCES || result->inventory || result->actor_scene || result->effects) { fputs(",\"case_context\":[",out); for (i=0;i<project->rules->case_count;++i) { if (i) fputc(',',out); gd_write_rule_case(out,model,project->rules,i); } fputc(']',out); }
     }
     if (view==GD_EXPLORER_RESOURCES) { fputs(",\"native_resource_coverage\":",out); gd_write_resource_coverage(out,project->resources); }
-    if (field(fields,"findings")) { if (result->gaps) gap_inventory(out,result); fputs(",\"findings\":",out); findings(out,model->findings,model->finding_count); if (view==GD_EXPLORER_MDA) { fputs(",\"mda_findings\":",out); findings(out,project->mda->findings,project->mda->finding_count); } if (view==GD_EXPLORER_RESOURCES || result->inventory || result->actor_scene) { fputs(",\"rule_findings\":",out); findings(out,project->rules->findings,project->rules->finding_count); } }
+    if (field(fields,"findings")) { if (result->gaps) gap_inventory(out,result); fputs(",\"findings\":",out); findings(out,model->findings,model->finding_count); if (view==GD_EXPLORER_MDA) { fputs(",\"mda_findings\":",out); findings(out,project->mda->findings,project->mda->finding_count); } if (view==GD_EXPLORER_RESOURCES || result->inventory || result->actor_scene || result->effects) { fputs(",\"rule_findings\":",out); findings(out,project->rules->findings,project->rules->finding_count); } }
     if (result->inventory) {
         const GD_ActorInventory *inventory=result->inventory;
         fprintf(out,",\"actor_inventory_coverage\":{\"scope\":\"inventory-wide declarations; no finite hypotheses or applicability checks\",\"nodes\":%d,\"links\":%d,\"construction_limited\":%s,\"source_incomplete\":%s,\"construction_work\":%d,\"construction_limit\":%d,\"unexamined_records\":%d,\"unexamined_sources\":%d,\"unexamined_cases\":%d,\"unexamined_participants\":%d,\"unexamined_edges\":%d,\"unexamined_calls\":%d,\"unresolved_nouns\":%d,\"unresolved_axes\":%d,\"unresolved_calls\":%d,\"incomplete_sources\":%d,\"incomplete_call_owners\":%d}",inventory->node_count,inventory->link_count,inventory->limited ? "true":"false",inventory->source_incomplete ? "true":"false",inventory->work,inventory->work_limit,inventory->unexamined_records,inventory->unexamined_sources,inventory->unexamined_cases,inventory->unexamined_participants,inventory->unexamined_edges,inventory->unexamined_calls,inventory->unresolved_nouns,inventory->unresolved_axes,inventory->unresolved_calls,inventory->incomplete_sources,inventory->incomplete_call_owners);
+    }
+    if (result->effects) {
+        const GD_EffectGraph *graph=result->effects;
+        fprintf(out,",\"effect_topology_coverage\":{\"scope\":\"whole loaded declaration concepts and concrete placements; independent of selected contributor/drawing\",\"construction_limited\":%s,\"source_incomplete\":%s,\"construction_work\":%d,\"construction_limit\":%d,\"unexamined_source_nodes\":%d,\"unexamined_relations\":%d,\"unknown_effects\":%d},\"effect_source_context\":",graph->limited ? "true":"false",graph->source_incomplete ? "true":"false",graph->work,graph->work_limit,graph->unexamined_source_nodes,graph->unexamined_relations,graph->unknown_effects);
+        if (!gd_write_resource_result(out,model,project->resources,1,NULL)) return 0;
     }
     if (result->actor_scene) {
         const GD_QueryScene *scene=result->actor_scene;
@@ -227,7 +252,7 @@ void gd_structure_result_destroy(GD_StructureResult *result) {
     if (!result) return;
     if (result->gaps) result->allocator.release(result->allocator.context,result->gaps);
     gd_structure_query_destroy(result->query); if (result->layout && !result->actor_scene) result->allocator.release(result->allocator.context,result->layout);
-    gd_query_scene_destroy(result->actor_scene); gd_actor_inventory_destroy(result->inventory);
+    gd_query_scene_destroy(result->actor_scene); gd_effect_graph_destroy(result->effects); gd_actor_inventory_destroy(result->inventory);
     result->allocator.release(result->allocator.context,result);
 }
 GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_ExplorerProject *project, const GD_StructureOptions *options) {
@@ -250,20 +275,24 @@ GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_Exp
         result->layout=layout; if (view==GD_EXPLORER_RESOURCES) resolver=gd_resource_routes_create(allocator);
         if (!diagnostic->error_count && (!layout || (view==GD_EXPLORER_RESOURCES && !resolver))) gd_error(diagnostic,"query.memory","Cannot allocate native projection/selectors",NULL,0);
         if (!diagnostic->error_count && options->scope_root) { int root=gd_explorer_record(model,options->scope_root); if (view!=GD_EXPLORER_RELATIONSHIPS || root<0) gd_error(diagnostic,"query.scope","--scope-root requires one loaded Relationships source record",options->scope_root,0); else gd_focus_reset(model,&focus,root); }
+        if (!diagnostic->error_count && view==GD_EXPLORER_EFFECTS) {
+            result->effects=gd_effect_graph_build_allocated(allocator,project->resources,GD_EFFECT_WORK);
+            if (!result->effects || !gd_effect_projection_layout(result->effects,layout)) gd_error(diagnostic,"query.memory","Cannot allocate native Effect declaration topology",NULL,0);
+        }
         if (!diagnostic->error_count && view==GD_EXPLORER_ACTORS && !result->actor_scene) {
             result->inventory=gd_actor_inventory_build(allocator,project->calls,GD_ACTOR_INVENTORY_WORK);
             if (!result->inventory) gd_error(diagnostic,"query.memory","Cannot allocate bounded actor declaration inventory",NULL,0);
             else if (!gd_actor_inventory_layout(result->inventory,layout)) gd_error(diagnostic,"query.projection_unavailable","Cannot construct actor inventory topology",NULL,0);
-        } else if (!diagnostic->error_count && !result->actor_scene && !gd_projection_layout(project,(GD_ExplorerView)view,options->scope_root ? &focus:NULL,layout)) gd_error(diagnostic,"query.projection_unavailable","Cannot construct requested native projection",NULL,0);
+        } else if (!diagnostic->error_count && !result->actor_scene && !result->effects && !gd_projection_layout(project,(GD_ExplorerView)view,options->scope_root ? &focus:NULL,layout)) gd_error(diagnostic,"query.projection_unavailable","Cannot construct requested native projection",NULL,0);
         if (!diagnostic->error_count) {
-            for (i=0;i<layout->node_count;++i) { int source=gd_structure_result_record(result,layout->nodes[i].key); shown[i]=(unsigned char)(source<0 ? options->status_count==0:status_matches(options,&model->records[source])); roles[i]=result->actor_scene ? (int)result->actor_scene->nodes[layout->nodes[i].key].kind:result->inventory ? (int)result->inventory->nodes[layout->nodes[i].key].kind:view==GD_EXPLORER_RESOURCES ? (int)project->resources->nodes[layout->nodes[i].key].kind:source>=0 ? (int)model->records[source].role:-1; }
+            for (i=0;i<layout->node_count;++i) { int source=gd_structure_result_record(result,layout->nodes[i].key); shown[i]=(unsigned char)(source<0 ? options->status_count==0:status_matches(options,&model->records[source])); roles[i]=result->effects ? (int)result->effects->nodes[layout->nodes[i].key].kind:result->actor_scene ? (int)result->actor_scene->nodes[layout->nodes[i].key].kind:result->inventory ? (int)result->inventory->nodes[layout->nodes[i].key].kind:view==GD_EXPLORER_RESOURCES ? (int)project->resources->nodes[layout->nodes[i].key].kind:source>=0 ? (int)model->records[source].role:-1; }
             for (i=0;i<layout->edge_count;++i) { int source=gd_structure_result_edge_record(result,layout->edges[i].key); eligible[i]=(unsigned char)(source<0 || status_matches(options,&model->records[source])); if (view==GD_EXPLORER_MATRIX && options->status_count) { const GD_Cell *cell=&model->cells[layout->edges[i].key]; eligible[i]=0; for (j=0;j<cell->pair_count;++j) if (status_matches(options,&model->records[model->pairs[cell->first_pair+j].interaction]) && (options->include_inactive || gd_active_case(&model->records[model->pairs[cell->first_pair+j].interaction]))) eligible[i]=1; } }
             request.edge_mask=eligible; request.direction=options->direction; request.lens=options->lens; request.incidence=view==GD_EXPLORER_MATRIX || view==GD_EXPLORER_RESOURCES; request.include_inactive=options->include_inactive; request.work_limit=options->work_limit;
             for (i=0;i<3;++i) if (selectors[i]) { *destinations[i]=selector(result,layout,resolver,selectors[i],&selector_work); if (*destinations[i]<0) gd_error(diagnostic,selector_error(*destinations[i]),"Structural selector missing, ambiguous or limited; use stable projected identity",selectors[i],0); }
             request.root_count=options->root_count;
             for (i=0;i<options->root_count;++i) { request.roots[i]=selector(result,layout,resolver,options->roots[i],&selector_work); if (request.roots[i]<0) gd_error(diagnostic,selector_error(request.roots[i]),"Start must identify one loaded projected node",options->roots[i],0); }
             request.relation_count=options->relation_count;
-            for (i=0;i<options->relation_count;++i) { int relation,found=-1; for (relation=0;relation<GD_FIELD_COUNT;++relation) if (!strcmp(options->relations[i],gd_field_name((GD_Field)relation))) found=relation; if (!strcmp(options->relations[i],"derived case pair")) found=GD_RELATION_CASE_PAIR; for (relation=GD_RELATION_RESOURCE_BASE;relation<=GD_RELATION_RESOURCE_BASE+GD_RESOURCE_INVOCATION;++relation) if (!strcmp(options->relations[i],gd_graph_relation_name(relation))) found=relation; for (relation=GD_RELATION_ACTOR_BASE;relation<=GD_RELATION_ACTOR_BASE+GD_ACTOR_MAPS_BINDING;++relation) if (!strcmp(options->relations[i],gd_graph_relation_name(relation))) found=relation; for (relation=GD_RELATION_QUERY_BASE;relation<=GD_RELATION_QUERY_BASE+GD_QUERY_EDGE_FRONTIER;++relation) if (!strcmp(options->relations[i],gd_graph_relation_name(relation))) found=relation; if (found<0 && !(options->relation_count==1 && !strcmp(options->relations[i],"all"))) gd_error(diagnostic,"query.relation","Relation must be native field or projection relation name",options->relations[i],0); request.relations[i]=found; }
+            for (i=0;i<options->relation_count;++i) { int relation,found=-1; for (relation=0;relation<GD_FIELD_COUNT;++relation) if (!strcmp(options->relations[i],gd_field_name((GD_Field)relation))) found=relation; if (!strcmp(options->relations[i],"derived case pair")) found=GD_RELATION_CASE_PAIR; for (relation=GD_RELATION_RESOURCE_BASE;relation<=GD_RELATION_RESOURCE_BASE+GD_RESOURCE_INVOCATION;++relation) if (!strcmp(options->relations[i],gd_graph_relation_name(relation))) found=relation; for (relation=GD_RELATION_ACTOR_BASE;relation<=GD_RELATION_ACTOR_BASE+GD_ACTOR_MAPS_BINDING;++relation) if (!strcmp(options->relations[i],gd_graph_relation_name(relation))) found=relation; for (relation=GD_RELATION_QUERY_BASE;relation<=GD_RELATION_QUERY_BASE+GD_QUERY_EDGE_FRONTIER;++relation) if (!strcmp(options->relations[i],gd_graph_relation_name(relation))) found=relation; for (relation=GD_RELATION_EFFECT_BASE;relation<=GD_RELATION_EFFECT_BASE+GD_EFFECT_CALL_FRONTIER;++relation) if (!strcmp(options->relations[i],gd_graph_relation_name(relation))) found=relation; if (found<0 && !(options->relation_count==1 && !strcmp(options->relations[i],"all"))) gd_error(diagnostic,"query.relation","Relation must be native field or projection relation name",options->relations[i],0); request.relations[i]=found; }
             if (options->relation_count==1 && !strcmp(options->relations[0],"all")) request.relation_count=0;
             if (!options->relation_count && view==GD_EXPLORER_RELATIONSHIPS && (request.kind==GD_STRUCTURE_REACHABILITY || request.kind==GD_STRUCTURE_DOMINATORS || request.kind==GD_STRUCTURE_BYPASS)) { request.relation_count=0; for (i=0;i<GD_FIELD_COUNT;++i) if (i!=GD_NEXT) request.relations[request.relation_count++]=i; }
             if (!diagnostic->error_count) { if (!gd_structure_request_valid(layout,shown,&request)) gd_error(diagnostic,"query.arguments","Invalid structural parameters/hidden selectors; inspect required starts/direction/bounds",NULL,0); else { query=gd_structure_query_build(allocator,layout,shown,roles,&request); if (!query) gd_error(diagnostic,"query.memory","Cannot allocate bounded structural query/scope",NULL,0); } }
@@ -278,7 +307,7 @@ GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_Exp
         memset(result->gaps,0,sizeof(*result->gaps)); result->gaps->rows=model->edge_count;
         for (i=0;i<model->edge_count;++i) { GD_DeclarationIdentity identity=identity_resolution(model,&model->edges[i]); result->gaps->identities[i]=(unsigned char)identity; ++result->gaps->counts[identity]; }
     }
-    result->source_incomplete=projection_incomplete(project,(GD_ExplorerView)view) || (result->inventory && (result->inventory->source_incomplete || result->inventory->limited)) || (result->actor_scene && (result->actor_scene->limited || options->actor_query->limited || options->actor_query->variants->limited || project->rules->finding_count || project->rules->findings_omitted)); return result;
+    result->source_incomplete=projection_incomplete(project,(GD_ExplorerView)view) || (result->effects && (result->effects->source_incomplete || result->effects->limited)) || (result->inventory && (result->inventory->source_incomplete || result->inventory->limited)) || (result->actor_scene && (result->actor_scene->limited || options->actor_query->limited || options->actor_query->variants->limited || project->rules->finding_count || project->rules->findings_omitted)); return result;
 }
 int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, int count, const GD_StructureOptions *options, int json, const char *fields, const char *initial_error) {
     GD_Model *diagnostic=gd_create(allocator); GD_ExplorerProject *project=NULL; GD_StructureResult *result=NULL; int i,status=2;

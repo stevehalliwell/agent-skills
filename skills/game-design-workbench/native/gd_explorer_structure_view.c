@@ -77,6 +77,24 @@ static int same_node(const GD_StructureResult *old, int a, const GD_StructureRes
     if (a<0 || b<0) return a==b;
     old_key=old->layout->nodes[a].key; new_key=fresh->layout->nodes[b].key;
     if (old->view==GD_EXPLORER_RESOURCES) return gd_resource_node_remap(old->project->resources,old_key,fresh->project->resources)==new_key;
+    if (old->effects || fresh->effects) {
+        const GD_EffectNode *x,*y; int first=-1,second=-1,depth;
+        const GD_Model *before=gd_explorer_model(old->project,old->view),*after=gd_explorer_model(fresh->project,fresh->view);
+        if (!old->effects || !fresh->effects || gd_effect_node_remap(old->effects,old_key,fresh->effects)!=new_key) return 0;
+        x=&old->effects->nodes[old_key]; y=&fresh->effects->nodes[new_key];
+        if ((x->axis<0)!=(y->axis<0)) return 0;
+        if (x->axis>=0) { const GD_Record *a=&before->records[x->axis],*b=&after->records[y->axis]; if (!same_record(a,b) || strcmp(a->axis.type ? a->axis.type:"",b->axis.type ? b->axis.type:"") || strcmp(a->axis.unit ? a->axis.unit:"",b->axis.unit ? b->axis.unit:"")) return 0; }
+        if (x->kind==GD_EFFECT_ACTIVATION) { first=x->activation; second=y->activation; }
+        else if (x->relation>=0) { first=old->project->resources->relations[x->relation].activation; second=fresh->project->resources->relations[y->relation].activation; }
+        for (depth=0;first>=0 && depth<=GD_MAX_RULE_EXPANSION_DEPTH;++depth) {
+            const GD_ResourceNode *a=&old->project->resources->nodes[first],*b=&fresh->project->resources->nodes[second];
+            int source=gd_explorer_resource_record(old->project->resources,first),target=gd_explorer_resource_record(fresh->project->resources,second);
+            if (source<0 || target<0 || !same_record(&before->records[source],&after->records[target]) || strcmp(before->records[source].body ? before->records[source].body:"",after->records[target].body ? after->records[target].body:"") || a->instance!=b->instance) return 0;
+            if (!a->instance) return 1;
+            first=a->parent; second=b->parent; if (second<0) return 0;
+        }
+        return first<0;
+    }
     if (old->actor_scene || fresh->actor_scene) {
         char before[GD_MAX_PATH],after[GD_MAX_PATH]; const GD_QuerySceneNode *x,*y; const GD_ActorQuery *p,*q; int first=-1,second=-1,i;
         if (!old->actor_scene || !fresh->actor_scene || !gd_structure_result_node_id(old,old_key,before,sizeof(before)) || !gd_structure_result_node_id(fresh,new_key,after,sizeof(after)) || strcmp(before,after)) return 0;
@@ -140,7 +158,7 @@ static void navigate(GD_ExplorerContext *context, int record, int resource_node)
     GD_ExplorerPane *pane=context->pane; if (record<0) return;
     if (pane->view==GD_EXPLORER_MDA) { pane->mda.record=record; pane->mda.link=-1; }
     else if (pane->view==GD_EXPLORER_RESOURCES) { pane->selection.node=resource_node; pane->selection.cell=-1; pane->selection.linked=resource_node<0 ? record:-1; }
-    else if (pane->view==GD_EXPLORER_ACTORS) { pane->selection.node=-1; pane->selection.cell=-1; pane->selection.linked=record; }
+    else if (pane->view==GD_EXPLORER_ACTORS || pane->view==GD_EXPLORER_EFFECTS) { pane->selection.node=-1; pane->selection.cell=-1; pane->selection.linked=record; }
     else pane->navigate=record;
 }
 static int node_id(const GD_StructureResult *result, int index, char *text, size_t capacity) {
@@ -153,6 +171,7 @@ static void node_row(GD_ExplorerContext *context, int index) {
     if (igSmallButton(TextFormat("#%d %s",index,result->layout->nodes[index].label))) navigate(context,record,result->view==GD_EXPLORER_RESOURCES ? key:-1);
     if (query->request.incidence) igText("%d incident rows | %d distinct partners | %d kinds",counts->incident,counts->partners,counts->kinds);
     else { igText("in %d | out %d | %d partners | %d kinds",counts->incoming,counts->outgoing,counts->partners,counts->kinds); igText("%d incident source rows",counts->incident); }
+    if (result->effects) { const GD_EffectNode *item=&result->effects->nodes[key]; igTextWrapped("%s | %s%s%s",gd_effect_kind_name(item->kind),item->axis>=0 ? gd_explorer_model(result->project,result->view)->records[item->axis].reference:"unresolved axis",item->value ? " = ":"",item->value ? item->value:""); }
     if (result->actor_scene) { const GD_QuerySceneNode *item=&result->actor_scene->nodes[key]; igText("%s | variant %d | applicability %s",gd_query_scene_node_kind_name(item->kind),item->variant,gd_rule_truth_name(item->applicability)); }
     if (result->inventory) { const GD_ActorInventoryNode *item=&result->inventory->nodes[key]; igText("%s | native case %d | local binding %d",gd_actor_inventory_kind_name(item->kind),item->case_index,item->participant); }
     if (query->request.source>=0 || query->request.target>=0) igText("Retained evidence member: %s",query->marked_nodes[index] ? "yes":"no");
@@ -174,6 +193,7 @@ static void node_row(GD_ExplorerContext *context, int index) {
 static void link_row(GD_ExplorerContext *context, int index, int reverse) {
     const GD_StructureResult *result=context->pane->structure_state->result; const GD_LayoutEdge *edge=&result->layout->edges[index]; int source=gd_structure_result_edge_record(result,edge->key);
     igPushID_Int(index); igTextWrapped("link #%d: %s%s%s | %s%s%s",index,result->layout->nodes[edge->a].label,result->query->request.incidence ? " -- ":" -> ",result->layout->nodes[edge->b].label,gd_graph_relation_name(edge->relation),result->query->request.incidence ? " | undirected incidence":"",reverse ? " | reverse to stored endpoints":"");
+    if (result->effects) { const GD_EffectLink *item=&result->effects->links[edge->key]; igText("Native relation %d | line %d | %s %s",item->relation,result->project->resources->relations[item->relation].line,item->kind==GD_EFFECT_DECLARATION ? "effect target":"call owner",item->participant>=0 ? result->project->rules->participants[item->participant].name:"none"); }
     if (result->actor_scene) { const GD_QuerySceneEdge *item=&result->actor_scene->edges[edge->key]; igText("Native %s row %d | variant %d",gd_query_scene_edge_kind_name(item->kind),item->source,item->variant); }
     if (result->inventory) { const GD_ActorInventoryLink *item=&result->inventory->links[edge->key]; igText("Native declaration %d | compiled binding %d | line %d",item->declaration,item->binding,gd_actor_inventory_link_line(result->inventory,edge->key)); }
     if (source>=0 && igSmallButton("Inspect declaring source")) navigate(context,source,-1);
@@ -213,12 +233,13 @@ static void gap_panel(GD_ExplorerContext *context) {
     igText("%d identity gaps; 64 rows/page",total);
     finding_rows(context,"Model native findings",model->findings,model->finding_count,model->findings_omitted);
     if (result->view==GD_EXPLORER_MDA) finding_rows(context,"MDA native findings",result->project->mda->findings,result->project->mda->finding_count,result->project->mda->findings_omitted);
-    if (result->view==GD_EXPLORER_RESOURCES || result->inventory || result->actor_scene) finding_rows(context,"Rule native findings",result->project->rules->findings,result->project->rules->finding_count,result->project->rules->findings_omitted);
+    if (result->view==GD_EXPLORER_RESOURCES || result->inventory || result->actor_scene || result->effects) finding_rows(context,"Rule native findings",result->project->rules->findings,result->project->rules->finding_count,result->project->rules->findings_omitted);
 }
 static void result_panel(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_StructureResult *result=state->result; const GD_StructureQuery *query=result->query; const GD_GraphAnalysis *analysis=&query->analysis; int i,count=0,indices[GD_MAX_RECORDS];
     igSeparator(); igText("Applied: %s [%s]",gd_structure_name(query->request.kind),result->options.projection);
     if (result->gaps) { gap_panel(context); return; }
+    if (result->effects) { const GD_EffectGraph *graph=result->effects; igTextWrapped("Effect scope: whole loaded declaration concepts and concrete mapped placements, not selected contributor/weight display or camera. Links retain targets/proposals; no state-matching edges, recipe, execution, frequency or final-outcome proof."); igText("Construction %d/%d%s | unexamined nodes %d / relations %d | unknown effects %d",graph->work,graph->work_limit,graph->limited ? " [LIMITED]":"",graph->unexamined_source_nodes,graph->unexamined_relations,graph->unknown_effects); }
     if (result->actor_scene) {
         const GD_ActorQuery *source=result->options.actor_query->variants; const GD_RuleCase *root=&result->project->rules->cases[source->case_index]; int i;
         igTextWrapped("Finite actor scope: %s#%s | local %s | %s. All retained hypotheses/excluded checks; independent of ghosts, camera and revealed neighborhood. Links are evidence associations, not execution order or feasibility proof.",gd_explorer_model(result->project,result->view)->records[result->project->rules->sources[root->source].record].reference,root->name,result->project->rules->participants[source->participant].name,gd_explorer_model(result->project,result->view)->records[source->axis].reference);
@@ -306,7 +327,8 @@ void gd_explorer_structure_controls(GD_ExplorerContext *context) {
         if (form->actor_scope) igTextWrapped("Uses last applied native actor-states query, including fixed facts/context. Apply variants first; coverage is not a finite topology. Display ghosts/primary/compare/excluded controls do not filter this scope. Replace old-scope selectors before Run.");
         else igTextWrapped("Declaration scope includes unused noun/axis definitions, distinct local bindings and authored calls. Does not evaluate guards or merge same-noun participants.");
     }
-    if (pane->view==GD_EXPLORER_ACTORS && !form->actor_scope) igTextWrapped("Scope: inventory-wide declarations plus filters below. Case/participant/axis/values/facts above, ghost display and camera do not restrict this inventory. Tables inspect source; no applicability or execution proof.");
+    if (pane->view==GD_EXPLORER_EFFECTS) igTextWrapped("Scope: whole loaded Effect declarations plus question filters; independent of selected result/contributor context, weighting and camera. Concepts are associations; direct counts are not runtime frequency.");
+    else if (pane->view==GD_EXPLORER_ACTORS && !form->actor_scope) igTextWrapped("Scope: inventory-wide declarations plus filters below. Case/participant/axis/values/facts above, ghost display and camera do not restrict this inventory. Tables inspect source; no applicability or execution proof.");
     else if (pane->view!=GD_EXPLORER_ACTORS) igTextWrapped("Result scope: canonical loaded projection plus explicit filters below, not camera or current canvas filters/revealed neighborhood. Result tables navigate existing source; no query overlay or gameplay proof.");
     if (igBeginCombo("Question",gd_structure_name((GD_StructureKind)form->kind),0)) { for (i=0;i<GD_STRUCTURE_COUNT;++i) if (igSelectable_Bool(gd_structure_name((GD_StructureKind)i),form->kind==i,0,(ImVec2_c){0,0})) { if (i==GD_STRUCTURE_DECLARATIONS) { int scope=form->actor_scope; defaults(form); form->actor_scope=scope; } form->kind=i; } igEndCombo(); }
     if (form->kind==GD_STRUCTURE_DECLARATIONS) igTextWrapped("Declaration inventory uses whole loaded reader context. Selecting it clears pending graph filters; no source changes or missing-metadata rules.");

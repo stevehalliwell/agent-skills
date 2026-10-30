@@ -34,8 +34,11 @@ typedef struct {
    Conditions remain attached to original activations. No state-matching edges.
    NULL means allocation/argument failure; bounded partial results expose limits. */
 GD_EffectGraph *gd_effect_graph_build(const GD_ResourceGraph *source, int work_limit);
+/* Same native projection with explicit result allocator; source stays borrowed. */
+GD_EffectGraph *gd_effect_graph_build_allocated(GD_Allocator allocator, const GD_ResourceGraph *source, int work_limit);
 void gd_effect_graph_destroy(GD_EffectGraph *graph);
 const char *gd_effect_kind_name(GD_EffectKind kind);
+const char *gd_effect_link_kind_name(GD_EffectLinkKind kind);
 /* Count direct logical effect links only. Optional activation mask indexes this
    graph's nodes, not Resource nodes. Repeated declarations/targets stay distinct.
    Output has node_count entries and must not alias graph or mask storage. */
