@@ -237,6 +237,23 @@ Checks: `test_actor_query.h`, `test_effect_query.h`, `test/native-queries.test.m
 
 Checks: `test_state_coverage.h`, `test/native-state-coverage.test.mjs`. Native actor-result parity, whole-case AND/same-noun isolation, outcome-only values, case/binding deduplication, exact selectors/status exclusions, empty/limited/draft scope, typed units/samples, 64-value masks, native over-capacity errors, allocation failures and unchanged inputs.
 
+### Native actor declaration inventory foundation
+
+`gd_actor_inventory.{h,c}` builds inventory-wide declaration topology separately from finite actor hypotheses. Structural CLI/viewer adapters are not wired yet; catalogue remains unchanged.
+
+```c
+GD_ActorInventory *inventory = gd_actor_inventory_build(allocator, analysis,
+                                                      GD_ACTOR_INVENTORY_WORK);
+/* Borrow analysis, rules/model and strings until inventory destruction. */
+gd_actor_inventory_destroy(inventory);
+```
+
+- Nodes: every loaded noun/axis definition, including unused definitions; every parsed case and its distinct local participant bindings. Same noun never merges local bindings. Empty/absent/invalid rule sources remain counted incomplete sources, not invented cases/actors.
+- Typed directed links: case contains local binding; binding declares noun; noun declares state axis; source case declares context axis; caller case invokes callee case; caller local binding maps to callee local parameter. Retain raw axis duplicates, repeated calls and exact compiled substitution rows. Rule-source context declarations attach each native case, not an actor state. No initial states, applicability evaluation, state matching, pool joins or implicit gameplay sequence. Inventory cases are declarations, not concrete expanded placements; existing Resource/native query provenance remains separate.
+- Provenance: node record/case/participant indices; link participant/model-edge/compiled-call index and exact substitution row. Indices belong to borrowed snapshot. Stable opaque node IDs length-frame kind, source reference/ID, case and local name; no snapshot offsets. Output overflow returns false and empty text, never truncated ID.
+- Own one 786,536-byte allocation via caller allocator; borrow no allocator policy from analysis. Fixed initialization clears owned storage and 16,384 map entries; bounded 16,384-byte temporary source index on stack. Variable construction max 67,108,864 charged work units, 4,096 nodes and 32,768 links. Keep each case/all local binding node group together. Links are separately bounded prefix. Limits and unexamined records/sources/cases/participants/edges/calls remain separate from native source incompleteness; neither partial nor source-incomplete inventory proves absence.
+- Checks: CJIT native 118/118 plus legacy CLI. Regressions cover distinct same-noun bindings, unused definitions, context axes, parallel declarations/calls, exact maps including 66-row whole-template mapping, stable IDs/overflow, every work cut in small fixture, exact work budget, node-group capacity, allocation failure, empty/unresolved source and retained native invocation error. Independent CJIT link-cap probe retains 507 nodes/32,768 links with checked endpoints/substitutions and separate construction/source flags. No new runtime catalogue/UI/manual acceptance claimed.
+
 ## Integrated Actors/Effects panes
 
 Use existing graph build and explicit collection bindings:
