@@ -22,6 +22,9 @@ void gd_effect_query_destroy(GD_EffectQuery *query);
 /* Source-order direct contributor row -> root-to-activation Effect node path.
    Return count; 0 for invalid input/capacity, never truncate. Caller owns output. */
 int gd_effect_contributor_path(const GD_EffectQuery *query, int row, int *nodes, int capacity);
+/* Same exact root/status scope for an activation, including no-effect/frontier
+   cases. Result may be empty because scope excludes any ancestor. */
+int gd_effect_activation_path(const GD_EffectQuery *query, int activation, int *nodes, int capacity);
 /* Exact opaque ID lookup: -1 missing, -2 ambiguous, -3 work/argument limit. */
 int gd_effect_select(const GD_EffectGraph *graph, const char *id, int work_limit);
 #endif

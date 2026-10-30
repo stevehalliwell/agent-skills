@@ -41,7 +41,7 @@ static void help(void) {
          "  Query --fields: see --list. Query views/ghosts remain pending.\n\n"
          "Unified explorer: gd view explorer with explicit collection bindings below.\n"
          "  One window; six projections; unavailable views explain missing roles.\n"
-         "  --mode skills|challenges|relationships|matrix|mda|resources (default first available)\n"
+         "  --mode skills|challenges|relationships|matrix|mda|resources|actors|effects (default first available)\n"
          "  --layout grid|graph|columns             Explorer: requires --mode matrix\n"
          "  Supports --frames, --screenshot, --output and error-output format flags.\n"
          "  Standalone view commands also available. No automatic folder discovery.\n\n"
@@ -357,10 +357,10 @@ static int application(int argc, char **argv) {
             explorer_mode_supplied = 1;
             if (++i == argc) { error="--mode requires a supported projection name"; break; }
             if (command==13) {
-                const char *names[]={"skills","challenges","relationships","matrix","mda","resources"}; int m;
+                const char *names[]={"skills","challenges","relationships","matrix","mda","resources","actors","effects"}; int m;
                 unified_mode=-1;
                 for (m=0;m<GD_EXPLORER_VIEWS;++m) if (!strcmp(argv[i],names[m])) unified_mode=m;
-                if (unified_mode<0) { error="Explorer --mode requires skills, challenges, relationships, matrix, mda or resources"; break; }
+                if (unified_mode<0) { error="Explorer --mode requires skills, challenges, relationships, matrix, mda, resources, actors or effects"; break; }
             } else {
                 if (strcmp(argv[i],"skills") && strcmp(argv[i],"challenges") && strcmp(argv[i],"relationships")) { error="--mode requires skills, challenges, or relationships"; break; }
                 explorer_mode = !strcmp(argv[i],"relationships") ? GD_EXPLORE_RELATIONSHIPS : !strcmp(argv[i],"challenges") ? GD_EXPLORE_CHALLENGES : GD_EXPLORE_SKILLS;

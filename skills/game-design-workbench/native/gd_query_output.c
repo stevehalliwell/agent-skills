@@ -173,7 +173,12 @@ int gd_write_query_catalogue(FILE *out, int json) {
         fputs("],\"repeatable_parameters\":[\"--status\"",out); if (i==GD_QUERY_ACTOR_STATES) fputs(",\"--value\",\"--assume\",\"--context\",\"--context-not\"",out);
         fputs("],\"fields\":[\"cases\",\"findings\"",out);
         fputs(i==GD_QUERY_BINDINGS ? ",\"bindings\"":i==GD_QUERY_ACTOR_STATES ? ",\"variants\",\"comparisons\"":",\"concepts\",\"contributors\"",out);
-        fprintf(out,"],\"ui_available\":false,\"work_limit_max\":%d}",GD_EFFECT_WORK);
+        fprintf(out,"],\"ui_available\":%s",i==GD_QUERY_BINDINGS ? "false":"true");
+        member(out,"ui_mode",i==GD_QUERY_BINDINGS ? NULL:i==GD_QUERY_ACTOR_STATES ? "actors":"effects");
+        member(out,"ui_scope",i==GD_QUERY_BINDINGS ? "CLI inventory; viewer source/binding pickers are not full inventory results":i==GD_QUERY_ACTOR_STATES ? "explicit root/local participant/axis/finite values/fixed facts/context; all or accepted root; selected pair and ghosts":"result picker; exact contributors/ancestors/side effects; all or accepted placement ancestors; direct-count weighting");
+        fputs(",\"ui_unavailable_parameters\":[\"--object\",\"arbitrary --status list\",\"--work-limit\"",out);
+        if (i==GD_QUERY_CONTRIBUTORS) fputs(",\"--case placement filter\",\"--axis/--value/--effect filters (choose result instead)\"",out);
+        fprintf(out,"],\"ipc_available\":false,\"work_limit_max\":%d}",GD_EFFECT_WORK);
     }
     fputs("]},\"coverage\":{\"scope\":\"implemented_builtin_catalogue_only\",\"complete\":true,\"source_data_loaded\":false},\"errors\":[],\"breadcrumbs\":[\"gd query --question NAME --projection actors|effects with explicit collection bindings; query --list advertises only implemented operations\"]}\n",out); return !ferror(out);
 }

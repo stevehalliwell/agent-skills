@@ -13,23 +13,25 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34});
     match_details(c); layout_controls(c); selected=analyze(c);
     if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_controls(c);
+    if (query_view(p->view)) { gd_explorer_query_controls(c); gd_explorer_query_details(c); }
     if (grid_view(p)) {
         if (!grid_blank_details(c)) gd_explorer_graph_details(c);
-    } else analysis_controls(c,selected);
+    } else if (!query_view(p->view)) analysis_controls(c,selected);
     if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_details(c);
     igEnd();
     matches(c); distance_focus_update(c,selected);
     if (p->distance_focus) gd_layout_focus_advance(p->distance_focus,p->layout,0.22f,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
     p->camera.offset=(Vector2){450,503};
-    if (p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+    if (p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
     {
         GD_ExplorerEvidence e=evidence(c,selected);
         if (grid_view(p)) grid_draw(c);
         else if (is_graph(p->view)) gd_explorer_graph_draw(c,&e);
         else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_draw(c,&e);
+        else if (query_view(p->view)) gd_explorer_query_draw(c);
         else gd_explorer_resource_draw(c,&e);
     }
-    draw_matches(c); if (!grid_view(p)) gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,0);
+    draw_matches(c); if (!grid_view(p) && !query_view(p->view)) gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,0);
     rlImGuiEnd(); EndDrawing();
 }
 static int explorer_test_grid_capacity(GD_ExplorerContext *c, const char *output) {
@@ -83,7 +85,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     char failure[GD_MAX_PATH+512]="",path[GD_MAX_PATH]="",invalid[GD_MAX_PATH]="",probe_path[GD_MAX_PATH]="",resource_source[260]="";
     GD_Model *model; GD_ExplorerProject *last_good; FILE *file;
     c.project=project;
-    EXPLORER_CHECK(project && !gd_explorer_error(project) && project->available==63);
+    EXPLORER_CHECK(project && !gd_explorer_error(project) && project->available==((1u<<GD_EXPLORER_VIEWS)-1));
     panes=allocator.allocate(allocator.context,GD_EXPLORER_VIEWS*sizeof(*panes));
     if (panes) memset(panes,0,GD_EXPLORER_VIEWS*sizeof(*panes));
     saved=allocator.allocate(allocator.context,sizeof(*saved));
@@ -98,6 +100,50 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         if (v==GD_EXPLORER_MDA) panes[v].mda.record=panes[v].layout->node_count ? panes[v].layout->nodes[0].key:-1;
         else panes[v].selection.node=panes[v].layout->node_count ? 0:-1;
         if (is_graph((GD_ExplorerView)v)) panes[v].inspected_record=gd_explorer_graph_record(&c);
+        if (query_view((GD_ExplorerView)v)) {
+            GD_ExplorerPane *p=&panes[v]; GD_ExplorerQueryState *last; GD_Layout *layout; Camera2D camera; int errors=gd_explorer_model(project,(GD_ExplorerView)v)->error_count;
+            if (v==GD_EXPLORER_ACTORS) {
+                int root,edge,found=0;
+                for (root=0;root<project->rules->case_count && !found;++root) {
+                    const GD_RuleCase *candidate=&project->rules->cases[root]; int actor=candidate->primary_participant;
+                    if (actor<0 || project->rules->participants[actor].noun_resolution!=GD_RULE_RESOLVED) continue;
+                    for (edge=project->rules->actor_first[project->rules->participants[actor].noun_record];edge>=0;edge=project->rules->next_axis[edge]) if (project->rules->axis_resolution[edge]==GD_RULE_RESOLVED) {
+                        int axis=gd_explorer_model(project,(GD_ExplorerView)v)->edges[edge].target;
+                        if (project->rules->axes[axis].valid && project->rules->axes[axis].type==GD_AXIS_ENUM && gd_explorer_model(project,(GD_ExplorerView)v)->records[axis].axis.allowed_count) { p->query_options.root_case=root; p->query_options.participant=actor; p->query_options.axis=axis; found=1; break; }
+                    }
+                }
+                EXPLORER_CHECK(found && gd_explorer_query_run(&c) && p->query_state->query->variants && p->query_state->scene);
+                p->query_options.ghosts=GD_QUERY_STACKED_VARIANTS; p->query_options.compare=1; p->query_options.include_excluded=true;
+                /* Display control is applied through same atomic query path. */
+                EXPLORER_CHECK(gd_explorer_query_run(&c));
+            }
+            EXPLORER_CHECK(p->query_state && p->query_state->scene && p->layout==&p->query_state->scene->layout);
+            last=p->query_state; layout=p->layout; camera=p->camera;
+            { GD_ExplorerSelection selection=p->selection; int stage; for (stage=1;stage<=(v==GD_EXPLORER_ACTORS ? 3:8);++stage) {
+                *fail_at=*calls+stage; EXPLORER_CHECK(!reset_view(&c)); *fail_at=-1;
+                EXPLORER_CHECK(p->query_state==last && p->layout==layout && !memcmp(&camera,&p->camera,sizeof(camera)) && !memcmp(&selection,&p->selection,sizeof(selection)) && gd_explorer_model(project,(GD_ExplorerView)v)->error_count==errors);
+            } }
+            *fail_at=*calls+1; EXPLORER_CHECK(!gd_explorer_query_run(&c)); *fail_at=-1;
+            EXPLORER_CHECK(p->query_state==last && p->layout==layout && !memcmp(&camera,&p->camera,sizeof(camera)) && gd_explorer_model(project,(GD_ExplorerView)v)->error_count==errors);
+            if (v==GD_EXPLORER_ACTORS) {
+                snprintf(p->query_options.facts,sizeof(p->query_options.facts),"__missing__:__missing__.x"); EXPLORER_CHECK(!gd_explorer_query_run(&c));
+                EXPLORER_CHECK(p->query_state==last && gd_explorer_model(project,(GD_ExplorerView)v)->error_count==errors); p->query_options.facts[0]=0;
+            }
+            if (v==GD_EXPLORER_EFFECTS) {
+                GD_ExplorerProject *fresh=gd_explorer_load(allocator,collections,count); GD_ExplorerPane *probe=allocator.allocate(allocator.context,sizeof(*probe)),*prior=allocator.allocate(allocator.context,sizeof(*prior)); GD_ExplorerContext candidate=c;
+                int axis=p->query_state->query->effects->nodes[p->query_state->selected->selection.target].axis,mapped;
+                EXPLORER_CHECK(fresh && !gd_explorer_error(fresh) && probe && prior && axis>=0);
+                *prior=*p; prior->selection.node=-1; memset(probe,0,sizeof(*probe)); pane_defaults(probe,GD_EXPLORER_EFFECTS);
+                mapped=gd_explorer_record(fresh->models[GD_EXPLORER_RULE_DATA],gd_explorer_model(project,GD_EXPLORER_EFFECTS)->records[axis].reference); EXPLORER_CHECK(mapped>=0);
+                fresh->models[GD_EXPLORER_RULE_DATA]->records[mapped].id="__replacement_axis_identity__"; candidate.project=fresh; candidate.pane=probe;
+                EXPLORER_CHECK(!gd_explorer_query_remap(&candidate,project,prior) && p->query_state==last && p->layout==layout);
+                pane_release_layout(allocator,probe); gd_diagnostics_clear(&probe->diagnostics); allocator.release(allocator.context,probe); allocator.release(allocator.context,prior); gd_explorer_destroy(fresh);
+            }
+            p->query_message[0]=0;
+            if (v==GD_EXPLORER_ACTORS) { int i; for (i=0;i<p->layout->node_count;++i) if (p->query_state->scene->nodes[i].kind==GD_QUERY_NODE_VARIANT && p->query_state->scene->nodes[i].variant==p->query_options.primary) p->selection.node=i; }
+            explorer_test_render(&c); EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/query-%d.png",output,v)<(int)sizeof(path) && gd_save_screenshot(path));
+            continue;
+        }
         EXPLORER_CHECK(panes[v].layout->direct_routes==(v==GD_EXPLORER_SKILLS));
         panes[v].paused=true; panes[v].paths.enabled=1;
         if (panes[v].layout->node_count) gd_graph_path_start(&panes[v].paths,panes[v].layout->nodes[0].key);
@@ -437,7 +483,7 @@ cleanup:
     if (grid_probe_created) remove(grid_probe_path);
     if (window) { rlImGuiShutdown(); CloseWindow(); }
     if (panes) {
-        for (v=0;v<GD_EXPLORER_VIEWS;++v) { gd_diagnostics_clear(&panes[v].diagnostics); gd_layout_focus_destroy(panes[v].distance_focus); gd_resource_routes_destroy(panes[v].resource_routes); if (panes[v].layout) allocator.release(allocator.context,panes[v].layout); }
+        for (v=0;v<GD_EXPLORER_VIEWS;++v) { gd_diagnostics_clear(&panes[v].diagnostics); gd_layout_focus_destroy(panes[v].distance_focus); gd_resource_routes_destroy(panes[v].resource_routes); pane_release_layout(allocator,&panes[v]); }
         allocator.release(allocator.context,panes);
     }
     if (saved) allocator.release(allocator.context,saved);

@@ -27,9 +27,11 @@ test('unified explorer validates options without prompting or opening a window',
 test('unified entry reports absent graph build or unavailable projection structurally', {skip:!executable},()=>{
   const output=failure(['--related','context=.']);
   assert.ok(['view.graph_unavailable','explorer.unavailable'].includes(output.errors[0].code));
+  for (const mode of ['actors','effects']) assert.ok(['view.graph_unavailable','explorer.unavailable'].includes(failure(['--related','context=.','--mode',mode]).errors[0].code));
   const help=spawnSync(executable,['--help'],{encoding:'utf8',timeout:30000});
   assert.equal(help.status,0);
   assert.match(help.stdout,/view matrix\|skill-atoms\|mda\|resources\|explorer/);
   assert.match(help.stdout,/No automatic folder discovery/);
   assert.match(help.stdout,/--layout grid\|graph\|columns/);
+  assert.match(help.stdout,/resources\|actors\|effects/);
 });

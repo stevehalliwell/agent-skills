@@ -1,5 +1,6 @@
 #include "gd_actor_query.h"
 #include "gd_query.h"
+#include "gd_query_scene.h"
 TEST(actor_finite_variants_and_checked_activation_evidence,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ActorQuery *query,*numeric,*tiny;
     GD_ActorSelection selection={0}; GD_RuleScenario fixed={0}; GD_ActorComparison comparison;
@@ -45,6 +46,36 @@ TEST(actor_finite_variants_and_checked_activation_evidence,
         surface=gd_query_build(model,rules,analysis,&request);
         TEST_ASSERT(surface && surface->variants && surface->variants->variant_count==query->variant_count && surface->variants->write_count==query->write_count);
         for (i=0;i<query->write_count;++i) TEST_ASSERT(surface->variants->writes[i].actor==query->writes[i].actor && surface->variants->writes[i].origin_case==query->writes[i].origin_case && surface->variants->writes[i].declaration==query->writes[i].declaration);
+        {
+            GD_QueryScene *scene=gd_query_scene_build(surface,GD_QUERY_ALL_VARIANTS,0,0,0,GD_EFFECT_WORK); int nodes=0,links=0;
+            TEST_ASSERT(scene && !scene->limited && scene->excluded_activations==2);
+            for (i=0;i<scene->layout.node_count;++i) { nodes+=scene->nodes[i].kind==GD_QUERY_NODE_VARIANT; TEST_ASSERT(scene->nodes[i].incoming==0 && gd_query_scene_record(scene,i)>=0); }
+            for (i=0;i<scene->layout.edge_count;++i) links+=scene->edges[i].kind==GD_QUERY_EDGE_EFFECT;
+            TEST_ASSERT(nodes==2 && links==3);
+            { int shared=0,first=0,second=0; GD_ActorComparison expected; TEST_ASSERT(gd_actor_compare(surface->variants,small,big,&expected) && gd_query_scene_compare(scene,small,big));
+              for (i=0;i<surface->variants->effect_count;++i) { int mask=gd_actor_compare_member(surface->variants,small,big,GD_ACTOR_SET_EFFECTS,i); shared+=mask==3; first+=mask==1; second+=mask==2; }
+              TEST_ASSERT(shared==expected.effects.shared && first==expected.effects.first_only && second==expected.effects.second_only);
+              for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) TEST_ASSERT(scene->nodes[i].comparison==gd_actor_compare_member(surface->variants,small,big,GD_ACTOR_SET_EFFECTS,scene->nodes[i].source));
+              TEST_ASSERT(!gd_query_scene_compare(scene,-1,big) && gd_actor_compare_member(surface->variants,small,big,GD_ACTOR_SET_EFFECTS,-1)==-1 && gd_actor_compare_member(surface->variants,small,big,(GD_ActorSet)9,0)==-1); }
+            gd_query_scene_destroy(scene);
+            scene=gd_query_scene_build(surface,GD_QUERY_PRIMARY_VARIANT,big,0,1,GD_EFFECT_WORK); nodes=links=0; TEST_ASSERT(scene && !scene->limited);
+            for (i=0;i<scene->layout.node_count;++i) nodes+=scene->nodes[i].kind==GD_QUERY_NODE_VARIANT;
+            for (i=0;i<scene->layout.edge_count;++i) links+=scene->edges[i].kind==GD_QUERY_EDGE_EFFECT;
+            TEST_ASSERT(nodes==1 && links==2); gd_query_scene_destroy(scene);
+            scene=gd_query_scene_build(surface,GD_QUERY_STACKED_VARIANTS,big,0,0,GD_EFFECT_WORK); nodes=0; TEST_ASSERT(scene);
+            for (i=0;i<scene->layout.node_count;++i) nodes+=scene->nodes[i].ghost;
+            TEST_ASSERT(nodes>0);
+            { int primary=-1,ghost=-1; for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_VARIANT) { if (scene->nodes[i].ghost) ghost=i; else primary=i; }
+              TEST_ASSERT(primary>=0 && ghost>=0 && gd_query_scene_hit(scene,scene->layout.nodes[primary].x,scene->layout.nodes[primary].y)==primary);
+              TEST_ASSERT(gd_query_scene_hit(scene,scene->layout.nodes[ghost].x,scene->layout.nodes[ghost].y+scene->layout.nodes[ghost].height/2-2)==ghost && gd_query_scene_hit(NULL,0,0)==-1); }
+            gd_query_scene_destroy(scene);
+            scene=gd_query_scene_build(surface,GD_QUERY_STACKED_VARIANTS,0,0,0,GD_EFFECT_WORK); TEST_ASSERT(scene);
+            for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_VARIANT && !scene->nodes[i].ghost) TEST_ASSERT(gd_query_scene_hit(scene,scene->layout.nodes[i].x,scene->layout.nodes[i].y)==i);
+            gd_query_scene_destroy(scene);
+            scene=gd_query_scene_build(surface,GD_QUERY_ALL_VARIANTS,0,0,0,0); TEST_ASSERT(scene && scene->limited && !scene->layout.node_count && scene->unexamined_items_upper_bound>0); gd_query_scene_destroy(scene);
+            TEST_ASSERT(gd_actor_write_effect(surface->variants,-1,0)==-1 && gd_actor_write_effect(surface->variants,0,-1)==-1);
+            for (i=0;i<surface->variants->write_count;++i) TEST_ASSERT(surface->variants->write_effects[i]>=0);
+        }
         gd_query_destroy(surface);
         request.kind=GD_QUERY_BINDINGS; request.case_index=-1; request.noun=rules->participants[actor].noun_record; request.fixed=NULL;
         surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->binding_count==6); gd_query_destroy(surface);

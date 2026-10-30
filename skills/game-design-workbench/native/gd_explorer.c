@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <string.h>
 
-const char *const gd_explorer_view_names[GD_EXPLORER_VIEWS]={"Skills","Challenges","Relationships","Interactions","MDA","Resources"};
+const char *const gd_explorer_view_names[GD_EXPLORER_VIEWS]={"Skills","Challenges","Relationships","Interactions","MDA","Resources","Actors / states","Effect convergence"};
 GD_ExplorerFamily gd_explorer_family(GD_ExplorerView view) {
     assert(view>=0 && view<GD_EXPLORER_VIEWS);
     return view<=GD_EXPLORER_RELATIONSHIPS ? GD_EXPLORER_SKILL_DATA :
@@ -73,7 +73,10 @@ GD_ExplorerProject *gd_explorer_load(GD_Allocator allocator, const GD_Collection
     if ((roles&7u)==7u) project->available|=1u<<GD_EXPLORER_MATRIX;
     { unsigned required=(1u<<GD_MDA_MECHANIC)|(1u<<GD_MDA_DYNAMIC)|(1u<<GD_MDA_AESTHETIC);
       if ((roles&required)==required) project->available|=1u<<GD_EXPLORER_MDA; }
-    if (roles&((1u<<GD_CASE)|(1u<<GD_MDA_MECHANIC)|(1u<<GD_RULE))) project->available|=1u<<GD_EXPLORER_RESOURCES;
+    if (roles&((1u<<GD_CASE)|(1u<<GD_MDA_MECHANIC)|(1u<<GD_RULE))) {
+        project->available|=(1u<<GD_EXPLORER_RESOURCES)|(1u<<GD_EXPLORER_EFFECTS);
+        if ((roles&((1u<<GD_NOUN)|(1u<<GD_AXIS)))==((1u<<GD_NOUN)|(1u<<GD_AXIS))) project->available|=1u<<GD_EXPLORER_ACTORS;
+    }
     for (f=0;f<GD_EXPLORER_FAMILIES;++f) {
         int wanted=0,v;
         for (v=0;v<GD_EXPLORER_VIEWS;++v) if ((project->available&(1u<<v)) && gd_explorer_family((GD_ExplorerView)v)==(GD_ExplorerFamily)f) wanted=1;

@@ -5,11 +5,12 @@
 #include "gd_layout_focus.h"
 #include "gd_matrix_grid.h"
 #include "gd_resource_routes.h"
+#include "gd_query_scene.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 
 typedef struct { int cell, node, interaction, linked, held; } GD_ExplorerSelection;
-enum { GD_EXPLORER_FIT_GRID_READABLE=4, GD_EXPLORER_FIT_RESOURCE_WITNESS=5 };
+enum { GD_EXPLORER_FIT_GRID_READABLE=4, GD_EXPLORER_FIT_RESOURCE_WITNESS=5, GD_EXPLORER_FIT_QUERY_READABLE=6 };
 typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } GD_ExplorerSkillEditor;
 typedef struct {
     int record, link, held;
@@ -17,6 +18,18 @@ typedef struct {
     char filter[129];
     unsigned char path_nodes[GD_MAX_RECORDS], path_links[GD_MAX_EDGES];
 } GD_ExplorerMdaDisplay;
+typedef struct {
+    int root_case,participant,axis,ghosts,primary,compare;
+    bool accepted,weighted,include_excluded;
+    char values[GD_MAX_RULE_LINE+1],facts[GD_MAX_RULE_LINE+1],contexts[GD_MAX_RULE_LINE+1];
+} GD_ExplorerQueryOptions;
+typedef struct {
+    GD_Allocator allocator; GD_ExplorerQueryOptions applied;
+    GD_Query *query; GD_QueryScene *scene; GD_Layout *empty;
+    GD_EffectQuery *selected;
+    GD_RuleScenario fixed;
+    char value_tokens[GD_MAX_RULE_LINE+1],fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1];
+} GD_ExplorerQueryState;
 typedef struct {
     GD_ExplorerView view;
     GD_Layout *layout;
@@ -27,6 +40,9 @@ typedef struct {
     Vector2 right_origin;
     int right_started;
     GD_ExplorerSelection selection;
+    GD_ExplorerQueryOptions query_options;
+    GD_ExplorerQueryState *query_state;
+    char query_message[256];
     GD_ResourceRoutes *resource_routes;
     int resource_from,resource_to,resource_witness;
     bool resource_accepted,resource_only_witness;
@@ -83,6 +99,18 @@ void gd_explorer_mda_input(GD_ExplorerContext *context);
 void gd_explorer_mda_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *evidence);
 void gd_explorer_mda_details(GD_ExplorerContext *context);
 void gd_explorer_mda_source(GD_ExplorerContext *context, int edge);
+
+int gd_explorer_query_prepare(GD_ExplorerContext *context);
+int gd_explorer_query_run(GD_ExplorerContext *context);
+int gd_explorer_query_select_result(GD_ExplorerContext *context, int target);
+void gd_explorer_query_destroy(GD_ExplorerQueryState *state);
+int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProject *old, const GD_ExplorerPane *prior);
+void gd_explorer_query_controls(GD_ExplorerContext *context);
+void gd_explorer_query_draw(GD_ExplorerContext *context);
+void gd_explorer_query_input(GD_ExplorerContext *context);
+void gd_explorer_query_details(GD_ExplorerContext *context);
+void gd_explorer_query_source(GD_ExplorerContext *context, int edge);
+int gd_explorer_query_record(const GD_ExplorerPane *pane);
 
 int gd_explorer_resource_prepare(GD_ExplorerContext *context);
 void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *evidence);

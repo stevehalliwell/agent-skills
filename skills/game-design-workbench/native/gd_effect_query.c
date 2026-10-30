@@ -19,6 +19,12 @@ static int reverse_path(const GD_EffectGraph *graph, int activation, int *path) 
         if (activation<0 || activation>=graph->node_count) return 0;
     }
 }
+static int eligible_path(const GD_EffectQuery *query, const int *path, int count) {
+    const GD_EffectSelection *selection=&query->selection; int j;
+    if (!count || (selection->root_case>=0 && query->graph->source->nodes[query->graph->nodes[path[count-1]].activation].case_index!=selection->root_case)) return 0;
+    if (selection->activation_mask) for (j=0;j<count;++j) if (!selection->activation_mask[path[j]]) return 0;
+    return 1;
+}
 GD_EffectQuery *gd_effect_query_build(const GD_EffectGraph *graph, GD_EffectSelection selection, int work_limit) {
     GD_EffectQuery *query; const GD_ResourceGraph *source; int i; size_t value_length=0;
     if (!graph || work_limit<0 || work_limit>GD_EFFECT_WORK) return NULL;
@@ -41,7 +47,7 @@ GD_EffectQuery *gd_effect_query_build(const GD_EffectGraph *graph, GD_EffectSele
     }
     if (query->limited) { query->unexamined_links=graph->link_count; return query; }
     for (i=0;i<graph->link_count;++i) {
-        const GD_EffectLink *link=&graph->links[i]; int path[GD_MAX_RULE_EXPANSION_DEPTH],count,j,eligible=1;
+        const GD_EffectLink *link=&graph->links[i]; int path[GD_MAX_RULE_EXPANSION_DEPTH],count,j;
         if (!charge(query,1)) break;
         if (link->kind!=GD_EFFECT_DECLARATION || (selection.target>=0 && link->to!=selection.target)) continue;
         {
@@ -64,9 +70,7 @@ GD_EffectQuery *gd_effect_query_build(const GD_EffectGraph *graph, GD_EffectSele
         if (!charge(query,GD_MAX_RULE_EXPANSION_DEPTH+1)) break;
         count=reverse_path(graph,link->from,path);
         if (!count) { query->source_incomplete=1; ++query->unresolved_targets; continue; }
-        if (selection.root_case>=0 && source->nodes[graph->nodes[path[count-1]].activation].case_index!=selection.root_case) eligible=0;
-        if (selection.activation_mask) for (j=0;j<count;++j) if (!selection.activation_mask[path[j]]) eligible=0;
-        if (!eligible) { ++query->excluded_scope; continue; }
+        if (!eligible_path(query,path,count)) { ++query->excluded_scope; continue; }
         query->links[query->count++]=i; ++query->incoming[link->to]; query->highlighted[i]=1;
         for (j=0;j<count;++j) {
             int call=query->incoming_call[path[j]]; query->context[path[j]]=1;
@@ -78,13 +82,17 @@ GD_EffectQuery *gd_effect_query_build(const GD_EffectGraph *graph, GD_EffectSele
     return query;
 }
 void gd_effect_query_destroy(GD_EffectQuery *query) { if (query) query->allocator.release(query->allocator.context,query); }
-int gd_effect_contributor_path(const GD_EffectQuery *query, int row, int *nodes, int capacity) {
+int gd_effect_activation_path(const GD_EffectQuery *query, int activation, int *nodes, int capacity) {
     int reverse[GD_MAX_RULE_EXPANSION_DEPTH],count,i;
-    if (!query || row<0 || row>=query->count || !nodes) return 0;
-    count=reverse_path(query->graph,query->graph->links[query->links[row]].from,reverse);
-    if (!count || capacity<count) return 0;
+    if (!query || !nodes) return 0;
+    count=reverse_path(query->graph,activation,reverse);
+    if (!eligible_path(query,reverse,count) || capacity<count) return 0;
     for (i=0;i<count;++i) nodes[i]=reverse[count-i-1];
     return count;
+}
+int gd_effect_contributor_path(const GD_EffectQuery *query, int row, int *nodes, int capacity) {
+    if (!query || row<0 || row>=query->count) return 0;
+    return gd_effect_activation_path(query,query->graph->links[query->links[row]].from,nodes,capacity);
 }
 int gd_effect_select(const GD_EffectGraph *graph, const char *id, int work_limit) {
     char candidate[GD_EFFECT_ID_CAPACITY]; size_t length=0; int i,found=-1,work=0;

@@ -90,6 +90,7 @@ GD_ActorQuery *gd_actor_query_build(GD_Model *model, const GD_RuleAnalysis *anal
     query=model->allocator.allocate(model->allocator.context,sizeof(*query));
     if (!query) { gd_error(model,"actors.memory","Cannot allocate bounded actor query",NULL,0); return NULL; }
     memset(query,0,sizeof(*query)); query->allocator=model->allocator; query->analysis=analysis;
+    for (i=0;i<GD_ACTOR_WRITES;++i) query->write_effects[i]=-1;
     query->case_index=selection->case_index; query->participant=actor; query->axis=axis; query->work_limit=work_limit; query->vocabulary_closed=model->records[axis].axis_closed;
     if (selection->fixed) query->fixed=*selection->fixed;
     if (selection->value_count) { n=selection->value_count; for (i=0;i<n;++i) values[i]=selection->values[i]; }
@@ -150,7 +151,7 @@ GD_ActorQuery *gd_actor_query_build(GD_Model *model, const GD_RuleAnalysis *anal
                 if (mapped>=root->first_participant && mapped<root->first_participant+root->participant_count && mapped!=actor) member(variant->partners,mapped);
             }
         }
-        for (j=variant->first_write;j<query->write_count && !query->limited;++j) { int effect=effect_member(query,query->variant_count-1,j); if (effect>=0) member(variant->effects,effect); }
+        for (j=variant->first_write;j<query->write_count && !query->limited;++j) { int effect=effect_member(query,query->variant_count-1,j); query->write_effects[j]=effect; if (effect>=0) member(variant->effects,effect); }
         if (evaluation->limited) query->limited=1;
         if (query->limited) variant->limited=1;
     }
@@ -166,6 +167,23 @@ static GD_ActorSetComparison compare_set(const unsigned long long *a, const unsi
         result.shared+=first && second; result.first_only+=first && !second; result.second_only+=!first && second;
     }
     return result;
+}
+int gd_actor_write_effect(const GD_ActorQuery *query, int variant, int write) {
+    const GD_ActorVariant *item;
+    if (!query || variant<0 || variant>=query->variant_count) return -1;
+    item=&query->variants[variant];
+    if (write<item->first_write || write>=item->first_write+item->write_count) return -1;
+    return query->write_effects[write];
+}
+int gd_actor_compare_member(const GD_ActorQuery *query, int first, int second, GD_ActorSet set, int member) {
+    const unsigned long long *a,*b; int count;
+    if (!query || first<0 || first>=query->variant_count || second<0 || second>=query->variant_count || member<0) return -1;
+    if (set==GD_ACTOR_SET_CASES) { a=query->variants[first].cases; b=query->variants[second].cases; count=query->analysis->rules->case_count; }
+    else if (set==GD_ACTOR_SET_PARTNERS) { a=query->variants[first].partners; b=query->variants[second].partners; count=query->analysis->rules->participant_count; }
+    else if (set==GD_ACTOR_SET_EFFECTS) { a=query->variants[first].effects; b=query->variants[second].effects; count=query->effect_count; }
+    else return -1;
+    if (member>=count) return -1;
+    return ((a[member/64]>>(member%64))&1u) | (((b[member/64]>>(member%64))&1u)<<1);
 }
 int gd_actor_compare(const GD_ActorQuery *query, int first, int second, GD_ActorComparison *result) {
     if (!query || !result || first<0 || second<0 || first>=query->variant_count || second>=query->variant_count) return 0;

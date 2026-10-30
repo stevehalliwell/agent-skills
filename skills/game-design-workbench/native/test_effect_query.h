@@ -1,5 +1,6 @@
 #include "gd_effect_query.h"
 #include "gd_query.h"
+#include "gd_query_scene.h"
 TEST(effect_contributor_scope_paths_and_counts,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ResourceGraph *source;
     GD_EffectGraph *graph,*duplicate; GD_EffectQuery *query; GD_EffectSelection selection={-1,-1,-1,-1,-1,NULL,NULL};
@@ -27,6 +28,26 @@ TEST(effect_contributor_scope_paths_and_counts,
         request.kind=GD_QUERY_CONTRIBUTORS; request.case_index=request.noun=request.axis=request.effect_kind=-1; request.target_id=id; request.work_limit=GD_EFFECT_WORK;
         surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->contributors && surface->contributors->count==4);
         selected=gd_effect_select(surface->effects,id,GD_EFFECT_WORK); TEST_ASSERT(selected>=0 && surface->contributors->incoming[selected]==4); gd_query_destroy(surface);
+        surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface);
+        {
+            GD_QueryScene *plain=gd_query_scene_build(surface,GD_QUERY_ALL_VARIANTS,-1,0,0,GD_EFFECT_WORK),*weighted=gd_query_scene_build(surface,GD_QUERY_ALL_VARIANTS,-1,1,0,GD_EFFECT_WORK); int changed=0;
+            TEST_ASSERT(plain && weighted && !plain->limited && plain->layout.node_count==weighted->layout.node_count && plain->layout.edge_count==weighted->layout.edge_count);
+            for (i=0;i<plain->layout.node_count;++i) { TEST_ASSERT(plain->nodes[i].source==weighted->nodes[i].source && plain->nodes[i].incoming==weighted->nodes[i].incoming); changed+=weighted->layout.nodes[i].width>plain->layout.nodes[i].width; }
+            TEST_ASSERT(changed==1 && plain->layout.edge_count==surface->effects->link_count);
+            gd_query_scene_destroy(plain); gd_query_scene_destroy(weighted);
+            {
+                GD_EffectSelection subset=surface->contributors->selection; GD_EffectQuery *scope; GD_QueryScene *scene; int found=0;
+                subset.root_case=root; subset.noun=noun; scope=gd_effect_query_build(surface->effects,subset,GD_EFFECT_WORK); TEST_ASSERT(scope && scope->count==1);
+                scene=gd_query_scene_effect_context(surface,scope,1,GD_EFFECT_WORK); TEST_ASSERT(scene && !scene->limited && scene->layout.node_count==3 && scene->layout.edge_count==3);
+                for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) { TEST_ASSERT(scene->nodes[i].incoming==2 && scope->incoming[selected]==1 && surface->contributors->incoming[selected]==4); ++found; }
+                TEST_ASSERT(found==1 && !gd_query_scene_compare(scene,0,1)); gd_query_scene_destroy(scene);
+                scene=gd_query_scene_effect_context(surface,scope,1,0); TEST_ASSERT(scene && scene->limited && !scene->layout.node_count && scene->unexamined_items_upper_bound>0); gd_query_scene_destroy(scene);
+                allocator=surface->allocator; failure=(RouteFailure){allocator,0}; surface->allocator=(GD_Allocator){&failure,route_allocate,route_release}; TEST_ASSERT(!gd_query_scene_effect_context(surface,scope,1,GD_EFFECT_WORK)); surface->allocator=allocator;
+                TEST_ASSERT(!gd_query_scene_effect_context(surface,NULL,1,GD_EFFECT_WORK));
+                gd_effect_query_destroy(scope);
+            }
+        }
+        gd_query_destroy(surface);
         allocator=model->allocator;
         for (selected=0;selected<4;++selected) {
             failure=(RouteFailure){allocator,selected}; model->allocator=(GD_Allocator){&failure,route_allocate,route_release};
@@ -49,6 +70,7 @@ TEST(effect_contributor_scope_paths_and_counts,
     selection.target=root_node; TEST_ASSERT(!gd_effect_query_build(graph,selection,GD_EFFECT_WORK)); selection.target=life;
     allocator=graph->allocator; failure=(RouteFailure){allocator,0}; graph->allocator=(GD_Allocator){&failure,route_allocate,route_release};
     TEST_ASSERT(!gd_effect_query_build(graph,selection,GD_EFFECT_WORK)); graph->allocator=allocator;
+    printf("query scene owned storage: %llu bytes; borrowed query/scope excluded\n",(unsigned long long)sizeof(GD_QueryScene));
     printf("contributor owned storage: %llu bytes; query adapter: %llu bytes; borrowed snapshots/inputs excluded\n",(unsigned long long)sizeof(GD_EffectQuery),(unsigned long long)sizeof(GD_Query));
     gd_effect_graph_destroy(graph); gd_resource_graph_destroy(source); gd_rule_analysis_destroy(analysis); gd_rules_destroy(rules); gd_destroy(model);
 )

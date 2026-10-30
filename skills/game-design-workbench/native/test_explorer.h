@@ -51,7 +51,7 @@ TEST(explorer_loading,
     GD_ExplorerProject *project,*fresh; GD_Model *skills,*mda; int i,record,changed=0;
     TEST_ASSERT(explorer_fixture());
     project=gd_explorer_load(allocator,explorer_collections,12);
-    TEST_ASSERT(project && !gd_explorer_error(project) && project->available==63 && project->draft && project->routes && project->mda && project->resources);
+    TEST_ASSERT(project && !gd_explorer_error(project) && project->available==((1u<<GD_EXPLORER_VIEWS)-1) && project->draft && project->routes && project->mda && project->resources);
     skills=gd_explorer_model(project,GD_EXPLORER_SKILLS); mda=gd_explorer_model(project,GD_EXPLORER_MDA);
     TEST_ASSERT(skills==gd_explorer_model(project,GD_EXPLORER_CHALLENGES) && skills==gd_explorer_model(project,GD_EXPLORER_RELATIONSHIPS));
     record=gd_explorer_record(mda,"moves/action"); TEST_ASSERT(record>=0 && mda->records[record].role==GD_MDA_MECHANIC);

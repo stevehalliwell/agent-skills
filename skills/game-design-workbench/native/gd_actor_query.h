@@ -34,7 +34,7 @@ typedef struct {
     int work, work_limit, limited, unexamined_variants, vocabulary_closed;
     GD_RuleScenario fixed;
     GD_ActorVariant variants[GD_ACTOR_VARIANTS];
-    GD_RuleWrite writes[GD_ACTOR_WRITES]; int write_activations[GD_ACTOR_WRITES];
+    GD_RuleWrite writes[GD_ACTOR_WRITES]; int write_activations[GD_ACTOR_WRITES],write_effects[GD_ACTOR_WRITES];
     GD_RuleActivation activations[GD_ACTOR_ACTIVATIONS];
     GD_RuleWriteCheck checks[GD_ACTOR_CHECKS]; GD_ActorEffect effects[GD_ACTOR_WRITES];
     GD_RuleScenario inputs; GD_RuleEvaluation evaluation; GD_RuleTrace trace; /* Owned reusable scratch. */
@@ -49,5 +49,11 @@ GD_ActorQuery *gd_actor_query_build(GD_Model *model, const GD_RuleAnalysis *anal
 void gd_actor_query_destroy(GD_ActorQuery *query);
 int gd_actor_trace_participant(const GD_RuleAnalysis *analysis, const GD_RuleActivation *activation, int participant);
 GD_EffectKind gd_actor_write_family(const GD_ActorQuery *query, int variant, const GD_RuleWrite *write);
+/* Exact retained concept association; -1 for invalid/unexamined write. */
+int gd_actor_write_effect(const GD_ActorQuery *query, int variant, int write);
+typedef enum { GD_ACTOR_SET_CASES, GD_ACTOR_SET_PARTNERS, GD_ACTOR_SET_EFFECTS } GD_ActorSet;
+/* Membership mask: 1 first, 2 second, 3 shared, 0 neither; -1 invalid.
+   Uses same retained not-excluded sets as gd_actor_compare. */
+int gd_actor_compare_member(const GD_ActorQuery *query, int first, int second, GD_ActorSet set, int member);
 int gd_actor_compare(const GD_ActorQuery *query, int first, int second, GD_ActorComparison *result);
 #endif

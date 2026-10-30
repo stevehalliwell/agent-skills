@@ -60,7 +60,7 @@ try {
         foreach ($name in @('skill-atoms', 'challenges', 'nouns', 'verbs', 'interactions', 'mechanics', 'systems', 'dynamics', 'aesthetics', 'axes', 'resources', 'control-vars')) {
             $inputs += @("--$name", "$name=$(Join-Path $game $name)")
         }
-        foreach ($mode in @('skills', 'challenges', 'relationships', 'matrix', 'mda', 'resources')) {
+        foreach ($mode in @('skills', 'challenges', 'relationships', 'matrix', 'mda', 'resources', 'actors', 'effects')) {
             $capture = Join-Path $fixture "$mode.png"
             $log = Join-Path $fixture "$mode-draft"
             Invoke-OwnedProbe (Join-Path $run 'gd-view.exe') (@('view', 'explorer') + $inputs + @('--mode', $mode, '--frames', '4', '--screenshot', $capture)) $log
@@ -74,7 +74,7 @@ try {
         foreach ($file in $fixtureSources) {
             if ((Get-FileHash -LiteralPath $file.Path -Algorithm SHA256).Hash -ne $file.Hash) { throw "Private fixture source changed: $($file.Path)" }
         }
-        $results += [pscustomobject]@{ example = $example; stateChecks = $checks; productionCaptures = 7; directory = $fixture }
+        $results += [pscustomobject]@{ example = $example; stateChecks = $checks; productionCaptures = 9; directory = $fixture }
     }
 } finally {
     $after = @(Get-ChildItem -LiteralPath $examples -Recurse -File | Sort-Object FullName)
