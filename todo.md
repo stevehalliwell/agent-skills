@@ -1106,12 +1106,13 @@ Status: ready for implementation. Use 05 and shared kernels; manual usefulness r
 
 #### Review 09 — Explore actor states and resource flows
 
-Status: ready for implementation. Uses existing 01/02/03 contracts and viewer integration from 06; does not reopen parked encounter design. Manual usefulness remains a review gate.
+Status: implementation underway; primary-target reader slice implemented, source migration and actor/effect exploration remain. Uses existing 01/02/03 contracts and viewer integration from 06; does not reopen parked encounter design. Manual usefulness remains a review gate.
 
 - Result: actor/state navigation, state-specific ghosts, conditional comparisons, shared outcome nodes, resource flows and role changes in shared analysis and visual inspection.
 - Resource projection should expose Task 02's derived flows and conversion-path exploration across resources; query semantics belong to Task 02, not a second viewer evaluator.
 - Select actor and move through its states to reveal relevant partners; alternatively select actors and show ghosts for states in which they interact. Preserve underlying actor identity. Include resource gap/pivotal-connection evidence.
 - Delivery slices: (1) explicit primary targets and affected source migration, (2) shared effect/contributor projection and headless queries, (3) actor/state browsing and state comparisons, (4) incoming-weighted convergence drawing and catalogue integration. Resource composition follows Review 02's existing contract. No executable simulation or all-axis Cartesian enumeration.
+- Reader slice: explicit `target`, unqualified result fields and scoped coexistence reuse existing semantic evaluators. Source order, original lines, same-type participants, parallel writes and explicit maps retained; legacy sources expose unspecified primary target. Rules/Resource JSON expose both scalar scopes through `effect_declarations` and numeric `target_origin`. Stable assignment packing is bounded and allocation-failure safe. Independent-review partial-list completeness finding fixed: rejected/unprocessed spans remain incomplete even beside valid spans; lost states keep OTHER conditional and Resource side facts unresolved. Checks: 99/99 native plus CLI, 29 Node passed / 4 external skips, strict C99, graph/plain builds and both-example app-local checks with unchanged source hashes/zero owned leaks. Evidence and engineering choice in [implementation plan](reports/graph-query-research/implementation-plan.md#functional-continuation--independent-delivery). Source migration, later functionality and human acceptance remain open.
 
 ##### Functional refinement — result convergence and targeted causes
 

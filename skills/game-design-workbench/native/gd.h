@@ -346,6 +346,9 @@ typedef struct {
     const char *name, *context, *unknown_conditions, *unknown_effects;
     int source, line, context_line, first_participant, participant_count, skip_if_count;
     int unknown_conditions_line, unknown_effects_line;
+    const char *primary_target, *default_effects[3]; /* becomes, preserve, causes; borrowed retained text. */
+    int primary_participant, primary_target_line, default_lines[3], default_set_line;
+    unsigned default_fields;
     GD_RuleContext ordered_context;
 } GD_RuleCase;
 typedef struct {
@@ -355,9 +358,12 @@ typedef struct {
     GD_RuleCondition required_condition, skip_condition;
     GD_RuleOtherAxes other_axes_mode;
     GD_RuleResolution noun_resolution;
-    unsigned fields;
+    unsigned fields, defaulted_fields; /* Normalized field presence; defaulted marks case-scope origin. */
+    unsigned incomplete_effect_fields; /* Bit 4/5: at least one state/preservation list rejected or unprocessed. */
 } GD_RuleParticipant;
-typedef struct { const char *axis, *expression; int line, quantity; GD_RuleTarget target; } GD_RuleAssignment;
+typedef struct { const char *axis, *expression; int line, quantity, participant, from_primary; GD_RuleTarget target; } GD_RuleAssignment;
+typedef enum { GD_RULE_EFFECT_STATE, GD_RULE_EFFECT_PRESERVE, GD_RULE_EFFECT_CALL } GD_RuleEffectKind;
+typedef struct { const char *text; int line, from_primary; } GD_RuleEffectSpan;
 typedef struct { const char *axis, *reference; int line, resource_record; GD_RuleTarget target; GD_RuleResolution resource_resolution, identity_resolution; } GD_RulePool;
 typedef struct { const char *text; size_t length; int line, control_record; GD_RuleTarget target; } GD_RuleStateEffect;
 typedef enum { GD_PRESERVE_AXIS, GD_PRESERVE_ALL, GD_PRESERVE_OTHER } GD_RulePreserveKind;
@@ -394,6 +400,11 @@ typedef struct {
     char text[GD_RULE_TEXT_CAPACITY];
 } GD_Rules;
 GD_Rules *gd_read_rules(GD_Model *model);
+/* Up to two borrowed scalar effect declarations, in original source-line order.
+   Case defaults and explicit participant fields remain separate, not concatenated.
+   Indices refer to this immutable rules snapshot; output borrows its lifetime. */
+int gd_rule_effect_spans(const GD_Rules *rules, int case_index, int participant,
+                         GD_RuleEffectKind kind, GD_RuleEffectSpan spans[2]);
 /* Internal phase: call once per fresh rule result; diagnostics append to model. */
 void gd_resolve_rule_axes(GD_Model *model, GD_Rules *rules);
 void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules);

@@ -112,6 +112,55 @@ test('native rule CLI exposes full live migration and preserves approved specime
     assert.ok(crate.data.records.every(row => row.rule_block === 'parsed'));
   });
 
+test('native primary targets retain both effect scopes, source lines and Resource provenance',
+  { skip: !executable && 'Set GD_NATIVE_EXE' }, async t => {
+    const root = await mkdtemp(join(tmpdir(), 'gd-primary-cli-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    for (const folder of ['nouns', 'axes', 'rules']) await mkdir(join(root, folder));
+    const files = new Map([
+      ['axes/Life.md', '---\nvalue_type: enum\nallowed_values: [alive, dead]\nclosed: true\n---\n'],
+      ['axes/Amount.md', '---\nvalue_type: integer\nunit: count\n---\n'],
+      ['nouns/hero.md', '---\naxes: [axes/Life, axes/Amount]\n---\n'],
+      ['rules/helper.md', '```gd-rule\ncase helper:\n    Actor:\n        noun: nouns/hero\n        requires: ANY\n        preserve: OTHER\n```\n'],
+      ['rules/root.md', '---\nstatus: accepted\ncoverage: defined\n---\n```gd-rule\ncase root:\n    target: A\n    context: ANY\n    becomes: dead\n    preserve: OTHER\n    causes: cases/helper#helper\n    set:\n        Amount: this + 1[count]\n    B:\n        noun: nouns/hero\n        requires: ANY\n        preserve: ALL\n    A:\n        noun: nouns/hero\n        requires: ANY\n        becomes: alive\n        causes: cases/helper#helper\n        set:\n            Amount: this + 2[count]\n```\n'],
+    ]);
+    for (const [path, content] of files) await writeFile(join(root, path), content);
+    const bindings = ['--interactions', `cases=${join(root, 'rules')}`, '--nouns', `nouns=${join(root, 'nouns')}`, '--axes', `axes=${join(root, 'axes')}`];
+    const report = structured(['rules', ...bindings]);
+    const item = report.data.cases.find(row => row.record === 'cases/root');
+    assert.equal(item.primary_target, 'A');
+    assert.deepEqual(item.participants.map(row => row.name), ['B', 'A']);
+    const actor = item.participants[1];
+    assert.equal(actor.state_lists_complete, true);
+    assert.equal(actor.preservation_lists_complete, true);
+    assert.deepEqual(actor.state_effects.map(row => row.target.state), ['dead', 'alive']);
+    assert.deepEqual(actor.set.map(row => [row.expression, row.target_origin]), [['this + 1[count]', 'primary'], ['this + 2[count]', 'participant']]);
+    const declarations = actor.effect_declarations;
+    assert.deepEqual(declarations.filter(row => row.field === 'causes').map(row => row.target_origin), ['primary', 'participant']);
+    for (const declaration of declarations) {
+      assert.equal(files.get('rules/root.md').split('\n')[declaration.line - 1].trim(), `${declaration.field}: ${declaration.text}`);
+    }
+    assert.equal(report.data.cases.find(row => row.record === 'cases/helper').primary_target, null);
+    const resources = JSON.parse(invoke(['resources', ...bindings]).stdout);
+    assert.equal(resources.ok, true); // Resource completeness separately includes composition/frontiers.
+    const activation = resources.data.nodes.find(row => row.kind === 'case' && row.source.record === 'cases/root');
+    assert.equal(activation.declaration.primary_target, 'A');
+    assert.deepEqual(activation.declaration.participants[1].effect_declarations, declarations);
+    assert.equal(resources.data.relations.filter(row => row.kind === 'invocation').length, 2);
+    assert.equal(resources.data.relations.filter(row => row.kind === 'state_write').length, 2);
+    for (const [path, content] of files) assert.equal(await readFile(join(root, path), 'utf8'), content);
+    await writeFile(join(root, 'rules/root.md'), files.get('rules/root.md').replace('        becomes: alive\n', '        becomes: alive,\n'));
+    const partial = structured(['rules', ...bindings], 2);
+    assert.ok(partial.errors.some(row => row.code === 'rules.state_list'));
+    const partialActor = partial.data.cases.find(row => row.record === 'cases/root').participants[1];
+    assert.equal(partialActor.state_effects.length, 1);
+    assert.equal(partialActor.state_lists_complete, false);
+    const partialResources = JSON.parse(invoke(['resources', ...bindings], 2).stdout);
+    assert.equal(partialResources.ok, false);
+    assert.ok(partialResources.errors.some(row => row.code === 'rules.state_list'));
+    assert.deepEqual(partialResources.data.nodes, []); // CLI rejects malformed candidate before graph construction.
+  });
+
 test('native rule CLI handles empty, partial and invalid requests without source writes',
   { skip: !executable && 'Set GD_NATIVE_EXE' }, async t => {
     const root = await mkdtemp(join(tmpdir(), 'gd-rule-cli-'));

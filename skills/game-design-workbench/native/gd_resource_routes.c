@@ -84,7 +84,7 @@ static int unresolved(const GD_ResourceGraph *graph, int node) {
     if (item->kind==GD_RESOURCE_CASE) {
         const GD_RuleCase *rule=&graph->rules->cases[item->case_index]; int p;
         if (rule->unknown_conditions || rule->unknown_effects) return 1;
-        for (p=rule->first_participant;p<rule->first_participant+rule->participant_count;++p) if (graph->rules->participants[p].causes) return 1;
+        for (p=rule->first_participant;p<rule->first_participant+rule->participant_count;++p) if (graph->rules->participants[p].causes || graph->rules->participants[p].incomplete_effect_fields) return 1;
     }
     return 0;
 }
@@ -159,7 +159,7 @@ int gd_resource_query(GD_ResourceRoutes *routes, const GD_ResourceGraph *graph, 
             const GD_RuleCase *rule=&graph->rules->cases[c]; int p;
             routes->case_unresolved[c]=(unsigned char)(rule->unknown_conditions || rule->unknown_effects);
             for (p=rule->first_participant;p<rule->first_participant+rule->participant_count;++p)
-                if (graph->rules->participants[p].causes) routes->case_unresolved[c]=1;
+                if (graph->rules->participants[p].causes || graph->rules->participants[p].incomplete_effect_fields) routes->case_unresolved[c]=1;
         }
     }
     /* Reverse insertion preserves source declaration order during traversal. */

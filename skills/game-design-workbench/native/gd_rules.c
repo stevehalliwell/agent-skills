@@ -70,6 +70,7 @@ static int declaration(GD_Model *model, GD_Rules *rules, GD_RuleSource *source,
         item->name = retain(model,rules,record,text+5,size-6,line);
         if (!item->name) return 0;
         item->source = (int)(source - rules->sources); item->line = line;
+        item->primary_participant = -1;
         item->first_participant = rules->participant_count;
         *current_case = rules->case_count++; ++source->case_count;
         *current_participant = -1; *in_set = 0; return 1;
@@ -85,6 +86,27 @@ static int declaration(GD_Model *model, GD_Rules *rules, GD_RuleSource *source,
     value_size = (size_t)(text+size-value);
     if (indent == 4) {
         *in_set = 0; *current_participant = -1;
+        if (same(key,key_size,"target") && value_size) {
+            if (item->primary_target) return fail(model,record,"rules.duplicate_field","Duplicate primary target",line);
+            if (!label(value,value_size)) return fail(model,record,"rules.primary_target","target names one case-local participant",line);
+            item->primary_target = retain(model,rules,record,value,value_size,line);
+            item->primary_target_line = line;
+            return item->primary_target != NULL;
+        }
+        if ((value_size && (same(key,key_size,"becomes") || same(key,key_size,"preserve") || same(key,key_size,"causes"))) ||
+            (item->primary_target && same(key,key_size,"set"))) {
+            int field = same(key,key_size,"becomes") ? 4:same(key,key_size,"preserve") ? 5:same(key,key_size,"causes") ? 6:7;
+            if (!item->primary_target) return fail(model,record,"rules.primary_required","Declare target before unqualified result fields",line);
+            if (item->default_fields & (1u << field)) return fail(model,record,"rules.duplicate_field","Duplicate case result field",line);
+            item->default_fields |= 1u << field;
+            if (field == 7) {
+                if (value_size) return fail(model,record,"rules.assignment","set: takes indented AXIS: EXPRESSION entries",line);
+                item->default_set_line = line; *in_set = 3; return 1;
+            }
+            item->default_effects[field-4] = retain(model,rules,record,value,value_size,line);
+            item->default_lines[field-4] = line;
+            return item->default_effects[field-4] != NULL;
+        }
         if (same(key,key_size,"context")) {
             if (item->context) return fail(model,record,"rules.duplicate_field","Duplicate case context",line);
             if (!value_size) return fail(model,record,"rules.value","context needs a value; omit it for unspecified context",line);
@@ -115,6 +137,21 @@ static int declaration(GD_Model *model, GD_Rules *rules, GD_RuleSource *source,
         participant->first_pool = rules->pool_count;
         *current_participant = rules->participant_count++; ++item->participant_count; return 1;
     }
+    if ((indent == 12 && *in_set == 1) || (indent == 8 && *in_set == 3)) {
+        GD_RuleAssignment *assignment;
+        if (!key_size || !value_size) return fail(model,record,"rules.assignment","set needs AXIS: EXPRESSION entries",line);
+        if (rules->assignment_count == GD_MAX_RULE_ASSIGNMENTS)
+            return fail(model,record,"rules.assignment_limit","8192 rule-assignment limit exceeded",line);
+        assignment = &rules->assignments[rules->assignment_count];
+        assignment->axis = retain(model,rules,record,key,key_size,line);
+        assignment->expression = retain(model,rules,record,value,value_size,line);
+        assignment->line = line; assignment->from_primary = *in_set == 3;
+        assignment->participant = assignment->from_primary ? -*current_case-1:*current_participant;
+        if (!assignment->axis || !assignment->expression) return 0;
+        ++rules->assignment_count;
+        if (!assignment->from_primary) ++rules->participants[*current_participant].assignment_count;
+        return 1;
+    }
     if (*current_participant < 0) return fail(model,record,"rules.participant","Declare a participant before its fields",line);
     participant = &rules->participants[*current_participant];
     if (indent == 12 && *in_set == 2) {
@@ -131,22 +168,6 @@ static int declaration(GD_Model *model, GD_Rules *rules, GD_RuleSource *source,
         pool->line = line;
         if (!pool->axis || !pool->reference) return 0;
         ++rules->pool_count; ++participant->pool_count;
-        return 1;
-    }
-    if (indent == 12 && *in_set == 1) {
-        GD_RuleAssignment *assignment;
-        /* Axis qualification is retained for later target/axis resolution. */
-        if (!key_size || !value_size) return fail(model,record,"rules.assignment","set needs AXIS: EXPRESSION entries",line);
-        if (rules->assignment_count == GD_MAX_RULE_ASSIGNMENTS)
-            return fail(model,record,"rules.assignment_limit","8192 rule-assignment limit exceeded",line);
-        assignment = &rules->assignments[rules->assignment_count];
-        assignment->axis = retain(model,rules,record,key,key_size,line);
-        assignment->expression = retain(model,rules,record,value,value_size,line);
-        assignment->line = line;
-        if (!assignment->axis || !assignment->expression) return 0;
-        ++rules->assignment_count; ++participant->assignment_count;
-        /* Repeated assignments are declarations, not last-write-wins. Keep them
-           for semantic conflict checking rather than silently overwriting. */
         return 1;
     }
     if (indent == 8) {
@@ -168,6 +189,50 @@ static int declaration(GD_Model *model, GD_Rules *rules, GD_RuleSource *source,
         *destination = retain(model,rules,record,value,value_size,line); return *destination != NULL;
     }
     return fail(model,record,"rules.indent","Use four spaces for case fields, eight for participant fields, twelve for set or pools entries",line);
+}
+static int finish_targets(GD_Model *model, GD_Rules *rules, const GD_RuleSource *source) {
+    const GD_Record *record = &model->records[source->record];
+    int c, p, field;
+    for (c=source->first_case;c<source->first_case+source->case_count;++c) {
+        GD_RuleCase *item=&rules->cases[c];
+        GD_RuleParticipant *participant;
+        if (!item->primary_target) continue; /* Legacy scoped declarations never acquire an inferred A. */
+        for (p=item->first_participant;p<item->first_participant+item->participant_count;++p)
+            if (!strcmp(item->primary_target,rules->participants[p].name)) item->primary_participant=p;
+        if (item->primary_participant<0)
+            return fail(model,record,"rules.primary_target","Primary target must name a declared participant in this case",item->primary_target_line);
+        participant=&rules->participants[item->primary_participant];
+        for (field=4;field<=7;++field) if ((item->default_fields & (1u<<field)) && !(participant->fields & (1u<<field))) {
+            participant->fields |= 1u<<field; participant->defaulted_fields |= 1u<<field;
+            participant->lines[field]=field==7 ? item->default_set_line:item->default_lines[field-4];
+            if (field==4) participant->becomes=item->default_effects[0];
+            if (field==5) participant->preserve=item->default_effects[1];
+            if (field==6) participant->causes=item->default_effects[2];
+        }
+    }
+    return 1;
+}
+/* Both source scopes feed existing semantic evaluators without concatenating text
+   or losing lines. Presence pointers include defaults for legacy consumers. */
+int gd_rule_effect_spans(const GD_Rules *rules, int case_index, int participant,
+                         GD_RuleEffectKind kind, GD_RuleEffectSpan spans[2]) {
+    const GD_RuleCase *item;
+    const GD_RuleParticipant *actor;
+    const char *local;
+    int count=0, field=(int)kind+4;
+    assert(rules && spans && case_index>=0 && case_index<rules->case_count && kind>=GD_RULE_EFFECT_STATE && kind<=GD_RULE_EFFECT_CALL);
+    item=&rules->cases[case_index];
+    assert(participant>=item->first_participant && participant<item->first_participant+item->participant_count);
+    actor=&rules->participants[participant];
+    if (participant==item->primary_participant && item->default_effects[kind])
+        spans[count++]=(GD_RuleEffectSpan){item->default_effects[kind],item->default_lines[kind],1};
+    local=kind==GD_RULE_EFFECT_STATE ? actor->becomes:kind==GD_RULE_EFFECT_PRESERVE ? actor->preserve:actor->causes;
+    if (local && !(actor->defaulted_fields & (1u<<field)))
+        spans[count++]=(GD_RuleEffectSpan){local,actor->lines[field],0};
+    if (count==2 && spans[0].line>spans[1].line) {
+        GD_RuleEffectSpan swap=spans[0]; spans[0]=spans[1]; spans[1]=swap;
+    }
+    return count;
 }
 static int read_source(GD_Model *model, GD_Rules *rules, GD_RuleSource *source) {
     const GD_Record *record = &model->records[source->record];
@@ -199,6 +264,31 @@ static int read_source(GD_Model *model, GD_Rules *rules, GD_RuleSource *source) 
     }
     if (rule_fence) return fail(model,record,"rules.unclosed_block","Close the gd-rule code fence",source->line);
     source->state = !seen ? GD_RULE_ABSENT : source->case_count ? GD_RULE_PARSED : GD_RULE_EMPTY;
+    return finish_targets(model,rules,source);
+}
+/* Stable counting placement restores contiguous participant ranges even when
+   case-level set blocks occur before/after scoped fields. No source-order winner. */
+static int index_assignments(GD_Model *model, GD_Rules *rules) {
+    struct AssignmentIndex { int cursor[GD_MAX_RULE_PARTICIPANTS]; GD_RuleAssignment rows[]; } *index;
+    int i, p, count=0, needed=0;
+    for (i=0;i<rules->assignment_count;++i) if (rules->assignments[i].from_primary) { needed=1; break; }
+    if (!needed) return 1;
+    index=rules->allocator.allocate(rules->allocator.context,sizeof(*index)+(size_t)rules->assignment_count*sizeof(index->rows[0]));
+    if (!index) { gd_error(model,"rules.memory","Cannot index primary-target quantity declarations",NULL,0); return 0; }
+    for (p=0;p<rules->participant_count;++p) rules->participants[p].assignment_count=0;
+    for (i=0;i<rules->assignment_count;++i) {
+        GD_RuleAssignment *assignment=&rules->assignments[i];
+        if (assignment->from_primary) assignment->participant=rules->cases[-assignment->participant-1].primary_participant;
+        assert(assignment->participant>=0 && assignment->participant<rules->participant_count);
+        ++rules->participants[assignment->participant].assignment_count;
+    }
+    for (p=0;p<rules->participant_count;++p) {
+        rules->participants[p].first_assignment=index->cursor[p]=count;
+        count+=rules->participants[p].assignment_count;
+    }
+    for (i=0;i<rules->assignment_count;++i) index->rows[index->cursor[rules->assignments[i].participant]++]=rules->assignments[i];
+    memcpy(rules->assignments,index->rows,(size_t)rules->assignment_count*sizeof(index->rows[0]));
+    rules->allocator.release(rules->allocator.context,index);
     return 1;
 }
 GD_Rules *gd_read_rules(GD_Model *model) {
@@ -220,6 +310,7 @@ GD_Rules *gd_read_rules(GD_Model *model) {
             source->case_count = 0; source->state = GD_RULE_INVALID;
         }
     }
+    if (!index_assignments(model,rules)) { gd_rules_destroy(rules); return NULL; }
     gd_resolve_rule_axes(model,rules);
     gd_resolve_rule_logic(model,rules);
     gd_resolve_rule_quantities(model,rules);
@@ -387,6 +478,8 @@ int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *ru
             const GD_RuleCase *item = &rules->cases[i]; if (i) fputc(',',output);
             provenance(output,&model->records[rules->sources[item->source].record],item->line);
             member(output,"case",item->name); member(output,"context",item->context);
+            member(output,"primary_target",item->primary_target);
+            fprintf(output,",\"primary_target_line\":%d,\"default_set_line\":%d",item->primary_target_line,item->default_set_line);
             member(output,"unknown_conditions",item->unknown_conditions); member(output,"unknown_effects",item->unknown_effects);
             fprintf(output,",\"unknown_conditions_line\":%d,\"unknown_effects_line\":%d",item->unknown_conditions_line,item->unknown_effects_line);
             context_result(output,model,rules,&item->ordered_context);
@@ -401,6 +494,22 @@ int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *ru
                 member(output,"skip_if",participant->skip_if); member(output,"other_axes",participant->other_axes);
                 member(output,"becomes",participant->becomes); member(output,"preserve",participant->preserve);
                 member(output,"causes",participant->causes);
+                fprintf(output,",\"state_lists_complete\":%s,\"preservation_lists_complete\":%s",participant->incomplete_effect_fields & (1u<<4) ? "false":"true",participant->incomplete_effect_fields & (1u<<5) ? "false":"true");
+                fputs(",\"effect_declarations\":[",output);
+                {
+                    int kind, n, declaration_comma=0;
+                    for (kind=GD_RULE_EFFECT_STATE;kind<=GD_RULE_EFFECT_CALL;++kind) {
+                        GD_RuleEffectSpan spans[2];
+                        int count=gd_rule_effect_spans(rules,i,item->first_participant+j,(GD_RuleEffectKind)kind,spans);
+                        for (n=0;n<count;++n) {
+                            if (declaration_comma++) fputc(',',output);
+                            fputs("{\"field\":",output); gd_json_string(output,kind==GD_RULE_EFFECT_STATE ? "becomes":kind==GD_RULE_EFFECT_PRESERVE ? "preserve":"causes");
+                            member(output,"text",spans[n].text); member(output,"target_origin",spans[n].from_primary ? "primary":"participant");
+                            fprintf(output,",\"line\":%d}",spans[n].line);
+                        }
+                    }
+                }
+                fputc(']',output);
                 member(output,"other_axes_mode",participant->other_axes_mode == GD_RULE_OTHER_ANY ? "any":
                        participant->other_axes_mode == GD_RULE_OTHER_INVALID ? "invalid":"unspecified");
                 condition_result(output,model,rules,"requires_condition",&participant->required_condition,participant->lines[1]);
@@ -413,6 +522,7 @@ int gd_write_rule_report(FILE *output, const GD_Model *model, const GD_Rules *ru
                     const GD_RuleAssignment *assignment = &rules->assignments[participant->first_assignment+k];
                     if (k) fputc(',',output); fputs("{\"axis\":",output); gd_json_string(output,assignment->axis);
                     member(output,"expression",assignment->expression); fprintf(output,",\"line\":%d",assignment->line);
+                    member(output,"target_origin",assignment->from_primary ? "primary":"participant");
                     effect_target(output,model,assignment->target); quantity_result(output,rules,assignment->quantity); fputc('}',output);
                 }
                 fputs("],\"pools\":[",output);

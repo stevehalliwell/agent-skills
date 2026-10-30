@@ -31,6 +31,8 @@ static void source(FILE *out, const GD_Model *model, int record, int line) {
 static void case_declaration(FILE *out, const GD_ResourceGraph *graph, int index) {
     const GD_RuleCase *item=&graph->rules->cases[index]; int i;
     fputs("{\"name\":",out); gd_json_string(out,item->name); member(out,"context",item->context);
+    member(out,"primary_target",item->primary_target);
+    fprintf(out,",\"primary_target_line\":%d,\"default_set_line\":%d",item->primary_target_line,item->default_set_line);
     member(out,"unknown_conditions",item->unknown_conditions); member(out,"unknown_effects",item->unknown_effects);
     fputs(",\"participants\":[",out);
     for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) {
@@ -40,7 +42,22 @@ static void case_declaration(FILE *out, const GD_ResourceGraph *graph, int index
         member(out,"noun_resolution",gd_rule_resolution_name(actor->noun_resolution));
         member(out,"requires",actor->requires); member(out,"skip_if",actor->skip_if); member(out,"other_axes",actor->other_axes);
         member(out,"becomes",actor->becomes); member(out,"causes",actor->causes); member(out,"preserve",actor->preserve);
-        fprintf(out,",\"line\":%d}",actor->line);
+        fprintf(out,",\"state_lists_complete\":%s,\"preservation_lists_complete\":%s",actor->incomplete_effect_fields & (1u<<4) ? "false":"true",actor->incomplete_effect_fields & (1u<<5) ? "false":"true");
+        fputs(",\"effect_declarations\":[",out);
+        {
+            int kind, n, comma=0;
+            for (kind=GD_RULE_EFFECT_STATE;kind<=GD_RULE_EFFECT_CALL;++kind) {
+                GD_RuleEffectSpan spans[2];
+                int count=gd_rule_effect_spans(graph->rules,index,i,(GD_RuleEffectKind)kind,spans);
+                for (n=0;n<count;++n) {
+                    if (comma++) fputc(',',out);
+                    fputs("{\"field\":",out); gd_json_string(out,kind==GD_RULE_EFFECT_STATE ? "becomes":kind==GD_RULE_EFFECT_PRESERVE ? "preserve":"causes");
+                    member(out,"text",spans[n].text); member(out,"target_origin",spans[n].from_primary ? "primary":"participant");
+                    fprintf(out,",\"line\":%d}",spans[n].line);
+                }
+            }
+        }
+        fprintf(out,"],\"line\":%d}",actor->line);
     }
     fputs("]}",out);
 }

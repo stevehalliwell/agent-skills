@@ -26,16 +26,17 @@ One labelled `gd-rule` code block per record. Multiple named cases, unordered se
 
 ```gd-rule
 case powered-side-contact:
+    target: Player
     context: Player sideContacts Walker
+    becomes: small, protected
+    set:
+        ProtectionTime: {control-vars/safety-window}
+    preserve: OTHER
 
     Player:
         noun: nouns/hero
         requires: alive AND (tall OR spark) AND NOT protected
         other_axes: ANY
-        becomes: small, protected
-        set:
-            ProtectionTime: {control-vars/safety-window}
-        preserve: OTHER
 
     Walker:
         noun: nouns/walker
@@ -44,8 +45,10 @@ case powered-side-contact:
 ```
 
 - Domain language, not YAML. Bare `{control-vars/safety-window}` remains an expression, not a flow mapping. No quoting/conversion needed.
-- Case header at column 0. Four spaces for case context/participant labels; eight for participant fields; twelve for `set` entries. Blank lines and whole-line `#` comments allowed. Inline `#` remains part of raw value, not a stripped comment.
+- Case header at column 0. Four spaces for case fields/participant labels; eight for participant fields or case-level `set` entries; twelve for participant-level `set` entries. Blank lines and whole-line `#` comments allowed. Inline `#` remains part of raw value, not a stripped comment.
 - Case names and local participant labels: ASCII technical names, at most 128 bytes, matching existing record-name convention. Different local labels can bind same noun type. Duplicate label within a case or duplicate case name within a record is an error. Same case name in different records remains separate.
+- `target: ParticipantLabel` explicitly names primary target A in this case. Declare it before unqualified result fields. Target can precede its participant block and does not change participant order. Require one declared local label; never infer A from order, noun type, frontmatter or actor role. Legacy fully scoped declarations remain readable with `primary_target: null`; anchor-dependent queries must disclose unspecified A.
+- Case-level `becomes`, `set`, `preserve` and `causes` apply to primary target. Participant-scoped fields retain their own target. Both scopes contribute simultaneous declarations under original whole-case guards; retain parallel effects, conflicts and exact source lines. Neither scope overrides the other. Conditions remain participant-grouped. Invocation maps remain explicit.
 - Optional case-level `unknown_conditions` and `unknown_effects` retain readable unmodeled scope and source lines at four-space indentation. They do not supply default predicates or effects.
 - Participant fields currently read: `noun`, `requires`, `skip_if`, `other_axes`, `becomes`, `preserve`, `causes`, `set`, `pools`. Scalar fields take nonempty raw text. Omit field for unspecified information. Empty field is not `ANY`.
 - `pools:` retains `AXIS: ALIAS/NAME` entries and source lines. Resolve axes through the participant's declared inventory and resource references through explicit `--resources` bindings. Missing, unloaded, wrong-role and ambiguous references remain distinct. Conflicting references for one participant axis make its identity ambiguous. `pool_bindings_complete` reports these checks; declaration success does not establish compatibility with other cases. Partial resource graph preview is documented in [native README](README.md#resource-graph-preview); full routes and composed outcomes remain unimplemented.
@@ -77,7 +80,7 @@ case powered-side-contact:
 
 Frontmatter relationships retain declarations, duplicates, source lines and loaded/ambiguous flags from existing loader. Participant noun bindings now resolve against explicit noun roles; actor-axis references resolve against explicit axis roles. Effect bindings and state predicates resolve through those declarations; ordered context binds through separate rule `context_axes`. Numeric predicates share control math; enum/boolean configuration lookups retain types. Preservation resolves through explicit axes; optional analysis binds/expands composition without source mutation. A structurally parsed block can still have effect-binding errors; raw cases stay visible, not semantically accepted.
 
-`data.cases` retains record identity/status/coverage/path, local case name and line, raw context and line, ordered participants, field lines and all numeric assignments with lines. Source line numbers address original Markdown, including frontmatter and CRLF files. Same-type participants remain distinct local bindings.
+`data.cases` retains record identity/status/coverage/path, local case name and line, explicit `primary_target` and `primary_target_line` (null/0 when unspecified), raw context and line, ordered participants, field lines and all numeric assignments with lines. `default_set_line` identifies case-level assignment block. Normalized participant scalar fields include case defaults when no scoped scalar exists. `effect_declarations` retains every scalar from both scopes with `field`, `text`, `line` and `target_origin` (`primary` or `participant`); use this list rather than one scalar to inspect all declarations. Numeric assignment rows also retain `target_origin`. Participant `state_lists_complete` / `preservation_lists_complete` report whether all authored lists were retained, separately from target resolution. Rejected or capacity-skipped lists never become complete merely because another scope contributed valid entries. Lost state declarations keep outcomes opaque and whole-case OTHER conditional. Source line numbers address original Markdown, including frontmatter and CRLF files. Same-type participants remain distinct local bindings.
 
 `coverage.complete` concerns completed declaration/type/name checks only. Counts expose all source records versus records with cases. Scope text distinguishes predicate logic from full applicability, equivalence, consistency and gameplay claims. `axes`, `actors`, participant binding flags and informational `findings` expose typed declarations and explicit applicability; [axis contract](axes.md) defines readiness limits. Missing blocks are not proof of missing gameplay behavior. Errors retain code, message, path and line; failed records do not discard other successfully parsed records.
 
@@ -85,7 +88,7 @@ Both live examples fully migrated: crate 12 rule records / 16 cases / 4 axes; pl
 
 ## Engineering bounds and checks
 
-`gd_rules.c` owns allocator-backed result and copied declaration text; `gd_rule_axes.c` resolves explicit noun/axis declarations; `gd_rule_logic.c` shares bounded state lookup across predicate compilation and effect bindings, without allocation. [Condition contract](conditions.md) defines grammar, derived facts, read-only truth and limits. `gd_rule_quantities.c` owns scoped numeric programs/inspection through shared `gd_controls.c`, including selected dependency snapshots. [Quantity contract](quantities.md) defines facts, types, units, bounds and limits. Effect spans borrow retained declaration text; resolved values borrow immutable model text. Model/provenance borrowed immutably until result destroyed. `gd_rule_analysis.c` owns bounded invocation/comparison storage and evaluates conditional proposals; [outcome contract](outcomes.md#c99-ownership-and-budgets) defines ownership, supported reasoning and limits. No recursion, source mutation, formula evaluator duplication, arbitrary code execution or gameplay runtime. Existing file/record/retained-model limits remain in force.
+`gd_rules.c` owns allocator-backed result and copied declaration text; `gd_rule_axes.c` resolves explicit noun/axis declarations; `gd_rule_logic.c` shares bounded state lookup across predicate compilation and effect bindings, without allocation. [Condition contract](conditions.md) defines grammar, derived facts, read-only truth and limits. `gd_rule_quantities.c` owns scoped numeric programs/inspection through shared `gd_controls.c`, including selected dependency snapshots. [Quantity contract](quantities.md) defines facts, types, units, bounds and limits. Effect spans borrow retained declaration text; resolved values borrow immutable model text. Primary-target normalization retains raw scopes, merges no text and reuses existing evaluators. Case-level numeric declarations use temporary allocator-owned stable counting placement, bounded by assignment/participant limits; free scratch before semantic resolution. Allocation failure returns no candidate rule snapshot. Model/provenance borrowed immutably until result destroyed. `gd_rule_analysis.c` owns bounded invocation/comparison storage and evaluates conditional proposals; [outcome contract](outcomes.md#c99-ownership-and-budgets) defines ownership, supported reasoning and limits. No recursion, source mutation, formula evaluator duplication, arbitrary code execution or gameplay runtime. Existing file/record/retained-model limits remain in force.
 
 Operation limits: 4,096 cases, 8,192 participants, 8,192 assignments, 8,192 pool bindings, 4 MiB copied declaration text, 8,192 bytes per rule line. Reject overflow; do not truncate or return a half-parsed record. Parsing scans bounded source text; local identity checks compare within bounded case/participant sets.
 

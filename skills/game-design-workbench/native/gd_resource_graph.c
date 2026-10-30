@@ -100,13 +100,14 @@ GD_ResourceGraph *gd_resource_graph_build(GD_Model *model, const GD_Rules *rules
         }
     }
     for (c=0;c<rules->case_count;++c) {
-        const GD_RuleCase *item=&rules->cases[c]; int activation=add_case(graph,c);
+        const GD_RuleCase *item=&rules->cases[c]; int activation=add_case(graph,c), unknown=item->unknown_conditions || item->unknown_effects;
         if (activation<0) { graph->unexamined_cases=rules->case_count-c; break; }
-        if (item->unknown_conditions || item->unknown_effects) ++graph->unknown_case_coverage;
+        if (unknown) ++graph->unknown_case_coverage;
         for (p=item->first_participant;p<item->first_participant+item->participant_count && !graph->limited;++p) {
             const GD_RuleParticipant *actor=&rules->participants[p];
             if (actor->causes) ++graph->composition_unexamined;
-            if (actor->preserve && !actor->preservation_count) ++graph->preservation_unexamined;
+            if ((actor->preserve && !actor->preservation_count) || (actor->incomplete_effect_fields & (1u<<5))) ++graph->preservation_unexamined;
+            if (actor->incomplete_effect_fields && !unknown) { unknown=1; ++graph->unknown_case_coverage; }
             for (k=0;k<2 && !graph->limited;++k) {
                 const GD_RuleCondition *condition=k ? &actor->skip_condition:&actor->required_condition;
                 for (i=condition->first_token;i<condition->first_token+condition->token_count && !graph->limited;++i) {

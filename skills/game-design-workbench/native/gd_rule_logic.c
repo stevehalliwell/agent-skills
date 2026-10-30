@@ -190,12 +190,11 @@ static int control_reference(RuleReader *reader, const char *text, size_t length
         *record=token.target;
     return 1;
 }
-static void states(RuleReader *reader, GD_RuleParticipant *participant) {
-    const char *start = participant->becomes, *cursor;
+static void states(RuleReader *reader, GD_RuleParticipant *participant, const char *text) {
+    const char *start = text, *cursor;
     int before = reader->rules->state_effect_count;
-    participant->first_state_effect = before;
     if (!start) return;
-    if (reader->effects_limit) { reader->rules->effect_bindings_complete = 0; return; }
+    if (reader->effects_limit) { reader->rules->effect_bindings_complete = 0; participant->incomplete_effect_fields |= 1u<<4; return; }
     /* Validate/retain the entire comma list before resolving any item. An empty
        entry or capacity failure contributes no valid-looking partial list. */
     for (cursor = start;; ++cursor) if (!*cursor || *cursor == ',') {
@@ -209,6 +208,7 @@ static void states(RuleReader *reader, GD_RuleParticipant *participant) {
         if (malformed || reader->rules->state_effect_count == GD_MAX_RULE_STATE_EFFECTS) {
             int full = !malformed;
             reader->rules->state_effect_count = before; reader->rules->effect_bindings_complete = 0;
+            participant->incomplete_effect_fields |= 1u<<4;
             reader->effects_limit = full;
             gd_error(reader->model,full ? "rules.state_effect_limit":"rules.state_list",
                      full ? "8192 state-effect limit exceeded; current and later effect lists not resolved" :
@@ -221,14 +221,13 @@ static void states(RuleReader *reader, GD_RuleParticipant *participant) {
         if (!*cursor) break;
         start = cursor+1;
     }
-    participant->state_effect_count = reader->rules->state_effect_count-before;
-    for (before = participant->first_state_effect; before < reader->rules->state_effect_count; ++before) {
+    for (; before < reader->rules->state_effect_count; ++before) {
         GD_RuleStateEffect *effect = &reader->rules->state_effects[before];
         if (control_reference(reader,effect->text,effect->length,&effect->control_record)) {
             effect->target=(GD_RuleTarget){GD_RULE_UNDETERMINED,-1,NULL}; continue;
         }
         effect->target = actor_target(reader,participant,effect->text,effect->length,1);
-        diagnose(reader,effect->target,"becomes",participant->becomes,BIND_EFFECT);
+        diagnose(reader,effect->target,"becomes",text,BIND_EFFECT);
     }
 }
 typedef struct { int operation, offset; const char *text; size_t length; } ConditionOperator;
@@ -242,12 +241,11 @@ static int word(const char *text, size_t size, const char *keyword) {
     }
     return 1;
 }
-static void preservation(RuleReader *reader, GD_RuleParticipant *participant) {
-    const char *cursor=participant->preserve;
+static void preservation(RuleReader *reader, GD_RuleParticipant *participant, const char *text) {
+    const char *cursor=text;
     int before=reader->rules->preservation_count, i;
-    participant->first_preservation=before;
     if (!cursor) return;
-    if (reader->preservation_limit) { reader->rules->preservation_bindings_complete=0; return; }
+    if (reader->preservation_limit) { reader->rules->preservation_bindings_complete=0; participant->incomplete_effect_fields |= 1u<<5; return; }
     while (*cursor) {
         const char *start,*end;
         GD_RulePreservation *item;
@@ -256,11 +254,13 @@ static void preservation(RuleReader *reader, GD_RuleParticipant *participant) {
         while (end>start && (end[-1]==' ' || end[-1]=='\t')) --end;
         if (end==start || (*cursor==',' && !cursor[1])) {
             reader->rules->preservation_count=before; reader->rules->preservation_bindings_complete=0;
+            participant->incomplete_effect_fields |= 1u<<5;
             gd_error(reader->model,"rules.preserve_list","preserve requires nonempty comma-separated axis names, ALL or OTHER",reader->model->records[reader->record].source_path,reader->line);
             return;
         }
         if (reader->rules->preservation_count==GD_MAX_RULE_PRESERVATIONS) {
             reader->rules->preservation_count=before; reader->rules->preservation_bindings_complete=0; reader->preservation_limit=1;
+            participant->incomplete_effect_fields |= 1u<<5;
             gd_error(reader->model,"rules.preserve_limit","8192 preservation declaration limit exceeded; current and later lists unavailable",reader->model->records[reader->record].source_path,reader->line);
             return;
         }
@@ -269,12 +269,11 @@ static void preservation(RuleReader *reader, GD_RuleParticipant *participant) {
         item->kind=word(start,item->length,"all") ? GD_PRESERVE_ALL:word(start,item->length,"other") ? GD_PRESERVE_OTHER:GD_PRESERVE_AXIS;
         if (*cursor==',') ++cursor;
     }
-    participant->preservation_count=reader->rules->preservation_count-before;
     for (i=before;i<reader->rules->preservation_count;++i) {
         GD_RulePreservation *item=&reader->rules->preservations[i];
         if (item->kind==GD_PRESERVE_AXIS) item->target=actor_target(reader,participant,item->text,item->length,LOOKUP_ANY_AXIS);
         else item->target=(GD_RuleTarget){participant->noun_resolution==GD_RULE_RESOLVED && reader->rules->actor_axes_complete[participant->noun_record] ? GD_RULE_RESOLVED:GD_RULE_UNDETERMINED,-1,NULL};
-        diagnose(reader,item->target,"preserve",participant->preserve,BIND_PRESERVE);
+        diagnose(reader,item->target,"preserve",text,BIND_PRESERVE);
     }
 }
 static int context_participant(RuleReader *reader, const GD_RuleCase *item, const char *text, size_t length) {
@@ -633,7 +632,7 @@ void gd_resolve_rule_controls(GD_Model *model, GD_Rules *rules) {
                     continue;
                 }
                 if (value) effect->target=actor_target(&reader,participant,value->string,strlen(value->string),1);
-                diagnose(&reader,effect->target,"becomes",participant->becomes,BIND_EFFECT);
+                diagnose(&reader,effect->target,"becomes",item->primary_participant==p && item->default_lines[0]==effect->line ? item->default_effects[0]:participant->becomes,BIND_EFFECT);
             }
             for (k=0;k<2;++k) {
                 GD_RuleCondition *condition=k ? &participant->skip_condition:&participant->required_condition;
@@ -678,7 +677,13 @@ void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules) {
                              model->records[reader.record].source_path,participant->lines[3]);
                 }
             }
-            reader.line = participant->lines[4]; states(&reader,participant);
+            {
+                GD_RuleEffectSpan spans[2];
+                int n, count=gd_rule_effect_spans(rules,i,item->first_participant+j,GD_RULE_EFFECT_STATE,spans);
+                participant->first_state_effect=rules->state_effect_count;
+                for (n=0;n<count;++n) { reader.line=spans[n].line; states(&reader,participant,spans[n].text); }
+                participant->state_effect_count=rules->state_effect_count-participant->first_state_effect;
+            }
             for (k = 0; k < participant->assignment_count; ++k) {
                 GD_RuleAssignment *assignment = &rules->assignments[participant->first_assignment+k];
                 reader.line = assignment->line;
@@ -716,7 +721,13 @@ void gd_resolve_rule_logic(GD_Model *model, GD_Rules *rules) {
                 for (k = 0; k < participant->pool_count; ++k) rules->pools[participant->first_pool+k].identity_resolution = GD_RULE_UNAVAILABLE;
                 rules->pool_bindings_complete = 0;
             }
-            reader.line=participant->lines[5]; preservation(&reader,participant);
+            {
+                GD_RuleEffectSpan spans[2];
+                int n, count=gd_rule_effect_spans(rules,i,item->first_participant+j,GD_RULE_EFFECT_PRESERVE,spans);
+                participant->first_preservation=rules->preservation_count;
+                for (n=0;n<count;++n) { reader.line=spans[n].line; preservation(&reader,participant,spans[n].text); }
+                participant->preservation_count=rules->preservation_count-participant->first_preservation;
+            }
         }
     }
 }

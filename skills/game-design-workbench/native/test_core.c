@@ -2443,6 +2443,8 @@ TEST(rules_allocation_failure,
 #include "test_layout_focus.h"
 #include "test_layout_interaction.h"
 #include "test_matrix_grid.h"
+#include "test_rule_targets.h"
+#include "test_rule_target_partial.h"
 #include "test_resource_output.h"
 #include "test_resource_routes.h"
 #include "test_graph_reachability.h"
@@ -2461,6 +2463,8 @@ int main(int argc, char **argv) {
     failed += test_rule_quantities(); failed += test_rule_numeric_comparisons();
     failed += test_rule_condition_logic(); failed += test_rule_exclusion_limits(); failed += test_rule_effect_bindings();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
+    failed += test_rule_primary_targets(); failed += test_rule_primary_equivalence(); failed += test_rule_primary_errors(); failed += test_rule_primary_allocation_failure();
+    failed += test_rule_primary_partial_lists(); failed += test_rule_primary_partial_limits();
     failed += test_rules_declarations(); failed += test_resource_unloaded_call(); failed += test_rule_expression_delta(); failed += test_rule_pool_resolution(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
     failed += test_matrix_grid(); failed += test_resource_output_limits(); failed += test_resource_routes();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
@@ -2485,6 +2489,6 @@ int main(int argc, char **argv) {
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/93 passed\n", 93-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/99 passed\n", 99-failed);
     return failed ? 1 : 0;
 }

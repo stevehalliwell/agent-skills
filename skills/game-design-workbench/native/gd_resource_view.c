@@ -598,6 +598,7 @@ void gd_explorer_resource_controls(GD_ExplorerContext *context) {
                 if (node->kind!=GD_RESOURCE_CASE) continue;
                 { const GD_RuleCase *rule=&graph->rules->cases[node->case_index];
                   igTextWrapped("Case %s | context %s | unknown conditions %s | unknown effects %s",rule->name,rule->context ? rule->context:"unspecified",rule->unknown_conditions ? rule->unknown_conditions:"none declared",rule->unknown_effects ? rule->unknown_effects:"none declared");
+                  igTextWrapped("Primary target %s | case-level becomes %s | preserves %s | calls %s",rule->primary_target ? rule->primary_target:"unspecified",rule->default_effects[0] ? rule->default_effects[0]:"unspecified",rule->default_effects[1] ? rule->default_effects[1]:"unspecified",rule->default_effects[2] ? rule->default_effects[2]:"none");
                   for (j=rule->first_participant;j<rule->first_participant+rule->participant_count;++j) {
                       const GD_RuleParticipant *actor=&graph->rules->participants[j];
                       igTextWrapped("%s requires %s | excludes %s | preserves %s | calls %s",actor->name,actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"unspecified",actor->preserve ? actor->preserve:"unspecified",actor->causes ? actor->causes:"none");

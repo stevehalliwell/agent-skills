@@ -42,9 +42,8 @@ int gd_rule_case_find(const GD_Model *model, const GD_Rules *rules, const char *
 }
 typedef struct { const char *name; size_t length; int caller, used; } MapSpec;
 static void compile_call(GD_Model *model, GD_RuleAnalysis *analysis, int case_index, int participant_index,
-                         const char *text, size_t length) {
+                         const char *text, size_t length, int line) {
     const GD_Rules *rules=analysis->rules;
-    const GD_RuleParticipant *participant=&rules->participants[participant_index];
     const char *cursor=text, *end=text+length, *reference, *filter=NULL;
     size_t reference_length, filter_length=0;
     MapSpec maps[GD_MAX_RULE_CALL_BINDINGS]; int map_count=0, explicit_map=0, i,c,p,source=-1,call_index,before;
@@ -52,7 +51,7 @@ static void compile_call(GD_Model *model, GD_RuleAnalysis *analysis, int case_in
     if (!compile_charge(analysis,(length+1)*(GD_MAX_RECORDS+GD_MAX_RULE_CALL_BINDINGS))) return;
     if (analysis->call_count==GD_MAX_RULE_CALLS) { analysis->compile_limited=1; return; }
     call_index=analysis->call_count++; call=&analysis->calls[call_index]; memset(call,0,sizeof(*call));
-    call->caller_case=case_index; call->caller=participant_index; call->line=participant->lines[6];
+    call->caller_case=case_index; call->caller=participant_index; call->line=line;
     call->text=text; call->length=length; call->target_source=-1; call->resolution=GD_RULE_UNDETERMINED;
     call->next=analysis->call_first[participant_index]; analysis->call_first[participant_index]=call_index;
     while (cursor<end && space((unsigned char)*cursor)) ++cursor;
@@ -154,14 +153,18 @@ GD_RuleAnalysis *gd_analyze_rules(GD_Model *model, const GD_Rules *rules) {
     for (c=0;c<rules->case_count && !analysis->compile_limited;++c) {
         const GD_RuleCase *item=&rules->cases[c];
         for (p=item->first_participant;p<item->first_participant+item->participant_count && !analysis->compile_limited;++p) {
-            const char *cursor=rules->participants[p].causes;
-            if (!cursor) continue;
-            while (*cursor && !analysis->compile_limited) {
-                const char *start=cursor,*end;
-                while (*cursor && *cursor!=';') ++cursor; end=cursor;
-                while (end>start && space((unsigned char)end[-1])) --end;
-                compile_call(model,analysis,c,p,start,(size_t)(end-start));
-                if (*cursor==';') { ++cursor; if (!*cursor) call_error(model,rules,c,rules->participants[p].lines[6],"rules.invocation_syntax","Trailing empty invocation is not a rule"); }
+            GD_RuleEffectSpan spans[2];
+            int n, count=gd_rule_effect_spans(rules,c,p,GD_RULE_EFFECT_CALL,spans);
+            if (!count) continue;
+            for (n=0;n<count && !analysis->compile_limited;++n) {
+                const char *cursor=spans[n].text;
+                while (*cursor && !analysis->compile_limited) {
+                    const char *start=cursor,*end;
+                    while (*cursor && *cursor!=';') ++cursor; end=cursor;
+                    while (end>start && space((unsigned char)end[-1])) --end;
+                    compile_call(model,analysis,c,p,start,(size_t)(end-start),spans[n].line);
+                    if (*cursor==';') { ++cursor; if (!*cursor) call_error(model,rules,c,spans[n].line,"rules.invocation_syntax","Trailing empty invocation is not a rule"); }
+                }
             }
             analysis->calls_complete[p]=(unsigned char)!analysis->compile_limited;
         }
@@ -384,7 +387,9 @@ static void case_writes(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *resu
     for (p=item->first_participant;p<item->first_participant+item->participant_count && !result->limited;++p) {
         const GD_RuleParticipant *participant=&rules->participants[p];
         if (participant->causes && !analysis->calls_complete[p]) { result->constraints_complete=0; result->opaque_effects=1; }
-        if (participant->becomes && !participant->state_effect_count) { result->constraints_complete=0; result->opaque_effects=1; }
+        if ((participant->becomes && !participant->state_effect_count) || (participant->incomplete_effect_fields & (1u<<4))) {
+            result->constraints_complete=result->values_complete=0; result->opaque_effects=1;
+        }
         for (i=participant->first_state_effect;i<participant->first_state_effect+participant->state_effect_count;++i) {
             const GD_RuleStateEffect *effect=&rules->state_effects[i];
             GD_RuleWrite *write=new_write(result,result->actor_map[p],effect->target.resolution==GD_RULE_RESOLVED ? effect->target.axis_record:-1,case_index,p,effect->line,conditional,path,depth);
@@ -408,7 +413,7 @@ static void case_writes(const GD_RuleAnalysis *analysis, GD_RuleEvaluation *resu
             if (!write->value.known) result->values_complete=0;
             if (write->value.state==GD_EXPRESSION_ARITHMETIC_ERROR || write->value.state==GD_EXPRESSION_UNIT_ERROR) result->constraints_complete=0;
         }
-        if (participant->preserve && !participant->preservation_count) result->constraints_complete=0;
+        if ((participant->preserve && !participant->preservation_count) || (participant->incomplete_effect_fields & (1u<<5))) result->constraints_complete=0;
         for (i=participant->first_preservation;i<participant->first_preservation+participant->preservation_count;++i) {
             GD_RuleDeferredPreservation *promise;
             if (!evaluation_charge(result,(size_t)depth+1)) return;
