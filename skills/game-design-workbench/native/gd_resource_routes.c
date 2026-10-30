@@ -20,7 +20,7 @@ static void identities(GD_ResourceRoutes *routes, const GD_ResourceGraph *graph)
     for (i=0;i<graph->relation_count;++i) if (routes->first_relation[graph->relations[i].facet]<0) routes->first_relation[graph->relations[i].facet]=i;
 }
 int gd_resource_select(GD_ResourceRoutes *routes, const GD_ResourceGraph *graph, const char *selector) {
-    int i,found=-1; char id[GD_MAX_PATH];
+    int i,found=-1,exact=-1,exact_count=0; char id[GD_MAX_PATH];
     if (!routes || !graph || !selector) return -1;
     routes->work=routes->limited=routes->selector_matches=0; routes->work_limit=GD_RESOURCE_ROUTE_WORK;
     if (!charge(routes,graph->node_count+graph->relation_count)) return -3;
@@ -30,7 +30,12 @@ int gd_resource_select(GD_ResourceRoutes *routes, const GD_ResourceGraph *graph,
         if (!charge(routes,GD_MAX_PATH)) return -3;
         if (!gd_resource_node_id(graph,i,routes->first_relation[i],id,sizeof(id))) return -3;
         routes->work-=GD_MAX_PATH-(int)strlen(id);
-        if (!strcmp(id,selector)) { routes->selector_matches=0; return i; }
+        if (!strcmp(id,selector)) {
+            if (!exact_count) routes->selector_matches=0;
+            if (exact_count<GD_RESOURCE_ROUTE_WITNESSES) routes->selector_candidates[exact_count]=i;
+            ++exact_count; exact=i; continue;
+        }
+        if (exact_count) continue;
         if (node->kind==GD_RESOURCE_ROLE) reference=node->pool_reference;
         else if (node->kind==GD_RESOURCE_CASE) reference=graph->model->records[graph->rules->sources[graph->rules->cases[node->case_index].source].record].reference;
         else reference=node->pool_reference;
@@ -39,10 +44,11 @@ int gd_resource_select(GD_ResourceRoutes *routes, const GD_ResourceGraph *graph,
             ++routes->selector_matches; found=i;
         }
     }
+    if (exact_count) { routes->selector_matches=exact_count>1 ? exact_count:0; return exact_count>1 ? -2:exact; }
     return routes->selector_matches>1 ? -2:found;
 }
 const char *gd_resource_arc_name(GD_ResourceArcKind kind) {
-    static const char *const names[]={"enabling_guard_not_consumed","checked_debit","checked_credit_not_final_outcome","state_proposal_not_gain"};
+    static const char *const names[]={"enabling_guard_not_consumed","checked_debit","checked_credit_not_final_outcome","state_proposal_not_gain","mapped_instantiation_not_temporal_sequence"};
     return names[kind];
 }
 static void arc(GD_ResourceRoutes *routes, int from, int to, int relation, GD_ResourceArcKind kind, int reverse) {
@@ -80,11 +86,11 @@ static void seeds(GD_ResourceRoutes *routes, int selected, unsigned char *mask) 
 }
 static int unresolved(const GD_ResourceGraph *graph, int node) {
     const GD_ResourceNode *item=&graph->nodes[node];
-    if (item->kind==GD_RESOURCE_FACET) return item->axis<0 || (item->pool>=0 && graph->rules->pools[item->pool].resource_resolution!=GD_RULE_RESOLVED);
+    if (item->kind==GD_RESOURCE_FACET) return item->identity_unresolved || item->axis<0 || (item->pool>=0 && graph->rules->pools[item->pool].resource_resolution!=GD_RULE_RESOLVED);
     if (item->kind==GD_RESOURCE_CASE) {
         const GD_RuleCase *rule=&graph->rules->cases[item->case_index]; int p;
-        if (rule->unknown_conditions || rule->unknown_effects) return 1;
-        for (p=rule->first_participant;p<rule->first_participant+rule->participant_count;++p) if (graph->rules->participants[p].causes || graph->rules->participants[p].incomplete_effect_fields) return 1;
+        if (!rule->context || rule->unknown_conditions || rule->unknown_effects) return 1;
+        for (p=rule->first_participant;p<rule->first_participant+rule->participant_count;++p) if (!graph->rules->participants[p].requires || graph->rules->participants[p].noun_resolution!=GD_RULE_RESOLVED || (!graph->calls_bound && graph->rules->participants[p].causes) || graph->rules->participants[p].incomplete_effect_fields) return 1;
     }
     return 0;
 }
@@ -104,24 +110,41 @@ static void retain(GD_ResourceRoutes *routes, const int *nodes, const int *arcs,
     w=&routes->witnesses[routes->witness_count++]; memset(w,0,sizeof(*w)); w->count=depth;
     for (i=0;i<=depth;++i) {
         int node=nodes[reverse ? depth-i:i]; const GD_ResourceNode *item=&routes->graph->nodes[node];
-        w->nodes[i]=node; w->unresolved|=item->kind==GD_RESOURCE_CASE ? routes->case_unresolved[item->case_index]:unresolved(routes->graph,node);
+        w->nodes[i]=node; w->unresolved|=item->kind==GD_RESOURCE_CASE ? routes->activation_unresolved[node]:unresolved(routes->graph,node);
         if (i<depth) w->arcs[i]=arcs[reverse ? depth-1-i:i];
         if (item->kind==GD_RESOURCE_CASE) {
-            const GD_Record *record=&routes->graph->model->records[routes->graph->rules->sources[routes->graph->rules->cases[item->case_index].source].record];
-            w->proposed|=record->status && !strcmp(record->status,"proposed");
+            int current=node,depth=0;
+            do {
+                const GD_ResourceNode *ancestor=&routes->graph->nodes[current];
+                const GD_Record *record=&routes->graph->model->records[routes->graph->rules->sources[routes->graph->rules->cases[ancestor->case_index].source].record];
+                if (!charge(routes,1)) return;
+                w->proposed|=record->status && !strcmp(record->status,"proposed");
+                w->unresolved|=routes->activation_unresolved[current];
+                if (!ancestor->instance) break;
+                current=ancestor->parent;
+            } while (++depth<GD_MAX_RULE_EXPANSION_DEPTH);
         }
     }
 }
 void gd_resource_route_mark(GD_ResourceRoutes *routes, int witness) {
     const GD_ResourceWitness *w; int i;
+    unsigned char guards[GD_RESOURCE_GRAPH_NODES]={0};
     memset(routes->marked_nodes,0,sizeof(routes->marked_nodes)); memset(routes->marked_relations,0,sizeof(routes->marked_relations)); memset(routes->side_relations,0,sizeof(routes->side_relations));
     if (witness<0 || witness>=routes->witness_count) return;
     w=&routes->witnesses[witness];
     for (i=0;i<=w->count;++i) routes->marked_nodes[w->nodes[i]]=1;
     for (i=0;i<w->count;++i) routes->marked_relations[routes->arcs[w->arcs[i]].relation]=1;
     for (i=0;i<=w->count;++i) if (routes->graph->nodes[w->nodes[i]].kind==GD_RESOURCE_CASE) {
+        int current=w->nodes[i],depth=0;
+        do {
+            const GD_ResourceNode *node=&routes->graph->nodes[current]; guards[current]=1; routes->marked_nodes[current]=1;
+            if (!node->instance) break;
+            current=node->parent;
+        } while (++depth<GD_MAX_RULE_EXPANSION_DEPTH);
+    }
+    for (i=0;i<routes->graph->node_count;++i) if (guards[i]) {
         int edge;
-        for (edge=routes->case_head[w->nodes[i]];edge>=0;edge=routes->case_next[edge]) {
+        for (edge=routes->case_head[i];edge>=0;edge=routes->case_next[edge]) {
             if (!routes->marked_relations[edge]) routes->side_relations[edge]=1;
             routes->marked_nodes[routes->graph->relations[edge].facet]=1;
         }
@@ -157,25 +180,39 @@ int gd_resource_query(GD_ResourceRoutes *routes, const GD_ResourceGraph *graph, 
         if (!routes->eligible[c]) ++routes->excluded_cases;
         {
             const GD_RuleCase *rule=&graph->rules->cases[c]; int p;
-            routes->case_unresolved[c]=(unsigned char)(rule->unknown_conditions || rule->unknown_effects);
+            routes->case_unresolved[c]=(unsigned char)(!rule->context || rule->unknown_conditions || rule->unknown_effects);
             for (p=rule->first_participant;p<rule->first_participant+rule->participant_count;++p)
-                if (graph->rules->participants[p].causes || graph->rules->participants[p].incomplete_effect_fields) routes->case_unresolved[c]=1;
+                if (!graph->rules->participants[p].requires || graph->rules->participants[p].noun_resolution!=GD_RULE_RESOLVED || (!graph->calls_bound && graph->rules->participants[p].causes) || graph->rules->participants[p].incomplete_effect_fields) routes->case_unresolved[c]=1;
         }
+    }
+    for (i=0;i<graph->node_count;++i) if (graph->nodes[i].kind==GD_RESOURCE_CASE) {
+        const GD_ResourceNode *node=&graph->nodes[i];
+        if (!charge(routes,1)) return 1;
+        routes->activation_eligible[i]=routes->eligible[node->case_index] && !node->binding_conflict && (!node->instance || routes->activation_eligible[node->parent]);
+        routes->activation_unresolved[i]=routes->case_unresolved[node->case_index] || node->frontier || node->binding_conflict || (node->instance && routes->activation_unresolved[node->parent]);
     }
     /* Reverse insertion preserves source declaration order during traversal. */
     for (i=graph->relation_count-1;i>=0;--i) {
         const GD_ResourceRelation *edge=&graph->relations[i]; int cnode=edge->activation;
         if (!charge(routes,1)) return 1;
-        if (graph->nodes[cnode].kind!=GD_RESOURCE_CASE || !routes->eligible[graph->nodes[cnode].case_index]) continue;
-        if (graph->nodes[edge->facet].kind==GD_RESOURCE_FACET && unresolved(graph,edge->facet)) routes->case_unresolved[graph->nodes[cnode].case_index]=1;
-        if (edge->kind==GD_RESOURCE_INVOCATION) { ++routes->unexpanded_calls; continue; }
+        if (graph->nodes[cnode].kind!=GD_RESOURCE_CASE || !routes->activation_eligible[cnode]) continue;
+        if (graph->nodes[edge->facet].kind==GD_RESOURCE_FACET && unresolved(graph,edge->facet)) routes->activation_unresolved[cnode]=1;
+        if (edge->kind==GD_RESOURCE_INVOCATION) {
+            if (edge->expanded && routes->activation_eligible[edge->facet]) arc(routes,cnode,edge->facet,i,GD_RESOURCE_CALL,reverse);
+            else { ++routes->unexpanded_calls; routes->activation_unresolved[cnode]=1; }
+            continue;
+        }
         if (edge->kind==GD_RESOURCE_REQUIREMENT) arc(routes,edge->facet,cnode,i,GD_RESOURCE_ENABLE,reverse);
         else if (edge->kind==GD_RESOURCE_STATE_WRITE) arc(routes,cnode,edge->facet,i,GD_RESOURCE_STATE_PROPOSAL,reverse);
         else if (edge->kind==GD_RESOURCE_QUANTITY_WRITE) {
-            if (!edge->delta_recognized || !edge->delta.known || !edge->delta.checks_complete) { ++routes->unknown_writes; routes->case_unresolved[graph->nodes[cnode].case_index]=1; continue; }
+            if (!edge->delta_recognized || !edge->delta.known || !edge->delta.checks_complete) { ++routes->unknown_writes; routes->activation_unresolved[cnode]=1; continue; }
             if (edge->delta.number<0) arc(routes,edge->facet,cnode,i,GD_RESOURCE_DEBIT,reverse);
             else if (edge->delta.number>0) arc(routes,cnode,edge->facet,i,GD_RESOURCE_CREDIT,reverse);
         }
+    }
+    for (i=graph->node_count-1;i>=0;--i) if (graph->nodes[i].kind==GD_RESOURCE_CASE && graph->nodes[i].instance) {
+        if (!charge(routes,1)) return 1;
+        routes->activation_unresolved[graph->nodes[i].parent]|=routes->activation_unresolved[i];
     }
     if (!collapse_arcs(routes,reverse)) return 1;
     seeds(routes,to,routes->goals); if (reverse) memcpy(starts,routes->goals,(size_t)graph->node_count); else seeds(routes,from,starts);

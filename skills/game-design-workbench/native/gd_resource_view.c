@@ -13,7 +13,7 @@ static const Color selected_color={255,217,125,255};
 static const char *node_label(const GD_ResourceGraph *graph, int index) {
     const GD_ResourceNode *node=&graph->nodes[index];
     if (node->kind==GD_RESOURCE_ROLE) return node->pool_reference;
-    if (node->kind==GD_RESOURCE_CASE) return graph->rules->cases[node->case_index].name;
+    if (node->kind==GD_RESOURCE_CASE) return node->instance ? node->instance_label:graph->rules->cases[node->case_index].name;
     if (node->pool_reference) return node->pool_reference;
     if (node->axis>=0) return graph->model->records[node->axis].reference;
     return "unresolved axis";
@@ -68,11 +68,7 @@ static int shared_choice(const GD_GraphAnalysis *analysis, int selected, int *pe
 }
 static const GD_Record *relation_source(const GD_ResourceGraph *graph, int index) {
     const GD_ResourceRelation *relation=&graph->relations[index];
-    int c=graph->nodes[relation->activation].kind==GD_RESOURCE_CASE ? graph->nodes[relation->activation].case_index:-1,k;
-    if (c<0 && relation->participant>=0) for (k=0;k<graph->rules->case_count;++k) {
-        const GD_RuleCase *item=&graph->rules->cases[k];
-        if (relation->participant>=item->first_participant && relation->participant<item->first_participant+item->participant_count) { c=k; break; }
-    }
+    int c=relation->source_case;
     return c>=0 ? &graph->model->records[graph->rules->sources[graph->rules->cases[c].source].record]:NULL;
 }
 static int path_sources(const GD_ResourceGraph *graph, const GD_Layout *layout, const int *arcs, int retained, int x, int y) {
@@ -250,6 +246,10 @@ static void detail(const GD_ResourceGraph *graph, int selected, int x, int width
         const GD_RuleCase *item=&graph->rules->cases[node->case_index];
         source=&graph->model->records[graph->rules->sources[item->source].record];
         DrawText(TextFormat("case line: %d",item->line),x,y,15,muted); y+=23;
+        if (node->instance) {
+            DrawText(TextFormat("Placement in %.40s",node_label(graph,node->parent)),x,y,15,selected_color); y+=23;
+            DrawText(TextFormat("call line %d | template origin above",graph->calls->calls[node->call].line),x,y,14,muted); y+=23;
+        }
         DrawText(TextFormat("context: %.55s",item->context ? item->context:"unspecified"),x,y,15,muted); y+=23;
     } else if (node->kind==GD_RESOURCE_ROLE) {
         if (node->record>=0) source=&graph->model->records[node->record];
@@ -276,6 +276,9 @@ static void detail(const GD_ResourceGraph *graph, int selected, int x, int width
               const GD_RuleAssignment *assignment=&graph->rules->assignments[edge->declaration];
               DrawText(TextFormat("  %.48s",assignment->expression),x,y,14,muted); y+=20;
               if (edge->delta_recognized && edge->delta.known) { DrawText(TextFormat("  signed delta: %g",edge->delta.number),x,y,14,muted); y+=20; }
+          } else if (edge->kind==GD_RESOURCE_STATE_WRITE) {
+              const GD_RuleStateEffect *effect=&graph->rules->state_effects[edge->declaration];
+              DrawText(TextFormat("  %s becomes %.38s",graph->rules->participants[edge->mapped_participant].name,effect->target.state ? effect->target.state:"unresolved state"),x,y,14,muted); y+=20;
           } else if (edge->kind==GD_RESOURCE_REQUIREMENT || edge->kind==GD_RESOURCE_EXCLUSION) {
               const GD_RuleParticipant *actor=&graph->rules->participants[edge->participant];
               const char *condition=edge->kind==GD_RESOURCE_REQUIREMENT ? actor->requires:actor->skip_if;
@@ -463,7 +466,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,1);
         BeginDrawing(); ClearBackground(background);
         DrawText("Resource graph preview",18,14,26,foreground);
-        DrawText("Incomplete: routes and composed outcomes are not implemented. Lines are declarations, not proof of flow.",18,49,16,selected_color);
+        DrawText("Direct and instantiated declarations; not final outcomes. Incidence lines are not proof of flow.",18,49,16,selected_color);
         DrawText(TextFormat("%d nodes | %d relations | %d unresolved facets | %d unexamined calls%s",graph->node_count,graph->relation_count,graph->unresolved_facets,graph->composition_unexamined,graph->limited ? " | GRAPH LIMIT REACHED":""),18,74,15,muted);
         draw_resource_graph(graph,layout,analysis,camera,viewport,selected,shared,pair,comparison,
                             paths,bypass,reachability,reach_pair,shapes,overview);
@@ -564,8 +567,8 @@ int gd_explorer_resource_run(GD_ExplorerContext *context) {
 void gd_explorer_resource_controls(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; const GD_ResourceGraph *graph=context->project->resources;
     int selected=p->selection.node,changed=0,i;
-    igSeparator(); igTextUnformatted("Direct conditional resource witnesses",NULL);
-    igTextWrapped("Whole loaded Resource snapshot, not camera/filter scope. Teal arrows: selected witness. Amber: side guard/write declarations, not necessarily consumed or AND inputs. Feasibility is not checked. Calls/unknown-direction writes remain frontiers.");
+    igSeparator(); igTextUnformatted("Conditional resource witnesses",NULL);
+    igTextWrapped("Whole loaded Resource snapshot, not camera/filter scope. Teal arrows: selected witness. Amber: side guard/write declarations, not necessarily consumed or AND inputs. Feasibility is not checked. Mapped calls expose concrete placements. Unresolved/limited calls and unknown-direction writes remain frontiers.");
     igTextWrapped("From: %s | To: %s",p->resource_from>=0 ? node_label(graph,p->resource_from):"any upstream declaration",p->resource_to>=0 ? node_label(graph,p->resource_to):"not selected");
     igBeginDisabled(selected<0 || selected>=graph->node_count || p->selection.linked>=0);
     if (igButton("Use selected as FROM",(ImVec2_c){0,0})) { p->resource_from=selected; changed=1; }
@@ -580,7 +583,7 @@ void gd_explorer_resource_controls(GD_ExplorerContext *context) {
     if (p->resource_routes) {
         GD_ResourceRoutes *query=p->resource_routes;
         igTextWrapped("%d retained witnesses | work %d/%d | work/witness limit %s | depth limit %s | cycles skipped %d",query->witness_count,query->work,query->work_limit,query->limited ? "yes":"no",query->depth_limited ? "yes":"no",query->cycle_edges);
-        igTextWrapped("Unknown-direction writes %d | unexpanded calls %d | excluded cases %d. No known direct witness is not impossibility; raw/capped expressions remain in source inspector.",query->unknown_writes,query->unexpanded_calls,query->excluded_cases);
+        igTextWrapped("Unknown-direction writes %d | unexpanded calls %d | excluded cases %d. No known witness is not impossibility; raw/capped expressions remain in source inspector.",query->unknown_writes,query->unexpanded_calls,query->excluded_cases);
         if (!query->to_bindings || (query->from>=0 && !query->from_bindings)) igTextWrapped("Endpoint has no explicit facet binding. Resource noun/type alone does not identify a shared pool.");
         if (query->witness_count && igSliderInt("Witness",&p->resource_witness,0,query->witness_count-1,"%d",0)) gd_resource_route_mark(query,p->resource_witness);
         if (p->resource_witness>=0) {
@@ -593,9 +596,14 @@ void gd_explorer_resource_controls(GD_ExplorerContext *context) {
                 const GD_ResourceArc *arc=&query->arcs[w->arcs[i]];
                 igTextWrapped("%s: %s -> %s",gd_resource_arc_name(arc->kind),node_label(graph,arc->from),node_label(graph,arc->to));
             }
-            if (igCollapsingHeader_TreeNodeFlags("Whole activation guards + side declarations",0)) for (i=0;i<=w->count;++i) {
-                const GD_ResourceNode *node=&graph->nodes[w->nodes[i]]; int j;
-                if (node->kind!=GD_RESOURCE_CASE) continue;
+            if (igCollapsingHeader_TreeNodeFlags("Whole ancestor/instance guards + side declarations",0)) {
+              unsigned char guards[GD_RESOURCE_GRAPH_NODES]={0};
+              for (i=0;i<=w->count;++i) if (graph->nodes[w->nodes[i]].kind==GD_RESOURCE_CASE) {
+                  int current=w->nodes[i],depth=0;
+                  do { guards[current]=1; if (!graph->nodes[current].instance) break; current=graph->nodes[current].parent; } while (++depth<GD_MAX_RULE_EXPANSION_DEPTH);
+              }
+              for (i=0;i<graph->node_count;++i) if (guards[i]) {
+                const GD_ResourceNode *node=&graph->nodes[i]; int j;
                 { const GD_RuleCase *rule=&graph->rules->cases[node->case_index];
                   igTextWrapped("Case %s | context %s | unknown conditions %s | unknown effects %s",rule->name,rule->context ? rule->context:"unspecified",rule->unknown_conditions ? rule->unknown_conditions:"none declared",rule->unknown_effects ? rule->unknown_effects:"none declared");
                   igTextWrapped("Primary target %s | case-level becomes %s | preserves %s | calls %s",rule->primary_target ? rule->primary_target:"unspecified",rule->default_effects[0] ? rule->default_effects[0]:"unspecified",rule->default_effects[1] ? rule->default_effects[1]:"unspecified",rule->default_effects[2] ? rule->default_effects[2]:"none");
@@ -604,10 +612,12 @@ void gd_explorer_resource_controls(GD_ExplorerContext *context) {
                       igTextWrapped("%s requires %s | excludes %s | preserves %s | calls %s",actor->name,actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"unspecified",actor->preserve ? actor->preserve:"unspecified",actor->causes ? actor->causes:"none");
                   }
                 }
-                for (j=query->case_head[w->nodes[i]];j>=0;j=query->case_next[j]) {
+                if (node->instance) igTextWrapped("Concrete placement in %s | template %s",node_label(graph,node->parent),graph->rules->cases[node->case_index].name);
+                for (j=query->case_head[i];j>=0;j=query->case_next[j]) {
                     gd_explorer_resource_source(context,j);
                     if (graph->relations[j].kind==GD_RESOURCE_QUANTITY_WRITE) igTextWrapped("%s",graph->rules->assignments[graph->relations[j].declaration].expression);
                 }
+              }
             }
         }
     }
@@ -631,6 +641,16 @@ void gd_explorer_resource_details(GD_ExplorerContext *context) {
         if (igButton("Copy node ID",(ImVec2_c){0,0})) SetClipboardText(identity);
     }
     igTextWrapped("#%d %s | %s",selected,node_label(graph,selected),node->kind==GD_RESOURCE_CASE ? "Rule case":node->kind==GD_RESOURCE_ROLE ? "Resource role":"Actor facet");
+    if (node->instance) {
+        const GD_RuleCase *item=&graph->rules->cases[node->case_index];
+        igTextWrapped("Concrete placement in %s | template origin retained | call line %d",node_label(graph,node->parent),graph->calls->calls[node->call].line);
+        for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) {
+            int actor=gd_resource_instance_actor(graph,selected,i);
+            igTextWrapped("Template %s = concrete %s",graph->rules->participants[i].name,actor>=0 ? graph->rules->participants[actor].name:"unresolved");
+        }
+        if (node->binding_conflict) igTextWrapped("Conflicting explicit mapped pool bindings: activation unavailable; no source wins.");
+        if (node->frontier) igTextWrapped("Expansion incomplete: inspect unresolved/cycle/depth/work frontier.");
+    }
     if (node->pool_reference) igTextWrapped("Pool: %s | shared identity, not a unique case/participant",node->pool_reference);
     if (node->case_index>=0 && !node->pool_reference) {
         const GD_RuleCase *item=&graph->rules->cases[node->case_index];
@@ -648,14 +668,19 @@ void gd_explorer_resource_details(GD_ExplorerContext *context) {
         igTextWrapped("%s",source->source_path);
         if (igButton("Copy source path",(ImVec2_c){0,0})) SetClipboardText(source->source_path);
     }
-    igSeparator(); igTextUnformatted("Incident declarations (not composed outcomes):",NULL);
+    igSeparator(); igTextUnformatted("Direct/instantiated declarations (not final outcomes):",NULL);
     for (i=0;i<graph->relation_count;++i) {
         const GD_ResourceRelation *edge=&graph->relations[i];
         if (edge->facet!=selected && edge->activation!=selected) continue;
         igPushID_Int(i); gd_explorer_resource_source(context,i);
+        if (edge->mapped_participant>=0 && edge->mapped_participant<graph->rules->participant_count)
+            igTextWrapped("Concrete participant: %s%s",graph->rules->participants[edge->mapped_participant].name,edge->contextual_input ? " | ancestor input in this placement":"");
         if (edge->kind==GD_RESOURCE_QUANTITY_WRITE) {
-            igTextWrapped("%s",graph->rules->assignments[edge->declaration].expression);
+            igTextWrapped("%s := %s",graph->rules->assignments[edge->declaration].axis,graph->rules->assignments[edge->declaration].expression);
             if (edge->delta_recognized && edge->delta.known) igText("Signed delta: %g",edge->delta.number);
+        } else if (edge->kind==GD_RESOURCE_STATE_WRITE) {
+            const GD_RuleStateEffect *effect=&graph->rules->state_effects[edge->declaration];
+            igTextWrapped("%s := %s",effect->target.axis_record>=0 ? graph->model->records[effect->target.axis_record].reference:"unresolved axis",effect->target.state ? effect->target.state:"unresolved state");
         } else if (edge->kind==GD_RESOURCE_REQUIREMENT || edge->kind==GD_RESOURCE_EXCLUSION) {
             const GD_RuleParticipant *actor=&graph->rules->participants[edge->participant];
             const char *condition=edge->kind==GD_RESOURCE_REQUIREMENT ? actor->requires:actor->skip_if;

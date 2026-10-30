@@ -4,12 +4,12 @@
 #define GD_RESOURCE_ROUTE_WITNESSES 64
 #define GD_RESOURCE_ROUTE_STEPS 64 /* At most 32 case activations. */
 #define GD_RESOURCE_ROUTE_WORK (16 * 1024 * 1024)
-typedef enum { GD_RESOURCE_ENABLE, GD_RESOURCE_DEBIT, GD_RESOURCE_CREDIT, GD_RESOURCE_STATE_PROPOSAL } GD_ResourceArcKind;
+typedef enum { GD_RESOURCE_ENABLE, GD_RESOURCE_DEBIT, GD_RESOURCE_CREDIT, GD_RESOURCE_STATE_PROPOSAL, GD_RESOURCE_CALL } GD_ResourceArcKind;
 typedef struct { int from,to,relation,next; GD_ResourceArcKind kind; } GD_ResourceArc;
 typedef struct { int count,unresolved,proposed; int nodes[GD_RESOURCE_ROUTE_STEPS+1],arcs[GD_RESOURCE_ROUTE_STEPS]; } GD_ResourceWitness;
-/* Caller-owned scratch/results, never source state. Direct guarded witnesses,
-   not executable plans. Unknown-direction writes and invocation expansion remain
-   explicit frontiers. Graph/snapshots must outlive scratch/results. */
+/* Caller-owned scratch/results, never source state. Direct/instantiated guarded
+   witnesses, not executable plans. Unknown-direction writes and unresolved,
+   cyclic or depth/work-limited invocations remain explicit frontiers. Graph/snapshots must outlive scratch/results. */
 typedef struct {
     GD_Allocator allocator; const GD_ResourceGraph *graph;
     int from,to,from_bindings,to_bindings,accepted_only,queried,work,work_limit,limited,depth_limited,cycle_edges;
@@ -18,6 +18,7 @@ typedef struct {
     int head[GD_RESOURCE_GRAPH_NODES],first_relation[GD_RESOURCE_GRAPH_NODES];
     int case_head[GD_RESOURCE_GRAPH_NODES],case_next[GD_RESOURCE_GRAPH_RELATIONS];
     unsigned char eligible[GD_MAX_RULE_CASES],case_unresolved[GD_MAX_RULE_CASES],goals[GD_RESOURCE_GRAPH_NODES];
+    unsigned char activation_eligible[GD_RESOURCE_GRAPH_NODES],activation_unresolved[GD_RESOURCE_GRAPH_NODES];
     unsigned char marked_nodes[GD_RESOURCE_GRAPH_NODES],marked_relations[GD_RESOURCE_GRAPH_RELATIONS],side_relations[GD_RESOURCE_GRAPH_RELATIONS];
     GD_ResourceArc arcs[GD_RESOURCE_GRAPH_RELATIONS];
     GD_ResourceWitness witnesses[GD_RESOURCE_ROUTE_WITNESSES];

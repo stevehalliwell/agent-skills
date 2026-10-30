@@ -170,7 +170,29 @@ syncBuiltinESMExports();\n`);
     await unlink(path); // Test owns injected sentinel; migration does not.
     assert.deepEqual(await Promise.all(paths.map(path => tree(path))), before);
   });
+  await t.test('semantic changes still fail equivalence before apply', async () => {
+    const preload=join(temporary,'semantic-change.mjs');
+    await writeFile(preload,`import childProcess from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
+const execute=childProcess.spawnSync;
+childProcess.spawnSync=function(command,args,...rest) {
+  const result=execute(command,args,...rest);
+  if (result.status===0 && args[0]==='resources' && args.some(value=>String(value).includes('primary-target-stage-'))) {
+    const report=JSON.parse(result.stdout);
+    report.data.relations.find(row=>row.kind==='quantity_write').expression='injected changed expression';
+    result.stdout=JSON.stringify(report);
+  }
+  return result;
+};
+syncBuiltinESMExports();\n`);
+    const report=JSON.parse(invoke([...args,'--apply'],2,['--import',pathToFileURL(preload).href]).stdout);
+    assert.equal(report.errors[0].code,'migration.equivalence'); assert.equal(report.partial,false);
+    assert.deepEqual(report.changed,[]); assert.deepEqual(await Promise.all(paths.map(path=>tree(path))),before);
+  });
   await t.test('successful staged replacement preserves native facts and reruns without changes', async () => {
+    // Synthetic mapped caller exercises target-derived instance labels; historical fixture stays unchanged.
+    const caller='case mapped-caller:\n    target: Switch\n    context: ANY\n    Crate:\n        noun: nouns/crate\n        requires: ANY\n    Switch:\n        noun: nouns/switch\n        requires: ANY\n        causes: interactions/occupied-switch#occupied with Crate=Crate, Switch=Switch, Exit=Exit\n    Exit:\n        noun: nouns/exit\n        requires: ANY\n';
+    await writeFile(record,legacy.toString('utf8').replace('```\n',caller+'```\n'));
     const report = JSON.parse(invoke([...args, '--apply']).stdout);
     assert.equal(report.summary.changed, 1);
     assert.equal(report.summary.proposed_files, 1);

@@ -33,7 +33,7 @@ static void help(void) {
          "  --layout grid|graph|columns             Explorer: requires --mode matrix\n"
          "  Supports --frames, --screenshot, --output and error-output format flags.\n"
          "  Standalone view commands also available. No automatic folder discovery.\n\n"
-         "Resources: gd resources uses explicit rule bindings; retained direct declarations only.\n"
+         "Resources: gd resources uses explicit rule bindings; direct and concretely instantiated declarations.\n"
          "  --fields nodes,relations,routes,findings (JSON). --to NODE_ID [--from NODE_ID] [--accepted-only].\n"
          "  Direct conditional witnesses only; composed outcomes/applicability remain unavailable.\n"
          "Matrix/connectivity collections (exactly one of each):\n"

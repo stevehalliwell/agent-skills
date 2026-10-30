@@ -78,8 +78,8 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
                        const char *output, int *fail_at, int *calls) {
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
     GD_ExplorerPane *panes=NULL,*saved=NULL; GD_ExplorerContext c={0};
-    int v,result=2,window=0,invalid_created=0,probe_created=0,grid_probe_created=0,resource_key=-1;
-    char grid_probe_path[GD_MAX_PATH]="";
+    int v,result=2,window=0,invalid_created=0,probe_created=0,grid_probe_created=0,resource_key=-1,resource_instance=0;
+    char grid_probe_path[GD_MAX_PATH]="",resource_instance_id[GD_MAX_PATH]="";
     char failure[GD_MAX_PATH+512]="",path[GD_MAX_PATH]="",invalid[GD_MAX_PATH]="",probe_path[GD_MAX_PATH]="",resource_source[260]="";
     GD_Model *model; GD_ExplorerProject *last_good; FILE *file;
     c.project=project;
@@ -317,6 +317,28 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         explorer_test_render(&c);
         for (i=0;i<p->layout->node_count;++i) EXPLORER_CHECK(visible(&c,i)==!!p->resource_routes->marked_nodes[i]);
         EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/resource-witness.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
+        for (i=0;i<project->resources->relation_count;++i) {
+            const GD_ResourceRelation *edge=&project->resources->relations[i];
+            const GD_ResourceNode *node=&project->resources->nodes[edge->activation];
+            int root_activation=edge->activation;
+            if (!node->instance || edge->contextual_input || (edge->kind!=GD_RESOURCE_STATE_WRITE && !(edge->kind==GD_RESOURCE_QUANTITY_WRITE && edge->delta_recognized && edge->delta.known && edge->delta.number>0))) continue;
+            while (project->resources->nodes[root_activation].instance) root_activation=project->resources->nodes[root_activation].parent;
+            p->resource_from=root_activation; p->resource_to=edge->facet; p->selection.node=edge->activation;
+            EXPLORER_CHECK(gd_explorer_resource_run(&c) && p->resource_routes->witness_count>0);
+            {
+                int witness,step,found=-1;
+                for (witness=0;witness<p->resource_routes->witness_count && found<0;++witness)
+                    for (step=0;step<=p->resource_routes->witnesses[witness].count;++step)
+                        if (p->resource_routes->witnesses[witness].nodes[step]==edge->activation) { found=witness; break; }
+                EXPLORER_CHECK(found>=0); p->resource_witness=found; gd_resource_route_mark(p->resource_routes,found);
+            }
+            EXPLORER_CHECK(!strcmp(p->layout->nodes[p->selection.node].label,node->instance_label));
+            p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS; explorer_test_render(&c);
+            EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/resource-instance.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
+            break;
+        }
+        p->resource_from=-1; p->resource_to=p->selection.node=target;
+        EXPLORER_CHECK(gd_explorer_resource_run(&c));
     }
     /* Allocation failure in replacement layout preparation must retain every
        old snapshot, draft and visited layout, not just a stale pointer. */
@@ -365,6 +387,10 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             int r=gd_explorer_resource_record(project->resources,i);
             if (r>=0 && !strncmp(rules->records[r].reference,"mechanics/",10)) { p->selection.node=i; source_record=r; break; }
         }
+        for (i=0;i<project->resources->node_count;++i) if (project->resources->nodes[i].instance) {
+            p->selection.node=i; source_record=gd_explorer_resource_record(project->resources,i); resource_instance=1;
+            EXPLORER_CHECK(gd_resource_node_id(project->resources,i,-1,resource_instance_id,sizeof(resource_instance_id))); break;
+        }
         resource_key=p->selection.node;
         EXPLORER_CHECK(source_record>=0); snprintf(resource_source,sizeof(resource_source),"%s",rules->records[source_record].reference);
         p->paths.count=0; gd_graph_path_start(&p->paths,p->selection.node);
@@ -391,6 +417,10 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         int record=gd_explorer_resource_record(project->resources,p->selection.node);
         EXPLORER_CHECK(record>=0 && !strcmp(project->resources->model->records[record].reference,resource_source));
         EXPLORER_CHECK(p->selection.node!=resource_key && p->paths.count==1 && p->paths.keys[0]==p->selection.node && !p->paths.lost);
+        if (resource_instance) {
+            char current[GD_MAX_PATH];
+            EXPLORER_CHECK(project->resources->nodes[p->selection.node].instance && gd_resource_node_id(project->resources,p->selection.node,-1,current,sizeof(current)) && !strcmp(current,resource_instance_id));
+        }
     }
     EXPLORER_CHECK(remove(probe_path)==0); probe_created=0;
     EXPLORER_CHECK(remove(grid_probe_path)==0); grid_probe_created=0;

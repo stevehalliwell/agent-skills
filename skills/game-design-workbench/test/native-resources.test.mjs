@@ -42,7 +42,7 @@ test('resource report exposes live retained declarations without implying routes
     assert.equal(value.coverage.composed_outcomes_available,false);
     assert.ok(value.data.relations.some(row=>row.kind==='quantity_write'));
     const selected=report([...args,'--fields','routes']); assert.deepEqual(Object.keys(selected.data),['routes']);
-    const text=invoke([...args,'--format','text']).stdout; assert.match(text,/Direct declarations only/); assert.match(text,/composed outcomes unavailable/);
+    const text=invoke([...args,'--format','text']).stdout; assert.match(text,/Direct and concretely instantiated declarations/); assert.match(text,/composed outcomes unavailable/);
     assert.deepEqual(await readFile(sentinel),before);
   }
 });
@@ -105,8 +105,11 @@ case capped:
     assert.equal(debit.delta.recognized,true); assert.equal(debit.delta.known,true); assert.equal(debit.delta.number,-100);
     assert.equal(debit.target.axis,'axes/Amount');
     const call=value.data.relations.find(row=>row.kind==='invocation'); assert.ok(call);
-    assert.equal(call.meaning,'guarded_case_reference_not_flattened'); assert.deepEqual(call.bindings,[{callee:'Wallet',caller:'Wallet'}]);
+    assert.equal(call.meaning,'guarded_concrete_instantiation'); assert.deepEqual(call.bindings,[{callee:'Wallet',caller:'Wallet'}]);
     assert.equal(value.data.relations.filter(row=>row.kind==='invocation').length,3);
+    assert.equal(value.coverage.concrete_instances,3);
+    assert.equal(value.data.nodes.filter(row=>row.instantiated).length,3);
+    assert.ok(value.data.nodes.filter(row=>row.instantiated).every(row=>row.instantiation.participants[0].concrete_participant==='Wallet'));
     assert.ok(value.data.relations.filter(row=>row.kind==='invocation').every(row=>row.bindings.length===1));
     assert.equal(value.data.relations.find(row=>row.expression==='this + 0[gold]').delta.number,0);
     const capped=value.data.relations.find(row=>row.expression==='min(this + 1[gold], 3[gold])');

@@ -81,13 +81,16 @@ async function files(root, prefix = '') {
   }
   return result;
 }
-/* Compare native facts, excluding only source locations and new anchor provenance.
+/* Compare native facts, excluding only source locations, new anchor provenance
+   and measured construction work (anchor metadata adds mapping work).
    Do not remove identities, statuses, guards, conditions, expressions, resolutions,
    call maps, effect multiplicity, units, quantities or graph relations. */
 function comparable(value, parent = '') {
   if (Array.isArray(value)) return value.map(item => comparable(item, parent));
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
     .filter(([key]) => !['source_path', 'line', 'field_lines', 'primary_target', 'target_origin'].includes(key) && !key.endsWith('_line') && !(parent === 'collections' && key === 'directory'))
+    .filter(([key]) => !(parent === 'instantiation' && key === 'concrete_primary_target')
+      && !(parent === 'coverage' && key === 'work'))
     .map(([key, item]) => [key, comparable(item, key)]));
   return value;
 }

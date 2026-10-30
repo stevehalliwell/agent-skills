@@ -54,6 +54,7 @@ TEST(resource_routes,
         TEST_ASSERT(gd_resource_node_remap(graph,2,fresh)==2); /* Definition availability is not identity. */
         fresh->node_count=4; fresh->nodes[3]=fresh->nodes[2];
         TEST_ASSERT(gd_resource_node_remap(graph,2,fresh)==-1); /* Do not pick duplicate identity. */
+        TEST_ASSERT(gd_resource_select(query,fresh,id)==-2 && query->selector_matches==2); /* Exact selectors also reject duplicates. */
         gd_resource_graph_destroy(fresh);
     }
     gd_resource_routes_destroy(query); gd_resource_graph_destroy(graph); gd_rules_destroy(rules); gd_destroy(model);

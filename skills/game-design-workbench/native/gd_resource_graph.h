@@ -15,11 +15,17 @@ typedef struct {
     /* A pool reference selects a shared facet only with a resolved axis and
        non-conflicting binding. Text is borrowed from the rules snapshot. */
     const char *pool_reference;
+    /* Source definitions remain separate from concrete mapped placements. */
+    int instance, parent, call, ordinal, depth, frontier, binding_conflict;
+    int first_relation, relation_count, placement, identity_unresolved;
+    unsigned long long identity[2];
+    char instance_label[128];
 } GD_ResourceNode;
 typedef struct {
     GD_ResourceRelationKind kind;
     int facet, activation, participant, declaration, line, delta_recognized, conditional;
     GD_RuleQuantityValue delta; /* Signed change only; no claim about final bounds. */
+    int source_case, contextual_input, expanded, mapped_participant;
     /* declaration indexes condition_tokens, state_effects, assignments, pools,
        preservations or compiled calls. ROLE_BINDING activation indexes a role
        node; INVOCATION facet indexes a callee case, not a resource facet.
@@ -32,27 +38,32 @@ typedef struct {
     const GD_RuleAnalysis *calls; /* Borrowed after call binding. */
     int node_count, relation_count, work, limited, unexamined_cases, unexamined_roles;
     int composition_unexamined, preservation_unexamined, unresolved_facets, unknown_case_coverage, calls_bound;
+    int instance_count, cycle_frontiers, depth_frontiers, binding_conflicts, identity_collisions;
     GD_ResourceNode nodes[GD_RESOURCE_GRAPH_NODES];
     GD_ResourceRelation relations[GD_RESOURCE_GRAPH_RELATIONS];
 } GD_ResourceGraph;
 
-/* Partial direct declarations only. No context, invocation expansion,
-   routes or production direction. ALL/OTHER enumerate explicitly declared
+/* Source declarations, followed by bounded concrete placements in bind_calls.
+   No gameplay evaluation or inventory plan. ALL/OTHER enumerate explicitly declared
    actor axes; OTHER relations remain conditional on whole-case effects.
    Relations retain whole original conditions; they are not independent AND
    requirements or guarantees of an applicable outcome. Borrow model/rules unchanged until graph destruction. */
 GD_ResourceGraph *gd_resource_graph_build(GD_Model *model, const GD_Rules *rules);
-/* Add explicit compiled call/case edges, retaining mapping and guard provenance.
-   No call is unconditional and no mapped effect is flattened into its caller.
+/* Instantiate compiled mapped calls with concrete facets and source provenance.
+   Invocation-scoped pool identity never retargets unrelated caller declarations.
+   No call is unconditional; nested activations/whole ancestor guards remain.
    Call once; analysis must outlive graph and match its model/rules snapshots. */
 int gd_resource_graph_bind_calls(GD_ResourceGraph *graph, const GD_RuleAnalysis *analysis);
 void gd_resource_graph_destroy(GD_ResourceGraph *graph);
+/* Resolve template participant to existing root-context participant; no new actor.
+   At most expansion-depth * log2(total compiled bindings) comparisons. */
+int gd_resource_instance_actor(const GD_ResourceGraph *graph, int activation, int participant);
 /* Stable opaque ID, bounded buffer. hint is first facet relation, or -1 to
    find it. Source/case/participant/axis/pool identity, never machine paths. */
 int gd_resource_node_id(const GD_ResourceGraph *graph, int node, int hint, char *text, size_t size);
 /* Same identity definition as serializer; -1 for absent/ambiguous identity. */
 int gd_resource_node_remap(const GD_ResourceGraph *old, int node, const GD_ResourceGraph *fresh);
-/* Read-only retained incidence report, not directed routes/composed outcomes.
+/* Read-only direct/instantiated incidence report, not final gameplay outcomes.
    Valid graph from builder/bind_calls; borrowed snapshots must remain alive. */
 int gd_write_resource_result(FILE *output, const GD_Model *model, const GD_ResourceGraph *graph, int json, const char *fields);
 #ifdef GD_WITH_VIEW
