@@ -62,15 +62,18 @@ test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:
     const root=join(examples,name,'game-design'),before=await sourceHashes(root);
     const result=spawnSync(adapter,['--ipc-helpers',root],{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:2*1024*1024});
     assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
-    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.checks>=180);
+    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.checks>=180);assert.ok(value.control_checks>=500);assert.ok(value.feedback_checks>=10);
     const snapshot=value.snapshot;assert.equal(snapshot.ok,true);assert.equal(snapshot.projection,'matrix');
     assert.equal(snapshot.panes.length,8);assert.equal(snapshot.draft.modified_records,0);assert.equal(snapshot.draft.undo_steps,0);
     assert.equal(snapshot.panes.find(pane=>pane.projection==='actors').query.pending.values,'unapplied Ω');
     assert.notEqual(snapshot.panes.find(pane=>pane.projection==='actors').query.applied?.values,'unapplied Ω');
+    const rules=snapshot.panes.find(pane=>pane.projection==='resources').rules;
+    assert.equal(rules.pending.bindings,true);assert.equal(rules.applied.bindings,true);
+    assert.deepEqual(rules.pending,rules.applied);
     assert.ok(snapshot.snapshots.every(family=>family.collections.every(collection=>collection.alias&&collection.directory)));
-    assert.equal(snapshot.limits.source_writes,false);assert.equal(snapshot.limits.derived_navigation,true);
+    assert.equal(snapshot.limits.source_writes,false);assert.equal(snapshot.limits.derived_navigation,true);assert.equal(snapshot.limits.application_controls,false);assert.equal(snapshot.limits.application_actions,true);assert.equal(snapshot.limits.source_refresh,true);
     assert.equal('source' in snapshot,false);
-    assert.equal(snapshot.agent_hint.stale,false);assert.equal(typeof snapshot.agent_hint.id,'string');
+    assert.equal(snapshot.agent_hint.stale,true);assert.equal(snapshot.reload_generation,'2');assert.equal(typeof snapshot.agent_hint.id,'string');
     const page=value.node_page;assert.equal(page.projection,'matrix');assert.equal(page.prepared,true);
     assert.equal(page.canvas,'ordinary');assert.equal(page.nodes.length,2);assert.equal(page.offset,0);assert.equal(page.next_offset,2);assert.ok(page.total>2);
     for(const node of page.nodes) {
@@ -100,6 +103,7 @@ test('viewer protocol and native local request/reply without any GUI',{skip:proc
       assert.equal(invoke(['inspect','--target',first.session]).mutations,0);
     });
     await t.test('bounded node pages and opt-in source fields remain read-only',()=>{
+      assert.deepEqual(invoke(['actions','--target',first.session]).actions,[]);
       assert.equal(invoke(['nodes','--target',first.session]).limit,64);
       const page=invoke(['nodes','--target',first.session,'--projection','effects','--offset','4096','--limit','1']);
       assert.equal(page.offset,4096);assert.equal(page.limit,1);assert.deepEqual(page.nodes,[]);
@@ -132,7 +136,7 @@ test('viewer protocol and native local request/reply without any GUI',{skip:proc
       assert.equal(invoke(['inspect','--target',first.session]).mutations,2);
     });
     await t.test('invalid CLI combinations fail as JSON without dispatch',()=>{
-      for(const arguments_ of [[],['unknown'],['hint','--projection','skills'],['inspect','--projection','skills'],['inspect','--target','../bad'],['list','--reference','x'],['inspect','--target',first.session,'--target',first.session],['nodes','--limit','0'],['nodes','--limit','65'],['nodes','--limit','1.5'],['nodes','--offset','-1'],['nodes','--offset','4097'],['nodes','--offset','01'],['inspect','--limit','1'],['nodes','--id','x'],['hint','--projection','effects','--reference','x','--id','y'],['navigate','--projection','actors','--id','x'.repeat(4096)]]) {
+      for(const arguments_ of [[],['unknown'],['hint','--projection','skills'],['inspect','--projection','skills'],['inspect','--target','../bad'],['list','--reference','x'],['inspect','--target',first.session,'--target',first.session],['nodes','--limit','0'],['nodes','--limit','65'],['nodes','--limit','1.5'],['nodes','--offset','-1'],['nodes','--offset','4097'],['nodes','--offset','01'],['inspect','--limit','1'],['nodes','--id','x'],['refresh','--projection','skills'],['actions','--limit','1'],['action','--projection','actors'],['action','--action','query.run'],['inspect','--action','query.run'],['hint','--projection','effects','--reference','x','--id','y'],['navigate','--projection','actors','--id','x'.repeat(4096)]]) {
         assert.equal(invoke(arguments_,2).ok,false);
       }
       assert.equal(invoke(['navigate','--target',first.session,'--projection','actors','--id','"'.repeat(4095)],2).code,'viewer.capacity');
@@ -158,6 +162,15 @@ test('viewer protocol and native local request/reply without any GUI',{skip:proc
         assert.equal(result.id,id);assert.equal(result.reference,'');
       }
       assert.equal(invoke(['inspect','--target',first.session]).mutations,7);
+    });
+    await t.test('explicit source refresh has no discard/projection options',()=>{
+      assert.equal(invoke(['refresh','--target',first.session]).reloaded,true);
+      assert.equal(invoke(['inspect','--target',first.session]).mutations,8);
+    });
+    await t.test('named application action travels through strict command envelope',()=>{
+      const result=invoke(['action','--target',first.session,'--projection','matrix','--action','structure.run']);
+      assert.equal(result.executed,true);assert.equal(result.action,'structure.run');
+      assert.equal(invoke(['inspect','--target',first.session]).mutations,9);
     });
     second=await owner();
     await t.test('multiple sessions require exact target',()=>{

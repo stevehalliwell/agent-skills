@@ -133,6 +133,7 @@ int gd_viewer_parse(const char *text, size_t size, GD_ViewerRequest *request) {
         else if (!strcmp(key,"id")) { bit=64; target=request->id; capacity=sizeof(request->id); }
         else if (!strcmp(key,"offset")) bit=128;
         else if (!strcmp(key,"limit")) bit=256;
+        else if (!strcmp(key,"action")) { bit=512; target=request->action; capacity=sizeof(request->action); }
         else return 0;
         if (seen&bit) return 0;
         seen|=bit;
@@ -146,9 +147,12 @@ int gd_viewer_parse(const char *text, size_t size, GD_ViewerRequest *request) {
     }
     spaces(&r);
     if (r.p!=r.end || (seen&3)!=3) return 0;
-    if (!strcmp(request->command,"inspect")) return !(seen&(8|16|64|128|256)) && (!(seen&32) || fields_valid(request->fields));
-    if (!strcmp(request->command,"nodes")) return !(seen&(16|32|64));
-    if ((seen&(16|64))==(16|64) || (seen&(32|128|256))) return 0;
+    if (!strcmp(request->command,"inspect")) return !(seen&~(7u|32u)) && (!(seen&32) || fields_valid(request->fields));
+    if (!strcmp(request->command,"nodes")) return !(seen&~(7u|8u|128u|256u));
+    if (!strcmp(request->command,"actions")) return !(seen&~(7u|8u));
+    if (!strcmp(request->command,"action")) return (seen&(8|512))==(8|512) && !(seen&~(7u|8u|512u));
+    if (!strcmp(request->command,"refresh")) return !(seen&~7u);
+    if ((seen&(16|64))==(16|64) || (seen&~(7u|8u|16u|64u))) return 0;
     if (!strcmp(request->command,"hint")) return (seen&8) && (seen&(16|64));
     if (!strcmp(request->command,"navigate")) return (seen&8)!=0;
     return 0;
@@ -334,7 +338,7 @@ static Exchange *exchange(GD_Allocator a, const char *session, const char *reque
     if (!channel_close(&e->channel)) goto fail;
     return e;
 fail:
-    snprintf(error,capacity,"Viewer exchange failed/timed out; navigation outcome may be unknown. Do not automatically retry mutations.");
+    snprintf(error,capacity,"Viewer exchange failed/timed out; mutation outcome may be unknown. Do not automatically retry mutations.");
     if (!channel_close(&e->channel)) { snprintf(error,capacity,"IPC cancellation unsettled; outcome unknown, backing retained until exit"); return NULL; }
     a.release(a.context,e); return NULL;
 }
@@ -362,30 +366,32 @@ static int cli_failure(const char *code, const char *message) {
     gd_viewer_error(&w,code,message); puts(output); fprintf(stderr,"%s: %s\n",code,message); return 2;
 }
 int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
-    const char *command=argc>2?argv[2]:NULL,*target=NULL,*projection=NULL,*reference=NULL,*fields=NULL,*id=NULL,*offset=NULL,*limit=NULL;
+    const char *command=argc>2?argv[2]:NULL,*target=NULL,*projection=NULL,*reference=NULL,*fields=NULL,*id=NULL,*offset=NULL,*limit=NULL,*action=NULL;
     unsigned page_offset=0,page_limit=GD_VIEWER_NODE_PAGE;
     char sessions[GD_VIEWER_INSTANCES][GD_VIEWER_SESSION],request[GD_VIEWER_REQUEST_LIMIT],error[512];
     GD_ViewerWriter w={request,0,sizeof(request),0}; GD_ViewerRequest parsed;
     int i,count=0; Exchange *e;
     if (command && !strcmp(command,"--help")) {
-        puts("Usage: gd viewer list|inspect|nodes|hint|navigate [--target SESSION] [--projection VIEW]\n"
+        puts("Usage: gd viewer list|inspect|nodes|hint|navigate|actions|action|refresh [--target SESSION] [--projection VIEW]\n"
              "hint/navigate --reference ALIAS/NAME (Find) or --id NATIVE_ID (exact select/frame); never both.\n"
              "nodes [--projection VIEW] [--offset 0..4096] [--limit 1..64] reads prepared canvas; default active view, page 64.\n"
              "inspect --fields selection,snapshots,panes,agent_hint,source narrows optional sections; source body opt-in.\n"
              "hint requires projection and reference/id; navigate requires projection.\n"
+             "actions [--projection VIEW] lists shared application actions; action --projection VIEW --action NAME runs one.\n"
+             "refresh reloads original source bindings now; active edits/dirty drafts block, never discard.\n"
              "JSON stdout; diagnostics stderr; exit 0 success / 2 failure. No auto-start, source writes or OS focus changes.\n"
-             "inspect/list are non-consuming. Multiple viewers require exact --target from list. Timeout outcome may be unknown; never auto-retry navigation."); return 0;
+             "inspect/list are non-consuming. Multiple viewers require exact --target from list. Timeout outcome may be unknown; never auto-retry mutations."); return 0;
     }
-    if (!command) return cli_failure("viewer.arguments","Supply list, inspect, nodes, hint or navigate; see gd viewer --help");
+    if (!command) return cli_failure("viewer.arguments","Supply list, inspect, nodes, hint, navigate, actions, action or refresh; see gd viewer --help");
     for (i=3;i<argc;++i) {
-        const char **field=!strcmp(argv[i],"--target")?&target:!strcmp(argv[i],"--projection")?&projection:!strcmp(argv[i],"--reference")?&reference:!strcmp(argv[i],"--fields")?&fields:!strcmp(argv[i],"--id")?&id:!strcmp(argv[i],"--offset")?&offset:!strcmp(argv[i],"--limit")?&limit:NULL;
+        const char **field=!strcmp(argv[i],"--target")?&target:!strcmp(argv[i],"--projection")?&projection:!strcmp(argv[i],"--reference")?&reference:!strcmp(argv[i],"--fields")?&fields:!strcmp(argv[i],"--id")?&id:!strcmp(argv[i],"--offset")?&offset:!strcmp(argv[i],"--limit")?&limit:!strcmp(argv[i],"--action")?&action:NULL;
         if (!strcmp(argv[i],"--json")) continue;
         if (!field || *field || i+1==argc || !*argv[i+1]) return cli_failure("viewer.arguments","Unknown, duplicate or missing option; see gd viewer --help");
         *field=argv[++i];
     }
     if (target && !session_valid(target)) return cli_failure("viewer.target","Use exact session identity from gd viewer list");
     if (!strcmp(command,"list")) {
-        if (target || projection || reference || fields || id || offset || limit) return cli_failure("viewer.arguments","list accepts only --json");
+        if (target || projection || reference || fields || id || offset || limit || action) return cli_failure("viewer.arguments","list accepts only --json");
         if (!instances(sessions,&count)) return cli_failure("viewer.discovery","Discovery failed or exceeds 32 candidates");
         /* All candidates remain explicit, including unresponsive endpoints. */
         fputs("{\"ok\":true,\"viewers\":[",stdout);
@@ -409,6 +415,7 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
     if (reference) { gd_viewer_write(&w,",\"reference\":"); gd_viewer_quote(&w,reference); }
     if (fields) { gd_viewer_write(&w,",\"fields\":"); gd_viewer_quote(&w,fields); }
     if (id) { gd_viewer_write(&w,",\"id\":"); gd_viewer_quote(&w,id); }
+    if (action) { gd_viewer_write(&w,",\"action\":"); gd_viewer_quote(&w,action); }
     if (offset) gd_viewer_write(&w,",\"offset\":%u",page_offset);
     if (limit) gd_viewer_write(&w,",\"limit\":%u",page_limit);
     gd_viewer_write(&w,"}");

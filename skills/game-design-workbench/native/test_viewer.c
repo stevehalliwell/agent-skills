@@ -24,6 +24,9 @@ static int checks(void) {
         "{\"protocol\":1,\"command\":\"nodes\",\"projection\":\"effects\",\"offset\":4096,\"limit\":1}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"effects\",\"id\":\"effect:Ω\"}",
         "{\"protocol\":1,\"command\":\"inspect\",\"fields\":\"source\"}",
+        "{\"protocol\":1,\"command\":\"refresh\"}",
+        "{\"protocol\":1,\"command\":\"actions\"}",
+        "{\"protocol\":1,\"command\":\"action\",\"projection\":\"actors\",\"action\":\"query.run\"}",
         "{\"protocol\":1,\"command\":\"inspect\",\"fields\":\"selection,panes\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\",\"reference\":\"skills/café\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\",\"reference\":\"skills/caf\\u00e9\\u03a9\\ud83d\\ude00\"}"
@@ -44,6 +47,14 @@ static int checks(void) {
         "{\"protocol\":1,\"command\":\"inspect\"} trailing",
         "{\"protocol\":1,\"command\":\"inspect\",\"target\":\"\"}",
         "{\"protocol\":1,\"command\":\"quit\"}",
+        "{\"protocol\":1,\"command\":\"refresh\",\"projection\":\"skills\"}",
+        "{\"protocol\":1,\"command\":\"refresh\",\"fields\":\"source\"}",
+        "{\"protocol\":1,\"command\":\"actions\",\"action\":\"query.run\"}",
+        "{\"protocol\":1,\"command\":\"actions\",\"limit\":1}",
+        "{\"protocol\":1,\"command\":\"action\",\"action\":\"query.run\"}",
+        "{\"protocol\":1,\"command\":\"action\",\"projection\":\"actors\"}",
+        "{\"protocol\":1,\"command\":\"inspect\",\"action\":\"query.run\"}",
+        "{\"protocol\":1,\"command\":\"action\",\"projection\":\"actors\",\"action\":\"0123456789012345678901234567890123456789012345678901234567890123\"}",
         "{\"protocol\":1,\"command\":\"navigate\",\"projection\":\"effects\",\"id\":\"x\",\"reference\":\"x\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"id\":\"x\"}",
         "{\"protocol\":1,\"command\":\"inspect\",\"id\":\"x\"}",
@@ -118,6 +129,12 @@ static void dispatch(void *context, const GD_ViewerRequest *request, GD_ViewerWr
         gd_viewer_write(w,"{\"ok\":true,\"mutations\":%d,\"session\":",owner->mutations); gd_viewer_quote(w,gd_viewer_session(owner->server)); gd_viewer_write(w,"}");
     } else if (!strcmp(request->command,"nodes")) {
         gd_viewer_write(w,"{\"ok\":true,\"nodes\":[],\"total\":0,\"offset\":%u,\"limit\":%u,\"next_offset\":null}",request->offset,request->limit);
+    } else if (!strcmp(request->command,"actions")) {
+        gd_viewer_write(w,"{\"ok\":true,\"actions\":[]}");
+    } else if (!strcmp(request->command,"action")) {
+        ++owner->mutations; gd_viewer_write(w,"{\"ok\":true,\"executed\":true,\"action\":"); gd_viewer_quote(w,request->action); gd_viewer_write(w,"}");
+    } else if (!strcmp(request->command,"refresh")) {
+        ++owner->mutations; gd_viewer_write(w,"{\"ok\":true,\"reloaded\":true}");
     } else {
         ++owner->mutations;
         if (!strcmp(request->reference,"slow")) Sleep(2300); /* Test-only delayed owner reply. */

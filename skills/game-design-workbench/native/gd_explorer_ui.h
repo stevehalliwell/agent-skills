@@ -144,6 +144,7 @@ void gd_explorer_mda_source(GD_ExplorerContext *context, int edge);
 
 int gd_explorer_query_prepare(GD_ExplorerContext *context);
 int gd_explorer_query_run(GD_ExplorerContext *context);
+int gd_explorer_query_display(GD_ExplorerContext *context);
 int gd_explorer_query_select_result(GD_ExplorerContext *context, int target);
 void gd_explorer_query_destroy(GD_ExplorerQueryState *state);
 int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProject *old, const GD_ExplorerPane *prior);
@@ -155,7 +156,9 @@ void gd_explorer_query_source(GD_ExplorerContext *context, int edge);
 int gd_explorer_query_record(const GD_ExplorerPane *pane);
 
 int gd_explorer_structure_prepare(GD_ExplorerContext *context);
+int gd_explorer_structure_inputs(GD_ExplorerContext *context);
 int gd_explorer_structure_run(GD_ExplorerContext *context);
+int gd_explorer_structure_clear(GD_ExplorerContext *context);
 int gd_explorer_structure_pending(const GD_ExplorerPane *pane);
 int gd_explorer_structure_remap(GD_ExplorerContext *context, const GD_ExplorerProject *old, const GD_ExplorerPane *prior);
 void gd_explorer_structure_destroy(GD_ExplorerStructureState *state);
@@ -169,6 +172,7 @@ void gd_explorer_similarity_input(GD_ExplorerContext *context);
 void gd_explorer_similarity_draw(GD_ExplorerContext *context);
 
 void gd_explorer_rules_destroy(GD_ExplorerRuleState *state);
+int gd_explorer_rules_inputs(GD_ExplorerContext *context);
 int gd_explorer_rules_run(GD_ExplorerContext *context);
 int gd_explorer_rules_remap(GD_ExplorerContext *context,const GD_ExplorerProject *old,const GD_ExplorerPane *prior);
 void gd_explorer_rules_controls(GD_ExplorerContext *context);

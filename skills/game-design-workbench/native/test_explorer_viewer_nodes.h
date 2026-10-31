@@ -119,8 +119,8 @@ static int explorer_viewer_nodes_checks(ExplorerViewer *viewer, GD_ExplorerPane 
     {
         GD_ExplorerPane *pane=&panes[GD_EXPLORER_MDA]; GD_ExplorerStructureState *state; Camera2D camera=pane->camera;
         c->pane=pane; *viewer->active=GD_EXPLORER_MDA;
-        NODE_CHECK(gd_explorer_structure_run(c)); state=pane->structure_state; state->pending.kind=GD_STRUCTURE_COUNT+1;
-        snprintf(state->pending.features,sizeof(state->pending.features),"retained-partners"); NODE_CHECK(gd_explorer_structure_run(c)); state=pane->structure_state;
+        NODE_CHECK(gd_explorer_action_run(c,GD_ACTION_STRUCTURE_RUN)); state=pane->structure_state; state->pending.kind=GD_STRUCTURE_COUNT+1;
+        snprintf(state->pending.features,sizeof(state->pending.features),"retained-partners"); NODE_CHECK(gd_explorer_action_run(c,GD_ACTION_STRUCTURE_RUN)); state=pane->structure_state;
         NODE_CHECK(gd_explorer_similarity_active(c) && viewer_canvas_count(c)>0 && state->result->similarity->map->available);
         viewer_identities(c,&ids); NODE_CHECK(viewer_canvas_id(c,0,&ids,identity,sizeof(identity)));
         REQUEST("navigate","mda",identity); NODE_CHECK(!strncmp(reply,"{\"ok\":true",10) && state->similarity_row==0);

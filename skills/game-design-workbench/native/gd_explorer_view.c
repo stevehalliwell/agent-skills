@@ -1,4 +1,4 @@
-#include "gd_explorer_ui.h"
+#include "gd_explorer_controls.h"
 #include "gd_graph_analysis_draw.h"
 #include "gd_graph_overview_draw.h"
 #include "rlImGui.h"
@@ -50,7 +50,7 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     gd_layout_focus_destroy(p->distance_focus); gd_resource_routes_destroy(p->resource_routes);
     memset(p,0,sizeof(*p)); p->layout=layout; p->view=view;
     p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; p->editor.record=-1;
-    p->query_options.root_case=p->query_options.participant=p->query_options.axis=p->query_options.noun=p->query_options.compare=-1; p->query_options.weighted=true;
+    gd_explorer_form_defaults(GD_FORM_QUERY,&p->query_options);
     p->grid.noun=p->grid.verb=-1; p->resource_from=p->resource_to=p->resource_witness=-1; p->resource_work_limit=GD_RESOURCE_ROUTE_WORK;
     p->mda=(GD_ExplorerMdaDisplay){.record=-1,.link=-1,.held=-1,.roles={true,true,true,true},.paused=true};
     p->camera.zoom=1; p->focus_auto_fit=true; p->distance_focus_revision=UINT64_MAX; p->peer=p->foundation_peer=p->witness=-1;
@@ -580,6 +580,14 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
     }
     gd_explorer_destroy(fresh); return 0;
 }
+/* 1 loaded, 0 reload failed, -1 blocked. Never commits or discards editor input. */
+static int refresh_sources(GD_ExplorerContext *c, GD_ExplorerPane *panes, const GD_Collection *collections, int count, char *failure, size_t capacity) {
+    int active=c->pane->view,updated;
+    if (gd_explorer_rank_pending(c->project,panes) || (c->project->draft && (c->project->draft->modified_count || c->project->draft->history_count))) {
+        snprintf(failure,capacity,"Refresh blocked: pending editor, draft changes or Undo history; no user buffers discarded."); return -1;
+    }
+    updated=reload_project(c,panes,collections,count,failure,capacity); c->pane=&panes[active]; return updated;
+}
 /* Shared state transition after caller establishes its own edit guard. */
 static void enter_view(GD_ExplorerContext *c, GD_ExplorerPane *panes, int target, const char *find_reference) {
     c->pane->selection.held=c->pane->mda.held=-1; c->pane->right_started=0;
@@ -685,6 +693,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     c.project=project; c.pane=&panes[active];
     if (!open_window("Game Design Workbench - Explorer")) { gd_error(diagnostic,"view.window","Cannot initialize explorer window",NULL,0); result=2; goto cleanup; }
     viewer.context=&c; viewer.panes=panes; viewer.active=&active; viewer.stale=&stale; viewer.reload_generation=1;
+    viewer.collections=collections; viewer.collection_count=count;
     viewer.server=gd_viewer_server_open(allocator,ipc_error,sizeof(ipc_error));
     for (;;) {
         int closing=WindowShouldClose(),width=GetScreenWidth(),height=GetScreenHeight(),split=width*60/100;
@@ -719,19 +728,6 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (viewer.server) igText("IPC session: %s",gd_viewer_session(viewer.server));
         if (*ipc_error) igTextWrapped("%s",ipc_error);
         if (gd_viewer_server_error(viewer.server)) igTextWrapped("%s",gd_viewer_server_error(viewer.server));
-        /* Reserve stable space: asynchronous hints must not move human controls. */
-        igBeginChild_Str("Agent hint location",(ImVec2_c){0,100},0,0);
-        if (viewer.has_hint) {
-            if (igSmallButton("Go to agent hint")) {
-                GD_ViewerRequest navigation=viewer.hint;
-                snprintf(navigation.command,sizeof(navigation.command),"navigate");
-                /* Process after rendering, through same guarded application path. */
-                viewer.hint=navigation;
-            }
-            igSameLine(0,-1); if (igSmallButton("Dismiss agent hint")) { viewer.has_hint=0; viewer.hint_pending=0; }
-            igTextWrapped("Agent hint: %s | %s",viewer.hint.projection,*viewer.hint.id?viewer.hint.id:viewer.hint.reference);
-        } else igTextUnformatted("No agent hint.",NULL);
-        igEndChild();
         requested=choose_view(project,"Data / projection",active,1);
         if (igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34})) reset=1;
         igTextWrapped("Reset affects this view only. Draft/source data and other views stay intact.");
@@ -805,6 +801,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         else if (query_view(p->view)) gd_explorer_query_details(&c);
         else gd_explorer_resource_details(&c);
         igEnd();
+        viewer_feedback(&viewer);
         {
             Vector2 mouse=GetMousePosition();
             if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && CheckCollisionPointRec(mouse,c.viewport) && !igGetIO_Nil()->WantCaptureMouse) {
@@ -901,11 +898,12 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         }
         if (refresh) {
             c.pane=&panes[GD_EXPLORER_SKILLS];
-            if (gd_explorer_graph_commit(&c)<0 || (project->draft && project->draft->modified_count))
-                snprintf(failure,sizeof(failure),"Refresh blocked: draft modified or editor invalid. Undo to disk sync point or finish/report first.");
+            if (gd_explorer_graph_commit(&c)<0)
+                snprintf(failure,sizeof(failure),"Refresh blocked: editor invalid. User input retained.");
             else {
-                stale=!reload_project(&c,panes,collections,count,failure,sizeof(failure));
-                if (!stale) ++viewer.reload_generation;
+                int updated=refresh_sources(&c,panes,collections,count,failure,sizeof(failure));
+                if (updated>=0) stale=!updated;
+                if (updated>0) ++viewer.reload_generation;
                 project=c.project;
             }
             c.pane=&panes[active];
@@ -913,12 +911,13 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (viewer.has_hint && !strcmp(viewer.hint.command,"navigate") && !viewer_interacting()) {
             char reply[1024]; GD_ViewerWriter writer={reply,0,sizeof(reply),0};
             if (!viewer_hint_current(&viewer)) gd_viewer_error(&writer,"viewer.stale_hint","Exact-node hint predates source reload or draft change; request a fresh hint");
-            else viewer_dispatch(&viewer,&viewer.hint,&writer);
+            else { viewer.human_go=1; viewer_dispatch(&viewer,&viewer.hint,&writer); viewer.human_go=0; }
             if (!strncmp(reply,"{\"ok\":true",10)) viewer.has_hint=0;
             else snprintf(failure,sizeof(failure),"Agent hint not opened: %s",reply);
             snprintf(viewer.hint.command,sizeof(viewer.hint.command),"hint");
         }
         gd_viewer_server_poll(viewer.server,viewer_dispatch,&viewer);
+        project=c.project; /* IPC refresh can replace snapshot owner after rendering. */
         viewer_apply_hint(&viewer);
     }
     rlImGuiShutdown(); CloseWindow();

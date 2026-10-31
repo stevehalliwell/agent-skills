@@ -15,7 +15,7 @@ int gd_explorer_structure_picker_checks(GD_ExplorerContext *context) {
         PICKER_CHECK(identity_ok && selected==0);
     }
     if (pane->view==GD_EXPLORER_RELATIONSHIPS && model->record_count) {
-        GD_ExplorerStructureForm form; defaults(&form); snprintf(form.scope_root,sizeof(form.scope_root),"%s",model->records[0].reference);
+        GD_ExplorerStructureForm form; gd_explorer_form_defaults(GD_FORM_STRUCTURE,&form); snprintf(form.scope_root,sizeof(form.scope_root),"%s",model->records[0].reference);
         restricted=build_state(context->project,pane->view,&form,NULL,message,sizeof(message)); PICKER_CHECK(restricted); pane->structure_state=restricted;
         { const GD_StructureResult *all=picker_context(context); PICKER_CHECK(all && all!=restricted->result && !all->options.scope_root && all->layout->node_count==choices->layout->node_count); }
     }

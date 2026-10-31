@@ -11,6 +11,8 @@ typedef struct {
     GD_ViewerRequest pending_hint; int hint_pending;
     uint64_t hint_generation,pending_hint_generation;
     unsigned hint_revision,pending_hint_revision;
+    const GD_Collection *collections; int collection_count;
+    char toast[128]; double toast_until; int human_go;
 } ExplorerViewer;
 static int viewer_hint_current(const ExplorerViewer *viewer) {
     return !*viewer->hint.id || (viewer->hint_generation==viewer->reload_generation && viewer->hint_revision==viewer->context->project->revision);
@@ -27,37 +29,17 @@ static void viewer_apply_hint(ExplorerViewer *viewer) {
 static void viewer_member(GD_ViewerWriter *w, const char *key, const char *value) {
     gd_viewer_quote(w,key); gd_viewer_write(w,":"); gd_viewer_quote(w,value);
 }
-static void viewer_query_options(GD_ViewerWriter *w, const GD_ExplorerQueryOptions *o) {
-    gd_viewer_write(w,"{\"root_case\":%d,\"participant\":%d,\"axis\":%d,\"noun\":%d,\"ghosts\":%d,\"primary\":%d,\"compare\":%d,\"coverage\":%s,\"accepted\":%s,\"weighted\":%s,\"include_excluded\":%s,\"literal_values\":%s,\"literal_assumptions\":%s,",
-        o->root_case,o->participant,o->axis,o->noun,o->ghosts,o->primary,o->compare,o->coverage?"true":"false",o->accepted?"true":"false",o->weighted?"true":"false",o->include_excluded?"true":"false",o->literal_values?"true":"false",o->literal_assumptions?"true":"false");
-    viewer_member(w,"values",o->values); gd_viewer_write(w,","); viewer_member(w,"facts",o->facts); gd_viewer_write(w,","); viewer_member(w,"contexts",o->contexts); gd_viewer_write(w,"}");
-}
-static void viewer_structure_form(GD_ViewerWriter *w, const GD_ExplorerStructureForm *f) {
-    gd_viewer_write(w,"{\"kind\":%d,\"direction\":%d,\"lens\":%d,\"work_limit\":%d,\"actor_scope\":%d,\"include_inactive\":%s,",f->kind,f->direction,f->lens,f->work_limit,f->actor_scope,f->include_inactive?"true":"false");
-#define S(name) viewer_member(w,#name,f->name)
-    S(from); gd_viewer_write(w,","); S(to); gd_viewer_write(w,","); S(avoid); gd_viewer_write(w,","); S(scope_root); gd_viewer_write(w,","); S(starts); gd_viewer_write(w,","); S(relations); gd_viewer_write(w,","); S(statuses); gd_viewer_write(w,","); S(features); gd_viewer_write(w,","); S(entries);
-#undef S
-    gd_viewer_write(w,"}");
-}
-static void viewer_rule_form(GD_ViewerWriter *w, const GD_ExplorerRuleForm *f) {
-    gd_viewer_write(w,"{\"kind\":%d,\"work_limit\":%d,\"bindings\":%s,",f->kind,f->work_limit,f->bindings?"true":"false");
-#define S(name) viewer_member(w,#name,f->name)
-    S(case_name); gd_viewer_write(w,","); S(facts); gd_viewer_write(w,","); S(contexts); gd_viewer_write(w,","); S(object); gd_viewer_write(w,","); S(participant); gd_viewer_write(w,","); S(axis); gd_viewer_write(w,","); S(statuses);
-#undef S
-    gd_viewer_write(w,"}");
-}
-static int viewer_editor_pending(const GD_ExplorerProject *project, const GD_ExplorerPane *panes) {
-    GD_Model *model=gd_explorer_model(project,GD_EXPLORER_SKILLS); char expected[64]; int v;
-    if (!model) return 0;
-    for (v=0;v<=GD_EXPLORER_RELATIONSHIPS;++v) {
-        const GD_ExplorerSkillEditor *editor=&panes[v].editor;
-        if (editor->record<0) continue;
-        if (editor->record>=model->record_count || model->records[editor->record].role!=GD_SKILL) return 1;
-        if (model->records[editor->record].has_rank) snprintf(expected,sizeof(expected),"%lld",(long long)model->records[editor->record].rank);
-        else snprintf(expected,sizeof(expected),"null");
-        if (strcmp(expected,editor->rank_text)) return 1;
+static void viewer_form(GD_ViewerWriter *w, GD_ExplorerForm form, const void *values) {
+    int i,count; const GD_ExplorerControl *fields=gd_explorer_form_fields(form,&count);
+    gd_viewer_write(w,"{");
+    for (i=0;i<count;++i) {
+        const GD_ExplorerControl *field=&fields[i]; const char *value=(const char *)values+field->offset;
+        if (i) gd_viewer_write(w,","); gd_viewer_quote(w,field->name); gd_viewer_write(w,":");
+        if (field->type==GD_CONTROL_INT) gd_viewer_write(w,"%d",*(const int *)value);
+        else if (field->type==GD_CONTROL_BOOL) gd_viewer_write(w,"%s",*(const bool *)value?"true":"false");
+        else gd_viewer_quote(w,value);
     }
-    return 0;
+    gd_viewer_write(w,"}");
 }
 #include "gd_explorer_viewer_nodes.h"
 static void viewer_selection(GD_ViewerWriter *w, GD_ExplorerContext *c) {
@@ -123,7 +105,7 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
     gd_viewer_write(w,"{\"ok\":true,\"protocol\":1,"); viewer_member(w,"session",gd_viewer_session(viewer->server));
     gd_viewer_write(w,","); viewer_member(w,"projection",viewer_projections[c->pane->view]);
     gd_viewer_write(w,",\"reload_generation\":\"%llu\",\"draft_revision\":%u,\"stale\":%s,\"draft\":{\"modified_records\":%d,\"undo_steps\":%d,\"rank_input_pending\":%s}",
-        (unsigned long long)viewer->reload_generation,c->project->revision,*viewer->stale?"true":"false",c->project->draft?c->project->draft->modified_count:0,c->project->draft?c->project->draft->history_count:0,viewer_editor_pending(c->project,viewer->panes)?"true":"false");
+        (unsigned long long)viewer->reload_generation,c->project->revision,*viewer->stale?"true":"false",c->project->draft?c->project->draft->modified_count:0,c->project->draft?c->project->draft->history_count:0,gd_explorer_rank_pending(c->project,viewer->panes)?"true":"false");
     if (gd_viewer_field(fields,"selection")) { gd_viewer_write(w,",\"selection\":"); viewer_selection(w,c); }
     if (fields && *fields && gd_viewer_field(fields,"source")) { gd_viewer_write(w,",\"source\":"); viewer_source(c,w); }
     if (gd_viewer_field(fields,"snapshots")) {
@@ -161,19 +143,19 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
         gd_viewer_write(w,",\"resource_query\":{\"from\":"); viewer_resource_id(w,c->project->resources,p->resource_from);
         gd_viewer_write(w,",\"to\":"); viewer_resource_id(w,c->project->resources,p->resource_to);
         gd_viewer_write(w,",\"witness\":%d,\"accepted_only\":%s,\"only_witness\":%s,\"work_limit\":%d,\"result_available\":%s}",p->resource_witness,p->resource_accepted?"true":"false",p->resource_only_witness?"true":"false",p->resource_work_limit,p->resource_routes?"true":"false");
-        gd_viewer_write(w,",\"query\":{\"pending\":"); viewer_query_options(w,&p->query_options);
+        gd_viewer_write(w,",\"query\":{\"pending\":"); viewer_form(w,GD_FORM_QUERY,&p->query_options);
         gd_viewer_write(w,",\"pending_selectors\":"); viewer_query_selectors(w,c->project,&p->query_options);
-        gd_viewer_write(w,",\"applied\":"); if (p->query_state) viewer_query_options(w,&p->query_state->applied); else gd_viewer_write(w,"null");
+        gd_viewer_write(w,",\"applied\":"); if (p->query_state) viewer_form(w,GD_FORM_QUERY,&p->query_state->applied); else gd_viewer_write(w,"null");
         gd_viewer_write(w,",\"applied_selectors\":"); if (p->query_state) viewer_query_selectors(w,c->project,&p->query_state->applied); else gd_viewer_write(w,"null"); gd_viewer_write(w,"}");
         gd_viewer_write(w,",\"structure\":");
         if (p->structure_state) {
-            gd_viewer_write(w,"{\"has_applied\":%s,\"pending\":",p->structure_state->has_applied?"true":"false"); viewer_structure_form(w,&p->structure_state->pending);
-            gd_viewer_write(w,",\"applied\":"); if (p->structure_state->has_applied) viewer_structure_form(w,&p->structure_state->applied); else gd_viewer_write(w,"null");
+            gd_viewer_write(w,"{\"has_applied\":%s,\"pending\":",p->structure_state->has_applied?"true":"false"); viewer_form(w,GD_FORM_STRUCTURE,&p->structure_state->pending);
+            gd_viewer_write(w,",\"applied\":"); if (p->structure_state->has_applied) viewer_form(w,GD_FORM_STRUCTURE,&p->structure_state->applied); else gd_viewer_write(w,"null");
             gd_viewer_write(w,",\"similarity\":{\"active\":%s,\"row\":%d,\"peer\":%d,\"camera\":{\"x\":%.9g,\"y\":%.9g,\"zoom\":%.9g}}}",gd_explorer_similarity_active(&item)?"true":"false",p->structure_state->similarity_row,p->structure_state->similarity_peer,(double)p->structure_state->similarity_camera.target.x,(double)p->structure_state->similarity_camera.target.y,(double)p->structure_state->similarity_camera.zoom);
         } else gd_viewer_write(w,"null");
         gd_viewer_write(w,",\"rules\":");
         if (p->rule_state) {
-            gd_viewer_write(w,"{\"pending\":"); viewer_rule_form(w,&p->rule_state->pending); gd_viewer_write(w,",\"applied\":"); if (p->rule_state->result) viewer_rule_form(w,&p->rule_state->applied); else gd_viewer_write(w,"null"); gd_viewer_write(w,"}");
+            gd_viewer_write(w,"{\"pending\":"); viewer_form(w,GD_FORM_RULES,&p->rule_state->pending); gd_viewer_write(w,",\"applied\":"); if (p->rule_state->result || p->rule_state->bindings) viewer_form(w,GD_FORM_RULES,&p->rule_state->applied); else gd_viewer_write(w,"null"); gd_viewer_write(w,"}");
         } else gd_viewer_write(w,"null");
         gd_viewer_write(w,"}");
     }
@@ -187,19 +169,86 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
     if (viewer->hint_pending) { gd_viewer_write(w,"{"); viewer_member(w,"projection",viewer->pending_hint.projection); gd_viewer_write(w,","); viewer_member(w,"reference",*viewer->pending_hint.reference?viewer->pending_hint.reference:NULL); gd_viewer_write(w,","); viewer_member(w,"id",*viewer->pending_hint.id?viewer->pending_hint.id:NULL); gd_viewer_write(w,"}"); }
     else gd_viewer_write(w,"null");
     }
-    gd_viewer_write(w,",\"limits\":{\"derived_navigation\":true,\"node_catalogue\":true,\"selected_source_body\":true,\"events\":false,\"source_writes\":false,\"selection_owner\":\"application selection; agent hints separate\",\"control_indices\":\"snapshot-local only; not durable selectors\",\"evidence_tables\":\"not exported; use native queries with inspected selectors\"}}");
+    gd_viewer_write(w,",\"limits\":{\"derived_navigation\":true,\"node_catalogue\":true,\"selected_source_body\":true,\"application_controls\":false,\"application_actions\":true,\"source_refresh\":true,\"events\":false,\"source_writes\":false,\"selection_owner\":\"application selection; agent hints separate\",\"control_indices\":\"snapshot-local only; not durable selectors\",\"evidence_tables\":\"not exported; use native queries with inspected selectors\"}}");
 }
 static int viewer_projection(const char *name) {
     int v; for (v=0;v<GD_EXPLORER_VIEWS;++v) if (!strcmp(name,viewer_projections[v])) return v; return -1;
+}
+static void viewer_toast(ExplorerViewer *viewer, const char *message, const char *subject) {
+    if (viewer->human_go) { *viewer->toast=0; return; }
+    int written=subject ? snprintf(viewer->toast,sizeof(viewer->toast),"%s %s",message,subject):snprintf(viewer->toast,sizeof(viewer->toast),"%s",message);
+    if (written<0 || (size_t)written>=sizeof(viewer->toast)) snprintf(viewer->toast,sizeof(viewer->toast),"CLI activity");
+    viewer->toast_until=igGetTime()+2.5;
+}
+static void viewer_feedback(ExplorerViewer *viewer) {
+    if (viewer->has_hint) {
+        bool open=true;
+        igSetNextWindowPos((ImVec2_c){20,viewer->context->viewport.y+viewer->context->viewport.height-180},ImGuiCond_FirstUseEver,(ImVec2_c){0,0});
+        igSetNextWindowSize((ImVec2_c){360,160},ImGuiCond_FirstUseEver);
+        if (igBegin("Agent hint",&open,ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoSavedSettings)) {
+            int current=viewer_hint_current(viewer);
+            igBeginDisabled(!current);
+            if (igSmallButton("Go")) snprintf(viewer->hint.command,sizeof(viewer->hint.command),"navigate");
+            igEndDisabled(); igSameLine(0,-1);
+            if (igSmallButton("Dismiss")) open=false;
+            igTextWrapped("%s | %s",viewer->hint.projection,*viewer->hint.id?viewer->hint.id:viewer->hint.reference);
+            if (!current) igTextWrapped("Hint predates source/draft changes. Request a fresh hint.");
+        }
+        igEnd();
+        if (!open) { viewer->has_hint=0; viewer->hint_pending=0; }
+    }
+    if (*viewer->toast && igGetTime()<viewer->toast_until) {
+        igSetNextWindowPos((ImVec2_c){20,20},ImGuiCond_Always,(ImVec2_c){0,0}); igSetNextWindowBgAlpha(0.85f);
+        if (igBegin("CLI feedback",NULL,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoInputs))
+            igTextUnformatted(viewer->toast,NULL);
+        igEnd();
+    }
+}
+static void viewer_actions(GD_ExplorerContext *c, GD_ViewerWriter *w) {
+    int action,written=0;
+    gd_viewer_write(w,"{\"ok\":true,"); viewer_member(w,"projection",viewer_projections[c->pane->view]); gd_viewer_write(w,",\"actions\":[");
+    for (action=0;action<GD_ACTION_COUNT;++action) {
+        const GD_ExplorerActionInfo *info=gd_explorer_action_info((GD_ExplorerAction)action);
+        if (!info || !(info->views&(1u<<c->pane->view))) continue;
+        if (written++) gd_viewer_write(w,","); gd_viewer_write(w,"{"); viewer_member(w,"name",info->name);
+        gd_viewer_write(w,","); viewer_member(w,"label",info->label);
+        gd_viewer_write(w,",\"available\":%s}",gd_explorer_action_available(c,(GD_ExplorerAction)action)?"true":"false");
+    }
+    gd_viewer_write(w,"],\"parameter_mutation\":false,\"source_draft_edits\":false}");
 }
 static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_ViewerWriter *w) {
     ExplorerViewer *viewer=data; GD_ExplorerContext *c=viewer->context,target=*c;
     int v=viewer_projection(request->projection),node=-1;
     if (!strcmp(request->command,"inspect")) { viewer_inspect(viewer,w,request->fields); return; }
-    if (!strcmp(request->command,"nodes") && !*request->projection) v=c->pane->view;
+    if (!strcmp(request->command,"refresh")) {
+        char message[GD_MAX_PATH+512]; int updated;
+        if (viewer_interacting()) { gd_viewer_error(w,"viewer.busy","Refresh blocked by active text/pointer/navigation-key input; no buffers discarded"); return; }
+        if (!viewer->collections || viewer->collection_count<1) { gd_viewer_error(w,"viewer.refresh","Original collection bindings unavailable; no reload attempted"); return; }
+        updated=refresh_sources(c,viewer->panes,viewer->collections,viewer->collection_count,message,sizeof(message));
+        if (updated>=0) *viewer->stale=!updated;
+        if (updated<=0) { gd_viewer_error(w,updated<0?"viewer.busy":"viewer.refresh",message); return; }
+        ++viewer->reload_generation; viewer_toast(viewer,"CLI reloaded sources",NULL);
+        gd_viewer_write(w,"{\"ok\":true,\"reloaded\":true,\"reload_generation\":\"%llu\",\"focus_changed\":false,\"draft_discarded\":false}",(unsigned long long)viewer->reload_generation); return;
+    }
+    if ((!strcmp(request->command,"nodes") || !strcmp(request->command,"actions")) && !*request->projection) v=c->pane->view;
     if (v<0 || !(c->project->available&(1u<<v))) { gd_viewer_error(w,"viewer.projection","Projection is unknown or unavailable with loaded bindings"); return; }
     target.pane=&viewer->panes[v];
     if (!strcmp(request->command,"nodes")) { viewer_nodes(viewer,request,&target,w); return; }
+    if (!strcmp(request->command,"actions")) { viewer_actions(&target,w); return; }
+    if (!strcmp(request->command,"action")) {
+        int action;
+        if (viewer_interacting() || gd_explorer_rank_pending(c->project,viewer->panes)) { gd_viewer_error(w,"viewer.busy","Action blocked by active input or pending rank edit; nothing applied"); return; }
+        for (action=0;action<GD_ACTION_COUNT;++action) if (!strcmp(request->action,gd_explorer_action_info((GD_ExplorerAction)action)->name)) break;
+        if (action==GD_ACTION_COUNT || !gd_explorer_action_available(&target,(GD_ExplorerAction)action)) { gd_viewer_error(w,"viewer.action","Action unknown or unavailable for target pane/result; inspect viewer actions"); return; }
+        if (!gd_explorer_action_run(&target,(GD_ExplorerAction)action)) {
+            const char *message=action==GD_ACTION_RULES_RUN || action==GD_ACTION_RULES_CLEAR ? target.pane->rule_message:target.pane->query_message;
+            gd_viewer_error(w,"viewer.action",*message?message:"Native action failed; last good result retained"); return;
+        }
+        c->analysis->initialized=0; viewer_toast(viewer,"CLI action in",gd_explorer_view_names[v]);
+        gd_viewer_write(w,"{\"ok\":true,\"executed\":true,"); viewer_member(w,"action",request->action);
+        gd_viewer_write(w,","); viewer_member(w,"projection",viewer_projections[v]); gd_viewer_write(w,","); viewer_member(w,"active_projection",viewer_projections[c->pane->view]);
+        gd_viewer_write(w,",\"focus_changed\":false,\"source_draft_changed\":false}"); return;
+    }
     if (*request->reference && gd_explorer_record(gd_explorer_model(c->project,(GD_ExplorerView)v),request->reference)<0) {
         gd_viewer_error(w,"viewer.reference","Exact qualified source reference is absent or ambiguous; no approximate match"); return;
     }
@@ -212,13 +261,14 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
         viewer->pending_hint_generation=viewer->reload_generation; viewer->pending_hint_revision=c->project->revision;
         gd_viewer_write(w,"{\"ok\":true,\"hint_updated\":true,\"display_pending\":true,\"persistent\":false,\"focus_changed\":false}"); return;
     }
-    if (viewer_interacting() || viewer_editor_pending(c->project,viewer->panes)) {
+    if (viewer_interacting() || gd_explorer_rank_pending(c->project,viewer->panes)) {
         gd_viewer_error(w,"viewer.busy","Navigation blocked by text input, pointer interaction or pending rank input; nothing applied"); return;
     }
     if (!*request->id && !pane_prepare(&target)) { gd_viewer_error(w,"viewer.prepare","Cannot prepare destination; active context retained"); return; }
     if (*request->reference && gd_explorer_similarity_active(&target)) { gd_viewer_error(w,"viewer.unsupported","Source Find navigation on similarity canvas is unsupported; use its exact native ID"); return; }
     if (*request->id && !viewer_select_node(&target,node,w)) return;
     /* Agent guard rejects pending edits; do not invoke human edit-commit path. */
+    if (v!=c->pane->view || *request->reference || *request->id) viewer_toast(viewer,"CLI redirected view to",gd_explorer_view_names[v]);
     enter_view(c,viewer->panes,v,*request->reference?request->reference:NULL);
     *viewer->active=v;
     if (*request->reference) { matches(c); fit_view(c,1); c->pane->fit=0; }

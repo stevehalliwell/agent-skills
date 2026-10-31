@@ -1,4 +1,4 @@
-#include "gd_explorer_ui.h"
+#include "gd_explorer_controls.h"
 #include "gd_resource_routes.h"
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
@@ -8,15 +8,10 @@
 #include <math.h>
 #include <string.h>
 
-static void defaults(GD_ExplorerStructureForm *form) { memset(form,0,sizeof(*form)); form->work_limit=GD_GRAPH_ANALYSIS_WORK; }
-static int equal_form(const GD_ExplorerStructureForm *a, const GD_ExplorerStructureForm *b) {
-    return a->kind==b->kind && a->direction==b->direction && a->lens==b->lens && a->work_limit==b->work_limit && a->include_inactive==b->include_inactive && a->actor_scope==b->actor_scope &&
-        !strcmp(a->from,b->from) && !strcmp(a->to,b->to) && !strcmp(a->avoid,b->avoid) && !strcmp(a->scope_root,b->scope_root) && !strcmp(a->starts,b->starts) && !strcmp(a->relations,b->relations) && !strcmp(a->statuses,b->statuses) && !strcmp(a->features,b->features) && !strcmp(a->entries,b->entries);
-}
 int gd_explorer_structure_pending(const GD_ExplorerPane *pane) {
     GD_ExplorerStructureForm empty; const GD_ExplorerStructureState *state=pane->structure_state;
     if (!state) return 0;
-    defaults(&empty); return !equal_form(&state->pending,state->has_applied ? &state->applied:&empty);
+    gd_explorer_form_defaults(GD_FORM_STRUCTURE,&empty); return !gd_explorer_form_equal(GD_FORM_STRUCTURE,&state->pending,state->has_applied ? &state->applied:&empty);
 }
 void gd_explorer_structure_destroy(GD_ExplorerStructureState *state) {
     if (!state) return;
@@ -24,7 +19,7 @@ void gd_explorer_structure_destroy(GD_ExplorerStructureState *state) {
 }
 static GD_ExplorerStructureState *empty_state(GD_Allocator allocator) {
     GD_ExplorerStructureState *state=allocator.allocate(allocator.context,sizeof(*state));
-    if (state) { memset(state,0,sizeof(*state)); state->allocator=allocator; defaults(&state->pending); defaults(&state->applied); state->similarity_row=state->similarity_peer=state->comparison_first=state->comparison_second=-1; }
+    if (state) { memset(state,0,sizeof(*state)); state->allocator=allocator; gd_explorer_form_defaults(GD_FORM_STRUCTURE,&state->pending); gd_explorer_form_defaults(GD_FORM_STRUCTURE,&state->applied); state->similarity_row=state->similarity_peer=state->comparison_first=state->comparison_second=-1; }
     return state;
 }
 /* Lists are UI parameter boundaries only: one literal per line, no expression
@@ -88,10 +83,19 @@ int gd_explorer_structure_prepare(GD_ExplorerContext *context) {
     }
     return 1;
 }
+int gd_explorer_structure_inputs(GD_ExplorerContext *context) {
+    if (!context->pane->structure_state) context->pane->structure_state=empty_state(context->project->allocator);
+    return context->pane->structure_state!=NULL;
+}
+int gd_explorer_structure_clear(GD_ExplorerContext *context) {
+    GD_ExplorerStructureState *fresh=empty_state(context->project->allocator);
+    if (!fresh) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Cannot clear question; last result/inputs retained"); return 0; }
+    gd_explorer_structure_destroy(context->pane->structure_state); context->pane->structure_state=fresh; *context->pane->query_message=0; return 1;
+}
 int gd_explorer_structure_run(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerStructureState *candidate; GD_ExplorerStructureForm form;
     if (!gd_projection_name(pane->view)) return 0;
-    if (pane->structure_state) form=pane->structure_state->pending; else defaults(&form);
+    if (pane->structure_state) form=pane->structure_state->pending; else gd_explorer_form_defaults(GD_FORM_STRUCTURE,&form);
     candidate=build_state(context->project,pane->view,&form,pane->query_state ? pane->query_state->query:NULL,pane->query_message,sizeof(pane->query_message));
     if (!candidate) return 0;
     gd_explorer_structure_destroy(pane->structure_state); pane->structure_state=candidate; *pane->query_message=0; return 1;
@@ -414,14 +418,13 @@ static void result_panel(GD_ExplorerContext *context) {
 #include "test_explorer_structure_pickers.h"
 #endif
 void gd_explorer_structure_controls(GD_ExplorerContext *context) {
-    GD_ExplorerPane *pane=context->pane; GD_ExplorerStructureState *state; GD_ExplorerStructureForm *form; int i;
+    GD_ExplorerPane *pane=context->pane; GD_ExplorerStructureForm *form; int i;
     if (!gd_projection_name(pane->view) || !igCollapsingHeader_TreeNodeFlags("Built-in structural / similarity questions",0)) return;
     gd_explorer_structure_prepare(context);
-    if (!pane->structure_state) pane->structure_state=empty_state(context->project->allocator);
-    if (!(state=pane->structure_state)) { igTextWrapped("Cannot allocate question inputs; other pane state retained."); return; }
-    form=&state->pending;
+    form=gd_explorer_form_pending(context,GD_FORM_STRUCTURE,1);
+    if (!form) { igTextWrapped("Cannot allocate question inputs; other pane state retained."); return; }
     if (pane->view==GD_EXPLORER_ACTORS) {
-        igCombo_Str("Analysis scope##structure",&form->actor_scope,"Declaration inventory\0State-specific (applied variants)\0",-1);
+        gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"actor_scope",NULL);
         if (form->actor_scope) igTextWrapped("Uses last applied native actor-states query, including fixed facts/context. Apply variants first; coverage is not a finite topology. Display ghosts/primary/compare/excluded controls do not filter this scope. Replace old-scope selectors before Run.");
         else igTextWrapped("Declaration scope includes unused noun/axis definitions, distinct local bindings and authored calls. Does not evaluate guards or merge same-noun participants.");
     }
@@ -430,13 +433,7 @@ void gd_explorer_structure_controls(GD_ExplorerContext *context) {
     else if (pane->view!=GD_EXPLORER_ACTORS) igTextWrapped("Result scope: canonical loaded projection plus explicit filters below, not camera or current canvas filters/revealed neighborhood. Result tables navigate existing source; no query overlay or gameplay proof.");
     if (gd_explorer_picker_begin(context,"Question",picker_question_label(form->kind))) {
         for (i=0;i<GD_STRUCTURE_QUESTIONS;++i) if (gd_explorer_picker_item(context,picker_question_label(i),form->kind==i,0)) {
-            if (i==GD_STRUCTURE_DECLARATIONS) { int scope=form->actor_scope; defaults(form); form->actor_scope=scope; }
-            if (i>=GD_STRUCTURE_COUNT) {
-                form->direction=GD_STRUCTURE_FORWARD; form->lens=GD_GRAPH_ANY; *form->starts=*form->avoid=0;
-                if (i==GD_STRUCTURE_COUNT) *form->from=*form->to=*form->features=*form->entries=0;
-                if (form->work_limit==GD_GRAPH_ANALYSIS_WORK) form->work_limit=GD_SIMILARITY_WORK;
-            } else *form->features=*form->entries=0;
-            form->kind=i;
+            gd_explorer_structure_question(form,i);
         }
         gd_explorer_picker_end();
     }
@@ -452,25 +449,24 @@ void gd_explorer_structure_controls(GD_ExplorerContext *context) {
             if (pane->view==GD_EXPLORER_RELATIONSHIPS) picker_nodes(context,choices,"Scope root (one hop; blank: all)",form->scope_root,sizeof(form->scope_root),0);
         }
         if (igTreeNode_Str("Advanced: raw identities / feature lists")) {
-            igInputText("From identity",form->from,sizeof(form->from),0,NULL,NULL); igInputText("To identity",form->to,sizeof(form->to),0,NULL,NULL);
-            igInputText("Avoid identity",form->avoid,sizeof(form->avoid),0,NULL,NULL); igInputText("Scope root",form->scope_root,sizeof(form->scope_root),0,NULL,NULL);
-            igInputTextMultiline("Features ID[=WEIGHT]",form->features,sizeof(form->features),(ImVec2_c){0,75},0,NULL,NULL);
-            igInputTextMultiline("Exact entry IDs",form->entries,sizeof(form->entries),(ImVec2_c){0,65},0,NULL,NULL); igTreePop();
+            gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"from",NULL); gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"to",NULL);
+            gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"avoid",NULL); gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"scope_root",NULL);
+            gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"features",NULL);
+            gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"entries",NULL); igTreePop();
         }
     }
     if (igTreeNode_Str("Filters and bounded parameters")) {
         const GD_StructureResult *choices=picker_context(context);
         if (choices) { if (form->kind<GD_STRUCTURE_COUNT) picker_nodes(context,choices,"Traversal starts",form->starts,sizeof(form->starts),1); picker_relations(context,choices,form->relations,sizeof(form->relations)); }
         gd_explorer_picker_statuses(context,gd_explorer_model(context->project,pane->view),form->statuses,sizeof(form->statuses));
-        if (igTreeNode_Str("Advanced: raw scope lists")) { igInputTextMultiline("Starts",form->starts,sizeof(form->starts),(ImVec2_c){0,55},0,NULL,NULL); igInputTextMultiline("Relation names",form->relations,sizeof(form->relations),(ImVec2_c){0,55},0,NULL,NULL); igInputTextMultiline("Statuses",form->statuses,sizeof(form->statuses),(ImVec2_c){0,45},0,NULL,NULL); igTreePop(); }
-        if (form->kind<GD_STRUCTURE_COUNT && igBeginCombo("Direction",form->direction==GD_STRUCTURE_FORWARD ? "forward":form->direction==GD_STRUCTURE_BACKWARD ? "backward":"both",0)) { const char *names[]={"forward","backward","both"}; for (i=0;i<3;++i) if (igSelectable_Bool(names[i],form->direction==i,0,(ImVec2_c){0,0})) form->direction=i; igEndCombo(); }
-        if (form->kind<GD_STRUCTURE_COUNT && igBeginCombo("Partner lens",form->lens==GD_GRAPH_ANY ? "any":form->lens==GD_GRAPH_SAME_ROLE ? "same-role":"changed-role",0)) { const char *names[]={"any","same-role","changed-role"}; for (i=0;i<3;++i) if (igSelectable_Bool(names[i],form->lens==i,0,(ImVec2_c){0,0})) form->lens=i; igEndCombo(); }
-        igCheckbox("Include inactive structural rows",&form->include_inactive); igInputInt("Search work ceiling",&form->work_limit,0,0,0);
+        if (igTreeNode_Str("Advanced: raw scope lists")) { gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"starts",NULL); gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"relations",NULL); gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"statuses",NULL); igTreePop(); }
+        if (form->kind<GD_STRUCTURE_COUNT) { gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"direction",NULL); gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"lens",NULL); }
+        gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"include_inactive",NULL); gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"work_limit",NULL);
         igTextWrapped("Supply only parameters supported by question; unsupported combinations fail without replacing last result. Blank Relationships path relations exclude next; all explicitly includes continuation. Lists trim whitespace; 64 items / 8192 combined bytes each."); igTreePop();
     }
     }
-    if (igButton("Run named question",(ImVec2_c){0,0})) gd_explorer_structure_run(context);
-    igSameLine(0,-1); if (igButton("Clear question",(ImVec2_c){0,0})) { GD_ExplorerStructureState *fresh=empty_state(context->project->allocator); if (fresh) { gd_explorer_structure_destroy(pane->structure_state); pane->structure_state=fresh; *pane->query_message=0; } else snprintf(pane->query_message,sizeof(pane->query_message),"Cannot clear question; last result/inputs retained"); }
+    gd_explorer_action_button(context,GD_ACTION_STRUCTURE_RUN);
+    igSameLine(0,-1); gd_explorer_action_button(context,GD_ACTION_STRUCTURE_CLEAR);
     if (*pane->query_message) igTextWrapped("%s",pane->query_message);
     if (gd_explorer_structure_pending(pane)) igTextWrapped("Inputs pending; displayed result still uses applied parameters. Run or clear before refresh.");
     if (pane->structure_state->result) {
