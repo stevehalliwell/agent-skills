@@ -11,8 +11,8 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     igBegin("Explorer test controls",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings);
     choose_view(c->project,"Data / projection",p->view,1);
     igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34});
-    match_details(c); layout_controls(c); selected=analyze(c);
-    if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_controls(c);
+    match_details(c); if (!gd_explorer_similarity_active(c)) layout_controls(c); selected=analyze(c);
+    if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(c); igSetNextItemOpen(true,ImGuiCond_Always); gd_explorer_rules_controls(c); }
     if (query_view(p->view)) { gd_explorer_query_controls(c); gd_explorer_query_details(c); }
     if (p->structure_state) { igSetNextItemOpen(true,ImGuiCond_Always); gd_explorer_structure_controls(c); }
     if (grid_view(p)) {
@@ -20,19 +20,20 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     } else if (!query_view(p->view) && !p->structure_state) analysis_controls(c,selected);
     if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_details(c);
     igEnd();
-    matches(c); distance_focus_update(c,selected);
-    if (p->distance_focus) gd_layout_focus_advance(p->distance_focus,p->layout,0.22f,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
+    matches(c); if (!gd_explorer_similarity_active(c)) distance_focus_update(c,selected);
+    if (!gd_explorer_similarity_active(c) && p->distance_focus) gd_layout_focus_advance(p->distance_focus,p->layout,0.22f,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
     p->camera.offset=(Vector2){450,503};
-    if (p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+    if (!gd_explorer_similarity_active(c) && p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
     {
         GD_ExplorerEvidence e=evidence(c,selected);
-        if (grid_view(p)) grid_draw(c);
+        if (gd_explorer_similarity_active(c)) gd_explorer_similarity_draw(c);
+        else if (grid_view(p)) grid_draw(c);
         else if (is_graph(p->view)) gd_explorer_graph_draw(c,&e);
         else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_draw(c,&e);
         else if (query_view(p->view)) gd_explorer_query_draw(c);
         else gd_explorer_resource_draw(c,&e);
     }
-    draw_matches(c); if (!grid_view(p) && !query_view(p->view)) gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,0);
+    if (!gd_explorer_similarity_active(c)) { draw_matches(c); if (!grid_view(p) && !query_view(p->view)) gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,0); }
     rlImGuiEnd(); EndDrawing();
 }
 static int explorer_test_grid_capacity(GD_ExplorerContext *c, const char *output) {
@@ -79,6 +80,7 @@ cleanup:
 }
 #include "test_explorer_structure.h"
 #include "test_explorer_coverage.h"
+#include "test_explorer_native_questions.h"
 int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections, int count,
                        const char *output, int *fail_at, int *calls) {
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
@@ -478,6 +480,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     EXPLORER_CHECK(panes[GD_EXPLORER_MATRIX].selection.cell<0 && panes[GD_EXPLORER_MATRIX].selection.linked<0);
     EXPLORER_CHECK(explorer_test_structure(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
     EXPLORER_CHECK(explorer_test_coverage(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
+    EXPLORER_CHECK(explorer_test_native_questions(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
     for (v=0;v<GD_EXPLORER_VIEWS;++v) { c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c)); explorer_test_render(&c); }
     fprintf(stderr,"Explorer checks passed: six projections; independent switching; multi-match Find; hidden counts; reset isolation; draft preservation; qualified roots; stale-edge recovery and deferred active Undo; validated selection; stderr logging; reload rollback and restoration.\n");
     result=0;

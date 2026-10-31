@@ -24,7 +24,7 @@ Examine a selected resource and the rules that create, spend, transform, or limi
 
 Roles: `nouns`, `resources`, `control-vars`, `mechanics`, `interactions`, `experiments`.
 
-Inspect control variables, typed axes, interaction/mechanic cases, explicit pool bindings and source records. Native controls resolve checked formulas/units. Resource inspection retains declarations, unknowns and conditional structural witnesses.
+Inspection topics: control variables, typed axes, interaction/mechanic cases, explicit pool bindings and source records. Native controls resolve checked formulas/units. Resource inspection retains declarations, unknowns and conditional structural witnesses.
 
 ## Working concepts
 

@@ -68,4 +68,4 @@ Skills retains existing explicit-knowledge/chains/combinations controls. Resourc
 
 ## Verification boundary
 
-CJIT headless native/CLI checks and UI compile/helper checks only during current batch. No window, rendering, real-pointer or event-loop acceptance implied. Full build/test, public Attendant metadata validation and window-opening checks wait for joint user gate. Native reader/report checks do not replace Attendant validation or all-14-question usefulness review.
+Full CJIT/Zig native and CLI, Node/public Attendant integrations, strict both-example metadata validation and bounded window/render checks pass. Native 127/127 per compiler; Node retains one skipped desktop-report integration. Extended window harness exercises all three inspector modes, candidate failure, reload/reset and cleanup on private copies, without OS input. Real-pointer/manual usefulness remains human gate. [Validation evidence](../../../reports/graph-query-research/validation-checkpoint.md); native reader/report checks do not replace Attendant validation or all-14-question usefulness review.

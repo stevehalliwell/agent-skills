@@ -361,7 +361,7 @@ if ($View) {
         $focusReport=(& $viewExecutable view skill-atoms @focusInputs --mode relationships --from mechanics/crate-pushing --frames 3 --screenshot $focusCapture | ConvertFrom-Json)
         if ($LASTEXITCODE -ne 0 -or -not $focusReport.ok -or $focusReport.data.changes.Count -or -not (Test-Path -LiteralPath $focusCapture)) { throw 'Focused record root/capture/proposal failed' }
         $missingRoot=(& $viewExecutable view skill-atoms @focusInputs --mode relationships --from mechanics/absent --frames 1 --json 2>$log | ConvertFrom-Json)
-        if ($LASTEXITCODE -ne 2 -or $missingRoot.ok -or $missingRoot.errors[0].code -ne 'view.root') { throw 'Unknown focused root did not fail without a window' }
+        if ($LASTEXITCODE -ne 2 -or $missingRoot.ok -or $missingRoot.errors[0].code -ne 'skills.selector') { throw 'Unknown focused root did not fail without a window' }
         foreach ($layout in @('graph', 'columns')) {
             $graphCapture = Join-Path $unicode "$layout.png"
             [string[]]$extra = @()

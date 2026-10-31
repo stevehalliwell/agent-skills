@@ -343,10 +343,17 @@ Progress:
 - Independent private reviews cover all nine similarity scopes, numerical typed values, exact pair/geometry/source semantics, allocation/reload rollback and zero owned remainder. Current Resources rule/binding prefix probe passes 75 production-helper checks: native parity, applied-token lifetime, invalid/status/cap/budget failures, pending/changed/blank refresh, marks/source navigation and cleanup. Concrete text/draft/source-selection and MDS hit/pair/remap findings corrected; final rechecks retained in private review directories. No shared reviewer edits or prohibited operations.
 - Packages 1–4 implementation/headless checkpoint does not accept rendering, event-loop, real-pointer usability, universal memory/performance bounds or all-14 answers. Stop for user attention before joint combined build/test, including window-opening tests and public Attendant checks. IPC, Resource layout repair, offline capture refresh and pre-UX capability/usefulness review remain later.
 
+### Checkpoint 6n — full rebuild and automated validation
+
+- User opened full-test gate, then clarified: complete rebuild/tests independently before tagging human for visual review. No OS input automation; frozen experiments remain untouched.
+- Rebuilt graph UI dependency, CJIT headless/plain/graph/explorer tests and Zig C99 headless. Native 127/127 plus CLI passes for both compilers; Node 58 passed/1 desktop-report integration skipped for each; public Attendant strict 67/225 records, no diagnostics/corrections.
+- Existing and extended owned-window suites pass on both private examples, including all nine MDS scopes and rule/binding modes, source hashes, rollback/reload/reset and zero remaining counted allocations. Fixed guide label and stale legacy error-code assertion; no native semantic defect found during full pass.
+- Evidence, exact boundaries, rebuilt executable and ordered visual review: [validation checkpoint](validation-checkpoint.md). Manual pointer/usefulness acceptance remains open; tag human before beginning that review.
+
 ## Comments
 
-- User requires CLI-only tests from this point: no viewer/app/window launches, focus changes or OS input automation. User and other agents share machine. Earlier app results remain historical evidence, not permission to repeat window-opening tests. Apply remaining compiler/regression checks headlessly; manual usefulness stays untested.
-- Native implementation/headless checkpoint delivered. Combined compiler/Node/window matrix, public Attendant validation, fresh rendered/offline evidence and manual usefulness remain open. Witnesses do not establish final composed outcomes or applicability.
+- User permits full rebuild and bounded automated window checks; no OS input automation. Previous CLI-only gate superseded explicitly. Human review follows automated pass.
+- Native implementation and full automated validation delivered. Fresh offline-history reports and manual usefulness remain open. Witnesses do not establish final composed outcomes or applicability.
 - Structural test initially expected five adjacency rows while retaining four-row relation filter. Corrected test scope, not production behavior. Failed assertion leaked test arena and caused later access violation; full corrected suite passes.
 - No formal priority ranking exists among research follow-ups. Sequence follows supplied recommendation and data/kernel dependencies.
 - Final review must cross-check provisional UI defaults, applicability and real reading usefulness. Automated tests do not establish user acceptance.
