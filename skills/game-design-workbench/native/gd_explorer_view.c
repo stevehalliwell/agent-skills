@@ -580,14 +580,17 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
     }
     gd_explorer_destroy(fresh); return 0;
 }
-static int change_view(GD_ExplorerContext *c, GD_ExplorerPane *panes, int target, const char *find_reference) {
-    GD_ExplorerPane *p=c->pane;
-    if (target<0 || target>=GD_EXPLORER_VIEWS || !(c->project->available&(1u<<target))) return 0;
-    if (is_graph(p->view) && gd_explorer_graph_commit(c)<0) return 0;
-    p->selection.held=p->mda.held=-1; p->right_started=0;
+/* Shared state transition after caller establishes its own edit guard. */
+static void enter_view(GD_ExplorerContext *c, GD_ExplorerPane *panes, int target, const char *find_reference) {
+    c->pane->selection.held=c->pane->mda.held=-1; c->pane->right_started=0;
     c->pane=&panes[target];
     if (find_reference) { snprintf(c->pane->find_reference,sizeof(c->pane->find_reference),"%s",find_reference); c->pane->fit=2; }
-    c->analysis->initialized=0; return 1;
+    c->analysis->initialized=0;
+}
+static int change_view(GD_ExplorerContext *c, GD_ExplorerPane *panes, int target, const char *find_reference) {
+    if (target<0 || target>=GD_EXPLORER_VIEWS || !(c->project->available&(1u<<target))) return 0;
+    if (is_graph(c->pane->view) && gd_explorer_graph_commit(c)<0) return 0;
+    enter_view(c,panes,target,find_reference); return 1;
 }
 static int center_relationships(GD_ExplorerContext *c, GD_ExplorerPane *panes, int source) {
     GD_Model *from=gd_explorer_model(c->project,c->pane->view),*target;
@@ -648,12 +651,14 @@ static void copy_error(GD_Model *diagnostic, const GD_Error *error) {
     }
     gd_error(diagnostic,owned[0],owned[1],owned[2],error->line);
 }
+#include "gd_explorer_viewer.h"
 int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int count,
                      int initial_view, int matrix_layout, int frames, const char *screenshot, const char *output_path) {
     GD_Allocator allocator=diagnostic->allocator;
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
     GD_ExplorerPane *panes=NULL;
     GD_ExplorerContext c={0};
+    ExplorerViewer viewer={0}; char ipc_error[256]="";
     int active=0,v,frame=0,result=0,stale=0,close_seen=0,timed_seen=0,close_next=0;
     double next_check=0; char failure[GD_MAX_PATH+512]="",report_path[GD_MAX_PATH]="";
     const GD_Error *error=gd_explorer_error(project);
@@ -679,6 +684,8 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     if (output_path) snprintf(report_path,sizeof(report_path),"%s",output_path);
     c.project=project; c.pane=&panes[active];
     if (!open_window("Game Design Workbench - Explorer")) { gd_error(diagnostic,"view.window","Cannot initialize explorer window",NULL,0); result=2; goto cleanup; }
+    viewer.context=&c; viewer.panes=panes; viewer.active=&active; viewer.stale=&stale; viewer.reload_generation=1;
+    viewer.server=gd_viewer_server_open(allocator,ipc_error,sizeof(ipc_error));
     for (;;) {
         int closing=WindowShouldClose(),width=GetScreenWidth(),height=GetScreenHeight(),split=width*60/100;
         int requested=-1,find_view=-1,reset=0,refresh=0,selected,relationship_root=-1,undo=0;
@@ -709,6 +716,22 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         igSetNextWindowPos((ImVec2_c){(float)split,12},ImGuiCond_Always,(ImVec2_c){0,0});
         igSetNextWindowSize((ImVec2_c){(float)(width-split-12),(float)(height-24)},ImGuiCond_Always);
         igBegin("Explorer controls and source",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
+        if (viewer.server) igText("IPC session: %s",gd_viewer_session(viewer.server));
+        if (*ipc_error) igTextWrapped("%s",ipc_error);
+        if (gd_viewer_server_error(viewer.server)) igTextWrapped("%s",gd_viewer_server_error(viewer.server));
+        /* Reserve stable space: asynchronous hints must not move human controls. */
+        igBeginChild_Str("Agent hint location",(ImVec2_c){0,100},0,0);
+        if (viewer.has_hint) {
+            if (igSmallButton("Go to agent hint")) {
+                GD_ViewerRequest navigation=viewer.hint;
+                snprintf(navigation.command,sizeof(navigation.command),"navigate");
+                /* Process after rendering, through same guarded application path. */
+                viewer.hint=navigation;
+            }
+            igSameLine(0,-1); if (igSmallButton("Dismiss agent hint")) { viewer.has_hint=0; viewer.hint_pending=0; }
+            igTextWrapped("Agent hint: %s | %s",viewer.hint.projection,*viewer.hint.id?viewer.hint.id:viewer.hint.reference);
+        } else igTextUnformatted("No agent hint.",NULL);
+        igEndChild();
         requested=choose_view(project,"Data / projection",active,1);
         if (igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34})) reset=1;
         igTextWrapped("Reset affects this view only. Draft/source data and other views stay intact.");
@@ -882,13 +905,25 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
                 snprintf(failure,sizeof(failure),"Refresh blocked: draft modified or editor invalid. Undo to disk sync point or finish/report first.");
             else {
                 stale=!reload_project(&c,panes,collections,count,failure,sizeof(failure));
+                if (!stale) ++viewer.reload_generation;
                 project=c.project;
             }
             c.pane=&panes[active];
         }
+        if (viewer.has_hint && !strcmp(viewer.hint.command,"navigate") && !viewer_interacting()) {
+            char reply[1024]; GD_ViewerWriter writer={reply,0,sizeof(reply),0};
+            if (!viewer_hint_current(&viewer)) gd_viewer_error(&writer,"viewer.stale_hint","Exact-node hint predates source reload or draft change; request a fresh hint");
+            else viewer_dispatch(&viewer,&viewer.hint,&writer);
+            if (!strncmp(reply,"{\"ok\":true",10)) viewer.has_hint=0;
+            else snprintf(failure,sizeof(failure),"Agent hint not opened: %s",reply);
+            snprintf(viewer.hint.command,sizeof(viewer.hint.command),"hint");
+        }
+        gd_viewer_server_poll(viewer.server,viewer_dispatch,&viewer);
+        viewer_apply_hint(&viewer);
     }
     rlImGuiShutdown(); CloseWindow();
 cleanup:
+    gd_viewer_server_close(viewer.server);
     if (panes) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) {
             gd_diagnostics_clear(&panes[v].diagnostics);
@@ -902,5 +937,6 @@ cleanup:
     gd_explorer_destroy(project); return result;
 }
 #ifdef GD_EXPLORER_TEST
+#include "test_explorer_viewer.h"
 #include "test_explorer_view.h"
 #endif

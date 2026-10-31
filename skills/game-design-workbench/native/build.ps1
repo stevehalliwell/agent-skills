@@ -1,14 +1,16 @@
 <#
 Build Windows/CJIT game-design tools. No downloads, installations, or project-data writes.
-Usage: ./build.ps1 [-View [-Graph] -RaylibDirectory PATH | -Test | -ExplorerTest -RaylibDirectory PATH] [-Cjit PATH] [-OutputDirectory PATH]
+Usage: ./build.ps1 [-View [-Graph] -RaylibDirectory PATH | -Test | -ViewerTest | -ExplorerTest -RaylibDirectory PATH] [-Cjit PATH] [-OutputDirectory PATH]
 Alternate output preserves running views. Stdout returns executable path; no project-data writes.
 -Graph needs explicitly prepared gd-ui.dll from build-ui.ps1.
+-ViewerTest builds headless protocol/transport fixture; does not launch it.
 RaylibDirectory is an extracted raylib 5.5 win64 SDK with lib/raylib.dll.
 #>
 param(
     [switch]$View,
     [switch]$Graph,
     [switch]$Test,
+    [switch]$ViewerTest,
     [switch]$ExplorerTest,
     [string]$UiLibrary = '',
     [string]$RaylibDirectory = $env:RAYLIB_ROOT,
@@ -18,7 +20,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($ExplorerTest) { $Graph = $true }
 if ($Graph) { $View = $true }
-if ($View -and $Test) { throw 'Choose -View or -Test, not both.' }
+if (($View -and ($Test -or $ViewerTest)) -or ($Test -and $ViewerTest)) { throw 'Choose one of -View, -Test or -ViewerTest.' }
 $root = $PSScriptRoot
 # Alternate output keeps a user's running explorer/draft untouched.
 $output = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $root 'build' }
@@ -27,14 +29,16 @@ $arguments = @('-q', '-DHAVE_CONFIG_H=1', '-DYAML_DECLARE_STATIC=1',
     '-I', (Join-Path $root 'vendor/libyaml/include'),
     '-I', (Join-Path $root 'vendor/libyaml/src'),
     (Join-Path $root 'gd_core.c'), (Join-Path $root 'gd_output.c'), (Join-Path $root 'gd_layout.c'), (Join-Path $root 'gd_matrix_grid.c'), (Join-Path $root 'gd_layout_routes.c'), (Join-Path $root 'gd_layout_focus.c'), (Join-Path $root 'gd_focus.c'), (Join-Path $root 'gd_graph_analysis.c'), (Join-Path $root 'gd_similarity.c'), (Join-Path $root 'gd_similarity_projection.c'), (Join-Path $root 'gd_similarity_output.c'), (Join-Path $root 'gd_graph_paths.c'), (Join-Path $root 'gd_graph_closure.c'), (Join-Path $root 'gd_graph_shapes.c'), (Join-Path $root 'gd_graph_overview.c'), (Join-Path $root 'gd_diagnostics.c'), (Join-Path $root 'gd_skills.c'), (Join-Path $root 'gd_skill_unlocks.c'), (Join-Path $root 'gd_draft.c'), (Join-Path $root 'gd_routes.c'), (Join-Path $root 'gd_mda.c'), (Join-Path $root 'gd_controls.c'), (Join-Path $root 'gd_control_import.c'), (Join-Path $root 'gd_rules.c'), (Join-Path $root 'gd_rule_axes.c'), (Join-Path $root 'gd_rule_logic.c'), (Join-Path $root 'gd_rule_quantities.c'), (Join-Path $root 'gd_rule_analysis.c'), (Join-Path $root 'gd_resource_graph.c'), (Join-Path $root 'gd_resource_identity.c'), (Join-Path $root 'gd_effect_graph.c'), (Join-Path $root 'gd_effect_query.c'), (Join-Path $root 'gd_query.c'), (Join-Path $root 'gd_named_query.c'), (Join-Path $root 'gd_query_output.c'), (Join-Path $root 'gd_query_scene.c'), (Join-Path $root 'gd_actor_query.c'), (Join-Path $root 'gd_actor_inventory.c'), (Join-Path $root 'gd_actor_identity.c'), (Join-Path $root 'gd_resource_routes.c'), (Join-Path $root 'gd_resource_output.c'), (Join-Path $root 'gd_explorer.c'), (Join-Path $root 'gd_projection.c'), (Join-Path $root 'gd_structure_query.c'), (Join-Path $root 'gd_structure_cli.c'))
+$arguments += Join-Path $root 'gd_viewer.c'
 if ($Test) { $arguments += Join-Path $root 'test_core.c' }
+elseif ($ViewerTest) { $arguments += Join-Path $root 'test_viewer.c' }
 elseif ($ExplorerTest) { $arguments += @('-DGD_EXPLORER_TEST=1', (Join-Path $root 'test_explorer_view.c')) }
 else { $arguments += Join-Path $root 'gd_cli.c' }
 foreach ($file in @('api.c', 'parser.c', 'reader.c', 'scanner.c')) {
     $arguments += Join-Path $root "vendor/libyaml/src/$file"
 }
-$arguments += @('-l', 'shell32')
-$name = if ($Test) { 'test-core.exe' } else { 'gd.exe' }
+$arguments += @('-l', 'shell32', '-l', 'advapi32')
+$name = if ($Test) { 'test-core.exe' } elseif ($ViewerTest) { 'test-viewer.exe' } else { 'gd.exe' }
 if ($View) {
     if (-not $RaylibDirectory) { throw 'View needs -RaylibDirectory PATH or RAYLIB_ROOT (raylib 5.5 win64 SDK). Headless build needs no raylib.' }
     $library = Join-Path $RaylibDirectory 'lib/raylib.dll'

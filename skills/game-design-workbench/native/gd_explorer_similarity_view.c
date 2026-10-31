@@ -24,6 +24,14 @@ static Vector2 point(const GD_Similarity *map,int row) {
        move individual points or feed map positions into ordinary layout. */
     return (Vector2){(float)(400*(map->x[row]/scale)),(float)(400*(map->y[row]/scale))};
 }
+int gd_explorer_similarity_select(GD_ExplorerContext *context,int row) {
+    GD_ExplorerStructureState *state=context->pane->structure_state;
+    const GD_Similarity *map;
+    if (!gd_explorer_similarity_active(context) || !(map=state->result->similarity->map) || !map->available || row<0 || row>=map->input.entry_count || !map->placed[row]) return 0;
+    choose_row(state,row,0); state->similarity_camera.target=point(map,row);
+    state->similarity_camera.offset=(Vector2){context->viewport.x+context->viewport.width/2,context->viewport.y+context->viewport.height/2};
+    state->similarity_camera.zoom=1; state->similarity_camera_ready=true; state->similarity_fit=false; return 1;
+}
 static void fit(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_Similarity *map=state->result->similarity->map;
     int row,found=0; float left=0,right=0,top=0,bottom=0;

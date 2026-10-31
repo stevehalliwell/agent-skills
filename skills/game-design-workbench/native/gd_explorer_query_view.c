@@ -16,10 +16,12 @@ void gd_explorer_query_destroy(GD_ExplorerQueryState *state) {
     state->allocator.release(state->allocator.context,state);
 }
 static int focus_result(GD_ExplorerQueryState *state, int target) {
-    GD_EffectSelection selection=state->query->contributors->selection; GD_EffectQuery *query; GD_QueryScene *scene;
+    GD_EffectSelection selection=state->query->contributors->selection; GD_EffectQuery *query; GD_QueryScene *scene; int i,matches=0;
     selection.target=target; query=gd_effect_query_build(state->query->effects,selection,GD_EFFECT_WORK); if (!query) return 0;
     scene=gd_query_scene_effect_context(state->query,query,state->applied.weighted,GD_EFFECT_WORK);
     if (!scene) { gd_effect_query_destroy(query); return 0; }
+    for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].source==target && scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) ++matches;
+    if (matches!=1) { gd_query_scene_destroy(scene); gd_effect_query_destroy(query); return 0; }
     gd_query_scene_destroy(state->scene); gd_effect_query_destroy(state->selected); state->selected=query; state->scene=scene; return 1;
 }
 static GD_ExplorerQueryState *build_state(GD_ExplorerContext *context, const GD_ExplorerQueryOptions *options, int allow_empty, const char *primary_value) {

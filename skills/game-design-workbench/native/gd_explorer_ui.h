@@ -162,6 +162,8 @@ void gd_explorer_structure_destroy(GD_ExplorerStructureState *state);
 void gd_explorer_structure_controls(GD_ExplorerContext *context);
 void gd_explorer_structure_source_node(GD_ExplorerContext *context,int node);
 int gd_explorer_similarity_active(const GD_ExplorerContext *context);
+/* Exact current placed entry; select/frame only, no feature/query changes. */
+int gd_explorer_similarity_select(GD_ExplorerContext *context, int row);
 void gd_explorer_similarity_controls(GD_ExplorerContext *context);
 void gd_explorer_similarity_input(GD_ExplorerContext *context);
 void gd_explorer_similarity_draw(GD_ExplorerContext *context);

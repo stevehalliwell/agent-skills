@@ -11,6 +11,7 @@
 #include "gd_skill_unlocks.h"
 #include "gd_explorer.h"
 #include "gd_matrix_grid.h"
+#include "gd_viewer.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
@@ -31,7 +32,8 @@ static void help(void) {
     puts("Game Design Workbench — native domain tools\n"
          "Usage: gd matrix|connectivity|skill-atoms|scaffolding|mda|controls|rules|resources [options]\n"
          "       gd view matrix|skill-atoms|mda|resources|explorer [options]\n"
-         "       gd query --list | --question NAME --projection NAME [options]\n\n"
+         "       gd query --list | --question NAME --projection NAME [options]\n"
+         "       gd viewer list|inspect|nodes|hint|navigate [options] (viewer --help)\n\n"
          "Built-in actor/effect, structural and similarity queries: query --list for supported pairs/parameters. No DSL.\n"
          "  --feature ID[=WEIGHT]  similarity-map: repeat advertised features; similarity-features discovers IDs\n"
          "  --entry ID            similarity-map: repeat up to 64 exact native IDs; default all shown\n"
@@ -43,7 +45,7 @@ static void help(void) {
          "  --work-limit N         Search work: actor/effect/similarity 0..67108864, structural 0..16777216; construction separate\n"
          "  Actor states require --case/--axis; default only authored A. Other facts stay fixed.\n"
          "  Effect contributors include definitions/placements, whole guards and exact calls.\n"
-         "  Query --fields and narrower Actors/Effects UI controls: see --list. IPC unavailable.\n"
+         "  Query --fields and narrower Actors/Effects UI controls: see --list. Viewer IPC: viewer --help.\n"
          "  Structural --relation/--start repeat; --scope-root restricts Relationships.\n"
          "  Structural --direction forward|backward|both; --avoid only native support candidates.\n\n"
          "Unified explorer: gd view explorer with explicit collection bindings below.\n"
@@ -179,6 +181,7 @@ static int absolute_folder(const char *path, char *result) {
 }
 static int application(int argc, char **argv) {
     GD_Allocator allocator = { NULL, system_allocate, system_release };
+    if (argc>1 && !strcmp(argv[1],"viewer")) return gd_viewer_command(argc,argv,allocator);
     GD_Collection collections[GD_MAX_COLLECTIONS]; GD_Role source_roles[GD_MAX_COLLECTIONS];
     char aliases[GD_MAX_COLLECTIONS][129], folders[GD_MAX_COLLECTIONS][GD_MAX_PATH];
     const char *error = NULL, *fields = NULL, *screenshot = NULL, *output_path = NULL;
