@@ -2,7 +2,7 @@
 
 ## Capture scope
 
-Notes captured, then discussed against remaining todo work. User requests coverage of new feedback in existing planned tasks and explicit review against these notes at next checkpoint after next implementation batch. User later authorized bounded unified-explorer implementation under Review 06. Interaction choices and technical contract live in `todo.md`; user accepted bounded unified-shell checkpoint, authorized commit and requested continuation through known steps until next review point unless material questions arise. Broader integrated acceptance remains open.
+Notes captured, then discussed against remaining todo work. User requests coverage of new feedback in existing planned tasks and explicit review against these notes at next checkpoint after next implementation batch. User later authorized bounded unified-explorer implementation under Review 06. Interaction choices and detailed technical contracts now live in [workbench specification and history](../../workbench-specification-and-history.md); current steps live in [todo.md](../../todo.md). Historical Review/Slice references below retain their original `todo.md` wording; user accepted bounded unified-shell checkpoint, authorized commit and requested continuation through known steps until next review point unless material questions arise. Broader integrated acceptance remains open.
 
 ## User observations and questions
 

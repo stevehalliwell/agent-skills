@@ -7,7 +7,7 @@ Continue graph-analysis follow-ups through next integrated review. Commit each v
 - Branch: `feat/game-design-workbench`
 - Dedicated worktree: `D:/Repos/agent-skills-game-design-workbench`
 - Starting checkpoint: `301ccde` (paired path witnesses); preceding foundation: `b898efd`.
-- Task authority: `todo.md`; no root Attendant task configuration.
+- Task authority: [todo.md](../../todo.md); no root Attendant task configuration. Detailed Review/Slice contracts and historical references to their former `todo.md` location now live in [workbench specification and history](../../workbench-specification-and-history.md). Current todo owns remaining steps and CJIT-only verification until final full-matrix review.
 - Preserve source/status identities, source directions, AND semantics, explicit knowledge, undo/drafts and last-good reload.
 - Generic graph layers analyze shown projection, not camera clipping or hidden graphs. Resource conditional queries explicitly use whole loaded Resource snapshot; controls disclose this separate scope.
 - No push, publication, unrelated schema migration, experiment rerun, global input automation or invented example game facts. Refined primary-target/source migrations and conformance repairs are authorized; preserve existing effects and frozen evidence.

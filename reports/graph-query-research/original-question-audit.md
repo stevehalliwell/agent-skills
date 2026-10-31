@@ -5,7 +5,7 @@
 Current tools answer declared relationships and selected conditional-rule hypotheses. They do not yet answer shared-outcome, actor-state, gameplay-role or resource-conversion questions end to end. Better layout does not close those gaps.
 
 - Inventory baseline: `8e6e5d7`. Current independent review includes accepted Grid `89b54e3`, Resource report `f233e7c`, focus/pickup `5c1e17e` and conditional Resource witnesses `adae021`. All original nine CLI probes were rerun, plus Resource overview/six route-frontier-identity probes; current evidence below.
-- Question authority: [original feedback](../../.pi/visualiser-review-notes.md). Current ownership: [todo.md](../../todo.md), Reviews 02–12 and Slice 6.
+- Question authority: [original feedback](../../.pi/visualiser-review-notes.md). Current work: [todo.md](../../todo.md). Detailed Reviews 02–12 and Slice 6: [preserved specification/history](../../workbench-specification-and-history.md).
 - **Narrow answer:** stated operation returns the stated declared fact, with limits. Not acceptance of the broader design question.
 - **Partial:** source representation, kernel or inspection exists; requested question/result still lacks coverage.
 - **Missing:** requested semantic analysis/presentation is not implemented. Not necessarily missing source data.

@@ -24,7 +24,7 @@ User authorized implementation after full automated validation and attempted vis
 
 ## Checks
 
-- Current constraint: no further GUI launches, window-based tests, restarts or focus changes. User objected to automated windows stealing focus. Remaining verification is headless/compile-only; existing app/draft stays untouched. Earlier owned-window results below are historical evidence, not authorization to open more windows.
+- Current constraint: no further GUI launches, window-based tests, restarts or focus changes. User objected to automated windows stealing focus. Until final review, remaining verification uses CJIT-only headless tests/build checks and UI compile-only checks; no Zig/alternate compilers or full compile-mode matrix. Final review runs all supported compile modes. Existing app/draft stays untouched. Earlier owned-window results below are historical evidence, not authorization to open more windows.
 - Fuzzy picker empty/prefix/subsequence/no-match; exact identities remain distinct, caps fail without partial adoption, search changes no query scope.
 - Both examples: Actors nonempty immediately when definitions exist; object inspection/drill-down/return; empty/no-axis/unknown cases; default/reset/reload/Find and failed candidate allocation.
 - Supported graph-context actions populate pending controls only; visible applied results remain until successful run. Source roles/occurrences must map exactly.
