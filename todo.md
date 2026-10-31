@@ -1058,10 +1058,10 @@ Status: bounded unified-shell checkpoint accepted and committed as `bf99e07`. En
 
 ##### Bidirectional CLI/viewer IPC
 
-Status: needs-refinement; captured from user review. No implementation or transport selected.
+Status: needs-refinement; next focus per latest user direction after committing current UX work and deferred walkthrough note. No implementation or transport selected.
 
 - Result: CLI and running viewer communicate so agent and human can refer to the same visible context, rather than manually copying IDs or describing screenshots.
-- Agent-to-viewer: agent can say “this is what I am talking about” and show the referenced thing in the viewer.
+- Agent-to-viewer: agent can say “this is what I am talking about”, show referenced things and change what the human is looking at in the running GUI.
 - Viewer-to-agent: human can point at current context and ask “what am I looking at?”, “why is this thing not doing what I want?” or “this is where we need to join some new systems in.” Agent receives the relevant viewer context for that discussion.
 - Open: transport, viewer/session targeting, context payload, supported commands/events, navigation/state behavior and security boundaries TBD. Capture does not select a protocol or authorize source writes.
 - Coordinate existing independent-pane/Find/draft/reload contracts and Review 10's human/agent question parity. Matching CLI and GUI kernels alone does not deliver this communication.
@@ -1122,6 +1122,7 @@ Status: bounded structural queries across all nine scopes, typed reached-set joi
 
 Status: bounded primary-target/migration, effect/variant/query/inventory kernels, Actors/Effects panes, typed joins, catalogue and separate MDS implemented. Native conformance localization/docs complete; public Attendant validation and automated combined build/window checks pass; manual acceptance remains open. Uses existing 01/02/03 and 06 contracts; parked encounter design stays closed.
 
+- [ ] **Return to Actors/state and shared-death walkthrough after next few improvements.** Status: deferred by user. Explain what actor-state analysis does and demonstrate how to see the many actions leading to the shared concept of death. User expects many contributors; no verified count or usefulness acceptance implied. Resume this human walkthrough after improvements, rather than closing it from automated tests. IPC is next focus.
 - Result: actor/state navigation, state-specific ghosts, conditional comparisons, shared outcome nodes, resource flows and role changes in shared analysis and visual inspection.
 - Resource projection should expose Task 02's derived flows and conversion-path exploration across resources; query semantics belong to Task 02, not a second viewer evaluator.
 - Select actor and move through its states to reveal relevant partners; alternatively select actors and show ghosts for states in which they interact. Preserve underlying actor identity. Include resource gap/pivotal-connection evidence.
@@ -1228,9 +1229,9 @@ User explicitly authorizes local checkpoint commits for current independent Mari
 ### Next integrated review checkpoint — current feedback coverage
 
 Delivery order, per latest user direction:
-1. Complete remaining functional additions and changes, refining unsettled contracts as each is reached.
-2. Deliver bidirectional CLI/viewer IPC and Resource layout repairs just before UX review. Both remain deferred until that late stage; order between them is not specified.
-3. Conduct UX review and repeat all 14 original design-question groups, especially partial/unavailable answers, against completed functionality.
+1. Current context-first UX changes committed as `b1c08d9`; user requested capturing deferred Actors/shared-death walkthrough and committing remaining changes.
+2. Switch to bidirectional CLI/viewer IPC: human points at GUI context; agent knows what human is looking at and can change what GUI shows. Refine unresolved contract before implementation. Resource layout repairs remain separate outstanding work.
+3. Return to Actors/state purpose and many-actions-to-shared-death walkthrough after next few improvements. Conduct wider UX review and repeat all 14 original design-question groups, especially partial/unavailable answers, against completed functionality.
 
 User requires next checkpoint after the next implementation batch to review against [integrated review notes](reports/graph-query-research/integrated-review-notes.md), not only implementation/test results. User accepted bounded unified-shell slice under Review 06 and authorized its checkpoint plus continuation through known steps until next review point, stopping for material questions. Continue settled readability fixes; retain unrefined behavior explicitly rather than inventing it. Preserve task dependencies and existing final gate. Checkpoint approval does not close broader usefulness/manual acceptance.
 
