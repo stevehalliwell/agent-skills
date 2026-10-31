@@ -1,5 +1,7 @@
 # Shared Markdown GUI implementation plan
 
+Historical spike-like plan. Spike-like accepted; current follow-up checklist lives in [TODO.md](../../TODO.md). Unchecked steps below retain prior planning context, not a newly approved delivery scope.
+
 Status: steps 5d–5f complete within agreed scope. Human confirmed cross-paragraph/formatting and within-cell preview feedback. Undo now uses file-path identity; partial discovery shows warning/CLI guidance. User accepted/deferred renderer draft-loss until a real case needs solving; see [GUI-REVIEW.md](GUI-REVIEW.md). Copied-workspace evaluation only; manual viewers not upgraded. Installed skill/launcher switch stays last.
 
 ## Result
