@@ -23,7 +23,7 @@ typedef struct {
 } GD_ExplorerMdaDisplay;
 typedef struct {
     int root_case,participant,axis,noun,ghosts,primary,compare;
-    bool coverage,accepted,weighted,include_excluded;
+    bool coverage,accepted,weighted,include_excluded,literal_values,literal_assumptions;
     char values[GD_MAX_RULE_LINE+1],facts[GD_MAX_RULE_LINE+1],contexts[GD_MAX_RULE_LINE+1];
 } GD_ExplorerQueryOptions;
 typedef struct {
@@ -43,7 +43,7 @@ typedef struct {
 } GD_ExplorerStructureForm;
 typedef struct {
     GD_Allocator allocator; GD_ExplorerStructureForm pending,applied;
-    GD_StructureResult *result; unsigned revision; int has_applied,page;
+    GD_StructureResult *result,*picker_context; unsigned revision,picker_revision; int has_applied,page,picker_scope;
     char start_tokens[GD_MAX_RULE_LINE+1],relation_tokens[GD_MAX_RULE_LINE+1],status_tokens[GD_MAX_RULE_LINE+1];
     char feature_tokens[GD_MAX_RULE_LINE+1],entry_tokens[GD_MAX_RULE_LINE+1],feature_ids[GD_SIMILARITY_FEATURES][128];
     const char *feature_names[GD_SIMILARITY_FEATURES],*entry_ids[GD_STRUCTURE_SELECTORS]; double feature_weights[GD_SIMILARITY_FEATURES];
@@ -64,6 +64,10 @@ typedef struct {
     int page,row,peer_write,axis_page; unsigned char marked_cases[GD_MAX_RULE_CASES];
 } GD_ExplorerRuleState;
 typedef struct {
+    const GD_ExplorerProject *project; int root,participant,axis,value,left,right,context_axis,context_value; bool context_false;
+    double number,sample;
+} GD_ExplorerAssumptionForm;
+typedef struct {
     GD_ExplorerView view;
     GD_Layout *layout;
     Camera2D camera,regular_camera;
@@ -78,6 +82,8 @@ typedef struct {
     GD_ExplorerStructureState *structure_state;
     GD_ExplorerRuleState *rule_state;
     char rule_message[256];
+    char picker_search[129];
+    GD_ExplorerAssumptionForm assumption_form;
     char query_message[256];
     GD_ResourceRoutes *resource_routes;
     int resource_from,resource_to,resource_witness,resource_work_limit;

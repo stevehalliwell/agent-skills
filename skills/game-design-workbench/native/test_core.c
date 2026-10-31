@@ -1710,7 +1710,7 @@ TEST(skill_progression_modes,
         TEST_ASSERT(gd_focus_layout(draft->model,&focus,layout,GD_SORT_NAME) && focus.visible[b]);
         TEST_ASSERT(gd_skill_layout(draft->model,layout,i%2,i%2,GD_SORT_NAME) && layout->node_count==2);
         { int edge; for (edge=0;edge<layout->edge_count;++edge) TEST_ASSERT(layout->edges[edge].relation==GD_PREREQUISITES); }
-        TEST_ASSERT(gd_route_layout(draft->model,layout,i%2,GD_SORT_PARTNERS) && layout->node_count==3 && layout->edge_count==4);
+        TEST_ASSERT(gd_route_layout(draft->model,layout,i%2,GD_SORT_PARTNERS) && layout->node_count==3 && layout->edge_count==4 && layout->direct_routes);
         { int edge; for (edge=0;edge<layout->edge_count;++edge) TEST_ASSERT(layout->edges[edge].relation==GD_NEXT); }
         TEST_ASSERT(layout->nodes[0].key>=0 && draft->modified_count==1 && draft->history_count==2 && draft->model->records[a].rank==-2);
     }
@@ -2463,6 +2463,7 @@ TEST(rules_allocation_failure,
 #include "test_related_paths.h"
 #include "test_named_queries.h"
 #include "test_named_empty.h"
+#include "test_picker.h"
 #include "test_graph_reachability.h"
 #include "test_graph_shapes.h"
 #include "test_graph_overview.h"
@@ -2484,6 +2485,7 @@ int main(int argc, char **argv) {
     failed += test_rules_declarations(); failed += test_resource_unloaded_call(); failed += test_rule_expression_delta(); failed += test_rule_pool_resolution(); failed += test_rules_fence_scope(); failed += test_rules_invalid_records(); failed += test_rules_limits(); failed += test_rules_allocation_failure();
     failed += test_matrix_grid(); failed += test_resource_output_limits(); failed += test_resource_routes();
     failed += test_resource_instance_identity_and_limits(); failed += test_resource_instance_depth_frontiers(); failed += test_resource_instance_unresolved_origins(); failed += test_effect_result_concepts_and_targeted_links(); failed += test_effect_projection_capacity_and_source_limits(); failed += test_effect_contributor_scope_paths_and_counts(); failed += test_actor_finite_variants_and_checked_activation_evidence(); failed += test_actor_variant_capacity_inputs_and_allocation(); failed += test_actor_open_values_and_parallel_preservation_provenance(); failed += test_actor_invalid_quantities_and_distinct_preservation_declarations();
+    failed += test_picker_search_and_lists();
     failed += test_structural_related_mixed_paths_native_and_shared_result();
     failed += test_named_rule_delegates_private_slots_inputs_limits_and_failures(); failed += test_named_resource_delegates_native_graph_and_zero_work(); failed += test_named_skill_delegate_explicit_knowledge_not_learning(); failed += test_named_empty_readers_and_unavailable_selectors();
     failed += test_similarity_typed_distances_missing_and_reorder(); failed += test_similarity_degenerate_non_euclidean_and_bounds(); failed += test_similarity_small_representable_distances(); failed += test_similarity_landmarks_all_entries_and_capacity();
@@ -2512,6 +2514,6 @@ int main(int argc, char **argv) {
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/127 passed\n", 127-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/128 passed\n", 128-failed);
     return failed ? 1 : 0;
 }

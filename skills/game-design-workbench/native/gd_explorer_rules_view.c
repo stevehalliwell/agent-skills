@@ -2,6 +2,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_explorer_loaded_pickers.h"
 #include <string.h>
 
 static int equal_form(const GD_ExplorerRuleForm *a,const GD_ExplorerRuleForm *b) {
@@ -159,19 +160,24 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
     { static const char *const modes[]={"Conditional outcomes","Conditional consistency","Object bindings"}; int mode=form->bindings ? 2:form->kind==GD_NAMED_CONSISTENCY ? 1:0;
       if (igCombo_Str_arr("Native inspection",&mode,modes,3,-1)) { memset(form,0,sizeof(*form)); form->bindings=mode==2; form->kind=mode==1 ? GD_NAMED_CONSISTENCY:GD_NAMED_OUTCOMES; form->work_limit=mode==2 ? GD_EFFECT_WORK:mode==1 ? -1:GD_RULE_EVALUATION_WORK_LIMIT; }
     }
+    { char saved_query_message[256]; memcpy(saved_query_message,pane->query_message,sizeof(saved_query_message)); *pane->query_message=0;
     if (form->bindings) {
-        igInputText("Object reference (blank all)",form->object,sizeof(form->object),0,NULL,NULL); igInputText("Binding source#case (blank all)",form->case_name,sizeof(form->case_name),0,NULL,NULL);
-        igInputText("Local participant name (blank all)",form->participant,sizeof(form->participant),0,NULL,NULL); igInputText("Axis reference (blank all)",form->axis,sizeof(form->axis),0,NULL,NULL);
-        igInputTextMultiline("Root statuses: one per line; blank all",form->statuses,sizeof(form->statuses),(ImVec2_c){0,55},0,NULL,NULL); igInputInt("Binding work ceiling 0..67108864",&form->work_limit,0,0,0);
+        int before=gd_explorer_picker_case_index(model,rules,form->case_name),root,local=-1;
+        gd_explorer_picker_record(context,"Object definition",GD_NOUN,form->object,sizeof(form->object));
+        root=gd_explorer_picker_case(context,"Binding source case",form->case_name,sizeof(form->case_name),1); if (root!=before) *form->participant=0;
+        if (root>=0) { const GD_RuleCase *item=&rules->cases[root]; for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) if (!strcmp(rules->participants[i].name,form->participant)) local=i; local=gd_explorer_picker_local(context,"Local binding",root,local,1); if (local>=0) snprintf(form->participant,sizeof(form->participant),"%s",rules->participants[local].name); else *form->participant=0; }
+        else igTextWrapped("Choose a source case to filter one local binding. Blank case keeps all cases; Advanced also permits cross-case exact-name filters.");
+        gd_explorer_picker_record(context,"Axis definition",GD_AXIS,form->axis,sizeof(form->axis)); gd_explorer_picker_statuses(context,model,form->statuses,sizeof(form->statuses));
+        if (igTreeNode_Str("Advanced: raw binding selectors")) { igInputText("Object reference",form->object,sizeof(form->object),0,NULL,NULL); igInputText("Source#case",form->case_name,sizeof(form->case_name),0,NULL,NULL); igInputText("Local participant name",form->participant,sizeof(form->participant),0,NULL,NULL); igInputText("Axis reference",form->axis,sizeof(form->axis),0,NULL,NULL); igInputTextMultiline("Root statuses",form->statuses,sizeof(form->statuses),(ImVec2_c){0,55},0,NULL,NULL); igTreePop(); }
+        igInputInt("Binding work ceiling 0..67108864",&form->work_limit,0,0,0);
     } else if (form->kind==GD_NAMED_OUTCOMES) {
-        if (igBeginCombo("Scenario source case",*form->case_name ? form->case_name:"Choose explicit source#case",0)) {
-            for (i=0;i<rules->case_count;++i) { const GD_RuleCase *item=&rules->cases[i]; const char *name=TextFormat("%s#%s",model->records[rules->sources[item->source].record].reference,item->name); igPushID_Int(i); if (igSelectable_Bool(name,!strcmp(form->case_name,name),0,(ImVec2_c){0,0})) snprintf(form->case_name,sizeof(form->case_name),"%s",name); igPopID(); } igEndCombo();
-        }
-        igInputText("Exact source#case",form->case_name,sizeof(form->case_name),0,NULL,NULL);
-        igInputTextMultiline("Literal facts: LOCAL:ALIAS/AXIS=VALUE; one per line",form->facts,sizeof(form->facts),(ImVec2_c){0,70},0,NULL,NULL);
-        igInputTextMultiline("Context triples; ! prefix means context-not; one per line",form->contexts,sizeof(form->contexts),(ImVec2_c){0,70},0,NULL,NULL);
+        int before=gd_explorer_picker_case_index(model,rules,form->case_name),root=gd_explorer_picker_case(context,"Scenario source case",form->case_name,sizeof(form->case_name),form->kind==GD_NAMED_CONSISTENCY);
+        if (root!=before) *form->facts=*form->contexts=0;
+        gd_explorer_picker_assumptions(context,root,form->facts,sizeof(form->facts),form->contexts,sizeof(form->contexts),NULL);
+        if (igTreeNode_Str("Advanced: raw source case")) { igInputText("Exact source#case",form->case_name,sizeof(form->case_name),0,NULL,NULL); igTreePop(); }
         igInputInt("Scenario work ceiling 0..16777216",&form->work_limit,0,0,0);
     } else igTextWrapped("Fixed native comparison ceiling %d; at most %d pairs / %d branches. Unexamined scope stays explicit.",GD_RULE_ANALYSIS_WORK_LIMIT,GD_MAX_RULE_COMPARISONS,GD_MAX_RULE_BRANCHES);
+    if (*pane->query_message) snprintf(pane->rule_message,sizeof(pane->rule_message),"%s",pane->query_message); memcpy(pane->query_message,saved_query_message,sizeof(saved_query_message)); }
     if (igButton("Run native reader question",(ImVec2_c){0,0})) { gd_explorer_rules_run(context); state=pane->rule_state; form=&state->pending; }
     igSameLine(0,8); if (igButton("Clear rule/binding inspection",(ImVec2_c){0,0})) { gd_explorer_rules_destroy(state); pane->rule_state=NULL; *pane->rule_message=0; return; }
     if (*pane->rule_message) igTextWrapped("%s",pane->rule_message);

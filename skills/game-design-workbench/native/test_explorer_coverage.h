@@ -40,7 +40,7 @@ static int explorer_test_coverage(GD_ExplorerContext *c, GD_ExplorerPane *panes,
     { GD_ExplorerProject *before_project=c->project; COVERAGE_CHECK(!reload_project(c,panes,collections,count,failure,sizeof(failure)) && c->project==before_project && pane->query_state==state); }
     pane->query_options=state->applied; COVERAGE_CHECK(reload_project(c,panes,collections,count,failure,sizeof(failure)));
     c->pane=pane; COVERAGE_CHECK(pane->query_state->query->state_coverage && pane->query_state->query->binding_count==1 && pane->selection.node<0);
-    COVERAGE_CHECK(reset_view(c) && !pane->query_state->query && !pane->query_options.coverage && pane->query_options.noun<0); ok=1;
+    COVERAGE_CHECK(reset_view(c) && pane->query_state->query && pane->query_state->query->request.kind==GD_QUERY_BINDINGS && pane->layout->node_count>0 && !pane->query_options.coverage && pane->query_options.noun<0); ok=1;
 cleanup:
     *fail_at=0;
     if (candidate) { pane_release_layout(allocator,candidate); gd_diagnostics_clear(&candidate->diagnostics); allocator.release(allocator.context,candidate); }

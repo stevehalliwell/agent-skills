@@ -2,22 +2,12 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_explorer_loaded_pickers.h"
 #include <math.h>
 #include <string.h>
 
 static int options_equal(const GD_ExplorerQueryOptions *a, const GD_ExplorerQueryOptions *b) {
-    return a->coverage==b->coverage && a->noun==b->noun && a->root_case==b->root_case && a->participant==b->participant && a->axis==b->axis && a->ghosts==b->ghosts && a->primary==b->primary && a->compare==b->compare && a->accepted==b->accepted && a->weighted==b->weighted && a->include_excluded==b->include_excluded && !strcmp(a->values,b->values) && !strcmp(a->facts,b->facts) && !strcmp(a->contexts,b->contexts);
-}
-static char *next_item(char **cursor) {
-    char *start=*cursor,*end,*last;
-    while (start && *start) {
-        end=strpbrk(start,";\n"); if (end) { *end=0; *cursor=end+1; } else *cursor=NULL;
-        while (*start==' ' || *start=='\t' || *start=='\r') ++start;
-        last=start+strlen(start); while (last>start && (last[-1]==' ' || last[-1]=='\t' || last[-1]=='\r')) *--last=0;
-        if (*start) return start;
-        start=*cursor;
-    }
-    return NULL;
+    return (!*a->values || a->literal_values==b->literal_values) && ((!*a->facts && !*a->contexts) || a->literal_assumptions==b->literal_assumptions) && a->coverage==b->coverage && a->noun==b->noun && a->root_case==b->root_case && a->participant==b->participant && a->axis==b->axis && a->ghosts==b->ghosts && a->primary==b->primary && a->compare==b->compare && a->accepted==b->accepted && a->weighted==b->weighted && a->include_excluded==b->include_excluded && !strcmp(a->values,b->values) && !strcmp(a->facts,b->facts) && !strcmp(a->contexts,b->contexts);
 }
 void gd_explorer_query_destroy(GD_ExplorerQueryState *state) {
     if (!state) return;
@@ -36,15 +26,16 @@ static GD_ExplorerQueryState *build_state(GD_ExplorerContext *context, const GD_
     GD_Model *model=gd_explorer_model(context->project,context->pane->view); GD_Allocator allocator=context->project->allocator;
     GD_ExplorerQueryState *state=allocator.allocate(allocator.context,sizeof(*state)); GD_QueryRequest request={0}; char *cursor,*item;
     int i,errors=model->error_count,omitted=model->errors_omitted,actor=context->pane->view==GD_EXPLORER_ACTORS;
+    int inventory=actor && allow_empty && !options->coverage && (options->root_case<0 || options->axis<0);
     if (!state) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Cannot allocate query state; last good query retained."); return NULL; }
     memset(state,0,sizeof(*state)); state->allocator=allocator; state->applied=*options;
-    if (actor && allow_empty && ((!options->coverage && options->root_case<0) || options->axis<0)) {
+    if (actor && allow_empty && options->coverage && options->axis<0) {
         state->empty=allocator.allocate(allocator.context,sizeof(*state->empty));
         if (!state->empty) goto failure;
         memset(state->empty,0,sizeof(*state->empty)); return state;
     }
-    request.kind=actor ? (options->coverage ? GD_QUERY_STATE_COVERAGE:GD_QUERY_ACTOR_STATES):GD_QUERY_CONTRIBUTORS; request.noun=actor && options->coverage ? options->noun:-1; request.effect_kind=-1; request.work_limit=GD_EFFECT_WORK;
-    request.case_index=actor ? options->root_case:-1; request.axis=actor ? options->axis:-1;
+    request.kind=inventory ? GD_QUERY_BINDINGS:actor ? (options->coverage ? GD_QUERY_STATE_COVERAGE:GD_QUERY_ACTOR_STATES):GD_QUERY_CONTRIBUTORS; request.noun=actor && options->coverage ? options->noun:-1; request.effect_kind=-1; request.work_limit=GD_EFFECT_WORK;
+    request.case_index=actor && !inventory ? options->root_case:-1; request.axis=actor && !inventory ? options->axis:-1;
     if (options->accepted) { request.status_count=1; request.statuses[0]="accepted"; }
     if (actor && options->coverage) {
         if (*options->facts || *options->contexts) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Coverage uses independent hypotheses, not fixed facts/context. Clear those inputs first."); goto failure; }
@@ -54,17 +45,17 @@ static GD_ExplorerQueryState *build_state(GD_ExplorerContext *context, const GD_
             request.participant=context->project->rules->participants[options->participant].name;
         }
         memcpy(state->value_tokens,options->values,sizeof(state->value_tokens)); cursor=state->value_tokens;
-        while ((item=next_item(&cursor))) { if (request.value_count==GD_ACTOR_VARIANTS) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"At most 64 finite values."); goto failure; } request.values[request.value_count++]=item; }
-    } else if (actor) {
+        while ((item=gd_picker_next_item(&cursor,options->literal_values))) { if (request.value_count==GD_ACTOR_VARIANTS) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"At most 64 finite values."); goto failure; } request.values[request.value_count++]=item; }
+    } else if (actor && !inventory) {
         if (options->root_case<0 || options->root_case>=context->project->rules->case_count || options->participant<0 || options->participant>=context->project->rules->participant_count) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Choose an explicit root case, declared participant and applicable axis."); goto failure; }
         { const GD_RuleCase *root=&context->project->rules->cases[options->root_case]; if (options->participant<root->first_participant || options->participant>=root->first_participant+root->participant_count) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Participant must belong to selected root case; no same-name fallback."); goto failure; } }
         request.participant=context->project->rules->participants[options->participant].name;
         memcpy(state->value_tokens,options->values,sizeof(state->value_tokens)); cursor=state->value_tokens;
-        while ((item=next_item(&cursor))) { if (request.value_count==GD_ACTOR_VARIANTS) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"At most 64 finite values."); goto failure; } request.values[request.value_count++]=item; }
+        while ((item=gd_picker_next_item(&cursor,options->literal_values))) { if (request.value_count==GD_ACTOR_VARIANTS) { snprintf(context->pane->query_message,sizeof(context->pane->query_message),"At most 64 finite values."); goto failure; } request.values[request.value_count++]=item; }
         memcpy(state->fact_tokens,options->facts,sizeof(state->fact_tokens)); cursor=state->fact_tokens;
-        while ((item=next_item(&cursor))) if (!gd_rule_assume(model,context->project->rules,options->root_case,item,&state->fixed)) goto failure;
+        while ((item=gd_picker_next_item(&cursor,options->literal_assumptions))) if (!gd_rule_assume(model,context->project->rules,options->root_case,item,&state->fixed)) goto failure;
         memcpy(state->context_tokens,options->contexts,sizeof(state->context_tokens)); cursor=state->context_tokens;
-        while ((item=next_item(&cursor))) { int positive=*item!='!'; if (!positive) ++item; if (!gd_rule_assume_context(model,context->project->rules,options->root_case,item,positive,&state->fixed)) goto failure; }
+        while ((item=gd_picker_next_item(&cursor,options->literal_assumptions))) { int positive=*item!='!'; if (!positive) ++item; if (!gd_rule_assume_context(model,context->project->rules,options->root_case,item,positive,&state->fixed)) goto failure; }
         if (state->fixed.fact_count || state->fixed.context_count) request.fixed=&state->fixed;
     }
     state->query=gd_query_build(model,context->project->rules,context->project->calls,&request); if (!state->query) goto failure;
@@ -91,7 +82,7 @@ failure:
 }
 int gd_explorer_query_prepare(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane;
-    if (!pane->query_state) pane->query_state=build_state(context,&pane->query_options,1,NULL);
+    if (!pane->query_state) { pane->query_state=build_state(context,&pane->query_options,1,NULL); if (pane->query_state) pane->query_options=pane->query_state->applied; }
     if (!pane->query_state) return 0;
     pane->layout=pane->query_state->scene ? &pane->query_state->scene->layout:pane->query_state->empty;
     if (pane->view==GD_EXPLORER_EFFECTS && pane->fit==1) pane->fit=GD_EXPLORER_FIT_QUERY_READABLE;
@@ -99,13 +90,14 @@ int gd_explorer_query_prepare(GD_ExplorerContext *context) {
 }
 int gd_explorer_query_run(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *fresh;
-    *pane->query_message=0; fresh=build_state(context,&pane->query_options,0,NULL); if (!fresh) return 0;
-    if (pane->structure_state && pane->structure_state->result && pane->structure_state->result->actor_scene) {
+    *pane->query_message=0; fresh=build_state(context,&pane->query_options,pane->view==GD_EXPLORER_ACTORS && !pane->query_options.coverage && pane->query_options.root_case<0 && pane->query_options.axis<0,NULL); if (!fresh) return 0;
+    if (pane->structure_state && ((pane->structure_state->result && pane->structure_state->result->actor_scene) || (pane->structure_state->picker_context && pane->structure_state->picker_context->actor_scene)) && fresh->query->request.kind!=GD_QUERY_BINDINGS) {
         GD_ExplorerPane candidate=*pane; GD_ExplorerContext next=*context;
         candidate.query_state=fresh; candidate.structure_state=NULL; next.pane=&candidate;
         if (!gd_explorer_structure_remap(&next,context->project,pane)) { snprintf(pane->query_message,sizeof(pane->query_message),"%s",*candidate.query_message ? candidate.query_message:"Cannot prepare dependent structural result; last good query retained."); gd_explorer_query_destroy(fresh); return 0; }
         gd_explorer_structure_destroy(pane->structure_state); pane->structure_state=candidate.structure_state;
     }
+    if (fresh->query->request.kind==GD_QUERY_BINDINGS && pane->structure_state && ((pane->structure_state->result && pane->structure_state->result->actor_scene) || (pane->structure_state->picker_context && pane->structure_state->picker_context->actor_scene))) { gd_explorer_structure_destroy(pane->structure_state); pane->structure_state=NULL; }
     gd_explorer_query_destroy(pane->query_state); pane->query_state=fresh; pane->query_options=fresh->applied; pane->layout=&fresh->scene->layout;
     pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; pane->fit=pane->view==GD_EXPLORER_EFFECTS || fresh->applied.coverage ? GD_EXPLORER_FIT_QUERY_READABLE:1; pane->prepared=1;
     snprintf(pane->query_message,sizeof(pane->query_message),"Query applied. Values are assumptions; no source writes or final outcome proof."); return 1;
@@ -178,6 +170,11 @@ int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProjec
         if (source_record>=0 && remap_record(before,fresh,source_record)<0) mapped=-1;
         if (mapped>=0) for (i=0;i<pane->layout->node_count;++i) if (pane->query_state->scene->nodes[i].source==mapped) pane->selection.node=i;
     }
+    if (prior->query_state && prior->query_state->query && prior->query_state->query->request.kind==GD_QUERY_BINDINGS && prior->selection.node>=0) {
+        int source=gd_query_scene_record(prior->query_state->scene,prior->selection.node),mapped=remap_record(before,fresh,source);
+        if (mapped>=0) for (i=0;i<pane->layout->node_count;++i) if (gd_query_scene_record(pane->query_state->scene,i)==mapped) pane->selection.node=i;
+        snprintf(pane->query_message,sizeof(pane->query_message),"Object inventory reloaded; exact selected definition %s.",pane->selection.node>=0 ? "retained":"cleared (missing/replaced)"); return 1;
+    }
     if (prior->view==GD_EXPLORER_ACTORS && prior->selection.node>=0) snprintf(pane->query_message,sizeof(pane->query_message),pane->query_options.coverage ? "Coverage selectors retained; native coverage recomputed; transient inspection cleared after reload.":"Root, binding, axis, primary value and facts retained; transient inspection cleared after reload.");
     return 1;
 }
@@ -218,6 +215,26 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryOptions *options=&pane->query_options; const GD_Rules *rules=context->project->rules; GD_Model *model=gd_explorer_model(context->project,pane->view); int i,display=0;
     igTextWrapped("Native query scope, not camera bounds. Local binding identities stay distinct. Whole guards/side effects remain source-backed; no executable recipe or final-outcome proof.");
     if (pane->view==GD_EXPLORER_ACTORS) {
+        int inventory=pane->query_state && pane->query_state->query && pane->query_state->query->request.kind==GD_QUERY_BINDINGS;
+        if (inventory) {
+            const GD_QueryScene *scene=pane->query_state->scene; int selected=gd_explorer_query_record(pane);
+            if (selected>=0 && model->records[selected].role!=GD_NOUN) selected=-1;
+            igTextWrapped("Declared objects / actors: %d definitions, %d local bindings. Click an object, then choose its case/binding and axis to inspect states. Definitions are not runtime instances.",scene->layout.node_count,pane->query_state->query->binding_count);
+            if (gd_explorer_picker_begin(context,"Browse object / actor",selected>=0 ? model->records[selected].reference:NULL)) {
+                for (i=0;i<scene->layout.node_count;++i) { int record=scene->nodes[i].source; if (gd_explorer_picker_item(context,TextFormat("%s | %s",model->records[record].name,model->records[record].reference),record==selected,0)) { pane->selection=(GD_ExplorerSelection){-1,i,0,-1,-1}; } }
+                gd_explorer_picker_end();
+            }
+            igTextWrapped("Browsing does not change pending analysis. Choose a case/local occurrence explicitly to set analysis context.");
+            if (options->root_case>=0) igTextWrapped("Pending analysis: %s / %s / %s",rules->cases[options->root_case].name,options->participant>=0 ? rules->participants[options->participant].name:"no binding",options->axis>=0 ? model->records[options->axis].name:"choose axis");
+            if (selected>=0 && gd_explorer_picker_begin(context,"Inspect states in case / local binding",options->participant>=0 && rules->participants[options->participant].noun_resolution==GD_RULE_RESOLVED && rules->participants[options->participant].noun_record==selected ? TextFormat("%s / %s",rules->cases[options->root_case].name,rules->participants[options->participant].name):NULL)) {
+                const GD_Query *query=pane->query_state->query;
+                for (i=0;i<query->binding_count;++i) { const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleParticipant *participant=&rules->participants[binding->participant]; const GD_RuleCase *item=&rules->cases[binding->case_index]; if (participant->noun_resolution==GD_RULE_RESOLVED && participant->noun_record==selected) { igPushID_Int(i); if (gd_explorer_picker_item(context,TextFormat("%s / %s | %s",item->name,participant->name,model->records[rules->sources[item->source].record].reference),options->participant==binding->participant,0)) { options->root_case=binding->case_index; options->participant=binding->participant; options->axis=-1; *options->values=*options->facts=*options->contexts=0; } igPopID(); } }
+                gd_explorer_picker_end();
+            }
+        } else if (igButton("Return to actor inventory",(ImVec2_c){0,0})) {
+            options->coverage=false; options->root_case=options->participant=options->axis=options->noun=options->compare=-1; *options->values=*options->facts=*options->contexts=0;
+            gd_explorer_query_run(context); return;
+        }
         if (igCheckbox("Finite state coverage across bindings",&options->coverage)) {
             options->root_case=options->participant=options->axis=options->noun=options->compare=-1;
             options->ghosts=GD_QUERY_ALL_VARIANTS; options->primary=0;
@@ -227,37 +244,50 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
         const GD_RuleCase *root=options->root_case>=0 ? &rules->cases[options->root_case]:NULL;
         if (options->coverage) {
             igTextWrapped("Each binding independently receives each finite value. Other bindings/context stay unknown; no same-noun simultaneous assignment or default A.");
-            if (igBeginCombo("Object filter",options->noun>=0 ? model->records[options->noun].reference:"All explicitly declared nouns",0)) {
-                if (igSelectable_Bool("All explicitly declared nouns",options->noun<0,0,(ImVec2_c){0,0})) options->noun=-1;
-                for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_NOUN && igSelectable_Bool(model->records[i].reference,i==options->noun,0,(ImVec2_c){0,0})) options->noun=i;
-                igEndCombo();
+            if (gd_explorer_picker_begin(context,"Object filter",options->noun>=0 ? model->records[options->noun].reference:"All explicitly declared nouns")) {
+                if (gd_explorer_picker_item(context,"All explicitly declared nouns",options->noun<0,0)) options->noun=-1;
+                for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_NOUN && gd_explorer_picker_item(context,model->records[i].reference,i==options->noun,0)) options->noun=i;
+                gd_explorer_picker_end();
             }
         }
-        if (igBeginCombo("Root case",root ? TextFormat("%s#%s",model->records[rules->sources[root->source].record].reference,root->name):options->coverage ? "All loaded root cases":"Choose explicit source case",0)) {
-            if (options->coverage && igSelectable_Bool("All loaded root cases",options->root_case<0,0,(ImVec2_c){0,0})) options->root_case=options->participant=-1;
-            for (i=0;i<rules->case_count;++i) { const GD_RuleCase *candidate=&rules->cases[i]; igPushID_Int(i); if (igSelectable_Bool(TextFormat("%s#%s",model->records[rules->sources[candidate->source].record].reference,candidate->name),i==options->root_case,0,(ImVec2_c){0,0})) { options->root_case=i; options->participant=options->coverage ? -1:candidate->primary_participant; if (!options->coverage) options->axis=-1; options->primary=0; } igPopID(); }
-            igEndCombo();
+        if ((!inventory || options->coverage) && gd_explorer_picker_begin(context,"Root case",root ? TextFormat("%s#%s",model->records[rules->sources[root->source].record].reference,root->name):options->coverage ? "All loaded root cases":"Choose source case")) {
+            if (options->coverage && gd_explorer_picker_item(context,"All loaded root cases",options->root_case<0,0)) options->root_case=options->participant=-1;
+            for (i=0;i<rules->case_count;++i) { const GD_RuleCase *candidate=&rules->cases[i]; igPushID_Int(i); if (gd_explorer_picker_item(context,TextFormat("%s#%s",model->records[rules->sources[candidate->source].record].reference,candidate->name),i==options->root_case,0)) { options->root_case=i; options->participant=options->coverage ? -1:candidate->primary_participant; if (!options->coverage) options->axis=-1; options->primary=0; options->compare=-1; *options->values=*options->facts=*options->contexts=0; } igPopID(); }
+            gd_explorer_picker_end();
         }
         root=options->root_case>=0 ? &rules->cases[options->root_case]:NULL;
-        if (root && igBeginCombo("Local participant",options->participant>=0 ? rules->participants[options->participant].name:options->coverage ? "All explicit local bindings":"A unspecified; choose declared binding",0)) {
-            if (options->coverage && igSelectable_Bool("All explicit local bindings",options->participant<0,0,(ImVec2_c){0,0})) options->participant=-1;
-            for (i=root->first_participant;i<root->first_participant+root->participant_count;++i) if (igSelectable_Bool(TextFormat("%s%s",rules->participants[i].name,i==root->primary_participant ? " [authored A]":""),i==options->participant,0,(ImVec2_c){0,0})) { options->participant=i; if (!options->coverage) options->axis=-1; }
-            igEndCombo();
+        if (root && !inventory && gd_explorer_picker_begin(context,"Local participant",options->participant>=0 ? rules->participants[options->participant].name:options->coverage ? "All explicit local bindings":"A unspecified; choose declared binding")) {
+            if (options->coverage && gd_explorer_picker_item(context,"All explicit local bindings",options->participant<0,0)) options->participant=-1;
+            for (i=root->first_participant;i<root->first_participant+root->participant_count;++i) if (gd_explorer_picker_item(context,TextFormat("%s%s",rules->participants[i].name,i==root->primary_participant ? " [authored A]":""),i==options->participant,0)) { options->participant=i; if (!options->coverage) options->axis=-1; }
+            gd_explorer_picker_end();
         }
-        if (options->coverage && igBeginCombo("Typed axis",options->axis>=0 ? model->records[options->axis].reference:"Choose explicit typed axis",0)) {
-            for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_AXIS && igSelectable_Bool(model->records[i].reference,i==options->axis,0,(ImVec2_c){0,0})) options->axis=i;
-            igEndCombo();
+        if (options->coverage && gd_explorer_picker_begin(context,"Typed axis",options->axis>=0 ? model->records[options->axis].reference:NULL)) {
+            for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_AXIS && gd_explorer_picker_item(context,model->records[i].reference,i==options->axis,0)) { options->axis=i; options->primary=0; options->compare=-1; *options->values=0; }
+            gd_explorer_picker_end();
         }
-        if (!options->coverage && options->participant>=0 && rules->participants[options->participant].noun_resolution==GD_RULE_RESOLVED && igBeginCombo("Typed axis",options->axis>=0 ? model->records[options->axis].reference:"Choose declared axis",0)) {
-            int edge; for (edge=rules->actor_first[rules->participants[options->participant].noun_record];edge>=0;edge=rules->next_axis[edge]) if (rules->axis_resolution[edge]==GD_RULE_RESOLVED) { int axis=model->edges[edge].target; if (igSelectable_Bool(model->records[axis].reference,axis==options->axis,0,(ImVec2_c){0,0})) options->axis=axis; } igEndCombo();
+        if (!options->coverage && options->participant>=0 && rules->participants[options->participant].noun_resolution==GD_RULE_RESOLVED && gd_explorer_picker_begin(context,"Typed axis",options->axis>=0 ? model->records[options->axis].reference:NULL)) {
+            int edge; for (edge=rules->actor_first[rules->participants[options->participant].noun_record];edge>=0;edge=rules->next_axis[edge]) if (rules->axis_resolution[edge]==GD_RULE_RESOLVED) { int axis=model->edges[edge].target; if (gd_explorer_picker_item(context,model->records[axis].reference,axis==options->axis,0)) { options->axis=axis; options->primary=0; options->compare=-1; *options->values=0; } } gd_explorer_picker_end();
         }
-        if (options->coverage) igTextWrapped("Finite values use ; separators. Blank uses declared enums; numeric axes need explicit samples. Explicit literals containing ; or newline are CLI-only.");
-        igInputText("Finite values (; separated; blank: declared enums)",options->values,sizeof(options->values),0,NULL,NULL);
-        if (!options->coverage && igTreeNode_Str("Other fixed facts / ordered context")) {
-            igTextWrapped("One per line or ;. Facts use CLI syntax A:axes/Axis=value. Context uses declared ordered relation; prefix ! for false. Values apply only selected axis/binding. Fixed facts keep explicit targets.");
-            igInputTextMultiline("Fixed state facts",options->facts,sizeof(options->facts),(ImVec2_c){0,65},0,NULL,NULL);
-            igInputTextMultiline("Fixed ordered context",options->contexts,sizeof(options->contexts),(ImVec2_c){0,65},0,NULL,NULL); igTreePop();
+        if (options->coverage) igTextWrapped("Blank values use declared enums; numeric axes need explicit finite samples. Each binding is an independent hypothesis, not a simultaneous world state.");
+        if (options->axis>=0 && rules->axes[options->axis].type==GD_AXIS_ENUM && gd_explorer_picker_begin(context,"Compare finite values",*options->values ? options->values:"All declared values")) {
+            const GD_ValueDefinition *axis=&model->records[options->axis].axis; const char *value=axis->allowed;
+            if (gd_explorer_picker_item(context,"All declared values",!*options->values,1)) { *options->values=0; options->literal_values=true; }
+            for (i=0;i<axis->allowed_count;++i,value+=strlen(value)+1) if (gd_explorer_picker_item(context,value,gd_picker_contains(options->values,value),1)) {
+                if (!options->literal_values && *options->values) snprintf(pane->query_message,sizeof(pane->query_message),"Clear raw samples before using value picker; prior inputs retained.");
+                else { options->literal_values=true; gd_explorer_picker_toggle(context,options->values,sizeof(options->values),value,GD_ACTOR_VARIANTS); }
+            }
+            gd_explorer_picker_end();
         }
+        if (options->axis>=0 && (rules->axes[options->axis].type==GD_AXIS_NUMBER || rules->axes[options->axis].type==GD_AXIS_INTEGER)) {
+            const GD_ValueDefinition *axis=&model->records[options->axis].axis;
+            igTextWrapped("Sample type %s | unit %s | declared bounds %s .. %s",axis->type,axis->unit && *axis->unit ? axis->unit:"unspecified",axis->minimum ? axis->minimum:"unspecified",axis->maximum ? axis->maximum:"unspecified");
+            char value[64]; double *sample=&pane->assumption_form.sample; igInputDouble("Finite numeric sample",sample,0,0,"%.17g",0);
+            if (igButton("Add numeric sample",(ImVec2_c){0,0})) { if (!isfinite(*sample) || (rules->axes[options->axis].type==GD_AXIS_INTEGER && floor(*sample)!=*sample)) snprintf(pane->query_message,sizeof(pane->query_message),"Sample must be finite and match declared integer/number type."); else if (!options->literal_values && *options->values) snprintf(pane->query_message,sizeof(pane->query_message),"Clear raw samples before using sample builder."); else { options->literal_values=true; snprintf(value,sizeof(value),"%.17g",*sample); if (!gd_picker_contains(options->values,value)) gd_explorer_picker_toggle(context,options->values,sizeof(options->values),value,GD_ACTOR_VARIANTS); } }
+        }
+        gd_explorer_picker_lines(context,"Selected finite samples (blank: declared values)",options->values,sizeof(options->values));
+        if (igTreeNode_Str("Advanced: raw finite samples")) { igCheckbox("Exact newline literals (otherwise ; shorthand)",&options->literal_values); igInputTextMultiline("Finite values",options->values,sizeof(options->values),(ImVec2_c){0,55},0,NULL,NULL); igTreePop(); }
+        if (!options->coverage) gd_explorer_picker_assumptions(context,options->root_case,options->facts,sizeof(options->facts),options->contexts,sizeof(options->contexts),&options->literal_assumptions);
+        else if (*options->facts || *options->contexts) { igTextWrapped("Fixed assumptions are incompatible with independent coverage. Clear them explicitly before Apply."); gd_explorer_picker_lines(context,"Fixed state assumptions",options->facts,sizeof(options->facts)); gd_explorer_picker_lines(context,"Fixed context assumptions",options->contexts,sizeof(options->contexts)); }
     }
     igCheckbox(pane->view==GD_EXPLORER_ACTORS ? (options->coverage ? "Accepted root cases only":"Accepted root only (dependencies stay labelled)"):"Accepted sources at every placement ancestor",&options->accepted);
     if (igButton("Apply native query",(ImVec2_c){0,0})) gd_explorer_query_run(context);
@@ -267,10 +297,10 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
         if (query->state_coverage) coverage_summary(query);
         if (query->variants) {
             display|=igCombo_Str("Variant display",&options->ghosts,"All variants\0Primary only\0Stacked ghosts\0",-1);
-            if (query->variants->variant_count) { display|=igSliderInt("Primary variant",&options->primary,0,query->variants->variant_count-1,"%d",0); if (pane->query_state->applied.primary>=0) igTextWrapped("Current primary: %s",query->variants->variants[pane->query_state->applied.primary].value); }
+            if (query->variants->variant_count && gd_explorer_picker_begin(context,"Primary state",options->primary>=0 && options->primary<query->variants->variant_count ? query->variants->variants[options->primary].value:NULL)) { for (i=0;i<query->variants->variant_count;++i) if (gd_explorer_picker_item(context,query->variants->variants[i].value,i==options->primary,0)) { options->primary=i; display=1; } gd_explorer_picker_end(); }
             display|=igCheckbox("Show checked excluded cases",&options->include_excluded);
             igText("%d/%d retained variants | work %d | %s",query->variants->variant_count,query->variants->requested,query->variants->work,query->variants->limited ? "LIMITED":"bounded check");
-            if (query->variants->variant_count) display|=igSliderInt("Compare with (-1 off)",&options->compare,-1,query->variants->variant_count-1,"%d",0);
+            if (query->variants->variant_count && gd_explorer_picker_begin(context,"Compare state",options->compare>=0 && options->compare<query->variants->variant_count ? query->variants->variants[options->compare].value:"No comparison")) { if (gd_explorer_picker_item(context,"No comparison",options->compare<0,0)) { options->compare=-1; display=1; } for (i=0;i<query->variants->variant_count;++i) if (gd_explorer_picker_item(context,query->variants->variants[i].value,i==options->compare,0)) { options->compare=i; display=1; } gd_explorer_picker_end(); }
             if (pane->query_state->applied.compare>=0) {
                 GD_ActorComparison value; int first=pane->query_state->applied.primary,second=pane->query_state->applied.compare;
                 gd_actor_compare(query->variants,first,second,&value);
@@ -279,8 +309,8 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
             }
         } else if (query->contributors) {
             int selected=pane->query_state->selected ? pane->query_state->selected->selection.target:-1;
-            if (igBeginCombo("Result / contributor context",selected>=0 ? TextFormat("%s %s%s%s",query->effects->nodes[selected].axis>=0 ? model->records[query->effects->nodes[selected].axis].reference:"unresolved",gd_effect_kind_name(query->effects->nodes[selected].kind),query->effects->nodes[selected].value ? ": ":"",query->effects->nodes[selected].value ? query->effects->nodes[selected].value:""):"No retained result",0)) {
-                for (i=0;i<query->effects->node_count;++i) if (query->effects->nodes[i].kind!=GD_EFFECT_ACTIVATION) { const GD_EffectNode *node=&query->effects->nodes[i]; igPushID_Int(i); if (igSelectable_Bool(TextFormat("%s %s%s%s | %d direct | #%d",node->axis>=0 ? model->records[node->axis].reference:"unresolved",gd_effect_kind_name(node->kind),node->value ? ": ":"",node->value ? node->value:"",query->contributors->incoming[i],i),i==selected,0,(ImVec2_c){0,0})) gd_explorer_query_select_result(context,i); igPopID(); } igEndCombo();
+            if (gd_explorer_picker_begin(context,"Result / contributor context",selected>=0 ? TextFormat("%s %s%s%s",query->effects->nodes[selected].axis>=0 ? model->records[query->effects->nodes[selected].axis].reference:"unresolved",gd_effect_kind_name(query->effects->nodes[selected].kind),query->effects->nodes[selected].value ? ": ":"",query->effects->nodes[selected].value ? query->effects->nodes[selected].value:""):"No retained result")) {
+                for (i=0;i<query->effects->node_count;++i) if (query->effects->nodes[i].kind!=GD_EFFECT_ACTIVATION) { const GD_EffectNode *node=&query->effects->nodes[i]; igPushID_Int(i); if (gd_explorer_picker_item(context,TextFormat("%s %s%s%s | %d direct | #%d",node->axis>=0 ? model->records[node->axis].reference:"unresolved",gd_effect_kind_name(node->kind),node->value ? ": ":"",node->value ? node->value:"",query->contributors->incoming[i],i),i==selected,0)) gd_explorer_query_select_result(context,i); igPopID(); } gd_explorer_picker_end();
             }
             if (igSmallButton("Frame selected result / readable")) pane->fit=GD_EXPLORER_FIT_QUERY_READABLE;
             igTextWrapped("Initial framing keeps labels readable; pan/zoom for full context. F fits all, possibly hiding small labels. Camera never changes query scope.");
@@ -401,7 +431,16 @@ static void coverage_details(GD_ExplorerContext *context, int value_index) {
 void gd_explorer_query_details(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; int record=gd_explorer_query_record(pane),selected=pane->selection.node,i;
     if (state && state->scene && selected>=0 && selected<state->scene->layout.node_count) {
-        const GD_QuerySceneNode *item=&state->scene->nodes[selected]; igTextWrapped("%s",state->scene->layout.nodes[selected].label); if (state->query->state_coverage) igTextWrapped("Aggregate independent binding hypotheses; card is not one case applicability verdict."); else igTextWrapped("Applicability %s | %s",gd_rule_truth_name(item->applicability),item->ghost ? "ghost context, not additional declaration":"native context");
+        const GD_QuerySceneNode *item=&state->scene->nodes[selected]; igTextWrapped("%s",state->scene->layout.nodes[selected].label); if (item->kind==GD_QUERY_NODE_OBJECT) {
+            int edge,axes=0; const GD_Model *model=state->query->model;
+            igTextWrapped("Loaded object definition; %d exact local-binding occurrences. No applicability or runtime-instance claim.",item->incoming);
+            for (edge=state->query->rules->actor_first[item->source];edge>=0;edge=state->query->rules->next_axis[edge]) {
+                const GD_Edge *reference=&model->edges[edge]; ++axes;
+                if (state->query->rules->axis_resolution[edge]==GD_RULE_RESOLVED) { const GD_Record *axis=&model->records[reference->target]; igTextWrapped("%s | type %s | unit %s | %d declared values",axis->reference,axis->axis.type ? axis->axis.type:"unspecified",axis->axis.unit && *axis->axis.unit ? axis->axis.unit:"unspecified",axis->axis.allowed_count); }
+                else igTextWrapped("Unresolved declared axis: %s",reference->reference);
+            }
+            if (!axes) igTextWrapped("No retained axis references. Inspect source to distinguish unknown inventory from explicitly empty inventory.");
+        } else if (state->query->state_coverage) igTextWrapped("Aggregate independent binding hypotheses; card is not one case applicability verdict."); else igTextWrapped("Applicability %s | %s",gd_rule_truth_name(item->applicability),item->ghost ? "ghost context, not additional declaration":"native context");
         if (state->query->state_coverage) coverage_details(context,item->source);
         if (state->query->effects) {
             char id[GD_EFFECT_ID_CAPACITY]; const GD_EffectNode *node=&state->query->effects->nodes[item->source];

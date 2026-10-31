@@ -1,5 +1,7 @@
 /* Included only by -ExplorerTest. Exercise the shell's actual state helpers and
    renderers in one owned window. Does not claim real-pointer/UI acceptance. */
+#include "test_explorer_picker_view.h"
+int gd_explorer_structure_picker_checks(GD_ExplorerContext *context);
 #define EXPLORER_CHECK(expression) do { if (!(expression)) { fprintf(stderr,"Explorer check failed at line %d: %s\n",__LINE__,#expression); goto cleanup; } } while (0)
 static void explorer_test_render(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; int selected;
@@ -108,7 +110,11 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         if (query_view((GD_ExplorerView)v)) {
             GD_ExplorerPane *p=&panes[v]; GD_ExplorerQueryState *last; GD_Layout *layout; Camera2D camera; int errors=gd_explorer_model(project,(GD_ExplorerView)v)->error_count;
             if (v==GD_EXPLORER_ACTORS) {
-                int root,edge,found=0;
+                int root,edge,found=0,nouns=0;
+                for (root=0;root<project->rules->model->record_count;++root) if (project->rules->model->records[root].role==GD_NOUN) ++nouns;
+                EXPLORER_CHECK(p->query_state->query->request.kind==GD_QUERY_BINDINGS && p->layout->node_count==nouns && nouns>0 && !p->layout->edge_count);
+                EXPLORER_CHECK(gd_explorer_query_record(p)>=0 && project->rules->model->records[gd_explorer_query_record(p)].role==GD_NOUN);
+                explorer_test_render(&c); EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/actor-default-inventory.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
                 for (root=0;root<project->rules->case_count && !found;++root) {
                     const GD_RuleCase *candidate=&project->rules->cases[root]; int actor=candidate->primary_participant;
                     if (actor<0 || project->rules->participants[actor].noun_resolution!=GD_RULE_RESOLVED) continue;
@@ -149,7 +155,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             explorer_test_render(&c); EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/query-%d.png",output,v)<(int)sizeof(path) && gd_save_screenshot(path));
             continue;
         }
-        EXPLORER_CHECK(panes[v].layout->direct_routes==(v==GD_EXPLORER_SKILLS));
+        EXPLORER_CHECK(panes[v].layout->direct_routes==(v==GD_EXPLORER_SKILLS || v==GD_EXPLORER_CHALLENGES));
         panes[v].paused=true; panes[v].paths.enabled=1;
         if (panes[v].layout->node_count) gd_graph_path_start(&panes[v].paths,panes[v].layout->nodes[0].key);
         panes[v].shapes=panes[v].foundations=true; panes[v].reach.enabled=1; panes[v].overview.enabled=1;
@@ -481,6 +487,9 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     EXPLORER_CHECK(explorer_test_structure(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
     EXPLORER_CHECK(explorer_test_coverage(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
     EXPLORER_CHECK(explorer_test_native_questions(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
+    c.pane=&panes[GD_EXPLORER_MDA]; EXPLORER_CHECK(gd_explorer_structure_picker_checks(&c));
+    c.pane=&panes[GD_EXPLORER_RELATIONSHIPS]; EXPLORER_CHECK(gd_explorer_structure_picker_checks(&c));
+    c.pane=&panes[GD_EXPLORER_ACTORS]; EXPLORER_CHECK(explorer_test_picker_window(&c,output));
     for (v=0;v<GD_EXPLORER_VIEWS;++v) { c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c)); explorer_test_render(&c); }
     fprintf(stderr,"Explorer checks passed: six projections; independent switching; multi-match Find; hidden counts; reset isolation; draft preservation; qualified roots; stale-edge recovery and deferred active Undo; validated selection; stderr logging; reload rollback and restoration.\n");
     result=0;

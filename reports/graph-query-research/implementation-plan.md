@@ -350,9 +350,17 @@ Progress:
 - Existing and extended owned-window suites pass on both private examples, including all nine MDS scopes and rule/binding modes, source hashes, rollback/reload/reset and zero remaining counted allocations. Fixed guide label and stale legacy error-code assertion; no native semantic defect found during full pass.
 - Evidence, exact boundaries, rebuilt executable and ordered visual review: [validation checkpoint](validation-checkpoint.md). Manual pointer/usefulness acceptance remains open; tag human before beginning that review.
 
+### Checkpoint 6o — context-first human inspection
+
+- Human review rejected discoverability of raw exact-ID controls and blank Actors default; user authorized corrective UX plus direct Challenge routing. [Current contract and evidence](human-inspection-ux.md).
+- Actors opens with loaded noun definitions and local-binding counts, including unused/no-axis objects. Browsing preserves pending work; exact occurrence/axis drill-down is explicit. Typed state/context builders and numeric samples reuse native evaluators. No runtime actor merging or invented data.
+- Searchable dropdowns cover native structural endpoints/starts/kinds/statuses, MDS catalogue/entries/weights and Actor/Effect/rule/binding selectors. Explicit clicked-context actions fill pending fields; raw syntax stays Advanced. Canonical selector universe remains independent of applied Relationships neighborhood; native keys remain distinct from layout indices.
+- Challenges uses existing direct/rounded routing. Native branch/cycle/self-loop and both-orientation checks preserve endpoints, display bands and drawing/picking geometry. MDA/Resource geometry unchanged.
+- CJIT native 128/128 plus CLI/plain/graph checks; Node 58 passed/1 desktop-report integration skipped. Both-example owned-window suites include immediate inventory, fuzzy popup, fresh unrun selectors, noncontiguous keys, Relationships root changes, MDS/rule modes, atomic reload/reset and unchanged sources; zero counted leaks. Independent 54-check closure fixed four concrete selector/browsing defects. Human pointer/comprehension/usefulness acceptance remains open.
+
 ## Comments
 
-- User permits full rebuild and bounded automated window checks; no OS input automation. Previous CLI-only gate superseded explicitly. Human review follows automated pass.
+- Prior full rebuild/window gate completed. User subsequently prohibited further focus stealing: no more GUI launches/windowed tests in current work; remaining checks headless/compile-only. No OS input automation. Existing human app/draft stays untouched.
 - Native implementation and full automated validation delivered. Fresh offline-history reports and manual usefulness remain open. Witnesses do not establish final composed outcomes or applicability.
 - Structural test initially expected five adjacency rows while retaining four-row relation filter. Corrected test scope, not production behavior. Failed assertion leaked test arena and caused later access violation; full corrected suite passes.
 - No formal priority ranking exists among research follow-ups. Sequence follows supplied recommendation and data/kernel dependencies.

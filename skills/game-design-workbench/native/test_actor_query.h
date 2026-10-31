@@ -78,7 +78,17 @@ TEST(actor_finite_variants_and_checked_activation_evidence,
         }
         gd_query_destroy(surface);
         request.kind=GD_QUERY_BINDINGS; request.case_index=-1; request.noun=rules->participants[actor].noun_record; request.fixed=NULL;
-        surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->binding_count==6); gd_query_destroy(surface);
+        surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->binding_count==6);
+        {
+            GD_QueryScene *scene=gd_query_scene_build(surface,GD_QUERY_ALL_VARIANTS,-1,0,0,GD_EFFECT_WORK); int nouns=0,bindings=0,j;
+            TEST_ASSERT(scene && !scene->limited && !scene->layout.edge_count);
+            for (j=0;j<model->record_count;++j) if (model->records[j].role==GD_NOUN) ++nouns;
+            TEST_ASSERT(scene->layout.node_count==nouns);
+            for (j=0;j<scene->layout.node_count;++j) { TEST_ASSERT(scene->nodes[j].kind==GD_QUERY_NODE_OBJECT && gd_query_scene_record(scene,j)==scene->nodes[j].source); bindings+=scene->nodes[j].incoming; }
+            TEST_ASSERT(bindings==6); gd_query_scene_destroy(scene);
+            scene=gd_query_scene_build(surface,GD_QUERY_ALL_VARIANTS,-1,0,0,0); TEST_ASSERT(scene && scene->limited && !scene->layout.node_count && scene->unexamined_items_upper_bound==model->record_count); gd_query_scene_destroy(scene);
+        }
+        gd_query_destroy(surface);
         request.participant="B"; surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->binding_count==1 && surface->bindings[0].participant==other); gd_query_destroy(surface);
         request.work_limit=0; surface=gd_query_build(model,rules,analysis,&request); TEST_ASSERT(surface && surface->limited && !surface->binding_count && surface->unexamined_bindings==rules->participant_count); gd_query_destroy(surface);
         TEST_ASSERT(gd_query_fields(GD_QUERY_ACTOR_STATES,"variants,cases") && !gd_query_fields(GD_QUERY_ACTOR_STATES,"contributors"));

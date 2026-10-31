@@ -207,7 +207,7 @@ void gd_routes_destroy(GD_Routes *routes) {
 int gd_route_layout(const GD_Model *model, GD_Layout *layout, int horizontal, GD_LayoutSort sort) {
     int nodes[GD_MAX_RECORDS], head[GD_MAX_RECORDS], next[GD_MAX_EDGES];
     int distance[GD_MAX_RECORDS], queue[GD_MAX_RECORDS], read=0, write=0, i;
-    memset(layout,0,sizeof(*layout)); layout->horizontal=horizontal; layout->group_count=1;
+    memset(layout,0,sizeof(*layout)); layout->horizontal=horizontal; layout->group_count=1; layout->direct_routes=1;
     for (i=0;i<model->record_count;++i) { nodes[i]=head[i]=distance[i]=-1; }
     for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_CHALLENGE) {
         GD_LayoutNode *node=&layout->nodes[layout->node_count]; nodes[i]=layout->node_count++;
