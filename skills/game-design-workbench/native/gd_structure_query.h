@@ -4,7 +4,7 @@
 #define GD_STRUCTURE_SELECTORS 64
 #define GD_STRUCTURE_KINDS 64
 
-typedef enum { GD_STRUCTURE_CONNECTIONS, GD_STRUCTURE_RELATED, GD_STRUCTURE_REACHABILITY, GD_STRUCTURE_DOMINATORS, GD_STRUCTURE_BYPASS, GD_STRUCTURE_SHAPES, GD_STRUCTURE_ADJACENCY, GD_STRUCTURE_DECLARATIONS, GD_STRUCTURE_COUNT } GD_StructureKind;
+typedef enum { GD_STRUCTURE_CONNECTIONS, GD_STRUCTURE_RELATED, GD_STRUCTURE_REACHABILITY, GD_STRUCTURE_DOMINATORS, GD_STRUCTURE_BYPASS, GD_STRUCTURE_SHAPES, GD_STRUCTURE_ADJACENCY, GD_STRUCTURE_DECLARATIONS, GD_STRUCTURE_RELATED_PATHS, GD_STRUCTURE_COUNT } GD_StructureKind;
 typedef enum { GD_STRUCTURE_FORWARD, GD_STRUCTURE_BACKWARD, GD_STRUCTURE_BOTH } GD_StructureDirection;
 typedef struct {
     GD_StructureKind kind; GD_StructureDirection direction; GD_GraphLens lens;
@@ -32,5 +32,8 @@ int gd_structure_kind(const char *name);
 int gd_structure_request_valid(const GD_Layout *layout, const unsigned char *shown, const GD_StructureRequest *request);
 GD_StructureQuery *gd_structure_query_build(GD_Allocator allocator, const GD_Layout *layout,
     const unsigned char *shown, const int *roles, const GD_StructureRequest *request);
+/* Native direct-partner or mixed-kind reached-set comparison, never inferred
+   semantic equivalence. NULL when selected rows are unfinished/unavailable. */
+const GD_GraphComparison *gd_structure_comparison(const GD_StructureQuery *query);
 void gd_structure_query_destroy(GD_StructureQuery *query);
 #endif

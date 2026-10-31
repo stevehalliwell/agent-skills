@@ -27,7 +27,7 @@ static int explorer_test_structure(GD_ExplorerContext *c, GD_ExplorerPane *panes
     }
     for (i=0;i<GD_STRUCTURE_COUNT;++i) {
         GD_ExplorerStructureForm *form=&c->pane->structure_state->pending; *form=initial; form->kind=i;
-        if (i==GD_STRUCTURE_RELATED || i==GD_STRUCTURE_REACHABILITY || i==GD_STRUCTURE_DOMINATORS || i==GD_STRUCTURE_BYPASS) { snprintf(form->from,sizeof(form->from),"%s",from); snprintf(form->to,sizeof(form->to),"%s",to); }
+        if (i==GD_STRUCTURE_RELATED || i==GD_STRUCTURE_RELATED_PATHS || i==GD_STRUCTURE_REACHABILITY || i==GD_STRUCTURE_DOMINATORS || i==GD_STRUCTURE_BYPASS) { snprintf(form->from,sizeof(form->from),"%s",from); snprintf(form->to,sizeof(form->to),"%s",to); }
         if (i==GD_STRUCTURE_BYPASS) snprintf(form->avoid,sizeof(form->avoid),"%s",from);
         STRUCTURE_CHECK(gd_explorer_structure_run(c) && c->pane->structure_state->result->inventory && c->pane->structure_state->result->query->request.kind==(GD_StructureKind)i);
     }
@@ -44,7 +44,7 @@ static int explorer_test_structure(GD_ExplorerContext *c, GD_ExplorerPane *panes
     }
     for (i=0;i<GD_STRUCTURE_COUNT;++i) {
         GD_ExplorerStructureForm *form=&c->pane->structure_state->pending; *form=initial; form->kind=i;
-        if (i==GD_STRUCTURE_RELATED || i==GD_STRUCTURE_REACHABILITY || i==GD_STRUCTURE_DOMINATORS || i==GD_STRUCTURE_BYPASS) { snprintf(form->from,sizeof(form->from),"%s",from); snprintf(form->to,sizeof(form->to),"%s",to); }
+        if (i==GD_STRUCTURE_RELATED || i==GD_STRUCTURE_RELATED_PATHS || i==GD_STRUCTURE_REACHABILITY || i==GD_STRUCTURE_DOMINATORS || i==GD_STRUCTURE_BYPASS) { snprintf(form->from,sizeof(form->from),"%s",from); snprintf(form->to,sizeof(form->to),"%s",to); }
         if (i==GD_STRUCTURE_BYPASS) snprintf(form->avoid,sizeof(form->avoid),"%s",from);
         STRUCTURE_CHECK(gd_explorer_structure_run(c) && c->pane->structure_state->result->query->request.kind==(GD_StructureKind)i);
         if (i==GD_STRUCTURE_BYPASS) STRUCTURE_CHECK(!c->pane->structure_state->result->query->available);
@@ -110,7 +110,7 @@ static int explorer_test_structure(GD_ExplorerContext *c, GD_ExplorerPane *panes
         initial=state->pending;
         for (i=0;i<GD_STRUCTURE_COUNT;++i) {
             GD_ExplorerStructureForm *form=&pane->structure_state->pending; *form=initial; form->kind=i;
-            if (i==GD_STRUCTURE_RELATED || i==GD_STRUCTURE_REACHABILITY || i==GD_STRUCTURE_DOMINATORS || i==GD_STRUCTURE_BYPASS) { snprintf(form->from,sizeof(form->from),"%s",from); snprintf(form->to,sizeof(form->to),"%s",to); }
+            if (i==GD_STRUCTURE_RELATED || i==GD_STRUCTURE_RELATED_PATHS || i==GD_STRUCTURE_REACHABILITY || i==GD_STRUCTURE_DOMINATORS || i==GD_STRUCTURE_BYPASS) { snprintf(form->from,sizeof(form->from),"%s",from); snprintf(form->to,sizeof(form->to),"%s",to); }
             if (i==GD_STRUCTURE_BYPASS) snprintf(form->avoid,sizeof(form->avoid),"%s",from);
             STRUCTURE_CHECK(gd_explorer_structure_run(c) && pane->structure_state->result->query->request.kind==(GD_StructureKind)i);
             STRUCTURE_CHECK(i==GD_STRUCTURE_DECLARATIONS ? pane->structure_state->result->gaps!=NULL:pane->structure_state->result->actor_scene!=NULL);

@@ -106,7 +106,7 @@ TEST(actor_inventory_local_bindings_declarations_and_work,
             for (kind=0;kind<GD_STRUCTURE_COUNT;++kind) {
                 options.question=gd_structure_name((GD_StructureKind)kind); options.from=options.to=NULL;
                 if (kind==GD_STRUCTURE_DECLARATIONS) options.actor_query=NULL; else options.actor_query=query;
-                if (kind==GD_STRUCTURE_REACHABILITY || kind==GD_STRUCTURE_DOMINATORS || kind==GD_STRUCTURE_BYPASS) options.from=start;
+                if (kind==GD_STRUCTURE_REACHABILITY || kind==GD_STRUCTURE_DOMINATORS || kind==GD_STRUCTURE_BYPASS || kind==GD_STRUCTURE_RELATED_PATHS) options.from=start;
                 if (kind==GD_STRUCTURE_BYPASS) options.to=start;
                 result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(result && result->view==GD_EXPLORER_ACTORS && !model->error_count);
                 if (kind!=GD_STRUCTURE_DECLARATIONS) {
@@ -117,7 +117,7 @@ TEST(actor_inventory_local_bindings_declarations_and_work,
                 } else TEST_ASSERT(result->gaps && !result->actor_scene);
                 gd_structure_result_destroy(result); TEST_ASSERT(!memory.outstanding);
             }
-            options.question="adjacency"; options.actor_query=query;
+            options.question="adjacency"; options.actor_query=query; options.from=options.to=NULL;
             for (i=0;i<4;++i) { memory.remaining=i; result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(!result && !memory.outstanding && model->error_count==1 && !strcmp(model->errors[0].code,"query.memory")); model->error_count=0; }
             memory.remaining=-1; options.actor_query=NULL; result=gd_structure_result_build(model,&project,&options); TEST_ASSERT(!result && model->error_count==1 && !strcmp(model->errors[0].code,"query.actor_scope")); model->error_count=0;
         }

@@ -172,6 +172,17 @@ GD_RuleAnalysis *gd_analyze_rules(GD_Model *model, const GD_Rules *rules) {
     if (analysis->compile_limited) gd_error(model,"rules.invocation_limit","Invocation work/call/binding limit exceeded; remaining expansion unavailable",NULL,0);
     return analysis;
 }
+GD_RuleAnalysis *gd_rule_analysis_workspace(GD_Allocator allocator,const GD_RuleAnalysis *compiled) {
+    GD_RuleAnalysis *result;
+    if (!compiled || !compiled->model || !compiled->rules || !allocator.allocate || !allocator.release || compiled->call_count<0 || compiled->call_count>GD_MAX_RULE_CALLS || compiled->binding_count<0 || compiled->binding_count>GD_MAX_RULE_BINDINGS) return NULL;
+    result=allocator.allocate(allocator.context,sizeof(*result)); if (!result) return NULL;
+    memset(result,0,sizeof(*result)); result->allocator=allocator; result->model=compiled->model; result->rules=compiled->rules; result->requested_case=-1;
+    result->call_count=compiled->call_count; result->binding_count=compiled->binding_count; result->compile_work=compiled->compile_work; result->compile_limited=compiled->compile_limited;
+    memcpy(result->calls,compiled->calls,(size_t)compiled->call_count*sizeof(*result->calls)); memcpy(result->bindings,compiled->bindings,(size_t)compiled->binding_count*sizeof(*result->bindings));
+    memcpy(result->call_first,compiled->call_first,sizeof(result->call_first)); memcpy(result->calls_complete,compiled->calls_complete,sizeof(result->calls_complete));
+    memcpy(result->verb_first,compiled->verb_first,sizeof(result->verb_first)); memcpy(result->verb_next,compiled->verb_next,sizeof(result->verb_next));
+    return result;
+}
 void gd_rule_analysis_destroy(GD_RuleAnalysis *analysis) {
     if (analysis) analysis->allocator.release(analysis->allocator.context,analysis);
 }

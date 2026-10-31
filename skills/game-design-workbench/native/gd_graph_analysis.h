@@ -149,7 +149,7 @@ const GD_GraphShapes *gd_graph_model_shapes(const GD_Model *model, GD_GraphAnaly
 typedef struct { int enabled, relation, reverse, peer, target; } GD_ReachControls;
 /* Separate caller-owned registered cache for ordinary typed reachability.
    Same kernel as foundations, without AND/knowledge interpretation. */
-const GD_GraphClosure *gd_graph_closure_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure,
+const GD_GraphClosure *gd_graph_closure_into(const GD_GraphAnalysis *analysis, GD_GraphClosure *closure,
     const unsigned char *eligible, const unsigned char *boundary, int relation, int reverse, int undirected, int work_limit);
 const GD_GraphComparison *gd_graph_closure_compare_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, int a, int b);
 const GD_GraphComparison *gd_graph_closure_choose_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, int a, int *peer);

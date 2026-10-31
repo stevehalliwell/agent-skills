@@ -1,5 +1,6 @@
 #include "gd_query.h"
 #include "gd_structure_cli.h"
+#include "gd_named_query.h"
 #include <math.h>
 #include <string.h>
 
@@ -164,7 +165,7 @@ static void contributor(FILE *out, const GD_Query *query, int row) {
 int gd_write_query_catalogue(FILE *out, int json) {
     int i;
     static const char *const parameters[]={"--object, --case, --participant, --axis, --status", "--case and --axis required; --participant (default authored A), --object, --value (repeatable), --assume, --context, --context-not, --status", "--to opaque result ID OR --axis/--value/--effect; --object, --case (root placement), --status", "--axis required; --object, --case, --participant (requires --case), --value (repeatable; required for numeric axis), --status"};
-    if (!json) { for (i=0;i<GD_QUERY_COUNT;++i) fprintf(out,"%s [%s]: %s\n",gd_query_name((GD_QueryKind)i),gd_query_projection((GD_QueryKind)i),parameters[i]); return gd_write_structure_catalogue(out,0,0); }
+    if (!json) { for (i=0;i<GD_QUERY_COUNT;++i) fprintf(out,"%s [%s]: %s\n",gd_query_name((GD_QueryKind)i),gd_query_projection((GD_QueryKind)i),parameters[i]); return gd_write_named_catalogue(out,0,0) && gd_write_structure_catalogue(out,0,0); }
     fputs("{\"schema_version\":1,\"ok\":true,\"data\":{\"questions\":[",out);
     for (i=0;i<GD_QUERY_COUNT;++i) {
         if (i) fputc(',',out); fputs("{\"name\":",out); gd_json_string(out,gd_query_name((GD_QueryKind)i)); member(out,"projection",gd_query_projection((GD_QueryKind)i)); member(out,"parameters",parameters[i]);
@@ -175,16 +176,18 @@ int gd_write_query_catalogue(FILE *out, int json) {
         fputs("],\"repeatable_parameters\":[\"--status\"",out); if (i==GD_QUERY_ACTOR_STATES) fputs(",\"--value\",\"--assume\",\"--context\",\"--context-not\"",out); else if (i==GD_QUERY_STATE_COVERAGE) fputs(",\"--value\"",out);
         fputs("],\"fields\":[\"cases\",\"findings\"",out);
         fputs(i==GD_QUERY_BINDINGS ? ",\"bindings\"":i==GD_QUERY_ACTOR_STATES ? ",\"variants\",\"comparisons\"":i==GD_QUERY_STATE_COVERAGE ? ",\"axis_definition\",\"state_values\",\"state_bindings\"": ",\"concepts\",\"contributors\"",out);
-        fprintf(out,"],\"ui_available\":%s",i==GD_QUERY_BINDINGS ? "false":"true");
-        member(out,"ui_mode",i==GD_QUERY_BINDINGS ? NULL:i==GD_QUERY_ACTOR_STATES || i==GD_QUERY_STATE_COVERAGE ? "actors":"effects");
-        member(out,"ui_scope",i==GD_QUERY_STATE_COVERAGE ? "Actors finite state coverage mode: typed axis/finite values; optional object/case/local binding; all or accepted root cases; aggregate value cards and exact independent-binding inspection":i==GD_QUERY_BINDINGS ? "CLI inventory; viewer source/binding pickers are not full inventory results":i==GD_QUERY_ACTOR_STATES ? "explicit root/local participant/axis/finite values/fixed facts/context; all or accepted root; selected pair and ghosts":"result picker; exact contributors/ancestors/side effects; all or accepted placement ancestors; direct-count weighting");
-        fputs(",\"ui_unavailable_parameters\":[\"arbitrary --status list\",\"--work-limit\"",out);
-        if (i!=GD_QUERY_STATE_COVERAGE) fputs(",\"--object\"",out);
+        fputs("],\"ui_available\":true",out);
+        member(out,"ui_mode",i==GD_QUERY_BINDINGS ? "resources":i==GD_QUERY_ACTOR_STATES || i==GD_QUERY_STATE_COVERAGE ? "actors":"effects");
+        member(out,"ui_scope",i==GD_QUERY_STATE_COVERAGE ? "Actors finite state coverage mode: typed axis/finite values; optional object/case/local binding; all or accepted root cases; aggregate value cards and exact independent-binding inspection":i==GD_QUERY_BINDINGS ? "Resources > Object bindings / rule checks > Object bindings: exact object/case/local/axis/status/work filters; native binding rows, typed axes and full source; purple canonical case provenance outlines, not applicability":i==GD_QUERY_ACTOR_STATES ? "explicit root/local participant/axis/finite values/fixed facts/context; all or accepted root; selected pair and ghosts":"result picker; exact contributors/ancestors/side effects; all or accepted placement ancestors; direct-count weighting");
+        fputs(",\"ui_unavailable_parameters\":[",out);
+        if (i!=GD_QUERY_BINDINGS) fputs("\"arbitrary --status list\",\"--work-limit\"",out);
+        if (i!=GD_QUERY_STATE_COVERAGE && i!=GD_QUERY_BINDINGS) fputs(",\"--object\"",out);
         if (i==GD_QUERY_CONTRIBUTORS) fputs(",\"--case placement filter\",\"--axis/--value/--effect filters (choose result instead)\"",out);
         if (i==GD_QUERY_STATE_COVERAGE) fputs(",\"explicit values beyond 8192 combined input bytes\",\"explicit value literals containing semicolon or newline separators\"",out);
         fprintf(out,"],\"ipc_available\":false,\"work_limit_max\":%d}",GD_EFFECT_WORK);
     }
-    gd_write_structure_catalogue(out,1,GD_QUERY_COUNT);
+    gd_write_named_catalogue(out,1,GD_QUERY_COUNT);
+    gd_write_structure_catalogue(out,1,GD_QUERY_COUNT+GD_NAMED_COUNT);
     fputs("]},\"coverage\":{\"scope\":\"implemented_builtin_catalogue_only\",\"complete\":true,\"source_data_loaded\":false},\"errors\":[],\"breadcrumbs\":[\"gd query --question NAME --projection NAME with explicit collection bindings; query --list advertises only implemented operations\"]}\n",out); return !ferror(out);
 }
 int gd_write_query(FILE *out, const GD_Model *model, const GD_Query *query, int json, const char *fields) {

@@ -1,7 +1,7 @@
 #include "gd_structure_query.h"
 #include <string.h>
 
-static const char *const names[]={"direct-connections","related-structure","reachability","structural-dominators","support-bypass","role-shapes","adjacency","declaration-gaps"};
+static const char *const names[]={"direct-connections","related-structure","reachability","structural-dominators","support-bypass","role-shapes","adjacency","declaration-gaps","related-paths"};
 const char *gd_structure_name(GD_StructureKind kind) { return kind>=0 && kind<GD_STRUCTURE_COUNT ? names[kind]:NULL; }
 int gd_structure_kind(const char *name) { int i; if (name) for (i=0;i<GD_STRUCTURE_COUNT;++i) if (!strcmp(name,names[i])) return i; return -1; }
 static int relation_selected(const GD_StructureRequest *request, int relation) {
@@ -15,10 +15,12 @@ int gd_structure_request_valid(const GD_Layout *layout, const unsigned char *sho
     int i;
     if (!layout || !request || layout->node_count<0 || layout->node_count>GD_MAX_RECORDS || layout->edge_count<0 || layout->edge_count>GD_MAX_PAIRS || request->kind<0 || request->kind>=GD_STRUCTURE_COUNT || request->direction<GD_STRUCTURE_FORWARD || request->direction>GD_STRUCTURE_BOTH || request->lens<GD_GRAPH_ANY || request->lens>=GD_GRAPH_LENS_COUNT || request->source<-1 || request->target<-1 || request->avoid<-1 || request->root_count<0 || request->root_count>GD_STRUCTURE_SELECTORS || request->relation_count<0 || request->relation_count>GD_STRUCTURE_KINDS || request->work_limit<0 || request->work_limit>GD_GRAPH_ANALYSIS_WORK) return 0;
     if (request->kind==GD_STRUCTURE_DECLARATIONS && (request->source>=0 || request->relation_count || request->include_inactive)) return 0;
-    if (!path_question(request->kind) && (request->direction!=GD_STRUCTURE_FORWARD || request->root_count)) return 0;
+    if (!path_question(request->kind) && request->root_count) return 0;
+    if (!path_question(request->kind) && request->kind!=GD_STRUCTURE_RELATED_PATHS && request->direction!=GD_STRUCTURE_FORWARD) return 0;
+    if (request->kind==GD_STRUCTURE_RELATED_PATHS && (request->source<0 || request->source==request->target)) return 0;
     if (request->kind!=GD_STRUCTURE_RELATED && request->lens!=GD_GRAPH_ANY) return 0;
     if (request->kind!=GD_STRUCTURE_BYPASS && request->avoid>=0) return 0;
-    if (!path_question(request->kind) && request->kind!=GD_STRUCTURE_RELATED && request->target>=0) return 0;
+    if (!path_question(request->kind) && request->kind!=GD_STRUCTURE_RELATED && request->kind!=GD_STRUCTURE_RELATED_PATHS && request->target>=0) return 0;
     if ((request->kind==GD_STRUCTURE_SHAPES || request->kind==GD_STRUCTURE_ADJACENCY) && request->source>=0) return 0;
     if ((request->source>=0 && !selected(layout,shown,request->source)) || (request->target>=0 && !selected(layout,shown,request->target)) || (request->avoid>=0 && !selected(layout,shown,request->avoid))) return 0;
     for (i=0;i<request->root_count;++i) if (!selected(layout,shown,request->roots[i])) return 0;
@@ -68,6 +70,14 @@ GD_StructureQuery *gd_structure_query_build(GD_Allocator allocator, const GD_Lay
     if (request->kind==GD_STRUCTURE_RELATED) {
         if (discovery) { query->complete=query->analysis.complete; query->work=query->analysis.work; }
         else { const GD_GraphComparison *comparison=gd_graph_compare(&query->analysis,request->source,request->target); if (comparison) { memcpy(query->marked_nodes,comparison->nodes,sizeof(query->marked_nodes)); memcpy(query->marked_edges,comparison->edges,sizeof(query->marked_edges)); } else query->available=0; }
+    } else if (request->kind==GD_STRUCTURE_RELATED_PATHS) {
+        const GD_GraphClosure *closure=gd_graph_closure_into(&query->analysis,&query->analysis.reachability,NULL,NULL,-1,0,query->undirected,request->work_limit);
+        const GD_GraphComparison *comparison=gd_graph_closure_compare_into(&query->analysis,&query->analysis.reachability,request->source,request->target);
+        query->complete=closure->complete; query->work=closure->work; query->available=comparison!=NULL;
+        /* Native selected-root comparisons have fixed bounded selection scans,
+           separate from transitive closure's charged search budget. */
+        query->selection_rows=query->analysis.node_count*((query->analysis.node_count+63)/64+4)+6*query->analysis.edge_count;
+        if (comparison) { memcpy(query->marked_nodes,comparison->nodes,sizeof(query->marked_nodes)); memcpy(query->marked_edges,comparison->edges,sizeof(query->marked_edges)); }
     } else if (request->kind==GD_STRUCTURE_REACHABILITY) {
         const GD_GraphClosure *closure=gd_graph_closure_into(&query->analysis,&query->analysis.reachability,NULL,NULL,-1,0,query->undirected,request->work_limit);
         query->complete=closure->complete; query->work=closure->work;
@@ -94,5 +104,13 @@ GD_StructureQuery *gd_structure_query_build(GD_Allocator allocator, const GD_Lay
     }
     if (!query->available) query->complete=0;
     return query;
+}
+const GD_GraphComparison *gd_structure_comparison(const GD_StructureQuery *query) {
+    const GD_GraphComparison *comparison;
+    if (!query) return NULL;
+    if (query->request.kind==GD_STRUCTURE_RELATED_PATHS) comparison=&query->analysis.reachability.comparison;
+    else if (query->request.kind==GD_STRUCTURE_RELATED) comparison=&query->analysis.comparison;
+    else return NULL;
+    return comparison->valid ? comparison:NULL;
 }
 void gd_structure_query_destroy(GD_StructureQuery *query) { if (query) query->allocator.release(query->allocator.context,query); }

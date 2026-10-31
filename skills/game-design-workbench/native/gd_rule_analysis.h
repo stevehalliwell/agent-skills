@@ -105,6 +105,10 @@ typedef struct {
 /* Compile explicit invocation mappings; borrowed model/rule snapshots remain immutable.
    Allocator owns analysis only. Caller destroys analysis before borrowed snapshots. */
 GD_RuleAnalysis *gd_analyze_rules(GD_Model *model, const GD_Rules *rules);
+/* Private mutable evaluation/comparison slots with same compiled context.
+   Copies compiled tables only; borrows immutable model/rules/strings. No source
+   diagnostics, compilation or result-slot aliases. Destroy before snapshots. */
+GD_RuleAnalysis *gd_rule_analysis_workspace(GD_Allocator allocator,const GD_RuleAnalysis *compiled);
 void gd_rule_analysis_destroy(GD_RuleAnalysis *analysis);
 /* One compiled call's unique immediate participant substitution; -1 if absent. */
 int gd_rule_call_participant(const GD_RuleAnalysis *analysis, int call, int participant);

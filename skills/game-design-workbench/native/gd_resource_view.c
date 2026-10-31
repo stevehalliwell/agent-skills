@@ -528,6 +528,17 @@ void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvi
     }
     draw_resource_graph(context->project->resources,p->layout,context->analysis,p->camera,context->viewport,p->selection.node,
                         p->shared,pair,comparison,e->paths,e->bypass,e->reachability,e->reach_pair,e->shapes,e->overview);
+    /* Separate provenance overlay: canonical declarations only, never a claim
+       that each mapped placement applies to the independent rule scenario. */
+    if (p->rule_state && (p->rule_state->result || p->rule_state->bindings)) {
+        int i; BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); BeginMode2D(p->camera);
+        for (i=0;i<p->layout->node_count;++i) {
+            const GD_LayoutNode *node=&p->layout->nodes[i]; const GD_ResourceNode *source=&context->project->resources->nodes[node->key];
+            if (context->analysis->shown[i] && source->kind==GD_RESOURCE_CASE && !source->instance && gd_explorer_rules_marked(context,source->case_index))
+                DrawRectangleLinesEx((Rectangle){node->x-97,node->y-31,194,62},3/p->camera.zoom,(Color){198,133,245,255});
+        }
+        EndMode2D(); EndScissorMode();
+    }
 }
 void gd_explorer_resource_source(GD_ExplorerContext *context, int edge) {
     const GD_ResourceGraph *graph=context->project->resources;
@@ -542,8 +553,8 @@ int gd_explorer_resource_run(GD_ExplorerContext *context) {
     if (p->resource_to<0) { snprintf(p->resource_message,sizeof(p->resource_message),"Select a concrete target node first."); return 0; }
     next=gd_resource_routes_create(context->project->allocator);
     if (!next) { snprintf(p->resource_message,sizeof(p->resource_message),"Cannot allocate bounded route scratch; previous result retained."); return 0; }
-    if (!gd_resource_query(next,context->project->resources,p->resource_from,p->resource_to,p->resource_accepted,GD_RESOURCE_ROUTE_WORK)) {
-        gd_resource_routes_destroy(next); snprintf(p->resource_message,sizeof(p->resource_message),"Invalid endpoints; previous result retained."); return 0;
+    if (!gd_resource_query(next,context->project->resources,p->resource_from,p->resource_to,p->resource_accepted,p->resource_work_limit)) {
+        gd_resource_routes_destroy(next); snprintf(p->resource_message,sizeof(p->resource_message),"Invalid endpoints or work ceiling; previous result retained."); return 0;
     }
     gd_resource_routes_destroy(p->resource_routes); p->resource_routes=next; p->resource_witness=next->witness_count ? 0:-1; *p->resource_message=0; return 1;
 }
@@ -560,6 +571,8 @@ void gd_explorer_resource_controls(GD_ExplorerContext *context) {
     igEndDisabled();
     if (igButton("Any upstream (clear FROM)",(ImVec2_c){0,0})) { p->resource_from=-1; changed=1; }
     if (igCheckbox("Accepted sources only",&p->resource_accepted)) changed=1;
+    igInputInt("Route work ceiling 0..16777216",&p->resource_work_limit,0,0,0);
+    if (p->resource_routes && p->resource_routes->work_limit!=p->resource_work_limit) igTextWrapped("Pending work ceiling differs; retained witnesses use their displayed applied ceiling until a successful run.");
     if (changed) { gd_resource_routes_destroy(p->resource_routes); p->resource_routes=NULL; p->resource_witness=-1; snprintf(p->resource_message,sizeof(p->resource_message),"Query changed; run to refresh witness."); }
     if (igButton("Run conditional witnesses",(ImVec2_c){0,0})) gd_explorer_resource_run(context);
     if (*p->resource_message) igTextWrapped("%s",p->resource_message);

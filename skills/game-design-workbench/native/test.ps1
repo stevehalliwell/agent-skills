@@ -10,6 +10,14 @@ $root = $PSScriptRoot
 $fixtures = Join-Path $root ('build/checks-' + [guid]::NewGuid().ToString('N'))
 & (Join-Path $root 'build/test-core.exe') $fixtures
 if ($LASTEXITCODE -ne 0) { throw 'Native domain checks failed' }
+$similarity = Get-Content -LiteralPath (Join-Path $fixtures 'similarity-map.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $similarity.ok -or -not $similarity.coverage.available -or $similarity.data.points.Count -ne 2 -or $similarity.data.features[0].id -ne 'reached-outgoing:all-selected-kinds' -or $similarity.data.evidence.pair.distance -ne 0.5 -or $similarity.data.evidence.pair.components[0].unweighted_distance -ne 0.5 -or $similarity.data.PSObject.Properties.Name -contains 'inputs' -or $similarity.data.PSObject.Properties.Name -contains 'source_context') { throw 'Native similarity serializer/default fields failed' }
+$similarityInputs = Get-Content -LiteralPath (Join-Path $fixtures 'similarity-inputs.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $similarityInputs.ok -or $similarityInputs.data.inputs.rows.Count -ne 2 -or $similarityInputs.data.inputs.rows[0][0].Count -ne 3 -or $similarityInputs.data.source_context.data.question -ne 'related-paths' -or $similarityInputs.data.PSObject.Properties.Name -contains 'points') { throw 'Native similarity exact input/context fields failed' }
+$similarityFeatures = Get-Content -LiteralPath (Join-Path $fixtures 'similarity-features.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $similarityFeatures.coverage.catalogue_complete -or $similarityFeatures.coverage.fit_performed -or @($similarityFeatures.data.features | Where-Object id -eq 'reached-outgoing:all-selected-kinds').Count -ne 1) { throw 'Native similarity capability catalogue failed' }
+$similarityLimited = Get-Content -LiteralPath (Join-Path $fixtures 'similarity-limited.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $similarityLimited.ok -or -not $similarityLimited.coverage.limited -or $similarityLimited.coverage.available -or $similarityLimited.coverage.feature_table_complete -or $null -ne $similarityLimited.data.points -or $null -ne $similarityLimited.data.features[0]) { throw 'Native similarity partial output invented feature/point facts' }
 $draftReport = Get-Content -LiteralPath (Join-Path $fixtures 'draft-changes.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $change = $draftReport.data.changes[0]
 if (-not $draftReport.ok -or $draftReport.data.applied -or $draftReport.data.changes.Count -ne 1 -or $change.reference -ne 'atoms/root' -or $change.fields.rank.loaded -ne 1 -or $change.fields.rank.current_disk -ne 9 -or $change.fields.rank.edited -ne 4 -or -not $change.current_disk_available -or -not $draftReport.coverage.disk_changed_since_load) { throw 'Draft three-way rank handoff failed' }
@@ -26,10 +34,85 @@ $gapFixture = Join-Path $fixtures 'declaration-gaps'
 $gaps = (& $executable query --question declaration-gaps --projection relationships --skill-atoms "things=$gapFixture/things" --related "actions=$gapFixture/actions" --fields findings --json | ConvertFrom-Json)
 if ($LASTEXITCODE -ne 0 -or -not $gaps.ok -or $gaps.data.declaration_gap_inventory.rows -ne 4 -or $gaps.data.declaration_gap_inventory.missing -ne 1 -or $gaps.data.declaration_gap_inventory.unloaded -ne 1 -or $gaps.data.declaration_gap_inventory.missing_metadata_checked -or -not $gaps.coverage.query_complete -or -not $gaps.coverage.source_incomplete) { throw 'Native declaration gap CLI contract failed' }
 $catalogue = (& $executable query --list --json | ConvertFrom-Json)
+$bindingCatalogue = @($catalogue.data.questions | Where-Object name -eq 'object-bindings')[0]
+if (-not $bindingCatalogue.ui_available -or $bindingCatalogue.ui_mode -ne 'resources' -or $bindingCatalogue.ui_unavailable_parameters.Count -ne 0) { throw 'Object binding catalogue does not match complete native reader controls' }
+foreach ($name in @('conditional-outcomes','conditional-consistency','skill-unlocks','resource-declarations','resource-routes')) {
+    $entry = @($catalogue.data.questions | Where-Object name -eq $name)
+    if ($entry.Count -ne 1 -or -not $entry[0].ui_available -or $entry[0].ipc_available -or -not $entry[0].ui_validation) { throw "Named delegate catalogue missing scope/validation boundary: $name" }
+}
 foreach ($question in @($catalogue.data.questions | Where-Object { $_.projections -contains 'actor-inventory' })) {
     if (($question.required_bindings_by_projection.'actor-inventory'.all_of -join ',') -ne 'nouns,axes') { throw 'Actor inventory catalogue omitted required typed bindings' }
     if ($question.name -ne 'declaration-gaps' -and $question.parameters_by_projection.actors -notcontains '--context-not (repeat)') { throw 'Actor catalogue advertises wrong negative-context flag' }
 }
+$namedRules = Join-Path $fixtures 'named-rules'
+$namedRuleInputs = @('--nouns', "things=$namedRules/things", '--axes', "actions=$namedRules/actions", '--mechanics', "cases=$namedRules/cases")
+$namedAssumptions = @('--case', 'cases/rules#caller', '--assume', 'Left:actions/Life=alive')
+$legacyOutcome = (& $executable rules @namedRuleInputs @namedAssumptions --json | ConvertFrom-Json)
+$namedOutcome = (& $executable query --question conditional-outcomes --projection rules @namedRuleInputs @namedAssumptions --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedOutcome.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyOutcome.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedOutcome.data.native_result.data)) { throw 'Named conditional outcome diverged from native rules report' }
+$legacyConsistency = (& $executable rules @namedRuleInputs --analyze --json | ConvertFrom-Json)
+$namedConsistency = (& $executable query --question conditional-consistency --projection rules @namedRuleInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedConsistency.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyConsistency.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedConsistency.data.native_result.data)) { throw 'Named consistency diverged from native comparison report' }
+$namedSkillsFolder = Join-Path $fixtures 'named-skills/things'
+$namedSkillInputs = @('--skill-atoms', "things=$namedSkillsFolder", '--from', 'things/root', '--known', 'things/pre')
+$legacyKnowledge = (& $executable skill-atoms @namedSkillInputs --json | ConvertFrom-Json)
+$namedKnowledge = (& $executable query --question skill-unlocks --projection skills @namedSkillInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedKnowledge.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyKnowledge.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedKnowledge.data.native_result.data)) { throw 'Named explicit skill knowledge diverged from native knowledge report' }
+$legacyResources = (& $executable resources @namedRuleInputs --json | ConvertFrom-Json)
+$namedResources = (& $executable query --question resource-declarations --projection resources @namedRuleInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedResources.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyResources.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedResources.data.native_result.data)) { throw 'Named Resource declarations diverged from native report' }
+$resourceTarget = $namedResources.data.native_result.data.nodes[0].id
+$legacyRoutes = (& $executable resources @namedRuleInputs --to $resourceTarget --json | ConvertFrom-Json)
+$namedRoutes = (& $executable query --question resource-routes --projection resources @namedRuleInputs --to $resourceTarget --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedRoutes.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyRoutes.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedRoutes.data.native_result.data)) { throw 'Named conditional routes diverged from native report' }
+function Assert-NamedText {
+    param([string]$Question, [string]$Projection, [string[]]$Flags)
+    $lines = @(& $executable query --question $Question --projection $Projection @Flags --format text)
+    if ($LASTEXITCODE -ne 0 -or -not $lines.Count -or $lines[0] -notlike "$Question *" -or @($lines | Where-Object { $_ -like '{"schema_version"*' }).Count) { throw "Named delegate text output emitted JSON or failed: $Question" }
+}
+Assert-NamedText conditional-outcomes rules ($namedRuleInputs + $namedAssumptions)
+Assert-NamedText conditional-consistency rules $namedRuleInputs
+Assert-NamedText skill-unlocks skills $namedSkillInputs
+Assert-NamedText resource-declarations resources $namedRuleInputs
+Assert-NamedText resource-routes resources ($namedRuleInputs + @('--to', $resourceTarget))
+$namedPruned = (& $executable query --question conditional-outcomes --projection rules @namedRuleInputs @namedAssumptions --fields analysis --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or @($namedPruned.data.native_result.data.PSObject.Properties).Count -ne 1 -or -not $namedPruned.data.native_result.data.analysis) { throw 'Named delegate native field pruning failed' }
+foreach ($bad in @(@('--question','conditional-consistency','--projection','rules','--work-limit','0'), @('--question','conditional-outcomes','--projection','rules'), @('--question','conditional-outcomes','--projection','rules','--case','cases/rules#caller','--status','accepted'), @('--question','resource-declarations','--projection','resources','--accepted-only'), @('--question','resource-routes','--projection','resources'), @('--question','conditional-consistency','--projection','skills'))) {
+    $badNamed = (& $executable query @namedRuleInputs @bad --json 2>$null | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 2 -or $badNamed.ok -or -not $badNamed.errors.Count) { throw 'Named delegate silently accepted unsupported selector/projection/filter/work override' }
+}
+$joinFixture = Join-Path $fixtures 'related-paths'
+$joinInputs = @('--skill-atoms', "atoms=$joinFixture/things", '--challenges', "challenges=$joinFixture/actions", '--related', "context=$joinFixture/cases")
+$similarityCatalogue = (& $executable query --question similarity-features --projection relationships @joinInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similarityCatalogue.ok -or -not $similarityCatalogue.coverage.catalogue_complete -or @($similarityCatalogue.data.features | Where-Object id -eq 'reached-outgoing:all-selected-kinds').Count -ne 1) { throw 'Similarity feature discovery CLI failed' }
+$similarityFlags = @('--feature', 'reached-outgoing:all-selected-kinds=2', '--entry', 'challenges/first', '--entry', 'challenges/second', '--from', 'challenges/first', '--to', 'challenges/second')
+$similarityMap = (& $executable query --question similarity-map --projection relationships @joinInputs @similarityFlags --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similarityMap.ok -or -not $similarityMap.coverage.available -or $similarityMap.data.points.Count -ne 2 -or $similarityMap.data.features[0].weight -ne 2 -or $similarityMap.data.evidence.pair.distance -ne 0.5 -or $similarityMap.data.scope.relation_kinds -contains 'next' -or $similarityMap.data.scope.entry_selection_erases_context) { throw 'Similarity CLI selection/weight/pair/default continuation contract failed' }
+$similaritySelf = (& $executable query --question similarity-map --projection relationships @joinInputs --feature 'reached-outgoing:all-selected-kinds=2' --entry challenges/first --entry challenges/second --from challenges/first --to challenges/first --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similaritySelf.coverage.available -or $similaritySelf.data.evidence.pair.distance -ne 0 -or (ConvertTo-Json -Compress -Depth 10 $similaritySelf.data.points) -ne (ConvertTo-Json -Compress -Depth 10 $similarityMap.data.points)) { throw 'Similarity CLI self-pair rejected or changed fitted geometry' }
+$similaritySource = (& $executable query --question similarity-map --projection relationships @joinInputs @similarityFlags --fields source --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or $null -ne $similaritySource.data.source_context.data.selectors.from -or $null -ne $similaritySource.data.source_context.data.selectors.to -or $similaritySource.data.source_context.data.scope.source -ne -1 -or $similaritySource.data.source_context.data.scope.target -ne -1) { throw 'Similarity inspection leaked into canonical context selectors' }
+$similarityAll = (& $executable query --question similarity-map --projection relationships @joinInputs @similarityFlags --relation all --fields evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or [Math]::Abs($similarityAll.data.evidence.pair.distance - (2.0/3.0)) -gt 1e-12 -or $similarityAll.data.PSObject.Properties.Name -contains 'points') { throw 'Similarity CLI explicit continuation/field pruning failed' }
+$similarityZero = (& $executable query --question similarity-map --projection relationships @joinInputs @similarityFlags --work-limit 0 --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similarityZero.ok -or -not $similarityZero.coverage.limited -or $similarityZero.coverage.available -or $null -ne $similarityZero.data.points -or $null -ne $similarityZero.data.evidence.pair) { throw 'Similarity CLI unfinished fit invented points/pair evidence' }
+$similarityMissing = (& $executable query --question similarity-map --projection relationships @joinInputs --feature source-status=0 --feature retained-partners --entry challenges/first --entry challenges/second --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similarityMissing.ok -or $similarityMissing.coverage.complete_entries -ne 0 -or $similarityMissing.coverage.missing_entries -ne 2 -or @($similarityMissing.data.points | Where-Object placed).Count -ne 0 -or $similarityMissing.data.points[0].missing_features[0].reason -ne 'absent authored field') { throw 'Similarity CLI zero-weight missing cell was imputed' }
+foreach ($bad in @(@('--feature','unsupported-feature'), @('--feature','retained-partners=0'), @('--feature','retained-partners','--entry','missing/native'), @('--feature','retained-partners','--direction','backward'), @('--feature','retained-partners','--from','challenges/first'), @('--feature','retained-partners','--from','challenges/first','--to','challenges/second','--status','accepted','--work-limit','0'))) {
+    $badSimilarity = (& $executable query --question similarity-map --projection relationships @joinInputs @bad --json 2>$null | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 2 -or $badSimilarity.ok -or -not $badSimilarity.errors.Count) { throw 'Similarity CLI accepted unavailable feature/entry/weight/direction/pair' }
+}
+$joined = (& $executable query --question related-paths --projection relationships @joinInputs --from challenges/first --to challenges/second --fields nodes,links,evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $joined.ok -or -not $joined.coverage.query_complete -or $joined.data.evidence.related_paths.comparison.shared -ne 2 -or $joined.data.evidence.related_paths.comparison.first_only -ne 1 -or $joined.data.evidence.related_paths.comparison.second_only -ne 1 -or $joined.data.scope.relation_kinds -contains 'next') { throw 'Mixed-kind reached-set CLI comparison or continuation boundary failed' }
+$mechanic = @($joined.data.nodes | Where-Object id -eq 'context/rule')[0]
+$joinWitness = @($joined.data.evidence.related_paths.witnesses | Where-Object member -eq $mechanic.index)[0]
+if ($joinWitness.sides[0].length -ne 3 -or $joinWitness.sides[1].length -ne 3 -or $joinWitness.sides[0].suffix.Count -ne 3 -or $joined.data.links[$joinWitness.sides[0].suffix[0].link].kind -ne 'mechanics' -or $joined.data.links[$joinWitness.sides[0].suffix[1].link].kind -ne 'prerequisites' -or $joined.data.links[$joinWitness.sides[0].suffix[2].link].kind -ne 'requires') { throw 'Mixed-kind witness lost typed ancestry or original link provenance' }
+$joinPartial = (& $executable query --question related-paths --projection relationships @joinInputs --from challenges/first --work-limit 0 --fields evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $joinPartial.ok -or $joinPartial.coverage.available -or $joinPartial.coverage.query_complete -or $joinPartial.data.evidence.related_paths.available) { throw 'Unfinished reached sets became checked absence' }
+$joinNoSource = (& $executable query --question related-paths --projection relationships @joinInputs --json 2>$null | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $joinNoSource.ok) { throw 'Related paths invented implicit source' }
+$joinCatalogue = @($catalogue.data.questions | Where-Object name -eq 'related-paths')[0]
+if ($joinCatalogue.required_parameters -notcontains '--from' -or $joinCatalogue.parameters -notcontains '--direction forward|backward|both') { throw 'Related paths catalogue omitted required source or supported direction' }
 $actorFixture = Join-Path $fixtures 'actor-inventory'
 $actorInputs = @('--nouns', "things=$actorFixture/things", '--axes', "actions=$actorFixture/actions", '--mechanics', "cases=$actorFixture/cases")
 $inventory = (& $executable query --question direct-connections --projection actor-inventory @actorInputs --json | ConvertFrom-Json)

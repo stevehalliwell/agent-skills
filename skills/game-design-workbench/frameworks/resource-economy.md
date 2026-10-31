@@ -24,20 +24,20 @@ Examine a selected resource and the rules that create, spend, transform, or limi
 
 Roles: `nouns`, `resources`, `control-vars`, `mechanics`, `interactions`, `experiments`.
 
-Inspection topics: control variables, interaction cases, and relevant source records.
+Inspect control variables, typed axes, interaction/mechanic cases, explicit pool bindings and source records. Native controls resolve checked formulas/units. Resource inspection retains declarations, unknowns and conditional structural witnesses.
 
 ## Working concepts
 
 - **Resource identity and quantity:** A resource extends a noun identity; its starting amount, capacity, and costs are separate authored control variables. Changing a number should not create a different resource or silently alter its meaning.
-- **Source, sink, and transformation:** A source adds quantity, a sink removes it, and a transformation relates quantities or states. Identify the rule and its trigger. Flow direction comes from source prose, not from a generic link between records.
+- **Source, sink, and transformation:** A source adds quantity, a sink removes it, and a transformation relates quantities or states. Identify the rule and its trigger. Requirements enable without consumption; checked negative/positive deltas supply debit/credit direction. Join cases only through explicit pool+axis identity, never a generic reference link or shared noun name.
 - **Feedback:** A reinforcing relationship amplifies a change; a balancing relationship counteracts it. Explain the intervening rules and time scale. A rising quantity alone is not proof of either relationship.
 - **Strategy dependence:** The same quantities can produce different outcomes under different decisions, routes, and timing assumptions. An average is not a substitute for inspecting bottlenecks, depleted states, or an alternative strategy.
 
 ## Apply to selected slice
 
 1. Choose one resource and one disputed claim, such as sufficiency for a declared route. Read noun, resource extension, control variables, spending mechanics, and relevant interaction cases. Record the exact claim and scope.
-2. List starting quantity, bounds, changes, and triggers with their source owners. Keep unknown amounts and opaque units explicit. Distinguish authored formula text from evaluated values; this slice does not evaluate formulas.
-3. Trace a concrete action sequence by hand only as a labeled analytical example. State assumptions about successes, failed-action costs, replenishment, and optional routes. Do not call the result an executed simulation.
+2. List starting quantity, bounds, changes, and triggers with their source owners. Keep unknown amounts and units explicit. Distinguish authored formula text from values checked by shared native resolver. Preserve quantity expressions, target bindings and full-case guards; do not duplicate evaluation.
+3. Inspect native conditional Resource witnesses where explicit pool+axis bindings support joins. State assumptions about successes, failed-action costs, replenishment and optional routes. Label any hand-traced sequence separately. Neither witness nor hand calculation proves feasibility or executed simulation.
 4. Examine a contrasting strategy or boundary state. Ask whether costs alter choices, merely delay progress, or permit a dead end under the stated assumptions. Separate quantity feasibility from reachability and desired experience.
 5. Return the flow narrative, disputed assumptions, and one useful measurement proposal. Preserve candidate tuning changes as alternatives. No control override, formula export, balance adoption, or experiment execution follows from this review.
 
@@ -71,9 +71,9 @@ Inspection topics: control variables, interaction cases, and relevant source rec
 
 ## Missing data and evidence limits
 
-A missing resource extension does not prevent discussing a noun. Missing flow direction is unresolved prose, not an inferred edge. Suggest an experiment without running it.
+A missing resource extension does not prevent discussing a noun. Unauthored pool bindings, unknown quantities and unresolved direction remain explicit gaps; prose alone does not create native flow edges. Suggest an experiment without running it.
 
-This release inventories named game configuration values and formula text; it does not evaluate formulas, resolve units, draw directional flow graphs, or execute simulations. Flow direction stays in rule prose. At most one accepted resource extension per noun is a source invariant to inspect manually here.
+Native controls resolve supported formulas/units. Resource inspection retains enabling/debit/credit declarations, explicit identities and conditional structural witnesses, with source/limit coverage. Generic incidence links are not flow; witnesses do not establish feasibility, execution, gameplay frequency or final outcomes. Inspection does not authorize tuning or experiment execution. At most one accepted resource extension per noun remains a source invariant; generic schema validation and native semantic checks have distinct coverage.
 
 ## References
 

@@ -1,5 +1,6 @@
 #include "gd_effect_graph.h"
 #include "gd_structure_cli.h"
+#include "gd_similarity_projection.h"
 #include "test_structure_memory.h"
 TEST(effect_result_concepts_and_targeted_links,
     GD_Model *model=model_create(); GD_Rules *rules; GD_RuleAnalysis *analysis; GD_ResourceGraph *source;
@@ -72,7 +73,7 @@ TEST(effect_result_concepts_and_targeted_links,
         options.projection="effects"; options.work_limit=GD_GRAPH_ANALYSIS_WORK;
         for (kind=0;kind<GD_STRUCTURE_COUNT;++kind) {
             options.question=gd_structure_name((GD_StructureKind)kind); options.from=options.to=NULL;
-            if (kind==GD_STRUCTURE_RELATED || kind==GD_STRUCTURE_REACHABILITY || kind==GD_STRUCTURE_DOMINATORS || kind==GD_STRUCTURE_BYPASS) { options.from=first; options.to=second; }
+            if (kind==GD_STRUCTURE_RELATED || kind==GD_STRUCTURE_RELATED_PATHS || kind==GD_STRUCTURE_REACHABILITY || kind==GD_STRUCTURE_DOMINATORS || kind==GD_STRUCTURE_BYPASS) { options.from=first; options.to=second; }
             result=gd_structure_result_build(model,&project,&options);
             TEST_ASSERT(result && result->effects && result->layout->node_count==graph->node_count && result->layout->edge_count==graph->link_count && !model->error_count && result->source_incomplete);
             TEST_ASSERT(result->query->request.incidence==0 && result->query->nodes[gain].incoming==4 && result->query->nodes[life].incoming==6);
@@ -149,6 +150,14 @@ TEST(effect_projection_capacity_and_source_limits,
         if (mode) {
             TEST_ASSERT(!graph->limited && graph->source_incomplete && graph->link_count==GD_EFFECT_LINKS);
             TEST_ASSERT(effects>32000 && !graph->unexamined_relations);
+            { StructureMemory memory={0,-1}; GD_ExplorerProject project={0}; GD_StructureOptions options={0}; GD_StructureResult *context;
+              const char *features[]={"retained-partners"}; unsigned char selected[GD_MAX_RECORDS]={0}; GD_SimilaritySelection selection={features,NULL,1,GD_SIMILARITY_WORK,selected,NULL,0}; GD_SimilarityProjection *projection;
+              project.allocator=(GD_Allocator){&memory,structure_allocate,structure_release}; project.models[GD_EXPLORER_RULE_DATA]=model; project.rules=rules; project.calls=analysis; project.resources=source; project.available=1u<<GD_EXPLORER_EFFECTS;
+              options.question="adjacency"; options.projection="effects"; options.work_limit=GD_GRAPH_ANALYSIS_WORK;
+              context=gd_structure_result_build(model,&project,&options); TEST_ASSERT(context && !context->effects->limited && source->limited);
+              selected[0]=selected[1]=1; projection=gd_similarity_projection_build(model,context,&selection);
+              TEST_ASSERT(projection && projection->source_limited && projection->limited && !projection->table_complete && !projection->map);
+              gd_similarity_projection_destroy(projection); gd_structure_result_destroy(context); TEST_ASSERT(!memory.outstanding && !model->error_count); }
         } else TEST_ASSERT(graph->limited && graph->node_count==GD_EFFECT_NODES && graph->link_count==4095 && graph->unexamined_relations==1 && effects==4095);
         gd_effect_graph_destroy(graph); gd_resource_graph_destroy(source); gd_rule_analysis_destroy(analysis); gd_rules_destroy(rules); gd_destroy(model);
     }

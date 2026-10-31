@@ -7,6 +7,8 @@
 #include "gd_resource_routes.h"
 #include "gd_query_scene.h"
 #include "gd_structure_cli.h"
+#include "gd_similarity_projection.h"
+#include "gd_named_query.h"
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 
@@ -37,12 +39,30 @@ typedef struct {
     bool include_inactive;
     char from[GD_MAX_PATH],to[GD_MAX_PATH],avoid[GD_MAX_PATH],scope_root[GD_MAX_PATH];
     char starts[GD_MAX_RULE_LINE+1],relations[GD_MAX_RULE_LINE+1],statuses[GD_MAX_RULE_LINE+1];
+    char features[GD_MAX_RULE_LINE+1],entries[GD_MAX_RULE_LINE+1];
 } GD_ExplorerStructureForm;
 typedef struct {
     GD_Allocator allocator; GD_ExplorerStructureForm pending,applied;
     GD_StructureResult *result; unsigned revision; int has_applied,page;
     char start_tokens[GD_MAX_RULE_LINE+1],relation_tokens[GD_MAX_RULE_LINE+1],status_tokens[GD_MAX_RULE_LINE+1];
+    char feature_tokens[GD_MAX_RULE_LINE+1],entry_tokens[GD_MAX_RULE_LINE+1],feature_ids[GD_SIMILARITY_FEATURES][128];
+    const char *feature_names[GD_SIMILARITY_FEATURES],*entry_ids[GD_STRUCTURE_SELECTORS]; double feature_weights[GD_SIMILARITY_FEATURES];
+    GD_SimilaritySelection similarity_selection;
+    Camera2D similarity_camera; bool similarity_canvas,similarity_fit,similarity_camera_ready;
+    int similarity_row,similarity_peer,similarity_page,comparison_first,comparison_second,comparison_available,comparison_work;
+    double comparison_distance,comparison_components[GD_SIMILARITY_FEATURES];
+    int similarity_member_pages[GD_SIMILARITY_FEATURES];
 } GD_ExplorerStructureState;
+typedef struct {
+    int kind,work_limit; bool bindings;
+    char case_name[GD_MAX_PATH],facts[GD_MAX_RULE_LINE+1],contexts[GD_MAX_RULE_LINE+1];
+    char object[GD_MAX_PATH],participant[GD_MAX_PATH],axis[GD_MAX_PATH],statuses[GD_MAX_RULE_LINE+1];
+} GD_ExplorerRuleForm;
+typedef struct {
+    GD_Allocator allocator; GD_ExplorerRuleForm pending,applied; GD_NamedQuery *result; GD_Query *bindings;
+    char fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1],status_tokens[GD_MAX_RULE_LINE+1];
+    int page,row,peer_write,axis_page; unsigned char marked_cases[GD_MAX_RULE_CASES];
+} GD_ExplorerRuleState;
 typedef struct {
     GD_ExplorerView view;
     GD_Layout *layout;
@@ -56,9 +76,11 @@ typedef struct {
     GD_ExplorerQueryOptions query_options;
     GD_ExplorerQueryState *query_state;
     GD_ExplorerStructureState *structure_state;
+    GD_ExplorerRuleState *rule_state;
+    char rule_message[256];
     char query_message[256];
     GD_ResourceRoutes *resource_routes;
-    int resource_from,resource_to,resource_witness;
+    int resource_from,resource_to,resource_witness,resource_work_limit;
     bool resource_accepted,resource_only_witness;
     char resource_message[160];
     GD_MatrixGrid grid; /* Caller-owned presentation, never typed snapshot data. */
@@ -132,6 +154,17 @@ int gd_explorer_structure_pending(const GD_ExplorerPane *pane);
 int gd_explorer_structure_remap(GD_ExplorerContext *context, const GD_ExplorerProject *old, const GD_ExplorerPane *prior);
 void gd_explorer_structure_destroy(GD_ExplorerStructureState *state);
 void gd_explorer_structure_controls(GD_ExplorerContext *context);
+void gd_explorer_structure_source_node(GD_ExplorerContext *context,int node);
+int gd_explorer_similarity_active(const GD_ExplorerContext *context);
+void gd_explorer_similarity_controls(GD_ExplorerContext *context);
+void gd_explorer_similarity_input(GD_ExplorerContext *context);
+void gd_explorer_similarity_draw(GD_ExplorerContext *context);
+
+void gd_explorer_rules_destroy(GD_ExplorerRuleState *state);
+int gd_explorer_rules_run(GD_ExplorerContext *context);
+int gd_explorer_rules_remap(GD_ExplorerContext *context,const GD_ExplorerProject *old,const GD_ExplorerPane *prior);
+void gd_explorer_rules_controls(GD_ExplorerContext *context);
+int gd_explorer_rules_marked(const GD_ExplorerContext *context,int case_index);
 
 int gd_explorer_resource_prepare(GD_ExplorerContext *context);
 void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *evidence);

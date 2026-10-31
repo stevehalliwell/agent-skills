@@ -21,10 +21,12 @@ async function fixture(t,records) {
 function record(name,fields='',status='accepted') { return `---\nid: structure-${name}\nname: ${name}\nstatus: ${status}\n${fields}---\nAuthored fixture ${name}.\n`; }
 function index(value,id) { const found=value.data.nodes.find(node=>node.id===id); assert.ok(found,id); return found.index; }
 async function digest(paths) { const hash=createHash('sha256'); for (const path of paths) hash.update(await readFile(path)); return hash.digest('hex'); }
-const structural=['direct-connections','related-structure','reachability','structural-dominators','support-bypass','role-shapes','adjacency','declaration-gaps'];
+const structural=['direct-connections','related-structure','reachability','structural-dominators','support-bypass','role-shapes','adjacency','declaration-gaps','related-paths'];
 test('structural catalogue advertises only delivered parameters and narrower UI availability',{skip:!executable},()=>{
-  const catalogue=run(['--list']); const questions=catalogue.data.questions.filter(item=>item.projections);
-  assert.deepEqual(questions.map(item=>item.name),structural);
+  const catalogue=run(['--list']); const projected=catalogue.data.questions.filter(item=>item.projections);
+  assert.deepEqual(projected.map(item=>item.name),[...structural,'similarity-features','similarity-map']);
+  const questions=projected.filter(item=>structural.includes(item.name));
+  for (const item of projected.filter(item=>item.name.startsWith('similarity-'))) { assert.equal(item.ui_available,false); assert.equal(item.work_limit_max,67108864); assert.equal(item.ipc_available,false); assert.deepEqual(item.required_parameters_by_projection.actors,['--case','--axis']); }
   for (const item of questions) { assert.deepEqual(item.projections,['skills','challenges','relationships','matrix','mda','resources','actor-inventory','actors','effects']); assert.equal(item.ui_available,true); assert.match(item.ui_scope,/canonical projection/); assert.ok(item.ui_unavailable_parameters.includes('repeatable input beyond 8192 combined bytes per list')); assert.equal(item.ipc_available,false); assert.equal(item.work_limit_max,16777216); for (const bindings of Object.values(item.required_bindings_by_projection)) { assert.ok(Array.isArray(bindings.all_of)); assert.ok(Array.isArray(bindings.any_of)); } assert.deepEqual(item.required_bindings_by_projection.resources.any_of,['interactions','mechanics']); assert.deepEqual(item.required_bindings_by_projection['actor-inventory'].all_of,['nouns','axes']); assert.deepEqual(item.required_bindings_by_projection.actors.all_of,['nouns','axes']); if (item.name!=='declaration-gaps') assert.deepEqual(item.required_parameters_by_projection.actors,['--case','--axis']); }
   assert.ok(!questions.find(item=>item.name==='adjacency').parameters.includes('--from'));
   assert.ok(!questions.find(item=>item.name==='direct-connections').repeatable_parameters.includes('--start'));

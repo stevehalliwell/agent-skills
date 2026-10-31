@@ -17,7 +17,7 @@ static int charge(GD_GraphClosure *closure) {
     if (closure->work==closure->limit) return 0;
     ++closure->work; return 1;
 }
-const GD_GraphClosure *gd_graph_closure_into(GD_GraphAnalysis *analysis, GD_GraphClosure *closure, const unsigned char *eligible,
+const GD_GraphClosure *gd_graph_closure_into(const GD_GraphAnalysis *analysis, GD_GraphClosure *closure, const unsigned char *eligible,
     const unsigned char *boundary, int relation, int reverse, int undirected, int work_limit) {
     int i,root,same,words=(analysis->node_count+63)/64;
     assert(analysis->initialized && relation>=-1 && work_limit>=0 && work_limit<=GD_GRAPH_ANALYSIS_WORK);

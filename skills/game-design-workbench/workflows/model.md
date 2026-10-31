@@ -39,7 +39,7 @@ Missing/null/empty relationship arrays mean no declared links. Noun applicabilit
 
 An accepted case may explicitly be `unknown`, `excluded`, or `not_applicable`; lifecycle and coverage answer different questions. A defined blocked action with no state change is `defined`, not missing. Case lists do not assert exhaustiveness. Do not manufacture noun–verb combinations as rules or defects.
 
-At most one accepted resource extension per noun. Flow direction remains rule prose; no directional resource graph is inferred. Rank is conceptual placement, not physical level or prerequisite depth; preserve null/negative/zero. Declared challenge routes do not prove reachability or acquired skill.
+At most one accepted resource extension per noun. Mechanics/interactions own explicit Resource rule declarations; extension metadata owns pool identity. Join cases only through explicit pool+axis bindings. Requirements enable without consumption; checked negative/positive deltas supply debit/credit direction. Preserve guards, mappings, unknown quantities and units. Conditional witnesses are structural support, not feasibility, execution or final outcomes; no flow is inferred from generic reference links. Rank is conceptual placement, not physical level or prerequisite depth; preserve null/negative/zero. Declared challenge routes do not prove reachability or acquired skill.
 
 ## Types and unavailable semantics
 
