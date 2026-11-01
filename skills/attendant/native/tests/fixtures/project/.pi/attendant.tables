@@ -1,0 +1,3 @@
+# Projection compatibility fixture
+records/decisions as decisions
+records/tasks as tasks

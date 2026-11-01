@@ -44,6 +44,10 @@ Run `schema` to discover each collection's source paths, declared fields, and fu
 
 When authoring `.usage.md`, record confirmed purpose and rules as concise, ordered, structured documentation; omit irrelevant headings and empty placeholders while retaining material unknowns. Do not invent workflow policy or migrate external skill instructions without an explicit request. Usage documentation is not projected as a record or enforced by schema validation.
 
+## Native evaluation
+
+Native CLI/GUI is under qualification; JS runner above remains default until explicit rollout approval. For an explicitly requested native build/evaluation or missing native build, read [Native build reference](references/build.md), build with installed tools, then return to original task/project. Do not auto-install, silently fall back to JS, or reuse historical spike binaries. Read [Native commands and feedback](references/native-commands.md) for native invocation, pending human comments and GUI reveal/inspection. Reading feedback grants no editing authority and never resolves it.
+
 ## Rules
 
 - Require Node.js `>=24.10.0`; migration additionally requires an existing Git commit before apply.

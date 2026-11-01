@@ -1,0 +1,5 @@
+# Preserve pinned upstream bytes/formatting, including CRLF and trailing whitespace.
+vendor/** -text -whitespace
+# Maintained bridge checks trailing spaces, allowing imported final blank lines.
+vendor/gui/** whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+*.sh text eol=lf

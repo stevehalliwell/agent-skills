@@ -1,0 +1,15 @@
+    int exercise, reference_clicks, edit_exercise, save_fail_exercise, cancel_clicks, sent_comments, target_clicks, undo_seen, saved_not_queued;
+    int preview_exercise, preview_exact_seen, preview_shared_seen, preview_dirty_send, inspection_requests, inspection_checked;
+    int selection_exercise, selection_ready, selection_source_seen, selection_action_checked, undo_checks, issues_shown;
+    gui_selection selection_before_comment;
+    int reveal_exercise, test_frame, reveal_phase, reveal_frame, reveal_go, reveal_failed, reveal_checks, marker_draws, reparse_go_armed;
+    int before_active, before_tabs, before_activation, before_start, before_end;
+    uint64_t before_revision;
+    ImGuiID before_widget;
+    HWND before_focus, before_foreground;
+    crmd_text_view before_view;
+    ImVec2 before_editor, hint_go_position;
+    ImVec2 preview_position;
+    float preview_scroll_y, preview_clip_bottom;
+    ImVec4 comment_rect;
+    ImVec2 first_position, depends_position, editor_position, comment_position, send_position, cancel_position, composer_cancel_position, feedback_position, target_position;
