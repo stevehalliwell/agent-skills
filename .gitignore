@@ -12,6 +12,11 @@ coverage/
 .nyc_output/
 *.log
 
+# Native Attendant output and preserved local spike artifacts
+skills/attendant/native/build/
+exploration/attendant-native/build/
+spikes/cimgui-richmd-c99/build/
+
 # Local environment and editor files
 .env
 .env.*
