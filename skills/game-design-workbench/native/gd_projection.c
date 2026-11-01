@@ -18,9 +18,14 @@ int gd_resource_layout(const GD_ResourceGraph *graph, GD_Layout *layout) {
     int i;
     if (!graph || !layout) return 0;
     memset(layout,0,sizeof(*layout)); layout->node_count=graph->node_count; layout->edge_count=graph->relation_count; layout->group_count=graph->node_count ? 1:0;
-    for (i=0;i<graph->node_count;++i) { layout->nodes[i].key=i; layout->nodes[i].label=gd_resource_label(graph,i); layout->nodes[i].group=0; layout->nodes[i].side=graph->nodes[i].kind==GD_RESOURCE_CASE ? 1:0; }
+    for (i=0;i<graph->node_count;++i) {
+        layout->nodes[i].key=i; layout->nodes[i].label=gd_resource_label(graph,i); layout->nodes[i].group=0; layout->nodes[i].side=graph->nodes[i].kind==GD_RESOURCE_CASE ? 1:0;
+        /* Include body, default shared-count row and outline clearance before
+           initial settling. Renderer replaces union with measured annotations. */
+        gd_layout_set_footprint(&layout->nodes[i],-106,-43,106,45);
+    }
     for (i=0;i<graph->relation_count;++i) { const GD_ResourceRelation *source=&graph->relations[i]; layout->edges[i]=(GD_LayoutEdge){source->facet,source->activation,i,1,GD_RELATION_RESOURCE_BASE+source->kind}; }
-    return gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME);
+    return gd_layout_components(layout) && gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME);
 }
 int gd_actor_inventory_layout(const GD_ActorInventory *inventory, GD_Layout *layout) {
     const GD_Rules *rules; const GD_Model *model; int i;

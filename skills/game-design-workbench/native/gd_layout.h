@@ -6,12 +6,18 @@
    Caller supplies topology, display labels, grouping, and two-column sides. */
 typedef enum { GD_LAYOUT_FORCE, GD_LAYOUT_COLUMNS, GD_LAYOUT_DIRECTED } GD_LayoutMode;
 typedef enum { GD_SORT_NAME, GD_SORT_PARTNERS } GD_LayoutSort;
+typedef struct { float left,top,right,bottom; } GD_LayoutBounds;
+enum { GD_LAYOUT_COLLISION_WORK=65536 };
+/* Owner-held scratch; snapshot intervals keep broad-phase sorting valid while
+   narrow-phase corrections change live positions. */
+typedef struct { double minimum,maximum; int node; } GD_LayoutCollisionItem;
 typedef struct {
     const char *label;
     int key, group, side, degree, layer;
     float axis, anchor;
     float x, y, vx, vy;
-    float width, height; /* Drawing bounds; zero uses documented text/card defaults. */
+    float width, height; /* Band/card dimensions; zero uses documented defaults. */
+    GD_LayoutBounds footprint; /* Rendered local bounds, independent of band dimensions. */
 } GD_LayoutNode;
 /* Opaque incident-role tags: authored GD_Field, derived case pair, or resource
    relation kind. Endpoint a/b is part of incident role, never inferred flow. */
@@ -37,11 +43,19 @@ typedef struct {
     unsigned tick;
     int horizontal, direct_routes;
     float width, height;
+    GD_LayoutCollisionItem collision_order[GD_MAX_RECORDS];
+    float collision_remaining[GD_MAX_RECORDS];
+    unsigned collision_cursor,collision_checks,collision_moves;
+    int collision_limited;
 } GD_Layout;
 
 /* Call after filling nodes/edges/counts; labels/topology must outlive layout.
    Rearrangement resets positions/velocities, not caller topology or identities. */
 int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort);
+/* Assign connected components from active shown edges, irrespective of arrow
+   direction. Presentation groups only; no new edges or semantic equivalence.
+   Reuses order/position scratch; call before arrange. */
+int gd_layout_components(GD_Layout *layout);
 /* Called by arrange after topology validation. Per-pair lanes retain source
    index/direction; no allocation or authored-edge changes. */
 void gd_layout_route_prepare(GD_Layout *layout);
@@ -53,7 +67,15 @@ float gd_layout_node_width(const GD_LayoutNode *node);
    solver. MDA retains its card/Bezier renderer. No reachability semantics. */
 void gd_layout_route(const GD_Layout *layout, int edge, GD_LayoutRoute *route);
 float gd_layout_route_distance(const GD_Layout *layout, int edge, float x, float y);
-/* One fixed display step; at most 32 fixed reciprocal repulsion samples/node + all active edges.
+/* Set finite, nonempty local bounds (each coordinate within +/-1048576).
+   Invalid bounds retain prior footprint. Renderers include labels and badges. */
+int gd_layout_set_footprint(GD_LayoutNode *node,float left,float top,float right,float bottom);
+/* One fixed display step; at most 32 repulsion samples/node + active edges.
+   Free layouts then separate footprint rectangles across all groups with 8-unit
+   clearance, at most 16 passes and GD_LAYOUT_COLLISION_WORK candidate visits.
+   Separation adds at most 20 layout units/node/step beyond ordinary motion.
+   Budget/partial clearance is explicit in collision_limited; no global guarantee.
+   Existing directed/column constraints unchanged. Scratch belongs to layout.
    held_node is temporarily fixed by pointer drag, or -1. No wall-clock dependency. */
 void gd_layout_step(GD_Layout *layout, int held_node);
 /* Directed layers lock the ordering axis, including paused pointer dragging.

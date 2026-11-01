@@ -1,6 +1,6 @@
 # Shared force layouts
 
-Status: agreed product direction; solver budgets and measured fixtures need technical refinement. Additive expansion requested after joint IPC tour. Current task authority: root `todo.md`, Step 2. No implementation or visual acceptance claimed here.
+Status: Steps 1/2 reviewed; Step 3 crossing reduction authorized. User reviewed Mario Resources: substantial readability improvement; clusters too vertical. Additive expansion requested after joint IPC tour. Current task authority: root `todo.md`, Step 2. Live readability acceptance remains open. [Step 1 findings, measurements and budgets](shared-force-layout-baseline.md); [Step 2 implementation and limits](shared-force-layout-separation.md).
 
 ## Result
 
@@ -45,10 +45,10 @@ Refactor/extend existing shared layout mechanism, not one solver per projection.
 
 ## Delivery slices
 
-1. Specify collision/crossing work budgets and measured acceptance fixtures from existing limits. Audit current renderer footprints and reference layouts before solver changes.
-2. Implement shared footprint-aware separation with CPU tests. Verify MDA/Interactions reference behavior and dense Resource fixture independently of crossing reduction.
+1. **Complete; reviewed.** Specify collision/crossing work budgets and measured acceptance fixtures from existing limits. Audit current renderer footprints and reference layouts before solver changes. Evidence in linked Step 1 baseline.
+2. **Complete; reviewed in Mario Resource viewer.** Shared footprint-aware separation, renderer unions/scaling, footprint-sized Free graph component spacing and actual Resource component grouping. CJIT core 133/133, Node 21/21; loaded-example initial Resource footprints have zero intersections after startup and 600 further steps. Adversarial dense fixtures still retain bounded overlap/motion; user reports substantial readability improvement in Mario Resources, not exhaustive every-view acceptance.
 3. Implement bounded edge-crossing reduction as separate slice after separation baseline. Test crossing improvement and regressions in node separation, settling and reference layouts.
-4. Add shared Native/Neighborhood initial-arrangement choice and geometry-only restart for Free graphs, plus Skills, Challenges and Relationships layout choices, band annotations and selection-preserving transitions through shared GUI/IPC controls.
+4. Add shared Native/Neighborhood initial-arrangement choice and geometry-only restart for Free graphs, plus Skills, Challenges and Relationships layout choices, band annotations and selection-preserving transitions through shared GUI/IPC controls. Captured follow-up: current neighborhood clusters are too vertical; aim to match main-view aspect ratio. Refine packing behavior in this later slice, not crossing reduction.
 5. Add Actor/Effect free placement without changing retained query topology, typed identities or contributor evidence.
 6. Run CJIT-only checks and coordinate live visual review on both examples. Keep full compiler matrix at Step 6.
 
@@ -68,4 +68,4 @@ Refactor/extend existing shared layout mechanism, not one solver per projection.
 ## Open
 
 - Neighborhood seed anchor choice and disconnected-component placement need technical refinement. Preserve selection without treating an anchor as authored root or changing graph scope.
-- Exact collision/crossing work budgets and performance acceptance require fixture measurements; no latency guarantee chosen yet.
+- Step 1 sets initial measured-fixture work caps. Steps 2/3 must validate and tune them against actual collision/crossing implementations; no latency guarantee chosen.

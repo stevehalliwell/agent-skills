@@ -119,7 +119,7 @@ static int witness_edge(const GD_Routes *routes, int witness, int source, int ta
     for (i=1;i<routes->witnesses[witness].length;++i) if (routes->witnesses[witness].path[i-1]==source && routes->witnesses[witness].path[i]==target) return 1;
     return 0;
 }
-static void draw_graph(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection,
+static void draw_graph(const GD_Model *model, GD_Layout *layout, const GraphSelection *selection,
                        Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
                        GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass,
                        const GD_GraphClosure *foundations, const GD_GraphComparison *foundation_pair,
@@ -194,24 +194,25 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
         }
     }
     for (i = 0; i < layout->node_count; ++i) {
-        const GD_LayoutNode *node = &layout->nodes[i];
+        GD_LayoutNode *node = &layout->nodes[i];
+        gd_layout_set_footprint(node,-40,-40,40,40);
         Color color = selection->node == i ? graph_selected : node->side ? (Color){224, 160, 109, 255} : (Color){108, 171, 230, 255};
         if (challenges && witness_node(routes,witness,node->key)) color=graph_selected;
         if (node->side) DrawRectangle((int)node->x-12, (int)node->y-12, 24, 24, color);
         else DrawCircleV(node_point(node), 13, color);
-        DrawText(node->label, (int)node->x-MeasureText(node->label, 18)/2, (int)node->y+22, 18, graph_text);
+        gd_graph_node_text(node,node->label, (int)node->x-MeasureText(node->label, 18)/2, (int)node->y+22, 18, graph_text,1);
         if (draft && (draft->rank_changed[node->key] || draft->prerequisites_changed[node->key])) {
             DrawCircleLines((int)node->x, (int)node->y, 25, graph_selected);
-            DrawText("*", (int)node->x+22, (int)node->y-28, 24, graph_selected);
+            gd_graph_node_text(node,"*", (int)node->x+22, (int)node->y-28, 24, graph_selected,1);
         }
         if (focused) {
             int collection=model->records[node->key].collection;
             const char *alias=collection>=0 && collection<model->collection_count ? model->collections[collection].alias:"loaded record";
             const char *caption = node->side ? TextFormat("ROOT | %s",alias):alias;
-            DrawText(caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted);
+            gd_graph_node_text(node,caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted,1);
         } else if (challenges) {
             const char *caption = model->records[node->key].entry ? "ENTRY" : routes && routes->reachable[node->key] ? "declared reachable" : "no declared entry path";
-            DrawText(caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted);
+            gd_graph_node_text(node,caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted,1);
         } else if (model->skill_mode) {
             const GD_Record *record = &model->records[node->key]; const GD_SkillState *state = &model->skills[node->key];
             const char *caption = state->cycle ? "CYCLE" : state->incomplete ? "UNKNOWN ANCESTRY" :
@@ -219,43 +220,43 @@ static void draw_graph(const GD_Model *model, const GD_Layout *layout, const Gra
                 record->has_rank ? TextFormat("rank %lld", (long long)record->rank) : "rank null";
             Color warning = state->incomplete ? (Color){238,114,120,255} : (Color){245,179,96,255};
             if (state->incomplete || state->rank_conflict) DrawCircleLines((int)node->x, (int)node->y, 18, warning);
-            DrawText(caption, (int)node->x-MeasureText(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted);
+            gd_graph_node_text(node,caption, (int)node->x-MeasureText(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted,1);
         }
         if (shared) {
             const char *badge=TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+");
-            DrawText(badge,(int)node->x-MeasureText(badge,13)/2,(int)node->y-37,13,shared_color);
+            gd_graph_node_text(node,badge,(int)node->x-MeasureText(badge,13)/2,(int)node->y-37,13,shared_color,1);
             if (pair>=0 && (i==analysis->pairs[pair].a || i==analysis->pairs[pair].b)) DrawCircleLines((int)node->x,(int)node->y,30,shared_color);
             if (comparison) {
                 unsigned category=comparison->nodes[i];
                 if (category) {
                     Color branch_color=gd_graph_branch_color(category);
                     DrawCircleLines((int)node->x,(int)node->y,21,branch_color);
-                    gd_graph_branch_badge(category,(int)node->x+36,(int)node->y-8,graph_background);
+                    gd_graph_footprint_rect(node,gd_graph_branch_badge(category,(int)node->x+36,(int)node->y-8,graph_background),1);
                 }
-                if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text);
-            } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)node->x+19,(int)node->y-8,13,shared_color);
+                if (i==comparison->a || i==comparison->b) gd_graph_node_text(node,i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text,1);
+            } else if (pair>=0 && i==left->neighbor) gd_graph_node_text(node,"shared",(int)node->x+19,(int)node->y-8,13,shared_color,1);
         }
         if (overview && overview->selected_nodes[i]) DrawCircleLines((int)node->x,(int)node->y,40,graph_selected);
         if (shapes) {
-            gd_graph_shape_badge(shapes,i,(int)node->x-65,(int)node->y-71,graph_background);
+            gd_graph_footprint_rect(node,gd_graph_shape_badge(shapes,i,(int)node->x-65,(int)node->y-71,graph_background),1);
             if (gd_graph_shape_peer(shapes,i,selection->node)) DrawCircleLines((int)node->x,(int)node->y,36,(Color){220,205,148,255});
         }
         if (reachability) {
-            gd_graph_reachability_badge(reachability,i,(int)node->x+36,(int)node->y-53,graph_background);
+            gd_graph_footprint_rect(node,gd_graph_reachability_badge(reachability,i,(int)node->x+36,(int)node->y-53,graph_background),1);
             if (reach_pair) {
                 if (reach_pair->nodes[i]) DrawCircleLines((int)node->x,(int)node->y,32,gd_graph_branch_color(reach_pair->nodes[i]));
-                if (i==reach_pair->a || i==reach_pair->b) DrawText(i==reach_pair->a ? "T-A":"T-B",(int)node->x-67,(int)node->y-53,12,graph_text);
+                if (i==reach_pair->a || i==reach_pair->b) gd_graph_node_text(node,i==reach_pair->a ? "T-A":"T-B",(int)node->x-67,(int)node->y-53,12,graph_text,1);
             }
         }
         if (foundations && foundations->eligible[i]) {
-            gd_graph_foundation_badge(foundations,i,(int)node->x+36,(int)node->y-23,graph_background);
+            gd_graph_footprint_rect(node,gd_graph_foundation_badge(foundations,i,(int)node->x+36,(int)node->y-23,graph_background),1);
             if (foundation_pair) {
                 if (foundation_pair->nodes[i]) DrawCircleLines((int)node->x,(int)node->y,28,gd_graph_branch_color(foundation_pair->nodes[i]));
-                if (i==foundation_pair->a || i==foundation_pair->b) DrawText(i==foundation_pair->a ? "A":"B",(int)node->x-43,(int)node->y-23,13,graph_text);
+                if (i==foundation_pair->a || i==foundation_pair->b) gd_graph_node_text(node,i==foundation_pair->a ? "A":"B",(int)node->x-43,(int)node->y-23,13,graph_text,1);
             }
         }
         if (paths) {
-            gd_graph_path_badge(paths,path_selection,bypass,i,(int)node->x+36,(int)node->y+7,graph_background);
+            gd_graph_footprint_rect(node,gd_graph_path_badge(paths,path_selection,bypass,i,(int)node->x+36,(int)node->y+7,graph_background),1);
             if (paths->roots[i]) gd_graph_path_start_marker((int)node->x-49,(int)node->y-24);
         }
     }

@@ -25,10 +25,24 @@ static inline const char *gd_graph_branch_label(unsigned flags) {
         default: return "mixed";
     }
 }
-static inline void gd_graph_branch_badge(unsigned flags, int x, int y, Color background) {
-    const char *label=gd_graph_branch_label(flags);
-    DrawRectangle(x-2,y-1,MeasureText(label,13)+4,15,background);
-    DrawText(label,x,y,13,gd_graph_branch_color(flags));
+/* Renderer-measured union in layout coordinates, including asymmetric text.
+   Scale is MDA's displayed-position scale, not camera zoom. */
+static inline void gd_graph_footprint_rect(GD_LayoutNode *node,Rectangle rectangle,float scale) {
+    GD_LayoutBounds *bounds=&node->footprint;
+    float left=rectangle.x/scale-node->x,top=rectangle.y/scale-node->y;
+    float right=left+rectangle.width/scale,bottom=top+rectangle.height/scale;
+    gd_layout_set_footprint(node,fminf(bounds->left,left),fminf(bounds->top,top),fmaxf(bounds->right,right),fmaxf(bounds->bottom,bottom));
+}
+static inline void gd_graph_node_text(GD_LayoutNode *node,const char *text,int x,int y,int size,Color color,float scale) {
+    DrawText(text,x,y,size,color);
+    gd_graph_footprint_rect(node,(Rectangle){(float)x,(float)y,(float)MeasureText(text,size),(float)size},scale);
+}
+static inline Rectangle gd_graph_badge(const char *label,int x,int y,int size,Color background,Color foreground) {
+    Rectangle rectangle={(float)x-2,(float)y-1,(float)MeasureText(label,size)+4,(float)size+2};
+    DrawRectangleRec(rectangle,background); DrawText(label,x,y,size,foreground); return rectangle;
+}
+static inline Rectangle gd_graph_branch_badge(unsigned flags, int x, int y, Color background) {
+    return gd_graph_badge(gd_graph_branch_label(flags),x,y,13,background,gd_graph_branch_color(flags));
 }
 static inline void gd_graph_underlay_line(Vector2 a, Vector2 b, float width, Color color, int dashed) {
     int segment;
@@ -54,7 +68,7 @@ static inline void gd_graph_route_arrow(const GD_LayoutRoute *route, Color color
 }
 static const Color gd_path_color={230,142,180,255};
 static const Color gd_bypass_color={89,220,226,255};
-static inline void gd_graph_path_badge(const GD_GraphPaths *paths, const GD_PathSelection *selection, const GD_PathBypass *bypass,
+static inline Rectangle gd_graph_path_badge(const GD_GraphPaths *paths, const GD_PathSelection *selection, const GD_PathBypass *bypass,
                                       int node, int x, int y, Color background) {
     char label[48];
     const char *ancestor=selection && selection->ancestors[node] ? " !":"";
@@ -71,28 +85,27 @@ static inline void gd_graph_path_badge(const GD_GraphPaths *paths, const GD_Path
     else if (!paths->undirected && paths->incoming[node]>=2)
         snprintf(label,sizeof(label),"D%d J%d%s%s",paths->dominated[node],paths->incoming[node],ancestor,witness);
     else snprintf(label,sizeof(label),"D%d%s%s",paths->dominated[node],ancestor,witness);
-    DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background); DrawText(label,x,y,12,*witness ? gd_bypass_color:gd_path_color);
+    return gd_graph_badge(label,x,y,12,background,*witness ? gd_bypass_color:gd_path_color);
 }
-static inline void gd_graph_shape_badge(const GD_GraphShapes *shapes, int node, int x, int y, Color background) {
+static inline Rectangle gd_graph_shape_badge(const GD_GraphShapes *shapes, int node, int x, int y, Color background) {
     char label[48];
     if (!shapes->complete) snprintf(label,sizeof(label),"shape?");
     else snprintf(label,sizeof(label),"shape %d/%d",shapes->colors[node]+1,shapes->size[shapes->colors[node]]);
-    DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background); DrawText(label,x,y,12,(Color){220,205,148,255});
+    return gd_graph_badge(label,x,y,12,background,(Color){220,205,148,255});
 }
 static inline int gd_graph_shape_peer(const GD_GraphShapes *shapes, int node, int selected) {
     return shapes && shapes->complete && selected>=0 && selected<shapes->node_count && shapes->colors[selected]>=0 && shapes->colors[node]==shapes->colors[selected];
 }
-static inline void gd_graph_reachability_badge(const GD_GraphClosure *closure, int node, int x, int y, Color background) {
+static inline Rectangle gd_graph_reachability_badge(const GD_GraphClosure *closure, int node, int x, int y, Color background) {
     char label[32]; snprintf(label,sizeof(label),"T%d%s",closure->users[node],closure->complete ? "":"+");
-    DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background); DrawText(label,x,y,12,(Color){160,200,224,255});
+    return gd_graph_badge(label,x,y,12,background,(Color){160,200,224,255});
 }
-static inline void gd_graph_foundation_badge(const GD_GraphClosure *closure, int node, int x, int y, Color background) {
+static inline Rectangle gd_graph_foundation_badge(const GD_GraphClosure *closure, int node, int x, int y, Color background) {
     char label[80],combination[32]="";
     if (closure->direct[node]>=2) snprintf(combination,sizeof(combination)," AND%d%s",closure->direct[node],closure->finished[node] ? "":"+");
     snprintf(label,sizeof(label),"F%d%s%s%s%s",closure->users[node],closure->complete ? "":"+",combination,
              closure->unknown[node] ? " ?":"",closure->cycle[node] ? " cycle":"");
-    DrawRectangle(x-2,y-1,MeasureText(label,12)+4,14,background);
-    DrawText(label,x,y,12,(Color){165,207,151,255});
+    return gd_graph_badge(label,x,y,12,background,(Color){165,207,151,255});
 }
 static inline void gd_graph_path_start_marker(int x, int y) {
     DrawTriangleLines((Vector2){(float)x,(float)y-5},(Vector2){(float)x-5,(float)y+5},(Vector2){(float)x+5,(float)y+5},(Color){225,233,241,255});

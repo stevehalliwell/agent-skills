@@ -272,7 +272,7 @@ static void detail(const GD_ResourceGraph *graph, int selected, int x, int width
     }
     EndScissorMode();
 }
-static void draw_resource_graph(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+static void draw_resource_graph(const GD_ResourceGraph *graph, GD_Layout *layout, GD_GraphAnalysis *analysis,
     Camera2D camera, Rectangle viewport, int selected, int shared, int pair, const GD_GraphComparison *comparison,
     const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability,
     const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
@@ -295,34 +295,35 @@ static void draw_resource_graph(const GD_ResourceGraph *graph, const GD_Layout *
         DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},1.5f,color);
     }
     for (i=0;i<layout->node_count;++i) {
-        const GD_LayoutNode *n=&layout->nodes[i]; const GD_ResourceNode *item=&graph->nodes[n->key];
+        GD_LayoutNode *n=&layout->nodes[i]; const GD_ResourceNode *item=&graph->nodes[n->key];
         Color color=item->kind==GD_RESOURCE_CASE ? case_color:item->kind==GD_RESOURCE_ROLE ? role_color:facet_color;
         if (!analysis->shown[i]) continue;
+        gd_layout_set_footprint(n,-106,-43,106,45);
         DrawRectangleRounded((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,(Color){28,38,50,255});
         DrawRectangleRoundedLinesEx((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,selected==n->key ? 3:1.5f,selected==n->key ? selected_color:color);
-        DrawText(item->kind==GD_RESOURCE_CASE ? "case":item->kind==GD_RESOURCE_ROLE ? "resource role":"facet",(int)n->x-83,(int)n->y-19,11,color);
-        DrawText(TextFormat("%.23s",node_label(graph,n->key)),(int)n->x-83,(int)n->y-3,14,foreground);
-        if (shared) DrawText(TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)n->x-83,(int)n->y+28,13,role_color);
+        gd_graph_node_text(n,item->kind==GD_RESOURCE_CASE ? "case":item->kind==GD_RESOURCE_ROLE ? "resource role":"facet",(int)n->x-83,(int)n->y-19,11,color,1);
+        gd_graph_node_text(n,TextFormat("%.23s",node_label(graph,n->key)),(int)n->x-83,(int)n->y-3,14,foreground,1);
+        if (shared) gd_graph_node_text(n,TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)n->x-83,(int)n->y+28,13,role_color,1);
         if (comparison) {
             unsigned category=comparison->nodes[i];
             if (category) {
                 Color branch_color=gd_graph_branch_color(category);
                 DrawRectangle((int)n->x+86,(int)n->y-18,2,36,branch_color);
-                gd_graph_branch_badge(category,(int)n->x-35,(int)n->y+28,background);
+                gd_graph_footprint_rect(n,gd_graph_branch_badge(category,(int)n->x-35,(int)n->y+28,background),1);
             }
-            if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground);
+            if (i==comparison->a || i==comparison->b) gd_graph_node_text(n,i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground,1);
         }
         if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-106,n->y-40,212,80},2,selected_color);
         if (shapes) {
-            gd_graph_shape_badge(shapes,i,(int)n->x-83,(int)n->y+45,background);
+            gd_graph_footprint_rect(n,gd_graph_shape_badge(shapes,i,(int)n->x-83,(int)n->y+45,background),1);
             if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){n->x-102,n->y-36,204,72},2,(Color){220,205,148,255});
         }
         if (reachability) {
-            gd_graph_reachability_badge(reachability,i,(int)n->x-83,(int)n->y-43,background);
+            gd_graph_footprint_rect(n,gd_graph_reachability_badge(reachability,i,(int)n->x-83,(int)n->y-43,background),1);
             if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-98,n->y-32,196,64},2,gd_graph_branch_color(reach_pair->nodes[i]));
         }
         if (paths) {
-            gd_graph_path_badge(paths,path_selection,bypass,i,(int)n->x,(int)n->y-20,background);
+            gd_graph_footprint_rect(n,gd_graph_path_badge(paths,path_selection,bypass,i,(int)n->x,(int)n->y-20,background),1);
             if (paths->roots[i]) gd_graph_path_start_marker((int)n->x+76,(int)n->y-15);
         }
     }

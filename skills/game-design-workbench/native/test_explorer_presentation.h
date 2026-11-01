@@ -29,6 +29,15 @@ static int viewer_retained_smoke(ExplorerViewer *viewer,GD_ExplorerView view,con
     w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);
     return !w.failed && presentation_decode(reply,decoded,sizeof(decoded))>0 && (!expected || strstr(decoded,expected));
 }
+static unsigned long presentation_footprint_overlaps(const GD_Layout *layout) {
+    unsigned long count=0;int i,j;
+    for(i=0;i<layout->node_count;++i)for(j=i+1;j<layout->node_count;++j){
+        const GD_LayoutNode *a=&layout->nodes[i],*b=&layout->nodes[j];
+        if(a->x+a->footprint.right>b->x+b->footprint.left && b->x+b->footprint.right>a->x+a->footprint.left &&
+           a->y+a->footprint.bottom>b->y+b->footprint.top && b->y+b->footprint.bottom>a->y+a->footprint.top)++count;
+    }
+    return count;
+}
 static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int *calls,char *reply) {
     GD_Allocator a=original->context->project->allocator;GD_ExplorerContext c=*original->context,target;GD_ExplorerPane *panes=NULL;ExplorerViewer viewer={0};GD_ViewerRequest request={0};GD_ViewerWriter w;
     int checks=0,result=0,active=GD_EXPLORER_MATRIX,stale=0,v,before,i;char decoded[65537],token[64],key[GD_MAX_PATH];
@@ -38,6 +47,16 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
 #define PRESENT_REQUEST(command_,view_) do {memset(&request,0,sizeof(request));strcpy(request.command,command_);strcpy(request.projection,viewer_projections[view_]);request.limit=64;target=c;target.pane=&panes[view_];}while(0)
 #define PRESENT_STAGE(view_,field_,value_) do {PRESENT_REQUEST("configure",view_);strcpy(request.form,"presentation");strcpy(request.control,field_);snprintf(request.value,sizeof(request.value),"%s",value_);viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));PRESENT_SEND();}while(0)
 #define PRESENT_ACTION(view_,action_) do {PRESENT_REQUEST("action",view_);strcpy(request.action,action_);viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));PRESENT_SEND();}while(0)
+    {
+        GD_LayoutNode node={.x=10,.y=20};
+        PRESENT_CHECK(gd_layout_set_footprint(&node,-1,-1,1,1));
+        gd_graph_footprint_rect(&node,(Rectangle){-75,28,210,64},3);
+        PRESENT_CHECK(fabsf(node.footprint.left+35)<0.001f && fabsf(node.footprint.right-35)<0.001f);
+        PRESENT_CHECK(fabsf(node.footprint.top+32.0f/3)<0.001f && fabsf(node.footprint.bottom-32.0f/3)<0.001f);
+        gd_graph_footprint_rect(&node,(Rectangle){180,105,120,14},3);
+        PRESENT_CHECK(fabsf(node.footprint.right-90)<0.001f && fabsf(node.footprint.bottom-59.0f/3)<0.001f);
+        PRESENT_CHECK(fabsf(node.footprint.left+35)<0.001f && fabsf(node.footprint.top+32.0f/3)<0.001f);
+    }
     panes=a.allocate(a.context,GD_EXPLORER_VIEWS*sizeof(*panes));analysis=a.allocate(a.context,sizeof(*analysis));knowledge=a.allocate(a.context,sizeof(*knowledge));PRESENT_CHECK(panes && analysis && knowledge);
     memset(panes,0,GD_EXPLORER_VIEWS*sizeof(*panes));memset(analysis,0,sizeof(*analysis));memset(knowledge,0,sizeof(*knowledge));
     for(v=0;v<GD_EXPLORER_VIEWS;++v)pane_defaults(&panes[v],(GD_ExplorerView)v);
@@ -45,6 +64,20 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(c.project->available&(1u<<v)) {
         PRESENT_REQUEST("controls",v);strcpy(request.form,"presentation");before=*calls;PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"\"presentation\"") && *calls==before && !panes[v].prepared);
         target=c;target.pane=&panes[v];PRESENT_CHECK(pane_prepare(&target));
+        if(v==GD_EXPLORER_RESOURCES){
+            GD_Layout *probe=a.allocate(a.context,sizeof(*probe));unsigned long initial,remaining;int step,node,valid=1;
+            GD_LayoutPoint previous[GD_MAX_RECORDS];double square=0,maximum=0;
+            PRESENT_CHECK(probe!=NULL);memcpy(probe,panes[v].layout,sizeof(*probe));initial=presentation_footprint_overlaps(probe);
+            for(step=0;step<600;++step){
+                if(step>=568)for(node=0;node<probe->node_count;++node)previous[node]=(GD_LayoutPoint){probe->nodes[node].x,probe->nodes[node].y};
+                gd_layout_step(probe,-1);if(probe->collision_checks>GD_LAYOUT_COLLISION_WORK)valid=0;
+                if(step>=568)for(node=0;node<probe->node_count;++node){double dx=(double)probe->nodes[node].x-previous[node].x,dy=(double)probe->nodes[node].y-previous[node].y,movement=dx*dx+dy*dy;square+=movement;if(movement>maximum)maximum=movement;}
+            }
+            for(step=0;step<probe->node_count;++step)if(!isfinite(probe->nodes[step].x)||!isfinite(probe->nodes[step].y))valid=0;
+            remaining=presentation_footprint_overlaps(probe);if(initial || remaining)valid=0;
+            fprintf(stderr,"Resource footprint probe: %d nodes / %d groups / %lu initial overlaps / %lu after 600 more steps / tail RMS %.6f max %.6f / limited %d\n",probe->node_count,probe->group_count,initial,remaining,probe->node_count ? sqrt(square/(32*probe->node_count)):0,sqrt(maximum),probe->collision_limited);
+            a.release(a.context,probe);PRESENT_CHECK(valid);
+        }
         PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !strcmp(panes[v].filter,"test source") && active==GD_EXPLORER_MATRIX);
         PRESENT_SEND();PRESENT_CHECK(strstr(reply,"viewer.stale_controls")!=NULL);
         PRESENT_STAGE(v,"filter","");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !*panes[v].filter);

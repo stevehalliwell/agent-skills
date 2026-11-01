@@ -125,7 +125,7 @@ static void projected_source(const GD_Model *model, const GD_Mda *mda, const GD_
     const GD_Edge *edge=&model->edges[mda->links[layout->edges[index].key].edge];
     igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
 }
-static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
+static void draw(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selected,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
@@ -161,41 +161,43 @@ static void draw(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layo
         if (display->link == edge->key) DrawText(gd_field_name(model->edges[mda->links[edge->key].edge].field),(int)tip.x+5,(int)tip.y-22,14,selected_color);
     }
     for (i = 0; i < layout->node_count; ++i) {
-        const GD_LayoutNode *node = &layout->nodes[i]; const GD_Record *record = &model->records[node->key];
+        GD_LayoutNode *node = &layout->nodes[i]; const GD_Record *record = &model->records[node->key];
+        float scale=spacing(layout);
         Color color = role_color(record->role); char label[32]; Vector2 position = point(layout,node);
         if (!visible(model,mda,display,node->key)) continue;
         ++drawn;
+        gd_layout_set_footprint(node,-121/scale,-48/scale,121/scale,48/scale);
         if (!mda->selected[node->key]) color = Fade(color,0.40f);
         DrawRectangleRounded((Rectangle){position.x-105,position.y-32,210,64},0.17f,6,(Color){27,36,48,255});
         DrawRectangleRoundedLinesEx((Rectangle){position.x-105,position.y-32,210,64},0.17f,6,display->record == node->key ? 3:1.5f,display->path_nodes[node->key] || display->record == node->key ? selected_color:color);
         snprintf(label,sizeof(label),"%.24s%s",record->name,strlen(record->name) > 24 ? "...":"");
-        DrawText(gd_mda_role_name(record->role),(int)position.x-96,(int)position.y-24,12,color);
-        DrawText(label,(int)position.x-96,(int)position.y-5,16,mda->selected[node->key] ? foreground:muted);
-        if (node->key == mda->root) DrawText("ROOT",(int)position.x+60,(int)position.y-24,12,selected_color);
+        gd_graph_node_text(node,gd_mda_role_name(record->role),(int)position.x-96,(int)position.y-24,12,color,scale);
+        gd_graph_node_text(node,label,(int)position.x-96,(int)position.y-5,16,mda->selected[node->key] ? foreground:muted,scale);
+        if (node->key == mda->root) gd_graph_node_text(node,"ROOT",(int)position.x+60,(int)position.y-24,12,selected_color,scale);
         if (shared) {
-            DrawText(TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)position.x-96,(int)position.y+35,13,shared_color);
+            gd_graph_node_text(node,TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)position.x-96,(int)position.y+35,13,shared_color,scale);
             if (comparison) {
                 unsigned category=comparison->nodes[i];
                 if (category) {
                     Color branch_color=gd_graph_branch_color(category);
                     DrawRectangle((int)position.x+100,(int)position.y-20,3,40,branch_color);
-                    gd_graph_branch_badge(category,(int)position.x-40,(int)position.y+35,background);
+                    gd_graph_footprint_rect(node,gd_graph_branch_badge(category,(int)position.x-40,(int)position.y+35,background),scale);
                 }
-                if (i==comparison->a || i==comparison->b) DrawText(i==comparison->a ? "A":"B",(int)position.x+83,(int)position.y+35,13,foreground);
-            } else if (pair>=0 && i==left->neighbor) DrawText("shared",(int)position.x+25,(int)position.y+35,13,shared_color);
+                if (i==comparison->a || i==comparison->b) gd_graph_node_text(node,i==comparison->a ? "A":"B",(int)position.x+83,(int)position.y+35,13,foreground,scale);
+            } else if (pair>=0 && i==left->neighbor) gd_graph_node_text(node,"shared",(int)position.x+25,(int)position.y+35,13,shared_color,scale);
         }
         if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){position.x-121,position.y-48,242,96},2,selected_color);
         if (shapes) {
-            gd_graph_shape_badge(shapes,i,(int)position.x-96,(int)position.y+52,background);
+            gd_graph_footprint_rect(node,gd_graph_shape_badge(shapes,i,(int)position.x-96,(int)position.y+52,background),scale);
             if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){position.x-117,position.y-44,234,88},2,(Color){220,205,148,255});
         }
         if (reachability) {
-            gd_graph_reachability_badge(reachability,i,(int)position.x-96,(int)position.y-48,background);
+            gd_graph_footprint_rect(node,gd_graph_reachability_badge(reachability,i,(int)position.x-96,(int)position.y-48,background),scale);
             if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){position.x-113,position.y-40,226,80},2,gd_graph_branch_color(reach_pair->nodes[i]));
-            if (reach_pair && (i==reach_pair->a || i==reach_pair->b)) DrawText(i==reach_pair->a ? "T-A":"T-B",(int)position.x+65,(int)position.y-48,12,foreground);
+            if (reach_pair && (i==reach_pair->a || i==reach_pair->b)) gd_graph_node_text(node,i==reach_pair->a ? "T-A":"T-B",(int)position.x+65,(int)position.y-48,12,foreground,scale);
         }
         if (paths) {
-            gd_graph_path_badge(paths,path_selection,bypass,i,(int)position.x-96,(int)position.y+15,background);
+            gd_graph_footprint_rect(node,gd_graph_path_badge(paths,path_selection,bypass,i,(int)position.x-96,(int)position.y+15,background),scale);
             if (paths->roots[i]) gd_graph_path_start_marker((int)position.x+94,(int)position.y+17);
         }
     }
