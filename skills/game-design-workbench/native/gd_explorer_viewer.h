@@ -13,6 +13,7 @@ typedef struct {
     unsigned hint_revision,pending_hint_revision;
     const GD_Collection *collections; int collection_count;
     char toast[128]; double toast_until; int human_go;
+    char layer_token[64],knowledge_token[64]; int layer_view;
 } ExplorerViewer;
 static int viewer_hint_current(const ExplorerViewer *viewer) {
     return !*viewer->hint.id || (viewer->hint_generation==viewer->reload_generation && viewer->hint_revision==viewer->context->project->revision);
@@ -31,6 +32,7 @@ static void viewer_member(GD_ViewerWriter *w, const char *key, const char *value
 }
 static void viewer_form(GD_ViewerWriter *w, GD_ExplorerForm form, const void *values) {
     int i,count; const GD_ExplorerControl *fields=gd_explorer_form_fields(form,&count);
+    if (!values) { gd_viewer_write(w,"null"); return; }
     gd_viewer_write(w,"{");
     for (i=0;i<count;++i) {
         const GD_ExplorerControl *field=&fields[i]; const char *value=(const char *)values+field->offset;
@@ -53,12 +55,24 @@ static void viewer_selection(GD_ViewerWriter *w, GD_ExplorerContext *c) {
     } else gd_viewer_write(w,"null");
     gd_viewer_write(w,",\"native_id\":"); gd_viewer_quote(w,available?id:NULL);
     gd_viewer_write(w,",\"kind\":"); gd_viewer_quote(w,node>=0 && node<viewer_canvas_count(c)?viewer_canvas_kind(c,node):NULL);
+    if(p->view==GD_EXPLORER_MATRIX) {
+        int noun=-1,verb=-1,cell=p->selection.cell;
+        if(cell>=0 && cell<model->cell_count){noun=model->cells[cell].noun;verb=model->cells[cell].verb;}
+        else if(grid_view(p) && p->selection.node<0 && p->selection.linked<0){noun=p->grid.noun;verb=p->grid.verb;}
+        gd_viewer_write(w,",\"matrix_cell\":");
+        if(noun>=0 && noun<model->record_count && verb>=0 && verb<model->record_count) {gd_viewer_write(w,"{");viewer_member(w,"noun",model->records[noun].reference);gd_viewer_write(w,",");viewer_member(w,"verb",model->records[verb].reference);gd_viewer_write(w,",\"declared\":%s}",cell>=0 ? "true":"false");}else gd_viewer_write(w,"null");
+    }
     gd_viewer_write(w,",\"snapshot_local\":{\"node\":%d,\"cell\":%d,\"case_offset\":%d,\"mda_link\":%d},\"identity_available\":%s,\"identity_limited\":%s}",node,p->selection.cell,p->selection.interaction,p->mda.link,available?"true":"false",ids.limited?"true":"false");
 }
 static void viewer_resource_id(GD_ViewerWriter *w, const GD_ResourceGraph *graph, int node) {
     char id[GD_MAX_PATH]="";
-    if (graph && node>=0) gd_resource_node_id(graph,node,-1,id,sizeof(id));
-    gd_viewer_quote(w,*id?id:NULL);
+    int available=graph && node>=0 && gd_resource_node_id(graph,node,-1,id,sizeof(id));
+    gd_viewer_quote(w,available ? id:NULL);
+}
+static void viewer_resource_form(GD_ViewerWriter *w,const GD_ResourceGraph *graph,const GD_ExplorerResourceForm *form) {
+    if (!form) { gd_viewer_write(w,"null"); return; }
+    gd_viewer_write(w,"{\"from\":"); viewer_resource_id(w,graph,form->from); gd_viewer_write(w,",\"to\":"); viewer_resource_id(w,graph,form->to);
+    gd_viewer_write(w,",\"accepted\":%s,\"work_limit\":%d}",form->accepted ? "true":"false",form->work_limit);
 }
 static void viewer_query_selectors(GD_ViewerWriter *w, const GD_ExplorerProject *project, const GD_ExplorerQueryOptions *options) {
     const GD_Rules *rules=project->rules; const GD_Model *model=project->models[GD_EXPLORER_RULE_DATA];
@@ -140,22 +154,24 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
         gd_viewer_write(w,",\"rank_editor\":{\"record\":%d,",p->editor.record); viewer_member(w,"text",p->editor.rank_text); gd_viewer_write(w,"}");
         gd_viewer_write(w,",\"mda_display\":{\"only_scope\":%s,\"only_path\":%s,\"roles\":[%s,%s,%s,%s],",p->mda.only_scope?"true":"false",p->mda.only_path?"true":"false",p->mda.roles[0]?"true":"false",p->mda.roles[1]?"true":"false",p->mda.roles[2]?"true":"false",p->mda.roles[3]?"true":"false");
         viewer_member(w,"filter",p->mda.filter); gd_viewer_write(w,"}");
-        gd_viewer_write(w,",\"resource_query\":{\"from\":"); viewer_resource_id(w,c->project->resources,p->resource_from);
-        gd_viewer_write(w,",\"to\":"); viewer_resource_id(w,c->project->resources,p->resource_to);
-        gd_viewer_write(w,",\"witness\":%d,\"accepted_only\":%s,\"only_witness\":%s,\"work_limit\":%d,\"result_available\":%s}",p->resource_witness,p->resource_accepted?"true":"false",p->resource_only_witness?"true":"false",p->resource_work_limit,p->resource_routes?"true":"false");
+        gd_viewer_write(w,",\"resource_query\":{\"from\":"); viewer_resource_id(w,c->project->resources,p->resource_pending.from);
+        gd_viewer_write(w,",\"to\":"); viewer_resource_id(w,c->project->resources,p->resource_pending.to);
+        gd_viewer_write(w,",\"witness\":%d,\"accepted_only\":%s,\"only_witness\":%s,\"work_limit\":%d,\"result_available\":%s,\"pending\":",p->resource_witness,p->resource_pending.accepted?"true":"false",p->resource_only_witness?"true":"false",p->resource_pending.work_limit,p->resource_routes?"true":"false");
+        viewer_resource_form(w,c->project->resources,&p->resource_pending); gd_viewer_write(w,",\"applied\":"); viewer_resource_form(w,c->project->resources,gd_explorer_form_applied(&item,GD_FORM_RESOURCE));
+        gd_viewer_write(w,",\"pending_differs\":%s}",p->resource_routes && !gd_explorer_form_equal(GD_FORM_RESOURCE,&p->resource_pending,&p->resource_applied) ? "true":"false");
         gd_viewer_write(w,",\"query\":{\"pending\":"); viewer_form(w,GD_FORM_QUERY,&p->query_options);
         gd_viewer_write(w,",\"pending_selectors\":"); viewer_query_selectors(w,c->project,&p->query_options);
-        gd_viewer_write(w,",\"applied\":"); if (p->query_state) viewer_form(w,GD_FORM_QUERY,&p->query_state->applied); else gd_viewer_write(w,"null");
+        gd_viewer_write(w,",\"applied\":"); viewer_form(w,GD_FORM_QUERY,gd_explorer_form_applied(&item,GD_FORM_QUERY));
         gd_viewer_write(w,",\"applied_selectors\":"); if (p->query_state) viewer_query_selectors(w,c->project,&p->query_state->applied); else gd_viewer_write(w,"null"); gd_viewer_write(w,"}");
         gd_viewer_write(w,",\"structure\":");
         if (p->structure_state) {
             gd_viewer_write(w,"{\"has_applied\":%s,\"pending\":",p->structure_state->has_applied?"true":"false"); viewer_form(w,GD_FORM_STRUCTURE,&p->structure_state->pending);
-            gd_viewer_write(w,",\"applied\":"); if (p->structure_state->has_applied) viewer_form(w,GD_FORM_STRUCTURE,&p->structure_state->applied); else gd_viewer_write(w,"null");
+            gd_viewer_write(w,",\"applied\":"); viewer_form(w,GD_FORM_STRUCTURE,gd_explorer_form_applied(&item,GD_FORM_STRUCTURE));
             gd_viewer_write(w,",\"similarity\":{\"active\":%s,\"row\":%d,\"peer\":%d,\"camera\":{\"x\":%.9g,\"y\":%.9g,\"zoom\":%.9g}}}",gd_explorer_similarity_active(&item)?"true":"false",p->structure_state->similarity_row,p->structure_state->similarity_peer,(double)p->structure_state->similarity_camera.target.x,(double)p->structure_state->similarity_camera.target.y,(double)p->structure_state->similarity_camera.zoom);
         } else gd_viewer_write(w,"null");
         gd_viewer_write(w,",\"rules\":");
         if (p->rule_state) {
-            gd_viewer_write(w,"{\"pending\":"); viewer_form(w,GD_FORM_RULES,&p->rule_state->pending); gd_viewer_write(w,",\"applied\":"); if (p->rule_state->result || p->rule_state->bindings) viewer_form(w,GD_FORM_RULES,&p->rule_state->applied); else gd_viewer_write(w,"null"); gd_viewer_write(w,"}");
+            gd_viewer_write(w,"{\"pending\":"); viewer_form(w,GD_FORM_RULES,&p->rule_state->pending); gd_viewer_write(w,",\"applied\":"); viewer_form(w,GD_FORM_RULES,gd_explorer_form_applied(&item,GD_FORM_RULES)); gd_viewer_write(w,"}");
         } else gd_viewer_write(w,"null");
         gd_viewer_write(w,"}");
     }
@@ -169,7 +185,7 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
     if (viewer->hint_pending) { gd_viewer_write(w,"{"); viewer_member(w,"projection",viewer->pending_hint.projection); gd_viewer_write(w,","); viewer_member(w,"reference",*viewer->pending_hint.reference?viewer->pending_hint.reference:NULL); gd_viewer_write(w,","); viewer_member(w,"id",*viewer->pending_hint.id?viewer->pending_hint.id:NULL); gd_viewer_write(w,"}"); }
     else gd_viewer_write(w,"null");
     }
-    gd_viewer_write(w,",\"limits\":{\"derived_navigation\":true,\"node_catalogue\":true,\"selected_source_body\":true,\"application_controls\":false,\"application_actions\":true,\"source_refresh\":true,\"events\":false,\"source_writes\":false,\"selection_owner\":\"application selection; agent hints separate\",\"control_indices\":\"snapshot-local only; not durable selectors\",\"evidence_tables\":\"not exported; use native queries with inspected selectors\"}}");
+    gd_viewer_write(w,",\"limits\":{\"derived_navigation\":true,\"node_catalogue\":true,\"selected_source_body\":true,\"application_controls\":false,\"application_actions\":true,\"form_controls\":true,\"presentation_controls\":true,\"retained_result_inspection\":true,\"evidence_paging\":true,\"source_refresh\":true,\"events\":false,\"source_writes\":false,\"selection_owner\":\"application selection; agent hints separate\",\"control_indices\":\"snapshot-local only; not durable selectors\",\"evidence_tables\":\"retained native JSON byte pages via viewer result; source-slot/selection pages via viewer evidence; completeness and native omissions remain explicit\"}}");
 }
 static int viewer_projection(const char *name) {
     int v; for (v=0;v<GD_EXPLORER_VIEWS;++v) if (!strcmp(name,viewer_projections[v])) return v; return -1;
@@ -211,11 +227,14 @@ static void viewer_actions(GD_ExplorerContext *c, GD_ViewerWriter *w) {
         const GD_ExplorerActionInfo *info=gd_explorer_action_info((GD_ExplorerAction)action);
         if (!info || !(info->views&(1u<<c->pane->view))) continue;
         if (written++) gd_viewer_write(w,","); gd_viewer_write(w,"{"); viewer_member(w,"name",info->name);
-        gd_viewer_write(w,","); viewer_member(w,"label",info->label);
+        gd_viewer_write(w,","); viewer_member(w,"label",info->label); gd_viewer_write(w,","); viewer_member(w,"form",gd_explorer_form_name(info->form));
         gd_viewer_write(w,",\"available\":%s}",gd_explorer_action_available(c,(GD_ExplorerAction)action)?"true":"false");
     }
-    gd_viewer_write(w,"],\"parameter_mutation\":false,\"source_draft_edits\":false}");
+    gd_viewer_write(w,"],\"parameter_mutation\":true,\"source_draft_edits\":false}");
 }
+#include "gd_explorer_viewer_controls.h"
+#include "gd_explorer_viewer_evidence.h"
+#include "gd_explorer_viewer_results.h"
 static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_ViewerWriter *w) {
     ExplorerViewer *viewer=data; GD_ExplorerContext *c=viewer->context,target=*c;
     int v=viewer_projection(request->projection),node=-1;
@@ -230,21 +249,52 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
         ++viewer->reload_generation; viewer_toast(viewer,"CLI reloaded sources",NULL);
         gd_viewer_write(w,"{\"ok\":true,\"reloaded\":true,\"reload_generation\":\"%llu\",\"focus_changed\":false,\"draft_discarded\":false}",(unsigned long long)viewer->reload_generation); return;
     }
-    if ((!strcmp(request->command,"nodes") || !strcmp(request->command,"actions")) && !*request->projection) v=c->pane->view;
+    if ((!strcmp(request->command,"nodes") || !strcmp(request->command,"actions") || !strcmp(request->command,"controls") || !strcmp(request->command,"evidence")) && !*request->projection) v=c->pane->view;
     if (v<0 || !(c->project->available&(1u<<v))) { gd_viewer_error(w,"viewer.projection","Projection is unknown or unavailable with loaded bindings"); return; }
     target.pane=&viewer->panes[v];
+    if (!strcmp(request->command,"evidence")) { viewer_evidence(viewer,request,&target,w); return; }
+    if (!strcmp(request->command,"result")) { viewer_result(viewer,request,&target,w); return; }
+    if (!strcmp(request->command,"select")) {
+        char token[64];
+        if(viewer_interacting() || gd_explorer_rank_pending(c->project,viewer->panes)) {gd_viewer_error(w,"viewer.busy","Selection blocked by active input/pending rank; nothing changed");return;}
+        viewer_control_token(viewer,&target,GD_FORM_PRESENTATION,token,sizeof(token));
+        if(strcmp(token,request->expect)) {gd_viewer_error(w,"viewer.stale_controls","Selection scope changed; read evidence again");return;}
+        if(!viewer_select(&target,request,w)) return;
+        if(target.pane->structure_state) target.pane->structure_state->similarity_canvas=false;
+        viewer_toast(viewer,"CLI selected context in",gd_explorer_view_names[v]); gd_viewer_write(w,"{\"ok\":true,\"selected\":true,\"focus_changed\":false,\"source_draft_changed\":false}"); return;
+    }
     if (!strcmp(request->command,"nodes")) { viewer_nodes(viewer,request,&target,w); return; }
     if (!strcmp(request->command,"actions")) { viewer_actions(&target,w); return; }
+    if (!strcmp(request->command,"controls")) { viewer_controls(viewer,request,&target,w,0); return; }
+    if (!strcmp(request->command,"configure")) {
+        int form=viewer_form_kind(request->form); char token[64],message[256];
+        if (viewer_interacting() || gd_explorer_rank_pending(c->project,viewer->panes)) { gd_viewer_error(w,"viewer.busy","Configuration blocked by active input or pending rank edit; nothing staged"); return; }
+        if (form<0 || !gd_explorer_form_available(&target,(GD_ExplorerForm)form)) { gd_viewer_error(w,"viewer.control","Unknown/unavailable form for target projection"); return; }
+        viewer_control_token(viewer,&target,(GD_ExplorerForm)form,token,sizeof(token));
+        if (strcmp(request->expect,token)) { gd_viewer_error(w,"viewer.stale_controls","Form/source scope changed; read controls again before configuring"); return; }
+        if (!gd_explorer_control_set(&target,(GD_ExplorerForm)form,request->control,request->value,message,sizeof(message))) { gd_viewer_error(w,"viewer.control",message); return; }
+        viewer_toast(viewer,"CLI configured controls in",gd_explorer_view_names[v]); viewer_controls(viewer,request,&target,w,1); return;
+    }
     if (!strcmp(request->command,"action")) {
         int action;
         if (viewer_interacting() || gd_explorer_rank_pending(c->project,viewer->panes)) { gd_viewer_error(w,"viewer.busy","Action blocked by active input or pending rank edit; nothing applied"); return; }
         for (action=0;action<GD_ACTION_COUNT;++action) if (!strcmp(request->action,gd_explorer_action_info((GD_ExplorerAction)action)->name)) break;
         if (action==GD_ACTION_COUNT || !gd_explorer_action_available(&target,(GD_ExplorerAction)action)) { gd_viewer_error(w,"viewer.action","Action unknown or unavailable for target pane/result; inspect viewer actions"); return; }
+        if (*request->expect) {
+            GD_ExplorerForm form=gd_explorer_action_info((GD_ExplorerAction)action)->form; char token[64];
+            viewer_control_token(viewer,&target,form,token,sizeof(token));
+            if (strcmp(request->expect,token)) { gd_viewer_error(w,"viewer.stale_controls","Pending/applied form or source scope changed; action not run"); return; }
+        }
         if (!gd_explorer_action_run(&target,(GD_ExplorerAction)action)) {
-            const char *message=action==GD_ACTION_RULES_RUN || action==GD_ACTION_RULES_CLEAR ? target.pane->rule_message:target.pane->query_message;
+            GD_ExplorerForm form=gd_explorer_action_info((GD_ExplorerAction)action)->form;
+            const char *message=form==GD_FORM_RESOURCE ? target.pane->resource_message:form==GD_FORM_RULES ? target.pane->rule_message:target.pane->query_message;
             gd_viewer_error(w,"viewer.action",*message?message:"Native action failed; last good result retained"); return;
         }
-        c->analysis->initialized=0; viewer_toast(viewer,"CLI action in",gd_explorer_view_names[v]);
+        if(action==GD_ACTION_VIEW_ANALYZE) {
+            viewer_record_layers(viewer,&target);
+            if(v==GD_EXPLORER_SKILLS) viewer_control_token(viewer,&target,GD_FORM_PRESENTATION,viewer->knowledge_token,sizeof(viewer->knowledge_token));
+        } else if(gd_explorer_action_info((GD_ExplorerAction)action)->form!=GD_FORM_PRESENTATION) c->analysis->initialized=0;
+        viewer_toast(viewer,"CLI action in",gd_explorer_view_names[v]);
         gd_viewer_write(w,"{\"ok\":true,\"executed\":true,"); viewer_member(w,"action",request->action);
         gd_viewer_write(w,","); viewer_member(w,"projection",viewer_projections[v]); gd_viewer_write(w,","); viewer_member(w,"active_projection",viewer_projections[c->pane->view]);
         gd_viewer_write(w,",\"focus_changed\":false,\"source_draft_changed\":false}"); return;

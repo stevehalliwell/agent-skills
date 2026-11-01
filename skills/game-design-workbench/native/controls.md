@@ -1,80 +1,106 @@
-# Shared investigation controls — implementation inventory
+# Shared investigation controls
 
-Status: shared-form/action refactor, named action IPC, guarded source refresh and UI feedback implemented. Typed parameter configuration and full control/result coverage remain missing. Shared-investigation walkthrough is not ready.
+Status: joint interactive Mario IPC tour completed; user requested checkpoint and three UX follow-ups in root `todo.md` Step 2. Analytical forms, presentation controls, retained result readers and typed evidence selection implemented and CJIT-verified. Tour demonstrated shared selection/hints, configure/Run/evidence loops and retained independent pane context. User reports Grid-to-Free-graph selection not visibly following, toast too brief and missing consistent readable selection framing. These remain open; CPU checks do not override observations. Step 1, full live safety/usefulness acceptance and final every-view walkthrough remain open. Separate review viewer launched at user request; no existing explorer replaced.
 
-## Implemented shared boundary
+## Shared application boundary
 
-`gd_explorer_controls.{h,c}` owns 41 field descriptions across three form families:
+`gd_explorer_controls.{h,c}` owns four analytical forms and dispatches application actions. `gd_explorer_presentation.h` adds immediate presentation metadata and transitions.
 
-- Query: Actor inventory/finite variants/coverage and Effect contributor display. Sixteen stored fields.
-- Structure: canonical structural questions and similarity across eight views. Fifteen stored fields.
-- Rules: Resource conditional outcomes/consistency and object bindings. Ten stored fields.
+- Query: 16 fields. Actor inventory, finite variants/coverage and Effect contributors.
+- Structure: 15 fields. Canonical structural and similarity questions across eight views.
+- Rules: 10 fields. Conditional outcomes/consistency and object bindings.
+- Resource: four fields. FROM, TO, accepted-only and work ceiling.
+- Presentation: 49 fields. View-specific layout, sort/direction, pause/filter, distance focus, graph layers/peers, relationship/MDA roots, roles/witness filters, Resource/Challenge witnesses, similarity entry/peer/canvas/page, hypothetical knowledge, shown support-path bypass nomination, result pages and binding-axis page.
 
-Each description defines field name, storage type/offset/capacity, label and primitive widget choices/height where applicable. GUI primitive editors, logical pending/applied equality and IPC form inspection use these descriptions. Native indices remain internal, snapshot-local values—not write selectors for a future IPC API.
+Descriptions define names, types, capacities, choices and editability. Discovery returns stable keys, pending/applied values, bounds and source-slot pages. Native indices remain snapshot-local output, never write selectors. GUI and IPC share domain builders, native selectors and application transitions; no parallel evaluator.
 
-Shared semantic transitions handle Actor question/root/participant/axis changes, structural question changes and rule inspection mode changes. Preserve dependent-input clearing from GUI behavior. Reject invalid native selector indices without partial transition. Empty query literal lists ignore unused parser-mode flags during logical comparison, matching prior behavior.
+Analytical configuration stages one field plus dependent resets atomically. Only explicit Run/Display consumes pending analysis/display inputs. Presentation configuration applies immediately; discovery reports apply policy. Neither path changes authoritative sources, draft/Undo, active pane or OS focus.
 
-Six named application actions share availability and dispatch:
+### Actions
 
-- `query.run`: replace Actor/Effect result through existing native builder.
-- `query.display`: rebuild drawing from applied query, not pending analytical inputs.
-- `structure.run`: run canonical structural/similarity question.
-- `structure.clear`: allocate default inputs before releasing old result.
-- `rules.run`: run conditional reader/binding inventory.
-- `rules.clear`: clear rule/binding inspection only.
+- `query.run`, `query.display`.
+- `structure.run`, `structure.clear`.
+- `rules.run`, `rules.clear`.
+- `resource.run`, `resource.clear`.
+- `view.fit`, `view.rearrange`, `view.expand`.
+- `view.start.add`, `view.start.clear`, `view.analyze`, `view.compare`.
+- `view.reset`, `view.find.clear`, `view.witness.fit`, `view.cell.fit`.
 
-GUI buttons use the same action dispatch. Action code calls existing domain builders; no parallel evaluator. Domains retain result ownership, diagnostics and last-good failure behavior. Pending form creation is explicit and lazy. Reads do not allocate forms.
+Discover current availability with `viewer actions`. `view.analyze` explicitly prepares shown-canvas layer/knowledge evidence; Query, Grid and similarity canvases do not masquerade as ordinary graph-layer caches. `view.compare` explicitly computes retained Actor/similarity pair evidence. Reads never run either action. Reset rejects dirty drafts or retained Undo and builds replacement before releasing previous pane state.
 
-IPC inspection now reports applied rule form for successful object-binding queries too; previously only conditional results exposed applied inputs.
-
-## IPC commands implemented
+## IPC use
 
 ```sh
-gd viewer actions --target SESSION --projection actors
-gd viewer action --target SESSION --projection actors --action query.run
-gd viewer action --target SESSION --projection actors --action query.display
+gd viewer controls --target SESSION --projection actors --form query
+gd viewer controls --target SESSION --projection actors --form query --control root_case --offset 0 --limit 16
+gd viewer configure --target SESSION --projection actors --form query --control root_case --value 'SOURCE#CASE' --expect TOKEN
+gd viewer action --target SESSION --projection actors --action query.run --expect UPDATED_TOKEN
+gd viewer controls --target SESSION --projection matrix --form presentation
+gd viewer configure --target SESSION --projection matrix --form presentation --control layout --value grid --expect TOKEN
+gd viewer evidence --target SESSION --projection matrix --form cells --limit 16
+gd viewer select --target SESSION --projection matrix --form cell --reference 'nouns/Hero' --id 'verbs/Jump' --expect SELECTION_TOKEN
+gd viewer result --target SESSION --projection actors --form query --limit 64
 gd viewer refresh --target SESSION
 ```
 
-- `actions` reads shared action descriptions/availability for requested or active pane. No preparation, input creation or evaluation.
-- `action` requires projection and exact action name. Execute one of six shared operations against that pane; do not activate an inactive pane or steal OS focus. Run consumes current pending analytical inputs explicitly. Success means action executed, not proof of complete coverage. No parameter-writing command yet.
-- `refresh` reloads original collection bindings through same native replacement pipeline as GUI refresh. No project rebinding or disk writes. Block active text/pointer/navigation input, pending rank text, modified draft and retained Undo history—even when net draft diff is empty. Pending analysis/remap conflicts reject without losing last-good state. Successful reload increments generation and invalidates old exact-ID hints.
-- All mutations retain explicit session targeting, bounded strict JSON and unknown-outcome/no-auto-retry rules. Reads remain non-consuming. Request allows no source-draft edit, Undo, discard or force-overwrite option.
+- `controls`/`actions` do not prepare panes, allocate forms or evaluate analysis.
+- `configure` requires latest form `control_token`. Stale token, active human input, pending rank text, disabled field, bad scalar or allocation failure rejects without staging. Token is stale-state guard, not authorization.
+- Scalars use exact source/case keys, scoped participant names, attached axes, applied variant values and canonical native IDs. Literal compound selectors retain native syntax and Run validation. Empty values clear only where native semantics allow. Escaped LF/CR/TAB are allowed only in `value`.
+- Canonical suggestions use existing matching picker/result scope. `canonical_choices_ready:false` is not absence proof. Explicitly run advertised `choice_discovery_question` when needed; no read creates that context.
+- Source-slot pages may be empty/filtered. Follow `next_offset`; pages are not frozen transactions.
+- Request cap: 8192 encoded bytes. Reply cap: 1 MiB. Scalar identity cap: 4095 UTF-8 bytes. Choice offset: 0..8192; page: 1..64. Capacity failure never returns successful truncated output.
+- Mutations retain explicit targeting, busy/rank guards and unknown-outcome/no-auto-retry rules. No source-draft edit, Undo, discard or force-overwrite endpoint.
 
-## Remaining control inventory and IPC work
+## Retained evidence and results
 
-Existing shared native analysis panels already cover several views. Reuse them; do not rebuild their semantics in transport code.
+`viewer evidence` lists page families. Supported pages: `links`, `cells`, `cases`, `diagnostics`, `starts`, `known`, `rule-rows`, `rule-checks`. Diagnostic reference filtering uses exact loaded reference. Link/cell/rule row handles require returned `selection_token`; native row offsets are not durable IDs.
 
-- Shell/display (`gd_explorer_view.c`): projection selection, view-specific layout choices, sort/direction, settling, Fit/Rearrange, distance focus/auto-fit, Find, Browse and Reset. Refresh now shares guarded native operation. Draft/report actions remain human-only. Layout validity and other guarded transitions need shared application operations, not raw struct writes.
-- Skills/Challenges/Relationships (`gd_graph_view.c`, `gd_graph_analysis_ui.c`, `gd_graph_reachability_ui.c`, `gd_graph_analysis_ui.h`): human-only rank/prerequisite draft editing; remaining IPC scope includes relationship root/expansion, known-skill assumptions; shared neighbors/lens/peer, paths/starts/witnesses/bypass, foundations, reachability, shapes and overview controls. Preserve typed identity and AND semantics.
-- Matrix (`gd_matrix_grid_view.h`): graph/columns/grid, noun/verb headers, cells and case selection. Cell/edge inspection must not be approximated as node selection.
-- MDA (`gd_mda_view.c`, unified shell): root, traversal direction, role/query/witness filters, witness selection and typed source inspection. Association remains distinct from causal flow.
-- Resources (`gd_resource_view.c`): incidence role filters, route endpoints, accepted scope, work limit, witness selection and witness-only display. Retain native identities and incidence versus directed-witness distinction.
-- Actor/Effect form pickers (`gd_explorer_query_view.c`, `gd_explorer_loaded_pickers.h`): exact source cases, local participants, attached typed axes, finite samples and assumptions, primary/comparison variants and exact contributor results. Extract selector discovery/resolution for GUI and IPC without exposing raw indices.
-- Structural/rule pickers (`gd_explorer_structure_pickers.h`, `gd_explorer_rules_view.c`): source/native selectors, starts, relation/status scope, feature weights, comparison entries, binding filters and fixed assumptions. Existing shared form descriptions cover storage, not all semantic choices/constraints.
-- Similarity (`gd_explorer_similarity_view.c`): ordinary/similarity canvas toggle, first/peer entry, feature/member comparisons, component tables, pagination and camera Fit. Preserve missing/unplaced state and independent ordinary camera.
-- Evidence/diagnostics: complete result/inspection data needed to explain displayed analysis, selected edges/cells/evidence, paging and source actions. Existing IPC exports forms/selection, not full result tables.
+`viewer select` supports exact `source`, `link`, Matrix `cell`/`case`, `diagnostic`, `rule` and `rule.check`. Matrix cells use noun+verb references or returned cell key, including blank grid coordinates. Rule transitions reuse native row/proposal marking and axis-page reset. Source selection returns from similarity to ordinary inspection. MDA link selection maps layout slot through native link key to declaring model edge.
 
-Next IPC layer must discover control types/valid choices/current and pending/applied state; resolve exact identities; validate requested changes; execute shared actions; return visible state and explicit failures. Agent must configure and run investigations without human field transcription. Preserve active human input, pending edits, independent panes, draft/Undo and last-good results. No authoritative source writes or OS focus/input automation.
+`viewer result --projection VIEW --form FAMILY` serializes retained native JSON:
 
-## Source-change boundary
+- `query`: bindings/axes, Actor finite variants/coverage, Effect concepts and currently selected target-labelled contributors.
+- `structure`: canonical question, declaration gaps or similarity result, including opt-in native inputs/source sections.
+- `rules`, `bindings`: conditional outcomes/consistency or object binding inventory.
+- `resource`: retained route coverage, witnesses, guards, side declarations and native graph evidence.
+- `mda`, `challenges`, `skills`: native association/witness, route/demand and hypothetical AND-knowledge results.
+- `layers`: explicitly prepared shown-canvas nodes/links, shared memberships, starts/support/bypass, foundations, reachability parent arcs, shape signatures and overview memberships.
+- `comparison`: explicitly computed Actor/similarity pair evidence.
 
-User chose disk-first source edits, followed by explicit GUI refresh. Do not expose skill rank/prerequisite draft mutations or Undo through IPC. Agent uses normal authorized file-editing/CLI workflow for authored changes; application-control IPC changes analytical/display inputs and requests reload. Do not speculate inside user's draft buffers.
+Byte-page envelope: `encoding:"base64"`, `offset`, `bytes`, `total_bytes`, `data`, `next_offset`, `result_token`. `--offset` counts decoded bytes. `--limit` is 1..64 KiB, default 64 KiB. Concatenate decoded pages before UTF-8/JSON parsing; a page may split a UTF-8 sequence or JSON token. Send returned token with subsequent pages. Token binds source/session, family/field filter, applied forms, selection, known set, starts, focused scope and retained rejected diagnostics. Restart after stale error.
 
-Refresh means request reload now, not silently discard active edits, dirty drafts or retained Undo history. Existing guards report conflicts; failed reload retains last-good snapshots/results. IPC does not bypass source-edit authorization or implicitly finish/export user draft.
+Capture uses bounded anonymous pipe and byte-only reader thread. Native serialization stays synchronous on owner thread. No disk files, stdout redirection, model reads on reader thread or hidden Run/comparison. Page storage cap: 65536 bytes. Total serialized ceiling: 64 MiB; overflow fails, never truncates successfully. Each page reserializes retained result to count exact total; page capacity is not a latency guarantee. Native producer omissions, work/storage limits and suffix truncation remain authoritative. Invalid outer layer caches serialize null, not stale nested evidence.
 
-## UI feedback — implemented after shared-form refactor
+Canonical structural scope and shown-canvas layer scope differ. Neither proves gameplay importance, causation, learning, simultaneous acquisition, execution order or final outcomes. Source-body inspection reads loaded Markdown, not unsaved text or fresh disk.
 
-- Hint uses separate movable/resizable ImGui window, default 360 × 160 at canvas bottom-left. No inspector child/reserved space. Appear only when hint exists; no focus on appearance. Go uses existing guarded navigation; Dismiss/close clears displayed and queued hint only. Disable Go for stale exact-ID hint.
-- Passive 2.5-second toast explains successful CLI navigation, analysis action or source reload. No input capture, navigation focus or focus on appearance. Latest notice replaces prior notice. No notice for reads, queued hints, failures or human Go. No-op view-only navigation does not show notice.
-- CPU ImGui frames verify independent window, bounds, focus retention, passive flags, expiry and disappearance. Live placement/readability remains for final review.
+## Resource pending/applied contract
 
-## Checks
+Stage all four Resource inputs while retaining last-good witnesses, applied endpoint/status/work labels, selected witness, highlights and display filters. Invalid input or failed Run/allocation preserves previous result and pending inputs. Only successful Run replaces witnesses. Explicit Clear resets Resource query/witnesses and defaults, retaining witness-only display setting and other forms. Snapshot exposes `resource_query.pending`, `applied`, `pending_differs`; applied is null before successful Run. Flat compatibility fields still describe pending inputs.
 
-CJIT-only graph/explorer compile and CPU-only production helper checks; no windows launched or existing explorer replaced. Native core: 128/128. Protocol: 59 cases plus 3 writer checks. Both examples: 248 IPC checks, 556 shared-control checks and 10 CPU ImGui feedback checks each. Targeted Node: 20 passed, 0 skipped. Example source hashes unchanged; zero owned native helper allocations remain.
+## Source refresh
 
-Checks cover all field offsets/capacities/types/names, every field's logical equality behavior, empty/nonempty literal modes, valid/invalid selector transitions, question/mode resets, lazy/read-only form access, every named action, action availability, allocation failures and last-good retention, applied binding-form inspection and pending-versus-applied query failure.
+Source changes remain disk-first authorized edits, followed by explicit guarded refresh. No IPC draft mutation or implicit export/discard.
 
-Checks also cover strict named-action/refresh envelopes, requested versus active pane ownership, successful/failing query actions, source reload allocation failure, pending-analysis conflict, successful atomic reload, dirty/Undo guards, hint invalidation and UI frames without native window or renderer.
+Refresh blocks active input, pending rank text, modified draft, retained Undo history, pending analytical inputs and remap conflicts. Zero-net-diff Undo still blocks. Cold configured forms preflight before replacement allocation. Cold applied analysis rebuilds even without base canvas. First Actor/Effect canvas uses default applied scope while retaining staged inputs. Failed replacement preserves previous project/results; success advances generation and invalidates exact-ID hints.
 
-Evidence: ignored `native/build/control-work/{adapter-crate.json,adapter-plumber.json,protocol.json,core.log,node.log,build-cli.log,build-transport.log,build-graph.log,build-explorer.log}`. All tested binaries built in this directory with CJIT. Live rendering and complete control/result coverage remain unverified/unimplemented; no walkthrough readiness or usability acceptance claimed.
+## Feedback
+
+- Independent human-owned hint window, default 360 × 160. No appearance focus. Go uses guarded navigation; Dismiss/close clears hint only. Stale exact hint disables Go.
+- Passive latest-wins 2.5-second CLI toast. No input capture or OS focus. Reads, failures and human Go do not produce toast.
+
+## Verification and remaining work
+
+CJIT only. CLI, transport, core, graph and explorer helper builds pass. Native core: 128/128. Protocol: 90 cases plus three writer and 115 capture checks. Each example: 254 IPC, 2178 shared-control, 105 configuration-loop, 185 presentation/result and 10 feedback checks. Targeted Node: 21 passed, zero failed/skipped. Source hashes unchanged; owned helper allocations released. No native window/renderer launched. Evidence: ignored `native/build/control-work/{adapter-crate.json,adapter-plumber.json,protocol.json,core.log,node.log,build-*.log}`.
+
+Current coverage includes analytical discovery/Run/Display/Clear, Resource last-good staging, cold-pane refresh, inactive ownership, presentation across eight views, byte pages/stale field filters, Matrix cells/cases/layout preservation, MDA link mapping, knowledge/start/diagnostic token invalidation, Rule row marking and similarity source-selection precedence. Capture checks cover binary pages, EOF, empty/failed callbacks, 64 MiB ceiling and warmed handle stability.
+
+Completed review hardening: full known/start/focus/diagnostic/contributor token scope; shared-cache ownership across inactive analysis and active similarity; MDA slot/key/source mapping; recursive retained similarity source; ordinary selection precedence; typed Matrix selection preservation; invalid outer-cache nulls; native return contracts; diagnostic omission/capture metadata; fail-fast expensive serializer loops. Independent source review found no remaining blocker within these classes. No latency guarantee inferred.
+
+Regression checks reassemble full JSON from 1 KiB pages and parse it in Node. Finite-Actor similarity source regression verifies no all-pair comparison section is evaluated/exported. Private diamond graph verifies exact bypass nomination through production dispatch.
+
+Review boundaries:
+
+- Full similarity feature-member data is readable through native `inputs`; exact linked source is selectable. Per-feature GUI member-page buttons are not individually mirrored as IPC controls. No human transcription needed to inspect those members.
+- Bypass nomination follows current prepared shown-path cache, like native panel. Scope changes may require explicit `view.analyze` and fresh choice discovery.
+- Full application-control parity remains a final inventory/review claim, not inferred from `presentation_controls:true`.
+- Joint interactive usefulness/safety review and every-view/mode/option walkthrough remain open. CPU checks are not GUI or usability acceptance. Alternate compiler matrix remains Step 6 work.

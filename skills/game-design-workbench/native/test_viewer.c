@@ -16,7 +16,9 @@ static void release(void *context, void *memory) { Memory *state=context; if (me
 #ifdef _WIN32
 static int lifecycle(void);
 #endif
+#include "test_viewer_capture.h"
 static int checks(void) {
+    int capture_count=capture_checks();if(!capture_count)return 2;
     const char *valid[]={
         "{\"protocol\":1,\"command\":\"inspect\"}",
         " { \"command\":\"navigate\",\"projection\":\"skills\",\"protocol\":1 } ",
@@ -25,8 +27,17 @@ static int checks(void) {
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"effects\",\"id\":\"effect:Ω\"}",
         "{\"protocol\":1,\"command\":\"inspect\",\"fields\":\"source\"}",
         "{\"protocol\":1,\"command\":\"refresh\"}",
+        "{\"protocol\":1,\"command\":\"evidence\"}",
+        "{\"protocol\":1,\"command\":\"evidence\",\"projection\":\"resources\",\"form\":\"diagnostics\",\"offset\":32768,\"limit\":1}",
+        "{\"protocol\":1,\"command\":\"result\",\"projection\":\"actors\",\"form\":\"query\",\"fields\":\"variants\",\"offset\":67108864,\"limit\":64,\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"select\",\"projection\":\"matrix\",\"form\":\"cell\",\"reference\":\"nouns/hero\",\"id\":\"verbs/jump\",\"expect\":\"token\"}",
         "{\"protocol\":1,\"command\":\"actions\"}",
         "{\"protocol\":1,\"command\":\"action\",\"projection\":\"actors\",\"action\":\"query.run\"}",
+        "{\"protocol\":1,\"command\":\"controls\"}",
+        "{\"protocol\":1,\"command\":\"controls\",\"form\":\"query\",\"control\":\"participant\",\"offset\":8192,\"limit\":1}",
+        "{\"protocol\":1,\"command\":\"configure\",\"projection\":\"actors\",\"form\":\"query\",\"control\":\"values\",\"value\":\"\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"configure\",\"projection\":\"actors\",\"form\":\"query\",\"control\":\"values\",\"value\":\"café\\nΩ\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"action\",\"projection\":\"actors\",\"action\":\"query.run\",\"expect\":\"token\"}",
         "{\"protocol\":1,\"command\":\"inspect\",\"fields\":\"selection,panes\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\",\"reference\":\"skills/café\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\",\"reference\":\"skills/caf\\u00e9\\u03a9\\ud83d\\ude00\"}"
@@ -47,6 +58,13 @@ static int checks(void) {
         "{\"protocol\":1,\"command\":\"inspect\"} trailing",
         "{\"protocol\":1,\"command\":\"inspect\",\"target\":\"\"}",
         "{\"protocol\":1,\"command\":\"quit\"}",
+        "{\"protocol\":1,\"command\":\"evidence\",\"offset\":32769}",
+        "{\"protocol\":1,\"command\":\"evidence\",\"fields\":\"ignored\"}",
+        "{\"protocol\":1,\"command\":\"result\",\"form\":\"query\"}",
+        "{\"protocol\":1,\"command\":\"result\",\"projection\":\"actors\"}",
+        "{\"protocol\":1,\"command\":\"result\",\"projection\":\"actors\",\"form\":\"query\",\"offset\":67108865}",
+        "{\"protocol\":1,\"command\":\"select\",\"projection\":\"matrix\",\"form\":\"cell\",\"id\":\"exact\"}",
+        "{\"protocol\":1,\"command\":\"select\",\"projection\":\"matrix\",\"form\":\"cell\",\"id\":\"exact\",\"expect\":\"token\",\"offset\":0}",
         "{\"protocol\":1,\"command\":\"refresh\",\"projection\":\"skills\"}",
         "{\"protocol\":1,\"command\":\"refresh\",\"fields\":\"source\"}",
         "{\"protocol\":1,\"command\":\"actions\",\"action\":\"query.run\"}",
@@ -73,6 +91,21 @@ static int checks(void) {
         "{\"protocol\":1,\"command\":\"inspect\",\"fields\":\"selection,selection\"}",
         "{\"protocol\":1,\"command\":\"inspect\",\"fields\":\"selection,\"}",
         "{\"protocol\":1,\"command\":\"navigate\",\"projection\":\"skills\",\"fields\":\"panes\"}",
+        "{\"protocol\":1,\"command\":\"controls\",\"control\":\"axis\"}",
+        "{\"protocol\":1,\"command\":\"controls\",\"offset\":0}",
+        "{\"protocol\":1,\"command\":\"controls\",\"value\":\"x\"}",
+        "{\"protocol\":1,\"command\":\"controls\",\"form\":\"query\",\"control\":\"axis\",\"offset\":8193}",
+        "{\"protocol\":1,\"command\":\"configure\",\"projection\":\"actors\",\"form\":\"query\",\"control\":\"axis\",\"value\":\"x\"}",
+        "{\"protocol\":1,\"command\":\"configure\",\"projection\":\"actors\",\"form\":\"query\",\"control\":\"axis\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"configure\",\"form\":\"query\",\"control\":\"axis\",\"value\":\"x\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"configure\",\"projection\":\"actors\",\"form\":\"query\",\"control\":\"accepted\",\"value\":true,\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"configure\",\"projection\":\"actors\",\"form\":\"query\",\"control\":\"axis\",\"value\":\"\",\"value\":\"x\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"inspect\",\"form\":\"query\"}",
+        "{\"protocol\":1,\"command\":\"nodes\",\"control\":\"axis\"}",
+        "{\"protocol\":1,\"command\":\"refresh\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"configure\",\"projection\":\"actors\",\"form\":\"query\",\"control\":\"values\",\"value\":\"\\u0000\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"configure\",\"projection\":\"actors\",\"form\":\"query\",\"control\":\"values\",\"value\":\"\\b\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"controls\",\"form\":\"query\\n\"}",
         "{\"protocol\":1,\"command\":\"inspect\",\"target\":{}}",
         "{\"protocol\":1,\"command\":\"inspect\",\"target\":\"\xff\"}"
     };
@@ -89,7 +122,7 @@ static int checks(void) {
 #ifdef _WIN32
     if (!lifecycle()) { fputs("Transport lifecycle/allocation check failed\n",stderr); return 2; }
 #endif
-    printf("{\"ok\":true,\"protocol_cases\":%zu,\"writer_checks\":3}\n",sizeof(valid)/sizeof(*valid)+sizeof(invalid)/sizeof(*invalid)+1); return 0;
+    printf("{\"ok\":true,\"protocol_cases\":%zu,\"writer_checks\":3,\"capture_checks\":%d}\n",sizeof(valid)/sizeof(*valid)+sizeof(invalid)/sizeof(*invalid)+1,capture_count); return 0;
 }
 #ifdef _WIN32
 /* Verify actual kernel-object DACL, not merely a successful same-user connect. */
@@ -129,6 +162,10 @@ static void dispatch(void *context, const GD_ViewerRequest *request, GD_ViewerWr
         gd_viewer_write(w,"{\"ok\":true,\"mutations\":%d,\"session\":",owner->mutations); gd_viewer_quote(w,gd_viewer_session(owner->server)); gd_viewer_write(w,"}");
     } else if (!strcmp(request->command,"nodes")) {
         gd_viewer_write(w,"{\"ok\":true,\"nodes\":[],\"total\":0,\"offset\":%u,\"limit\":%u,\"next_offset\":null}",request->offset,request->limit);
+    } else if (!strcmp(request->command,"controls")) {
+        gd_viewer_write(w,"{\"ok\":true,\"forms\":[],\"offset\":%u,\"limit\":%u}",request->offset,request->limit);
+    } else if (!strcmp(request->command,"configure")) {
+        ++owner->mutations; gd_viewer_write(w,"{\"ok\":true,\"configured\":true,\"value\":"); gd_viewer_quote(w,request->value); gd_viewer_write(w,",\"expect\":"); gd_viewer_quote(w,request->expect); gd_viewer_write(w,"}");
     } else if (!strcmp(request->command,"actions")) {
         gd_viewer_write(w,"{\"ok\":true,\"actions\":[]}");
     } else if (!strcmp(request->command,"action")) {

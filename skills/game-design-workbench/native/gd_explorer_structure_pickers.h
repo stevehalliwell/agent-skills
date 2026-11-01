@@ -5,8 +5,8 @@ static const GD_StructureResult *picker_context(GD_ExplorerContext *context) {
     GD_StructureOptions options={0}; GD_StructureResult *fresh; int errors=model->error_count,omitted=model->errors_omitted;
     /* Status/relation filters mask analysis, not canonical rows. Only an
        explicit Relationships scope root narrows the retained layout. */
-    if (state->result && state->revision==context->project->revision && !state->result->options.scope_root && !state->result->gaps && (context->pane->view!=GD_EXPLORER_ACTORS || !!state->result->actor_scene==!!scope)) return state->result;
-    if (state->picker_context && state->picker_revision==context->project->revision && state->picker_scope==scope) return state->picker_context;
+    const GD_StructureResult *cached=gd_explorer_structure_choices(context);
+    if (cached) return cached;
     options.question=gd_structure_name(GD_STRUCTURE_CONNECTIONS); options.projection=context->pane->view==GD_EXPLORER_ACTORS && scope ? "actors":gd_projection_name(context->pane->view); options.work_limit=GD_GRAPH_ANALYSIS_WORK;
     if (scope) options.actor_query=context->pane->query_state ? context->pane->query_state->query:NULL;
     memcpy(saved,model->errors,sizeof(saved)); fresh=gd_structure_result_build(model,context->project,&options);

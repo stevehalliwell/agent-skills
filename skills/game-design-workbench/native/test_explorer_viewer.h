@@ -4,11 +4,13 @@
 #include "test_explorer_viewer_nodes.h"
 #include "test_explorer_controls.h"
 #include "test_explorer_viewer_feedback.h"
+#include "test_explorer_presentation.h"
+#include "test_explorer_configuration.h"
 int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, int count, int *fail_at, int *calls) {
     GD_ExplorerProject *project=gd_explorer_load(a,collections,count);
-    GD_ExplorerPane *panes=NULL,*before=NULL; GD_GraphAnalysis *analysis=NULL; char *reply=NULL;
+    GD_ExplorerPane *panes=NULL,*before=NULL; GD_GraphAnalysis *analysis=NULL; char *reply=NULL,*configuration_json=NULL,*presentation_json=NULL;
     GD_ExplorerContext c={0}; ExplorerViewer viewer={0}; GD_ViewerRequest request={0};
-    GD_ViewerWriter w; int active=GD_EXPLORER_MATRIX,stale=0,result=2,v,skill=-1,checks=0,control_checks=0,feedback_checks=0;
+    GD_ViewerWriter w; int active=GD_EXPLORER_MATRIX,stale=0,result=2,v,skill=-1,checks=0,control_checks=0,feedback_checks=0,configuration_checks=0,presentation_checks=0;
     ImGuiContext *imgui=NULL;
 #define CHECK(value) do { ++checks; if (!(value)) { fprintf(stderr,"Viewer adapter check failed: %s (line %d)\n",#value,__LINE__); goto cleanup; } } while (0)
 #define DISPATCH(command_,projection_,reference_) do { memset(&request,0,sizeof(request)); snprintf(request.command,sizeof(request.command),"%s",command_); snprintf(request.projection,sizeof(request.projection),"%s",projection_); snprintf(request.reference,sizeof(request.reference),"%s",reference_); w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_dispatch(&viewer,&request,&w); } while (0)
@@ -17,8 +19,8 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
     panes=a.allocate(a.context,sizeof(*panes)*GD_EXPLORER_VIEWS);
     if (panes) memset(panes,0,sizeof(*panes)*GD_EXPLORER_VIEWS);
     before=a.allocate(a.context,sizeof(*panes)*GD_EXPLORER_VIEWS);
-    analysis=a.allocate(a.context,sizeof(*analysis)); reply=a.allocate(a.context,GD_VIEWER_REPLY_LIMIT);
-    CHECK(panes && before && analysis && reply);
+    analysis=a.allocate(a.context,sizeof(*analysis)); reply=a.allocate(a.context,GD_VIEWER_REPLY_LIMIT); configuration_json=a.allocate(a.context,GD_VIEWER_REPLY_LIMIT);presentation_json=a.allocate(a.context,GD_VIEWER_REPLY_LIMIT);
+    CHECK(panes && before && analysis && reply && configuration_json && presentation_json);
     memset(panes,0,sizeof(*panes)*GD_EXPLORER_VIEWS); memset(analysis,0,sizeof(*analysis));
     for (v=0;v<GD_EXPLORER_VIEWS;++v) pane_defaults(&panes[v],(GD_ExplorerView)v);
     imgui=igCreateContext(NULL); CHECK(imgui!=NULL); igGetIO_Nil()->IniFilename=NULL;
@@ -130,36 +132,48 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
     {
         GD_ExplorerProject *last=c.project; uint64_t generation=viewer.reload_generation;
         GD_ExplorerQueryOptions actor_options=panes[GD_EXPLORER_ACTORS].query_options,effect_options=panes[GD_EXPLORER_EFFECTS].query_options;
+        panes[GD_EXPLORER_ACTORS].query_options=panes[GD_EXPLORER_ACTORS].query_state->applied;
+        panes[GD_EXPLORER_EFFECTS].query_options=panes[GD_EXPLORER_EFFECTS].query_state->applied;
         memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);
         *fail_at=*calls+1; DISPATCH("refresh","",""); *fail_at=0;
         CHECK(strstr(reply,"viewer.refresh") && c.project==last && active==GD_EXPLORER_MATRIX && viewer.reload_generation==generation);
         CHECK(!memcmp(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS));
+        panes[GD_EXPLORER_ACTORS].query_options=actor_options; panes[GD_EXPLORER_EFFECTS].query_options=effect_options;
         DISPATCH("refresh","",""); CHECK(strstr(reply,"viewer.refresh") && c.project==last); /* Pending query inputs block native remap. */
         panes[GD_EXPLORER_ACTORS].query_options=panes[GD_EXPLORER_ACTORS].query_state->applied;
         panes[GD_EXPLORER_EFFECTS].query_options=panes[GD_EXPLORER_EFFECTS].query_state->applied;
+        /* IPC can own applied analysis before its base canvas is visited. */
+        CHECK(panes[GD_EXPLORER_MDA].structure_state && panes[GD_EXPLORER_MDA].structure_state->has_applied && panes[GD_EXPLORER_MDA].layout);
+        a.release(a.context,panes[GD_EXPLORER_MDA].layout); panes[GD_EXPLORER_MDA].layout=NULL; panes[GD_EXPLORER_MDA].prepared=0;
         DISPATCH("refresh","",""); project=c.project;
+        CHECK(panes[GD_EXPLORER_MDA].layout && panes[GD_EXPLORER_MDA].structure_state && panes[GD_EXPLORER_MDA].structure_state->has_applied && panes[GD_EXPLORER_MDA].structure_state->result);
         CHECK(!strncmp(reply,"{\"ok\":true",10) && c.project!=last && active==GD_EXPLORER_MATRIX);
         CHECK(viewer.reload_generation==generation+1 && !stale && !viewer_hint_current(&viewer));
         CHECK(!project->draft->modified_count && !project->draft->history_count);
         panes[GD_EXPLORER_ACTORS].query_options=actor_options; panes[GD_EXPLORER_EFFECTS].query_options=effect_options;
     }
     memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);
+    configuration_checks=viewer_configuration_checks(&viewer,fail_at,calls,configuration_json); CHECK(configuration_checks>0);
+    presentation_checks=viewer_presentation_checks(&viewer,fail_at,calls,presentation_json); CHECK(presentation_checks>0);
     feedback_checks=viewer_feedback_checks(&viewer); CHECK(feedback_checks>0);
     CHECK(!memcmp(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS) && active==GD_EXPLORER_MATRIX && !project->draft->modified_count);
     DISPATCH("inspect","",""); CHECK(!w.failed && !strstr(reply,"\"body\":"));
     /* Outer Node test parses complete serialized production payloads. */
-    printf("{\"ok\":true,\"snapshot\":%s",reply);
+    printf("{\"ok\":true,\"control_catalogue\":%s,\"snapshot\":%s,\"layer_result\":%s",configuration_json,reply,presentation_json);
     DISPATCH("nodes","matrix",""); request.limit=2; w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_dispatch(&viewer,&request,&w);
     CHECK(!w.failed); printf(",\"node_page\":%s",reply);
     w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_inspect(&viewer,&w,"selection,source"); CHECK(!w.failed);
-    printf(",\"source_context\":%s,\"checks\":%d,\"control_checks\":%d,\"feedback_checks\":%d}\n",reply,checks,control_checks,feedback_checks); result=0;
+    printf(",\"source_context\":%s",reply);
+    DISPATCH("controls","resources",""); CHECK(!w.failed); printf(",\"resource_controls\":%s",reply);
+    DISPATCH("actions","resources",""); CHECK(!w.failed); printf(",\"resource_actions\":%s",reply);
+    printf(",\"checks\":%d,\"control_checks\":%d,\"feedback_checks\":%d,\"configuration_checks\":%d,\"presentation_checks\":%d}\n",checks,control_checks,feedback_checks,configuration_checks,presentation_checks); result=0;
 cleanup:
     if (imgui) igDestroyContext(imgui);
     if (panes) for (v=0;v<GD_EXPLORER_VIEWS;++v) {
         gd_diagnostics_clear(&panes[v].diagnostics); gd_layout_focus_destroy(panes[v].distance_focus); gd_resource_routes_destroy(panes[v].resource_routes); pane_release_layout(a,&panes[v]);
     }
     if (panes) a.release(a.context,panes); if (before) a.release(a.context,before);
-    if (analysis) a.release(a.context,analysis); if (reply) a.release(a.context,reply); gd_explorer_destroy(project);
+    if (analysis) a.release(a.context,analysis); if (reply) a.release(a.context,reply); if (configuration_json) a.release(a.context,configuration_json);if(presentation_json)a.release(a.context,presentation_json); gd_explorer_destroy(project);
 #undef CHECK
 #undef ACTION
 #undef DISPATCH

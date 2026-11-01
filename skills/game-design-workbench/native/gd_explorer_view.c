@@ -51,7 +51,7 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     memset(p,0,sizeof(*p)); p->layout=layout; p->view=view;
     p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; p->editor.record=-1;
     gd_explorer_form_defaults(GD_FORM_QUERY,&p->query_options);
-    p->grid.noun=p->grid.verb=-1; p->resource_from=p->resource_to=p->resource_witness=-1; p->resource_work_limit=GD_RESOURCE_ROUTE_WORK;
+    p->grid.noun=p->grid.verb=-1; p->resource_witness=-1; gd_explorer_form_defaults(GD_FORM_RESOURCE,&p->resource_pending);
     p->mda=(GD_ExplorerMdaDisplay){.record=-1,.link=-1,.held=-1,.roles={true,true,true,true},.paused=true};
     p->camera.zoom=1; p->focus_auto_fit=true; p->distance_focus_revision=UINT64_MAX; p->peer=p->foundation_peer=p->witness=-1;
     p->navigate=p->focus_root=p->focus_expand=p->inspected_record=-1;
@@ -132,7 +132,7 @@ static int visible(GD_ExplorerContext *c, int node) {
 }
 static int analyze(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; unsigned char shown[GD_MAX_RECORDS]; int i,selected=-1;
-    if (grid_view(p) || query_view(p->view)) return p->selection.node; /* No generic layers over Grid or state/ghost associations. */
+    if (grid_view(p) || query_view(p->view) || gd_explorer_similarity_active(c)) return p->selection.node; /* No generic layers over Grid or state/ghost associations. */
     if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_mark(c);
     for (i=0;i<p->layout->node_count;++i) {
         shown[i]=(unsigned char)visible(c,i);
@@ -275,7 +275,7 @@ static const unsigned char *entries(GD_ExplorerContext *c, unsigned char *roots)
 static GD_ExplorerEvidence evidence(GD_ExplorerContext *c, int selected) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view);
     GD_ExplorerEvidence e={0}; unsigned char roots[GD_MAX_RECORDS];
-    if (grid_view(p) || query_view(p->view)) return e;
+    if (grid_view(p) || query_view(p->view) || gd_explorer_similarity_active(c)) return e;
     e.paths=gd_graph_paths_prepare(c->analysis,&p->paths,entries(c,roots),incidence(p->view));
     if (e.paths && p->paths.compare) e.bypass=gd_graph_path_bypass(c->analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK);
     if (p->foundations) e.foundations=gd_graph_foundations(model,c->analysis,p->view==GD_EXPLORER_RELATIONSHIPS);
@@ -425,30 +425,37 @@ static void match_details(GD_ExplorerContext *c) {
         igTreePop();
     }
 }
+static int presentation_widget(GD_ExplorerContext *c,const char *name,const char *label) {
+    GD_ExplorerPresentation values; const GD_ExplorerControl *field=gd_explorer_form_field(GD_FORM_PRESENTATION,name); char key[GD_MAX_PATH]; int changed;
+    gd_explorer_presentation_read(c,&values);
+    if(!strcmp(name,"layout")) changed=igCombo_Str(label,&values.layout,c->pane->view==GD_EXPLORER_SKILLS ? "Prerequisite depth\0Authored rank constraints\0":c->pane->view==GD_EXPLORER_MATRIX ? "Free graph\0Noun / verb columns\0Grid\0":"Role bands\0Free graph\0",-1);
+    else changed=gd_explorer_form_widget(GD_FORM_PRESENTATION,&values,name,label);
+    if(changed && gd_explorer_presentation_value(c,field,&values,key,sizeof(key))==1) gd_explorer_presentation_set(c,name,key,c->pane->query_message,sizeof(c->pane->query_message));
+    return changed;
+}
 static int layout_controls(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int rearrange=0;
-    if (p->view==GD_EXPLORER_SKILLS) rearrange=igCombo_Str("Layout",&p->rank,"Prerequisite depth\0Authored rank constraints\0",-1);
-    else if (p->view==GD_EXPLORER_MATRIX) rearrange=igCombo_Str("Layout",&p->layout_choice,"Free graph\0Noun / verb columns\0Grid\0",-1);
-    else if (p->view==GD_EXPLORER_MDA) rearrange=igCombo_Str("Layout",&p->layout_choice,"Role bands\0Free graph\0",-1);
+    if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_MDA) presentation_widget(c,"layout","Layout");
     else if (query_view(p->view)) igTextWrapped("Layout: separate native query bands; incoming weighting never changes declarations. Query/ghost associations are not temporal paths.");
     else igTextWrapped(p->view==GD_EXPLORER_CHALLENGES ? "Layout: declared route bands":p->view==GD_EXPLORER_RELATIONSHIPS ? "Layout: focused consumed declarations":"Layout: free incidence graph");
-    if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_CHALLENGES) if (igCombo_Str("Direction",&p->horizontal,"Top to bottom\0Left to right\0",-1)) rearrange=1;
-    if (is_graph(p->view) && igCombo_Str("Sort / initial order",&p->sort,grid_view(p) ? "Name\0Active partners (descending)\0":"Name\0Shown degree (descending)\0",-1)) rearrange=1;
+    if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_CHALLENGES) presentation_widget(c,"direction","Direction");
+    if (is_graph(p->view)) presentation_widget(c,"sort","Sort / initial order");
     if (grid_view(p) || query_view(p->view) || p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS || p->layout->mode==GD_LAYOUT_COLUMNS)
         igTextWrapped("Stable layout; settling applies only to movable graph layouts.");
     else { igCheckbox("Pause settling",&p->paused); igSameLine(0,-1); }
-    if (igButton("Fit (F)",(ImVec2_c){0,0})) p->fit=1;
-    if (!query_view(p->view)) { igSameLine(0,-1); if (igButton("Rearrange",(ImVec2_c){0,0})) rearrange=1; }
+    if (igButton("Fit (F)",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.fit");
+    if (!query_view(p->view)) { igSameLine(0,-1); if (igButton("Rearrange",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.rearrange"); }
     if (p->view==GD_EXPLORER_MATRIX && !grid_view(p)) igCheckbox("Overlay other pairs (does not merge groups)",&p->overlay);
     if (grid_view(p)) igTextWrapped("Grid shows every loaded noun, verb and declared cell, including inactive pairs. Wheel zooms cells/labels; right/middle drag pans. Arrows select (held repeat); PageUp/Down changes case. Blank is not a defect. Graph analysis/focus layers unavailable in Grid; settings retained for graph layouts.");
     if (p->view==GD_EXPLORER_MDA) {
         int direction=c->project->mda->direction,i;
-        if (igCombo_Str("Traversal",&direction,"Both / associations\0Forward / toward aesthetics\0Backward / authored basis\0",-1))
-            gd_mda_query(model,c->project->mda,c->project->mda->root,(GD_MdaDirection)direction);
+        if (igCombo_Str("Traversal",&direction,"Both / associations\0Forward / toward aesthetics\0Backward / authored basis\0",-1)) {
+            const char *keys[]={"both","forward","backward"}; gd_explorer_presentation_set(c,"mda_direction",keys[direction],p->query_message,sizeof(p->query_message));
+        }
         igTextWrapped("Query root: %s",c->project->mda->root>=0 ? model->records[c->project->mda->root].reference:"all supplied nodes");
         if (p->mda.record>=0 && gd_mda_role(model->records[p->mda.record].role) && igButton("Use selected as query root",(ImVec2_c){0,0}))
-            gd_mda_query(model,c->project->mda,p->mda.record,c->project->mda->direction);
-        if (igButton("Show all query nodes",(ImVec2_c){0,0})) gd_mda_query(model,c->project->mda,-1,c->project->mda->direction);
+            gd_explorer_presentation_set(c,"mda_root",model->records[p->mda.record].reference,p->query_message,sizeof(p->query_message));
+        if (igButton("Show all query nodes",(ImVec2_c){0,0})) gd_explorer_presentation_set(c,"mda_root","",p->query_message,sizeof(p->query_message));
         igCheckbox("Only query nodes (display only)",&p->mda.only_scope);
         igCheckbox("Only selected witness (display only)",&p->mda.only_path);
         for (i=0;i<4;++i) igCheckbox(gd_mda_role_name((GD_Role)(GD_MDA_MECHANIC+i)),&p->mda.roles[i]);
@@ -461,8 +468,24 @@ static int layout_controls(GD_ExplorerContext *c) {
     }
     return rearrange;
 }
+static int reset_view(GD_ExplorerContext *c);
+static void grid_frame_selection(GD_ExplorerContext *c);
+#include "gd_explorer_presentation.h"
 static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const GD_Collection *collections, int count,
                           char *failure, size_t failure_size) {
+    union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; } defaults;
+    GD_ExplorerContext current=*c; int pane,form;
+    /* Cold forms can be configured before any canvas exists. Never skip their
+       pending inputs, or consume them implicitly while rebuilding a snapshot. */
+    for (pane=0;pane<GD_EXPLORER_VIEWS;++pane) for (form=0;form<GD_FORM_COUNT;++form) {
+        const void *pending,*applied; current.pane=&panes[pane];
+        pending=gd_explorer_form_pending(&current,(GD_ExplorerForm)form,0); if (!pending) continue;
+        applied=gd_explorer_form_applied(&current,(GD_ExplorerForm)form);
+        if (!applied) { gd_explorer_form_defaults((GD_ExplorerForm)form,&defaults); applied=&defaults; }
+        if (!gd_explorer_form_equal((GD_ExplorerForm)form,pending,applied)) {
+            snprintf(failure,failure_size,"Apply or reset pending %s inputs in %s before refresh; prior state retained.",gd_explorer_form_name((GD_ExplorerForm)form),gd_explorer_view_names[pane]); return 0;
+        }
+    }
     GD_ExplorerProject *old=c->project,*fresh=gd_explorer_load(old->allocator,collections,count);
     GD_ExplorerPane *replacement=NULL; GD_ExplorerContext candidate=*c;
     const GD_Error *error=gd_explorer_error(fresh); const char *question_failure=NULL;
@@ -484,7 +507,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
             }
             if (ready) ready=gd_mda_query(gd_explorer_model(fresh,GD_EXPLORER_MDA),fresh->mda,root,old->mda->direction);
         }
-        for (v=0;v<GD_EXPLORER_VIEWS && ready;++v) if (panes[v].layout) {
+        for (v=0;v<GD_EXPLORER_VIEWS && ready;++v) if (panes[v].layout || panes[v].query_state || panes[v].structure_state || panes[v].rule_state || panes[v].resource_routes) {
             GD_ExplorerPane *p=&replacement[v]; const GD_ExplorerPane *prior=&panes[v];
             GD_Model *model=gd_explorer_model(old,(GD_ExplorerView)v),*next=gd_explorer_model(fresh,(GD_ExplorerView)v);
             GD_Focus focus={0}; int record,root=-1,j;
@@ -521,8 +544,11 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
                     if (key>=0) gd_graph_path_start(&mapped,key); else ++mapped.lost;
                 }
                 p->paths=mapped;
-                p->resource_from=gd_explorer_resource_remap(old->resources,fresh->resources,prior->resource_from);
-                p->resource_to=gd_explorer_resource_remap(old->resources,fresh->resources,prior->resource_to);
+                p->resource_pending.from=gd_explorer_resource_remap(old->resources,fresh->resources,prior->resource_pending.from);
+                p->resource_pending.to=gd_explorer_resource_remap(old->resources,fresh->resources,prior->resource_pending.to);
+                if ((prior->resource_pending.from>=0 && p->resource_pending.from<0) || (prior->resource_pending.to>=0 && p->resource_pending.to<0)) {
+                    snprintf(p->resource_message,sizeof(p->resource_message),"Resource endpoint cannot remap; prior snapshot/inputs/witnesses retained."); ready=0; question_failure=p->resource_message;
+                }
                 p->resource_witness=-1;
             } else gd_graph_paths_remap(&p->paths,model,next);
             p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
@@ -548,10 +574,8 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
             if (ready && !gd_explorer_structure_remap(&candidate,old,prior)) { ready=0; question_failure=p->query_message; }
             if (ready && !gd_explorer_rules_remap(&candidate,old,prior)) { ready=0; question_failure=p->rule_message; }
             if (ready && v==GD_EXPLORER_RESOURCES && prior->resource_routes) {
-                if (prior->resource_work_limit!=prior->resource_routes->work_limit) { snprintf(p->resource_message,sizeof(p->resource_message),"Apply pending Resource work ceiling before refresh."); ready=0; question_failure=p->resource_message; }
-                else if (p->resource_to<0 || (prior->resource_from>=0 && p->resource_from<0))
-                    snprintf(p->resource_message,sizeof(p->resource_message),"Endpoint disappeared on reload; select new endpoints before running.");
-                else if (!gd_explorer_resource_run(&candidate)) ready=0;
+                if (!gd_explorer_form_equal(GD_FORM_RESOURCE,&prior->resource_pending,&prior->resource_applied)) { snprintf(p->resource_message,sizeof(p->resource_message),"Apply pending Resource inputs before refresh; prior witnesses retained."); ready=0; question_failure=p->resource_message; }
+                else if (!gd_explorer_resource_run(&candidate)) { ready=0; question_failure=p->resource_message; }
             }
         }
         /* Preparing every visited layout is part of candidate validation. Never
@@ -615,7 +639,7 @@ static int center_relationships(GD_ExplorerContext *c, GD_ExplorerPane *panes, i
 static int reset_view(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_ExplorerView view=p->view;
     if (is_graph(view) && gd_explorer_graph_commit(c)<0) return 0;
-    if (query_view(view) || p->structure_state || p->rule_state) {
+    {
         GD_Allocator allocator=c->project->allocator; GD_ExplorerContext context=*c;
         GD_ExplorerPane *candidate=allocator.allocate(allocator.context,sizeof(*candidate));
         if (!candidate) { snprintf(p->query_message,sizeof(p->query_message),"Cannot allocate reset candidate; last good query retained."); return 0; }
@@ -628,8 +652,6 @@ static int reset_view(GD_ExplorerContext *c) {
         pane_release_layout(allocator,p); gd_diagnostics_clear(&p->diagnostics); gd_layout_focus_destroy(p->distance_focus); gd_resource_routes_destroy(p->resource_routes);
         *p=*candidate; allocator.release(allocator.context,candidate); c->analysis->initialized=0; return 1;
     }
-    if (view==GD_EXPLORER_MDA) gd_mda_query(gd_explorer_model(c->project,view),c->project->mda,-1,GD_MDA_BOTH);
-    pane_defaults(p,view); c->analysis->initialized=0; return 1;
 }
 static int undo_draft(GD_ExplorerContext *c, GD_ExplorerPane *panes) {
     if (!c->project->draft || !gd_draft_undo(c->project->draft)) return 0;
@@ -783,7 +805,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             }
             igEndChild(); igTreePop();
         }
-        if (p->view==GD_EXPLORER_SKILLS && igCollapsingHeader_TreeNodeFlags("Skill opportunities / knowledge",0)) gd_explorer_graph_unlocks(&c);
+        if (p->view==GD_EXPLORER_SKILLS && igCollapsingHeader_TreeNodeFlags("Skill opportunities / knowledge",0)) { gd_explorer_graph_unlocks(&c); viewer_control_token(&viewer,&c,GD_FORM_PRESENTATION,viewer.knowledge_token,sizeof(viewer.knowledge_token)); }
         {
             const GD_Finding *findings=p->view==GD_EXPLORER_MDA ? project->mda->findings:project->rules && (p->view==GD_EXPLORER_RESOURCES || query_view(p->view)) ? project->rules->findings:model->findings;
             int count_findings=p->view==GD_EXPLORER_MDA ? project->mda->finding_count:(p->view==GD_EXPLORER_RESOURCES || query_view(p->view)) ? project->rules->finding_count:model->finding_count;
@@ -877,7 +899,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             gd_layout_focus_advance(p->distance_focus,p->layout,GetFrameTime(),p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
         if (!gd_explorer_similarity_active(&c) && p->fit==3) { fit_view(&c,2); p->fit=0; }
         {
-            GD_ExplorerEvidence e=evidence(&c,selected);
+            GD_ExplorerEvidence e=evidence(&c,selected); viewer_record_layers(&viewer,&c);
             if (gd_explorer_similarity_active(&c)) gd_explorer_similarity_draw(&c);
             else if (grid_view(p)) grid_draw(&c);
             else if (is_graph(p->view)) gd_explorer_graph_draw(&c,&e);

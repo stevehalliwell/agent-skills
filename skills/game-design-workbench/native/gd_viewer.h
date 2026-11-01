@@ -7,10 +7,11 @@
 #define GD_VIEWER_INSTANCES 32
 #define GD_VIEWER_SESSION 64
 #define GD_VIEWER_NODE_PAGE 64
-/* Local control v1: no source writes, execution, arbitrary paths or auto-start. */
+#define GD_VIEWER_CONTROL_OFFSET GD_MAX_RULE_PARTICIPANTS
+/* Local control v1: no source/draft writes, scripts, arbitrary paths or auto-start. */
 typedef struct {
     char command[16], target[GD_VIEWER_SESSION], projection[32], reference[260], fields[128];
-    char id[GD_MAX_PATH],action[64];
+    char id[GD_MAX_PATH],action[64],form[32],control[64],value[GD_MAX_RULE_LINE+1],expect[64];
     unsigned offset,limit;
 } GD_ViewerRequest;
 typedef struct { char *text; size_t size, capacity; int failed; } GD_ViewerWriter;

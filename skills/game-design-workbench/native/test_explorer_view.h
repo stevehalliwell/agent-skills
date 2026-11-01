@@ -364,10 +364,10 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
        Keep result through candidate-allocation and reload/remapping checks. */
     {
         GD_ExplorerPane *p=&panes[GD_EXPLORER_RESOURCES]; int i,target=-1;
-        c.pane=p; p->resource_to=0;
+        c.pane=p; p->resource_pending.to=0;
         EXPLORER_CHECK(gd_explorer_resource_run(&c));
         for (i=0;i<p->resource_routes->arc_count;++i) if (p->resource_routes->arcs[i].kind==GD_RESOURCE_CREDIT || p->resource_routes->arcs[i].kind==GD_RESOURCE_STATE_PROPOSAL) { target=p->resource_routes->arcs[i].to; break; }
-        EXPLORER_CHECK(target>=0); p->resource_to=p->selection.node=target;
+        EXPLORER_CHECK(target>=0); p->resource_pending.to=p->selection.node=target;
         EXPLORER_CHECK(gd_explorer_resource_run(&c) && p->resource_routes->witness_count>0 && p->resource_routes->marked_nodes[target]);
         p->shared=p->branches=p->foundations=p->shapes=false; p->paths.enabled=p->reach.enabled=p->overview.enabled=0;
         p->resource_only_witness=true; p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;
@@ -380,7 +380,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             int root_activation=edge->activation;
             if (!node->instance || edge->contextual_input || (edge->kind!=GD_RESOURCE_STATE_WRITE && !(edge->kind==GD_RESOURCE_QUANTITY_WRITE && edge->delta_recognized && edge->delta.known && edge->delta.number>0))) continue;
             while (project->resources->nodes[root_activation].instance) root_activation=project->resources->nodes[root_activation].parent;
-            p->resource_from=root_activation; p->resource_to=edge->facet; p->selection.node=edge->activation;
+            p->resource_pending.from=root_activation; p->resource_pending.to=edge->facet; p->selection.node=edge->activation;
             EXPLORER_CHECK(gd_explorer_resource_run(&c) && p->resource_routes->witness_count>0);
             {
                 int witness,step,found=-1;
@@ -394,7 +394,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/resource-instance.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
             break;
         }
-        p->resource_from=-1; p->resource_to=p->selection.node=target;
+        p->resource_pending.from=-1; p->resource_pending.to=p->selection.node=target;
         EXPLORER_CHECK(gd_explorer_resource_run(&c));
     }
     /* Allocation failure in replacement layout preparation must retain every
@@ -466,7 +466,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     EXPLORER_CHECK(remove(invalid)==0); invalid_created=0;
     EXPLORER_CHECK(reload_project(&c,panes,collections,count,failure,sizeof(failure)) && c.project!=last_good);
     EXPLORER_CHECK(panes[GD_EXPLORER_RESOURCES].resource_routes && panes[GD_EXPLORER_RESOURCES].resource_routes->graph==c.project->resources);
-    EXPLORER_CHECK(panes[GD_EXPLORER_RESOURCES].resource_routes->to==panes[GD_EXPLORER_RESOURCES].resource_to);
+    EXPLORER_CHECK(panes[GD_EXPLORER_RESOURCES].resource_routes->to==panes[GD_EXPLORER_RESOURCES].resource_applied.to);
     project=c.project;
     EXPLORER_CHECK(grid_view(&panes[GD_EXPLORER_MATRIX]) && panes[GD_EXPLORER_MATRIX].grid.noun>=0 && panes[GD_EXPLORER_MATRIX].grid.verb>=0 && panes[GD_EXPLORER_MATRIX].selection.cell>=0);
     {

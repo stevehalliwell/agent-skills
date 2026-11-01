@@ -83,7 +83,7 @@ static void mark_write(GD_ExplorerRuleState *state,const GD_RuleWrite *write) {
     if (write->origin_case>=0 && write->origin_case<rules->case_count) state->marked_cases[write->origin_case]=1;
     for (i=0;i<write->path_count && i<GD_MAX_RULE_EXPANSION_DEPTH;++i) if (write->path[i]>=0 && write->path[i]<rules->case_count) state->marked_cases[write->path[i]]=1;
 }
-static void choose(GD_ExplorerRuleState *state,int row,int peer) {
+void gd_explorer_rules_choose(GD_ExplorerRuleState *state,int row,int peer) {
     const GD_RuleAnalysis *analysis=state->result ? state->result->analysis:NULL; memset(state->marked_cases,0,sizeof(state->marked_cases)); state->row=row; state->peer_write=peer; state->axis_page=0;
     if (state->bindings) { if (row>=0 && row<state->bindings->binding_count) state->marked_cases[state->bindings->bindings[row].case_index]=1; return; }
     if (state->result->request.kind==GD_NAMED_OUTCOMES) {
@@ -128,7 +128,7 @@ static void binding_details(GD_ExplorerContext *context,GD_ExplorerRuleState *st
     if (gd_explorer_similarity_active(context)) igTextWrapped("Source inspection returns to ordinary canvas; similarity geometry remains unchanged.");
     if (count>64) igSliderInt("Binding page",&state->page,0,(count-1)/64,"%d",0); if (state->page<0 || state->page*64>=count) state->page=0; start=state->page*64;
     for (i=start;i<count && i<start+64;++i) { const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleCase *item=&rules->cases[binding->case_index]; const GD_RuleParticipant *actor=&rules->participants[binding->participant];
-        igPushID_Int(i); if (igSelectable_Bool(TextFormat("%s#%s / %s | %s",model->records[rules->sources[item->source].record].reference,item->name,actor->name,actor->noun ? actor->noun:"unspecified noun"),state->row==i,0,(ImVec2_c){0,0})) choose(state,i,-1); igPopID();
+        igPushID_Int(i); if (igSelectable_Bool(TextFormat("%s#%s / %s | %s",model->records[rules->sources[item->source].record].reference,item->name,actor->name,actor->noun ? actor->noun:"unspecified noun"),state->row==i,0,(ImVec2_c){0,0})) gd_explorer_rules_choose(state,i,-1); igPopID();
     }
     if (state->row>=0 && state->row<count) { const GD_QueryBinding *binding=&query->bindings[state->row]; const GD_RuleParticipant *actor=&rules->participants[binding->participant];
         igTextWrapped("Local %s | noun %s | resolution %s | declaration line %d",actor->name,actor->noun ? actor->noun:"unspecified",gd_rule_resolution_name(actor->noun_resolution),actor->line);
@@ -168,7 +168,7 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
     if (form->bindings) {
         int before=gd_explorer_picker_case_index(model,rules,form->case_name),root,local=-1;
         gd_explorer_picker_record(context,"Object definition",GD_NOUN,form->object,sizeof(form->object));
-        root=gd_explorer_picker_case(context,"Binding source case",form->case_name,sizeof(form->case_name),1); if (root!=before) *form->participant=0;
+        root=gd_explorer_picker_case(context,"Binding source case",form->case_name,sizeof(form->case_name),1); gd_explorer_rule_case_transition(form,before,root);
         if (root>=0) { const GD_RuleCase *item=&rules->cases[root]; for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) if (!strcmp(rules->participants[i].name,form->participant)) local=i; local=gd_explorer_picker_local(context,"Local binding",root,local,1); if (local>=0) snprintf(form->participant,sizeof(form->participant),"%s",rules->participants[local].name); else *form->participant=0; }
         else igTextWrapped("Choose a source case to filter one local binding. Blank case keeps all cases; Advanced also permits cross-case exact-name filters.");
         gd_explorer_picker_record(context,"Axis definition",GD_AXIS,form->axis,sizeof(form->axis)); gd_explorer_picker_statuses(context,model,form->statuses,sizeof(form->statuses));
@@ -176,7 +176,7 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
         gd_explorer_form_widget(GD_FORM_RULES,form,"work_limit","Binding work ceiling 0..67108864");
     } else if (form->kind==GD_NAMED_OUTCOMES) {
         int before=gd_explorer_picker_case_index(model,rules,form->case_name),root=gd_explorer_picker_case(context,"Scenario source case",form->case_name,sizeof(form->case_name),form->kind==GD_NAMED_CONSISTENCY);
-        if (root!=before) *form->facts=*form->contexts=0;
+        gd_explorer_rule_case_transition(form,before,root);
         gd_explorer_picker_assumptions(context,root,form->facts,sizeof(form->facts),form->contexts,sizeof(form->contexts),NULL);
         if (igTreeNode_Str("Advanced: raw source case")) { gd_explorer_form_widget(GD_FORM_RULES,form,"case_name",NULL); igTreePop(); }
         gd_explorer_form_widget(GD_FORM_RULES,form,"work_limit","Scenario work ceiling 0..16777216");
@@ -205,8 +205,8 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
           case_details(context,state->result->root);
       } else igTextWrapped("Checked pairs %d | retained %d | unexamined %d | work %d/%d | limited %s. Role alignment is hypothetical, not shared runtime identity. Conflict is existential; equivalence bounded by native checked vocabulary/branches.",analysis->pair_count,analysis->comparison_count,analysis->pairs_unexamined,analysis->comparison_work,GD_RULE_ANALYSIS_WORK_LIMIT,analysis->comparison_limited ? "yes":"no");
       if (count>64) igSliderInt("Rule result page",&state->page,0,(count-1)/64,"%d",0); if (state->page<0 || state->page*64>=count) state->page=0; start=state->page*64;
-      for (i=start;i<count && i<start+64;++i) { igPushID_Int(i); if (state->result->request.kind==GD_NAMED_OUTCOMES) { const GD_RuleWrite *write=&analysis->scenario.writes[i]; if (igSelectable_Bool(TextFormat("%d: %s | %s | line %d",i,write->kind==GD_WRITE_STATE ? "state":write->kind==GD_WRITE_QUANTITY ? "quantity":"preserve",write->axis>=0 ? model->records[write->axis].reference:"unknown axis",write->line),state->row==i,0,(ImVec2_c){0,0})) choose(state,i,-1); }
-          else { const GD_RuleComparisonResult *pair=&analysis->comparisons[i]; if (igSelectable_Bool(TextFormat("%d: %s / %s | %s",i,rules->cases[pair->first_case].name,rules->cases[pair->second_case].name,gd_rule_relation_name(pair->relation)),state->row==i,0,(ImVec2_c){0,0})) choose(state,i,-1); } igPopID(); }
+      for (i=start;i<count && i<start+64;++i) { igPushID_Int(i); if (state->result->request.kind==GD_NAMED_OUTCOMES) { const GD_RuleWrite *write=&analysis->scenario.writes[i]; if (igSelectable_Bool(TextFormat("%d: %s | %s | line %d",i,write->kind==GD_WRITE_STATE ? "state":write->kind==GD_WRITE_QUANTITY ? "quantity":"preserve",write->axis>=0 ? model->records[write->axis].reference:"unknown axis",write->line),state->row==i,0,(ImVec2_c){0,0})) gd_explorer_rules_choose(state,i,-1); }
+          else { const GD_RuleComparisonResult *pair=&analysis->comparisons[i]; if (igSelectable_Bool(TextFormat("%d: %s / %s | %s",i,rules->cases[pair->first_case].name,rules->cases[pair->second_case].name,gd_rule_relation_name(pair->relation)),state->row==i,0,(ImVec2_c){0,0})) gd_explorer_rules_choose(state,i,-1); } igPopID(); }
       if (state->row>=0 && state->row<count) {
           if (state->result->request.kind==GD_NAMED_OUTCOMES) { proposal_details(context,&analysis->scenario.writes[state->row]); if (state->peer_write>=0 && state->peer_write<count) proposal_details(context,&analysis->scenario.writes[state->peer_write]); }
           else { const GD_RuleComparisonResult *pair=&analysis->comparisons[state->row];
@@ -217,6 +217,6 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
               if (pair->conflict_first>=0 && pair->conflict_second>=0) { igTextWrapped("Native existential conflicting proposals (no conflict winner):"); proposal_details(context,&pair->conflict_a); proposal_details(context,&pair->conflict_b); }
           }
       }
-      if (state->result->request.kind==GD_NAMED_OUTCOMES && analysis->scenario.checks_count && igCollapsingHeader_TreeNodeFlags("Checked simultaneous proposal pairs",0)) for (i=0;i<analysis->scenario.checks_count;++i) { const GD_RuleWriteCheck *check=&analysis->scenario.checks[i]; igPushID_Int(i); if (igSelectable_Bool(TextFormat("%d / %d: conflict %s",check->first,check->second,gd_rule_truth_name(check->conflict)),false,0,(ImVec2_c){0,0})) choose(state,check->first,check->second); igPopID(); }
+      if (state->result->request.kind==GD_NAMED_OUTCOMES && analysis->scenario.checks_count && igCollapsingHeader_TreeNodeFlags("Checked simultaneous proposal pairs",0)) for (i=0;i<analysis->scenario.checks_count;++i) { const GD_RuleWriteCheck *check=&analysis->scenario.checks[i]; igPushID_Int(i); if (igSelectable_Bool(TextFormat("%d / %d: conflict %s",check->first,check->second,gd_rule_truth_name(check->conflict)),false,0,(ImVec2_c){0,0})) gd_explorer_rules_choose(state,check->first,check->second); igPopID(); }
     }
 }

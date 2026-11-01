@@ -62,7 +62,26 @@ test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:
     const root=join(examples,name,'game-design'),before=await sourceHashes(root);
     const result=spawnSync(adapter,['--ipc-helpers',root],{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:2*1024*1024});
     assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
-    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.checks>=180);assert.ok(value.control_checks>=500);assert.ok(value.feedback_checks>=10);
+    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.checks>=180);assert.ok(value.control_checks>=500);assert.ok(value.feedback_checks>=10);assert.ok(value.configuration_checks>=50);
+    assert.ok(value.presentation_checks>=150);
+    const layers=value.layer_result;assert.equal(layers.ok,true);assert.match(layers.scope,/shown-canvas/);
+    assert.equal(layers.nodes.length,layers.shown_nodes);assert.ok(layers.nodes.every(node=>typeof node.id==='string'));
+    assert.ok(layers.links.every(link=>link.from>=0 && link.from<layers.nodes.length && link.to>=0 && link.to<layers.nodes.length));
+    assert.equal(layers.foundations,null);assert.ok(layers.shapes?.valid);assert.ok(layers.overview?.valid);
+    const catalogue=value.control_catalogue;assert.equal(catalogue.ok,true);assert.equal(catalogue.projection,'actors');
+    const form=catalogue.forms.find(form=>form.name==='query');assert.match(form.control_token,/^[a-f0-9]{16}$/);
+    assert.equal(form.fields.length,16);assert.ok(form.applied);assert.equal(form.fields.find(field=>field.name==='coverage').value,'false');
+    assert.match(form.fields.find(field=>field.name==='root_case').value,/#/);
+    assert.equal(form.fields.find(field=>field.name==='values').choices_closed,false);
+    assert.ok(form.fields.find(field=>field.name==='values').choice_slots>=2);
+    assert.ok(form.fields.every(field=>typeof field.editable==='boolean' && ['boolean','text','choice','integer'].includes(field.type)));
+    const resourceForm=value.resource_controls.forms.find(form=>form.name==='resource');
+    assert.match(resourceForm.control_token,/^[a-f0-9]{16}$/);assert.equal(resourceForm.fields.length,4);
+    assert.equal(resourceForm.fields.find(field=>field.name==='to').choices_closed,true);
+    assert.ok(resourceForm.fields.find(field=>field.name==='to').choice_slots>1);
+    assert.equal(resourceForm.fields.find(field=>field.name==='from').value,'');
+    assert.equal(resourceForm.fields.find(field=>field.name==='work_limit').maximum,16777216);
+    assert.deepEqual(value.resource_actions.actions.filter(action=>action.form==='resource').map(action=>action.name),['resource.run','resource.clear']);
     const snapshot=value.snapshot;assert.equal(snapshot.ok,true);assert.equal(snapshot.projection,'matrix');
     assert.equal(snapshot.panes.length,8);assert.equal(snapshot.draft.modified_records,0);assert.equal(snapshot.draft.undo_steps,0);
     assert.equal(snapshot.panes.find(pane=>pane.projection==='actors').query.pending.values,'unapplied Ω');
@@ -71,7 +90,7 @@ test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:
     assert.equal(rules.pending.bindings,true);assert.equal(rules.applied.bindings,true);
     assert.deepEqual(rules.pending,rules.applied);
     assert.ok(snapshot.snapshots.every(family=>family.collections.every(collection=>collection.alias&&collection.directory)));
-    assert.equal(snapshot.limits.source_writes,false);assert.equal(snapshot.limits.derived_navigation,true);assert.equal(snapshot.limits.application_controls,false);assert.equal(snapshot.limits.application_actions,true);assert.equal(snapshot.limits.source_refresh,true);
+    assert.equal(snapshot.limits.source_writes,false);assert.equal(snapshot.limits.derived_navigation,true);assert.equal(snapshot.limits.application_controls,false);assert.equal(snapshot.limits.application_actions,true);assert.equal(snapshot.limits.source_refresh,true);assert.equal(snapshot.limits.form_controls,true);
     assert.equal('source' in snapshot,false);
     assert.equal(snapshot.agent_hint.stale,true);assert.equal(snapshot.reload_generation,'2');assert.equal(typeof snapshot.agent_hint.id,'string');
     const page=value.node_page;assert.equal(page.projection,'matrix');assert.equal(page.prepared,true);
@@ -104,6 +123,9 @@ test('viewer protocol and native local request/reply without any GUI',{skip:proc
     });
     await t.test('bounded node pages and opt-in source fields remain read-only',()=>{
       assert.deepEqual(invoke(['actions','--target',first.session]).actions,[]);
+      assert.deepEqual(invoke(['controls','--target',first.session]).forms,[]);
+      const options=invoke(['controls','--target',first.session,'--form','query','--control','participant','--offset','8192','--limit','1']);
+      assert.equal(options.offset,8192);assert.equal(options.limit,1);
       assert.equal(invoke(['nodes','--target',first.session]).limit,64);
       const page=invoke(['nodes','--target',first.session,'--projection','effects','--offset','4096','--limit','1']);
       assert.equal(page.offset,4096);assert.equal(page.limit,1);assert.deepEqual(page.nodes,[]);
@@ -136,7 +158,7 @@ test('viewer protocol and native local request/reply without any GUI',{skip:proc
       assert.equal(invoke(['inspect','--target',first.session]).mutations,2);
     });
     await t.test('invalid CLI combinations fail as JSON without dispatch',()=>{
-      for(const arguments_ of [[],['unknown'],['hint','--projection','skills'],['inspect','--projection','skills'],['inspect','--target','../bad'],['list','--reference','x'],['inspect','--target',first.session,'--target',first.session],['nodes','--limit','0'],['nodes','--limit','65'],['nodes','--limit','1.5'],['nodes','--offset','-1'],['nodes','--offset','4097'],['nodes','--offset','01'],['inspect','--limit','1'],['nodes','--id','x'],['refresh','--projection','skills'],['actions','--limit','1'],['action','--projection','actors'],['action','--action','query.run'],['inspect','--action','query.run'],['hint','--projection','effects','--reference','x','--id','y'],['navigate','--projection','actors','--id','x'.repeat(4096)]]) {
+      for(const arguments_ of [[],['unknown'],['hint','--projection','skills'],['inspect','--projection','skills'],['inspect','--target','../bad'],['list','--reference','x'],['inspect','--target',first.session,'--target',first.session],['nodes','--limit','0'],['nodes','--limit','65'],['nodes','--limit','1.5'],['nodes','--offset','-1'],['nodes','--offset','4097'],['nodes','--offset','01'],['inspect','--limit','1'],['nodes','--id','x'],['refresh','--projection','skills'],['actions','--limit','1'],['controls','--control','axis'],['controls','--offset','0'],['controls','--form','query','--control','axis','--offset','8193'],['controls','--value','x'],['configure','--projection','actors','--form','query','--control','axis','--value','x'],['configure','--projection','actors','--form','query','--control','axis','--expect','token'],['configure','--form','query','--control','axis','--value','x','--expect','token'],['inspect','--form','query'],['refresh','--expect','token'],['action','--projection','actors'],['action','--action','query.run'],['inspect','--action','query.run'],['hint','--projection','effects','--reference','x','--id','y'],['navigate','--projection','actors','--id','x'.repeat(4096)]]) {
         assert.equal(invoke(arguments_,2).ok,false);
       }
       assert.equal(invoke(['navigate','--target',first.session,'--projection','actors','--id','"'.repeat(4095)],2).code,'viewer.capacity');
@@ -171,6 +193,13 @@ test('viewer protocol and native local request/reply without any GUI',{skip:proc
       const result=invoke(['action','--target',first.session,'--projection','matrix','--action','structure.run']);
       assert.equal(result.executed,true);assert.equal(result.action,'structure.run');
       assert.equal(invoke(['inspect','--target',first.session]).mutations,9);
+    });
+    await t.test('configuration preserves empty/multiline UTF-8 values and opaque expected tokens',()=>{
+      for(const text of ['','café Ω\nquoted "value"\r\n\ttab']) {
+        const result=invoke(['configure','--target',first.session,'--projection','actors','--form','query','--control','values','--value',text,'--expect','fixture-token']);
+        assert.equal(result.configured,true);assert.equal(result.value,text);assert.equal(result.expect,'fixture-token');
+      }
+      assert.equal(invoke(['inspect','--target',first.session]).mutations,11);
     });
     second=await owner();
     await t.test('multiple sessions require exact target',()=>{

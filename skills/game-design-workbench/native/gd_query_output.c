@@ -68,10 +68,11 @@ static void effect_id(FILE *out, const GD_EffectGraph *graph, int index) {
     char id[GD_EFFECT_ID_CAPACITY]; gd_json_string(out,gd_effect_node_id(graph,index,id,sizeof(id)) ? id:NULL);
 }
 static void activation(FILE *out, const GD_Query *query, int index) {
+    if(ferror(out))return;
     const GD_EffectGraph *graph=query->effects; const GD_ResourceNode *node=&query->resource->nodes[graph->nodes[index].activation]; const GD_RuleCase *item=&query->rules->cases[node->case_index]; int p;
     fputs("{\"id\":",out); effect_id(out,graph,index); fputs(",\"source\":",out); source_case(out,query,node->case_index);
     fprintf(out,",\"instantiated\":%s,\"binding_conflict\":%s,\"frontier\":%s,\"mapping\":[",node->instance ? "true":"false",node->binding_conflict ? "true":"false",node->frontier ? "true":"false");
-    for (p=item->first_participant;p<item->first_participant+item->participant_count;++p) {
+    for (p=item->first_participant;p<item->first_participant+item->participant_count && !ferror(out);++p) {
         int mapped=gd_resource_instance_actor(query->resource,graph->nodes[index].activation,p);
         if (p!=item->first_participant) fputc(',',out);
         fputs("{\"template\":",out); actor(out,query,p); fputs(",\"concrete\":",out); actor(out,query,mapped); fputc('}',out);
@@ -84,16 +85,17 @@ static void activation(FILE *out, const GD_Query *query, int index) {
     fputc('}',out);
 }
 static void variant(FILE *out, const GD_Query *query, int index) {
+    if(ferror(out))return;
     const GD_ActorQuery *variants=query->variants; const GD_ActorVariant *item=&variants->variants[index]; int i;
     fprintf(out,"{\"index\":%d,\"value\":",index); gd_json_string(out,item->value); member(out,"applicability",gd_rule_truth_name(item->applicability));
     member(out,"context",gd_rule_truth_name(item->context)); member(out,"requirements",gd_rule_truth_name(item->requirements));
     fprintf(out,",\"exclusion_state\":%d,\"guards\":%d,\"checked_guards\":%d,\"constraints_complete\":%s,\"values_complete\":%s,\"limited\":%s,\"opaque_effects\":%d,\"cycles\":%d,\"conflicts\":%d,\"uncertain_pairs\":%d,\"evaluation_work\":%d,\"activations\":[",item->exclusion.state,item->exclusion.guard_count,item->exclusion.checked_count,item->constraints_complete ? "true":"false",item->values_complete ? "true":"false",item->limited ? "true":"false",item->opaque_effects,item->cycles,item->conflicts,item->uncertain_pairs,item->work);
-    for (i=item->first_activation;i<item->first_activation+item->activation_count;++i) {
+    for (i=item->first_activation;i<item->first_activation+item->activation_count && !ferror(out);++i) {
         const GD_RuleActivation *entry=&variants->activations[i]; int step;
         if (i!=item->first_activation) fputc(',',out);
         fprintf(out,"{\"index\":%d,\"snapshot_activation_index\":%d,\"source\":",i-item->first_activation,i); source_case(out,query,entry->case_index); member(out,"applicability",gd_rule_truth_name(entry->applicability)); member(out,"local_applicability",gd_rule_truth_name(entry->local_applicability));
         fputs(",\"via\":[",out);
-        for (step=0;step<entry->path_count;++step) {
+        for (step=0;step<entry->path_count && !ferror(out);++step) {
             if (step) fputc(',',out); fputs("{\"source\":",out); source_case(out,query,entry->path[step]);
             if (entry->calls[step]>=0) { const GD_RuleCall *call=&query->analysis->calls[entry->calls[step]]; fprintf(out,",\"call_snapshot_index\":%d,\"call_line\":%d",entry->calls[step],call->line); fputs(",\"call_text\":",out); gd_json_string_n(out,call->text,call->length); }
             fputc('}',out);
@@ -101,7 +103,7 @@ static void variant(FILE *out, const GD_Query *query, int index) {
         fputs("]}",out);
     }
     fputs("],\"proposals\":[",out);
-    for (i=item->first_write;i<item->first_write+item->write_count;++i) {
+    for (i=item->first_write;i<item->first_write+item->write_count && !ferror(out);++i) {
         const GD_RuleWrite *write=&variants->writes[i];
         if (i!=item->first_write) fputc(',',out);
         fprintf(out,"{\"index\":%d,\"activation\":%d,\"declaration_index\":%d,\"family\":",i-item->first_write,variants->write_activations[i]-item->first_activation,write->declaration);
@@ -109,19 +111,19 @@ static void variant(FILE *out, const GD_Query *query, int index) {
         fputs(",\"proposal\":",out); gd_write_rule_proposal(out,query->analysis,write); fputc('}',out);
     }
     fputs("],\"write_checks\":[",out);
-    for (i=item->first_check;i<item->first_check+item->check_count;++i) {
+    for (i=item->first_check;i<item->first_check+item->check_count && !ferror(out);++i) {
         const GD_RuleWriteCheck *check=&variants->checks[i]; if (i!=item->first_check) fputc(',',out);
         fprintf(out,"{\"first_proposal\":%d,\"second_proposal\":%d,\"conflict\":",check->first-item->first_write,check->second-item->first_write); gd_json_string(out,gd_rule_truth_name(check->conflict)); fputc('}',out);
     }
     fprintf(out,"],\"checks_omitted\":%d,\"partners\":[",item->checks_omitted);
     {
         int comma=0;
-        for (i=0;i<query->rules->participant_count;++i) if (item->partners[i/64] & (1ULL<<(i%64))) { if (comma++) fputc(',',out); actor(out,query,i); }
+        for (i=0;i<query->rules->participant_count && !ferror(out);++i) if (item->partners[i/64] & (1ULL<<(i%64))) { if (comma++) fputc(',',out); actor(out,query,i); }
     }
     fputs("],\"effect_concepts\":[",out);
     {
         int comma=0;
-        for (i=0;i<variants->effect_count;++i) if (item->effects[i/64] & (1ULL<<(i%64))) {
+        for (i=0;i<variants->effect_count && !ferror(out);++i) if (item->effects[i/64] & (1ULL<<(i%64))) {
             const GD_ActorEffect *effect=&variants->effects[i];
             if (comma++) fputc(',',out); fprintf(out,"{\"index\":%d,\"kind\":",i); gd_json_string(out,gd_effect_kind_name(effect->kind));
             member(out,"axis",effect->axis>=0 ? query->model->records[effect->axis].reference:NULL); member(out,"value",effect->state);
@@ -150,6 +152,7 @@ static int concept_matches(const GD_Query *query, int index) {
         (selection->kind<0 || selection->kind==(int)node->kind) && (!selection->value || (node->value && !strcmp(selection->value,node->value)));
 }
 static void contributor(FILE *out, const GD_Query *query, int row) {
+    if(ferror(out))return;
     const GD_EffectQuery *result=query->contributors; const GD_EffectLink *link=&query->effects->links[result->links[row]]; const GD_ResourceRelation *relation=&query->resource->relations[link->relation];
     const GD_EffectNode *node=&query->effects->nodes[link->to]; int path[GD_MAX_RULE_EXPANSION_DEPTH],count=gd_effect_contributor_path(result,row,path,GD_MAX_RULE_EXPANSION_DEPTH),i;
     fputs("{\"result\":",out); effect_id(out,query->effects,link->to); fputs(",\"affected\":",out); actor(out,query,link->participant);
@@ -159,7 +162,7 @@ static void contributor(FILE *out, const GD_Query *query, int row) {
     member(out,"declared_unit",node->axis>=0 ? query->model->records[node->axis].axis.unit:NULL);
     if (relation->kind==GD_RESOURCE_QUANTITY_WRITE) member(out,"expression",query->rules->assignments[relation->declaration].expression);
     fputs(",\"via\":[",out);
-    for (i=0;i<count;++i) { if (i) fputc(',',out); activation(out,query,path[i]); }
+    for (i=0;i<count && !ferror(out);++i) { if (i) fputc(',',out); activation(out,query,path[i]); }
     fputs("]}",out);
 }
 int gd_write_query_catalogue(FILE *out, int json) {
@@ -190,7 +193,7 @@ int gd_write_query_catalogue(FILE *out, int json) {
     gd_write_structure_catalogue(out,1,GD_QUERY_COUNT+GD_NAMED_COUNT);
     fputs("]},\"coverage\":{\"scope\":\"implemented_builtin_catalogue_only\",\"complete\":true,\"source_data_loaded\":false},\"errors\":[],\"breadcrumbs\":[\"gd query --question NAME --projection NAME with explicit collection bindings; query --list advertises only implemented operations\"]}\n",out); return !ferror(out);
 }
-int gd_write_query(FILE *out, const GD_Model *model, const GD_Query *query, int json, const char *fields) {
+static int write_query(FILE *out, const GD_Model *model, const GD_Query *query, int json, const char *fields,int compare) {
     int i,j,comma=0,complete=model->error_count==0 && model->errors_omitted==0 && query!=NULL;
     int limited=query && (query->limited || (query->state_coverage && query->state_coverage->limited) || (query->variants && query->variants->limited) || (query->resource && query->resource->limited) || (query->effects && query->effects->limited) || (query->contributors && query->contributors->limited));
     if (query && (query->limited || (query->state_coverage && (query->state_coverage->limited || query->state_coverage->source_incomplete)))) complete=0;
@@ -214,11 +217,11 @@ int gd_write_query(FILE *out, const GD_Model *model, const GD_Query *query, int 
     if (query) {
         if (query->request.kind==GD_QUERY_BINDINGS && selected(fields,"bindings")) {
             fputs("\"bindings\":[",out); comma=1;
-            for (i=0;i<query->binding_count;++i) {
+            for (i=0;i<query->binding_count && !ferror(out);++i) {
                 const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleParticipant *participant=&query->rules->participants[binding->participant]; int edge,axes=0;
                 if (i) fputc(',',out); fputs("{\"source\":",out); source_case(out,query,binding->case_index); fputs(",\"actor\":",out); actor(out,query,binding->participant);
                 fprintf(out,",\"primary\":%s,\"axes_complete\":%s,\"axes\":[",binding->participant==query->rules->cases[binding->case_index].primary_participant ? "true":"false",participant->noun_resolution==GD_RULE_RESOLVED && query->rules->actor_axes_complete[participant->noun_record] ? "true":"false");
-                if (participant->noun_resolution==GD_RULE_RESOLVED) for (edge=query->rules->actor_first[participant->noun_record];edge>=0;edge=query->rules->next_axis[edge]) {
+                if (participant->noun_resolution==GD_RULE_RESOLVED) for (edge=query->rules->actor_first[participant->noun_record];edge>=0 && !ferror(out);edge=query->rules->next_axis[edge]) {
                     const GD_Edge *item=&model->edges[edge]; if (axes++) fputc(',',out); fputs("{\"reference\":",out); gd_json_string(out,item->reference); member(out,"resolution",gd_rule_resolution_name(query->rules->axis_resolution[edge])); member(out,"resolved_reference",query->rules->axis_resolution[edge]==GD_RULE_RESOLVED ? model->records[item->target].reference:NULL);
                     if (query->rules->axis_resolution[edge]==GD_RULE_RESOLVED) { const GD_Record *record=&model->records[item->target]; const char *value=record->axis.allowed; int n; member(out,"value_type",record->axis.type); member(out,"unit",record->axis.unit); member(out,"minimum",record->axis.minimum); member(out,"maximum",record->axis.maximum); fprintf(out,",\"definition_valid\":%s,\"unit_known\":%s,\"closed\":%s,\"values\":[",query->rules->axes[item->target].valid ? "true":"false",query->rules->axes[item->target].unit_known ? "true":"false",record->axis_closed ? "true":"false"); for (n=0;n<record->axis.allowed_count;++n) { if (n) fputc(',',out); gd_json_string(out,value); value+=strlen(value)+1; } fputc(']',out); }
                     fprintf(out,",\"line\":%d}",item->line);
@@ -256,8 +259,8 @@ int gd_write_query(FILE *out, const GD_Model *model, const GD_Query *query, int 
             }
             fputc(']',out);
         }
-        if (query->request.kind==GD_QUERY_ACTOR_STATES && selected(fields,"variants")) { if (comma++) fputc(',',out); fputs("\"variants\":[",out); if (query->variants) for (i=0;i<query->variants->variant_count;++i) { if (i) fputc(',',out); variant(out,query,i); } fputc(']',out); }
-        if (query->request.kind==GD_QUERY_ACTOR_STATES && selected(fields,"comparisons")) {
+        if (query->request.kind==GD_QUERY_ACTOR_STATES && selected(fields,"variants")) { if (comma++) fputc(',',out); fputs("\"variants\":[",out); if (query->variants) for (i=0;i<query->variants->variant_count && !ferror(out);++i) { if (i) fputc(',',out); variant(out,query,i); } fputc(']',out); }
+        if (compare && query->request.kind==GD_QUERY_ACTOR_STATES && selected(fields,"comparisons")) {
             int pairs=0; if (comma++) fputc(',',out); fputs("\"comparisons\":[",out);
             if (query->variants) for (i=0;i<query->variants->variant_count;++i) for (j=i+1;j<query->variants->variant_count;++j) { GD_ActorComparison value; gd_actor_compare(query->variants,i,j,&value); if (pairs++) fputc(',',out); fprintf(out,"{\"first\":%d,\"second\":%d,\"complete\":%s,\"cases\":",i,j,value.complete ? "true":"false"); comparison_set(out,value.cases,query->variants->variants[i].cases,query->variants->variants[j].cases,query->rules->case_count); fputs(",\"partners\":",out); comparison_set(out,value.partners,query->variants->variants[i].partners,query->variants->variants[j].partners,query->rules->participant_count); fputs(",\"effects\":",out); comparison_set(out,value.effects,query->variants->variants[i].effects,query->variants->variants[j].effects,query->variants->effect_count); fputc('}',out); }
             fputc(']',out);
@@ -267,8 +270,8 @@ int gd_write_query(FILE *out, const GD_Model *model, const GD_Query *query, int 
             for (i=0;i<query->effects->node_count;++i) if (concept_matches(query,i)) { const GD_EffectNode *node=&query->effects->nodes[i]; if (count++) fputc(',',out); fputs("{\"id\":",out); effect_id(out,query->effects,i); member(out,"kind",gd_effect_kind_name(node->kind)); member(out,"axis",node->axis>=0 ? model->records[node->axis].reference:NULL); member(out,"value",node->value); fprintf(out,",\"incoming\":%d}",query->contributors->incoming[i]); }
             fputc(']',out);
         }
-        if (query->effects && selected(fields,"contributors")) { if (comma++) fputc(',',out); fputs("\"contributors\":[",out); for (i=0;i<query->contributors->count;++i) { if (i) fputc(',',out); contributor(out,query,i); } fputc(']',out); }
-        if (selected(fields,"cases")) { int count=0; if (comma++) fputc(',',out); fputs("\"cases\":[",out); for (i=0;i<query->rules->case_count;++i) if (query->cases[i]) { if (count++) fputc(',',out); fprintf(out,"{\"index\":%d,\"declaration\":",i); gd_write_rule_case(out,model,query->rules,i); fputc('}',out); } fputc(']',out); }
+        if (query->effects && selected(fields,"contributors")) { if (comma++) fputc(',',out); fputs("\"contributors\":[",out); for (i=0;i<query->contributors->count && !ferror(out);++i) { if (i) fputc(',',out); contributor(out,query,i); } fputc(']',out); }
+        if (selected(fields,"cases")) { int count=0; if (comma++) fputc(',',out); fputs("\"cases\":[",out); for (i=0;i<query->rules->case_count && !ferror(out);++i) if (query->cases[i]) { if (count++) fputc(',',out); fprintf(out,"{\"index\":%d,\"declaration\":",i); gd_write_rule_case(out,model,query->rules,i); fputc('}',out); } fputc(']',out); }
         if (selected(fields,"findings")) { if (comma++) fputc(',',out); fputs("\"findings\":[",out); for (i=0;i<query->rules->finding_count;++i) { const GD_Finding *finding=&query->rules->findings[i]; if (i) fputc(',',out); fputs("{\"code\":",out); gd_json_string(out,finding->code); member(out,"message",finding->message); member(out,"record",finding->record>=0 ? model->records[finding->record].reference:NULL); fprintf(out,",\"line\":%d}",finding->line); } fputc(']',out); }
     }
     fprintf(out,"},\"coverage\":{\"complete\":%s,\"read_only\":true,\"scope\":",complete ? "true":"false");
@@ -284,4 +287,14 @@ int gd_write_query(FILE *out, const GD_Model *model, const GD_Query *query, int 
     for (i=0;i<model->error_count;++i) { const GD_Error *error=&model->errors[i]; if (i) fputc(',',out); fputs("{\"code\":",out); gd_json_string(out,error->code); member(out,"message",error->message); member(out,"source_path",error->path); fprintf(out,",\"line\":%d}",error->line); }
     fprintf(out,"],\"errors_omitted\":%d,\"breadcrumbs\":[\"gd query --list\",\"Use object-bindings to inspect qualified --case/--participant and declared --axis selectors; use effect-contributors concepts for opaque --to IDs\"]}\n",model->errors_omitted);
     return !ferror(out);
+}
+int gd_write_query(FILE *out,const GD_Model *model,const GD_Query *query,int json,const char *fields) { return write_query(out,model,query,json,fields,1); }
+int gd_write_query_retained(FILE *out,const GD_Model *model,const GD_Query *query,int json,const char *fields) { return write_query(out,model,query,json,fields,0); }
+int gd_write_query_selection(FILE *out,const GD_Model *model,const GD_Query *query,GD_EffectQuery *selected,int json,const char *fields) {
+    GD_Query *view; int written; char id[GD_EFFECT_ID_CAPACITY];
+    if(!selected) return gd_write_query_retained(out,model,query,json,fields);
+    view=query->allocator.allocate(query->allocator.context,sizeof(*view)); if(!view) return 0;
+    *view=*query; view->contributors=selected;
+    if(selected->selection.target>=0 && gd_effect_node_id(query->effects,selected->selection.target,id,sizeof(id))) view->request.target_id=id;
+    written=write_query(out,model,view,json,fields,0);query->allocator.release(query->allocator.context,view);return written;
 }

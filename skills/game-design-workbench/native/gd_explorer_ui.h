@@ -31,6 +31,7 @@ typedef struct {
     GD_Query *query; GD_QueryScene *scene; GD_Layout *empty;
     GD_EffectQuery *selected;
     int coverage_page;
+    GD_ActorComparison comparison; int comparison_first,comparison_second,comparison_ready;
     GD_RuleScenario fixed;
     char value_tokens[GD_MAX_RULE_LINE+1],fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1];
 } GD_ExplorerQueryState;
@@ -68,6 +69,19 @@ typedef struct {
     double number,sample;
 } GD_ExplorerAssumptionForm;
 typedef struct {
+    int from,to,work_limit; bool accepted;
+} GD_ExplorerResourceForm;
+/* Value snapshot only; pane/domain state remains authoritative. */
+typedef struct {
+    int layout,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
+    int focus_root,mda_root,mda_direction,resource_witness,route_witness,similarity_row,similarity_peer;
+    int overview_row,overview_column,coverage_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
+    bool paused,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
+    bool paths_enabled,paths_declared,paths_compare,reach_enabled,reach_reverse,overview_enabled;
+    bool only_scope,only_path,role0,role1,role2,role3,only_witness,similarity_canvas,known;
+    char filter[129],mda_filter[129];
+} GD_ExplorerPresentation;
+typedef struct {
     GD_ExplorerView view;
     GD_Layout *layout;
     Camera2D camera,regular_camera;
@@ -86,8 +100,9 @@ typedef struct {
     GD_ExplorerAssumptionForm assumption_form;
     char query_message[256];
     GD_ResourceRoutes *resource_routes;
-    int resource_from,resource_to,resource_witness,resource_work_limit;
-    bool resource_accepted,resource_only_witness;
+    GD_ExplorerResourceForm resource_pending,resource_applied;
+    int resource_witness;
+    bool resource_only_witness;
     char resource_message[160];
     GD_MatrixGrid grid; /* Caller-owned presentation, never typed snapshot data. */
     GD_ExplorerSkillEditor editor;
@@ -146,6 +161,7 @@ int gd_explorer_query_prepare(GD_ExplorerContext *context);
 int gd_explorer_query_run(GD_ExplorerContext *context);
 int gd_explorer_query_display(GD_ExplorerContext *context);
 int gd_explorer_query_select_result(GD_ExplorerContext *context, int target);
+int gd_explorer_query_compare(GD_ExplorerContext *context);
 void gd_explorer_query_destroy(GD_ExplorerQueryState *state);
 int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProject *old, const GD_ExplorerPane *prior);
 void gd_explorer_query_controls(GD_ExplorerContext *context);
@@ -167,6 +183,7 @@ void gd_explorer_structure_source_node(GD_ExplorerContext *context,int node);
 int gd_explorer_similarity_active(const GD_ExplorerContext *context);
 /* Exact current placed entry; select/frame only, no feature/query changes. */
 int gd_explorer_similarity_select(GD_ExplorerContext *context, int row);
+int gd_explorer_similarity_compare(GD_ExplorerContext *context);
 void gd_explorer_similarity_controls(GD_ExplorerContext *context);
 void gd_explorer_similarity_input(GD_ExplorerContext *context);
 void gd_explorer_similarity_draw(GD_ExplorerContext *context);
@@ -176,6 +193,7 @@ int gd_explorer_rules_inputs(GD_ExplorerContext *context);
 int gd_explorer_rules_run(GD_ExplorerContext *context);
 int gd_explorer_rules_remap(GD_ExplorerContext *context,const GD_ExplorerProject *old,const GD_ExplorerPane *prior);
 void gd_explorer_rules_controls(GD_ExplorerContext *context);
+void gd_explorer_rules_choose(GD_ExplorerRuleState *state,int row,int peer);
 int gd_explorer_rules_marked(const GD_ExplorerContext *context,int case_index);
 
 int gd_explorer_resource_prepare(GD_ExplorerContext *context);

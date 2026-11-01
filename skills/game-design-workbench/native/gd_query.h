@@ -48,4 +48,7 @@ void gd_query_destroy(GD_Query *query);
 int gd_query_fields(GD_QueryKind kind, const char *fields);
 int gd_write_query_catalogue(FILE *output, int json);
 int gd_write_query(FILE *output, const GD_Model *model, const GD_Query *query, int json, const char *fields);
+/* Serialization only: no implicit all-variant comparison evaluation. */
+int gd_write_query_retained(FILE *output,const GD_Model *model,const GD_Query *query,int json,const char *fields);
+int gd_write_query_selection(FILE *output,const GD_Model *model,const GD_Query *query,GD_EffectQuery *selected,int json,const char *fields);
 #endif

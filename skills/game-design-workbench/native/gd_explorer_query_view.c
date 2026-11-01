@@ -79,9 +79,18 @@ failure:
     else if (!*context->pane->query_message) snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Cannot prepare bounded query/drawing; last good query retained.");
     model->error_count=errors; model->errors_omitted=omitted; gd_explorer_query_destroy(state); return NULL;
 }
+/* First canvas uses default applied scope. Staged inputs require explicit Run. */
 int gd_explorer_query_prepare(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane;
-    if (!pane->query_state) { pane->query_state=build_state(context,&pane->query_options,1,NULL); if (pane->query_state) pane->query_options=pane->query_state->applied; }
+    if (!pane->query_state) {
+        GD_ExplorerQueryOptions defaults; int pristine; bool literal_values=pane->query_options.literal_values,literal_assumptions=pane->query_options.literal_assumptions;
+        gd_explorer_form_defaults(GD_FORM_QUERY,&defaults); pristine=gd_explorer_form_equal(GD_FORM_QUERY,&pane->query_options,&defaults);
+        pane->query_state=build_state(context,&defaults,1,NULL);
+        if (pane->query_state && pristine) {
+            pane->query_options=pane->query_state->applied;
+            pane->query_options.literal_values=literal_values; pane->query_options.literal_assumptions=literal_assumptions;
+        }
+    }
     if (!pane->query_state) return 0;
     pane->layout=pane->query_state->scene ? &pane->query_state->scene->layout:pane->query_state->empty;
     if (pane->view==GD_EXPLORER_EFFECTS && pane->fit==1) pane->fit=GD_EXPLORER_FIT_QUERY_READABLE;
@@ -179,7 +188,19 @@ int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProjec
 }
 int gd_explorer_query_record(const GD_ExplorerPane *pane) {
     if (pane->selection.linked>=0) return pane->selection.linked;
+    if(pane->query_state && pane->query_state->scene && pane->selection.cell>=0 && pane->selection.cell<pane->query_state->scene->layout.edge_count) {
+        const GD_QueryScene *scene=pane->query_state->scene; const GD_QuerySceneEdge *edge=&scene->edges[pane->selection.cell]; int source_case=-1;
+        if(scene->query->effects) source_case=scene->query->resource->relations[scene->query->effects->links[edge->source].relation].source_case;
+        else if(edge->kind==GD_QUERY_EDGE_EFFECT && scene->query->variants) source_case=scene->query->variants->writes[edge->source].origin_case;
+        if(source_case>=0) return scene->query->rules->sources[scene->query->rules->cases[source_case].source].record;
+    }
     return pane->query_state && pane->query_state->scene ? gd_query_scene_record(pane->query_state->scene,pane->selection.node):-1;
+}
+int gd_explorer_query_compare(GD_ExplorerContext *context) {
+    GD_ExplorerQueryState *state=context->pane->query_state;
+    if(!state || !state->query || !state->query->variants || state->applied.primary<0 || state->applied.compare<0) return 0;
+    state->comparison_first=state->applied.primary; state->comparison_second=state->applied.compare;
+    state->comparison_ready=gd_actor_compare(state->query->variants,state->comparison_first,state->comparison_second,&state->comparison); return state->comparison_ready;
 }
 int gd_explorer_query_display(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; GD_QueryScene *fresh; int i,kind=-1,source=-1,variant=-1;
@@ -231,7 +252,7 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
                 gd_explorer_picker_end();
             }
         } else if (igButton("Return to actor inventory",(ImVec2_c){0,0})) {
-            options->coverage=false; options->root_case=options->participant=options->axis=options->noun=options->compare=-1; *options->values=*options->facts=*options->contexts=0;
+            gd_explorer_query_inventory(options);
             gd_explorer_action_run(context,GD_ACTION_QUERY_RUN); return;
         }
         if (gd_explorer_form_widget(GD_FORM_QUERY,options,"coverage",NULL)) gd_explorer_query_question(options,options->coverage);
@@ -257,11 +278,11 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
             gd_explorer_picker_end();
         }
         if (options->coverage && gd_explorer_picker_begin(context,"Typed axis",options->axis>=0 ? model->records[options->axis].reference:NULL)) {
-            for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_AXIS && gd_explorer_picker_item(context,model->records[i].reference,i==options->axis,0)) gd_explorer_query_axis(options,model,i);
+            for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_AXIS && gd_explorer_picker_item(context,model->records[i].reference,i==options->axis,0)) gd_explorer_query_axis(options,rules,i);
             gd_explorer_picker_end();
         }
         if (!options->coverage && options->participant>=0 && rules->participants[options->participant].noun_resolution==GD_RULE_RESOLVED && gd_explorer_picker_begin(context,"Typed axis",options->axis>=0 ? model->records[options->axis].reference:NULL)) {
-            int edge; for (edge=rules->actor_first[rules->participants[options->participant].noun_record];edge>=0;edge=rules->next_axis[edge]) if (rules->axis_resolution[edge]==GD_RULE_RESOLVED) { int axis=model->edges[edge].target; if (gd_explorer_picker_item(context,model->records[axis].reference,axis==options->axis,0)) gd_explorer_query_axis(options,model,axis); } gd_explorer_picker_end();
+            int edge; for (edge=rules->actor_first[rules->participants[options->participant].noun_record];edge>=0;edge=rules->next_axis[edge]) if (rules->axis_resolution[edge]==GD_RULE_RESOLVED) { int axis=model->edges[edge].target; if (gd_explorer_picker_item(context,model->records[axis].reference,axis==options->axis,0)) gd_explorer_query_axis(options,rules,axis); } gd_explorer_picker_end();
         }
         if (options->coverage) igTextWrapped("Blank values use declared enums; numeric axes need explicit finite samples. Each binding is an independent hypothesis, not a simultaneous world state.");
         if (options->axis>=0 && rules->axes[options->axis].type==GD_AXIS_ENUM && gd_explorer_picker_begin(context,"Compare finite values",*options->values ? options->values:"All declared values")) {

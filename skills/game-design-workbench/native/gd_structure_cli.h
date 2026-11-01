@@ -46,6 +46,7 @@ int gd_structure_result_record(const GD_StructureResult *result, int key);
 int gd_structure_result_edge_record(const GD_StructureResult *result, int key);
 int gd_structure_result_node_id(const GD_StructureResult *result, int key, char *text, size_t size);
 int gd_write_structure_result(FILE *output, const GD_StructureResult *result, int json, const char *fields);
+int gd_write_structure_retained(FILE *output,const GD_StructureResult *result,int json,const char *fields);
 /* CLI parser supplies explicit collections/original roles. No second parser. */
 int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, int count,
     const GD_StructureOptions *options, int json, const char *fields, const char *initial_error);

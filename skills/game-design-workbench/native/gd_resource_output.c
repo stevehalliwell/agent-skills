@@ -29,13 +29,14 @@ static void source(FILE *out, const GD_Model *model, int record, int line) {
     member(out,"status",item->status); member(out,"coverage",item->coverage); fprintf(out,",\"line\":%d}",line);
 }
 static void case_declaration(FILE *out, const GD_ResourceGraph *graph, int index) {
+    if(ferror(out))return;
     const GD_RuleCase *item=&graph->rules->cases[index]; int i;
     fputs("{\"name\":",out); gd_json_string(out,item->name); member(out,"context",item->context);
     member(out,"primary_target",item->primary_target);
     fprintf(out,",\"primary_target_line\":%d,\"default_set_line\":%d",item->primary_target_line,item->default_set_line);
     member(out,"unknown_conditions",item->unknown_conditions); member(out,"unknown_effects",item->unknown_effects);
     fputs(",\"participants\":[",out);
-    for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) {
+    for (i=item->first_participant;i<item->first_participant+item->participant_count && !ferror(out);++i) {
         const GD_RuleParticipant *actor=&graph->rules->participants[i];
         if (i!=item->first_participant) fputc(',',out);
         fputs("{\"name\":",out); gd_json_string(out,actor->name); member(out,"noun",actor->noun);
@@ -46,7 +47,7 @@ static void case_declaration(FILE *out, const GD_ResourceGraph *graph, int index
         fputs(",\"pools\":[",out);
         {
             int pool;
-            for (pool=actor->first_pool;pool<actor->first_pool+actor->pool_count;++pool) {
+            for (pool=actor->first_pool;pool<actor->first_pool+actor->pool_count && !ferror(out);++pool) {
                 const GD_RulePool *binding=&graph->rules->pools[pool];
                 if (pool!=actor->first_pool) fputc(',',out);
                 fputs("{\"axis\":",out); gd_json_string(out,binding->axis); member(out,"reference",binding->reference);
@@ -59,7 +60,7 @@ static void case_declaration(FILE *out, const GD_ResourceGraph *graph, int index
             for (kind=GD_RULE_EFFECT_STATE;kind<=GD_RULE_EFFECT_CALL;++kind) {
                 GD_RuleEffectSpan spans[2];
                 int count=gd_rule_effect_spans(graph->rules,index,i,(GD_RuleEffectKind)kind,spans);
-                for (n=0;n<count;++n) {
+                for (n=0;n<count && !ferror(out);++n) {
                     if (comma++) fputc(',',out);
                     fputs("{\"field\":",out); gd_json_string(out,kind==GD_RULE_EFFECT_STATE ? "becomes":kind==GD_RULE_EFFECT_PRESERVE ? "preserve":"causes");
                     member(out,"text",spans[n].text); member(out,"target_origin",spans[n].from_primary ? "primary":"participant");
@@ -83,7 +84,7 @@ static void instantiation(FILE *out, const GD_ResourceGraph *graph, const int *f
     p=item->primary_participant>=0 ? gd_resource_instance_actor(graph,index,item->primary_participant):-1;
     member(out,"concrete_primary_target",p>=0 ? graph->rules->participants[p].name:NULL);
     fputs(",\"participants\":[",out);
-    for (p=item->first_participant;p<item->first_participant+item->participant_count;++p) {
+    for (p=item->first_participant;p<item->first_participant+item->participant_count && !ferror(out);++p) {
         int actor=gd_resource_instance_actor(graph,index,p);
         if (p!=item->first_participant) fputc(',',out);
         fputs("{\"template_participant\":",out); gd_json_string(out,graph->rules->participants[p].name);
@@ -125,6 +126,7 @@ static void target(FILE *out, const GD_Model *model, GD_RuleTarget value) {
     member(out,"state",value.state); fputc('}',out);
 }
 static void relation(FILE *out, const GD_ResourceGraph *graph, const int *first_relation, int index) {
+    if(ferror(out))return;
     const GD_ResourceRelation *edge=&graph->relations[index]; const GD_Rules *rules=graph->rules;
     const GD_RuleParticipant *actor=&rules->participants[edge->participant];
     int case_index=edge->source_case;
@@ -172,7 +174,7 @@ static void relation(FILE *out, const GD_ResourceGraph *graph, const int *first_
         const GD_RuleCase *callee=&rules->cases[graph->nodes[edge->facet].case_index]; int i,comma=0;
         fputs(",\"text\":",out); gd_json_string_n(out,call->text,call->length);
         member(out,"resolution",gd_rule_resolution_name(call->resolution)); fputs(",\"bindings\":[",out);
-        for (i=call->first_binding;i<call->first_binding+call->binding_count;++i) {
+        for (i=call->first_binding;i<call->first_binding+call->binding_count && !ferror(out);++i) {
             const GD_RuleBinding *binding=&graph->calls->bindings[i];
             if (binding->callee<callee->first_participant || binding->callee>=callee->first_participant+callee->participant_count) continue;
             if (comma++) fputc(',',out);
@@ -184,6 +186,7 @@ static void relation(FILE *out, const GD_ResourceGraph *graph, const int *first_
     fputc('}',out);
 }
 static void query_result(FILE *out, const GD_ResourceGraph *graph, const GD_ResourceRoutes *query, const int *first_relation) {
+    if(ferror(out))return;
     int w,i,j,comma=0; unsigned char used[GD_RESOURCE_GRAPH_NODES]={0};
     fprintf(out,"{\"available\":%s,\"queried\":%s,",graph ? "true":"false",query && query->queried ? "true":"false");
     fputs("\"semantics\":\"Conditional structural witnesses over direct and instantiated declarations, not applicability, starting-inventory plans, state compatibility or final outcomes. Whole ancestor/instance bundles remain guards; OR is not AND. Unresolved, cyclic or limited invocations and unknown-direction writes remain frontiers. Invocation arcs are placement structure, not a temporal execution sequence. Unavailable/limited is not no path.\"",out);
@@ -198,7 +201,7 @@ static void query_result(FILE *out, const GD_ResourceGraph *graph, const GD_Reso
     fprintf(out,",\"selector_matches\":%d,\"selector_candidates\":[",query->selector_matches);
     for (i=0;i<query->selector_matches && i<GD_RESOURCE_ROUTE_WITNESSES;++i) { if (i) fputc(',',out); node_identity(out,graph,first_relation,query->selector_candidates[i]); }
     fputs("],\"witnesses\":[",out);
-    for (w=0;w<query->witness_count;++w) {
+    for (w=0;w<query->witness_count && !ferror(out);++w) {
         const GD_ResourceWitness *item=&query->witnesses[w]; if (w) fputc(',',out);
         fprintf(out,"{\"conditional\":true,\"feasibility\":\"not_checked\",\"unresolved\":%s,\"proposal_reliance\":%s,\"nodes\":[",item->unresolved ? "true":"false",item->proposed ? "true":"false");
         for (i=0;i<=item->count;++i) { if (i) fputc(',',out); node_identity(out,graph,first_relation,item->nodes[i]); used[item->nodes[i]]=1; }
@@ -212,18 +215,18 @@ static void query_result(FILE *out, const GD_ResourceGraph *graph, const GD_Reso
     }
     for (i=graph->node_count-1;i>=0;--i) if (used[i] && graph->nodes[i].kind==GD_RESOURCE_CASE && graph->nodes[i].instance) used[graph->nodes[i].parent]=1;
     fputs("],\"activations\":[",out);
-    for (i=0;i<graph->node_count;++i) if (used[i] && graph->nodes[i].kind==GD_RESOURCE_CASE) {
+    for (i=0;i<graph->node_count && !ferror(out);++i) if (used[i] && graph->nodes[i].kind==GD_RESOURCE_CASE) {
         if (comma++) fputc(',',out);
         fputs("{\"id\":",out); node_identity(out,graph,first_relation,i);
         fputs(",\"source\":",out); source(out,graph->model,case_record(graph,graph->nodes[i].case_index),graph->rules->cases[graph->nodes[i].case_index].line);
         instantiation(out,graph,first_relation,i);
         fputs(",\"whole_case_guards\":",out); case_declaration(out,graph,graph->nodes[i].case_index);
         fputs(",\"all_direct_relations_including_side_inputs\":[",out);
-        for (j=query->case_head[i];j>=0;j=query->case_next[j]) { if (j!=query->case_head[i]) fputc(',',out); relation(out,graph,first_relation,j); }
+        for (j=query->case_head[i];j>=0 && !ferror(out);j=query->case_next[j]) { if (j!=query->case_head[i]) fputc(',',out); relation(out,graph,first_relation,j); }
         fputs("]}",out);
     }
     fputs("],\"frontiers_all_eligible_sources\":[",out); comma=0;
-    for (i=0;i<graph->relation_count;++i) {
+    for (i=0;i<graph->relation_count && !ferror(out);++i) {
         const GD_ResourceRelation *edge=&graph->relations[i]; const GD_ResourceNode *owner=&graph->nodes[edge->activation];
         if (owner->kind!=GD_RESOURCE_CASE || !query->activation_eligible[edge->activation]) continue;
         if (!(edge->kind==GD_RESOURCE_INVOCATION && (!edge->expanded || !query->activation_eligible[edge->facet])) && !(edge->kind==GD_RESOURCE_QUANTITY_WRITE && (!edge->delta_recognized || !edge->delta.known || !edge->delta.checks_complete))) continue;
@@ -273,12 +276,12 @@ int gd_write_resource_query(FILE *out, const GD_Model *model, const GD_ResourceG
     }
     fprintf(out,"{\"schema_version\":1,\"ok\":%s,\"data\":{",ok ? "true":"false");
     if (selected(fields,"nodes")) {
-        fputs("\"nodes\":[",out); if (graph) for (i=0;i<graph->node_count;++i) { if (i) fputc(',',out); node(out,graph,first_relation,i); }
+        fputs("\"nodes\":[",out); if (graph) for (i=0;i<graph->node_count && !ferror(out);++i) { if (i) fputc(',',out); node(out,graph,first_relation,i); }
         fputc(']',out); comma=1;
     }
     if (selected(fields,"relations")) {
         if (comma++) fputc(',',out); fputs("\"relations\":[",out);
-        if (graph) for (i=0;i<graph->relation_count;++i) { if (i) fputc(',',out); relation(out,graph,first_relation,i); } fputc(']',out);
+        if (graph) for (i=0;i<graph->relation_count && !ferror(out);++i) { if (i) fputc(',',out); relation(out,graph,first_relation,i); } fputc(']',out);
     }
     if (selected(fields,"routes")) {
         if (comma++) fputc(',',out);

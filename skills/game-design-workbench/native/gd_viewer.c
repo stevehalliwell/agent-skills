@@ -45,7 +45,7 @@ static int hex4(Reader *r, unsigned *value) {
     }
     return 1;
 }
-static int string(Reader *r, char *output, size_t capacity) {
+static int string(Reader *r, char *output, size_t capacity, int multiline) {
     size_t length=0;
     if (!take(r,'"')) return 0;
     while (r->p<r->end) {
@@ -67,8 +67,9 @@ static int string(Reader *r, char *output, size_t capacity) {
                 } else if (c>=0xdc00 && c<=0xdfff) return 0;
             } else if (c!='"' && c!='\\' && c!='/') return 0;
         }
-        /* Paths/identifiers cannot contain NUL or control characters. */
-        if (c<32) return 0;
+        /* Only literal control values accept escaped LF/CR/TAB. NUL and other
+           control bytes remain forbidden; raw JSON control bytes always fail. */
+        if (c<32 && (!multiline || (c!=10 && c!=13 && c!=9))) return 0;
         if (c<128) bytes[0]=(unsigned char)c;
         else if (c<256 && !unicode) bytes[0]=(unsigned char)c; /* Raw UTF-8 bytes validated on close. */
         else if (c<2048) { bytes[0]=0xc0|(c>>6); bytes[1]=0x80|(c&63); n=2; }
@@ -123,7 +124,7 @@ int gd_viewer_parse(const char *text, size_t size, GD_ViewerRequest *request) {
     if (!take(&r,'{')) return 0;
     for (;;) {
         char key[32]; unsigned bit; char *target=NULL; size_t capacity=0;
-        if (!string(&r,key,sizeof(key)) || !take(&r,':')) return 0;
+        if (!string(&r,key,sizeof(key),0) || !take(&r,':')) return 0;
         if (!strcmp(key,"protocol")) bit=1;
         else if (!strcmp(key,"command")) { bit=2; target=request->command; capacity=sizeof(request->command); }
         else if (!strcmp(key,"target")) { bit=4; target=request->target; capacity=sizeof(request->target); }
@@ -134,13 +135,17 @@ int gd_viewer_parse(const char *text, size_t size, GD_ViewerRequest *request) {
         else if (!strcmp(key,"offset")) bit=128;
         else if (!strcmp(key,"limit")) bit=256;
         else if (!strcmp(key,"action")) { bit=512; target=request->action; capacity=sizeof(request->action); }
+        else if (!strcmp(key,"form")) { bit=1024; target=request->form; capacity=sizeof(request->form); }
+        else if (!strcmp(key,"control")) { bit=2048; target=request->control; capacity=sizeof(request->control); }
+        else if (!strcmp(key,"value")) { bit=4096; target=request->value; capacity=sizeof(request->value); }
+        else if (!strcmp(key,"expect")) { bit=8192; target=request->expect; capacity=sizeof(request->expect); }
         else return 0;
         if (seen&bit) return 0;
         seen|=bit;
         if (bit==1) { spaces(&r); if (r.p==r.end || *r.p++!='1') return 0; }
-        else if (bit==128) { if (!unsigned_value(&r,GD_MAX_RECORDS,&request->offset)) return 0; }
+        else if (bit==128) { if (!unsigned_value(&r,64u*1024u*1024u,&request->offset)) return 0; }
         else if (bit==256) { if (!unsigned_value(&r,GD_VIEWER_NODE_PAGE,&request->limit) || !request->limit) return 0; }
-        else if (!string(&r,target,capacity) || !*target) return 0;
+        else if (!string(&r,target,capacity,bit==4096) || (!*target && bit!=4096)) return 0;
         spaces(&r);
         if (take(&r,'}')) break;
         if (!take(&r,',')) return 0;
@@ -148,9 +153,14 @@ int gd_viewer_parse(const char *text, size_t size, GD_ViewerRequest *request) {
     spaces(&r);
     if (r.p!=r.end || (seen&3)!=3) return 0;
     if (!strcmp(request->command,"inspect")) return !(seen&~(7u|32u)) && (!(seen&32) || fields_valid(request->fields));
-    if (!strcmp(request->command,"nodes")) return !(seen&~(7u|8u|128u|256u));
+    if (!strcmp(request->command,"nodes")) return request->offset<=GD_MAX_RECORDS && !(seen&~(7u|8u|128u|256u));
+    if (!strcmp(request->command,"select")) return (seen&(8|1024|64|8192))==(8|1024|64|8192) && !(seen&~(7u|8u|1024u|64u|8192u|16u));
+    if (!strcmp(request->command,"result")) return (seen&(8|1024))==(8|1024) && !(seen&~(7u|8u|1024u|32u|128u|256u|8192u));
+    if (!strcmp(request->command,"evidence")) return request->offset<=GD_MAX_EDGES && !(seen&~(7u|8u|1024u|128u|256u|16u));
+    if (!strcmp(request->command,"controls")) return request->offset<=GD_VIEWER_CONTROL_OFFSET && !(seen&~(7u|8u|1024u|2048u|128u|256u)) && (!(seen&2048) || (seen&1024)) && (!(seen&(128|256)) || (seen&2048));
+    if (!strcmp(request->command,"configure")) return (seen&(8|1024|2048|4096|8192))==(8|1024|2048|4096|8192) && !(seen&~(7u|8u|1024u|2048u|4096u|8192u));
     if (!strcmp(request->command,"actions")) return !(seen&~(7u|8u));
-    if (!strcmp(request->command,"action")) return (seen&(8|512))==(8|512) && !(seen&~(7u|8u|512u));
+    if (!strcmp(request->command,"action")) return (seen&(8|512))==(8|512) && !(seen&~(7u|8u|512u|8192u));
     if (!strcmp(request->command,"refresh")) return !(seen&~7u);
     if ((seen&(16|64))==(16|64) || (seen&~(7u|8u|16u|64u))) return 0;
     if (!strcmp(request->command,"hint")) return (seen&8) && (seen&(16|64));
@@ -366,32 +376,37 @@ static int cli_failure(const char *code, const char *message) {
     gd_viewer_error(&w,code,message); puts(output); fprintf(stderr,"%s: %s\n",code,message); return 2;
 }
 int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
-    const char *command=argc>2?argv[2]:NULL,*target=NULL,*projection=NULL,*reference=NULL,*fields=NULL,*id=NULL,*offset=NULL,*limit=NULL,*action=NULL;
+    const char *command=argc>2?argv[2]:NULL,*target=NULL,*projection=NULL,*reference=NULL,*fields=NULL,*id=NULL,*offset=NULL,*limit=NULL,*action=NULL,*form=NULL,*control=NULL,*value=NULL,*expect=NULL;
     unsigned page_offset=0,page_limit=GD_VIEWER_NODE_PAGE;
     char sessions[GD_VIEWER_INSTANCES][GD_VIEWER_SESSION],request[GD_VIEWER_REQUEST_LIMIT],error[512];
     GD_ViewerWriter w={request,0,sizeof(request),0}; GD_ViewerRequest parsed;
     int i,count=0; Exchange *e;
     if (command && !strcmp(command,"--help")) {
-        puts("Usage: gd viewer list|inspect|nodes|hint|navigate|actions|action|refresh [--target SESSION] [--projection VIEW]\n"
+        puts("Usage: gd viewer list|inspect|nodes|hint|navigate|actions|action|refresh|controls|configure|evidence|select|result [--target SESSION] [--projection VIEW]\n"
              "hint/navigate --reference ALIAS/NAME (Find) or --id NATIVE_ID (exact select/frame); never both.\n"
              "nodes [--projection VIEW] [--offset 0..4096] [--limit 1..64] reads prepared canvas; default active view, page 64.\n"
              "inspect --fields selection,snapshots,panes,agent_hint,source narrows optional sections; source body opt-in.\n"
              "hint requires projection and reference/id; navigate requires projection.\n"
              "actions [--projection VIEW] lists shared application actions; action --projection VIEW --action NAME runs one.\n"
+             "controls [--projection VIEW] [--form FORM [--control NAME --offset N --limit N]] reads types/values/choice keys.\n"
+             "configure --projection VIEW --form FORM --control NAME --value TEXT --expect TOKEN stages analytical input; presentation applies immediately like GUI. Empty text clears.\n"
+             "evidence [--projection VIEW] [--form links|cells|cases|diagnostics|layers|starts|known] [--offset N --limit N] reads retained pages.\n"
+             "select --projection VIEW --form link|cell|case|source --id KEY --expect TOKEN changes exact inspection; cell also accepts --reference NOUN --id VERB.\n"
+             "result --projection VIEW --form query|structure|rules|bindings|resource|mda|challenges [--fields NATIVE_FIELDS --offset BYTE --limit KIB --expect TOKEN] reads base64 native JSON chunks; no evaluation.\n"
              "refresh reloads original source bindings now; active edits/dirty drafts block, never discard.\n"
              "JSON stdout; diagnostics stderr; exit 0 success / 2 failure. No auto-start, source writes or OS focus changes.\n"
              "inspect/list are non-consuming. Multiple viewers require exact --target from list. Timeout outcome may be unknown; never auto-retry mutations."); return 0;
     }
-    if (!command) return cli_failure("viewer.arguments","Supply list, inspect, nodes, hint, navigate, actions, action or refresh; see gd viewer --help");
+    if (!command) return cli_failure("viewer.arguments","Supply list, inspect, nodes, hint, navigate, actions, action, refresh, controls or configure; see gd viewer --help");
     for (i=3;i<argc;++i) {
-        const char **field=!strcmp(argv[i],"--target")?&target:!strcmp(argv[i],"--projection")?&projection:!strcmp(argv[i],"--reference")?&reference:!strcmp(argv[i],"--fields")?&fields:!strcmp(argv[i],"--id")?&id:!strcmp(argv[i],"--offset")?&offset:!strcmp(argv[i],"--limit")?&limit:!strcmp(argv[i],"--action")?&action:NULL;
+        const char **field=!strcmp(argv[i],"--target")?&target:!strcmp(argv[i],"--projection")?&projection:!strcmp(argv[i],"--reference")?&reference:!strcmp(argv[i],"--fields")?&fields:!strcmp(argv[i],"--id")?&id:!strcmp(argv[i],"--offset")?&offset:!strcmp(argv[i],"--limit")?&limit:!strcmp(argv[i],"--action")?&action:!strcmp(argv[i],"--form")?&form:!strcmp(argv[i],"--control")?&control:!strcmp(argv[i],"--value")?&value:!strcmp(argv[i],"--expect")?&expect:NULL;
         if (!strcmp(argv[i],"--json")) continue;
-        if (!field || *field || i+1==argc || !*argv[i+1]) return cli_failure("viewer.arguments","Unknown, duplicate or missing option; see gd viewer --help");
+        if (!field || *field || i+1==argc || (!*argv[i+1] && field!=&value)) return cli_failure("viewer.arguments","Unknown, duplicate or missing option; see gd viewer --help");
         *field=argv[++i];
     }
     if (target && !session_valid(target)) return cli_failure("viewer.target","Use exact session identity from gd viewer list");
     if (!strcmp(command,"list")) {
-        if (target || projection || reference || fields || id || offset || limit || action) return cli_failure("viewer.arguments","list accepts only --json");
+        if (target || projection || reference || fields || id || offset || limit || action || form || control || value || expect) return cli_failure("viewer.arguments","list accepts only --json");
         if (!instances(sessions,&count)) return cli_failure("viewer.discovery","Discovery failed or exceeds 32 candidates");
         /* All candidates remain explicit, including unresponsive endpoints. */
         fputs("{\"ok\":true,\"viewers\":[",stdout);
@@ -403,7 +418,7 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
     }
     if (offset) {
         Reader r={offset,offset+strlen(offset)};
-        if (!unsigned_value(&r,GD_MAX_RECORDS,&page_offset) || r.p!=r.end) return cli_failure("viewer.arguments","offset must be integer 0..4096");
+        if (!unsigned_value(&r,!strcmp(command,"result") ? 64u*1024u*1024u:!strcmp(command,"evidence") ? GD_MAX_EDGES:!strcmp(command,"controls") ? GD_VIEWER_CONTROL_OFFSET:GD_MAX_RECORDS,&page_offset) || r.p!=r.end) return cli_failure("viewer.arguments","offset outside command's bounded source-slot range");
     }
     if (limit) {
         Reader r={limit,limit+strlen(limit)};
@@ -416,6 +431,10 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
     if (fields) { gd_viewer_write(&w,",\"fields\":"); gd_viewer_quote(&w,fields); }
     if (id) { gd_viewer_write(&w,",\"id\":"); gd_viewer_quote(&w,id); }
     if (action) { gd_viewer_write(&w,",\"action\":"); gd_viewer_quote(&w,action); }
+    if (form) { gd_viewer_write(&w,",\"form\":"); gd_viewer_quote(&w,form); }
+    if (control) { gd_viewer_write(&w,",\"control\":"); gd_viewer_quote(&w,control); }
+    if (value) { gd_viewer_write(&w,",\"value\":"); gd_viewer_quote(&w,value); }
+    if (expect) { gd_viewer_write(&w,",\"expect\":"); gd_viewer_quote(&w,expect); }
     if (offset) gd_viewer_write(&w,",\"offset\":%u",page_offset);
     if (limit) gd_viewer_write(&w,",\"limit\":%u",page_limit);
     gd_viewer_write(&w,"}");

@@ -489,7 +489,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
 }
 
 #ifdef GD_WITH_GRAPH
-#include "gd_explorer_ui.h"
+#include "gd_explorer_controls.h"
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
@@ -550,32 +550,36 @@ void gd_explorer_resource_source(GD_ExplorerContext *context, int edge) {
 }
 int gd_explorer_resource_run(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; GD_ResourceRoutes *next;
-    if (p->resource_to<0) { snprintf(p->resource_message,sizeof(p->resource_message),"Select a concrete target node first."); return 0; }
+    if (p->resource_pending.to<0) { snprintf(p->resource_message,sizeof(p->resource_message),"Select a concrete target node first."); return 0; }
     next=gd_resource_routes_create(context->project->allocator);
     if (!next) { snprintf(p->resource_message,sizeof(p->resource_message),"Cannot allocate bounded route scratch; previous result retained."); return 0; }
-    if (!gd_resource_query(next,context->project->resources,p->resource_from,p->resource_to,p->resource_accepted,p->resource_work_limit)) {
+    if (!gd_resource_query(next,context->project->resources,p->resource_pending.from,p->resource_pending.to,p->resource_pending.accepted,p->resource_pending.work_limit)) {
         gd_resource_routes_destroy(next); snprintf(p->resource_message,sizeof(p->resource_message),"Invalid endpoints or work ceiling; previous result retained."); return 0;
     }
-    gd_resource_routes_destroy(p->resource_routes); p->resource_routes=next; p->resource_witness=next->witness_count ? 0:-1; *p->resource_message=0; return 1;
+    gd_resource_routes_destroy(p->resource_routes); p->resource_routes=next; p->resource_applied=p->resource_pending;
+    p->resource_witness=next->witness_count ? 0:-1; *p->resource_message=0; context->analysis->initialized=0; return 1;
 }
 void gd_explorer_resource_controls(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; const GD_ResourceGraph *graph=context->project->resources;
-    int selected=p->selection.node,changed=0,i;
+    int selected=p->selection.node,i;
     igSeparator(); igTextUnformatted("Conditional resource witnesses",NULL);
     igTextWrapped("Whole loaded Resource snapshot, not camera/filter scope. Teal arrows: selected witness. Amber: side guard/write declarations, not necessarily consumed or AND inputs. Feasibility is not checked. Mapped calls expose concrete placements. Unresolved/limited calls and unknown-direction writes remain frontiers.");
-    igTextWrapped("From: %s | To: %s",p->resource_from>=0 ? node_label(graph,p->resource_from):"any upstream declaration",p->resource_to>=0 ? node_label(graph,p->resource_to):"not selected");
+    igTextWrapped("Pending from: %s | to: %s",p->resource_pending.from>=0 ? node_label(graph,p->resource_pending.from):"any upstream declaration",p->resource_pending.to>=0 ? node_label(graph,p->resource_pending.to):"not selected");
     igBeginDisabled(selected<0 || selected>=graph->node_count || p->selection.linked>=0);
-    if (igButton("Use selected as FROM",(ImVec2_c){0,0})) { p->resource_from=selected; changed=1; }
+    if (igButton("Use selected as FROM",(ImVec2_c){0,0})) p->resource_pending.from=selected;
     igSameLine(0,8);
-    if (igButton("Use selected as TO",(ImVec2_c){0,0})) { p->resource_to=selected; changed=1; }
+    if (igButton("Use selected as TO",(ImVec2_c){0,0})) p->resource_pending.to=selected;
     igEndDisabled();
-    if (igButton("Any upstream (clear FROM)",(ImVec2_c){0,0})) { p->resource_from=-1; changed=1; }
-    if (igCheckbox("Accepted sources only",&p->resource_accepted)) changed=1;
-    igInputInt("Route work ceiling 0..16777216",&p->resource_work_limit,0,0,0);
-    if (p->resource_routes && p->resource_routes->work_limit!=p->resource_work_limit) igTextWrapped("Pending work ceiling differs; retained witnesses use their displayed applied ceiling until a successful run.");
-    if (changed) { gd_resource_routes_destroy(p->resource_routes); p->resource_routes=NULL; p->resource_witness=-1; snprintf(p->resource_message,sizeof(p->resource_message),"Query changed; run to refresh witness."); }
-    if (igButton("Run conditional witnesses",(ImVec2_c){0,0})) gd_explorer_resource_run(context);
-    if (*p->resource_message) igTextWrapped("%s",p->resource_message);
+    if (igButton("Any upstream (clear FROM)",(ImVec2_c){0,0})) p->resource_pending.from=-1;
+    gd_explorer_form_widget(GD_FORM_RESOURCE,&p->resource_pending,"accepted",NULL);
+    gd_explorer_form_widget(GD_FORM_RESOURCE,&p->resource_pending,"work_limit",NULL);
+    if (p->resource_routes) {
+        const GD_ExplorerResourceForm *applied=&p->resource_applied;
+        igTextWrapped("Applied from: %s | to: %s | accepted-only: %s | work ceiling: %d",applied->from>=0 ? node_label(graph,applied->from):"any upstream declaration",node_label(graph,applied->to),applied->accepted ? "yes":"no",applied->work_limit);
+        if (!gd_explorer_form_equal(GD_FORM_RESOURCE,&p->resource_pending,applied)) igTextWrapped("Inputs pending. Witnesses and highlights retain applied scope until a successful Run.");
+    }
+    gd_explorer_action_button(context,GD_ACTION_RESOURCE_RUN); igSameLine(0,8); gd_explorer_action_button(context,GD_ACTION_RESOURCE_CLEAR);
+    if (*p->resource_message) igTextWrapped("Last Run: %s",p->resource_message);
     if (p->resource_routes) {
         GD_ResourceRoutes *query=p->resource_routes;
         igTextWrapped("%d retained witnesses | work %d/%d | work/witness limit %s | depth limit %s | cycles skipped %d",query->witness_count,query->work,query->work_limit,query->limited ? "yes":"no",query->depth_limited ? "yes":"no",query->cycle_edges);

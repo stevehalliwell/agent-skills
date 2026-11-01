@@ -4,10 +4,11 @@
 
 void gd_json_string_n(FILE *output, const char *value, size_t size) {
     const unsigned char *p, *end;
+    if (ferror(output)) return;
     if (!value) { fputs("null", output); return; }
     end = (const unsigned char *)value + size;
     fputc('"', output);
-    for (p = (const unsigned char *)value; p < end; ++p) {
+    for (p = (const unsigned char *)value; p < end && !ferror(output); ++p) {
         if (*p == '"' || *p == '\\') { fputc('\\', output); fputc(*p, output); }
         else if (*p < 32) fprintf(output, "\\u%04x", *p);
         else fputc(*p, output);
@@ -15,6 +16,7 @@ void gd_json_string_n(FILE *output, const char *value, size_t size) {
     fputc('"', output);
 }
 void gd_json_string(FILE *output, const char *value) {
+    if (ferror(output)) return;
     gd_json_string_n(output,value,value ? strlen(value):0);
 }
 static void member(FILE *output, const char *key, const char *value, int comma) {
@@ -117,7 +119,7 @@ static void rank_value(FILE *output, int known, int64_t value) {
 static void skill_records(FILE *output, const GD_Model *model) {
     int i, j, comma = 0;
     fputc('[', output);
-    for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_SKILL) {
+    for (i = 0; i < model->record_count && !ferror(output); ++i) if (model->records[i].role == GD_SKILL) {
         const GD_Record *record = &model->records[i];
         const GD_SkillState *state = &model->skills[i];
         int edge_comma = 0;
@@ -133,7 +135,7 @@ static void skill_records(FILE *output, const GD_Model *model) {
         fprintf(output, ",\"layout_layer\":%d,\"placement_complete\":%s,\"cycle\":%s,\"rank_conflict\":%s,\"root\":%s,\"declared_prerequisite_count\":%d,\"prerequisite_count\":%d,\"dependent_count\":%d,\"relationships\":[",
                 state->layout_layer, state->incomplete ? "false" : "true", state->cycle ? "true" : "false", state->incomplete ? "null" : state->rank_conflict ? "true" : "false",
                 state->declared_prerequisites ? "false" : "true", state->declared_prerequisites, state->prerequisite_count, state->dependent_count);
-        for (j = 0; j < model->edge_count; ++j) if (model->edges[j].source == i) {
+        for (j = 0; j < model->edge_count && !ferror(output); ++j) if (model->edges[j].source == i) {
             const GD_Edge *edge = &model->edges[j];
             if (edge_comma++) fputc(',', output);
             fputc('{', output); member(output, "field", gd_field_name(edge->field), 0); member(output, "reference", edge->reference, 1);
@@ -172,14 +174,14 @@ static void findings(FILE *output, const GD_Model *model) {
 static void route_records(FILE *output, const GD_Model *model, const GD_Routes *routes, GD_Role role) {
     int i, e, comma = 0;
     fputc('[',output);
-    for (i = 0; i < model->record_count; ++i) if (model->records[i].role == role) {
+    for (i = 0; i < model->record_count && !ferror(output); ++i) if (model->records[i].role == role) {
         const GD_Record *record = &model->records[i]; int edge_comma = 0;
         if (comma++) fputc(',',output);
         fputc('{',output); member(output,"reference",record->reference,0); member(output,"source_path",record->source_path,1);
         member(output,"id",record->id,1); member(output,"status",record->status,1);
         if (role == GD_CHALLENGE) fprintf(output,",\"entry\":%s,\"reachable\":%s",record->entry ? "true":"false",routes && routes->reachable[i] ? "true" : routes && routes->routes_complete ? "false" : "null");
         fputs(",\"relationships\":[",output);
-        for (e = 0; e < model->edge_count; ++e) if (model->edges[e].source == i) {
+        for (e = 0; e < model->edge_count && !ferror(output); ++e) if (model->edges[e].source == i) {
             const GD_Edge *edge = &model->edges[e];
             if (edge_comma++) fputc(',',output);
             fputc('{',output); member(output,"field",gd_field_name(edge->field),0); member(output,"reference",edge->reference,1);
@@ -352,7 +354,7 @@ int gd_write_mda_result(FILE *output, const GD_Model *model, const GD_Mda *mda, 
     fprintf(output,"{\"schema_version\":1,\"ok\":%s,\"data\":{",complete ? "true":"false");
     if (selected(fields,"nodes")) {
         fputs("\"nodes\":[",output); comma = 1; j = 0;
-        if (mda) for (i = 0; i < model->record_count; ++i) if (mda->selected[i]) {
+        if (mda) for (i = 0; i < model->record_count && !ferror(output); ++i) if (mda->selected[i]) {
             const GD_Record *record = &model->records[i]; int e, edge_comma = 0;
             if (j++) fputc(',',output); fputc('{',output);
             member(output,"reference",record->reference,0); member(output,"role",gd_mda_role_name(record->role),1);
@@ -361,7 +363,7 @@ int gd_write_mda_result(FILE *output, const GD_Model *model, const GD_Mda *mda, 
             member(output,"basis",gd_mda_basis(model,mda,i),1); member(output,"aesthetic_trace",gd_mda_trace(mda,i),1);
             member(output,"example_aesthetic",mda->nodes[i].aesthetic >= 0 ? model->records[mda->nodes[i].aesthetic].reference:NULL,1);
             fputs(",\"relationships\":[",output);
-            for (e = 0; e < model->edge_count; ++e) if (model->edges[e].source == i) {
+            for (e = 0; e < model->edge_count && !ferror(output); ++e) if (model->edges[e].source == i) {
                 const GD_Edge *edge = &model->edges[e]; if (edge_comma++) fputc(',',output);
                 fputc('{',output); member(output,"field",gd_field_name(edge->field),0); member(output,"reference",edge->reference,1);
                 fprintf(output,",\"line\":%d,\"loaded\":%s,\"ambiguous\":%s,\"context_only\":%s}",edge->line,edge->target >= 0 ? "true":"false",edge->target == -2 ? "true":"false",record->role == GD_MDA_MECHANIC || edge->field == GD_EXPERIMENTS ? "true":"false");
@@ -388,7 +390,7 @@ int gd_write_mda_result(FILE *output, const GD_Model *model, const GD_Mda *mda, 
     }
     if (selected(fields,"paths")) {
         if (comma++) fputc(',',output); fputs("\"paths\":[",output); j = 0;
-        if (mda && mda->root >= 0) for (i = 0; i < model->record_count; ++i) if (mda->selected[i]) {
+        if (mda && mda->root >= 0) for (i = 0; i < model->record_count && !ferror(output); ++i) if (mda->selected[i]) {
             int nodes[GD_MAX_MDA_PATH], links[GD_MAX_MDA_PATH], full_length, k;
             int count = gd_mda_path(mda,i,nodes,links,GD_MAX_MDA_PATH,&full_length);
             if (j++) fputc(',',output); fputc('{',output); member(output,"to",model->records[i].reference,0);

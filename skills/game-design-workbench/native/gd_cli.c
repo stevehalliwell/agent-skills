@@ -33,7 +33,7 @@ static void help(void) {
          "Usage: gd matrix|connectivity|skill-atoms|scaffolding|mda|controls|rules|resources [options]\n"
          "       gd view matrix|skill-atoms|mda|resources|explorer [options]\n"
          "       gd query --list | --question NAME --projection NAME [options]\n"
-         "       gd viewer list|inspect|nodes|hint|navigate|actions|action|refresh [options] (viewer --help)\n\n"
+         "       gd viewer list|inspect|nodes|hint|navigate|actions|action|refresh|controls|configure [options] (viewer --help)\n\n"
          "Built-in actor/effect, structural and similarity queries: query --list for supported pairs/parameters. No DSL.\n"
          "  --feature ID[=WEIGHT]  similarity-map: repeat advertised features; similarity-features discovers IDs\n"
          "  --entry ID            similarity-map: repeat up to 64 exact native IDs; default all shown\n"

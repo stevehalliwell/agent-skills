@@ -106,13 +106,20 @@ static void catalogue(GD_ExplorerContext *context) {
     }
     igEndChild(); igTreePop();
 }
-static void compare(GD_ExplorerStructureState *state) {
-    const GD_SimilarityProjection *projection=state->result->similarity; int i;
-    if (state->similarity_row<0 || state->similarity_peer<0) return;
+int gd_explorer_similarity_compare(GD_ExplorerContext *context) {
+    GD_ExplorerStructureState *state=context->pane->structure_state;
+    const GD_SimilarityProjection *projection=state && state->result ? state->result->similarity:NULL;
+    if (!projection || state->similarity_row<0 || state->similarity_peer<0 || state->similarity_row>=projection->entry_count || state->similarity_peer>=projection->entry_count) return 0;
     if (state->comparison_first!=state->similarity_row || state->comparison_second!=state->similarity_peer) {
         state->comparison_first=state->similarity_row; state->comparison_second=state->similarity_peer; state->comparison_work=0;
         state->comparison_available=projection->map && gd_similarity_distance(projection->map,state->similarity_row,state->similarity_peer,state->comparison_components,&state->comparison_distance,&state->comparison_work,GD_SIMILARITY_WORK);
     }
+    return state->comparison_available;
+}
+static void compare(GD_ExplorerContext *context) {
+    GD_ExplorerStructureState *state=context->pane->structure_state; const GD_SimilarityProjection *projection=state->result->similarity; int i;
+    if (state->similarity_row<0 || state->similarity_peer<0) return;
+    gd_explorer_similarity_compare(context);
     igSeparator(); igText("Pair #%d / #%d | %d independent native work",state->similarity_row,state->similarity_peer,state->comparison_work);
     if (!state->comparison_available) { igTextWrapped("Distance unavailable: missing selected cell, unfinished range validation or independent work ceiling. No value imputed."); return; }
     igText("Native weighted distance %.17g",state->comparison_distance);
@@ -178,5 +185,5 @@ void gd_explorer_similarity_controls(GD_ExplorerContext *context) {
         if (igSmallButton(TextFormat("Inspect #%d",row))) choose_row(state,row,0); igSameLine(0,-1);
         if (igSmallButton("Compare")) choose_row(state,row,1); igSameLine(0,-1); igText("%s | %s",placed ? "placed":"unplaced",projection->ids[row]); igPopID();
     }
-    inspect(context); compare(state);
+    inspect(context); compare(context);
 }
