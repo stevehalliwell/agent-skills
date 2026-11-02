@@ -78,13 +78,51 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             fprintf(stderr,"Resource footprint probe: %d nodes / %d groups / %lu initial overlaps / %lu after 600 more steps / tail RMS %.6f max %.6f / limited %d\n",probe->node_count,probe->group_count,initial,remaining,probe->node_count ? sqrt(square/(32*probe->node_count)):0,sqrt(maximum),probe->collision_limited);
             a.release(a.context,probe);PRESENT_CHECK(valid);
         }
-        if(v==GD_EXPLORER_MATRIX || v==GD_EXPLORER_MDA || v==GD_EXPLORER_RESOURCES) {
+        if(v<=GD_EXPLORER_RESOURCES) {
             GD_Layout *native=a.allocate(a.context,sizeof(*native)); GD_LayoutPoint *seeded=a.allocate(a.context,GD_MAX_RECORDS*sizeof(*seeded));
             GD_GraphAnalysis *retained=a.allocate(a.context,sizeof(*retained));
             GD_ExplorerSelection selection; int node,seed_allocations,root=c.project->mda ? c.project->mda->root:-1;
+            GD_Focus scope=panes[v].focus;
             PRESENT_CHECK(native && seeded && retained);
+            if(v<=GD_EXPLORER_RELATIONSHIPS) {
+                if(v==GD_EXPLORER_SKILLS) {PRESENT_STAGE(v,"layout","rank");PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].rank==1);}
+                if(v==GD_EXPLORER_RELATIONSHIPS && panes[v].layout->node_count>1) {
+                    for(node=0;node<panes[v].layout->node_count;++node) if(panes[v].layout->nodes[node].key!=panes[v].focus.root) break;
+                    if(node<panes[v].layout->node_count) {panes[v].selection.node=node;PRESENT_ACTION(v,"view.expand");PRESENT_CHECK(strstr(reply,"\"executed\":true"));}
+                }
+                if(v==GD_EXPLORER_RELATIONSHIPS) {
+                    /* Retained partial scope must not replay expansion on mode
+                       switch, even when expanded records now have more neighbors. */
+                    for(node=0;node<panes[v].layout->node_count;++node) {
+                        int record=panes[v].layout->nodes[node].key;
+                        if(record!=panes[v].focus.root && !panes[v].focus.expanded[record]) break;
+                    }
+                    if(node<panes[v].layout->node_count) {
+                        int hidden=panes[v].layout->nodes[node].key;
+                        scope=panes[v].focus;scope.visible[hidden]=0;panes[v].focus=scope;
+                        memset(panes[v].focus.expanded,0,sizeof(panes[v].focus.expanded));target=c;target.pane=&panes[v];
+                        PRESENT_CHECK(gd_explorer_graph_prepare(&target));
+                        memcpy(panes[v].focus.expanded,scope.expanded,sizeof(scope.expanded));
+                        for(node=0;node<panes[v].layout->node_count;++node) if(panes[v].layout->nodes[node].key==scope.root) panes[v].selection.node=node;
+                        panes[v].inspected_record=scope.root;PRESENT_CHECK(!panes[v].focus.visible[hidden]);
+                    }
+                }
+                scope=panes[v].focus;memcpy(native,panes[v].layout,sizeof(*native));selection=panes[v].selection;
+                PRESENT_STAGE(v,"initial_arrangement","neighborhood");PRESENT_CHECK(strstr(reply,"viewer.control") && !panes[v].initial_arrangement);
+                PRESENT_ACTION(v,"view.analyze");PRESENT_CHECK(strstr(reply,"\"executed\":true") && analysis->initialized);memcpy(retained,analysis,sizeof(*retained));
+                PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]) && layout_settles(&panes[v]) && !panes[v].paused && !memcmp(retained,analysis,sizeof(*retained)));
+                PRESENT_CHECK(!memcmp(&scope,&panes[v].focus,sizeof(scope)) && !memcmp(&selection,&panes[v].selection,sizeof(selection)));
+                for(node=0;node<native->node_count;++node) PRESENT_CHECK(native->nodes[node].x==panes[v].layout->nodes[node].x && native->nodes[node].y==panes[v].layout->nodes[node].y && native->nodes[node].layer==panes[v].layout->nodes[node].layer);
+            }
             if(v==GD_EXPLORER_MDA) {PRESENT_STAGE(v,"initial_arrangement","neighborhood");PRESENT_CHECK(!panes[v].initial_arrangement && strstr(reply,"viewer.control"));PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true"));}
             memcpy(native,panes[v].layout,sizeof(*native));selection=panes[v].selection;
+            if(v<=GD_EXPLORER_RELATIONSHIPS && native->node_count) {
+                int movable=0;float x,y;unsigned tick=panes[v].layout->tick;
+                for(node=0;node<native->node_count;++node) if(native->nodes[node].side || native->nodes[node].layer==0) {movable=node;break;}
+                x=panes[v].layout->nodes[movable].x+31;y=panes[v].layout->nodes[movable].y+43;
+                gd_layout_move_node(panes[v].layout,movable,x,y);PRESENT_CHECK(panes[v].layout->nodes[movable].x==x && panes[v].layout->nodes[movable].y==y);
+                gd_layout_step(panes[v].layout,movable);PRESENT_CHECK(panes[v].layout->tick==tick+1 && panes[v].layout->nodes[movable].x==x && panes[v].layout->nodes[movable].y==y);
+            }
             PRESENT_ACTION(v,"view.analyze");PRESENT_CHECK(strstr(reply,"\"executed\":true") && analysis->initialized);memcpy(retained,analysis,sizeof(*retained));
             seed_allocations=*calls;PRESENT_STAGE(v,"initial_arrangement","neighborhood");seed_allocations=*calls-seed_allocations;
             PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].initial_arrangement==1 && !panes[v].paused);
@@ -101,9 +139,11 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             PRESENT_CHECK(!memcmp(retained,analysis,sizeof(*retained)));
             for(node=0;node<native->node_count;++node) PRESENT_CHECK(native->nodes[node].x==panes[v].layout->nodes[node].x && native->nodes[node].y==panes[v].layout->nodes[node].y);
             {
-                GD_Layout *last=panes[v].layout;panes[v].paused=true;*fail_at=*calls+seed_allocations;
-                PRESENT_STAGE(v,"initial_arrangement","neighborhood");*fail_at=-1;
-                PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].layout==last && !panes[v].initial_arrangement && panes[v].paused && !memcmp(retained,analysis,sizeof(*retained)));
+                GD_Layout *last=panes[v].layout;int allocation;panes[v].paused=true;
+                for(allocation=1;allocation<=seed_allocations;++allocation) {
+                    *fail_at=*calls+allocation;PRESENT_STAGE(v,"initial_arrangement","neighborhood");*fail_at=-1;
+                    PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].layout==last && !panes[v].initial_arrangement && panes[v].paused && !memcmp(retained,analysis,sizeof(*retained)));
+                }
             }
             if(v==GD_EXPLORER_MATRIX) {
                 c.viewport=(Rectangle){0};PRESENT_CHECK(gd_layout_seed_neighborhood(native,a,1));
@@ -111,6 +151,18 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
                 c.viewport=(Rectangle){0,0,1200,400};PRESENT_REQUEST("controls",v);strcpy(request.form,"presentation");PRESENT_SEND();PRESENT_CHECK(!w.failed);
                 for(node=0;node<native->node_count;++node) PRESENT_CHECK(native->nodes[node].x==panes[v].layout->nodes[node].x && native->nodes[node].y==panes[v].layout->nodes[node].y);
                 PRESENT_STAGE(v,"initial_arrangement","native");PRESENT_CHECK(strstr(reply,"\"configured\":true"));c.viewport=(Rectangle){0,0,1000,700};
+            }
+            if(v<=GD_EXPLORER_RELATIONSHIPS) {
+                PRESENT_CHECK(!memcmp(&scope,&panes[v].focus,sizeof(scope)));
+                if(v==GD_EXPLORER_SKILLS) {
+                    PRESENT_CHECK(panes[v].rank==1);
+                    PRESENT_STAGE(v,"layout","depth");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !panes[v].rank && panes[v].layout->mode==GD_LAYOUT_DIRECTED);
+                    PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !panes[v].rank && free_graph(&panes[v]));
+                }
+                PRESENT_STAGE(v,"layout",v==GD_EXPLORER_SKILLS ? "depth":v==GD_EXPLORER_CHALLENGES ? "bands":"native");
+                PRESENT_CHECK(strstr(reply,"\"configured\":true") && !free_graph(&panes[v]));
+                if(v!=GD_EXPLORER_SKILLS) PRESENT_CHECK(!layout_settles(&panes[v]));
+                if(v==GD_EXPLORER_RELATIONSHIPS) PRESENT_CHECK(!memcmp(&scope,&panes[v].focus,sizeof(scope)));
             }
             if(v==GD_EXPLORER_MDA) {PRESENT_STAGE(v,"layout","bands");PRESENT_CHECK(strstr(reply,"\"configured\":true"));}
             a.release(a.context,retained);a.release(a.context,seeded);a.release(a.context,native);

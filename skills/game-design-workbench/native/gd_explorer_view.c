@@ -32,6 +32,13 @@ static void pane_release_layout(GD_Allocator allocator, GD_ExplorerPane *pane) {
     pane->query_state=NULL; pane->layout=NULL;
 }
 static int incidence(GD_ExplorerView view) { return view==GD_EXPLORER_MATRIX || view==GD_EXPLORER_RESOURCES; }
+static int free_graph(const GD_ExplorerPane *p) {
+    return !query_view(p->view) && p->layout && p->layout->mode==GD_LAYOUT_FORCE && (p->view!=GD_EXPLORER_RELATIONSHIPS || p->layout_choice==GD_LAYOUT_FORCE);
+}
+static int layout_settles(const GD_ExplorerPane *p) {
+    return p->layout && !grid_view(p) && !query_view(p->view) && p->layout->mode!=GD_LAYOUT_COLUMNS &&
+        ((p->view!=GD_EXPLORER_CHALLENGES && p->view!=GD_EXPLORER_RELATIONSHIPS) || free_graph(p));
+}
 static const char *missing_roles(GD_ExplorerView view) {
     switch (view) {
         case GD_EXPLORER_SKILLS: case GD_EXPLORER_RELATIONSHIPS: return "Supply --skill-atoms ALIAS=FOLDER";
@@ -57,12 +64,12 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     p->navigate=p->focus_root=p->focus_expand=p->inspected_record=-1;
     p->reach=(GD_ReachControls){0,-1,0,-1,-1}; p->overview=(GD_OverviewControls){0,-1,-1};
     p->shared=true; p->paused=view==GD_EXPLORER_MDA || view==GD_EXPLORER_RESOURCES || query_view(view);
-    p->layout_choice=GD_LAYOUT_FORCE; p->fit=1; p->focus.root=-1;
+    p->layout_choice=view<=GD_EXPLORER_RELATIONSHIPS ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE; p->fit=1; p->focus.root=-1;
     p->paths.declared=view==GD_EXPLORER_CHALLENGES;
 }
 static int pane_seed(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; float aspect=1;
-    if(!p->initial_arrangement || p->layout->mode!=GD_LAYOUT_FORCE) return 1;
+    if(!p->initial_arrangement || !free_graph(p)) return 1;
     if(isfinite(c->viewport.width) && isfinite(c->viewport.height) && c->viewport.width>0 && c->viewport.height>0) {
         float measured=c->viewport.width/c->viewport.height; if(isfinite(measured) && measured>0) aspect=measured;
     }
@@ -185,7 +192,7 @@ static void distance_focus_update(GD_ExplorerContext *c, int selected) {
     }
     gd_layout_focus_begin(p->distance_focus,p->layout);
     result=gd_layout_focus_apply(p->distance_focus,p->layout,c->analysis->shown,
-        p->view==GD_EXPLORER_MATRIX ? p->overlay:1,!incidence(p->view),selected,
+        p->view==GD_EXPLORER_MATRIX ? p->overlay:1,!incidence(p->view) && !free_graph(p),selected,
         p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
     p->distance_focus_revision=c->scope_revision;
     if (result==2 && p->focus_auto_fit && p->fit!=2) fit_view(c,2);
@@ -437,21 +444,22 @@ static void match_details(GD_ExplorerContext *c) {
 static int presentation_widget(GD_ExplorerContext *c,const char *name,const char *label) {
     GD_ExplorerPresentation values; const GD_ExplorerControl *field=gd_explorer_form_field(GD_FORM_PRESENTATION,name); char key[GD_MAX_PATH]; int changed;
     gd_explorer_presentation_read(c,&values);
-    if(!strcmp(name,"layout")) changed=igCombo_Str(label,&values.layout,c->pane->view==GD_EXPLORER_SKILLS ? "Prerequisite depth\0Authored rank constraints\0":c->pane->view==GD_EXPLORER_MATRIX ? "Free graph\0Noun / verb columns\0Grid\0":"Role bands\0Free graph\0",-1);
+    if(!strcmp(name,"layout")) changed=igCombo_Str(label,&values.layout,c->pane->view==GD_EXPLORER_SKILLS ? "Prerequisite depth\0Authored rank constraints\0Free graph\0":c->pane->view==GD_EXPLORER_MATRIX ? "Free graph\0Noun / verb columns\0Grid\0":c->pane->view==GD_EXPLORER_RELATIONSHIPS ? "Stable neighborhood\0Free graph\0":c->pane->view==GD_EXPLORER_CHALLENGES ? "Declared route bands\0Free graph\0":"Role bands\0Free graph\0",-1);
     else changed=gd_explorer_form_widget(GD_FORM_PRESENTATION,&values,name,label);
     if(changed && gd_explorer_presentation_value(c,field,&values,key,sizeof(key))==1) gd_explorer_presentation_set(c,name,key,c->pane->query_message,sizeof(c->pane->query_message));
     return changed;
 }
 static int layout_controls(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int rearrange=0;
-    if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_MDA) presentation_widget(c,"layout","Layout");
+    if (is_graph(p->view) || p->view==GD_EXPLORER_MDA) presentation_widget(c,"layout","Layout");
     else if (query_view(p->view)) igTextWrapped("Layout: separate native query bands; incoming weighting never changes declarations. Query/ghost associations are not temporal paths.");
-    else igTextWrapped(p->view==GD_EXPLORER_CHALLENGES ? "Layout: declared route bands":p->view==GD_EXPLORER_RELATIONSHIPS ? "Layout: focused consumed declarations":"Layout: free incidence graph");
-    if ((p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_MDA || p->view==GD_EXPLORER_RESOURCES) && p->layout->mode==GD_LAYOUT_FORCE && !grid_view(p))
+    else igTextWrapped("Layout: free incidence graph");
+    if (free_graph(p) && !grid_view(p))
         presentation_widget(c,"initial_arrangement","Initial arrangement");
     if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_CHALLENGES) presentation_widget(c,"direction","Direction");
     if (is_graph(p->view)) presentation_widget(c,"sort","Sort / initial order");
-    if (grid_view(p) || query_view(p->view) || p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS || p->layout->mode==GD_LAYOUT_COLUMNS)
+    if (p->view==GD_EXPLORER_SKILLS && free_graph(p)) igTextWrapped("Node band labels retain %s; positions are not locked to bands.",p->rank ? "authored rank constraints":"prerequisite depth");
+    if (!layout_settles(p))
         igTextWrapped("Stable layout; settling applies only to movable graph layouts.");
     else { igCheckbox("Pause settling",&p->paused); igSameLine(0,-1); }
     if (igButton("Fit (F)",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.fit");
@@ -780,7 +788,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             if (igCheckbox("Focus layout by shown-link distance",&enabled) && !distance_focus_toggle(&c,enabled))
                 snprintf(failure,sizeof(failure),"Cannot allocate bounded distance-focus scratch; regular layout retained.");
             igCheckbox("Auto-fit camera on focus changes",&p->focus_auto_fit);
-            if (p->distance_focus_enabled) igTextWrapped("Shown-link distance is layout only, not flow. Animated 220 ms transitions retain bands and directed roots; click again to interrupt. Auto-fit off keeps camera unchanged on focus selection/off. Off returns to regular pose, then resumes drag/settling. F and Find still frame explicitly.");
+            if (p->distance_focus_enabled) igTextWrapped("Shown-link distance is layout only, not flow. Animated 220 ms transitions retain constrained bands/roots; Free graphs do not pin data roots. Click again to interrupt. Auto-fit off keeps camera unchanged on focus selection/off. Off returns to regular pose, then resumes drag/settling. F and Find still frame explicitly.");
         }
         selected=analyze(&c);
         if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(&c); gd_explorer_rules_controls(&c); }
@@ -868,7 +876,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (!igGetIO_Nil()->WantCaptureKeyboard) {
             if (IsKeyPressed(KEY_F)) { if (gd_explorer_similarity_active(&c)) p->structure_state->similarity_fit=true; else p->fit=1; }
             if (IsKeyPressed(KEY_F5)) refresh=1;
-            if (!gd_explorer_similarity_active(&c) && IsKeyPressed(KEY_SPACE) && p->layout->mode!=GD_LAYOUT_COLUMNS && active!=GD_EXPLORER_CHALLENGES && active!=GD_EXPLORER_RELATIONSHIPS && !query_view(p->view)) p->paused=!p->paused;
+            if (!gd_explorer_similarity_active(&c) && IsKeyPressed(KEY_SPACE) && layout_settles(p)) p->paused=!p->paused;
         }
         if (!igGetIO_Nil()->WantTextInput && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_Z)) undo=1;
         /* Both Undo inputs run after inspector readers. Repair revision before
@@ -903,7 +911,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (!p->distance_focus_enabled && p->distance_focus && p->distance_focus->animating &&
             (p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held)>=0)
             p->distance_focus->animating=p->distance_focus->returning=0;
-        if (!gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view) && !p->distance_focus_enabled && !(p->distance_focus && p->distance_focus->animating) && !p->paused && p->view!=GD_EXPLORER_CHALLENGES && p->view!=GD_EXPLORER_RELATIONSHIPS) {
+        if (!gd_explorer_similarity_active(&c) && layout_settles(p) && !p->distance_focus_enabled && !(p->distance_focus && p->distance_focus->animating) && !p->paused) {
             int held=p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held;
             gd_layout_step(p->layout,held);
         }

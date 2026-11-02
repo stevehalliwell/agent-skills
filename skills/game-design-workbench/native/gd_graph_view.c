@@ -218,6 +218,7 @@ static void draw_graph(const GD_Model *model, GD_Layout *layout, const GraphSele
             const char *caption = state->cycle ? "CYCLE" : state->incomplete ? "UNKNOWN ANCESTRY" :
                 state->rank_conflict ? TextFormat("rank %lld -> %lld (conflict)", (long long)record->rank, (long long)state->display_rank) :
                 record->has_rank ? TextFormat("rank %lld", (long long)record->rank) : "rank null";
+            if (layout->mode==GD_LAYOUT_FORCE) caption=node->layer<0 ? TextFormat("Unplaced | %s",caption):TextFormat("Band %d | %s",node->layer,caption);
             Color warning = state->incomplete ? (Color){238,114,120,255} : (Color){245,179,96,255};
             if (state->incomplete || state->rank_conflict) DrawCircleLines((int)node->x, (int)node->y, 18, warning);
             gd_graph_node_text(node,caption, (int)node->x-MeasureText(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted,1);
@@ -901,8 +902,12 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
    input lifetime and per-view settings belong to the shell, not these helpers. */
 int gd_explorer_graph_prepare(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
-    return prepare_layout(model,p->layout,p->view==GD_EXPLORER_MATRIX && p->layout_choice==GD_MATRIX_GRID_CHOICE ? GD_LAYOUT_COLUMNS:(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
+    int okay=prepare_layout(model,p->layout,p->view==GD_EXPLORER_MATRIX && p->layout_choice==GD_MATRIX_GRID_CHOICE ? GD_LAYOUT_COLUMNS:(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
                           p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS ? &p->focus:NULL);
+    /* Native seed keeps directed/ego coordinates; only Free removes axis locks.
+       Topology, band labels, root markers and revealed scope stay adapter-owned. */
+    if(okay && p->view<=GD_EXPLORER_RELATIONSHIPS && p->layout_choice==GD_LAYOUT_FORCE) p->layout->mode=GD_LAYOUT_FORCE;
+    return okay;
 }
 void gd_explorer_graph_input(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; GD_ExplorerSelection before=p->selection,choice;

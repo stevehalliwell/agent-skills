@@ -211,7 +211,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         }
         EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/focus-alternate-%d.png",output,views[v])<(int)sizeof(path) && gd_save_screenshot(path));
         EXPLORER_CHECK(distance_focus_toggle(&c,0));
-        p->rank=p->horizontal=p->layout_choice=0; p->prepared=0; EXPLORER_CHECK(pane_prepare(&c));
+        p->rank=p->horizontal=0;p->layout_choice=views[v]==GD_EXPLORER_SKILLS ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE; p->prepared=0; EXPLORER_CHECK(pane_prepare(&c));
     }
     /* Grid uses same cells/source inspector; graph-only layers remain dormant.
        Keep this pane in Grid through later reload/failure checks. */

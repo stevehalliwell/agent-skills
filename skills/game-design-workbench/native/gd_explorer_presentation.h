@@ -14,8 +14,8 @@ typedef struct { GD_ExplorerControl control; unsigned views; size_t source; int 
 #define PF(name,label,type,choices,keys,views,member,integer_bool) {{#name,label,choices,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,keys},views,offsetof(GD_ExplorerPane,member),integer_bool}
 #define VF(name,label,type,views) {{#name,label,NULL,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,NULL},views,(size_t)-1,0}
 static const PresentationField presentation_fields[]={
- VF(layout,"Layout",GD_CONTROL_INT,PV_SKILL|(1u<<GD_EXPLORER_MATRIX)|PV_MDA),
- PF(initial_arrangement,"Initial arrangement",GD_CONTROL_INT,"Native\0Neighborhood\0","native\0neighborhood\0",(1u<<GD_EXPLORER_MATRIX)|PV_MDA|PV_RESOURCE,initial_arrangement,0),
+ VF(layout,"Layout",GD_CONTROL_INT,PV_GRAPH&~PV_RESOURCE),
+ PF(initial_arrangement,"Initial arrangement",GD_CONTROL_INT,"Native\0Neighborhood\0","native\0neighborhood\0",PV_GRAPH,initial_arrangement,0),
  PF(sort,"Sort / initial order",GD_CONTROL_INT,"Name\0Degree\0","name\0degree\0",15,sort,0),
  PF(direction,"Layout direction",GD_CONTROL_INT,"Top to bottom\0Left to right\0","vertical\0horizontal\0",3,horizontal,0),
  PF(paused,"Pause settling",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,paused,0),
@@ -92,7 +92,8 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
         if(field->source==(size_t)-1) continue; source=(const char *)p+field->source;
         if(field->integer_bool) *(bool *)value=*(const int *)source!=0; else memcpy(value,source,field->control.capacity);
     }
-    out->layout=p->view==GD_EXPLORER_SKILLS ? p->rank:p->layout_choice;
+    out->layout=p->view==GD_EXPLORER_SKILLS ? p->layout_choice==GD_LAYOUT_FORCE ? 2:p->rank:
+        p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS ? p->layout_choice==GD_LAYOUT_FORCE:p->layout_choice;
     out->distance_focus=p->distance_focus_enabled; out->focus_root=p->focus.root;
     out->mda_root=c->project->mda ? c->project->mda->root:-1; out->mda_direction=c->project->mda ? c->project->mda->direction:0;
     out->resource_witness=p->resource_witness; out->similarity_row=out->similarity_peer=-1;
@@ -109,7 +110,7 @@ int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *na
     if(!field || !(field->views&(1u<<p->view))) return 0;
     if(!strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
     if(!p->prepared) return 0;
-    if(!strcmp(name,"initial_arrangement")) return p->layout && p->layout->mode==GD_LAYOUT_FORCE && !grid_view(p) && !gd_explorer_similarity_active(c);
+    if(!strcmp(name,"initial_arrangement")) return free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c);
     if(!strncmp(name,"similarity_",11)) return p->structure_state && p->structure_state->result && p->structure_state->result->similarity;
     if(!strcmp(name,"known")) { int record=selected_record((GD_ExplorerContext *)c); return record>=0 && gd_explorer_model(c->project,p->view)->records[record].role==GD_SKILL; }
     if(!strcmp(name,"resource_witness")) return p->resource_routes!=NULL;
@@ -137,7 +138,7 @@ static int presentation_node_id(const GD_ExplorerContext *c,int node,char *key,s
 }
 static int presentation_node_field(const char *name) { return !strcmp(name,"peer") || !strcmp(name,"foundation_peer") || !strcmp(name,"reach_peer") || !strcmp(name,"reach_target"); }
 static const char *presentation_list(const GD_ExplorerContext *c,const GD_ExplorerControl *field) {
-    if(!strcmp(field->name,"layout")) return c->pane->view==GD_EXPLORER_SKILLS ? "depth\0rank\0":c->pane->view==GD_EXPLORER_MATRIX ? "free\0columns\0grid\0":"bands\0free\0";
+    if(!strcmp(field->name,"layout")) return c->pane->view==GD_EXPLORER_SKILLS ? "depth\0rank\0free\0":c->pane->view==GD_EXPLORER_MATRIX ? "free\0columns\0grid\0":c->pane->view==GD_EXPLORER_RELATIONSHIPS ? "native\0free\0":"bands\0free\0";
     if(!strcmp(field->name,"mda_direction")) return "both\0forward\0backward\0";
     return field->keys ? field->keys:field->choices;
 }
@@ -202,43 +203,58 @@ int gd_explorer_presentation_value(const GD_ExplorerContext *c,const GD_Explorer
 }
 static int presentation_same_topology(const GD_Layout *a,const GD_Layout *b) {
     int i;
-    if(!a || a->node_count!=b->node_count || a->edge_count!=b->edge_count || a->group_count!=b->group_count || a->mode!=b->mode) return 0;
+    if(!a || a->node_count!=b->node_count || a->edge_count!=b->edge_count || a->group_count!=b->group_count) return 0;
     for(i=0;i<a->node_count;++i) if(a->nodes[i].key!=b->nodes[i].key || a->nodes[i].group!=b->nodes[i].group || a->nodes[i].layer!=b->nodes[i].layer) return 0;
     return !memcmp(a->edges,b->edges,(size_t)a->edge_count*sizeof(*a->edges));
 }
 static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresentation *values,int geometry_only) {
-    GD_ExplorerPane next=*c->pane,*p=c->pane; GD_ExplorerContext candidate=*c;
+    GD_ExplorerPane *next,*p=c->pane; GD_ExplorerContext candidate=*c; GD_Allocator allocator=c->project->allocator; int same_topology;
     if(query_view(p->view)) return 0;
-    next.layout=NULL; next.distance_focus=NULL; next.structure_state=NULL; next.prepared=0;
-    next.rank=p->view==GD_EXPLORER_SKILLS ? values->layout:p->rank;
-    next.layout_choice=p->view==GD_EXPLORER_SKILLS ? p->layout_choice:values->layout;
-    next.sort=values->sort; next.horizontal=values->direction;
-    next.initial_arrangement=0; /* Prepare native topology once; seed after footprint remap. */
-    if(is_graph(p->view)) next.selection=(GD_ExplorerSelection){-1,-1,0,selected_record(c),-1};
-    candidate.pane=&next;
-    if(!pane_prepare(&candidate)) { if(next.layout) c->project->allocator.release(c->project->allocator.context,next.layout); gd_layout_focus_destroy(next.distance_focus); return 0; }
+    /* Keep large candidate pane snapshot off bounded Windows call stack. */
+    next=allocator.allocate(allocator.context,sizeof(*next)); if(!next) return 0;
+    memcpy(next,p,sizeof(*next));
+    next->layout=NULL; next->distance_focus=NULL; next->structure_state=NULL; next->prepared=0;
+    if(p->view==GD_EXPLORER_SKILLS) {
+        if(values->layout<2) next->rank=values->layout;
+        next->layout_choice=values->layout==2 ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;
+    } else if(p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS)
+        next->layout_choice=values->layout ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;
+    else next->layout_choice=values->layout;
+    next->sort=values->sort; next->horizontal=values->direction;
+    next->initial_arrangement=0; /* Prepare native topology once; seed after footprint remap. */
+    if(is_graph(p->view)) next->selection=(GD_ExplorerSelection){-1,-1,0,selected_record(c),-1};
+    candidate.pane=next;
+    /* Geometry commands keep revealed membership. Only explicit expansion/reset
+       adds records; do not replay expanded flags against newer declarations. */
+    if(p->view==GD_EXPLORER_RELATIONSHIPS) memset(next->focus.expanded,0,sizeof(next->focus.expanded));
+    if(!pane_prepare(&candidate)) goto failed;
+    if(p->view==GD_EXPLORER_RELATIONSHIPS) memcpy(next->focus.expanded,p->focus.expanded,sizeof(next->focus.expanded));
     if(p->prepared && p->layout) {
         int i,node_key=p->selection.node>=0 && p->selection.node<p->layout->node_count ? p->layout->nodes[p->selection.node].key:-1;
-        next.selection=p->selection;next.selection.held=-1;
-        if(node_key>=0){next.selection.node=-1;for(i=0;i<next.layout->node_count;++i)if(next.layout->nodes[i].key==node_key)next.selection.node=i;}
-        if(next.selection.cell>=0){int found=0;for(i=0;i<next.layout->edge_count;++i)if(next.layout->edges[i].key==next.selection.cell)found=1;if(!found)next.selection.cell=-1;}
-        if(p->view==GD_EXPLORER_MATRIX){next.grid.noun=p->grid.noun;next.grid.verb=p->grid.verb;if(next.selection.cell>=0){const GD_Cell *cell=&gd_explorer_model(c->project,p->view)->cells[next.selection.cell];next.grid.noun=cell->noun;next.grid.verb=cell->verb;}}
+        next->selection=p->selection;next->selection.held=-1;
+        if(node_key>=0){next->selection.node=-1;for(i=0;i<next->layout->node_count;++i)if(next->layout->nodes[i].key==node_key)next->selection.node=i;}
+        if(next->selection.cell>=0){int found=0;for(i=0;i<next->layout->edge_count;++i)if(next->layout->edges[i].key==next->selection.cell)found=1;if(!found)next->selection.cell=-1;}
+        if(p->view==GD_EXPLORER_MATRIX){next->grid.noun=p->grid.noun;next->grid.verb=p->grid.verb;if(next->selection.cell>=0){const GD_Cell *cell=&gd_explorer_model(c->project,p->view)->cells[next->selection.cell];next->grid.noun=cell->noun;next->grid.verb=cell->verb;}}
     }
-    if(geometry_only && !presentation_same_topology(p->layout,next.layout)) {
-        c->project->allocator.release(c->project->allocator.context,next.layout);gd_layout_focus_destroy(next.distance_focus);return 0;
+    same_topology=presentation_same_topology(p->layout,next->layout);
+    if(geometry_only && !same_topology) goto failed;
+    next->initial_arrangement=values->initial_arrangement;
+    if(next->initial_arrangement && free_graph(next) && free_graph(p)) {
+        int i; for(i=0;i<next->layout->node_count && i<p->layout->node_count;++i)
+            if(next->layout->nodes[i].key==p->layout->nodes[i].key) next->layout->nodes[i].footprint=p->layout->nodes[i].footprint;
     }
-    next.initial_arrangement=values->initial_arrangement;
-    if(next.initial_arrangement && next.layout->mode==GD_LAYOUT_FORCE && p->layout && p->layout->mode==GD_LAYOUT_FORCE) {
-        int i; for(i=0;i<next.layout->node_count && i<p->layout->node_count;++i)
-            if(next.layout->nodes[i].key==p->layout->nodes[i].key) next.layout->nodes[i].footprint=p->layout->nodes[i].footprint;
-    }
-    if(!pane_seed(&candidate)) { c->project->allocator.release(c->project->allocator.context,next.layout); gd_layout_focus_destroy(next.distance_focus); return 0; }
-    if(next.distance_focus) gd_layout_focus_capture(next.distance_focus,next.layout);
-    if(p->layout) c->project->allocator.release(c->project->allocator.context,p->layout); gd_layout_focus_destroy(p->distance_focus);
-    p->initial_arrangement=next.initial_arrangement;
-    p->layout=next.layout; p->distance_focus=next.distance_focus; p->distance_focus_revision=UINT64_MAX;
-    p->rank=next.rank; p->layout_choice=next.layout_choice; p->sort=next.sort; p->horizontal=next.horizontal; p->grid=next.grid; p->selection=next.selection; p->focus=next.focus;
-    p->prepared=next.prepared; p->revision=next.revision; p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1; if(!geometry_only) c->analysis->initialized=0; return 1;
+    if(!pane_seed(&candidate)) goto failed;
+    if(next->distance_focus) gd_layout_focus_capture(next->distance_focus,next->layout);
+    if(p->layout) allocator.release(allocator.context,p->layout); gd_layout_focus_destroy(p->distance_focus);
+    p->initial_arrangement=next->initial_arrangement;
+    p->layout=next->layout; p->distance_focus=next->distance_focus; p->distance_focus_revision=UINT64_MAX;
+    p->rank=next->rank; p->layout_choice=next->layout_choice; p->sort=next->sort; p->horizontal=next->horizontal; p->grid=next->grid; p->selection=next->selection; p->focus=next->focus;
+    p->prepared=next->prepared; p->revision=next->revision; p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1;
+    if(!same_topology) c->analysis->initialized=0;
+    allocator.release(allocator.context,next);return 1;
+failed:
+    if(next->layout) allocator.release(allocator.context,next->layout);
+    gd_layout_focus_destroy(next->distance_focus);allocator.release(allocator.context,next);return 0;
 }
 int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const char *value,char *message,size_t capacity) {
     const PresentationField *entry=presentation_field(name); const GD_ExplorerControl *field=entry ? &entry->control:NULL; GD_ExplorerPresentation next; GD_ExplorerPane *p=c->pane;
@@ -259,7 +275,7 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
     error="Cannot apply presentation candidate; last good state retained";
     if(!strcmp(name,"layout") || !strcmp(name,"sort") || !strcmp(name,"direction") || !strcmp(name,"initial_arrangement")) {
         if(!presentation_rearrange(c,&next,!strcmp(name,"initial_arrangement"))) goto failed;
-        if(!strcmp(name,"initial_arrangement")) p->paused=false;
+        if(!strcmp(name,"initial_arrangement") || (!strcmp(name,"layout") && free_graph(p))) p->paused=false;
     }
     else if(!strcmp(name,"distance_focus")) { if(!distance_focus_toggle(c,next.distance_focus)) goto failed; }
     else if(!strcmp(name,"focus_root")) { if(next.focus_root<0) goto failed; { GD_Focus old=p->focus; p->focus=(GD_Focus){0}; gd_focus_reset(gd_explorer_model(c->project,p->view),&p->focus,next.focus_root); if(!presentation_rearrange(c,&next,0)) {p->focus=old;goto failed;} } }
