@@ -40,7 +40,7 @@ TEST(effect_contributor_scope_paths_and_counts,
                 subset.root_case=root; subset.noun=noun; scope=gd_effect_query_build(surface->effects,subset,GD_EFFECT_WORK); TEST_ASSERT(scope && scope->count==1);
                 scene=gd_query_scene_effect_context(surface,scope,1,GD_EFFECT_WORK); TEST_ASSERT(scene && !scene->limited && scene->layout.node_count==3 && scene->layout.edge_count==3);
                 for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) { TEST_ASSERT(scene->nodes[i].incoming==2 && scope->incoming[selected]==1 && surface->contributors->incoming[selected]==4); ++found; }
-                TEST_ASSERT(found==1 && !gd_query_scene_compare(scene,0,1)); gd_query_scene_destroy(scene);
+                TEST_ASSERT(found==1 && !gd_query_scene_compare(scene,0,1) && query_scene_free_checks(scene)); gd_query_scene_destroy(scene);
                 scene=gd_query_scene_effect_context(surface,scope,1,0); TEST_ASSERT(scene && scene->limited && !scene->layout.node_count && scene->unexamined_items_upper_bound>0); gd_query_scene_destroy(scene);
                 allocator=surface->allocator; failure=(RouteFailure){allocator,0}; surface->allocator=(GD_Allocator){&failure,route_allocate,route_release}; TEST_ASSERT(!gd_query_scene_effect_context(surface,scope,1,GD_EFFECT_WORK)); surface->allocator=allocator;
                 TEST_ASSERT(!gd_query_scene_effect_context(surface,NULL,1,GD_EFFECT_WORK));

@@ -160,6 +160,7 @@ void gd_explorer_mda_source(GD_ExplorerContext *context, int edge);
 int gd_explorer_query_prepare(GD_ExplorerContext *context);
 int gd_explorer_query_run(GD_ExplorerContext *context);
 int gd_explorer_query_display(GD_ExplorerContext *context);
+int gd_explorer_query_arrange(GD_ExplorerContext *context,GD_LayoutMode mode,int neighborhood);
 int gd_explorer_query_select_result(GD_ExplorerContext *context, int target);
 int gd_explorer_query_compare(GD_ExplorerContext *context);
 void gd_explorer_query_destroy(GD_ExplorerQueryState *state);

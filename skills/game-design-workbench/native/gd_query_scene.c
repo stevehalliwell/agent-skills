@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
+#include "gd_query_scene_free.h"
 
 const char *gd_query_scene_node_kind_name(GD_QueryNodeKind kind) {
     static const char *const names[]={"selected_binding","state_hypothesis","checked_activation","effect_concept","partner_binding","coverage_value","object_definition"};
@@ -197,6 +198,10 @@ static GD_QueryScene *build_scene(GD_Allocator allocator, const GD_Query *query,
         for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_VARIANT && scene->nodes[i].variant==primary) anchor=i;
         if (anchor>=0) for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].kind==GD_QUERY_NODE_VARIANT && i!=anchor) { offset+=26; scene->layout.nodes[i].x=scene->layout.nodes[anchor].x; scene->layout.nodes[i].y=scene->layout.nodes[anchor].y+offset; }
     }
+    {
+        int i;for(i=0;i<scene->layout.node_count;++i) scene->native_points[i]=(GD_LayoutPoint){scene->layout.nodes[i].x,scene->layout.nodes[i].y};
+        scene->native_group=scene->layout.groups[0];scene->native_width=scene->layout.width;scene->native_height=scene->layout.height;
+    }
     return scene;
 }
 GD_QueryScene *gd_query_scene_build(const GD_Query *query, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit) { if (!query) return NULL; return build_scene(query->allocator,query,NULL,ghosts,primary,weighted,include_excluded,work_limit); }
@@ -224,7 +229,7 @@ int gd_query_scene_hit(const GD_QueryScene *scene, float x, float y) {
     }
     return -1;
 }
-void gd_query_scene_destroy(GD_QueryScene *scene) { if (scene) scene->allocator.release(scene->allocator.context,scene); }
+void gd_query_scene_destroy(GD_QueryScene *scene) { if (scene) {if(scene->free_geometry) scene->allocator.release(scene->allocator.context,scene->free_geometry);scene->allocator.release(scene->allocator.context,scene);} }
 int gd_query_scene_record(const GD_QueryScene *scene, int node) {
     const GD_QuerySceneNode *item; const GD_Query *query;
     if (!scene || node<0 || node>=scene->layout.node_count) return -1;

@@ -451,7 +451,7 @@ static const GD_ExplorerActionInfo actions[]={
     {"resource.run","Run conditional witnesses",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RESOURCE},
     {"resource.clear","Clear Resource query/witnesses",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RESOURCE},
     {"view.fit","Fit",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
-    {"view.rearrange","Rearrange",(1u<<GD_EXPLORER_ACTORS)-1,GD_FORM_PRESENTATION},
+    {"view.rearrange","Rearrange",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.expand","Expand selected relationship",1u<<GD_EXPLORER_RELATIONSHIPS,GD_FORM_PRESENTATION},
     {"view.start.add","Add selected analysis start",(1u<<GD_EXPLORER_ACTORS)-1,GD_FORM_PRESENTATION},
     {"view.start.clear","Clear analysis starts",(1u<<GD_EXPLORER_ACTORS)-1,GD_FORM_PRESENTATION},
@@ -472,6 +472,7 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
         const GD_ExplorerPane *p=context->pane;
         if(!p->prepared)return 0;
         if(action==GD_ACTION_VIEW_RESET && context->project->draft && (context->project->draft->modified_count || context->project->draft->history_count))return 0;
+        if(action==GD_ACTION_VIEW_REARRANGE && p->view>=GD_EXPLORER_ACTORS) return p->query_state && p->query_state->scene && !(p->structure_state && p->structure_state->similarity_canvas);
         if(action==GD_ACTION_VIEW_WITNESS_FIT)return p->resource_routes && p->resource_routes->witness_count>0;
         if(action==GD_ACTION_VIEW_CELL_FIT)return p->layout_choice==2 && p->grid.noun>=0 && p->grid.verb>=0;
         if(action==GD_ACTION_VIEW_ANALYZE)return p->view<GD_EXPLORER_ACTORS && !(p->view==GD_EXPLORER_MATRIX && p->layout_choice==2) && !(p->structure_state && p->structure_state->similarity_canvas);

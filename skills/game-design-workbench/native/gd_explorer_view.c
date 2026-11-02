@@ -33,10 +33,11 @@ static void pane_release_layout(GD_Allocator allocator, GD_ExplorerPane *pane) {
 }
 static int incidence(GD_ExplorerView view) { return view==GD_EXPLORER_MATRIX || view==GD_EXPLORER_RESOURCES; }
 static int free_graph(const GD_ExplorerPane *p) {
-    return !query_view(p->view) && p->layout && p->layout->mode==GD_LAYOUT_FORCE && (p->view!=GD_EXPLORER_RELATIONSHIPS || p->layout_choice==GD_LAYOUT_FORCE);
+    return p->layout && p->layout->mode==GD_LAYOUT_FORCE && (p->view!=GD_EXPLORER_RELATIONSHIPS || p->layout_choice==GD_LAYOUT_FORCE) &&
+        (!query_view(p->view) || (p->layout_choice==GD_LAYOUT_FORCE && p->query_state && p->query_state->scene));
 }
 static int layout_settles(const GD_ExplorerPane *p) {
-    return p->layout && !grid_view(p) && !query_view(p->view) && p->layout->mode!=GD_LAYOUT_COLUMNS &&
+    return p->layout && !grid_view(p) && (!query_view(p->view) || free_graph(p)) && p->layout->mode!=GD_LAYOUT_COLUMNS &&
         ((p->view!=GD_EXPLORER_CHALLENGES && p->view!=GD_EXPLORER_RELATIONSHIPS) || free_graph(p));
 }
 static const char *missing_roles(GD_ExplorerView view) {
@@ -64,7 +65,7 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     p->navigate=p->focus_root=p->focus_expand=p->inspected_record=-1;
     p->reach=(GD_ReachControls){0,-1,0,-1,-1}; p->overview=(GD_OverviewControls){0,-1,-1};
     p->shared=true; p->paused=view==GD_EXPLORER_MDA || view==GD_EXPLORER_RESOURCES || query_view(view);
-    p->layout_choice=view<=GD_EXPLORER_RELATIONSHIPS ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE; p->fit=1; p->focus.root=-1;
+    p->layout_choice=view<=GD_EXPLORER_RELATIONSHIPS || query_view(view) ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE; p->fit=1; p->focus.root=-1;
     p->paths.declared=view==GD_EXPLORER_CHALLENGES;
 }
 static int pane_seed(GD_ExplorerContext *c) {
@@ -444,26 +445,30 @@ static void match_details(GD_ExplorerContext *c) {
 static int presentation_widget(GD_ExplorerContext *c,const char *name,const char *label) {
     GD_ExplorerPresentation values; const GD_ExplorerControl *field=gd_explorer_form_field(GD_FORM_PRESENTATION,name); char key[GD_MAX_PATH]; int changed;
     gd_explorer_presentation_read(c,&values);
-    if(!strcmp(name,"layout")) changed=igCombo_Str(label,&values.layout,c->pane->view==GD_EXPLORER_SKILLS ? "Prerequisite depth\0Authored rank constraints\0Free graph\0":c->pane->view==GD_EXPLORER_MATRIX ? "Free graph\0Noun / verb columns\0Grid\0":c->pane->view==GD_EXPLORER_RELATIONSHIPS ? "Stable neighborhood\0Free graph\0":c->pane->view==GD_EXPLORER_CHALLENGES ? "Declared route bands\0Free graph\0":"Role bands\0Free graph\0",-1);
+    if(!strcmp(name,"layout")) changed=igCombo_Str(label,&values.layout,c->pane->view==GD_EXPLORER_SKILLS ? "Prerequisite depth\0Authored rank constraints\0Free graph\0":c->pane->view==GD_EXPLORER_MATRIX ? "Free graph\0Noun / verb columns\0Grid\0":query_view(c->pane->view) ? "Native query layout\0Free graph\0":c->pane->view==GD_EXPLORER_RELATIONSHIPS ? "Stable neighborhood\0Free graph\0":c->pane->view==GD_EXPLORER_CHALLENGES ? "Declared route bands\0Free graph\0":"Role bands\0Free graph\0",-1);
     else changed=gd_explorer_form_widget(GD_FORM_PRESENTATION,&values,name,label);
     if(changed && gd_explorer_presentation_value(c,field,&values,key,sizeof(key))==1) gd_explorer_presentation_set(c,name,key,c->pane->query_message,sizeof(c->pane->query_message));
     return changed;
 }
 static int layout_controls(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int rearrange=0;
-    if (is_graph(p->view) || p->view==GD_EXPLORER_MDA) presentation_widget(c,"layout","Layout");
+    if (is_graph(p->view) || p->view==GD_EXPLORER_MDA || (query_view(p->view) && p->query_state && p->query_state->scene)) presentation_widget(c,"layout","Layout");
     else if (query_view(p->view)) igTextWrapped("Layout: separate native query bands; incoming weighting never changes declarations. Query/ghost associations are not temporal paths.");
     else igTextWrapped("Layout: free incidence graph");
     if (free_graph(p) && !grid_view(p))
         presentation_widget(c,"initial_arrangement","Initial arrangement");
     if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_CHALLENGES) presentation_widget(c,"direction","Direction");
     if (is_graph(p->view)) presentation_widget(c,"sort","Sort / initial order");
+    if(query_view(p->view) && p->query_state && p->query_state->scene) {
+        igTextWrapped("Placement never changes declarations or query evidence. Query/ghost associations are not temporal paths.");
+        if(free_graph(p) && p->query_state->scene->ghosts==GD_QUERY_STACKED_VARIANTS) igTextDisabled("Stacked variant cards move together.");
+    }
     if (p->view==GD_EXPLORER_SKILLS && free_graph(p)) igTextWrapped("Node band labels retain %s; positions are not locked to bands.",p->rank ? "authored rank constraints":"prerequisite depth");
     if (!layout_settles(p))
         igTextWrapped("Stable layout; settling applies only to movable graph layouts.");
     else { igCheckbox("Pause settling",&p->paused); igSameLine(0,-1); }
     if (igButton("Fit (F)",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.fit");
-    if (!query_view(p->view)) { igSameLine(0,-1); if (igButton("Rearrange",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.rearrange"); }
+    if (!query_view(p->view) || (p->query_state && p->query_state->scene)) { igSameLine(0,-1); if (igButton("Rearrange",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.rearrange"); }
     if (p->layout->mode==GD_LAYOUT_FORCE && p->layout->collision_limited)
         igTextWrapped("Footprint separation reached bounded work/movement limit; overlaps may remain. Resume settling to continue. Camera does not establish clearance.");
     if (p->view==GD_EXPLORER_MATRIX && !grid_view(p)) igCheckbox("Overlay other pairs (does not merge groups)",&p->overlay);
@@ -913,7 +918,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             p->distance_focus->animating=p->distance_focus->returning=0;
         if (!gd_explorer_similarity_active(&c) && layout_settles(p) && !p->distance_focus_enabled && !(p->distance_focus && p->distance_focus->animating) && !p->paused) {
             int held=p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held;
-            gd_layout_step(p->layout,held);
+            if(query_view(p->view)) gd_query_scene_step(p->query_state->scene,held);else gd_layout_step(p->layout,held);
         }
         selected=analyze(&c); if (!gd_explorer_similarity_active(&c)) distance_focus_update(&c,selected);
         if (!gd_explorer_similarity_active(&c) && !grid_view(p) && p->distance_focus && p->distance_focus->animating)

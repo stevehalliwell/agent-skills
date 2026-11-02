@@ -12,13 +12,27 @@ void gd_explorer_query_destroy(GD_ExplorerQueryState *state) {
     if (state->empty) state->allocator.release(state->allocator.context,state->empty);
     state->allocator.release(state->allocator.context,state);
 }
-static int focus_result(GD_ExplorerQueryState *state, int target) {
+static int query_place(GD_ExplorerContext *context,GD_QueryScene *scene,GD_LayoutMode mode,int neighborhood) {
+    float aspect=1;
+    if(isfinite(context->viewport.width) && isfinite(context->viewport.height) && context->viewport.width>0 && context->viewport.height>0) {
+        float measured=context->viewport.width/context->viewport.height;if(isfinite(measured) && measured>0) aspect=measured;
+    }
+    return gd_query_scene_place(scene,mode,neighborhood,aspect);
+}
+int gd_explorer_query_arrange(GD_ExplorerContext *context,GD_LayoutMode mode,int neighborhood) {
+    GD_ExplorerPane *pane=context->pane;
+    if(!pane->query_state || !pane->query_state->scene || !query_place(context,pane->query_state->scene,mode,neighborhood)) return 0;
+    pane->layout_choice=mode;pane->initial_arrangement=neighborhood;pane->selection.held=-1;pane->paused=false;
+    pane->fit=pane->view==GD_EXPLORER_EFFECTS || pane->query_state->applied.coverage ? GD_EXPLORER_FIT_QUERY_READABLE:1;return 1;
+}
+static int focus_result(GD_ExplorerContext *context,GD_ExplorerQueryState *state, int target) {
     GD_EffectSelection selection=state->query->contributors->selection; GD_EffectQuery *query; GD_QueryScene *scene; int i,matches=0;
     selection.target=target; query=gd_effect_query_build(state->query->effects,selection,GD_EFFECT_WORK); if (!query) return 0;
     scene=gd_query_scene_effect_context(state->query,query,state->applied.weighted,GD_EFFECT_WORK);
     if (!scene) { gd_effect_query_destroy(query); return 0; }
     for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].source==target && scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) ++matches;
     if (matches!=1) { gd_query_scene_destroy(scene); gd_effect_query_destroy(query); return 0; }
+    if(state->scene && !query_place(context,scene,(GD_LayoutMode)context->pane->layout_choice,context->pane->initial_arrangement)) {gd_query_scene_destroy(scene);gd_effect_query_destroy(query);return 0;}
     gd_query_scene_destroy(state->scene); gd_effect_query_destroy(state->selected); state->selected=query; state->scene=scene; return 1;
 }
 static GD_ExplorerQueryState *build_state(GD_ExplorerContext *context, const GD_ExplorerQueryOptions *options, int allow_empty, const char *primary_value) {
@@ -69,10 +83,11 @@ static GD_ExplorerQueryState *build_state(GD_ExplorerContext *context, const GD_
     if (state->query->effects) {
         int best=-1;
         for (i=0;i<state->query->effects->node_count;++i) if (state->query->effects->nodes[i].kind!=GD_EFFECT_ACTIVATION && (best<0 || state->query->contributors->incoming[i]>state->query->contributors->incoming[best])) best=i;
-        if (best>=0 && !focus_result(state,best)) goto failure;
+        if (best>=0 && !focus_result(context,state,best)) goto failure;
     }
     if (!state->scene) state->scene=gd_query_scene_build(state->query,(GD_QueryGhostMode)state->applied.ghosts,state->applied.primary,state->applied.weighted,state->applied.include_excluded,GD_EFFECT_WORK);
     if (!state->scene || (state->applied.compare>=0 && !gd_query_scene_compare(state->scene,state->applied.primary,state->applied.compare))) goto failure;
+    if(!query_place(context,state->scene,(GD_LayoutMode)context->pane->layout_choice,context->pane->initial_arrangement)) goto failure;
     model->error_count=errors; model->errors_omitted=omitted; return state;
 failure:
     if (model->error_count>errors) snprintf(context->pane->query_message,sizeof(context->pane->query_message),"%s: %s. Last good query retained.",model->errors[errors].code,model->errors[errors].message);
@@ -168,7 +183,7 @@ int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProjec
         int mapped=gd_effect_node_remap(previous->effects,prior->query_state->selected->selection.target,pane->query_state->query->effects);
         if (goal->axis>=0 && (mapped<0 || remap_axis(before,fresh,goal->axis)!=pane->query_state->query->effects->nodes[mapped].axis)) return 0;
         if (goal->relation>=0) { int source_case=previous->resource->relations[goal->relation].source_case,record=previous->rules->sources[previous->rules->cases[source_case].source].record; if (remap_record(before,fresh,record)<0) return 0; }
-        if (mapped<0 || !focus_result(pane->query_state,mapped)) return 0;
+        if (mapped<0 || !focus_result(context,pane->query_state,mapped)) return 0;
         pane->layout=&pane->query_state->scene->layout;
     }
     if (prior->query_state && prior->query_state->query && prior->query_state->query->effects && prior->selection.node>=0 && prior->query_state->scene) {
@@ -207,6 +222,7 @@ int gd_explorer_query_display(GD_ExplorerContext *context) {
     if (!state || !state->query) return 0;
     fresh=state->selected ? gd_query_scene_effect_context(state->query,state->selected,pane->query_options.weighted,GD_EFFECT_WORK):gd_query_scene_build(state->query,(GD_QueryGhostMode)pane->query_options.ghosts,pane->query_options.primary,pane->query_options.weighted,pane->query_options.include_excluded,GD_EFFECT_WORK);
     if (fresh && pane->query_options.compare>=0 && !gd_query_scene_compare(fresh,pane->query_options.primary,pane->query_options.compare)) { gd_query_scene_destroy(fresh); fresh=NULL; }
+    if(fresh && !query_place(context,fresh,(GD_LayoutMode)pane->layout_choice,pane->initial_arrangement)) {gd_query_scene_destroy(fresh);fresh=NULL;}
     if (!fresh) { snprintf(pane->query_message,sizeof(pane->query_message),"Cannot allocate display candidate; previous drawing retained."); return 0; }
     if (pane->selection.node>=0 && pane->selection.node<state->scene->layout.node_count) { const GD_QuerySceneNode *node=&state->scene->nodes[pane->selection.node]; kind=node->kind; source=node->source; variant=node->variant; }
     gd_query_scene_destroy(state->scene); state->scene=fresh; pane->layout=&fresh->layout; pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
@@ -216,7 +232,7 @@ int gd_explorer_query_display(GD_ExplorerContext *context) {
 }
 int gd_explorer_query_select_result(GD_ExplorerContext *context, int target) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; int i;
-    if (!state || !state->query || !state->query->effects || target<0 || target>=state->query->effects->node_count || state->query->effects->nodes[target].kind==GD_EFFECT_ACTIVATION || !focus_result(state,target)) return 0;
+    if (!state || !state->query || !state->query->effects || target<0 || target>=state->query->effects->node_count || state->query->effects->nodes[target].kind==GD_EFFECT_ACTIVATION || !focus_result(context,state,target)) return 0;
     pane->layout=&state->scene->layout; pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
     for (i=0;i<pane->layout->node_count;++i) if (state->scene->nodes[i].source==target) pane->selection.node=i;
     pane->fit=GD_EXPLORER_FIT_QUERY_READABLE; return 1;
@@ -402,7 +418,7 @@ void gd_explorer_query_input(GD_ExplorerContext *context) {
             }
         } else for (i=0;i<pane->layout->edge_count;++i) if (gd_layout_route_distance(pane->layout,i,world.x,world.y)<=7/pane->camera.zoom) { pane->selection=(GD_ExplorerSelection){i,-1,0,-1,-1}; break; }
     }
-    if (pane->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_drag_node(pane->layout,pane->selection.held,world.x,world.y);
+    if (pane->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_query_scene_drag(pane->query_state->scene,pane->selection.held,world.x,world.y);
 }
 static void case_details(GD_ExplorerContext *context, int index) {
     const GD_Rules *rules=context->project->rules; const GD_RuleCase *item=&rules->cases[index]; const GD_Record *record=&rules->model->records[rules->sources[item->source].record]; int i;

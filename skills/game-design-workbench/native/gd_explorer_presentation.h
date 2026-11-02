@@ -14,8 +14,8 @@ typedef struct { GD_ExplorerControl control; unsigned views; size_t source; int 
 #define PF(name,label,type,choices,keys,views,member,integer_bool) {{#name,label,choices,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,keys},views,offsetof(GD_ExplorerPane,member),integer_bool}
 #define VF(name,label,type,views) {{#name,label,NULL,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,NULL},views,(size_t)-1,0}
 static const PresentationField presentation_fields[]={
- VF(layout,"Layout",GD_CONTROL_INT,PV_GRAPH&~PV_RESOURCE),
- PF(initial_arrangement,"Initial arrangement",GD_CONTROL_INT,"Native\0Neighborhood\0","native\0neighborhood\0",PV_GRAPH,initial_arrangement,0),
+ VF(layout,"Layout",GD_CONTROL_INT,PV_ALL&~PV_RESOURCE),
+ PF(initial_arrangement,"Initial arrangement",GD_CONTROL_INT,"Native\0Neighborhood\0","native\0neighborhood\0",PV_ALL,initial_arrangement,0),
  PF(sort,"Sort / initial order",GD_CONTROL_INT,"Name\0Degree\0","name\0degree\0",15,sort,0),
  PF(direction,"Layout direction",GD_CONTROL_INT,"Top to bottom\0Left to right\0","vertical\0horizontal\0",3,horizontal,0),
  PF(paused,"Pause settling",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,paused,0),
@@ -93,7 +93,7 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
         if(field->integer_bool) *(bool *)value=*(const int *)source!=0; else memcpy(value,source,field->control.capacity);
     }
     out->layout=p->view==GD_EXPLORER_SKILLS ? p->layout_choice==GD_LAYOUT_FORCE ? 2:p->rank:
-        p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS ? p->layout_choice==GD_LAYOUT_FORCE:p->layout_choice;
+        p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS || query_view(p->view) ? p->layout_choice==GD_LAYOUT_FORCE:p->layout_choice;
     out->distance_focus=p->distance_focus_enabled; out->focus_root=p->focus.root;
     out->mda_root=c->project->mda ? c->project->mda->root:-1; out->mda_direction=c->project->mda ? c->project->mda->direction:0;
     out->resource_witness=p->resource_witness; out->similarity_row=out->similarity_peer=-1;
@@ -110,6 +110,8 @@ int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *na
     if(!field || !(field->views&(1u<<p->view))) return 0;
     if(!strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
     if(!p->prepared) return 0;
+    if(!strcmp(name,"layout") && gd_explorer_similarity_active(c)) return 0;
+    if(query_view(p->view) && (!strcmp(name,"layout") || !strcmp(name,"initial_arrangement")) && (!p->query_state || !p->query_state->scene)) return 0;
     if(!strcmp(name,"initial_arrangement")) return free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c);
     if(!strncmp(name,"similarity_",11)) return p->structure_state && p->structure_state->result && p->structure_state->result->similarity;
     if(!strcmp(name,"known")) { int record=selected_record((GD_ExplorerContext *)c); return record>=0 && gd_explorer_model(c->project,p->view)->records[record].role==GD_SKILL; }
@@ -138,7 +140,7 @@ static int presentation_node_id(const GD_ExplorerContext *c,int node,char *key,s
 }
 static int presentation_node_field(const char *name) { return !strcmp(name,"peer") || !strcmp(name,"foundation_peer") || !strcmp(name,"reach_peer") || !strcmp(name,"reach_target"); }
 static const char *presentation_list(const GD_ExplorerContext *c,const GD_ExplorerControl *field) {
-    if(!strcmp(field->name,"layout")) return c->pane->view==GD_EXPLORER_SKILLS ? "depth\0rank\0free\0":c->pane->view==GD_EXPLORER_MATRIX ? "free\0columns\0grid\0":c->pane->view==GD_EXPLORER_RELATIONSHIPS ? "native\0free\0":"bands\0free\0";
+    if(!strcmp(field->name,"layout")) return c->pane->view==GD_EXPLORER_SKILLS ? "depth\0rank\0free\0":c->pane->view==GD_EXPLORER_MATRIX ? "free\0columns\0grid\0":c->pane->view==GD_EXPLORER_RELATIONSHIPS || query_view(c->pane->view) ? "native\0free\0":"bands\0free\0";
     if(!strcmp(field->name,"mda_direction")) return "both\0forward\0backward\0";
     return field->keys ? field->keys:field->choices;
 }
@@ -209,7 +211,7 @@ static int presentation_same_topology(const GD_Layout *a,const GD_Layout *b) {
 }
 static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresentation *values,int geometry_only) {
     GD_ExplorerPane *next,*p=c->pane; GD_ExplorerContext candidate=*c; GD_Allocator allocator=c->project->allocator; int same_topology;
-    if(query_view(p->view)) return 0;
+    if(query_view(p->view)) return gd_explorer_query_arrange(c,values->layout ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED,values->initial_arrangement);
     /* Keep large candidate pane snapshot off bounded Windows call stack. */
     next=allocator.allocate(allocator.context,sizeof(*next)); if(!next) return 0;
     memcpy(next,p,sizeof(*next));

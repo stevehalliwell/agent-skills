@@ -167,6 +167,45 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             if(v==GD_EXPLORER_MDA) {PRESENT_STAGE(v,"layout","bands");PRESENT_CHECK(strstr(reply,"\"configured\":true"));}
             a.release(a.context,retained);a.release(a.context,seeded);a.release(a.context,native);
         }
+        if(query_view((GD_ExplorerView)v) && panes[v].query_state && panes[v].query_state->scene) {
+            GD_ExplorerQueryState *state=panes[v].query_state;GD_QueryScene *scene=state->scene;GD_Query *query=state->query;GD_EffectQuery *scope=state->selected;
+            GD_ExplorerQueryOptions pending=panes[v].query_options,applied=state->applied;GD_ExplorerSelection selection=panes[v].selection;
+            GD_Layout *native=a.allocate(a.context,sizeof(*native));int node,allocation,work=scene->work;
+            PRESENT_CHECK(native!=NULL);memcpy(native,panes[v].layout,sizeof(*native));
+            if(native->node_count) panes[v].selection.node=0;selection=panes[v].selection;
+            snprintf(panes[v].query_options.contexts,sizeof(panes[v].query_options.contexts),"pending geometry-only test");
+            PRESENT_CHECK(!free_graph(&panes[v]) && !layout_settles(&panes[v]));
+            PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]) && layout_settles(&panes[v]));
+            for(node=0;node<native->node_count;++node) PRESENT_CHECK(scene->layout.nodes[node].x==native->nodes[node].x && scene->layout.nodes[node].y==native->nodes[node].y);
+            PRESENT_STAGE(v,"initial_arrangement","neighborhood");PRESENT_CHECK(strstr(reply,"\"configured\":true"));
+            gd_query_scene_step(scene,-1);
+            PRESENT_CHECK(state==panes[v].query_state && state->scene==scene && state->query==query && state->selected==scope && scene->work==work && !memcmp(&state->applied,&applied,sizeof(applied)));
+            PRESENT_CHECK(!strcmp(panes[v].query_options.contexts,"pending geometry-only test") && !memcmp(&selection,&panes[v].selection,sizeof(selection)));
+            PRESENT_STAGE(v,"layout","native");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !free_graph(&panes[v]) && !layout_settles(&panes[v]) && !scene->free_geometry);
+            for(node=0;node<native->node_count;++node) PRESENT_CHECK(scene->layout.nodes[node].x==native->nodes[node].x && scene->layout.nodes[node].y==native->nodes[node].y);
+            panes[v].paused=true;
+            for(allocation=1;allocation<=1+(native->edge_count>0)+(native->node_count>0);++allocation) {
+                *fail_at=*calls+allocation;PRESENT_STAGE(v,"layout","free");*fail_at=-1;
+                PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].paused && !free_graph(&panes[v]) && !scene->free_geometry && state->scene==scene && state->query==query && state->selected==scope);
+            }
+            panes[v].query_options=pending;panes[v].paused=false;
+            PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true"));
+            panes[v].query_options.weighted=!applied.weighted;
+            target=c;target.pane=&panes[v];
+            for(allocation=1;allocation<=2+(native->edge_count>0)+(native->node_count>0);++allocation) {
+                int displayed;*fail_at=*calls+allocation;displayed=gd_explorer_query_display(&target);*fail_at=-1;
+                PRESENT_CHECK(!displayed && state->scene==scene && state->query==query && state->selected==scope && free_graph(&panes[v]) && !memcmp(&state->applied,&applied,sizeof(applied)));
+            }
+            PRESENT_CHECK(gd_explorer_query_display(&target) && state->scene!=scene && state->query==query && state->selected==scope && free_graph(&panes[v]));
+            if(v==GD_EXPLORER_EFFECTS && state->selected) {
+                int goal=state->selected->selection.target;
+                PRESENT_CHECK(gd_explorer_query_select_result(&target,goal) && state->query==query && free_graph(&panes[v]) && state->selected->selection.target==goal);
+            }
+            panes[v].query_options=state->applied;
+            PRESENT_CHECK(gd_explorer_query_run(&target) && panes[v].query_state!=state && free_graph(&panes[v]) && panes[v].initial_arrangement==1);
+            PRESENT_STAGE(v,"layout","native");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !layout_settles(&panes[v]));
+            panes[v].query_options=pending;a.release(a.context,native);
+        }
         PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !strcmp(panes[v].filter,"test source") && active==GD_EXPLORER_MATRIX);
         PRESENT_SEND();PRESENT_CHECK(strstr(reply,"viewer.stale_controls")!=NULL);
         PRESENT_STAGE(v,"filter","");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !*panes[v].filter);

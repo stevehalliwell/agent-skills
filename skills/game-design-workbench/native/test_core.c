@@ -2453,6 +2453,7 @@ TEST(rules_allocation_failure,
 #include "test_resource_instances.h"
 #include "test_effect_graph.h"
 #include "test_actor_inventory.h"
+#include "test_query_scene_free.h"
 #include "test_effect_query.h"
 #include "test_actor_query.h"
 #include "test_state_coverage.h"

@@ -8,11 +8,14 @@ typedef enum { GD_QUERY_NODE_BINDING, GD_QUERY_NODE_VARIANT, GD_QUERY_NODE_ACTIV
 typedef enum { GD_QUERY_EDGE_ASSUMPTION, GD_QUERY_EDGE_INVOCATION, GD_QUERY_EDGE_EFFECT, GD_QUERY_EDGE_PARTICIPANT, GD_QUERY_EDGE_FRONTIER } GD_QueryEdgeKind;
 typedef struct { GD_QueryNodeKind kind; int source,variant,incoming,ghost; GD_RuleTruth applicability; int comparison; } GD_QuerySceneNode;
 typedef struct { GD_QueryEdgeKind kind; int source,variant; } GD_QuerySceneEdge;
+typedef struct GD_QueryFree GD_QueryFree;
 typedef struct {
     GD_Allocator allocator; const GD_Query *query; const GD_EffectQuery *effect_scope;
     GD_Layout layout;
     GD_QuerySceneNode nodes[GD_MAX_RECORDS]; GD_QuerySceneEdge edges[GD_MAX_PAIRS];
     char labels[GD_MAX_RECORDS][GD_QUERY_SCENE_LABEL];
+    GD_LayoutPoint native_points[GD_MAX_RECORDS]; GD_LayoutGroup native_group;
+    float native_width,native_height; GD_QueryFree *free_geometry;
     GD_QueryGhostMode ghosts; int primary,weighted,include_excluded;
     int work,work_limit,limited,capacity_limited,unexamined_items_upper_bound,label_truncations,excluded_activations;
 } GD_QueryScene;
@@ -34,6 +37,12 @@ const char *gd_query_scene_edge_kind_name(GD_QueryEdgeKind kind);
 GD_QueryScene *gd_query_scene_effect_context(const GD_Query *query, const GD_EffectQuery *scope, int weighted, int work_limit);
 /* Color membership only; no source topology, semantic facts or counts change. */
 int gd_query_scene_compare(GD_QueryScene *scene, int first, int second);
+/* Geometry only: retain typed scene/query/metadata. Native restores build pose.
+   Free uses shared solver with compound stacked-variant footprints. Candidate
+   allocation/work failure leaves prior geometry intact; no per-frame allocation. */
+int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhood,float aspect);
+void gd_query_scene_step(GD_QueryScene *scene,int held_node);
+void gd_query_scene_drag(GD_QueryScene *scene,int node,float x,float y);
 void gd_query_scene_destroy(GD_QueryScene *scene);
 /* Snapshot record for source inspection/Find; -1 if no resolved source. */
 int gd_query_scene_record(const GD_QueryScene *scene, int node);
