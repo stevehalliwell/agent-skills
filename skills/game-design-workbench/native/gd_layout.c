@@ -17,6 +17,7 @@ static int compare_order(const void *a, const void *b) {
 }
 #include "gd_layout_directed.h"
 #include "gd_layout_collision.h"
+#include "gd_layout_seed.h"
 int gd_matrix_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort) {
     int record_node[GD_MAX_RECORDS],i;
     if (!model || !layout) return 0;

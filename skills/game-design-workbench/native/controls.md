@@ -16,6 +16,8 @@ Descriptions define names, types, capacities, choices and editability. Discovery
 
 Analytical configuration stages one field plus dependent resets atomically. Only explicit Run/Display consumes pending analysis/display inputs. Presentation configuration applies immediately; discovery reports apply policy. Neither path changes authoritative sources, draft/Undo, active pane or OS focus.
 
+Presentation `initial_arrangement: native | neighborhood` applies immediately to prepared Interactions/MDA/Resources Free graphs; Native is default. Unavailable in constrained/similarity layouts; does not switch layout mode. Repositions nodes and resumes settling while preserving selection, scope and retained analysis. Main-canvas aspect guides compact graph-derived neighborhoods; unknown viewport uses 1:1. No selection/zoom/resize reseed. Arrangement changes and `view.rearrange` reject topology changes rather than hiding source refresh; failed candidate retains prior state. [Seed contract and limits](../../../reports/graph-query-research/shared-force-layout-seeding.md).
+
 ### Actions
 
 - `query.run`, `query.display`.

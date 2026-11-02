@@ -73,7 +73,7 @@ typedef struct {
 } GD_ExplorerResourceForm;
 /* Value snapshot only; pane/domain state remains authoritative. */
 typedef struct {
-    int layout,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
+    int layout,initial_arrangement,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
     int focus_root,mda_root,mda_direction,resource_witness,route_witness,similarity_row,similarity_peer;
     int overview_row,overview_column,coverage_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
     bool paused,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
@@ -114,7 +114,7 @@ typedef struct {
     GD_OverviewControls overview;
     GD_GraphLens lens;
     bool shared, branches, foundations, shapes, paused, overlay;
-    int peer, foundation_peer, layout_choice, sort, horizontal, rank, witness;
+    int peer, foundation_peer, layout_choice, initial_arrangement, sort, horizontal, rank, witness;
     int prepared, fit, navigate, focus_root, focus_expand, inspected_record;
     unsigned revision;
     char filter[129], find_reference[260];

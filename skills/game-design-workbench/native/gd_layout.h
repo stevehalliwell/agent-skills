@@ -56,6 +56,12 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
    direction. Presentation groups only; no new edges or semantic equivalence.
    Reuses order/position scratch; call before arrange. */
 int gd_layout_components(GD_Layout *layout);
+/* One-shot compact BFS seed, graph-derived distinct-neighbor hubs, active edges.
+   Prepared Free layout only. Preserves topology, groups, order and footprint data.
+   Linear bounded adjacency/BFS/shelf work; <=1 MiB temporary allocator workspace,
+   no persistent or per-frame allocation. Positive finite canvas width/height ratio.
+   Failure retains complete prior layout. Shelf aspect is a target, not optimum. */
+int gd_layout_seed_neighborhood(GD_Layout *layout,GD_Allocator allocator,float aspect);
 /* Called by arrange after topology validation. Per-pair lanes retain source
    index/direction; no allocation or authored-edge changes. */
 void gd_layout_route_prepare(GD_Layout *layout);

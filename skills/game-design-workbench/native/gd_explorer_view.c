@@ -60,6 +60,14 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     p->layout_choice=GD_LAYOUT_FORCE; p->fit=1; p->focus.root=-1;
     p->paths.declared=view==GD_EXPLORER_CHALLENGES;
 }
+static int pane_seed(GD_ExplorerContext *c) {
+    GD_ExplorerPane *p=c->pane; float aspect=1;
+    if(!p->initial_arrangement || p->layout->mode!=GD_LAYOUT_FORCE) return 1;
+    if(isfinite(c->viewport.width) && isfinite(c->viewport.height) && c->viewport.width>0 && c->viewport.height>0) {
+        float measured=c->viewport.width/c->viewport.height; if(isfinite(measured) && measured>0) aspect=measured;
+    }
+    return gd_layout_seed_neighborhood(p->layout,c->project->allocator,aspect);
+}
 static int pane_prepare(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int i,record=-1;
     unsigned revision=gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA ? c->project->revision:1;
@@ -86,6 +94,7 @@ static int pane_prepare(GD_ExplorerContext *c) {
     }
     if (!(is_graph(p->view) ? gd_explorer_graph_prepare(c):p->view==GD_EXPLORER_MDA ? gd_explorer_mda_prepare(c):gd_explorer_resource_prepare(c))) return 0;
     if (grid_view(p) && !gd_matrix_grid_prepare(&p->grid,model,(GD_LayoutSort)p->sort)) return 0;
+    if (!pane_seed(c)) return 0;
     if (record>=0 && is_graph(p->view)) {
         p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
         for (i=0;i<p->layout->node_count;++i) if (p->layout->nodes[i].key==record) p->selection.node=i;
@@ -438,6 +447,8 @@ static int layout_controls(GD_ExplorerContext *c) {
     if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_MDA) presentation_widget(c,"layout","Layout");
     else if (query_view(p->view)) igTextWrapped("Layout: separate native query bands; incoming weighting never changes declarations. Query/ghost associations are not temporal paths.");
     else igTextWrapped(p->view==GD_EXPLORER_CHALLENGES ? "Layout: declared route bands":p->view==GD_EXPLORER_RELATIONSHIPS ? "Layout: focused consumed declarations":"Layout: free incidence graph");
+    if ((p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_MDA || p->view==GD_EXPLORER_RESOURCES) && p->layout->mode==GD_LAYOUT_FORCE && !grid_view(p))
+        presentation_widget(c,"initial_arrangement","Initial arrangement");
     if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_CHALLENGES) presentation_widget(c,"direction","Direction");
     if (is_graph(p->view)) presentation_widget(c,"sort","Sort / initial order");
     if (grid_view(p) || query_view(p->view) || p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS || p->layout->mode==GD_LAYOUT_COLUMNS)

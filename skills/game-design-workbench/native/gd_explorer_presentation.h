@@ -15,6 +15,7 @@ typedef struct { GD_ExplorerControl control; unsigned views; size_t source; int 
 #define VF(name,label,type,views) {{#name,label,NULL,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,NULL},views,(size_t)-1,0}
 static const PresentationField presentation_fields[]={
  VF(layout,"Layout",GD_CONTROL_INT,PV_SKILL|(1u<<GD_EXPLORER_MATRIX)|PV_MDA),
+ PF(initial_arrangement,"Initial arrangement",GD_CONTROL_INT,"Native\0Neighborhood\0","native\0neighborhood\0",(1u<<GD_EXPLORER_MATRIX)|PV_MDA|PV_RESOURCE,initial_arrangement,0),
  PF(sort,"Sort / initial order",GD_CONTROL_INT,"Name\0Degree\0","name\0degree\0",15,sort,0),
  PF(direction,"Layout direction",GD_CONTROL_INT,"Top to bottom\0Left to right\0","vertical\0horizontal\0",3,horizontal,0),
  PF(paused,"Pause settling",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,paused,0),
@@ -108,6 +109,7 @@ int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *na
     if(!field || !(field->views&(1u<<p->view))) return 0;
     if(!strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
     if(!p->prepared) return 0;
+    if(!strcmp(name,"initial_arrangement")) return p->layout && p->layout->mode==GD_LAYOUT_FORCE && !grid_view(p) && !gd_explorer_similarity_active(c);
     if(!strncmp(name,"similarity_",11)) return p->structure_state && p->structure_state->result && p->structure_state->result->similarity;
     if(!strcmp(name,"known")) { int record=selected_record((GD_ExplorerContext *)c); return record>=0 && gd_explorer_model(c->project,p->view)->records[record].role==GD_SKILL; }
     if(!strcmp(name,"resource_witness")) return p->resource_routes!=NULL;
@@ -198,13 +200,20 @@ int gd_explorer_presentation_value(const GD_ExplorerContext *c,const GD_Explorer
     if(slots>=0) { ordinal=native+(field->type!=GD_CONTROL_BOOL && !presentation_list(c,field)); return gd_explorer_presentation_option(c,field,ordinal,&native,out,capacity); }
     ordinal=snprintf(out,capacity,"%d",native); return ordinal>=0 && (size_t)ordinal<capacity ? 1:-1;
 }
-static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresentation *values) {
+static int presentation_same_topology(const GD_Layout *a,const GD_Layout *b) {
+    int i;
+    if(!a || a->node_count!=b->node_count || a->edge_count!=b->edge_count || a->group_count!=b->group_count || a->mode!=b->mode) return 0;
+    for(i=0;i<a->node_count;++i) if(a->nodes[i].key!=b->nodes[i].key || a->nodes[i].group!=b->nodes[i].group || a->nodes[i].layer!=b->nodes[i].layer) return 0;
+    return !memcmp(a->edges,b->edges,(size_t)a->edge_count*sizeof(*a->edges));
+}
+static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresentation *values,int geometry_only) {
     GD_ExplorerPane next=*c->pane,*p=c->pane; GD_ExplorerContext candidate=*c;
     if(query_view(p->view)) return 0;
     next.layout=NULL; next.distance_focus=NULL; next.structure_state=NULL; next.prepared=0;
     next.rank=p->view==GD_EXPLORER_SKILLS ? values->layout:p->rank;
     next.layout_choice=p->view==GD_EXPLORER_SKILLS ? p->layout_choice:values->layout;
     next.sort=values->sort; next.horizontal=values->direction;
+    next.initial_arrangement=0; /* Prepare native topology once; seed after footprint remap. */
     if(is_graph(p->view)) next.selection=(GD_ExplorerSelection){-1,-1,0,selected_record(c),-1};
     candidate.pane=&next;
     if(!pane_prepare(&candidate)) { if(next.layout) c->project->allocator.release(c->project->allocator.context,next.layout); gd_layout_focus_destroy(next.distance_focus); return 0; }
@@ -215,10 +224,21 @@ static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresent
         if(next.selection.cell>=0){int found=0;for(i=0;i<next.layout->edge_count;++i)if(next.layout->edges[i].key==next.selection.cell)found=1;if(!found)next.selection.cell=-1;}
         if(p->view==GD_EXPLORER_MATRIX){next.grid.noun=p->grid.noun;next.grid.verb=p->grid.verb;if(next.selection.cell>=0){const GD_Cell *cell=&gd_explorer_model(c->project,p->view)->cells[next.selection.cell];next.grid.noun=cell->noun;next.grid.verb=cell->verb;}}
     }
+    if(geometry_only && !presentation_same_topology(p->layout,next.layout)) {
+        c->project->allocator.release(c->project->allocator.context,next.layout);gd_layout_focus_destroy(next.distance_focus);return 0;
+    }
+    next.initial_arrangement=values->initial_arrangement;
+    if(next.initial_arrangement && next.layout->mode==GD_LAYOUT_FORCE && p->layout && p->layout->mode==GD_LAYOUT_FORCE) {
+        int i; for(i=0;i<next.layout->node_count && i<p->layout->node_count;++i)
+            if(next.layout->nodes[i].key==p->layout->nodes[i].key) next.layout->nodes[i].footprint=p->layout->nodes[i].footprint;
+    }
+    if(!pane_seed(&candidate)) { c->project->allocator.release(c->project->allocator.context,next.layout); gd_layout_focus_destroy(next.distance_focus); return 0; }
+    if(next.distance_focus) gd_layout_focus_capture(next.distance_focus,next.layout);
     if(p->layout) c->project->allocator.release(c->project->allocator.context,p->layout); gd_layout_focus_destroy(p->distance_focus);
+    p->initial_arrangement=next.initial_arrangement;
     p->layout=next.layout; p->distance_focus=next.distance_focus; p->distance_focus_revision=UINT64_MAX;
     p->rank=next.rank; p->layout_choice=next.layout_choice; p->sort=next.sort; p->horizontal=next.horizontal; p->grid=next.grid; p->selection=next.selection; p->focus=next.focus;
-    p->prepared=next.prepared; p->revision=next.revision; p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1; c->analysis->initialized=0; return 1;
+    p->prepared=next.prepared; p->revision=next.revision; p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1; if(!geometry_only) c->analysis->initialized=0; return 1;
 }
 int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const char *value,char *message,size_t capacity) {
     const PresentationField *entry=presentation_field(name); const GD_ExplorerControl *field=entry ? &entry->control:NULL; GD_ExplorerPresentation next; GD_ExplorerPane *p=c->pane;
@@ -237,9 +257,12 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
         *(int *)slot=(int)number;
     }
     error="Cannot apply presentation candidate; last good state retained";
-    if(!strcmp(name,"layout") || !strcmp(name,"sort") || !strcmp(name,"direction")) { if(!presentation_rearrange(c,&next)) goto failed; }
+    if(!strcmp(name,"layout") || !strcmp(name,"sort") || !strcmp(name,"direction") || !strcmp(name,"initial_arrangement")) {
+        if(!presentation_rearrange(c,&next,!strcmp(name,"initial_arrangement"))) goto failed;
+        if(!strcmp(name,"initial_arrangement")) p->paused=false;
+    }
     else if(!strcmp(name,"distance_focus")) { if(!distance_focus_toggle(c,next.distance_focus)) goto failed; }
-    else if(!strcmp(name,"focus_root")) { if(next.focus_root<0) goto failed; { GD_Focus old=p->focus; p->focus=(GD_Focus){0}; gd_focus_reset(gd_explorer_model(c->project,p->view),&p->focus,next.focus_root); if(!presentation_rearrange(c,&next)) {p->focus=old;goto failed;} } }
+    else if(!strcmp(name,"focus_root")) { if(next.focus_root<0) goto failed; { GD_Focus old=p->focus; p->focus=(GD_Focus){0}; gd_focus_reset(gd_explorer_model(c->project,p->view),&p->focus,next.focus_root); if(!presentation_rearrange(c,&next,0)) {p->focus=old;goto failed;} } }
     else if(!strcmp(name,"mda_root") || !strcmp(name,"mda_direction")) { if(!gd_mda_query(gd_explorer_model(c->project,p->view),c->project->mda,next.mda_root,(GD_MdaDirection)next.mda_direction)) goto failed; }
     else if(!strcmp(name,"resource_witness")) { p->resource_witness=next.resource_witness; gd_resource_route_mark(p->resource_routes,p->resource_witness); }
     else if(!strcmp(name,"similarity_canvas")) p->structure_state->similarity_canvas=next.similarity_canvas;
@@ -268,10 +291,10 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     if(!strcmp(name,"view.witness.fit")) {if(p->view!=GD_EXPLORER_RESOURCES || !p->resource_routes || !p->resource_routes->witness_count)return 0;p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;return 1;}
     if(!strcmp(name,"view.cell.fit")) {if(p->view!=GD_EXPLORER_MATRIX || !grid_view(p) || p->grid.noun<0 || p->grid.verb<0)return 0;grid_frame_selection(c);return 1;}
     if(!strcmp(name,"view.fit")) { if(gd_explorer_similarity_active(c)) p->structure_state->similarity_fit=true; else p->fit=1; return 1; }
-    if(!strcmp(name,"view.rearrange")) { gd_explorer_presentation_read(c,&values); return presentation_rearrange(c,&values); }
+    if(!strcmp(name,"view.rearrange")) { gd_explorer_presentation_read(c,&values); return presentation_rearrange(c,&values,1); }
     if(!strcmp(name,"view.start.clear")) { p->paths.count=p->paths.lost=0; return 1; }
     if(!strcmp(name,"view.start.add")) { int node=analyze(c); return node>=0 && gd_graph_path_start(&p->paths,p->layout->nodes[node].key)>=0; }
-    if(!strcmp(name,"view.expand")) { int record=selected_record(c); GD_Focus prior=p->focus; if(p->view!=GD_EXPLORER_RELATIONSHIPS || record<0) return 0; gd_focus_expand(gd_explorer_model(c->project,p->view),&p->focus,record); gd_explorer_presentation_read(c,&values); if(presentation_rearrange(c,&values)) return 1; p->focus=prior; return 0; }
+    if(!strcmp(name,"view.expand")) { int record=selected_record(c); GD_Focus prior=p->focus; if(p->view!=GD_EXPLORER_RELATIONSHIPS || record<0) return 0; gd_focus_expand(gd_explorer_model(c->project,p->view),&p->focus,record); gd_explorer_presentation_read(c,&values); if(presentation_rearrange(c,&values,0)) return 1; p->focus=prior; return 0; }
     if(!strcmp(name,"view.analyze")) { int selected;if(query_view(p->view) || grid_view(p) || gd_explorer_similarity_active(c)) return 0;selected=analyze(c); if(c->pane->view==GD_EXPLORER_SKILLS && (!c->query || !gd_skill_unlocks(gd_explorer_model(c->project,c->pane->view),p->known,selected_record(c),c->query))) return 0; (void)evidence(c,selected); if(p->paths.enabled && selected>=0) gd_graph_path_selection(c->analysis,selected); if(p->shared && selected>=0 && p->peer>=0) gd_graph_compare(c->analysis,selected,p->peer); return 1; }
     if(!strcmp(name,"view.compare")) return !gd_explorer_similarity_active(c) && c->pane->view==GD_EXPLORER_ACTORS ? gd_explorer_query_compare(c):gd_explorer_similarity_compare(c);
     return 0;

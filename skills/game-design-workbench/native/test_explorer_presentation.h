@@ -78,6 +78,43 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             fprintf(stderr,"Resource footprint probe: %d nodes / %d groups / %lu initial overlaps / %lu after 600 more steps / tail RMS %.6f max %.6f / limited %d\n",probe->node_count,probe->group_count,initial,remaining,probe->node_count ? sqrt(square/(32*probe->node_count)):0,sqrt(maximum),probe->collision_limited);
             a.release(a.context,probe);PRESENT_CHECK(valid);
         }
+        if(v==GD_EXPLORER_MATRIX || v==GD_EXPLORER_MDA || v==GD_EXPLORER_RESOURCES) {
+            GD_Layout *native=a.allocate(a.context,sizeof(*native)); GD_LayoutPoint *seeded=a.allocate(a.context,GD_MAX_RECORDS*sizeof(*seeded));
+            GD_GraphAnalysis *retained=a.allocate(a.context,sizeof(*retained));
+            GD_ExplorerSelection selection; int node,seed_allocations,root=c.project->mda ? c.project->mda->root:-1;
+            PRESENT_CHECK(native && seeded && retained);
+            if(v==GD_EXPLORER_MDA) {PRESENT_STAGE(v,"initial_arrangement","neighborhood");PRESENT_CHECK(!panes[v].initial_arrangement && strstr(reply,"viewer.control"));PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true"));}
+            memcpy(native,panes[v].layout,sizeof(*native));selection=panes[v].selection;
+            PRESENT_ACTION(v,"view.analyze");PRESENT_CHECK(strstr(reply,"\"executed\":true") && analysis->initialized);memcpy(retained,analysis,sizeof(*retained));
+            seed_allocations=*calls;PRESENT_STAGE(v,"initial_arrangement","neighborhood");seed_allocations=*calls-seed_allocations;
+            PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].initial_arrangement==1 && !panes[v].paused);
+            PRESENT_CHECK(!memcmp(&selection,&panes[v].selection,sizeof(selection)) && (!c.project->mda || c.project->mda->root==root));
+            PRESENT_CHECK(!memcmp(retained,analysis,sizeof(*retained)));
+            PRESENT_CHECK(native->node_count==panes[v].layout->node_count && !memcmp(native->edges,panes[v].layout->edges,sizeof(native->edges)));
+            for(node=0;node<native->node_count;++node) seeded[node]=(GD_LayoutPoint){panes[v].layout->nodes[node].x,panes[v].layout->nodes[node].y};
+            if(v==GD_EXPLORER_MATRIX && native->node_count>1) panes[v].selection.node=1;
+            PRESENT_ACTION(v,"view.rearrange");PRESENT_CHECK(strstr(reply,"\"executed\":true"));
+            for(node=0;node<native->node_count;++node) PRESENT_CHECK(seeded[node].x==panes[v].layout->nodes[node].x && seeded[node].y==panes[v].layout->nodes[node].y);
+            panes[v].selection=selection;
+            PRESENT_ACTION(v,"view.analyze");PRESENT_CHECK(strstr(reply,"\"executed\":true") && analysis->initialized);memcpy(retained,analysis,sizeof(*retained));
+            PRESENT_STAGE(v,"initial_arrangement","native");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !panes[v].initial_arrangement && !panes[v].paused);
+            PRESENT_CHECK(!memcmp(retained,analysis,sizeof(*retained)));
+            for(node=0;node<native->node_count;++node) PRESENT_CHECK(native->nodes[node].x==panes[v].layout->nodes[node].x && native->nodes[node].y==panes[v].layout->nodes[node].y);
+            {
+                GD_Layout *last=panes[v].layout;panes[v].paused=true;*fail_at=*calls+seed_allocations;
+                PRESENT_STAGE(v,"initial_arrangement","neighborhood");*fail_at=-1;
+                PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].layout==last && !panes[v].initial_arrangement && panes[v].paused && !memcmp(retained,analysis,sizeof(*retained)));
+            }
+            if(v==GD_EXPLORER_MATRIX) {
+                c.viewport=(Rectangle){0};PRESENT_CHECK(gd_layout_seed_neighborhood(native,a,1));
+                PRESENT_STAGE(v,"initial_arrangement","neighborhood");PRESENT_CHECK(strstr(reply,"\"configured\":true"));
+                c.viewport=(Rectangle){0,0,1200,400};PRESENT_REQUEST("controls",v);strcpy(request.form,"presentation");PRESENT_SEND();PRESENT_CHECK(!w.failed);
+                for(node=0;node<native->node_count;++node) PRESENT_CHECK(native->nodes[node].x==panes[v].layout->nodes[node].x && native->nodes[node].y==panes[v].layout->nodes[node].y);
+                PRESENT_STAGE(v,"initial_arrangement","native");PRESENT_CHECK(strstr(reply,"\"configured\":true"));c.viewport=(Rectangle){0,0,1000,700};
+            }
+            if(v==GD_EXPLORER_MDA) {PRESENT_STAGE(v,"layout","bands");PRESENT_CHECK(strstr(reply,"\"configured\":true"));}
+            a.release(a.context,retained);a.release(a.context,seeded);a.release(a.context,native);
+        }
         PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !strcmp(panes[v].filter,"test source") && active==GD_EXPLORER_MATRIX);
         PRESENT_SEND();PRESENT_CHECK(strstr(reply,"viewer.stale_controls")!=NULL);
         PRESENT_STAGE(v,"filter","");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !*panes[v].filter);
@@ -129,15 +166,15 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","columns");*fail_at=-1;PRESENT_CHECK(strstr(reply,"viewer.control") && panes[GD_EXPLORER_MATRIX].layout==last && panes[GD_EXPLORER_MATRIX].layout_choice==0);
     }
     {
-        GD_ExplorerPane saved=panes[GD_EXPLORER_RESOURCES];GD_Layout *diamond=a.allocate(a.context,sizeof(*diamond));const GD_ExplorerControl *field=gd_explorer_form_field(GD_FORM_PRESENTATION,"bypass_candidate");int candidate,okay;
-        PRESENT_CHECK(diamond!=NULL);memset(diamond,0,sizeof(*diamond));diamond->node_count=4;diamond->edge_count=4;
+        GD_ExplorerPane *saved=a.allocate(a.context,sizeof(*saved));GD_Layout *diamond=a.allocate(a.context,sizeof(*diamond));const GD_ExplorerControl *field=gd_explorer_form_field(GD_FORM_PRESENTATION,"bypass_candidate");int candidate,okay;
+        PRESENT_CHECK(saved && diamond);memcpy(saved,&panes[GD_EXPLORER_RESOURCES],sizeof(*saved));memset(diamond,0,sizeof(*diamond));diamond->node_count=4;diamond->edge_count=4;
         for(i=0;i<4;++i){diamond->nodes[i].key=i;diamond->nodes[i].label="Private path node";diamond->edges[i].key=i;diamond->edges[i].active=1;}
         diamond->edges[0].a=0;diamond->edges[0].b=1;diamond->edges[1].a=0;diamond->edges[1].b=2;diamond->edges[2].a=1;diamond->edges[2].b=3;diamond->edges[3].a=2;diamond->edges[3].b=3;
         panes[GD_EXPLORER_RESOURCES].layout=diamond;panes[GD_EXPLORER_RESOURCES].selection=(GD_ExplorerSelection){-1,3,0,-1,-1};panes[GD_EXPLORER_RESOURCES].paths.count=1;panes[GD_EXPLORER_RESOURCES].paths.keys[0]=0;panes[GD_EXPLORER_RESOURCES].paths.compare=1;analysis->initialized=0;
         PRESENT_ACTION(GD_EXPLORER_RESOURCES,"view.analyze");okay=strstr(reply,"\"executed\":true") && analysis->paths.selection.candidate_count>0;
         target=c;target.pane=&panes[GD_EXPLORER_RESOURCES];okay=okay && gd_explorer_presentation_option(&target,field,0,&candidate,key,sizeof(key))==1;
         if(okay){PRESENT_STAGE(GD_EXPLORER_RESOURCES,"bypass_candidate",key);okay=strstr(reply,"\"configured\":true") && analysis->paths.selection.candidate==candidate && analysis->paths.bypass.valid;}
-        panes[GD_EXPLORER_RESOURCES]=saved;a.release(a.context,diamond);analysis->initialized=0;PRESENT_CHECK(okay);
+        memcpy(&panes[GD_EXPLORER_RESOURCES],saved,sizeof(*saved));a.release(a.context,saved);a.release(a.context,diamond);analysis->initialized=0;PRESENT_CHECK(okay);
     }
     PRESENT_ACTION(GD_EXPLORER_SKILLS,"view.analyze");PRESENT_CHECK(strstr(reply,"\"executed\":true")!=NULL);
     PRESENT_REQUEST("result",GD_EXPLORER_SKILLS);strcpy(request.form,"skills");PRESENT_SEND();PRESENT_CHECK(!w.failed && presentation_decode(reply,decoded,sizeof(decoded))>0 && strstr(decoded,"\"exploration\":"));
