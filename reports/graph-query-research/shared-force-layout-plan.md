@@ -1,6 +1,6 @@
 # Shared force layouts
 
-Status: Steps 1/2 reviewed; Step 3 crossing reduction authorized. User reviewed Mario Resources: substantial readability improvement; clusters too vertical. Additive expansion requested after joint IPC tour. Current task authority: root `todo.md`, Step 2. Live readability acceptance remains open. [Step 1 findings, measurements and budgets](shared-force-layout-baseline.md); [Step 2 implementation and limits](shared-force-layout-separation.md).
+Status: Steps 1/2 reviewed and retained. Step 3 position/force crossing experiments did not work well enough and were removed. User authorized checkpoint and continuation to Step 4. Revisit crossings before final review; [research retained for that gate](directed-crossing-algorithms/first-blush/recommendation.md), no replacement selected. User reviewed Mario Resources: substantial readability improvement; clusters too vertical. Additive expansion requested after joint IPC tour. Current task authority: root `todo.md`, Step 2. Live readability acceptance remains open. [Step 1 findings, measurements and budgets](shared-force-layout-baseline.md); [Step 2 implementation and limits](shared-force-layout-separation.md); [rejected position trial](shared-force-layout-crossings.md); [force trial and limits](shared-force-layout-force-uncrossing.md).
 
 ## Result
 
@@ -15,7 +15,7 @@ Offer common free force-directed presentation across graph-backed projections. P
 - Existing MDA/Interactions free layouts participate in shared solver improvements. Preserve their useful visual behavior; verify regressions explicitly.
 - Similarity distance map remains distinct. Do not replace feature-distance coordinates with force placement.
 
-## Source audit
+## Source audit (before implementation)
 
 - `native/gd_layout.{h,c}` already provides shared node/edge/group storage, arrangement and fixed-step force solver. Current force solver applies center attraction, point repulsion, active-edge springs, damping and speed cap.
 - Repulsion checks at most 32 fixed partners per node, within supplied group only. It does not test rendered rectangles/label footprints. Thus force repulsion is not node-overlap prevention.
@@ -47,10 +47,10 @@ Refactor/extend existing shared layout mechanism, not one solver per projection.
 
 1. **Complete; reviewed.** Specify collision/crossing work budgets and measured acceptance fixtures from existing limits. Audit current renderer footprints and reference layouts before solver changes. Evidence in linked Step 1 baseline.
 2. **Complete; reviewed in Mario Resource viewer.** Shared footprint-aware separation, renderer unions/scaling, footprint-sized Free graph component spacing and actual Resource component grouping. CJIT core 133/133, Node 21/21; loaded-example initial Resource footprints have zero intersections after startup and 600 further steps. Adversarial dense fixtures still retain bounded overlap/motion; user reports substantial readability improvement in Mario Resources, not exhaustive every-view acceptance.
-3. Implement bounded edge-crossing reduction as separate slice after separation baseline. Test crossing improvement and regressions in node separation, settling and reference layouts.
+3. **Failed experiments removed; crossing work deferred until before final review.** Position corrections were jittery/not clearly better; force fallback and branch rotation also did not work well enough. Remove experimental runtime/workspace/tests; restore reviewed `ed08a0c` overlap code exactly. CJIT core 133/133, Node 21/21, both example IPC suites and ten deterministic 120/600-step fixtures pass. Historical trial measurements and algorithm orientation retained, not adopted. User authorized checkpoint and Steps 4/5 continuation. Existing viewers untouched.
 4. Add shared Native/Neighborhood initial-arrangement choice and geometry-only restart for Free graphs, plus Skills, Challenges and Relationships layout choices, band annotations and selection-preserving transitions through shared GUI/IPC controls. Captured follow-up: current neighborhood clusters are too vertical; aim to match main-view aspect ratio. Refine packing behavior in this later slice, not crossing reduction.
 5. Add Actor/Effect free placement without changing retained query topology, typed identities or contributor evidence.
-6. Run CJIT-only checks and coordinate live visual review on both examples. Keep full compiler matrix at Step 6.
+6. Revisit failed edge-crossing approaches and algorithm research **before final review**; record a new bounded trial or explicitly retained limits. Then run CJIT-only checks and coordinate live visual review on both examples. Keep full compiler matrix at final Step 6.
 
 ## Acceptance
 
@@ -68,4 +68,5 @@ Refactor/extend existing shared layout mechanism, not one solver per projection.
 ## Open
 
 - Neighborhood seed anchor choice and disconnected-component placement need technical refinement. Preserve selection without treating an anchor as authored root or changing graph scope.
-- Step 1 sets initial measured-fixture work caps. Steps 2/3 must validate and tune them against actual collision/crossing implementations; no latency guarantee chosen.
+- Crossing reduction remains unsolved and deferred, not a blocker for Steps 4/5. Revisit before final review without silently adopting fixed ranks, new dependencies or another uncrossing heuristic.
+- Step 1 sets initial measured-fixture work caps. Collision implementation validated in Step 2; any future crossing implementation needs its own budget/quality checks. No latency guarantee chosen.
