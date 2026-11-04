@@ -13,7 +13,11 @@ function run(command, args, cwd = process.cwd()) {
 }
 const sha256 = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const dependencies = JSON.parse(readFileSync('build/dependencies.json', 'utf8'));
+const macOS = process.platform === 'darwin';
+const library = macOS ? 'build/bin/libcimgui_richmd.dylib' : 'build/bin/cimgui_richmd.dll';
+const generator = macOS ? 'build/bin/luajit' : 'build/bin/luajit.exe';
 const paths = new Set(['vendor/gui/richmd_c.cpp', 'vendor/gui/richmd_c.h', 'vendor/gui/preview-selection.cpp.inc', 'tools/build-gui-stack.sh', 'tools/prepare-gui.mjs', 'tools/patch-richmd.mjs', 'tools/fix-generated.mjs', 'tools/gui-stack-manifest.mjs']);
+if (macOS) paths.add('tools/build-gui-stack-macos.sh');
 for (const [name] of dependencies.dependencies) {
   const folder = `build/deps/${name}`;
   for (const entry of run('git', ['ls-files', '-z'], resolve(folder)).split('\0').filter(Boolean)) {
@@ -27,6 +31,9 @@ const files = [...paths].sort().map(path => ({ path, sha256: sha256(path) }));
 writeFileSync('build/build-manifest.json', JSON.stringify({
   builtAt: new Date().toISOString(), zig: run(process.env.ZIG || 'zig', ['version']), generatorZig: run('zig', ['version']),
   dependencies, files, sourceTreeSha256: createHash('sha256').update(JSON.stringify(files)).digest('hex'),
-  dllSha256: sha256('build/bin/cimgui_richmd.dll'),
-  generatorSha256: sha256('build/bin/luajit.exe'),
+  platform: process.platform, architecture: process.arch, backend: macOS ? 'glfw-opengl3' : 'win32-d3d11',
+  ...(macOS ? { sdk: process.env.SDKROOT || run('xcrun', ['--show-sdk-path']), deploymentTarget: process.env.MACOSX_DEPLOYMENT_TARGET } : {}),
+  library, generator,
+  dllSha256: sha256(library),
+  generatorSha256: sha256(generator),
 }, null, 2) + '\n');

@@ -8,6 +8,7 @@ import { dirname, join, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const hash = text => createHash('sha256').update(text).digest('hex');
+const retainsPublished = process.platform === 'darwin';
 function inventory(folder) {
   return Object.fromEntries(readdirSync(folder, { withFileTypes: true }).filter(entry => entry.name !== '.attendant').flatMap(entry => {
     const path = join(folder, entry.name);
@@ -23,12 +24,26 @@ mkdirSync(join(root, 'build/api-check'), { recursive: true });
 const report = { ok: false, cases: [], run: mkdtempSync(join(root, 'build/api-check/run-')) };
 try {
   for (const compiler of ['cjit', 'zig']) for (const spelling of ['relative', 'absolute']) {
-    const probe = join(root, `build/api-probe-${compiler}.exe`), cli = join(root, `build/attendant-${compiler}.exe`);
+    const suffix = process.platform === 'win32' ? '.exe' : '';
+    const probe = join(root, `build/api-probe-${compiler}${suffix}`), cli = join(root, `build/attendant-${compiler}${suffix}`);
     const project = join(report.run, `${compiler}-${spelling} caf\u00e9 \u03a9`);
     mkdirSync(project);
     const target = join(project, 'document.md'), original = '---\r\nname: file\r\n---\r\nHello caf\u00e9 \ud83d\ude00\r\nNext line.\r\n';
     writeFileSync(target, original);
     const recordCase = name => report.cases.push({ compiler, spelling, name });
+    if (spelling === 'relative') {
+      for (const TZ of ['UTC', 'Pacific/Auckland']) {
+        for (const value of ['1601-01-01T00:00:00.000Z', '1969-12-31T23:59:59.000Z', '1970-01-01T00:00:00.000Z', '2026-10-04T23:45:59.000Z', '2028-02-29T01:02:03.123Z', '9999-12-31T23:59:59.999Z']) {
+          const date = child(probe, ['datetime', value], 0, { TZ });
+          assert.equal(date.value, value);
+          assert.equal(BigInt(date.ticks), BigInt(Date.parse(value)) * 10000n + 116444736000000000n);
+        }
+        for (const value of ['1600-12-31T23:59:59.999Z', '1900-02-29T00:00:00.000Z', '2026-04-31T00:00:00.000Z', '2026-01-01T24:00:00.000Z', '2026-01-01T00:00:60.000Z', '2026-01-01T00:00:00.000+01:00']) {
+          assert.equal(child(probe, ['datetime', value], 1, { TZ }).ok, false);
+        }
+      }
+      recordCase('UTC datetime round-trip, epoch boundaries, leap dates and timezone independence');
+    }
     let snapshot = inventory(project), read = child(probe, ['read', target]);
     assert.equal(read.text, original); assert.equal(read.hash, hash(original)); assert.deepEqual(inventory(project), snapshot);
     assert(!existsSync(join(project, '.pi'))); recordCase('read does not bootstrap workspace');
@@ -49,23 +64,38 @@ try {
     }
     recordCase('hash, code-point text, bounds and empty comment preflight leave no files');
     for (const fault of ['staged', 'seeds-published', 'comment-published']) {
-      failure = send({ fault, status: 1 }); assert.equal(failure.recovered, true); assert.deepEqual(failure.written, []);
+      failure = send({ fault, status: 1 }); assert.equal(failure.recovered, true);
+      const published = retainsPublished ? { staged: 0, 'seeds-published': 3, 'comment-published': 4 }[fault] : 0;
+      assert.equal(failure.written.length, published);
+      assert.equal(readFileSync(target, 'utf8'), saved);
+      assert.deepEqual(Object.keys(inventory(project)).sort(), [...Object.keys(snapshot), ...failure.written].sort());
+      if (published) {
+        assert.match(failure.message, /retained published files/);
+        assert(failure.written.every(path => existsSync(path) && path.startsWith(join(project, 'records/_meta_comments/'))));
+        rmSync(join(project, 'records'), { recursive: true });
+      }
       assert.deepEqual(inventory(project), snapshot); assert(!existsSync(join(project, '.pi'))); assert(!existsSync(join(project, 'records')));
     }
-    recordCase('staging and partial-bootstrap publication failures roll back owned files/directories');
+    recordCase(retainsPublished ? 'failed bootstrap retains and reports published files; staging is removed' : 'staging and partial-bootstrap publication failures roll back owned files/directories');
     failure = send({ fault: 'target-change', status: 1 });
     assert.equal(failure.code, 'feedback-stale'); assert.equal(failure.recovered, true);
     assert.equal(readFileSync(target, 'utf8'), saved + '\n# Concurrent external edit\n');
     assert(!existsSync(join(project, 'records'))); assert(!existsSync(join(project, '.pi')));
     writeFileSync(target, saved); recordCase('target edit after staging rejects comment and preserves external bytes');
     failure = send({ fault: 'config-change', status: 1 });
-    assert.equal(failure.recovered, true); assert.deepEqual(failure.written, []);
+    assert.equal(failure.recovered, true); assert.equal(failure.written.length, retainsPublished ? 4 : 0);
     assert.equal(readFileSync(join(project, '.pi/attendant.tables'), 'utf8'), '\n# Concurrent external edit\n');
+    if (retainsPublished) {
+      assert(failure.written.every(path => existsSync(path)));
+      rmSync(join(project, 'records'), { recursive: true });
+    }
     assert(!existsSync(join(project, 'records')));
-    rmSync(join(project, '.pi'), { recursive: true }); recordCase('external config publication wins; owned bootstrap rolls back without deleting external config');
+    rmSync(join(project, '.pi'), { recursive: true }); recordCase('external config publication wins; cleanup preserves external config and reports remaining files');
     failure = send({ fault: 'published-edit', status: 1 });
     const preservedSeed = join(project, 'records/_meta_comments/.schema.md');
-    assert.deepEqual(failure.written, [preservedSeed]); assert.match(failure.message, /preserved changed or busy files/);
+    assert.equal(failure.written.length, retainsPublished ? 4 : 1);
+    assert(failure.written.includes(preservedSeed)); assert(failure.written.every(path => existsSync(path)));
+    assert.match(failure.message, retainsPublished ? /retained published files/ : /preserved changed or busy files/);
     assert(readFileSync(preservedSeed, 'utf8').endsWith('\n# Concurrent external edit\n'));
     snapshot = inventory(project); send({ status: 1 }); assert.deepEqual(inventory(project), snapshot);
     rmSync(join(project, 'records'), { recursive: true }); recordCase('rollback preserves changed published file, reports it, and retry conflicts without overwrite');
@@ -128,9 +158,15 @@ try {
     }
     recordCase('absent anchor requires explicit context mode, zero bounds, empty source text and saved hash');
     for (const fault of ['staged', 'seeds-published', 'comment-published']) {
-      failure = contextSend({fault, status: 1}); assert.deepEqual(failure.written, []); assert.deepEqual(inventory(contextual), snapshot);
+      failure = contextSend({fault, status: 1});
+      const published = retainsPublished ? { staged: 0, 'seeds-published': 3, 'comment-published': 4 }[fault] : 0;
+      assert.equal(failure.written.length, published);
+      assert.equal(readFileSync(contextTarget, 'utf8'), saved);
+      assert.deepEqual(Object.keys(inventory(contextual)).sort(), [...Object.keys(snapshot), ...failure.written].sort());
+      if (published) rmSync(join(contextual, 'records'), { recursive: true });
+      assert.deepEqual(inventory(contextual), snapshot);
     }
-    recordCase('context-only first-send rollback preserves original source and leaves no seeds');
+    recordCase(retainsPublished ? 'context-only failed bootstrap reports retained files without changing source' : 'context-only first-send rollback preserves original source and leaves no seeds');
     failure = contextSend({fault: 'target-change', status: 1}); assert.equal(failure.code, 'feedback-stale');
     assert.equal(readFileSync(contextTarget, 'utf8'), saved + '\n# Concurrent external edit\n');
     assert(!existsSync(join(contextual, '.pi')) && !existsSync(join(contextual, 'records'))); writeFileSync(contextTarget, saved);

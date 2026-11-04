@@ -3,13 +3,16 @@
 int main(int argc, char **argv) {
     attendant_session *session = attendant_open();
     attendant_result result;
+#if defined(_WIN32)
     LPWSTR *arguments;
     char *owned[16] = {0};
+#endif
     const char *target;
     int i, code;
     jsonb output;
     char *json;
     if (!session) return 3;
+#if defined(_WIN32)
     arguments = CommandLineToArgvW(GetCommandLineW(), &argc);
     if (!arguments || argc > 16) return 2;
     for (i = 0; i < argc; i++) {
@@ -18,13 +21,26 @@ int main(int argc, char **argv) {
         if (!owned[i] || !WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, arguments[i], -1, owned[i], size, NULL, NULL)) return 3;
     }
     LocalFree(arguments); argv = owned;
+#endif
+    if (argc == 3 && !strcmp(argv[1], "datetime")) {
+        source_time stamp;
+        request_begin(session)->recovery = NULL;
+        int valid = parse_datetime(argv[2], &stamp);
+        if (valid) printf("{\"ok\":true,\"ticks\":\"%llu\",\"value\":\"%s\"}\n", (unsigned long long)stamp, iso_time(&session->state, stamp));
+        else puts("{\"ok\":false}");
+        code = valid ? 0 : 1; goto cleanup;
+    }
     if (argc == 3 && !strcmp(argv[1], "read")) { target = argv[2]; result = attendant_read_document(session, target); }
     else if (argc == 5 && !strcmp(argv[1], "save")) { target = argv[2]; result = attendant_save_document(session, target, argv[3], argv[4]); }
     else if (argc == 10 && (!strcmp(argv[1], "send") || !strcmp(argv[1], "send-context"))) {
         attendant_feedback input;
         memset(&input, 0, sizeof(input));
         input.project = argv[2]; input.target_path = target = argv[3]; input.target_hash = argv[4];
+#if defined(_WIN32)
         input.range_start = _strtoui64(argv[5], NULL, 10); input.range_end = _strtoui64(argv[6], NULL, 10);
+#else
+        input.range_start = strtoull(argv[5], NULL, 10); input.range_end = strtoull(argv[6], NULL, 10);
+#endif
         input.selected_text = argv[7]; input.comment = argv[8];
         input.mode = !strcmp(argv[1], "send-context") ? ATTENDANT_FEEDBACK_CONTEXT : ATTENDANT_FEEDBACK_SOURCE;
         if (strcmp(argv[9], "probe")) return 2;
@@ -50,7 +66,10 @@ int main(int argc, char **argv) {
         printf(",\"recovered\":%s", next.ok ? "true" : "false");
     }
     puts("}");
+cleanup:
     attendant_close(session);
+#if defined(_WIN32)
     for (i = 0; i < argc; i++) HeapFree(GetProcessHeap(), 0, owned[i]);
+#endif
     return code;
 }

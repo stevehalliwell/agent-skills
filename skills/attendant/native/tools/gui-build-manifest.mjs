@@ -10,15 +10,19 @@ const stack = root;
 const variant = process.env.ATTENDANT_GUI_VARIANT || '';
 assert(!variant || /^[a-z0-9][a-z0-9-]*$/.test(variant), 'Invalid ATTENDANT_GUI_VARIANT');
 export const guiDirectory = `build/gui${variant ? '-' + variant : ''}`;
+const executableSuffix = process.platform === 'win32' ? '.exe' : '';
+const library = process.platform === 'darwin' ? 'libcimgui_richmd.dylib' : 'cimgui_richmd.dll';
 const sha256 = path => createHash('sha256').update(readFileSync(path)).digest('hex');
-function stackManifest() {
+export function stackManifest() {
   const manifest = JSON.parse(readFileSync(join(stack, 'build/build-manifest.json')));
+  assert.equal(manifest.platform || 'win32', process.platform, 'GUI stack targets another platform');
+  if (manifest.architecture) assert.equal(manifest.architecture, process.arch, 'GUI stack targets another architecture');
   for (const file of manifest.files) assert.equal(sha256(join(stack, file.path)), file.sha256, `GUI stack input changed: ${file.path}`);
-  assert.equal(sha256(join(stack, 'build/bin/cimgui_richmd.dll')), manifest.dllSha256, 'GUI stack DLL changed');
+  assert.equal(sha256(join(stack, manifest.library || 'build/bin/cimgui_richmd.dll')), manifest.dllSha256, 'GUI stack library changed');
   return { sha256: sha256(join(stack, 'build/build-manifest.json')), dllSha256: manifest.dllSha256, dependencies: manifest.dependencies };
 }
 function inputFiles() {
-  const paths = ['build-gui.sh', 'tools/build-inputs.sh', 'tools/gui-build-manifest.mjs'];
+  const paths = ['build-gui.sh', 'tools/build-inputs.sh', 'tools/build-platform.sh', 'tools/build-gui-macos.sh', 'tools/gui-build-manifest.mjs'];
   function walk(folder) {
     for (const entry of readdirSync(join(root, folder), { withFileTypes: true })) {
       const path = join(folder, entry.name);
@@ -33,9 +37,10 @@ export function verifyBuild(compiler, testing = false) {
   const name = `attendant-gui-${compiler}${testing ? '-check' : ''}`;
   const manifest = JSON.parse(readFileSync(join(root, `${guiDirectory}/${name}.json`)));
   assert.equal(manifest.compiler, compiler); assert.equal(manifest.testing, testing);
+  assert.equal(manifest.platform, process.platform); assert.equal(manifest.architecture, process.arch);
   assert.deepEqual(inputFiles(), manifest.inputs, 'GUI build inputs changed; rebuild before acceptance');
   assert.deepEqual(stackManifest(), manifest.stack, 'GUI stack manifest changed; rebuild GUI');
-  assert.equal(sha256(join(root, `${guiDirectory}/cimgui_richmd.dll`)), manifest.stack.dllSha256, 'Copied GUI DLL changed');
+  assert.equal(sha256(join(root, `${guiDirectory}/${library}`)), manifest.stack.dllSha256, 'Copied GUI library changed');
   for (const file of manifest.binaries) assert.equal(sha256(join(root, file.path)), file.sha256, `GUI binary changed: ${file.path}`);
   return manifest;
 }
@@ -44,12 +49,13 @@ function writeManifest(compiler, testing) {
   const executable = process.env[compiler === 'zig' ? 'ZIG' : 'CJIT'] || compiler;
   const version = spawnSync(executable, [compiler === 'zig' ? 'version' : '--help'], { encoding: 'utf8' });
   assert.equal(version.status, 0, 'Compiler version probe failed');
-  const binaries = [join(root, `${guiDirectory}/${name}.exe`)];
-  if (testing) binaries.push(join(root, `${guiDirectory}/model-check-${compiler}.exe`));
-  const manifest = { builtAt: new Date().toISOString(), compiler, testing, compilerCommand: executable,
+  const binaries = [join(root, `${guiDirectory}/${name}${executableSuffix}`)];
+  if (testing) binaries.push(join(root, `${guiDirectory}/model-check-${compiler}${executableSuffix}`));
+  if (process.platform === 'darwin' && compiler === 'cjit') binaries.push(join(root, `${guiDirectory}/link-cjit${testing ? '-check' : ''}/${library}`));
+  const manifest = { builtAt: new Date().toISOString(), platform: process.platform, architecture: process.arch, compiler, testing, compilerCommand: executable,
     version: { status: version.status, text: (version.stdout + version.stderr).slice(0, 1000) },
     inputs: inputFiles(), stack: stackManifest(), binaries: binaries.map(path => ({ path: relative(root, path).replaceAll('\\', '/'), sha256: sha256(path) })) };
-  assert.equal(sha256(join(root, `${guiDirectory}/cimgui_richmd.dll`)), manifest.stack.dllSha256);
+  assert.equal(sha256(join(root, `${guiDirectory}/${library}`)), manifest.stack.dllSha256);
   writeFileSync(join(root, `${guiDirectory}/${name}.json`), JSON.stringify(manifest, null, 2) + '\n');
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {

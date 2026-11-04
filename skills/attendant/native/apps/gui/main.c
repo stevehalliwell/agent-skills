@@ -1,6 +1,14 @@
-/* Windows C99 workspace host; C++ dependencies stay in Zig-built GUI DLL. */
+/* C99 workspace host. C++ dependencies stay behind the GUI library's C ABI. */
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#if defined(_WIN32)
+#include <windows.h> /* GUI declarations before base.h's lean Win32 include. */
+#endif
+#include "../../src/core/platform.h"
+#if defined(__APPLE__)
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#include "ipc-macos.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +19,9 @@
 #include "workspace.h"
 #include "reveal.h"
 #include "inspect.h"
+#if defined(_WIN32)
 __declspec(dllimport) LPWSTR *WINAPI CommandLineToArgvW(LPCWSTR, int *);
+#endif
 
 typedef enum gui_action { GUI_ACTION_NONE, GUI_ACTION_CLOSE, GUI_ACTION_RELOAD, GUI_ACTION_EXIT } gui_action;
 typedef struct gui_app {
@@ -28,8 +38,9 @@ typedef struct gui_app {
     int pending_tab, pending_open, composer_active, composer_open, composer_tab, feedback_filter;
     int composer_start, composer_end, composer_from_preview;
     char *composer_preview_text, *composer_preview_context;
+    size_t composer_preview_size;
     char comment[64 * 1024];
-    DWORD last_poll;
+    uint32_t last_poll;
     ImFont *source_font;
 #ifdef ATTENDANT_GUI_TESTING
 #include "../../tests/gui/app-state.inc"
@@ -37,6 +48,7 @@ typedef struct gui_app {
 } gui_app;
 static gui_app *application;
 static void link_clicked(const char *url, void *user) { gui_open_link(&((gui_app *)user)->workspace, url); }
+#if defined(_WIN32)
 static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
     if (message == WM_COPYDATA && application && lparam) {
         const COPYDATASTRUCT *copy = (const COPYDATASTRUCT *)lparam;
@@ -57,6 +69,16 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
     if (message == WM_CLOSE) { if (application) application->request_exit = 1; return 0; }
     if (message == WM_DESTROY) { PostQuitMessage(0); return 0; }
     return DefWindowProcA(window, message, wparam, lparam);
+}
+#else
+static void window_close(GLFWwindow *window) {
+    if (application) application->request_exit = 1;
+    glfwSetWindowShouldClose(window, GLFW_FALSE);
+}
+#endif
+static void clear_composer_preview(gui_app *app) {
+    if (app->composer_preview_text) arena_memory_release(app->composer_preview_text, app->composer_preview_size);
+    app->composer_preview_text = app->composer_preview_context = NULL; app->composer_preview_size = 0;
 }
 static void show_text(const char *text) { igTextUnformatted(text, NULL); }
 static void recovery_details(gui_workspace *workspace) {
@@ -92,7 +114,7 @@ static void navigation_panel(gui_app *app) {
                 if (strcmp(collection, document->collection)) continue;
                 if (!strcmp(collection, "_meta_comments") && ((app->feedback_filter == 1 && !document->pending) || (app->feedback_filter == 2 && !document->resolved))) continue;
                 snprintf(label, sizeof(label), "%s%s%s###document-%d", document->pending ? "[pending] " : "", document->invalid ? "[invalid] " : "", document->name, j);
-                selected = workspace->active >= 0 && !_stricmp(document->path, workspace->tabs[workspace->active].path);
+                selected = workspace->active >= 0 && !source_path_compare(document->path, workspace->tabs[workspace->active].path);
                 if (igSelectable_Bool(label, selected, 0, zero)) gui_open_document(workspace, document->path);
 #ifdef ATTENDANT_GUI_TESTING
                 if (!strcmp(document->collection, "_meta_comments") && document->pending) {
@@ -116,7 +138,7 @@ static void reference_bar(gui_app *app, int index) {
     if (!navigation) return;
     for (i = 0; i < navigation->count; i++) {
         attendant_document_info *document = &navigation->documents[i];
-        if (_stricmp(document->path, tab->path)) continue;
+        if (source_path_compare(document->path, tab->path)) continue;
         for (j = 0; j < document->reference_count; j++) {
             attendant_reference *reference = &document->references[j]; char label[2048];
             snprintf(label, sizeof(label), "%s: %s%s###reference-%d", reference->field, reference->value, reference->target_path ? "" : " [unresolved]", j);
@@ -177,7 +199,7 @@ static void agent_hint_bar(gui_app *app) {
         char label[GUI_PATH + 128];
         const char *state = app->hint_path_ok ? " [not opened]" : " [path unavailable]";
         int i;
-        for (i = 0; i < GUI_TABS; i++) if (app->workspace.tabs[i].used && !_stricmp(app->hint.path, app->workspace.tabs[i].path)) {
+        for (i = 0; i < GUI_TABS; i++) if (app->workspace.tabs[i].used && !source_path_compare(app->hint.path, app->workspace.tabs[i].path)) {
             if (app->hint_path_ok) state = gui_reveal_matches(&app->hint, &app->workspace.tabs[i]) ? "" : " [stale/dirty]"; break;
         }
         if (igButton("Go to agent hint", zero)) {
@@ -209,7 +231,7 @@ static void agent_marker(gui_app *app, gui_tab *tab, ImGuiID widget) {
     crmd_text_view view;
     ImVec2 minimum, maximum, clip_minimum, clip_maximum;
     float y;
-    int matching = app->hint.version && !_stricmp(app->hint.path, tab->path);
+    int matching = app->hint.version && !source_path_compare(app->hint.path, tab->path);
     if (!matching) return;
     if (!app->hint_path_ok || !gui_reveal_matches(&app->hint, tab)) { app->scroll_hint = 0; return; }
     if (app->marker_revision != tab->text_revision) {
@@ -256,16 +278,16 @@ static void document_panel(gui_app *app, int index) {
     igBeginDisabled((selection.status != GUI_SELECTION_EXACT && selection.status != GUI_SELECTION_MAPPED && selection.status != GUI_SELECTION_CONTEXT) || selection.tab != index);
     if (igButton("Comment on selection", zero)) {
         int ready = 1;
-        if (app->composer_preview_text) VirtualFree(app->composer_preview_text, 0, MEM_RELEASE);
-        app->composer_preview_text = app->composer_preview_context = NULL;
+        clear_composer_preview(app);
         if (selection.view == GUI_SELECTION_PREVIEW) {
             size_t text_length = app->workspace.preview_text_length, context_length = app->workspace.preview_context_length;
-            char *copy = VirtualAlloc(NULL, text_length + context_length + 2, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            size_t size = text_length + context_length + 2;
+            char *copy = native_memory_allocate(size);
             ready = copy && app->workspace.preview_text && app->workspace.preview_context;
             if (ready) {
                 memcpy(copy, app->workspace.preview_text, text_length + 1); memcpy(copy + text_length + 1, app->workspace.preview_context, context_length + 1);
-                app->composer_preview_text = copy; app->composer_preview_context = copy + text_length + 1;
-            } else { if (copy) VirtualFree(copy, 0, MEM_RELEASE); snprintf(app->workspace.error, sizeof(app->workspace.error), "Cannot freeze preview selection context"); }
+                app->composer_preview_text = copy; app->composer_preview_context = copy + text_length + 1; app->composer_preview_size = size;
+            } else { if (copy) arena_memory_release(copy, size); snprintf(app->workspace.error, sizeof(app->workspace.error), "Cannot freeze preview selection context"); }
         }
         if (ready) {
             app->composer_tab = index; app->composer_active = app->composer_open = 1; app->comment[0] = 0;
@@ -416,8 +438,7 @@ static void draw_dialogs(gui_app *app) {
                 if (app->composer_from_preview ? gui_send_preview_comment(workspace, app->composer_tab, app->composer_start, app->composer_end, app->composer_preview_context, app->comment) :
                     gui_send_comment(workspace, app->composer_tab, app->composer_start, app->composer_end, app->comment)) {
                     app->composer_active = 0; igCloseCurrentPopup();
-                    if (app->composer_preview_text) VirtualFree(app->composer_preview_text, 0, MEM_RELEASE);
-                    app->composer_preview_text = app->composer_preview_context = NULL;
+                    clear_composer_preview(app);
 #ifdef ATTENDANT_GUI_TESTING
                     app->sent_comments++;
 #endif
@@ -435,8 +456,7 @@ static void draw_dialogs(gui_app *app) {
         igEndDisabled(); igSameLine(0, -1);
         if (igButton("Cancel", zero) || igIsKeyPressed_Bool(ImGuiKey_Escape, false)) {
             app->composer_active = 0; igCloseCurrentPopup();
-            if (app->composer_preview_text) VirtualFree(app->composer_preview_text, 0, MEM_RELEASE);
-            app->composer_preview_text = app->composer_preview_context = NULL;
+            clear_composer_preview(app);
         }
 #ifdef ATTENDANT_GUI_TESTING
         app->composer_cancel_position = item_center();
@@ -507,11 +527,11 @@ static void draw_workspace(gui_app *app) {
 }
 static int load_fonts(gui_app *app, const char *assets) {
     const char *names[] = {"fonts/Roboto/Roboto-Regular.ttf", "fonts/Inconsolata-Medium.ttf", "fonts/Roboto/Roboto-Bold.ttf", "fonts/Roboto/Roboto-RegularItalic.ttf", "fonts/Roboto/Roboto-BoldItalic.ttf"};
-    char paths[5][GUI_PATH]; wchar_t wide[4096]; int i;
+    char paths[5][GUI_PATH]; int i;
     ImFontConfig *merge;
     for (i = 0; i < 5; i++) {
         int length = snprintf(paths[i], sizeof(paths[i]), "%s/%s", assets, names[i]);
-        if (length < 0 || length >= GUI_PATH || !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, paths[i], -1, wide, 4096) || GetFileAttributesW(wide) == INVALID_FILE_ATTRIBUTES) return 0;
+        if (length < 0 || length >= GUI_PATH || source_stat(paths[i]).kind != SOURCE_REGULAR) return 0;
     }
     igGetIO_Nil()->FontDefault = ImFontAtlas_AddFontFromFileTTF(igGetIO_Nil()->Fonts, paths[0], 16.0f, NULL, NULL);
     app->source_font = ImFontAtlas_AddFontFromFileTTF(igGetIO_Nil()->Fonts, paths[1], 16.0f, NULL, NULL);
@@ -528,17 +548,26 @@ int main(int argc, char **argv) {
     const char *project = NULL, *assets = NULL, *initial = NULL, *shot = NULL, *reveal = NULL;
     uint32_t reveal_line = 1;
     int line_supplied = 0, inspect = 0;
+#if defined(_WIN32)
     char *owned[32] = {0};
     LPWSTR *arguments;
+#endif
     int frame_limit = 0, frame = 0, code = 1, i, gui_ready = 0;
 #ifdef ATTENDANT_GUI_TESTING
     int exercise = 0, edit_exercise = 0, save_fail_exercise = 0, preview_exercise = 0, reveal_exercise = 0, selection_exercise = 0;
 #endif
     bool running = true;
+#if defined(_WIN32)
     HWND window = NULL;
     WNDCLASSA description;
-    ImGuiContext *context = NULL;
     MSG message;
+#else
+    GLFWwindow *window = NULL;
+    gui_ipc_server server = {0};
+    int glfw_ready = 0;
+#endif
+    ImGuiContext *context = NULL;
+#if defined(_WIN32)
     arguments = CommandLineToArgvW(GetCommandLineW(), &argc);
     if (!arguments) return gui_reveal_error(1, "argument-conversion", "Cannot decode Windows arguments");
     if (argc > 32) { LocalFree(arguments); return usage(stderr, 2); }
@@ -552,6 +581,10 @@ int main(int argc, char **argv) {
         }
     }
     LocalFree(arguments); argv = owned;
+#else
+    if (argc > 32) return usage(stderr, 2);
+    for (i = 0; i < argc; i++) if (!string_view_utf8_valid(string_view_from_cstr(argv[i]))) return usage(stderr, 2);
+#endif
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--help")) return usage(stdout, 0);
 #ifdef ATTENDANT_GUI_TESTING
@@ -580,11 +613,13 @@ int main(int argc, char **argv) {
         if (exercise || edit_exercise || preview_exercise || reveal_exercise || selection_exercise) return usage(stderr, 2);
 #endif
         code = inspect ? gui_inspect(project) : gui_reveal_send(project, reveal, reveal_line);
+#if defined(_WIN32)
         for (i = 0; i < argc; i++) HeapFree(GetProcessHeap(), 0, owned[i]);
+#endif
         return code;
     }
     if (!project || !assets || line_supplied || (shot && !frame_limit)) return usage(stderr, 2);
-    application = VirtualAlloc(NULL, sizeof(*application), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    application = native_memory_allocate(sizeof(*application));
     if (!application) return 3;
     application->shown_activation = -1;
 #ifdef ATTENDANT_GUI_TESTING
@@ -595,10 +630,22 @@ int main(int argc, char **argv) {
 #ifdef ATTENDANT_GUI_TESTING
 #include "../../tests/gui/ownership.inc"
 #endif
+#if defined(_WIN32)
     memset(&description, 0, sizeof(description)); description.lpfnWndProc = window_proc;
     description.hInstance = GetModuleHandleA(NULL); description.lpszClassName = GUI_WINDOW_CLASS;
     description.hCursor = LoadCursorA(NULL, IDC_ARROW);
     if (!RegisterClassA(&description)) goto cleanup;
+#else
+    if (!glfwInit()) { fprintf(stderr, "Cannot initialize GLFW\n"); goto cleanup; }
+    glfw_ready = 1;
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+    window = glfwCreateWindow(1440, 1000, "Attendant - shared Markdown workspace", NULL, NULL);
+    if (!window) goto cleanup;
+    glfwMakeContextCurrent(window); glfwSwapInterval(1);
+    glfwSetWindowCloseCallback(window, window_close);
+#endif
     context = igCreateContext(NULL); igGetIO_Nil()->IniFilename = NULL; igStyleColorsDark(NULL);
 #ifdef ATTENDANT_GUI_TESTING
     if (selection_exercise) igGetIO_Nil()->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -609,24 +656,39 @@ int main(int argc, char **argv) {
         const size_t layout[] = {sizeof(ImGuiStoragePair), offsetof(ImGuiStoragePair, value), sizeof(ImGuiStyleMod), offsetof(ImGuiStyleMod, backup), sizeof(ImGuiInputEvent), offsetof(ImGuiInputEvent, event)};
         if (!crmd_check_cimgui_layout(layout, sizeof(layout) / sizeof(layout[0]))) goto cleanup;
     }
+#if defined(_WIN32)
     window = CreateWindowExA(0, description.lpszClassName, "Attendant - shared Markdown workspace", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 1440, 1000, NULL, NULL, description.hInstance, NULL);
     if (!window || !crmd_init(window, assets, link_clicked, application)) { fprintf(stderr, "%s\n", crmd_error()); goto cleanup; }
     gui_ready = 1; ShowWindow(window, SW_SHOWDEFAULT); UpdateWindow(window);
+#else
+    if (!crmd_init(window, assets, link_clicked, application)) { fprintf(stderr, "%s\n", crmd_error()); goto cleanup; }
+    gui_ready = 1;
+    application->inspection = native_memory_allocate(sizeof(*application->inspection));
+    if (!application->inspection || !gui_ipc_start(&server)) { fprintf(stderr, "Cannot start local GUI control endpoint\n"); goto cleanup; }
+#endif
     while (running) {
+#if defined(_WIN32)
         while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
             if (message.message == WM_QUIT) running = false;
             TranslateMessage(&message); DispatchMessageA(&message);
         }
+#else
+        glfwPollEvents();
+        gui_ipc_poll(&server, &application->workspace, &application->pending_hint, &application->pending_hint_ready, application->inspection);
+#ifdef ATTENDANT_GUI_TESTING
+        application->inspection_requests = (int)server.inspections;
+#endif
+#endif
 #ifdef ATTENDANT_GUI_TESTING
         /* Owned mutable fixtures stop at bound; final checks reject incomplete work. */
         if ((reveal_exercise || edit_exercise || preview_exercise || selection_exercise) && frame_limit && frame >= frame_limit) break;
 #endif
         if (frame_limit && frame >= frame_limit && !application->exit_cancelled) { application->bound_reached = 1; application->request_exit = 1; }
         if (!running || (application->request_exit && !dirty_documents(&application->workspace) && !application->composer_active && application->pending_action == GUI_ACTION_NONE)) break;
-        if (!application->composer_active && application->pending_action == GUI_ACTION_NONE && GetTickCount() - application->last_poll > 1000) {
+        if (!application->composer_active && application->pending_action == GUI_ACTION_NONE && system_milliseconds() - application->last_poll > 1000) {
             if (application->workspace.active >= 0) gui_check_external(&application->workspace, application->workspace.active);
-            application->last_poll = GetTickCount();
+            application->last_poll = system_milliseconds();
         }
 #ifdef ATTENDANT_GUI_TESTING
         exercise_input(application, window, frame);
@@ -636,7 +698,7 @@ int main(int argc, char **argv) {
         /* Later human navigation cancels an unrendered Go; incoming hints do not. */
         if (application->scroll_hint && (application->workspace.active < 0 ||
             (application->shown_activation == application->workspace.activation &&
-             _stricmp(application->hint.path, application->workspace.tabs[application->workspace.active].path)))) application->scroll_hint = 0;
+             source_path_compare(application->hint.path, application->workspace.tabs[application->workspace.active].path)))) application->scroll_hint = 0;
         /* Do not retarget a Go click/key or its queued scroll. Update after release. */
         if (application->pending_hint_ready && !application->scroll_hint && !igIsAnyMouseDown() && !igIsMouseReleased_Nil(0) &&
             !igIsKeyDown_Nil(ImGuiKey_Enter) && !igIsKeyReleased_Nil(ImGuiKey_Enter) &&
@@ -649,7 +711,7 @@ int main(int argc, char **argv) {
         draw_workspace(application);
         if (application->render_failed) {
             fprintf(stderr, "Render failure: frame abandoned without normal teardown. %s\n", crmd_error());
-#ifndef ATTENDANT_GUI_TESTING
+#if defined(_WIN32) && !defined(ATTENDANT_GUI_TESTING)
             MessageBoxA(window, "Markdown renderer failed. Workspace will close without saving unsaved buffers. No source changes were made by this failure.", "Attendant render failure", MB_OK | MB_ICONERROR);
 #endif
             goto cleanup;
@@ -670,7 +732,13 @@ int main(int argc, char **argv) {
 cleanup:
     if (gui_ready && !crmd_shutdown()) code = 1;
     if (crmd_live_images()) code = 1;
+#if defined(_WIN32)
     if (window) DestroyWindow(window);
+#else
+    gui_ipc_stop(&server);
+    if (window) glfwDestroyWindow(window);
+    if (glfw_ready) glfwTerminate();
+#endif
     if (context) igDestroyContext(context);
     if (!code) {
         printf("{\"ok\":true,\"frames\":%d,\"tabs\":%d,\"vertices\":%d", frame, application->workspace.tab_count, crmd_vertex_count());
@@ -679,10 +747,12 @@ cleanup:
 #endif
         puts("}");
     } else fprintf(stderr, "GUI initialization, exercise, rendering or cleanup failed: %s\n", crmd_error());
-    if (application->composer_preview_text) VirtualFree(application->composer_preview_text, 0, MEM_RELEASE);
-    if (application->inspection) VirtualFree(application->inspection, 0, MEM_RELEASE);
-    gui_workspace_destroy(&application->workspace); VirtualFree(application, 0, MEM_RELEASE); application = NULL;
+    clear_composer_preview(application);
+    if (application->inspection) arena_memory_release(application->inspection, sizeof(*application->inspection));
+    gui_workspace_destroy(&application->workspace); arena_memory_release(application, sizeof(*application)); application = NULL;
+#if defined(_WIN32)
     UnregisterClassA(GUI_WINDOW_CLASS, GetModuleHandleA(NULL));
     for (i = 0; i < argc; i++) HeapFree(GetProcessHeap(), 0, owned[i]);
+#endif
     return code;
 }

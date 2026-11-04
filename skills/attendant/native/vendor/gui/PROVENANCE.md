@@ -9,8 +9,9 @@ Imported from accepted runtime spike `330136285cb1470ccecc00ca244894c9de2122a3`,
 - RichMd: `609039721f838108251520079fff79011cf46659`, <https://github.com/pthom/imgui_rich_md>, MIT; includes separate third-party notices/assets.
 - MD4C: `481fbfbdf72daab2912380d62bb5f2187d438408`, <https://github.com/mity/md4c>, MIT.
 - LuaJIT, generation only: `a4c064539ea931274d407e1249b4bb575424a0f4`, <https://github.com/LuaJIT/LuaJIT>, MIT.
+- GLFW, macOS only: `7b6aead9fb88b3623e3b3725ebb42670cbe4c579` (3.4), <https://github.com/glfw/glfw>, zlib/libpng license. Cocoa/OpenGL3 window/input backend follows upstream RichMd example stack; Windows retains Win32/D3D11.
 
-Retain upstream license/notices with redistributed DLL/assets; font and embedded third-party notices remain in pinned checkouts. No claim of completed distribution/license audit.
+Retain upstream license/notices with redistributed library/assets; font and embedded third-party notices remain in pinned checkouts. No claim of completed distribution/license audit.
 
 Required deterministic patches:
 
@@ -18,6 +19,6 @@ Required deterministic patches:
 2. Remove known duplicate generated C typedefs; name three C-view anonymous unions for C99. GUI startup verifies sizes/union offsets against C++ DLL.
 3. Reconstruct four RichMd file patches from pinned originals: genuine/synthetic run provenance, strict source proof, selectable preview/context, edge scrolling and invalidation/ownership. Refuse unknown changes or missing expected patch.
 
-Build verifies revisions/allowed tracked edits offline and regenerates wrappers. Stack manifest hashes maintained inputs, dependency/generated files, generator and DLL; GUI manifests bind application binaries to stack. Use one cimgui/ImGui implementation in DLL; never mix wrapper revisions.
+Build verifies revisions/allowed tracked edits offline and regenerates wrappers. Stack manifest hashes maintained inputs, dependency/generated files, generator and native library; records host/backend. GUI manifests bind application binaries to stack. Use one cimgui/ImGui implementation in native library; never mix wrapper revisions.
 
 `imgui_demo.cpp` remains because full generated cimgui exports reference its entry points. Separate spike host and historical comparison harnesses are not imported.

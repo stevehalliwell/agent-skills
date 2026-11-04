@@ -5,7 +5,8 @@
 #define GUI_INSPECT_RESULT 0x41544932u
 #define GUI_INSPECT_BUSY 0x41544933u
 #define GUI_INSPECT_CLIENT_CLASS "AttendantWorkspaceInspector"
-/* Same-desktop read-only inspection, not authentication/edit authority.
+/* Read-only inspection: Windows desktop / macOS same UID across sessions.
+ * Not application authentication or edit authority.
  * Header and selected UTF-8 bytes only. No pointers. Snapshot uses live buffer. */
 typedef struct gui_inspection_header {
     uint32_t version, has_document, dirty, view, status, start, end, length, context_length;
@@ -19,7 +20,9 @@ typedef struct gui_inspection {
 int gui_inspection_snapshot(const gui_workspace *workspace, gui_inspection *output);
 int gui_inspection_json(const gui_inspection *snapshot, char *output, size_t capacity);
 int gui_inspection_accept(gui_inspection *output, const char *project, const void *data, size_t size);
+#if defined(_WIN32)
 uintptr_t gui_inspection_receive(HWND window, HWND client, const gui_workspace *workspace,
     int busy, gui_inspection *output, const void *data, size_t size);
+#endif
 int gui_inspect(const char *project);
 #endif

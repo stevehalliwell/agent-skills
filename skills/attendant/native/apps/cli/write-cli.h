@@ -5,13 +5,13 @@ static int safe_stem(const char *name) {
     size_t length = strlen(name);
     if (!length || !((*name >= 'A' && *name <= 'Z') || (*name >= 'a' && *name <= 'z') || (*name >= '0' && *name <= '9'))) return 0;
     for (p = name; *p; p++) if (!( (*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || (*p >= '0' && *p <= '9') || *p == '_' || *p == '-')) return 0;
-    if (!_stricmp(name, "CON") || !_stricmp(name, "PRN") || !_stricmp(name, "AUX") || !_stricmp(name, "NUL")) return 0;
-    if (length == 4 && (!_strnicmp(name, "COM", 3) || !_strnicmp(name, "LPT", 3)) && name[3] >= '1' && name[3] <= '9') return 0;
+    if (!source_case_compare(name, "CON") || !source_case_compare(name, "PRN") || !source_case_compare(name, "AUX") || !source_case_compare(name, "NUL")) return 0;
+    if (length == 4 && (!source_case_compare_n(name, "COM", 3) || !source_case_compare_n(name, "LPT", 3)) && name[3] >= '1' && name[3] <= '9') return 0;
     return 1;
 }
 static int native_add_table(context *c, read_options *options) {
     const char *directory = full_path(c, options->project, options->directory);
-    const char *base = strrchr(directory, '\\'), *name = options->alias ? trim(copy_text(c, options->alias, strlen(options->alias))) : base ? base + 1 : directory;
+    const char *name = options->alias ? trim(copy_text(c, options->alias, strlen(options->alias))) : source_basename(directory);
     const char *config_path = full_path(c, options->project, ".pi/attendant.tables"), *config, *line, *next_config;
     const char *paths[3], *texts[] = {"---\n---\n", "", ""}, *staged[3], *staged_config;
     char *out = allocate(c, 65536);
@@ -20,16 +20,16 @@ static int native_add_table(context *c, read_options *options) {
     int i;
     c->error_code = "add-table-input";
     if (!*name || !safe_stem(name) || !strncmp(name, "__attendant_", 12)) fail(c, "Collection name must be a safe non-reserved filename stem");
-    if (!_stricmp(directory, options->project) || (!absolute_path(options->directory) && !inside_project(options->project, directory))) fail(c, "Relative collection path must be inside the project and not its root");
+    if (!source_path_compare(directory, options->project) || (!absolute_path(options->directory) && !inside_project(options->project, directory))) fail(c, "Relative collection path must be inside the project and not its root");
     {
         const char *state = full_path(c, options->project, ".attendant");
-        if (!_stricmp(directory, state) || inside_project(state, directory)) fail(c, "Source collections must not be inside disposable .attendant state");
+        if (!source_path_compare(directory, state) || inside_project(state, directory)) fail(c, "Source collections must not be inside disposable .attendant state");
     }
     load_config(c, options->project);
     if (c->collection_count >= MAX_COLLECTIONS) fail(c, "Collection capacity exceeded");
     if (!c->config_hash || c->diagnostic_count) fail(c, "Cannot add collection to invalid config/schema");
     for (i = 0; i < c->collection_count; i++) {
-        if (!_stricmp(name, c->collections[i].name) || !lstrcmpiW(wide(c, directory), wide(c, full_path(c, ".", c->collections[i].directory)))) fail(c, "Collection name or directory is already configured");
+        if (!source_case_compare(name, c->collections[i].name) || !source_path_compare(directory, full_path(c, ".", c->collections[i].directory))) fail(c, "Collection name or directory is already configured");
     }
     require_empty_directory(c, directory);
     config = read_text(c, config_path, NULL);
@@ -133,8 +133,7 @@ static int parse_items(context *c, const char *text, write_request *requests) {
 }
 static const char *template_body(context *c, collection *table) {
     const char *path = full_path(c, table->directory, ".template.md"), *text, *body = NULL, *p;
-    DWORD attributes = GetFileAttributesW(wide(c, path));
-    if (attributes == INVALID_FILE_ATTRIBUTES && (GetLastError() == ERROR_FILE_NOT_FOUND || GetLastError() == ERROR_PATH_NOT_FOUND)) return "";
+    if (source_stat(path).kind == SOURCE_MISSING) return "";
     text = read_text(c, path, NULL);
     if (strncmp(text, "---\n", 4) && strncmp(text, "---\r\n", 5)) return text;
     p = strchr(text, '\n') + 1;
@@ -170,20 +169,20 @@ static int native_write_records(context *c, read_options *options) {
     if (!table) fail(c, "Unknown collection: %s", options->collection);
     {
         const char *state = full_path(c, options->project, ".attendant"), *source = full_path(c, ".", table->directory);
-        if (!_stricmp(source, state) || inside_project(state, source)) fail(c, "Source collections must not be inside disposable .attendant state");
+        if (!source_path_compare(source, state) || inside_project(state, source)) fail(c, "Source collections must not be inside disposable .attendant state");
     }
     original_count = c->record_count;
     if (creating && count > MAX_RECORDS - original_count) fail(c, "Record capacity exceeded");
     for (i = 0; i < count; i++) {
         write_request *item = &requests[i];
         if (!item->name || !safe_stem(item->name)) fail(c, "Record name must be a safe non-device filename stem");
-        for (j = 0; j < i; j++) if (!_stricmp(item->name, requests[j].name)) fail(c, "Repeated target name in batch: %s", item->name);
+        for (j = 0; j < i; j++) if (!source_case_compare(item->name, requests[j].name)) fail(c, "Repeated target name in batch: %s", item->name);
         if (!creating && (!item->fields_present || !item->fields.count)) fail(c, "Update fields must be a non-empty JSON object");
         preflight_writable_fields(c, table, &item->fields);
         item->path = full_path(c, table->directory, format_text(c, "%s.md", item->name));
-        for (j = 0; j < original_count; j++) if (!_stricmp(item->path, c->records[j].path)) break;
+        for (j = 0; j < original_count; j++) if (!source_path_compare(item->path, c->records[j].path)) break;
         if (creating) {
-            if (GetFileAttributesW(wide(c, item->path)) != INVALID_FILE_ATTRIBUTES || (GetLastError() != ERROR_FILE_NOT_FOUND && GetLastError() != ERROR_PATH_NOT_FOUND)) fail(c, "Record target exists or cannot be checked: %s", item->path);
+            if (source_exists(item->path)) fail(c, "Record target exists or cannot be checked: %s", item->path);
         } else {
             if (j == original_count) fail(c, "Record was not found: %s", item->name);
             item->target = &c->records[j]; item->path = item->target->path;
@@ -196,11 +195,12 @@ static int native_write_records(context *c, read_options *options) {
         write_request *item = &requests[i];
         record *r;
         if (creating) {
-            FILETIME now;
+            source_time now = source_now();
+            if (!now) fail(c, "System clock unavailable");
             value empty = {0}; empty.kind = VALUE_ARRAY;
             r = &c->records[c->record_count++]; item->target = r; r->path = item->path; r->owner = table;
             mapping_set(c, &r->front, "id", text_value(uuid_v7(c))); mapping_set(c, &r->front, "name", text_value(item->name));
-            GetSystemTimeAsFileTime(&now); mapping_set(c, &r->front, "created_at", text_value(iso_time(c, now)));
+            mapping_set(c, &r->front, "created_at", text_value(iso_time(c, now)));
             mapping_set(c, &r->front, "desc", text_value("")); mapping_set(c, &r->front, "tags", empty);
             for (j = 0; j < table->field_count; j++) {
                 field *f = &table->fields[j];

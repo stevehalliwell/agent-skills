@@ -19,8 +19,8 @@ static value yaml_scalar(context *c, yaml_node_t *node, mapping *result) {
     v.kind = VALUE_STRING; v.text = copy_text(c, text, node->data.scalar.length);
     if (node->data.scalar.length != strlen(text)) { result->problem = "NUL in YAML scalar is unsupported."; return v; }
     if (node->data.scalar.style != YAML_PLAIN_SCALAR_STYLE) return v;
-    if (!*text || !strcmp(text, "~") || !_stricmp(text, "null")) v.kind = VALUE_NULL;
-    else if (!_stricmp(text, "true") || !_stricmp(text, "false")) { v.kind = VALUE_BOOL; v.number.real = !_stricmp(text, "true"); }
+    if (!*text || !strcmp(text, "~") || !source_case_compare(text, "null")) v.kind = VALUE_NULL;
+    else if (!source_case_compare(text, "true") || !source_case_compare(text, "false")) { v.kind = VALUE_BOOL; v.number.real = !source_case_compare(text, "true"); }
     else if (strchr("0123456789-+.", *text)) {
         const char *number_text = *text == '+' || *text == '-' ? text + 1 : text;
         number_parse parsed;
@@ -29,7 +29,7 @@ static value yaml_scalar(context *c, yaml_node_t *node, mapping *result) {
         }
         parsed = parse_number(text, &v);
         if (parsed == NUMBER_INVALID) result->problem = "Decimal number exceeds i64/u64 or finite f64 range.";
-        else if (parsed == NUMBER_NOT_NUMERIC && (!strncmp(text, "0x", 2) || !strncmp(text, "0o", 2) || !_stricmp(text, ".nan") || !_stricmp(text, ".inf") || !_stricmp(text, "+.inf") || !_stricmp(text, "-.inf")))
+        else if (parsed == NUMBER_NOT_NUMERIC && (!strncmp(text, "0x", 2) || !strncmp(text, "0o", 2) || !source_case_compare(text, ".nan") || !source_case_compare(text, ".inf") || !source_case_compare(text, "+.inf") || !source_case_compare(text, "-.inf")))
             result->problem = "Non-decimal or nonfinite YAML number is unsupported.";
     }
     return v;

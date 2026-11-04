@@ -1,6 +1,11 @@
 /* Local, bounded, latest-location IPC. No source writes or automatic navigation. */
 #define WIN32_LEAN_AND_MEAN
 #include "reveal.h"
+#include "../../src/core/platform.h"
+#if defined(__APPLE__)
+#include "ipc-macos.h"
+#include <sys/mount.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #define JSONB_API static inline
@@ -28,6 +33,7 @@ int gui_reveal_has_line(const char *text, uint32_t line) {
     return line <= count;
 }
 int gui_reveal_ordinary_path(const char *path) {
+#if defined(_WIN32)
     wchar_t wide[4096], drive[4];
     DWORD attributes;
     UINT kind;
@@ -46,19 +52,46 @@ int gui_reveal_ordinary_path(const char *path) {
     attributes = GetFileAttributesW(wide);
     if (attributes == INVALID_FILE_ATTRIBUTES) return GetLastError() == ERROR_FILE_NOT_FOUND;
     return !(attributes & FILE_ATTRIBUTE_REPARSE_POINT);
+#else
+    char prefix[SOURCE_PATH_CAPACITY];
+    if (!path || *path != '/' || strlen(path) >= sizeof(prefix)) return 0;
+    snprintf(prefix, sizeof(prefix), "%s", path);
+    for (size_t i = 1; ; i++) {
+        if (prefix[i] && prefix[i] != '/') continue;
+        char saved = prefix[i]; prefix[i] = 0;
+        source_kind kind = source_stat(prefix).kind;
+        if (kind == SOURCE_LINK) {
+            /* Standard macOS aliases are OS-owned, not application links. */
+            char resolved[SOURCE_PATH_CAPACITY];
+            const char *expected = !strcmp(prefix, "/tmp") ? "/private/tmp" : !strcmp(prefix, "/var") ? "/private/var" : !strcmp(prefix, "/etc") ? "/private/etc" : NULL;
+            if (!expected || !realpath(prefix, resolved) || strcmp(resolved, expected)) return 0;
+        } else if (kind != SOURCE_DIRECTORY && (saved || (kind != SOURCE_REGULAR && kind != SOURCE_MISSING))) return 0;
+        if (kind != SOURCE_MISSING) {
+            struct statfs volume;
+            if (statfs(prefix, &volume) || !(volume.f_flags & MNT_LOCAL)) return 0;
+        }
+        prefix[i] = saved;
+        if (!saved) break;
+    }
+    return 1;
+#endif
 }
 int gui_reveal_matches(const gui_reveal *hint, const gui_tab *tab) {
     return hint->version == 1 && tab->used && !tab->dirty && !tab->external_change &&
-        !_stricmp(hint->path, tab->path) && !strcmp(hint->hash, tab->hash);
+        !source_path_compare(hint->path, tab->path) && !strcmp(hint->hash, tab->hash);
 }
 static int path_allowed(const gui_workspace *workspace, const char *path) {
     size_t length = strlen(workspace->root);
     int i;
+#if defined(_WIN32)
     if (!_strnicmp(workspace->root, path, length) &&
         (workspace->root[length - 1] == '\\' || path[length] == '\\')) return 1;
+#else
+    if (!strncmp(workspace->root, path, length) && (length == 1 || path[length] == '/')) return 1;
+#endif
     if (workspace->navigation) for (i = 0; i < workspace->navigation->count; i++)
-        if (!_stricmp(path, workspace->navigation->documents[i].path)) return 1;
-    for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].used && !_stricmp(path, workspace->tabs[i].path)) return 1;
+        if (!source_path_compare(path, workspace->navigation->documents[i].path)) return 1;
+    for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].used && !source_path_compare(path, workspace->tabs[i].path)) return 1;
     return 0;
 }
 uintptr_t gui_reveal_receive(const gui_workspace *workspace, gui_reveal *pending,
@@ -73,12 +106,12 @@ uintptr_t gui_reveal_receive(const gui_workspace *workspace, gui_reveal *pending
     memcpy(&incoming, data, sizeof(incoming)); request = &incoming;
     if (!memchr(request->project, 0, GUI_PATH) || !memchr(request->path, 0, GUI_PATH) ||
         !memchr(request->hash, 0, 65) || request->version != 1) return 0;
-    if (!gui_full_path(NULL, request->project, absolute) || _stricmp(absolute, workspace->root)) return 0;
+    if (!gui_full_path(NULL, request->project, absolute) || source_path_compare(absolute, workspace->root)) return 0;
     if (operation == GUI_REVEAL_QUERY && !*request->path) return GUI_REVEAL_MATCH;
     length = strlen(request->path);
-    if (length < 3 || _stricmp(request->path + length - 3, ".md")) return 0;
+    if (length < 3 || source_case_compare(request->path + length - 3, ".md")) return 0;
     for (i = 0; i < length; i++) if ((unsigned char)request->path[i] < 32) return 0;
-    if (!gui_full_path(NULL, request->path, absolute) || _stricmp(absolute, request->path) ||
+    if (!gui_full_path(NULL, request->path, absolute) || source_path_compare(absolute, request->path) ||
         !path_allowed(workspace, absolute)) return 0;
     if (operation == GUI_REVEAL_QUERY) return GUI_REVEAL_ALLOWED;
     if (!pending || !ready || !request->line || request->line > GUI_TEXT + 1u || strlen(request->hash) != 64) return 0;
@@ -87,6 +120,7 @@ uintptr_t gui_reveal_receive(const gui_workspace *workspace, gui_reveal *pending
     memcpy(pending, request, sizeof(*pending)); *ready = 1;
     return GUI_REVEAL_ACCEPTED;
 }
+#if defined(_WIN32)
 static int deliver(HWND window, uintptr_t operation, const gui_reveal *request, DWORD timeout, uintptr_t *reply) {
     COPYDATASTRUCT copy;
     DWORD_PTR result = 0;
@@ -126,7 +160,7 @@ int gui_reveal_test_discovery_limits(void) {
     return find_window(NULL, (LPARAM)&discovery) && !discovery.failed && discovery.visited == 1;
 }
 #endif
-HWND gui_find_workspace(const char *project, int *status) {
+gui_endpoint gui_find_workspace(const char *project, int *status) {
     gui_reveal request;
     reveal_discovery discovery;
     const char *code = NULL, *message = NULL;
@@ -148,9 +182,16 @@ HWND gui_find_workspace(const char *project, int *status) {
     if (code) { *status = gui_reveal_error(1, code, message); return NULL; }
     *status = 0; return discovery.window;
 }
+#else
+static int deliver(gui_endpoint endpoint, uintptr_t operation, const gui_reveal *request, uint32_t timeout, uintptr_t *reply) {
+    uint32_t result = 0;
+    if (gui_ipc_call(endpoint, (uint32_t)operation, request, timeout, &result, NULL, NULL) != 1) return 0;
+    *reply = result; return 1;
+}
+#endif
 int gui_reveal_send(const char *project, const char *path, uint32_t line) {
     gui_reveal request;
-    HWND window;
+    gui_endpoint window;
     attendant_session *session;
     attendant_result source;
     uintptr_t reply;
@@ -163,7 +204,7 @@ int gui_reveal_send(const char *project, const char *path, uint32_t line) {
         return gui_reveal_error(1, "reveal-not-allowed", "Target must be Markdown inside project or a registered/open document; recipient may also have closed");
     if (!line || line > GUI_TEXT + 1u) return gui_reveal_error(2, "invalid-line", "Line must be between 1 and 4194305");
     if (!gui_reveal_ordinary_path(request.project) || !gui_reveal_ordinary_path(request.path))
-        return gui_reveal_error(1, "unsupported-path", "Reveal requires accessible ordinary local drive paths without reparse ancestry; editor remains available");
+        return gui_reveal_error(1, "unsupported-path", "Reveal requires accessible ordinary local paths without application-link ancestry; editor remains available");
     session = attendant_open();
     if (!session) return gui_reveal_error(1, "capacity", "Cannot allocate source read session");
     source = attendant_read_document(session, request.path);
@@ -178,9 +219,9 @@ int gui_reveal_send(const char *project, const char *path, uint32_t line) {
 #ifdef ATTENDANT_GUI_TESTING
     /* Test-only stale-source sender; production contains no override. */
     {
-        char override[65]; DWORD length = GetEnvironmentVariableA("ATTENDANT_GUI_TEST_REVEAL_HASH", override, sizeof(override));
-        if (length) {
-            if (length != 64) return gui_reveal_error(2, "test-hash", "Test hash must have 64 lowercase hex digits");
+        const char *override = getenv("ATTENDANT_GUI_TEST_REVEAL_HASH");
+        if (override && *override) {
+            if (strlen(override) != 64) return gui_reveal_error(2, "test-hash", "Test hash must have 64 lowercase hex digits");
             memcpy(request.hash, override, 65);
         }
     }

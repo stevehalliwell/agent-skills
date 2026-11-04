@@ -6,7 +6,7 @@
     int before_active, before_tabs, before_activation, before_start, before_end;
     uint64_t before_revision;
     ImGuiID before_widget;
-    HWND before_focus, before_foreground;
+    uintptr_t before_focus, before_foreground;
     crmd_text_view before_view;
     ImVec2 before_editor, hint_go_position;
     ImVec2 preview_position;

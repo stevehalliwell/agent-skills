@@ -1,6 +1,8 @@
 /* Source edits own only requested value spans or appended fields. Never emit an
    existing document through LibYAML: comments, style and body stay source-owned. */
+#if defined(_WIN32)
 __declspec(dllimport) LONG WINAPI BCryptGenRandom(void *, PUCHAR, ULONG, ULONG);
+#endif
 /* Escape characters JSON permits literally but YAML folds or rejects. */
 static int yaml_escape_width(const unsigned char *p) {
     int width = yaml_linebreak_width(p);
@@ -45,13 +47,16 @@ static void mapping_set(context *c, mapping *map, const char *key, value data) {
 }
 static const char *uuid_v7(context *c) {
     unsigned char bytes[16];
-    FILETIME now;
-    ULARGE_INTEGER ticks;
-    ULONGLONG milliseconds;
+    source_time now = source_now();
+    u64 milliseconds;
     char text[37];
+    if (!now) fail(c, "System clock unavailable");
+#if defined(_WIN32)
     if (BCryptGenRandom(NULL, bytes, sizeof(bytes), 2 /* BCRYPT_USE_SYSTEM_PREFERRED_RNG */) < 0) fail(c, "Windows secure random source unavailable");
-    GetSystemTimeAsFileTime(&now); ticks.LowPart = now.dwLowDateTime; ticks.HighPart = now.dwHighDateTime;
-    milliseconds = (ticks.QuadPart - 116444736000000000ULL) / 10000ULL;
+#else
+    arc4random_buf(bytes, sizeof(bytes));
+#endif
+    milliseconds = (now - SOURCE_UNIX_EPOCH) / 10000ULL;
     bytes[0] = (unsigned char)(milliseconds >> 40); bytes[1] = (unsigned char)(milliseconds >> 32);
     bytes[2] = (unsigned char)(milliseconds >> 24); bytes[3] = (unsigned char)(milliseconds >> 16);
     bytes[4] = (unsigned char)(milliseconds >> 8); bytes[5] = (unsigned char)milliseconds;
@@ -67,34 +72,34 @@ static const char *parent_path(context *c, const char *path) {
 }
 static const char *stage_source(context *c, const char *target, const char *text) {
     const char *temporary;
-    HANDLE file;
-    DWORD written;
+    void *file;
     int ok;
     size_t length = strlen(text);
     c->error_path = target;
-    temporary = format_text(c, "%s\\.attendant-%s.tmp", parent_path(c, target), uuid_v7(c));
+    temporary = full_path(c, parent_path(c, target), format_text(c, ".attendant-%s.tmp", uuid_v7(c)));
     if (length > TEXT_CAPACITY) fail(c, "Generated source exceeds 4 MiB capacity");
     if (c->staged_count == MAX_RECORDS) fail(c, "Source staging capacity exceeded");
-    file = CreateFileW(wide(c, temporary), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) fail(c, "Cannot stage source for %s", target);
+    file = source_stage_open(temporary, target);
+    if (!file) fail(c, "Cannot stage source for %s", target);
     c->staged[c->staged_count++] = temporary;
-    ok = WriteFile(file, text, (DWORD)length, &written, NULL) && written == length && FlushFileBuffers(file);
-    if (!CloseHandle(file)) ok = 0;
+    ok = file_stream_transfer(file, (void *)text, length, 1) && file_stream_flush(file);
+    if (!file_stream_close(file)) ok = 0;
     if (!ok) fail(c, "Cannot finish source staging for %s", target);
     c->error_path = NULL;
     return temporary;
 }
 static void publish_source(context *c, const char *temporary, const char *target, const char *original) {
     int i;
-    DWORD attributes;
+    source_file_info attributes;
     c->error_path = target;
-    attributes = GetFileAttributesW(wide(c, target));
+    attributes = source_stat(target);
     if (original) {
-        if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT))) fail(c, "Source target changed or is not a regular file: %s", target);
+        if (attributes.kind != SOURCE_REGULAR) fail(c, "Source target changed or is not a regular file: %s", target);
+        if (attributes.read_only) fail(c, "Source target is read-only: %s", target);
         if (strcmp(read_text(c, target, NULL), original)) fail(c, "Source changed since preflight: %s", target);
-    } else if (attributes != INVALID_FILE_ATTRIBUTES || (GetLastError() != ERROR_FILE_NOT_FOUND && GetLastError() != ERROR_PATH_NOT_FOUND)) fail(c, "Target exists or cannot be checked: %s", target);
+    } else if (attributes.kind != SOURCE_MISSING) fail(c, "Target exists or cannot be checked: %s", target);
     if (c->written_count == MAX_RECORDS) fail(c, "Written-path reporting capacity exceeded");
-    if (!MoveFileExW(wide(c, temporary), wide(c, target), MOVEFILE_WRITE_THROUGH | (original ? MOVEFILE_REPLACE_EXISTING : 0))) fail(c, "Cannot publish source: %s", target);
+    if (!source_publish(temporary, target, original ? SOURCE_REPLACE : SOURCE_CREATE)) fail(c, "Cannot publish source: %s", target);
     for (i = 0; i < c->staged_count; i++) if (c->staged[i] == temporary) { c->staged[i] = NULL; break; }
     c->written[c->written_count++] = target;
     c->error_path = NULL;
@@ -175,7 +180,7 @@ static value *planned_value(record *r, const char *key) {
     value *v = lookup(&r->corrections, key);
     return v ? v : lookup(&r->front, key);
 }
-typedef struct repair_candidate { record *r; const char *name, *id; ULONGLONG created; } repair_candidate;
+typedef struct repair_candidate { record *r; const char *name, *id; source_time created; } repair_candidate;
 static int compare_candidates(const void *left, const void *right) {
     const repair_candidate *a = left, *b = right;
     if (a->created != b->created) return a->created < b->created ? -1 : 1;
@@ -225,21 +230,21 @@ static void plan_duplicates(context *c, repair_candidate *candidates, int count,
 }
 static int plan_corrections(context *c) {
     repair_candidate *candidates = allocate(c, c->record_count * sizeof(repair_candidate));
-    FILETIME now;
+    source_time now = source_now();
     const char *materialized;
     int count = 0, corrected = 0, i, j;
-    GetSystemTimeAsFileTime(&now); materialized = iso_time(c, now);
+    if (!now) fail(c, "System clock unavailable");
+    materialized = iso_time(c, now);
     for (i = 0; i < c->record_count; i++) {
         record *r = &c->records[i];
         const char *base;
         value empty_array = {0}, *v;
         repair_candidate *candidate;
-        FILETIME created;
-        ULARGE_INTEGER ticks;
+        source_time created;
         if (r->front.problem || !r->front.present || r->owner->invalid) continue;
         empty_array.kind = VALUE_ARRAY;
         if (!valid_uuid(lookup(&r->front, "id"))) mapping_set(c, &r->corrections, "id", text_value(uuid_v7(c)));
-        base = strrchr(r->path, '\\'); base = base ? base + 1 : r->path;
+        base = source_basename(r->path);
         if (!lookup(&r->front, "name")) mapping_set(c, &r->corrections, "name", text_value(copy_text(c, base, strlen(base) - 3)));
         if (!lookup(&r->front, "created_at")) mapping_set(c, &r->corrections, "created_at", text_value(materialized));
         if (!lookup(&r->front, "desc")) mapping_set(c, &r->corrections, "desc", text_value(""));
@@ -250,12 +255,12 @@ static int plan_corrections(context *c) {
             if (!strcmp(f->kind, "default") || !strcmp(f->kind, "enum")) mapping_set(c, &r->corrections, f->name, f->fallback);
             else if (!strcmp(f->kind, "string-array")) mapping_set(c, &r->corrections, f->name, empty_array);
         }
-        candidate = &candidates[count++]; candidate->r = r; candidate->created = ~(ULONGLONG)0;
+        candidate = &candidates[count++]; candidate->r = r; candidate->created = ~(source_time)0;
         v = planned_value(r, "name"); candidate->name = v && v->kind == VALUE_STRING ? v->text : NULL;
         v = planned_value(r, "id"); candidate->id = v && v->kind == VALUE_STRING ? v->text : "";
         v = lookup(&r->front, "created_at");
         if (v && v->kind == VALUE_STRING && parse_datetime(v->text, &created)) {
-            ticks.LowPart = created.dwLowDateTime; ticks.HighPart = created.dwHighDateTime; candidate->created = ticks.QuadPart;
+            candidate->created = created;
         }
     }
     qsort(candidates, count, sizeof(repair_candidate), compare_candidates);
@@ -291,42 +296,56 @@ static void apply_corrections(context *c) {
 }
 
 static void make_directories(context *c, const char *path) {
-    wchar_t *target = wide(c, path);
-    int i, length = (int)wcslen(target);
-    if (length < 3 || target[1] != L':') fail(c, "Directory creation currently requires a Windows drive path");
-    for (i = 3; i <= length; i++) if (i == length || target[i] == L'\\' || target[i] == L'/') {
-        wchar_t saved = target[i];
-        DWORD attributes;
-        target[i] = 0; attributes = GetFileAttributesW(target);
-        if (attributes == INVALID_FILE_ATTRIBUTES) {
+    char *target = copy_text(c, path, strlen(path));
+    size_t i, length = strlen(target), start = 1;
+#if defined(_WIN32)
+    if (length < 3 || target[1] != ':') fail(c, "Directory creation requires a Windows drive path");
+    start = 3;
+#else
+    if (*target != '/') fail(c, "Directory creation requires an absolute path");
+#endif
+    for (i = start; i <= length; i++) if (i == length || target[i] == '/' ||
+#if defined(_WIN32)
+        target[i] == '\\'
+#else
+        0
+#endif
+    ) {
+        char saved = target[i]; target[i] = 0;
+        source_kind kind = source_stat(target).kind;
+        if (kind == SOURCE_MISSING) {
             if (c->created_directory_count == 128) fail(c, "Directory creation depth exceeds 128 components");
-            const char *owned = utf8(c, target);
-            if (!CreateDirectoryW(target, NULL)) fail(c, "Cannot create collection directory");
+            const char *owned = copy_text(c, target, strlen(target));
+            if (!source_mkdir(target)) fail(c, "Cannot create collection directory");
             c->created_directories[c->created_directory_count++] = owned;
-        } else if (!(attributes & FILE_ATTRIBUTE_DIRECTORY) || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) fail(c, "Collection path contains a non-directory or reparse point");
+        } else if (kind != SOURCE_DIRECTORY) fail(c, "Collection path contains a non-directory or link");
         target[i] = saved;
     }
 }
 
 static int inside_project(const char *root, const char *path) {
     size_t length = strlen(root);
+#if defined(_WIN32)
     return !_strnicmp(root, path, length) && (path[length] == '\\' || path[length] == '/');
+#else
+    return !strncmp(root, path, length) && (length == 1 || path[length] == '/');
+#endif
 }
 
 static void require_empty_directory(context *c, const char *directory) {
-    DWORD attributes = GetFileAttributesW(wide(c, directory));
-    if (attributes != INVALID_FILE_ATTRIBUTES) {
-        WIN32_FIND_DATAW entry;
-        HANDLE scan;
-        if (!(attributes & FILE_ATTRIBUTE_DIRECTORY) || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) fail(c, "Collection target must be a regular empty directory");
-        scan = FindFirstFileW(wide(c, format_text(c, "%s\\*", directory)), &entry);
-        if (scan == INVALID_HANDLE_VALUE) fail(c, "Cannot inspect collection directory");
-        do {
-            if (wcscmp(entry.cFileName, L".") && wcscmp(entry.cFileName, L"..")) { FindClose(scan); fail(c, "Collection target must not contain files"); }
-        } while (FindNextFileW(scan, &entry));
-        if (GetLastError() != ERROR_NO_MORE_FILES) { FindClose(scan); fail(c, "Cannot finish directory inspection"); }
-        FindClose(scan);
-    } else if (GetLastError() != ERROR_FILE_NOT_FOUND && GetLastError() != ERROR_PATH_NOT_FOUND) fail(c, "Cannot inspect collection target");
+    source_kind kind = source_stat(directory).kind;
+    if (kind == SOURCE_MISSING) return;
+    if (kind != SOURCE_DIRECTORY) fail(c, "Collection target must be a regular empty directory");
+    source_directory scan;
+    int next;
+    if (!source_directory_open(&scan, directory)) fail(c, "Cannot inspect collection directory");
+    c->scanning_directory = &scan;
+    while ((next = source_directory_next(&scan)) > 0) {
+        if (strcmp(scan.name, ".") && strcmp(scan.name, "..")) fail(c, "Collection target must not contain files");
+    }
+    if (next < 0) fail(c, "Cannot finish directory inspection");
+    int closed = source_directory_close(&scan); c->scanning_directory = NULL;
+    if (!closed) fail(c, "Cannot close directory inspection");
 }
 static const char *new_record_text(context *c, mapping *front, const char *body) {
     char *out;

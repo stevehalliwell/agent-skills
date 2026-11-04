@@ -1,50 +1,79 @@
 /* Test-only document-state acceptance. Requires generated ownership marker.
    CHECK always runs, including toolchains which define NDEBUG at -O3. */
 #define WIN32_LEAN_AND_MEAN
+#if defined(_WIN32)
 #include <windows.h>
+#endif
+#include "../../src/core/platform.h"
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
 #include "../../apps/gui/workspace.h"
 #include "../../apps/gui/reveal.h"
 #include "../../apps/gui/inspect.h"
+#if defined(_WIN32)
 __declspec(dllimport) LPWSTR *WINAPI CommandLineToArgvW(LPCWSTR, int *);
+#endif
 static int checks, edit_after_read;
 void gui_model_after_read(const char *path) {
-    wchar_t wide[4096]; HANDLE file; DWORD count;
     const char *suffix = "\nExternal read/stat gap edit.\n";
     if (!edit_after_read) return;
     edit_after_read = 0;
+#if defined(_WIN32)
+    wchar_t wide[4096]; HANDLE file; DWORD count;
     if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, 4096)) ExitProcess(2);
     file = CreateFileW(wide, FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) ExitProcess(2);
     if (!WriteFile(file, suffix, (DWORD)strlen(suffix), &count, NULL) || count != strlen(suffix)) { CloseHandle(file); ExitProcess(2); }
     CloseHandle(file);
+#else
+    int descriptor = open(path, O_WRONLY | O_APPEND | O_NOFOLLOW);
+    if (descriptor < 0) exit(2);
+    void *file = (void *)(uptr)(descriptor + 1);
+    int ok = file_stream_transfer(file, (void *)suffix, strlen(suffix), 1);
+    if (!file_stream_close(file)) ok = 0;
+    if (!ok) exit(2);
+#endif
 }
 #define CHECK(expression) do { checks++; if (!(expression)) { fprintf(stderr, "Model check failed at line %d: %s\n", __LINE__, #expression); return 1; } } while (0)
-int main(void) {
-    int argc, first, second, comment_index, i, references = 0;
+static int test_environment(const char *name, const char *value) {
+#if defined(_WIN32)
+    return SetEnvironmentVariableA(name, value) != 0;
+#else
+    return (value ? setenv(name, value, 1) : unsetenv(name)) == 0;
+#endif
+}
+#if defined(__APPLE__)
+#include "ipc-model-macos.h"
+#endif
+int main(int argc, char **argv) {
+    int first, second, comment_index, i, references = 0;
+#if defined(_WIN32)
     LPWSTR *arguments = CommandLineToArgvW(GetCommandLineW(), &argc);
+#endif
     char project[GUI_PATH], marker[GUI_PATH], path[GUI_PATH], comment_path[GUI_PATH] = {0}, expected_hash[65], *edited, *external;
-    wchar_t wide[4096];
     gui_workspace *workspace;
     gui_tab *tab;
     attendant_result result;
     const char *selected = "caf\xc3\xa9 \xce\xa9 \xf0\x9f\x98\x80\r\n";
+#if defined(_WIN32)
     CHECK(arguments && argc == 2);
     CHECK(WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, arguments[1], -1, project, GUI_PATH, NULL, NULL)); LocalFree(arguments);
+#else
+    CHECK(argc == 2 && gui_full_path(NULL, argv[1], project));
+#endif
     snprintf(marker, sizeof(marker), "%s/.gui-test-owned", project);
-    CHECK(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, marker, -1, wide, 4096)); CHECK(GetFileAttributesW(wide) != INVALID_FILE_ATTRIBUTES);
-    workspace = VirtualAlloc(NULL, sizeof(*workspace), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    edited = VirtualAlloc(NULL, GUI_TEXT + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    external = VirtualAlloc(NULL, GUI_TEXT + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    CHECK(source_stat(marker).kind == SOURCE_REGULAR);
+    workspace = native_memory_allocate(sizeof(*workspace));
+    edited = native_memory_allocate(GUI_TEXT + 1);
+    external = native_memory_allocate(GUI_TEXT + 1);
     CHECK(workspace && edited && external && gui_workspace_init(workspace, project));
     {
-        gui_inspection *empty = VirtualAlloc(NULL, sizeof(*empty), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        gui_inspection *empty = native_memory_allocate(sizeof(*empty));
         char json[1024]; CHECK(empty);
         CHECK(gui_inspection_snapshot(workspace, empty) && !empty->header.has_document && !empty->header.length);
         CHECK(gui_inspection_json(empty, json, sizeof(json)) && strstr(json, "\"document\":null"));
-        VirtualFree(empty, 0, MEM_RELEASE);
+        arena_memory_release(empty, sizeof(*empty));
     }
     CHECK(gui_open_document(workspace, "records/tasks/first.md")); first = workspace->active; tab = &workspace->tabs[first];
     for (i = 0; i < workspace->navigation->count; i++) if (!strcmp(workspace->navigation->documents[i].path, tab->path)) {
@@ -63,7 +92,7 @@ int main(void) {
     tab->selection_start = (int)(strstr(tab->text, "Model selection: ") - tab->text) + 17;
     tab->selection_end = tab->selection_start + (int)strlen(selected);
     {
-        gui_inspection *snapshot = VirtualAlloc(NULL, sizeof(*snapshot), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        gui_inspection *snapshot = native_memory_allocate(sizeof(*snapshot));
         char json[8192]; int start = tab->selection_start, end = tab->selection_end;
         CHECK(snapshot);
         CHECK(gui_inspection_snapshot(workspace, snapshot) && snapshot->header.has_document && snapshot->header.status == GUI_SELECTION_NONE);
@@ -74,6 +103,7 @@ int main(void) {
         CHECK(snapshot->header.end - snapshot->header.start == 10 && snapshot->header.start < (uint32_t)start);
         CHECK(gui_inspection_json(snapshot, json, sizeof(json)) && strstr(json, "\"dirty\":true") && strstr(json, "unicode-codepoint"));
         CHECK(!gui_inspection_json(snapshot, json, 10));
+#if defined(_WIN32)
         {
             WNDCLASSA description = {0}; gui_reveal request = {0}; HWND client;
             description.lpfnWndProc = DefWindowProcA; description.hInstance = GetModuleHandleA(NULL); description.lpszClassName = GUI_INSPECT_CLIENT_CLASS;
@@ -85,6 +115,7 @@ int main(void) {
             CHECK(!gui_inspection_receive(NULL, NULL, workspace, 1, snapshot, &request, sizeof(request)));
             DestroyWindow(client);
         }
+#endif
         {
             size_t bytes = offsetof(gui_inspection, text) + snapshot->header.length + snapshot->header.context_length + 2;
             gui_inspection_header *packet = (gui_inspection_header *)external;
@@ -110,7 +141,7 @@ int main(void) {
         CHECK(gui_open_document(workspace, tab->path)); CHECK(gui_selection_current(workspace).status == GUI_SELECTION_NONE);
         gui_selection_capture(workspace, first, GUI_SELECTION_PREVIEW, GUI_SELECTION_EXACT, start, end);
         CHECK(gui_set_document_text(workspace, first, edited)); CHECK(gui_selection_current(workspace).status == GUI_SELECTION_NONE);
-        VirtualFree(snapshot, 0, MEM_RELEASE);
+        arena_memory_release(snapshot, sizeof(*snapshot));
     }
     CHECK(!gui_close_document(workspace, first, 0));
     CHECK(!gui_send_comment(workspace, first, tab->selection_start, tab->selection_end, "Must not send dirty text."));
@@ -122,16 +153,20 @@ int main(void) {
     CHECK(!gui_send_comment(workspace, first, -1, tab->selection_end, "Invalid range."));
     CHECK(!gui_send_comment(workspace, first, tab->selection_start + 4, tab->selection_end, "Inside UTF-8 sequence."));
     CHECK(!gui_send_comment(workspace, first, tab->selection_start, tab->selection_start + 11, "End inside supplementary sequence."));
-    CHECK(SetEnvironmentVariableA("ATTENDANT_FEEDBACK_FAULT", "published-edit"));
+    CHECK(test_environment("ATTENDANT_FEEDBACK_FAULT", "published-edit"));
     CHECK(!gui_send_comment(workspace, first, tab->selection_start, tab->selection_end, "Failed bootstrap must retain surviving paths."));
-    CHECK(SetEnvironmentVariableA("ATTENDANT_FEEDBACK_FAULT", NULL));
+    CHECK(test_environment("ATTENDANT_FEEDBACK_FAULT", NULL));
+#if defined(_WIN32)
     CHECK(workspace->surviving_count == 1 && workspace->surviving_total == 1);
+#else
+    CHECK(workspace->surviving_count == 4 && workspace->surviving_total == 4);
+#endif
     snprintf(path, sizeof(path), "%s", workspace->surviving_paths[0]);
     CHECK(gui_refresh(workspace)); CHECK(!strcmp(path, workspace->surviving_paths[0]));
     result = attendant_read_document(workspace->session, path);
     CHECK(result.ok && strstr(result.text, "# Concurrent external edit"));
-    CHECK(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, 4096)); CHECK(DeleteFileW(wide));
-    { wchar_t *separator = wcsrchr(wide, L'\\'); CHECK(separator); *separator = 0; CHECK(RemoveDirectoryW(wide)); }
+    for (i = 0; i < workspace->surviving_count; i++) CHECK(source_remove(workspace->surviving_paths[i], 0));
+    { char *name = (char *)source_basename(path); CHECK(name > path); name[-1] = 0; CHECK(source_remove(path, 1)); }
     CHECK(gui_send_comment(workspace, first, tab->selection_end, tab->selection_start, "Review this Unicode selection.\r\nKeep body exact.\n"));
     CHECK(workspace->active == first && !tab->dirty);
     for (i = 0; i < workspace->navigation->count; i++) if (workspace->navigation->documents[i].pending) snprintf(comment_path, sizeof(comment_path), "%s", workspace->navigation->documents[i].path);
@@ -204,6 +239,9 @@ int main(void) {
         CHECK(!ready);
         CHECK(gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request)) == GUI_REVEAL_ACCEPTED);
         CHECK(ready && !memcmp(&request, &pending, sizeof(request)));
+        request.line = 2;
+        CHECK(gui_reveal_receive(workspace, &pending, &ready, GUI_REVEAL_SET, &request, sizeof(request)) == GUI_REVEAL_ACCEPTED);
+        CHECK(pending.line == 2); request.line = 1;
         CHECK(workspace->active == active && workspace->tab_count == count && workspace->activation == activation);
         CHECK(current->selection_start == start && current->selection_end == end && current->text_revision == revision);
         CHECK(gui_reveal_matches(&request, current)); current->dirty = 1; CHECK(!gui_reveal_matches(&request, current)); current->dirty = 0;
@@ -233,7 +271,13 @@ int main(void) {
             workspace->navigation->documents[0].path = original;
         }
         CHECK(!ready);
+#if defined(_WIN32)
         CHECK(gui_reveal_test_discovery_limits());
+#else
+        snprintf(path, sizeof(path), "%s/reveal-link", project);
+        CHECK(!symlink(current->path, path)); CHECK(!gui_reveal_ordinary_path(path)); CHECK(source_remove(path, 0));
+        CHECK(gui_reveal_ordinary_path("/tmp"));
+#endif
         CHECK(gui_reveal_ordinary_path(workspace->root)); CHECK(gui_reveal_ordinary_path(current->path));
         CHECK(!gui_reveal_ordinary_path("\\\\server\\share\\file.md"));
         CHECK(!gui_reveal_ordinary_path("\\\\?\\C:\\file.md"));
@@ -245,7 +289,7 @@ int main(void) {
         const char *context = "{\"sections\":[{\"text\":\"caf\xc3\xa9 section\",\"highlight_start\":0,\"highlight_end\":4,\"range_unit\":\"unicode-codepoint\"}]}";
         int document = workspace->active, note_index;
         gui_tab *current = &workspace->tabs[document];
-        gui_inspection *snapshot = VirtualAlloc(NULL, sizeof(*snapshot), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        gui_inspection *snapshot = native_memory_allocate(sizeof(*snapshot));
         attendant_feedback input = {0}; attendant_comment note;
         char json[4096], note_path[GUI_PATH] = {0};
         CHECK(snapshot != NULL);
@@ -286,9 +330,12 @@ int main(void) {
         CHECK(gui_open_document(workspace, note_path)); note_index = workspace->active;
         CHECK(gui_open_comment_target(workspace, note_index));
         CHECK(workspace->active == document && current->dirty && current->selection_start == 1 && current->selection_end == 3 && strstr(workspace->notice, "No source anchor"));
-        VirtualFree(snapshot, 0, MEM_RELEASE);
+        arena_memory_release(snapshot, sizeof(*snapshot));
     }
-    gui_workspace_destroy(workspace); VirtualFree(workspace, 0, MEM_RELEASE);
-    VirtualFree(edited, 0, MEM_RELEASE); VirtualFree(external, 0, MEM_RELEASE);
+#if defined(__APPLE__)
+    CHECK(model_delayed_inspection(workspace));
+#endif
+    gui_workspace_destroy(workspace); arena_memory_release(workspace, sizeof(*workspace));
+    arena_memory_release(edited, GUI_TEXT + 1); arena_memory_release(external, GUI_TEXT + 1);
     printf("{\"ok\":true,\"checks\":%d}\n", checks); return 0;
 }

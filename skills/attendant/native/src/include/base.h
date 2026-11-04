@@ -61,6 +61,7 @@ REFERENCES
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -3172,8 +3173,9 @@ static const char *file_error_message(file_error error) {
 
 /* Local message pipes. Caller owns zeroed channel and all I/O storage. One
    outstanding operation per channel; keep buffers alive until terminal poll.
-   Windows backend only. Other platforms return pipe_error_unsupported.
-   Server grants current user only and rejects remote clients; no heap storage.
+   Windows named pipes and macOS framed Unix sockets; other platforms return
+   pipe_error_unsupported. Server grants current user only and rejects remote
+   clients; no heap storage.
    Windows access-policy calls loaded from OS advapi32, with no caller link flag. */
 typedef enum pipe_error {
     pipe_error_ok, pipe_error_pending, pipe_error_invalid, pipe_error_unavailable,

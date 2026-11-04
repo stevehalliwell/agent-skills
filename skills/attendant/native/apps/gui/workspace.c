@@ -1,10 +1,10 @@
 /* UI-independent document model. Explicit user actions own save/discard/send. */
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include "workspace.h"
-#include "../../src/include/base.h"
+#include "../../src/core/platform.h"
 #include <stdio.h>
 #include <string.h>
+#define GUI_NAV_MEMORY (sizeof(gui_navigation) + 16 * 1024 * 1024)
 #ifdef ATTENDANT_MODEL_TESTING
 void gui_model_after_read(const char *path);
 #endif
@@ -26,6 +26,7 @@ static int result_problem(gui_workspace *workspace, attendant_result result) {
     return 0;
 }
 int gui_full_path(const char *root, const char *path, char *output) {
+#if defined(_WIN32)
     wchar_t input[4096], absolute[4096];
     char joined[GUI_PATH];
     const char *source = path;
@@ -41,6 +42,16 @@ int gui_full_path(const char *root, const char *path, char *output) {
     if (!size || size >= 4096 || !WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, absolute, -1, output, GUI_PATH, NULL, NULL)) return 0;
     { size_t length = strlen(output); while (length > 3 && output[length - 1] == '\\') output[--length] = 0; }
     return 1;
+#else
+    char joined[GUI_PATH];
+    if (!path || !*path || !string_view_utf8_valid(string_view_from_cstr(path))) return 0;
+    if (root && *root && *path != '/') {
+        int length = snprintf(joined, sizeof(joined), "%s/%s", root, path);
+        if (length < 0 || length >= (int)sizeof(joined)) return 0;
+        path = joined;
+    }
+    return source_full_path(path, output);
+#endif
 }
 static char *navigation_text(arena *memory, const char *text) {
     arena_result space;
@@ -57,7 +68,7 @@ int gui_refresh(gui_workspace *workspace) {
     arena *memory;
     int i, j;
     if (!result.ok) return result_problem(workspace, result);
-    next = VirtualAlloc(NULL, sizeof(*next) + 16 * 1024 * 1024, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    next = native_memory_allocate(GUI_NAV_MEMORY);
     if (!next) return problem(workspace, "Cannot allocate workspace navigation");
     memory = arena_from_buffer(next + 1, 16 * 1024 * 1024);
     next->memory = memory; next->count = source.document_count; next->diagnostics = source.diagnostic_count;
@@ -77,10 +88,10 @@ int gui_refresh(gui_workspace *workspace) {
             if (!reference->field || !reference->value || (old->target_path && !reference->target_path)) goto capacity;
         }
     }
-    if (workspace->navigation) VirtualFree(workspace->navigation, 0, MEM_RELEASE);
+    if (workspace->navigation) arena_memory_release(workspace->navigation, GUI_NAV_MEMORY);
     workspace->navigation = next; return 1;
 capacity:
-    VirtualFree(next, 0, MEM_RELEASE); return problem(workspace, "Workspace navigation exceeds 16 MiB capacity; previous view retained");
+    arena_memory_release(next, GUI_NAV_MEMORY); return problem(workspace, "Workspace navigation exceeds 16 MiB capacity; previous view retained");
 }
 int gui_workspace_init(gui_workspace *workspace, const char *root) {
     memset(workspace, 0, sizeof(*workspace)); workspace->active = -1;
@@ -91,14 +102,13 @@ int gui_workspace_init(gui_workspace *workspace, const char *root) {
 }
 void gui_workspace_destroy(gui_workspace *workspace) {
     int i;
-    for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].text) VirtualFree(workspace->tabs[i].text, 0, MEM_RELEASE);
-    if (workspace->navigation) VirtualFree(workspace->navigation, 0, MEM_RELEASE);
+    for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].text) arena_memory_release(workspace->tabs[i].text, GUI_TEXT + 1);
+    if (workspace->navigation) arena_memory_release(workspace->navigation, GUI_NAV_MEMORY);
     gui_selection_clear(workspace);
     attendant_close(workspace->session); memset(workspace, 0, sizeof(*workspace));
 }
 static void document_metadata(gui_tab *tab, attendant_result result) {
-    tab->modified.dwLowDateTime = (DWORD)result.write_time;
-    tab->modified.dwHighDateTime = (DWORD)(result.write_time >> 32); tab->file_size = (DWORD)result.file_size;
+    tab->modified = result.write_time; tab->file_size = result.file_size;
 }
 int gui_open_document(gui_workspace *workspace, const char *path) {
     char absolute[GUI_PATH];
@@ -107,7 +117,7 @@ int gui_open_document(gui_workspace *workspace, const char *path) {
     int i, slot = -1;
     if (!gui_full_path(workspace->root, path, absolute)) return problem(workspace, "Cannot resolve bounded UTF-8 document path");
     for (i = 0; i < GUI_TABS; i++) {
-        if (workspace->tabs[i].used && !_stricmp(absolute, workspace->tabs[i].path)) {
+        if (workspace->tabs[i].used && !source_path_compare(absolute, workspace->tabs[i].path)) {
             if (workspace->active != i) gui_selection_clear(workspace);
             workspace->active = i; workspace->activation++; return 1;
         }
@@ -120,7 +130,7 @@ int gui_open_document(gui_workspace *workspace, const char *path) {
     gui_model_after_read(result.path);
 #endif
     tab = &workspace->tabs[slot]; memset(tab, 0, sizeof(*tab));
-    tab->text = VirtualAlloc(NULL, GUI_TEXT + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    tab->text = native_memory_allocate(GUI_TEXT + 1);
     if (!tab->text) return problem(workspace, "Cannot allocate document text");
     snprintf(tab->path, sizeof(tab->path), "%s", result.path); snprintf(tab->hash, sizeof(tab->hash), "%s", result.hash);
     tab->length = strlen(result.text); memcpy(tab->text, result.text, tab->length + 1);
@@ -155,7 +165,7 @@ int gui_close_document(gui_workspace *workspace, int index, int discard_dirty) {
     if (!tab->used) return 1;
     if (tab->dirty && !discard_dirty) return problem(workspace, "Dirty document requires Save, Discard or Cancel");
     if (workspace->selection.tab == index) gui_selection_clear(workspace);
-    VirtualFree(tab->text, 0, MEM_RELEASE); memset(tab, 0, sizeof(*tab)); workspace->tab_count--;
+    arena_memory_release(tab->text, GUI_TEXT + 1); memset(tab, 0, sizeof(*tab)); workspace->tab_count--;
     if (workspace->active == index) {
         workspace->active = -1;
         for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].used) { workspace->active = i; break; }
@@ -165,10 +175,10 @@ int gui_close_document(gui_workspace *workspace, int index, int discard_dirty) {
 }
 void gui_check_external(gui_workspace *workspace, int index) {
     gui_tab *tab = &workspace->tabs[index];
-    wchar_t path[4096]; WIN32_FILE_ATTRIBUTE_DATA data;
-    if (!tab->used || !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, tab->path, -1, path, 4096)) return;
-    if (!GetFileAttributesExW(path, GetFileExInfoStandard, &data)) { tab->external_change = 1; return; }
-    if (CompareFileTime(&data.ftLastWriteTime, &tab->modified) || data.nFileSizeLow != tab->file_size) {
+    if (!tab->used) return;
+    source_file_info data = source_stat(tab->path);
+    if (data.kind != SOURCE_REGULAR) { tab->external_change = 1; return; }
+    if (data.modified != tab->modified || data.size != tab->file_size) {
         tab->external_change = 1;
         if (!tab->dirty) gui_reload_document(workspace, index, 0);
     }
@@ -179,7 +189,7 @@ int gui_set_document_text(gui_workspace *workspace, int index, const char *text)
     memcpy(tab->text, text, length + 1); tab->length = length; tab->dirty = 1; tab->generation++; tab->text_revision = ++workspace->text_revision; return 1;
 }
 void gui_selection_clear(gui_workspace *workspace) {
-    if (workspace->preview_text) VirtualFree(workspace->preview_text, 0, MEM_RELEASE);
+    if (workspace->preview_text) arena_memory_release(workspace->preview_text, workspace->preview_text_length + workspace->preview_context_length + 2);
     workspace->preview_text = workspace->preview_context = NULL;
     workspace->preview_text_length = workspace->preview_context_length = 0;
     memset(&workspace->selection, 0, sizeof(workspace->selection)); workspace->selection.tab = -1;
@@ -214,10 +224,10 @@ int gui_selection_capture_preview(gui_workspace *workspace, int index, int start
     if (!context_length) { gui_selection_capture(workspace, index, GUI_SELECTION_PREVIEW, GUI_SELECTION_UNSUPPORTED, 0, 0); return problem(workspace, "Preview selection has no rendered context"); }
     if (!workspace->preview_text || workspace->preview_text_length != text_length || workspace->preview_context_length != context_length ||
         memcmp(workspace->preview_text, text, text_length) || memcmp(workspace->preview_context, context, context_length)) {
-        copy = VirtualAlloc(NULL, text_length + context_length + 2, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        copy = native_memory_allocate(text_length + context_length + 2);
         if (!copy) { gui_selection_capture(workspace, index, GUI_SELECTION_PREVIEW, GUI_SELECTION_UNSUPPORTED, 0, 0); return problem(workspace, "Cannot allocate preview selection context"); }
         memcpy(copy, text, text_length + 1); memcpy(copy + text_length + 1, context, context_length + 1);
-        if (workspace->preview_text) VirtualFree(workspace->preview_text, 0, MEM_RELEASE);
+        if (workspace->preview_text) arena_memory_release(workspace->preview_text, workspace->preview_text_length + workspace->preview_context_length + 2);
         workspace->preview_text = copy; workspace->preview_context = copy + text_length + 1;
         workspace->preview_text_length = text_length; workspace->preview_context_length = context_length;
     }
@@ -249,19 +259,19 @@ int gui_send_comment(gui_workspace *workspace, int index, int start, int end, co
     if (tab->dirty) return problem(workspace, "Save & Send or Cancel required for dirty source");
     if (start > end) { int swap = start; start = end; end = swap; }
     if (start < 0 || end <= start || (size_t)end > tab->length) return problem(workspace, "Select nonempty source text first");
-    selected = VirtualAlloc(NULL, end - start + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    selected = native_memory_allocate((size_t)(end - start) + 1);
     if (!selected) return problem(workspace, "Cannot allocate selected text");
     memcpy(selected, tab->text + start, end - start);
     input.project = workspace->root; input.target_path = tab->path; input.target_hash = tab->hash;
     input.selected_text = selected; input.comment = comment;
     while (offset < (size_t)end) {
         size_t width = string_utf8_sequence_size((const u8 *)tab->text + offset, tab->length - offset);
-        if (!width || offset + width > (size_t)end) { VirtualFree(selected, 0, MEM_RELEASE); return problem(workspace, "Selection must use UTF-8 boundaries"); }
+        if (!width || offset + width > (size_t)end) { arena_memory_release(selected, (size_t)(end - start) + 1); return problem(workspace, "Selection must use UTF-8 boundaries"); }
         if (offset == (size_t)start) input.range_start = point;
-        else if (offset < (size_t)start && offset + width > (size_t)start) { VirtualFree(selected, 0, MEM_RELEASE); return problem(workspace, "Selection must use UTF-8 boundaries"); }
+        else if (offset < (size_t)start && offset + width > (size_t)start) { arena_memory_release(selected, (size_t)(end - start) + 1); return problem(workspace, "Selection must use UTF-8 boundaries"); }
         offset += width; point++;
     }
-    input.range_end = point; result = attendant_send_feedback(workspace->session, &input); VirtualFree(selected, 0, MEM_RELEASE);
+    input.range_end = point; result = attendant_send_feedback(workspace->session, &input); arena_memory_release(selected, (size_t)(end - start) + 1);
     return comment_result(workspace, result);
 }
 int gui_send_preview_comment(gui_workspace *workspace, int index, int start, int end, const char *context, const char *comment) {
@@ -274,7 +284,7 @@ int gui_send_preview_comment(gui_workspace *workspace, int index, int start, int
     if (strlen(context) > GUI_TEXT || strlen(comment) > GUI_TEXT) return problem(workspace, "Preview note exceeds 4 MiB");
     size = strlen(comment) + strlen(prefix) + strlen(anchor) + strlen(context) + strlen(suffix);
     if (size > GUI_TEXT) return problem(workspace, "Preview note exceeds 4 MiB; selection was not truncated");
-    body = VirtualAlloc(NULL, size + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    body = native_memory_allocate(size + 1);
     if (!body) return problem(workspace, "Cannot allocate preview note");
     snprintf(body, size + 1, "%s%s%s%s%s", comment, prefix, anchor, context, suffix);
     if (end > start) ok = gui_send_comment(workspace, index, start, end, body);
@@ -284,7 +294,7 @@ int gui_send_preview_comment(gui_workspace *workspace, int index, int start, int
         input.selected_text = ""; input.comment = body; input.mode = ATTENDANT_FEEDBACK_CONTEXT;
         ok = comment_result(workspace, attendant_send_feedback(workspace->session, &input));
     }
-    VirtualFree(body, 0, MEM_RELEASE); return ok;
+    arena_memory_release(body, size + 1); return ok;
 }
 int gui_open_comment_target(gui_workspace *workspace, int comment_index) {
     attendant_comment comment;
@@ -297,7 +307,7 @@ int gui_open_comment_target(gui_workspace *workspace, int comment_index) {
     if (!result.ok) return result_problem(workspace, result);
     snprintf(target, sizeof(target), "%s", comment.target_path); snprintf(hash, sizeof(hash), "%s", comment.target_hash);
     snprintf(status, sizeof(status), "%s", comment.status); range_start = comment.range_start; range_end = comment.range_end;
-    length = strlen(comment.selected_text); selected = VirtualAlloc(NULL, length + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    length = strlen(comment.selected_text); selected = native_memory_allocate(length + 1);
     if (!selected) return problem(workspace, "Cannot allocate feedback anchor");
     memcpy(selected, comment.selected_text, length + 1);
     if (!gui_open_document(workspace, target)) goto finished;
@@ -321,7 +331,7 @@ int gui_open_comment_target(gui_workspace *workspace, int comment_index) {
     tab->selection_start = (int)begin; tab->selection_end = (int)offset; tab->reveal_selection = 1;
     snprintf(workspace->notice, sizeof(workspace->notice), "Opened %s comment target. Reading does not resolve feedback.", status); ok = 1;
 finished:
-    VirtualFree(selected, 0, MEM_RELEASE); return ok;
+    arena_memory_release(selected, length + 1); return ok;
 }
 int gui_open_link(gui_workspace *workspace, const char *url) {
     int i;
@@ -338,8 +348,8 @@ int gui_open_link(gui_workspace *workspace, const char *url) {
     if (strstr(url, "://") || url[0] == '#') return problem(workspace, "External URL or unresolved anchor not opened");
     if (workspace->active >= 0) {
         char joined[GUI_PATH]; gui_tab *tab = &workspace->tabs[workspace->active];
-        const char *end = strrchr(tab->path, '\\');
-        int length = snprintf(joined, sizeof(joined), "%.*s\\%s", end ? (int)(end - tab->path) : 0, tab->path, url);
+        const char *name = source_basename(tab->path);
+        int length = snprintf(joined, sizeof(joined), "%.*s%s", (int)(name - tab->path), tab->path, url);
         if (length < 0 || length >= (int)sizeof(joined)) return problem(workspace, "Link path too long");
         return gui_open_document(workspace, joined);
     }

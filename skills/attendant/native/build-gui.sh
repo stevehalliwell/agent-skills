@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Windows GUI, separate from CLI. Requires explicitly prepared/built GUI DLL.
+# Native GUI, separate from CLI. Requires explicitly prepared/built GUI library.
 # Usage: bash build-gui.sh [cjit|zig] [--check]
 set -euo pipefail
 cd "$(dirname "$0")"
 compiler=${1:-cjit}
 if [[ $# -gt 2 || ( "$compiler" != cjit && "$compiler" != zig ) || ( $# == 2 && "$2" != --check ) ]]; then
   echo 'Usage: build-gui.sh [cjit|zig] [--check]' >&2; exit 2
+fi
+if [[ $(uname -s) == Darwin ]]; then
+  exec bash tools/build-gui-macos.sh "$@"
 fi
 stack=.
 if [[ ! -f "$stack/build/bin/cimgui_richmd.dll" ]]; then

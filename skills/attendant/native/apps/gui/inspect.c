@@ -1,7 +1,10 @@
 /* Live document inspection. No filesystem, source-session or ImGui calls. */
 #define WIN32_LEAN_AND_MEAN
 #include "inspect.h"
-#include "../../src/include/base.h"
+#include "../../src/core/platform.h"
+#if defined(__APPLE__)
+#include "ipc-macos.h"
+#endif
 #include <stdio.h>
 #include <string.h>
 #define JSONB_API static inline
@@ -78,6 +81,7 @@ int gui_inspection_json(const gui_inspection *snapshot, char *output, size_t cap
 #undef EMIT
     return 1;
 }
+#if defined(_WIN32)
 uintptr_t gui_inspection_receive(HWND window, HWND client, const gui_workspace *workspace,
     int busy, gui_inspection *output, const void *data, size_t size) {
     COPYDATASTRUCT copy; DWORD_PTR result = 0; char name[128];
@@ -91,6 +95,7 @@ uintptr_t gui_inspection_receive(HWND window, HWND client, const gui_workspace *
         SMTO_ABORTIFHUNG | SMTO_BLOCK, 250, &result) || result != GUI_INSPECT_RESULT) return 0;
     return GUI_INSPECT_RESULT;
 }
+#endif
 int gui_inspection_accept(gui_inspection *output, const char *project, const void *data, size_t size) {
     gui_inspection_header header;
     const char *text, *context;
@@ -100,7 +105,7 @@ int gui_inspection_accept(gui_inspection *output, const char *project, const voi
     memcpy(&header, data, sizeof(header));
     if (header.version != 2 || header.has_document > 1 || header.dirty > 1 || header.view > GUI_SELECTION_PREVIEW || header.status > GUI_SELECTION_CONTEXT ||
         header.length > GUI_TEXT || header.context_length > GUI_TEXT || size != offsetof(gui_inspection, text) + header.length + header.context_length + 2 ||
-        !memchr(header.project, 0, GUI_PATH) || !memchr(header.path, 0, GUI_PATH) || _stricmp(header.project, project) ||
+        !memchr(header.project, 0, GUI_PATH) || !memchr(header.path, 0, GUI_PATH) || source_path_compare(header.project, project) ||
         !string_view_utf8_valid(string_view_from_cstr(header.path)) ||
         header.start > header.end || header.end > GUI_TEXT) return 0;
     if (header.has_document && !*header.path) return 0;
@@ -120,8 +125,10 @@ int gui_inspection_accept(gui_inspection *output, const char *project, const voi
         offset += width; points++;
     }
     if (header.status == GUI_SELECTION_EXACT && points != header.end - header.start) return 0;
-    memcpy(output, data, size); return 1;
+    if ((const void *)output != data) memcpy(output, data, size);
+    return 1;
 }
+#if defined(_WIN32)
 typedef struct inspection_client {
     HWND server;
     const char *project;
@@ -184,3 +191,32 @@ cleanup:
     if (json) VirtualFree(json, 0, MEM_RELEASE);
     VirtualFree(client.snapshot, 0, MEM_RELEASE); return status;
 }
+#else
+int gui_inspect(const char *project) {
+    gui_reveal request = {0};
+    int status;
+    request.version = 1;
+    if (!gui_full_path(NULL, project, request.project)) return gui_reveal_error(1, "invalid-project", "Cannot resolve bounded UTF-8 project path");
+    gui_endpoint endpoint = gui_find_workspace(request.project, &status);
+    if (!endpoint) return status;
+    gui_inspection *snapshot = native_memory_allocate(sizeof(*snapshot));
+    const size_t capacity = 12u * GUI_TEXT + 6u * GUI_PATH + 4096u;
+    char *json = NULL;
+    uint32_t reply = 0;
+    size_t bytes = 0;
+    if (!snapshot) return gui_reveal_error(1, "capacity", "Cannot allocate bounded inspection response");
+    status = 1;
+    if (gui_ipc_call(endpoint, GUI_INSPECT_REQUEST, &request, 2000, &reply, snapshot, &bytes) != 1 ||
+        reply != GUI_INSPECT_RESULT || !gui_inspection_accept(snapshot, request.project, snapshot, bytes)) {
+        gui_reveal_error(1, "inspection-unavailable", "Viewer did not provide stable inspection; retry with a responsive viewer"); goto cleanup;
+    }
+    json = native_memory_allocate(capacity);
+    if (!json || !gui_inspection_json(snapshot, json, capacity)) {
+        gui_reveal_error(1, "capacity", "Cannot encode bounded inspection result"); goto cleanup;
+    }
+    puts(json); status = 0;
+cleanup:
+    if (json) arena_memory_release(json, capacity);
+    arena_memory_release(snapshot, sizeof(*snapshot)); return status;
+}
+#endif

@@ -43,19 +43,19 @@ static attendant_result request_result(context *c, int ok, const char *path, con
     return result;
 }
 attendant_session *attendant_open(void) {
-    attendant_session *session = VirtualAlloc(NULL, sizeof(*session), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    attendant_session *session = native_memory_allocate(sizeof(*session));
     void *backing;
     if (!session) return NULL;
-    backing = VirtualAlloc(NULL, REQUEST_MEMORY, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    if (!backing) { VirtualFree(session, 0, MEM_RELEASE); return NULL; }
+    backing = native_memory_allocate(REQUEST_MEMORY);
+    if (!backing) { arena_memory_release(session, sizeof(*session)); return NULL; }
     session->memory = arena_from_buffer(backing, REQUEST_MEMORY);
     return session;
 }
 void attendant_close(attendant_session *session) {
     if (!session) return;
     if (active_context == &session->state) active_context = NULL;
-    VirtualFree(session->memory, 0, MEM_RELEASE);
-    VirtualFree(session, 0, MEM_RELEASE);
+    arena_memory_release(session->memory, REQUEST_MEMORY);
+    arena_memory_release(session, sizeof(*session));
 }
 static void input_text(context *c, const char *text) {
     if (!text || strlen(text) > TEXT_CAPACITY || !string_view_utf8_valid(string_view_from_cstr(text)))
@@ -63,10 +63,8 @@ static void input_text(context *c, const char *text) {
 }
 static const char *regular_document(context *c, const char *path) {
     const char *absolute;
-    DWORD attributes;
     input_text(c, path); absolute = full_path(c, ".", path); c->error_path = absolute;
-    attributes = GetFileAttributesW(wide(c, absolute));
-    if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)))
+    if (source_stat(absolute).kind != SOURCE_REGULAR)
         fail(c, "Document must be an existing regular file");
     return absolute;
 }
@@ -88,8 +86,8 @@ attendant_result attendant_read_workspace(attendant_session *session, const char
     const char *root;
     attendant_document_info *documents;
     int i, j, k, count;
-    WIN32_FIND_DATAW entry;
-    HANDLE scan;
+    source_directory scan;
+    int next;
     if (workspace) memset(workspace, 0, sizeof(*workspace));
     if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
     if (!workspace) fail(c, "Missing workspace output");
@@ -102,7 +100,7 @@ attendant_result attendant_read_workspace(attendant_session *session, const char
         value *status = lookup(&r->front, "status");
         int references = 0;
         document->path = r->path; document->collection = r->owner->name;
-        document->name = r->validation_name ? r->validation_name : strrchr(r->path, '\\') + 1;
+        document->name = r->validation_name ? r->validation_name : source_basename(r->path);
         document->invalid = r->blocked;
         document->pending = !strcmp(r->owner->name, "_meta_comments") && status && status->kind == VALUE_STRING && !strcmp(status->text, "pending");
         document->resolved = !strcmp(r->owner->name, "_meta_comments") && status && status->kind == VALUE_STRING && !strcmp(status->text, "resolved");
@@ -128,38 +126,36 @@ attendant_result attendant_read_workspace(attendant_session *session, const char
             }
         }
     }
-    scan = FindFirstFileW(wide(c, format_text(c, "%s\\*", root)), &entry);
-    if (scan == INVALID_HANDLE_VALUE) fail(c, "Cannot browse workspace directory");
-    c->scanning_directory = scan;
-    do {
-        const char *name = utf8(c, entry.cFileName), *path;
+    if (!source_directory_open(&scan, root)) fail(c, "Cannot browse workspace directory");
+    c->scanning_directory = &scan;
+    while ((next = source_directory_next(&scan)) > 0) {
+        const char *name = scan.name, *path;
         size_t length = strlen(name);
-        if ((entry.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) || *name == '.' || length < 3 || _stricmp(name + length - 3, ".md")) continue;
+        if (*name == '.' || length < 3 || source_case_compare(name + length - 3, ".md")) continue;
         path = full_path(c, root, name);
-        for (i = 0; i < count; i++) if (!_stricmp(documents[i].path, path)) break;
+        if (source_stat(path).kind != SOURCE_REGULAR) continue;
+        for (i = 0; i < count; i++) if (!source_path_compare(documents[i].path, path)) break;
         if (i < count) continue;
         if (count == MAX_RECORDS) fail(c, "Workspace document capacity exceeded");
-        documents[count].path = path; documents[count].name = name; documents[count++].collection = "(workspace)";
-    } while (FindNextFileW(scan, &entry));
-    if (GetLastError() != ERROR_NO_MORE_FILES) fail(c, "Cannot finish workspace enumeration");
-    FindClose(scan); c->scanning_directory = NULL;
+        documents[count].path = path; documents[count].name = copy_text(c, name, length); documents[count++].collection = "(workspace)";
+    }
+    if (next < 0) fail(c, "Cannot finish workspace enumeration");
+    int closed = source_directory_close(&scan); c->scanning_directory = NULL;
+    if (!closed) fail(c, "Cannot close workspace enumeration");
     workspace->root = root; workspace->documents = documents;
     workspace->document_count = count; workspace->diagnostic_count = c->diagnostic_count;
     return request_result(c, 1, root, NULL, NULL);
 }
-static uint64_t attribute_time(const WIN32_FILE_ATTRIBUTE_DATA *attributes) {
-    return ((uint64_t)attributes->ftLastWriteTime.dwHighDateTime << 32) | attributes->ftLastWriteTime.dwLowDateTime;
-}
-static uint64_t attribute_size(const WIN32_FILE_ATTRIBUTE_DATA *attributes) {
-    return ((uint64_t)attributes->nFileSizeHigh << 32) | attributes->nFileSizeLow;
-}
-static void source_attributes(context *c, const char *path, WIN32_FILE_ATTRIBUTE_DATA *attributes) {
-    if (!GetFileAttributesExW(wide(c, path), GetFileExInfoStandard, attributes)) fail(c, "Cannot stat %s", path);
+static uint64_t attribute_time(const source_file_info *attributes) { return attributes->modified; }
+static uint64_t attribute_size(const source_file_info *attributes) { return attributes->size; }
+static void source_attributes(context *c, const char *path, source_file_info *attributes) {
+    *attributes = source_stat(path);
+    if (attributes->kind != SOURCE_REGULAR) fail(c, "Cannot stat %s", path);
 }
 attendant_result attendant_read_document(attendant_session *session, const char *path) {
     context *c = request_begin(session);
     const char *absolute, *text;
-    WIN32_FILE_ATTRIBUTE_DATA before, after;
+    source_file_info before, after;
     attendant_result result;
     if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
     absolute = regular_document(c, path); source_attributes(c, absolute, &before);
@@ -173,7 +169,7 @@ attendant_result attendant_read_document(attendant_session *session, const char 
 attendant_result attendant_save_document(attendant_session *session, const char *path, const char *expected_hash, const char *text) {
     context *c = request_begin(session);
     const char *absolute, *original, *hash, *staged;
-    WIN32_FILE_ATTRIBUTE_DATA attributes;
+    source_file_info attributes;
     attendant_result result;
     if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
     input_text(c, text); input_text(c, expected_hash);
@@ -210,8 +206,8 @@ attendant_result attendant_read_comment(attendant_session *session, const char *
     if (!table) fail(c, "No configured _meta_comments collection");
     expected = read_mapping(c, comment_schema, NULL); actual = read_mapping(c, table->schema_text, NULL);
     if (actual.problem || !mapping_equal(&expected, &actual)) fail(c, "Existing _meta_comments schema is not managed schema v1");
-    absolute = regular_document(c, full_path(c, root, path)); separator = strrchr(absolute, '\\');
-    if (!separator || _stricmp(copy_text(c, absolute, separator - absolute), full_path(c, root, table->directory)) || separator[1] == '.' ||
+    absolute = regular_document(c, full_path(c, root, path)); separator = source_basename(absolute) - 1;
+    if (source_path_compare(copy_text(c, absolute, separator - absolute), full_path(c, root, table->directory)) || separator[1] == '.' ||
         strlen(separator + 1) < 3 || strcmp(absolute + strlen(absolute) - 3, ".md")) fail(c, "Expected immediate managed comment Markdown file");
     text = read_text(c, absolute, NULL); front = read_mapping(c, text, &body);
     if (front.problem || !front.present) fail(c, "Comment front matter must be a valid mapping");
@@ -260,7 +256,7 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
     const char *seed_paths[3], *seed_stages[3], *seeds[3] = {comment_schema, "---\n---\n", comment_usage};
     collection *table = NULL;
     mapping expected, front = {0};
-    FILETIME now;
+    source_time now;
     value empty = {0};
     int i, bootstrap;
     if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
@@ -278,14 +274,14 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
     c->error_code = "feedback-conflict";
     config_path = full_path(c, root, ".pi/attendant.tables"); c->error_path = config_path;
     {
-        DWORD attributes = GetFileAttributesW(wide(c, config_path));
-        if (attributes != INVALID_FILE_ATTRIBUTES) {
-            if (attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) fail(c, "Config must be a regular file");
+        source_kind kind = source_stat(config_path).kind;
+        if (kind != SOURCE_MISSING && kind != SOURCE_ERROR) {
+            if (kind != SOURCE_REGULAR) fail(c, "Config must be a regular file");
             config = read_text(c, config_path, NULL); load_config(c, root);
             if (c->diagnostic_count) fail(c, "Cannot register feedback with invalid config/schema");
-        } else if (GetLastError() != ERROR_FILE_NOT_FOUND && GetLastError() != ERROR_PATH_NOT_FOUND) fail(c, "Cannot inspect workspace config");
+        } else if (kind == SOURCE_ERROR) fail(c, "Cannot inspect workspace config");
     }
-    for (i = 0; i < c->collection_count; i++) if (!_stricmp(c->collections[i].name, "_meta_comments")) {
+    for (i = 0; i < c->collection_count; i++) if (!source_case_compare(c->collections[i].name, "_meta_comments")) {
         if (strcmp(c->collections[i].name, "_meta_comments")) fail(c, "Feedback alias conflicts by case");
         table = &c->collections[i];
     }
@@ -294,7 +290,7 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
     if (bootstrap) {
         if (c->collection_count == MAX_COLLECTIONS) fail(c, "Collection capacity exceeded");
         directory = full_path(c, root, "records/_meta_comments"); c->error_path = directory;
-        for (i = 0; i < c->collection_count; i++) if (!lstrcmpiW(wide(c, directory), wide(c, full_path(c, ".", c->collections[i].directory))))
+        for (i = 0; i < c->collection_count; i++) if (!source_path_compare(directory, full_path(c, ".", c->collections[i].directory)))
             fail(c, "Feedback directory already belongs to another collection");
         require_empty_directory(c, directory);
         table = &c->collections[c->collection_count++];
@@ -320,13 +316,15 @@ attendant_result attendant_send_feedback(attendant_session *session, const atten
     {
         const char *state = full_path(c, root, ".attendant");
         c->error_path = directory;
-        if (!_stricmp(directory, root) || !_stricmp(directory, state) || inside_project(state, directory))
+        if (!source_path_compare(directory, root) || !source_path_compare(directory, state) || inside_project(state, directory))
             fail(c, "Feedback directory must not be workspace root or disposable state");
     }
     name = format_text(c, "comment-%s", uuid_v7(c)); comment_path = full_path(c, directory, format_text(c, "%s.md", name));
     empty.kind = VALUE_ARRAY;
     mapping_set(c, &front, "id", text_value(uuid_v7(c))); mapping_set(c, &front, "name", text_value(name));
-    GetSystemTimeAsFileTime(&now); mapping_set(c, &front, "created_at", text_value(iso_time(c, now)));
+    now = source_now();
+    if (!now) fail(c, "System clock unavailable");
+    mapping_set(c, &front, "created_at", text_value(iso_time(c, now)));
     mapping_set(c, &front, "desc", text_value("")); mapping_set(c, &front, "tags", empty);
     mapping_set(c, &front, "status", text_value("pending")); mapping_set(c, &front, "target_path", text_value(target));
     mapping_set(c, &front, "target_hash", text_value(input->target_hash));
