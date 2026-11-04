@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Windows x64 GUI dependency DLL. Requires pinned sources and Zig; never downloads.
+# Native GUI dependency library. Requires pinned sources and Zig; never downloads.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export ZIG_GLOBAL_CACHE_DIR="${ZIG_GLOBAL_CACHE_DIR:-$(pwd)/build/zig-cache}"
@@ -10,6 +10,9 @@ if [[ ! -f build/deps/luajit/src/ljamalg.c ]]; then
   echo 'Missing sources: run node tools/prepare-gui.mjs first.' >&2; exit 1
 fi
 node tools/prepare-gui.mjs --verify
+if [[ $(uname -s) == Darwin ]]; then
+  exec bash tools/build-gui-stack-macos.sh
+fi
 # Rebuild generation tool; Zig's private content-addressed cache avoids stale tool reuse.
   (
     cd build/deps/luajit/src

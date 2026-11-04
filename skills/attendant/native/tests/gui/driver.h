@@ -1,4 +1,36 @@
 /* Test-only GUI state observation and synthetic input. Included after host helpers. */
+static ImGuiKey test_shortcut_modifier(void) {
+    return igGetIO_Nil()->ConfigMacOSXBehaviors ? ImGuiMod_Super : ImGuiMod_Ctrl;
+}
+static uintptr_t test_focus(void) {
+#if defined(_WIN32)
+    return (uintptr_t)GetFocus();
+#else
+    return (uintptr_t)glfwGetWindowAttrib(glfwGetCurrentContext(), GLFW_FOCUSED);
+#endif
+}
+static uintptr_t test_foreground(void) {
+#if defined(_WIN32)
+    return (uintptr_t)GetForegroundWindow();
+#else
+    return test_focus();
+#endif
+}
+static void test_mouse(void *window, ImVec2 position) {
+#if defined(_WIN32)
+    crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+#else
+    glfwSetCursorPos(window, position.x, position.y);
+    ImGuiIO_AddMousePosEvent(igGetIO_Nil(), position.x, position.y);
+#endif
+}
+static void test_close(void *window) {
+#if defined(_WIN32)
+    window_proc(window, WM_CLOSE, 0, 0);
+#else
+    window_close(window);
+#endif
+}
 static ImVec2 item_center(void) {
     ImVec2 a = igGetItemRectMin(), b = igGetItemRectMax(), center = {(a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f}; return center;
 }
@@ -20,12 +52,12 @@ static void reveal_observe(gui_app *app, gui_tab *tab, ImGuiID widget) {
         app->before_view = view; app->before_editor = editor; app->before_widget = widget;
         app->before_active = app->workspace.active; app->before_tabs = app->workspace.tab_count; app->before_activation = app->workspace.activation;
         app->before_start = tab->selection_start; app->before_end = tab->selection_end; app->before_revision = tab->text_revision;
-        app->before_focus = GetFocus(); app->before_foreground = GetForegroundWindow();
+        app->before_focus = test_focus(); app->before_foreground = test_foreground();
         app->reveal_phase = 1; puts("{\"event\":\"ready\"}"); fflush(stdout); return;
     }
     if (app->reveal_phase == 1 && app->inspection_requests && !app->inspection_checked) {
         REVEAL_CHECK(app->workspace.active == app->before_active && app->workspace.tab_count == app->before_tabs && app->workspace.activation == app->before_activation);
-        REVEAL_CHECK(view.active_id == app->before_view.active_id && GetFocus() == app->before_focus && GetForegroundWindow() == app->before_foreground);
+        REVEAL_CHECK(view.active_id == app->before_view.active_id && test_focus() == app->before_focus && test_foreground() == app->before_foreground);
         REVEAL_CHECK(view.scroll_y == app->before_view.scroll_y && editor.x == app->before_editor.x && editor.y == app->before_editor.y);
         REVEAL_CHECK(view.caret == app->before_view.caret && view.selection_start == app->before_view.selection_start && view.selection_end == app->before_view.selection_end);
         REVEAL_CHECK(tab->selection_start == app->before_start && tab->selection_end == app->before_end && tab->text_revision == app->before_revision);
@@ -33,7 +65,7 @@ static void reveal_observe(gui_app *app, gui_tab *tab, ImGuiID widget) {
     }
     if (app->reveal_phase == 1 && app->hint.version) {
         REVEAL_CHECK(app->workspace.active == app->before_active && app->workspace.tab_count == app->before_tabs && app->workspace.activation == app->before_activation);
-        REVEAL_CHECK(view.active_id == app->before_view.active_id && GetFocus() == app->before_focus && GetForegroundWindow() == app->before_foreground);
+        REVEAL_CHECK(view.active_id == app->before_view.active_id && test_focus() == app->before_focus && test_foreground() == app->before_foreground);
         REVEAL_CHECK(view.scroll_y == app->before_view.scroll_y && editor.x == app->before_editor.x && editor.y == app->before_editor.y);
         REVEAL_CHECK(view.caret == app->before_view.caret && view.selection_start == app->before_view.selection_start && view.selection_end == app->before_view.selection_end);
         REVEAL_CHECK(tab->selection_start == app->before_start && tab->selection_end == app->before_end && tab->text_revision == app->before_revision);
@@ -61,7 +93,7 @@ static void reveal_observe(gui_app *app, gui_tab *tab, ImGuiID widget) {
 #undef REVEAL_CHECK
 }
 
-static void exercise_input(gui_app *app, HWND window, int frame) {
+static void exercise_input(gui_app *app, void *window, int frame) {
     ImVec2 position;
     app->test_frame = frame;
     if (app->selection_exercise == 15) {
@@ -75,18 +107,18 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
             }
         }
         position = app->editor_position;
-        crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+        test_mouse(window, position);
         if (frame == 5 || frame == 6 || frame == 18 || frame == 19 || frame == 58 || frame == 59)
             ImGuiIO_AddMouseButtonEvent(io, 0, frame == 5 || frame == 18 || frame == 58);
-        if (frame == 8 || frame == 30) { ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, true); ImGuiIO_AddKeyEvent(io, ImGuiKey_A, true); }
+        if (frame == 8 || frame == 30) { ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), true); ImGuiIO_AddKeyEvent(io, ImGuiKey_A, true); }
         if (frame == 9 || frame == 31) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, false);
-        if (frame == 10 || frame == 32) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, false);
+        if (frame == 10 || frame == 32) ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), false);
         if (frame == 11 || frame == 34) ImGuiIO_AddInputCharactersUTF8(io, frame == 11 ? "undo shared" : "undo B edit");
         if (frame == 22 || frame == 38 || frame == 44 || frame == 50 || frame == 62) {
-            ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, true); ImGuiIO_AddKeyEvent(io, frame == 44 ? ImGuiKey_Y : ImGuiKey_Z, true);
+            ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), true); ImGuiIO_AddKeyEvent(io, frame == 44 ? ImGuiKey_Y : ImGuiKey_Z, true);
         }
         if (frame == 23 || frame == 39 || frame == 45 || frame == 51 || frame == 63) ImGuiIO_AddKeyEvent(io, frame == 45 ? ImGuiKey_Y : ImGuiKey_Z, false);
-        if (frame == 24 || frame == 40 || frame == 46 || frame == 52 || frame == 64) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, false);
+        if (frame == 24 || frame == 40 || frame == 46 || frame == 52 || frame == 64) ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), false);
         if (frame == 26 || frame == 36 || frame == 42 || frame == 48 || frame == 66) {
             const char *expected = frame == 36 || frame == 48 ? "undo B edit" : frame == 42 ? "undo B edi" : "undo shared";
             if (strcmp(workspace->tabs[workspace->active].text, expected)) {
@@ -112,13 +144,13 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
         if (frame >= 14 && frame <= 17) { position.x = 12; position.y = 12; }
         if (frame >= 40 && frame <= 41) position = app->comment_position;
         if (frame >= 54 && frame <= 55) position = app->send_position;
-        crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+        test_mouse(window, position);
         if (frame == 5 || frame == 6 || frame == 14 || frame == 15) ImGuiIO_AddMouseButtonEvent(io, 0, frame == 5 || frame == 14);
-        if (frame == 8 || frame == 10) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, frame == 8);
+        if (frame == 8 || frame == 10) ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), frame == 8);
         if (frame == 8 || frame == 9) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 8);
         if (app->selection_exercise == 6) {
             if (frame == 11) ImGuiIO_AddInputCharactersUTF8(io, "plain  \nnext\n");
-            if (frame == 12 || frame == 13) { ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, frame == 12); ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 12); }
+            if (frame == 12 || frame == 13) { ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), frame == 12); ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 12); }
         }
         if (frame == 40 || frame == 41) ImGuiIO_AddMouseButtonEvent(io, 0, frame == 40);
         if (app->selection_exercise != 1 && app->selection_exercise != 13 && frame == 50) ImGuiIO_AddInputCharactersUTF8(io, "Preview selection review note\nHuman body unchanged.");
@@ -137,7 +169,7 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
             if (frame == 20 || frame == 25) ImGuiIO_AddMouseButtonEvent(io, 0, frame == 20);
         } else if (app->selection_exercise == 3) {
             if (frame == 20 || frame == 21) ImGuiIO_AddMouseButtonEvent(io, 0, frame == 20);
-            if (frame == 24 || frame == 26) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, frame == 24);
+            if (frame == 24 || frame == 26) ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), frame == 24);
             if (frame == 24 || frame == 25) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 24);
         } else {
             if (frame == 20 || frame == 21) ImGuiIO_AddMouseButtonEvent(io, 1, frame == 20);
@@ -155,12 +187,12 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
         if (frame >= 5 && frame <= 14) position = app->editor_position;
         else if (app->reveal_phase == 2 && frame >= app->reveal_frame + 4 && frame <= app->reveal_frame + 5) position = app->hint_go_position;
         else position.x = position.y = -100;
-        if (position.x >= 0) crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+        if (position.x >= 0) test_mouse(window, position);
         if (frame == 5 || (app->reveal_phase == 2 && frame == app->reveal_frame + 4)) ImGuiIO_AddMouseButtonEvent(io, 0, true);
         if (frame == 6 || (app->reveal_phase == 2 && frame == app->reveal_frame + 5)) ImGuiIO_AddMouseButtonEvent(io, 0, false);
-        if (frame == 7 || frame == 12) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, true);
+        if (frame == 7 || frame == 12) ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), true);
         if (frame == 7 || frame == 8) ImGuiIO_AddKeyEvent(io, ImGuiKey_End, frame == 7);
-        if (frame == 9 || frame == 14) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, false);
+        if (frame == 9 || frame == 14) ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), false);
         if (frame == 10 && app->reveal_exercise == 2) ImGuiIO_AddInputCharactersUTF8(io, "!");
         if (frame == 12 || frame == 13) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 12);
         return;
@@ -172,12 +204,12 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
         else if (frame >= 30 && frame <= 34) position = app->comment_position;
         else if (frame >= 44 && frame <= 48) position = app->send_position;
         else position.x = position.y = -100;
-        if (position.x >= 0) crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+        if (position.x >= 0) test_mouse(window, position);
         if (frame == 5 || frame == 20 || frame == 30 || frame == 44) ImGuiIO_AddMouseButtonEvent(io, 0, true);
         if (frame == 6 || frame == 21 || frame == 31 || frame == 45) ImGuiIO_AddMouseButtonEvent(io, 0, false);
-        if (frame == 8 || frame == 24) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, true);
+        if (frame == 8 || frame == 24) ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), true);
         if (frame == 8 || frame == 9) ImGuiIO_AddKeyEvent(io, ImGuiKey_End, frame == 8);
-        if (frame == 10 || frame == 26) ImGuiIO_AddKeyEvent(io, ImGuiMod_Ctrl, false);
+        if (frame == 10 || frame == 26) ImGuiIO_AddKeyEvent(io, test_shortcut_modifier(), false);
         if (frame == 12) ImGuiIO_AddInputCharactersUTF8(io, "!");
         if (frame == 24 || frame == 25) ImGuiIO_AddKeyEvent(io, ImGuiKey_A, frame == 24);
         if (frame == 38) ImGuiIO_AddInputCharactersUTF8(io, "GUI preview context note\nSecond line.");
@@ -194,17 +226,17 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
         else if (!app->save_fail_exercise && frame >= 55 && frame <= 57) position = app->feedback_position;
         else if (!app->save_fail_exercise && frame >= 59 && frame <= 61) position = app->target_position;
         else position.x = position.y = -100;
-        if (position.x >= 0) crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+        if (position.x >= 0) test_mouse(window, position);
         if (frame == 5 || frame == 26 || frame == 30 || frame == 38 || frame == 50 || (app->save_fail_exercise && frame == 58) || (!app->save_fail_exercise && (frame == 55 || frame == 59))) ImGuiIO_AddMouseButtonEvent(igGetIO_Nil(), 0, true);
         if (frame == 6 || frame == 27 || frame == 31 || frame == 39 || frame == 51 || (app->save_fail_exercise && frame == 59) || (!app->save_fail_exercise && (frame == 56 || frame == 60))) ImGuiIO_AddMouseButtonEvent(igGetIO_Nil(), 0, false);
-        if (frame == 8 || frame == 16 || frame == 19 || frame == 33) ImGuiIO_AddKeyEvent(igGetIO_Nil(), ImGuiMod_Ctrl, true);
+        if (frame == 8 || frame == 16 || frame == 19 || frame == 33) ImGuiIO_AddKeyEvent(igGetIO_Nil(), test_shortcut_modifier(), true);
         if (frame == 8) ImGuiIO_AddKeyEvent(igGetIO_Nil(), ImGuiKey_End, true);
         if (frame == 9) ImGuiIO_AddKeyEvent(igGetIO_Nil(), ImGuiKey_End, false);
-        if (frame == 10 || frame == 17 || frame == 20 || frame == 35) ImGuiIO_AddKeyEvent(igGetIO_Nil(), ImGuiMod_Ctrl, false);
+        if (frame == 10 || frame == 17 || frame == 20 || frame == 35) ImGuiIO_AddKeyEvent(igGetIO_Nil(), test_shortcut_modifier(), false);
         if (frame == 12) ImGuiIO_AddInputCharactersUTF8(igGetIO_Nil(), " GUI edit");
         if (frame == 16 || frame == 17) ImGuiIO_AddKeyEvent(igGetIO_Nil(), ImGuiKey_Z, frame == 16);
         if (frame == 19 || frame == 20) ImGuiIO_AddKeyEvent(igGetIO_Nil(), ImGuiKey_Y, frame == 19);
-        if (frame == 22) window_proc(window, WM_CLOSE, 0, 0);
+        if (frame == 22) test_close(window);
         if (frame == 33 || frame == 34) ImGuiIO_AddKeyEvent(igGetIO_Nil(), ImGuiKey_A, frame == 33);
         if (frame == 44) ImGuiIO_AddInputCharactersUTF8(igGetIO_Nil(), "GUI context note\nSecond line.");
         return;
@@ -214,7 +246,7 @@ static void exercise_input(gui_app *app, HWND window, int frame) {
     else if (frame >= 12 && frame <= 15) position = app->first_position;
     else if (frame >= 20 && frame <= 23) position = app->depends_position;
     else return;
-    crmd_message(window, WM_MOUSEMOVE, 0, MAKELPARAM((int)position.x, (int)position.y));
+    test_mouse(window, position);
     if (frame == 5 || frame == 12 || frame == 20) ImGuiIO_AddMouseButtonEvent(igGetIO_Nil(), 0, true);
     if (frame == 6 || frame == 13 || frame == 21) ImGuiIO_AddMouseButtonEvent(igGetIO_Nil(), 0, false);
 }

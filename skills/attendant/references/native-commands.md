@@ -2,7 +2,7 @@
 
 Read for explicit native evaluation. Setup/missing build: [build reference](build.md). Existing JS workflow stays default until rollout approval. Native has no migration/import command.
 
-`<native>` means `<skill-dir>/native/build/attendant-zig.exe` or CJIT counterpart. Run from target project, or supply `-p <project>`. Preserve existing collection setup/record approval gates and inspect schema/usage before managed data changes.
+`<native>` means `<skill-dir>/native/build/attendant-zig.exe` or CJIT counterpart on Windows; omit `.exe` on macOS. Run from target project, or supply `-p <project>`. Preserve existing collection setup/record approval gates and inspect schema/usage before managed data changes.
 
 ## Commands
 

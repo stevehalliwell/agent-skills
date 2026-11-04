@@ -10,6 +10,7 @@ int main(int argc, char **argv) {
     int i;
     active_context = &c;
     c.memory = arena_from_buffer(backing, sizeof(backing));
+#if defined(_WIN32)
     {
         LPWSTR *arguments = CommandLineToArgvW(GetCommandLineW(), &argc);
         if (!arguments) fail(&c, "Cannot read Windows command line");
@@ -17,6 +18,7 @@ int main(int argc, char **argv) {
         for (i = 0; i < argc; i++) argv[i] = (char *)utf8(&c, arguments[i]);
         LocalFree(arguments);
     }
+#endif
     if (argc < 2 || !strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) return native_help();
     if (!strcmp(argv[1], "doctor") || !strcmp(argv[1], "validate") || !strcmp(argv[1], "add-table") || !strcmp(argv[1], "create") || !strcmp(argv[1], "update") ||
         !strcmp(argv[1], "sync") || !strcmp(argv[1], "schema") || !strcmp(argv[1], "query") || !strcmp(argv[1], "search"))

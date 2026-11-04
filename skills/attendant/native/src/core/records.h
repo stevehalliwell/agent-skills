@@ -39,14 +39,14 @@ static void record_problem(context *c, record *r, const char *code, const char *
 }
 static void validate_record(context *c, record *r) {
     value *v;
-    FILETIME time;
+    source_time time;
     int i, j;
     if (r->front.problem) { record_problem(c, r, r->front.problem_code, r->front.problem); return; }
     if (!r->front.present) { r->blocked = 1; return; }
     v = lookup(&r->front, "name");
     if (v && v->kind == VALUE_STRING) r->validation_name = v->text;
     else {
-        const char *base = strrchr(r->path, '\\'); base = base ? base + 1 : r->path;
+        const char *base = source_basename(r->path);
         r->validation_name = copy_text(c, base, strlen(base) - 3);
     }
     v = lookup(&r->front, "id"); if (v && !valid_uuid(v)) record_problem(c, r, "record-id", "id must be UUIDv7.");

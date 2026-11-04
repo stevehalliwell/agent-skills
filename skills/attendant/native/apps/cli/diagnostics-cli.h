@@ -54,37 +54,33 @@ static int native_doctor(context *c, read_options *options) {
     const char *projection = "missing", *path = full_path(c, options->project, ".attendant/attendant.sqlite");
     jsonb b;
     sqlite3 *probe = NULL;
-    HANDLE directory;
-    int healthy = 1, sqlite_ok;
+    int healthy = 1, sqlite_ok, writable;
     load_source(c, options->project); projection_requirements(c);
     jsonb_init(&b); json_check(jsonb_array(&b, out, OUTPUT_CAPACITY));
+#if defined(_WIN32)
     doctor_check(&b, out, "runtime-native", "ok", "Native Windows runtime available.", NULL);
+#else
+    doctor_check(&b, out, "runtime-native", "ok", "Native macOS runtime available.", NULL);
+#endif
     sqlite_ok = sqlite3_open(":memory:", &probe) == SQLITE_OK && sqlite3_exec(probe, "CREATE VIRTUAL TABLE probe USING fts5(content, tokenize='trigram')", NULL, NULL, NULL) == SQLITE_OK;
     sqlite3_close(probe);
     if (!sqlite_ok) healthy = 0;
     doctor_check(&b, out, "runtime-sqlite", sqlite_ok ? "ok" : "error", sqlite_ok ? "SQLite FTS5 with trigram tokenizer available." : "SQLite FTS5 trigram tokenizer is unavailable.", format_text(c, "{\"version\":\"%s\"}", sqlite3_libversion()));
     if (!c->config_hash || c->contract_diagnostic_count) healthy = 0;
     doctor_check(&b, out, "config", c->config_hash && !c->contract_diagnostic_count ? "ok" : "error", c->config_hash ? "Attendant config inspected." : "Missing .pi/attendant.tables.", format_text(c, "{\"collections\":%d}", c->collection_count));
-    directory = CreateFileW(wide(c, options->project), 0x0002 /* FILE_ADD_FILE */, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-    if (directory == INVALID_HANDLE_VALUE) healthy = 0; else CloseHandle(directory);
-    doctor_check(&b, out, "state-write", directory != INVALID_HANDLE_VALUE ? "ok" : "error", directory != INVALID_HANDLE_VALUE ? "Project root is writable for generated state." : "Project root is not writable for generated state.", NULL);
-    if (GetFileAttributesW(wide(c, path)) != INVALID_FILE_ATTRIBUTES) {
-        WIN32_FILE_ATTRIBUTE_DATA wal;
-        HANDLE stable = CreateFileW(wide(c, path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        DWORD journal = GetFileAttributesW(wide(c, format_text(c, "%s-journal", path)));
-        DWORD journal_error = GetLastError();
-        int sidecar = journal != INVALID_FILE_ATTRIBUTES || (journal_error != ERROR_FILE_NOT_FOUND && journal_error != ERROR_PATH_NOT_FOUND);
-        if (GetFileAttributesExW(wide(c, format_text(c, "%s-wal", path)), GetFileExInfoStandard, &wal)) {
-            if ((wal.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || wal.nFileSizeHigh || wal.nFileSizeLow) sidecar = 1;
-        } else {
-            DWORD wal_error = GetLastError();
-            if (wal_error != ERROR_FILE_NOT_FOUND && wal_error != ERROR_PATH_NOT_FOUND) sidecar = 1;
-        }
+    writable = source_directory_writable(options->project);
+    if (!writable) healthy = 0;
+    doctor_check(&b, out, "state-write", writable ? "ok" : "error", writable ? "Project root is writable for generated state." : "Project root is not writable for generated state.", NULL);
+    if (source_exists(path)) {
+        void *stable = source_freeze_read(path);
+        source_file_info wal = source_stat(format_text(c, "%s-wal", path));
+        int sidecar = source_exists(format_text(c, "%s-journal", path));
+        if (wal.kind != SOURCE_MISSING && (wal.kind != SOURCE_REGULAR || wal.size)) sidecar = 1;
         projection = "stale";
         /* Read-only consumers can leave empty WAL/SHM files. Freeze the main
            file against writers, then inspect immutably only without WAL data.
            Active writers/nonempty WAL remain conservatively stale, not ignored. */
-        if (!sidecar && stable != INVALID_HANDLE_VALUE) {
+        if (!sidecar && stable) {
             size_t length = strlen(path), used = 0, j;
             char *encoded = allocate(c, length * 3 + 1);
             for (j = 0; j < length; j++) {
@@ -99,7 +95,7 @@ static int native_doctor(context *c, read_options *options) {
             } else projection = "corrupt";
             sqlite3_close(c->db); c->db = NULL;
         }
-        if (stable != INVALID_HANDLE_VALUE) CloseHandle(stable);
+        if (stable) file_stream_close(stable);
     }
     if (strcmp(projection, "fresh")) healthy = 0;
     doctor_check(&b, out, "projection", !strcmp(projection, "fresh") ? "ok" : "error", format_text(c, "Projection is %s.", projection), NULL);

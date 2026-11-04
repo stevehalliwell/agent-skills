@@ -20,6 +20,10 @@ const dependencies = [
   ['richmd/external/md4c', 'https://github.com/mity/md4c.git', '481fbfbdf72daab2912380d62bb5f2187d438408'],
   ['luajit', 'https://github.com/LuaJIT/LuaJIT.git', 'a4c064539ea931274d407e1249b4bb575424a0f4'],
 ];
+// Upstream RichMd examples use GLFW/OpenGL3. Windows retains Win32/D3D11.
+if (process.platform === 'darwin') dependencies.push([
+  'glfw', 'https://github.com/glfw/glfw.git', '7b6aead9fb88b3623e3b3725ebb42670cbe4c579', // 3.4
+]);
 for (const [name, url, commit] of dependencies) {
   const path = resolve('build/deps', name);
   if (!existsSync(resolve(path, '.git'))) {

@@ -21,12 +21,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 mkdirSync(join(root, 'build/bench'), { recursive: true });
 const run = mkdtempSync(join(root, 'build/bench/run-'));
 const compilers = ['cjit', 'zig'];
+const suffix = process.platform === 'win32' ? '.exe' : '';
 const commands = { sync: ['sync'], query: ['query', '-s', 'SELECT name,status FROM tasks ORDER BY name'], search: ['search', '-q', 'projection'] };
 const samples = [];
 for (const compiler of compilers) cpSync(join(root, 'tests/fixtures/project'), join(run, compiler), { recursive: true });
 function invoke(compiler, name) {
   const start = performance.now();
-  const child = spawnSync(join(root, `build/attendant-${compiler}.exe`), [...commands[name], '-p', join(run, compiler)], { encoding: 'utf8', timeout: 30000, windowsHide: true });
+  const child = spawnSync(join(root, `build/attendant-${compiler}${suffix}`), [...commands[name], '-p', join(run, compiler)], { encoding: 'utf8', timeout: 30000, windowsHide: true });
   const milliseconds = performance.now() - start;
   assert.equal(child.status, 0, child.error?.message || child.stderr);
   const result = JSON.parse(child.stdout);
@@ -44,5 +45,5 @@ const summary = compilers.flatMap(compiler => Object.keys(commands).map(command 
   const middle = Math.floor(values.length / 2), median = values.length % 2 ? values[middle] : (values[middle - 1] + values[middle]) / 2;
   return { compiler, command, samples: values.length, minimumMs: values[0], medianMs: median, maximumMs: values.at(-1) };
 }));
-writeFileSync(join(run, 'results.json'), JSON.stringify({ runs, scope: 'warm synthetic fixture, process launch through exit; rotating serial compiler order', samples, summary }, null, 2) + '\n');
+writeFileSync(join(run, 'results.json'), JSON.stringify({ platform: process.platform, architecture: process.arch, runs, scope: 'warm synthetic fixture, process launch through exit; rotating serial compiler order', samples, summary }, null, 2) + '\n');
 console.log(JSON.stringify({ run, summary }));

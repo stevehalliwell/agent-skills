@@ -17,7 +17,7 @@ function inventory(folder, includeState = false) {
 }
 try {
   for (const compiler of ['cjit', 'zig']) {
-    const project = join(report.run, `${compiler} café Ω`), executable = join(root, `build/attendant-${compiler}.exe`);
+    const project = join(report.run, `${compiler} café Ω`), executable = join(root, `build/attendant-${compiler}${process.platform === 'win32' ? '.exe' : ''}`);
     cpSync(join(root, 'tests/fixtures/project'), project, { recursive: true });
     const check = name => report.cases.push({ compiler, name });
     function cli(args, status = 0, input) {

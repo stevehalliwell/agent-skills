@@ -1,9 +1,8 @@
 #ifndef ATTENDANT_WORKSPACE_H
 #define ATTENDANT_WORKSPACE_H
 #include "../../src/native-api.h"
+#if defined(_WIN32)
 #include <windows.h>
-#ifndef WC_ERR_INVALID_CHARS
-#define WC_ERR_INVALID_CHARS 0x80
 #endif
 #define GUI_TABS 16
 #define GUI_TEXT (4 * 1024 * 1024)
@@ -19,8 +18,7 @@ typedef struct gui_tab {
     uint64_t text_revision;
     int selection_start, selection_end; /* Editor UTF-8 byte offsets. */
     int reveal_selection, anchor_stale;
-    FILETIME modified;
-    DWORD file_size;
+    uint64_t modified, file_size;
 } gui_tab;
 typedef struct gui_navigation {
     int count, diagnostics;

@@ -1,15 +1,18 @@
 # Native Attendant
 
-Windows-first C99 CLI and Markdown workspace GUI over shared core. Markdown is authoritative; `.attendant/` is disposable SQLite projection state. Runtime needs no Node.js. Third-party GUI C++ stays behind C ABI/DLL.
+C99 CLI and Markdown workspace GUI over shared core. Markdown is authoritative; `.attendant/` is disposable SQLite projection state. Runtime needs no Node.js. Third-party GUI C++ stays behind C ABI/native library.
 
-Status: product import under qualification. Existing JS skill launcher remains active; native rollout requires explicit approval. Use owned workspace copies for evaluation, not authoritative projects.
+Status: native macOS arm64 implementation and automated acceptance complete; product remains under rollout qualification. Existing JS skill launcher remains active; native rollout requires explicit approval. Use owned workspace copies for evaluation, not authoritative projects.
+
+macOS arm64: Zig/CJIT CLI, source/feedback API and interactive GLFW/OpenGL3 workspace run. Combined checks pass 20 CLI groups, 94 API cases, 20 GUI/model groups (194 macOS model assertions per compiler) and 16 control groups. Bridge checks cover Markdown/images, Retina screenshots and terminal render cleanup. Windows keeps Win32/D3D11; current Windows proof is cross-compilation/linking, not runtime execution. See [macOS build checkpoint](../references/build.md#macos-bring-up-checkpoint).
 
 ## Build and run
 
 Read [build reference](../references/build.md). It covers installed tools, explicit dependency acquisition, offline builds and missing-build handling. No automatic installs/downloads.
 
 ```sh
-# From this directory, Windows Git Bash:
+# From this directory, Windows Git Bash or macOS Bash.
+# Omit .exe from executable names on macOS:
 bash build.sh zig
 build/attendant-zig.exe --help
 build/attendant-zig.exe schema -p /path/to/owned/workspace
@@ -39,7 +42,7 @@ No build/runtime dependency on historical exploration/spike trees. Do not overwr
 - `create`/`update` accept nonempty arrays of `{name, fields}`. Only declared fields plus `desc`/`tags` are writable. Defaults/template apply to create. Reject invalid types/references, immutable fields, unsafe names, collisions and invalid prospective batches before publication.
 - Update/correction splices changed value spans; preserve unrelated bytes, comments, newline style and body. Formatting inside replaced values may change. Parse/validate serialized values before staging.
 - Flush exclusive sibling temporary files; compare captured source before replacement. Publication is atomic per file, not across a batch. Completed writes survive later failures and are reported as `written`; source remains committed if projection refresh fails. No universal concurrent-writer guarantee.
-- Add-table/first feedback bootstrap publish owned seeds before config registration. Failed cleanup preserves changed/busy files and reports survivors. Never adopt conflicting managed data.
+- Add-table/first feedback bootstrap publish owned seeds before config registration. On macOS, failed setup retains published files and reports written paths; staging and empty owned directories are cleaned. Windows removes unchanged owned files through share-denying handles, preserving changed/busy files. Inspect reported files before retrying; never adopt conflicting managed data.
 - Native source API is single-threaded and recoverable; see `src/native-api.h` for ownership, lifetimes and request/result contracts. GUI source reads/saves/feedback do not require preparing SQLite.
 
 ## Projection and limits
@@ -60,14 +63,19 @@ From this directory, after builds described in build reference:
 node tests/core/cli-check.mjs
 node tests/core/api-check.mjs
 node tests/gui/check.mjs
+# macOS transport-specific checks:
+node tests/gui/control-macos-check.mjs
+node tests/gui/bridge-check.mjs
 node tools/benchmark.mjs 5
 ```
 
-Checks create owned copies under `build/`; never target live projects. Current results: `build/cli-check-results.json`, `build/api-check-results.json`, `build/gui-check-results.json`. GUI manifests bind actual inputs/binaries to checks. Model assertions remain active even if compiler defines `NDEBUG`.
+Checks create owned copies under `build/`; never target live projects. Current results: `build/cli-check-results.json`, `build/api-check-results.json`, `build/gui-check-results.json`; macOS adds `build/control-check-results.json` and `build/bridge-check-results.json`. GUI manifests bind actual inputs/binaries to checks. macOS model checks include maximum 4 MiB selection plus 4 MiB context, delayed-reader backpressure and frozen-reply independence from later selection changes. Model assertions remain active even if compiler defines `NDEBUG`.
 
 Benchmark measures warm synthetic fixture launch-to-exit, excluding build/copy/warmup/result checks, rotating serial compiler order. Reports samples and min/median/max. It is not real-project or GUI footprint qualification.
 
 ## Remaining limits and history
+
+macOS control transport is same-UID across login sessions, not same-desktop isolation or application authentication. Same-UID processes can inspect selections or impersonate endpoints. Discovery rejects ambiguous/unresponsive/unsafe endpoints; stale endpoints are not deleted during discovery. A stale same-PID endpoint can require manual removal after a crash.
 
 Known renderer failure abandons unsafe frame but loses unsaved tabs/composer drafts. Recovery explicitly deferred. Git integration, migration/import, coordinated concurrent source writers, wider Unicode/glyph/long-path/access-denied/DPI/device-loss and long-run/power-loss qualification remain outside demonstrated coverage. Automated GUI checks are not final human rollout acceptance. Startup/idle/interaction footprint is not qualified.
 

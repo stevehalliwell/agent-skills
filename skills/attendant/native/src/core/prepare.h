@@ -307,11 +307,10 @@ static void rebuild_projection(context *c, const char *root) {
     const char *directory = full_path(c, root, ".attendant");
     const char *target = full_path(c, directory, "attendant.sqlite");
     int i;
-    if (!CreateDirectoryW(wide(c, directory), NULL) && GetLastError() != ERROR_ALREADY_EXISTS) fail(c, "Cannot create projection directory");
+    if (!source_mkdir(directory) && source_stat(directory).kind != SOURCE_DIRECTORY) fail(c, "Cannot create projection directory");
     /* Replacement still requires no active consumers. Healthy WAL updates use
        transactions instead; never rename a main DB over live WAL sidecars. */
-    if (GetFileAttributesW(wide(c, format_text(c, "%s-wal", target))) != INVALID_FILE_ATTRIBUTES ||
-        GetFileAttributesW(wide(c, format_text(c, "%s-shm", target))) != INVALID_FILE_ATTRIBUTES) {
+    if (source_exists(format_text(c, "%s-wal", target)) || source_exists(format_text(c, "%s-shm", target))) {
         int status;
         if (projection_open(c, target, SQLITE_OPEN_READWRITE) != SQLITE_OK) fail(c, "Cannot recover existing WAL projection");
         sqlite3_busy_timeout(c->db, PROJECTION_BUSY_MS);
@@ -322,15 +321,14 @@ static void rebuild_projection(context *c, const char *root) {
         if (status != SQLITE_OK) fail(c, "Existing WAL sidecars: stop consumers before rebuilding projection");
     }
     /* Old rollback journals must not replay on a new DB. */
-    if (GetFileAttributesW(wide(c, format_text(c, "%s-wal", target))) != INVALID_FILE_ATTRIBUTES ||
-        GetFileAttributesW(wide(c, format_text(c, "%s-shm", target))) != INVALID_FILE_ATTRIBUTES)
+    if (source_exists(format_text(c, "%s-wal", target)) || source_exists(format_text(c, "%s-shm", target)))
         fail(c, "Existing WAL sidecars: stop consumers and remove disposable projection before rebuilding");
-    if (GetFileAttributesW(wide(c, format_text(c, "%s-journal", target))) != INVALID_FILE_ATTRIBUTES)
+    if (source_exists(format_text(c, "%s-journal", target)))
         fail(c, "Existing rollback journal: recover with SQLite or remove disposable projection after stopping consumers");
-    c->temporary = full_path(c, directory, format_text(c, "native-%lu.sqlite", (unsigned long)GetCurrentProcessId()));
+    c->temporary = full_path(c, directory, format_text(c, "native-%lu.sqlite", source_process_id()));
     {
         const char *suffixes[] = {"", "-wal", "-shm", "-journal"};
-        for (i = 0; i < 4; i++) if (GetFileAttributesW(wide(c, format_text(c, "%s%s", c->temporary, suffixes[i]))) != INVALID_FILE_ATTRIBUTES) {
+        for (i = 0; i < 4; i++) if (source_exists(format_text(c, "%s%s", c->temporary, suffixes[i]))) {
             c->temporary = NULL; fail(c, "Temporary database already exists");
         }
     }
@@ -363,7 +361,7 @@ static void rebuild_projection(context *c, const char *root) {
     if (sqlite3_wal_checkpoint_v2(c->db, NULL, SQLITE_CHECKPOINT_TRUNCATE, NULL, NULL) != SQLITE_OK) fail(c, "Cannot checkpoint temporary projection");
     if (sqlite3_close(c->db) != SQLITE_OK) fail(c, "Cannot close database");
     c->db = NULL;
-    if (!MoveFileExW(wide(c, c->temporary), wide(c, target), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) fail(c, "Cannot publish database (is another process using it?)");
+    if (!source_publish(c->temporary, target, SOURCE_REPLACE)) fail(c, "Cannot publish database (is another process using it?)");
     c->temporary = NULL;
 }
 /* Upgrade only search objects in an otherwise current projection. WAL readers
@@ -393,7 +391,7 @@ static const char *refresh_projection(context *c, const char *root, projection_m
     projection_delta *delta = allocate(c, sizeof(*delta));
     projection_requirements(c);
     /* Do not let a read probe recover or publish over a hot rollback journal. */
-    if (GetFileAttributesW(wide(c, format_text(c, "%s-journal", target))) != INVALID_FILE_ATTRIBUTES)
+    if (source_exists(format_text(c, "%s-journal", target)))
         fail(c, "Existing rollback journal: recover with SQLite or remove disposable projection after stopping consumers");
     {
         if (projection_open(c, target, SQLITE_OPEN_READONLY) == SQLITE_OK) {

@@ -1,7 +1,9 @@
 /* CLI commands share config, schema, arena, JSON and in-process preparation.
    Read preparation may correct source; incremental reconciliation is excluded. */
 #include "../../vendor/libpdjson5/pdjson5.h"
+#if defined(_WIN32)
 #include <io.h>
+#endif
 #include <fcntl.h>
 
 #define RESULT_LIMIT 10000
@@ -41,7 +43,9 @@ static const char *option_input(context *c, read_options *options, const char *t
         char *input;
         if (options->stdin_used++) { c->error_code = "cli-input"; fail(c, "stdin may be used for only one option"); }
         input = allocate(c, TEXT_CAPACITY + 1);
+#if defined(_WIN32)
         _setmode(_fileno(stdin), _O_BINARY);
+#endif
         size = fread(input, 1, TEXT_CAPACITY, stdin);
         if (ferror(stdin) || (size == TEXT_CAPACITY && fgetc(stdin) != EOF)) fail(c, "stdin read failed or exceeds 4 MiB");
         if (memchr(input, 0, size) || !string_view_utf8_valid(string_view_from_cstr(input))) fail(c, "stdin must be NUL-free UTF-8");
@@ -132,7 +136,7 @@ static int read_authorizer(void *opaque, int action, const char *first, const ch
     }
     if (action == SQLITE_FUNCTION) {
         const char *name = second ? second : first;
-        if (name && (!_stricmp(name, "load_extension") || !_stricmp(name, "readfile") || !_stricmp(name, "writefile") || !_stricmp(name, "eval"))) return SQLITE_DENY;
+        if (name && (!source_case_compare(name, "load_extension") || !source_case_compare(name, "readfile") || !source_case_compare(name, "writefile") || !source_case_compare(name, "eval"))) return SQLITE_DENY;
         return SQLITE_OK;
     }
     if (action == SQLITE_SELECT || action == SQLITE_RECURSIVE || action == SQLITE_PRAGMA) return SQLITE_OK;
@@ -469,15 +473,13 @@ static const char *schema_json(context *c, read_options *options) {
         collection *table = &c->collections[i];
         const char *usage_path = full_path(c, table->directory, ".usage.md");
         const char *fts = format_text(c, "__attendant_fts_%s", table->name);
-        DWORD attributes;
         json_check(jsonb_object(&b, out, OUTPUT_CAPACITY));
         json_property(&b, out, OUTPUT_CAPACITY, "name", table->name);
         json_property(&b, out, OUTPUT_CAPACITY, "directory", table->directory);
         json_property(&b, out, OUTPUT_CAPACITY, "schemaPath", table->schema_path);
         json_property(&b, out, OUTPUT_CAPACITY, "usagePath", usage_path);
         json_check(jsonb_key(&b, out, OUTPUT_CAPACITY, "usage", 5));
-        attributes = GetFileAttributesW(wide(c, usage_path));
-        if (attributes == INVALID_FILE_ATTRIBUTES && (GetLastError() == ERROR_FILE_NOT_FOUND || GetLastError() == ERROR_PATH_NOT_FOUND)) json_check(jsonb_null(&b, out, OUTPUT_CAPACITY));
+        if (source_stat(usage_path).kind == SOURCE_MISSING) json_check(jsonb_null(&b, out, OUTPUT_CAPACITY));
         else {
             const char *usage = read_text(c, usage_path, NULL);
             json_check(jsonb_string(&b, out, OUTPUT_CAPACITY, usage, strlen(usage)));
@@ -525,20 +527,27 @@ static const char *schema_json(context *c, read_options *options) {
     (void)options;
     return out;
 }
-/* Windows NLS supplies word categories without another Unicode dependency.
+/* Native Unicode categories: Windows NLS or explicit macOS UTF-8 locale.
    Tested Latin/CJK terms match the runner; Unicode-version/category edge parity
    and supplementary-plane letters remain deferred. Emoji are not words. */
 static int search_word(const unsigned char *p, int *width) {
     unsigned int point;
-    WCHAR utf16[2]; WORD categories[2]; int count = 1, i;
+    int i;
     if (*p < 128) { *width = 1; return (*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9'); }
     *width = (*p & 0xe0) == 0xc0 ? 2 : (*p & 0xf0) == 0xe0 ? 3 : 4;
     point = *p & (*width == 2 ? 31 : *width == 3 ? 15 : 7);
     for (i = 1; i < *width; i++) point = (point << 6) | (p[i] & 63);
+#if defined(_WIN32)
+    WCHAR utf16[2]; WORD categories[2]; int count = 1;
     if (point > 0xffff) { point -= 0x10000; utf16[0] = (WCHAR)(0xd800 + (point >> 10)); utf16[1] = (WCHAR)(0xdc00 + (point & 1023)); count = 2; }
     else utf16[0] = (WCHAR)point;
     if (!GetStringTypeW(CT_CTYPE1, utf16, count, categories)) return 0;
     return (categories[0] & (C1_ALPHA | C1_DIGIT)) != 0;
+#else
+    static locale_t words;
+    if (!words) words = newlocale(LC_CTYPE_MASK, "en_US.UTF-8", NULL);
+    return words && iswalnum_l((wint_t)point, words) != 0;
+#endif
 }
 static int partial_search(const char *text) {
     const unsigned char *p = (const unsigned char *)text;
@@ -553,7 +562,7 @@ static int partial_search(const char *text) {
         }
         word[bytes < 7 ? bytes : 7] = 0;
         if (!bytes) break;
-        if (!_stricmp(word, "AND") || !_stricmp(word, "OR") || !_stricmp(word, "NOT") || !_stricmp(word, "NEAR")) continue;
+        if (!source_case_compare(word, "AND") || !source_case_compare(word, "OR") || !source_case_compare(word, "NOT") || !source_case_compare(word, "NEAR")) continue;
         if (length < 3) return 0;
         terms++;
     }

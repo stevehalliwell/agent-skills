@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 const runner = fileURLToPath(new URL("../scripts/attendant.mjs", import.meta.url));
 
 async function fixture(files) {
-  const root = await mkdtemp(join(tmpdir(), "attendant-skill-"));
+  // Child cwd resolves macOS /var symlink; compare the same canonical paths.
+  const root = await realpath(await mkdtemp(join(tmpdir(), "attendant-skill-")));
   for (const [path, content] of Object.entries(files)) {
     const target = join(root, path);
     await mkdir(dirname(target), { recursive: true });

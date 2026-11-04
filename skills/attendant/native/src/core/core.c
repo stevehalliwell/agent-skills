@@ -3,6 +3,7 @@
    The process owns one bounded arena; libraries retain their own allocators.
    Reject unsupported inputs rather than advertise untested YAML compatibility. */
 #include "../include/base.h"
+#if defined(_WIN32)
 /* Minimal stable CNG ABI declarations: Windows SDK bcrypt.h uses annotations
    unsupported by CJIT's bundled headers. Link Windows bcrypt.dll directly. */
 __declspec(dllimport) LPWSTR *WINAPI CommandLineToArgvW(LPCWSTR, int *);
@@ -10,9 +11,8 @@ typedef HANDLE BCRYPT_ALG_HANDLE;
 __declspec(dllimport) LONG WINAPI BCryptOpenAlgorithmProvider(BCRYPT_ALG_HANDLE *, LPCWSTR, LPCWSTR, ULONG);
 __declspec(dllimport) LONG WINAPI BCryptHash(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, PUCHAR, ULONG, PUCHAR, ULONG);
 __declspec(dllimport) LONG WINAPI BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE, ULONG);
-#ifndef WC_ERR_INVALID_CHARS
-#define WC_ERR_INVALID_CHARS 0x80
 #endif
+#include "platform.h"
 #include <math.h>
 #include <stdarg.h>
 #include <setjmp.h>
@@ -68,7 +68,7 @@ typedef struct record {
     int blocked, projection_changed, cache_changed;
     const char *next_text, *validation_name;
     double mtime_ms;
-    ULONGLONG created_on_disk;
+    source_time created_on_disk;
     size_t size;
 } record;
 typedef struct diagnostic { collection *owner; const char *path, *code, *message; } diagnostic;
@@ -94,7 +94,8 @@ typedef struct context {
     /* Embedded request boundary only; CLI keeps its existing fatal contract. */
     jmp_buf *recovery;
     char error_message[6144];
-    HANDLE reading_file, scanning_directory;
+    void *reading_file;
+    source_directory *scanning_directory;
     yaml_parser_t *yaml_scanner, *yaml_parser;
     yaml_document_t *yaml_document;
     char json_scratch[OUTPUT_CAPACITY];
@@ -111,9 +112,12 @@ static void json_check(jsonbcode status) {
         exit(1);
     }
 }
-/* Cleanup owns only the exact published bytes, not every future file at a path.
-   Open without write/delete sharing, compare, then delete through same handle. */
-static int rollback_source(const wchar_t *path, const char *expected) {
+/* Windows removes only verified bytes through a share-denying handle.
+   macOS retains published files after failure; written paths support inspection. */
+static int rollback_source(const char *input, const char *expected) {
+#if defined(_WIN32)
+    wchar_t path[PATH_CAPACITY];
+    if (!source_wide(input, path)) return 0;
     typedef BOOL (WINAPI *dispose_file)(HANDLE, int, LPVOID, DWORD);
     dispose_file dispose = (dispose_file)GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetFileInformationByHandle");
     HANDLE file;
@@ -136,6 +140,12 @@ static int rollback_source(const wchar_t *path, const char *expected) {
     }
     if (ok) ok = dispose(file, 4 /* FileDispositionInfo */, &disposition, sizeof(disposition)) != 0;
     CloseHandle(file); return ok;
+#else
+    /* ponytail: no check-and-unlink rollback on macOS. Keep published files
+     * rather than add locking/quarantine machinery for failed bootstrap. */
+    (void)expected;
+    return source_stat(input).kind == SOURCE_MISSING;
+#endif
 }
 static void fail(context *c, const char *format, ...) {
     char message[2048], cleaned[6144], output[16384];
@@ -154,8 +164,8 @@ static void fail(context *c, const char *format, ...) {
     }
     cleaned[cleaned_length] = 0;
     if (!c->recovery) fprintf(stderr, "%s\n", cleaned);
-    if (c->reading_file) { CloseHandle(c->reading_file); c->reading_file = NULL; }
-    if (c->scanning_directory) { FindClose(c->scanning_directory); c->scanning_directory = NULL; }
+    if (c->reading_file) { file_stream_close(c->reading_file); c->reading_file = NULL; }
+    if (c->scanning_directory) { source_directory_close(c->scanning_directory); c->scanning_directory = NULL; }
     if (c->yaml_document) { yaml_document_delete(c->yaml_document); c->yaml_document = NULL; }
     if (c->yaml_parser) { yaml_parser_delete(c->yaml_parser); c->yaml_parser = NULL; }
     if (c->yaml_scanner) { yaml_parser_delete(c->yaml_scanner); c->yaml_scanner = NULL; }
@@ -165,14 +175,12 @@ static void fail(context *c, const char *format, ...) {
         sqlite3_close_v2(c->db); c->db = NULL;
     }
     while (c->staged_count) {
-        wchar_t path[PATH_CAPACITY];
         const char *temporary = c->staged[--c->staged_count];
-        if (temporary && MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, temporary, -1, path, PATH_CAPACITY)) DeleteFileW(path);
+        if (temporary) source_remove(temporary, 0);
     }
     while (c->rollback_count) {
-        wchar_t path[PATH_CAPACITY];
         const char *owned = c->rollback_paths[--c->rollback_count];
-        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, owned, -1, path, PATH_CAPACITY) && rollback_source(path, c->rollback_expected[c->rollback_count])) {
+        if (rollback_source(owned, c->rollback_expected[c->rollback_count])) {
             int i;
             for (i = 0; i < c->written_count; i++) if (!strcmp(c->written[i], owned)) {
                 memmove(&c->written[i], &c->written[i + 1], (c->written_count - i - 1) * sizeof(char *)); c->written_count--; break;
@@ -180,23 +188,24 @@ static void fail(context *c, const char *format, ...) {
         } else preserved_rollback = 1;
     }
     if (preserved_rollback) {
+#if defined(_WIN32)
         const char *note = " Cleanup preserved changed or busy files; inspect written paths.";
+#else
+        const char *note = " Cleanup retained published files; inspect written paths.";
+#endif
         if (cleaned_length + strlen(note) < sizeof(cleaned)) { strcpy(cleaned + cleaned_length, note); cleaned_length += strlen(note); }
     }
     while (c->created_directory_count) {
-        wchar_t path[PATH_CAPACITY];
         const char *owned = c->created_directories[--c->created_directory_count];
-        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, owned, -1, path, PATH_CAPACITY)) RemoveDirectoryW(path);
+        source_remove(owned, 1);
     }
     if (c->temporary) {
         const char *suffixes[] = {"", "-wal", "-shm", "-journal"};
         int i;
         for (i = 0; i < 4; i++) {
-            wchar_t path[PATH_CAPACITY];
             char name[PATH_CAPACITY * 4];
             snprintf(name, sizeof(name), "%s%s", c->temporary, suffixes[i]);
-            if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name, -1, path, PATH_CAPACITY) &&
-                !DeleteFileW(path) && GetLastError() != ERROR_FILE_NOT_FOUND)
+            if (!source_remove(name, 0))
                 fprintf(stderr, "Cannot remove temporary projection: %s\n", name);
         }
     }
@@ -256,6 +265,7 @@ static const char *format_text(context *c, const char *format, ...) {
     if (length < 0 || length >= (int)sizeof(buffer)) fail(c, "Formatted text capacity exceeded");
     return copy_text(c, buffer, length);
 }
+#if defined(_WIN32)
 static wchar_t *wide(context *c, const char *path) {
     int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0);
     wchar_t *result;
@@ -272,40 +282,38 @@ static const char *utf8(context *c, const wchar_t *path) {
     if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, path, -1, result, count, NULL, NULL)) fail(c, "Path conversion failed");
     return result;
 }
+#endif
 static int absolute_path(const char *path) {
+#if defined(_WIN32)
     return path[0] == '/' || path[0] == '\\' ||
         (strlen(path) > 2 && path[1] == ':' && (path[2] == '/' || path[2] == '\\'));
+#else
+    return path[0] == '/';
+#endif
 }
 static const char *full_path(context *c, const char *base, const char *path) {
-    wchar_t output[PATH_CAPACITY];
-    const char *input = path;
-    DWORD length;
-    if (!absolute_path(path))
-        input = format_text(c, "%s\\%s", base, path);
-    length = GetFullPathNameW(wide(c, input), PATH_CAPACITY, output, NULL);
-    if (!length || length >= PATH_CAPACITY) fail(c, "Cannot resolve path: %s", input);
-    while (length > 3 && (output[length - 1] == L'\\' || output[length - 1] == L'/')) output[--length] = 0;
-    return utf8(c, output);
+    char output[PATH_CAPACITY];
+    const char *input = absolute_path(path) ? path : format_text(c, "%s/%s", base, path);
+    if (!string_view_utf8_valid(string_view_from_cstr(input)) || !source_full_path(input, output)) fail(c, "Cannot resolve path: %s", input);
+    return copy_text(c, output, strlen(output));
 }
 /* Per-file failures can be listed by workspace browser; allocation failures remain fatal. */
 static const char *try_read_text(context *c, const char *path, size_t *length, const char **problem) {
-    HANDLE file = CreateFileW(wide(c, path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                              NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    LARGE_INTEGER size;
-    DWORD count;
+    void *file = source_read_open(path);
+    u64 size;
     char *text;
-    if (file == INVALID_HANDLE_VALUE) { *problem = format_text(c, "Cannot read %s", path); return NULL; }
-    if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > TEXT_CAPACITY) {
-        CloseHandle(file); *problem = format_text(c, "Source exceeds 4 MiB capacity: %s", path); return NULL;
+    if (!file) { *problem = format_text(c, "Cannot read %s", path); return NULL; }
+    if (!file_stream_size(file, &size) || size > TEXT_CAPACITY) {
+        file_stream_close(file); *problem = format_text(c, "Source exceeds 4 MiB capacity: %s", path); return NULL;
     }
     c->reading_file = file;
-    text = allocate(c, (size_t)size.QuadPart + 1);
-    if (!ReadFile(file, text, (DWORD)size.QuadPart, &count, NULL) || count != size.QuadPart) {
-        CloseHandle(file); c->reading_file = NULL; *problem = format_text(c, "Read failed: %s", path); return NULL;
-    }
-    CloseHandle(file); c->reading_file = NULL;
-    if (memchr(text, 0, count) || !string_view_utf8_valid(string_view_from_cstr(text))) { *problem = format_text(c, "Source must be NUL-free UTF-8: %s", path); return NULL; }
-    if (length) *length = count;
+    text = allocate(c, (size_t)size + 1);
+    int ok = file_stream_transfer(file, text, (size_t)size, 0);
+    if (!file_stream_close(file)) ok = 0;
+    c->reading_file = NULL;
+    if (!ok) { *problem = format_text(c, "Read failed: %s", path); return NULL; }
+    if (memchr(text, 0, (size_t)size) || !string_view_utf8_valid(string_view_from_cstr(text))) { *problem = format_text(c, "Source must be NUL-free UTF-8: %s", path); return NULL; }
+    if (length) *length = (size_t)size;
     return text;
 }
 static const char *read_text(context *c, const char *path, size_t *length) {
@@ -314,15 +322,21 @@ static const char *read_text(context *c, const char *path, size_t *length) {
     return text;
 }
 static const char *digest(context *c, const char *text) {
-    BCRYPT_ALG_HANDLE algorithm;
     unsigned char bytes[32];
+#if defined(_WIN32)
+    BCRYPT_ALG_HANDLE algorithm;
+#endif
     char result[65];
     int i;
+#if defined(_WIN32)
     if (BCryptOpenAlgorithmProvider(&algorithm, L"SHA256", NULL, 0) < 0) fail(c, "SHA-256 unavailable");
     if (BCryptHash(algorithm, NULL, 0, (PUCHAR)text, (ULONG)strlen(text), bytes, sizeof(bytes)) < 0) {
         BCryptCloseAlgorithmProvider(algorithm, 0); fail(c, "SHA-256 failed");
     }
     BCryptCloseAlgorithmProvider(algorithm, 0);
+#else
+    if (strlen(text) > UINT32_MAX || !CC_SHA256(text, (CC_LONG)strlen(text), bytes)) fail(c, "SHA-256 failed");
+#endif
     for (i = 0; i < 32; i++) sprintf(result + i * 2, "%02x", bytes[i]);
     return copy_text(c, result, 64);
 }
@@ -566,7 +580,7 @@ static void load_config(context *c, const char *root) {
     const char *path = full_path(c, root, ".pi/attendant.tables");
     const char *source;
     char *config, *line;
-    if (GetFileAttributesW(wide(c, path)) == INVALID_FILE_ATTRIBUTES) {
+    if (source_stat(path).kind == SOURCE_MISSING || source_stat(path).kind == SOURCE_ERROR) {
         add_diagnostic(c, NULL, path, "tables-missing", "Missing .pi/attendant.tables."); return;
     }
     source = read_text(c, path, NULL);
@@ -603,7 +617,7 @@ static void load_config(context *c, const char *root) {
            schema hash includes that spelling even when file paths normalize. */
         table->directory = absolute_path(directory) ? directory : full_path(c, root, directory);
         table->schema_path = full_path(c, table->directory, ".schema.md");
-        if (GetFileAttributesW(wide(c, table->schema_path)) == INVALID_FILE_ATTRIBUTES) {
+        if (source_stat(table->schema_path).kind == SOURCE_MISSING || source_stat(table->schema_path).kind == SOURCE_ERROR) {
             schema_problem(c, table, "schema-missing", "Collection has no .schema.md.");
             table->schema_text = ""; continue;
         }
@@ -620,34 +634,44 @@ static void load_config(context *c, const char *root) {
         }
     }
 }
-static const char *iso_time(context *c, FILETIME filetime) {
+static const char *iso_time(context *c, source_time stamp) {
+#if defined(_WIN32)
+    FILETIME filetime = {(DWORD)stamp, (DWORD)(stamp >> 32)};
     SYSTEMTIME time;
     if (!FileTimeToSystemTime(&filetime, &time)) fail(c, "Invalid file timestamp");
     return format_text(c, "%04u-%02u-%02uT%02u:%02u:%02u.%03uZ", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond, time.wMilliseconds);
+#else
+    time_t seconds = (time_t)(stamp / 10000000ULL) - 11644473600LL;
+    struct tm time;
+    if (!gmtime_r(&seconds, &time)) fail(c, "Invalid file timestamp");
+    return format_text(c, "%04d-%02d-%02dT%02d:%02d:%02d.%03uZ", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday,
+        time.tm_hour, time.tm_min, time.tm_sec, (unsigned)(stamp % 10000000ULL / 10000));
+#endif
 }
 #include "datetime.h"
 #include "records.h"
 static int compare_paths(const void *a, const void *b) { return strcmp(*(const char *const *)a, *(const char *const *)b); }
 static void load_records(context *c, collection *table) {
-    WIN32_FIND_DATAW entry;
-    HANDLE search = FindFirstFileW(wide(c, format_text(c, "%s\\*", table->directory)), &entry);
+    source_directory search;
     const char *paths[MAX_RECORDS];
-    int count = 0, i;
-    if (search == INVALID_HANDLE_VALUE) { add_diagnostic(c, table, table->directory, "collection-read", "Collection directory cannot be read."); table->invalid = 1; return; }
-    c->scanning_directory = search;
-    do {
-        const char *name = utf8(c, entry.cFileName);
+    int count = 0, i, next;
+    if (!source_directory_open(&search, table->directory)) { add_diagnostic(c, table, table->directory, "collection-read", "Collection directory cannot be read."); table->invalid = 1; return; }
+    c->scanning_directory = &search;
+    while ((next = source_directory_next(&search)) > 0) {
+        const char *name = search.name, *path;
         size_t length = strlen(name);
-        if ((entry.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) || *name == '.' || length < 3 || strcmp(name + length - 3, ".md")) continue;
+        if (*name == '.' || length < 3 || strcmp(name + length - 3, ".md")) continue;
+        path = full_path(c, table->directory, name);
+        if (source_stat(path).kind != SOURCE_REGULAR) continue;
         if (count == MAX_RECORDS) fail(c, "Record capacity exceeded");
-        paths[count++] = full_path(c, table->directory, name);
-    } while (FindNextFileW(search, &entry));
-    if (GetLastError() != ERROR_NO_MORE_FILES) { FindClose(search); c->scanning_directory = NULL; fail(c, "Directory enumeration failed"); }
-    FindClose(search); c->scanning_directory = NULL;
+        paths[count++] = path;
+    }
+    if (next < 0) fail(c, "Directory enumeration failed");
+    int closed = source_directory_close(&search); c->scanning_directory = NULL;
+    if (!closed) fail(c, "Directory cleanup failed");
     qsort(paths, count, sizeof(paths[0]), compare_paths);
     for (i = 0; i < count; i++) {
-        WIN32_FILE_ATTRIBUTE_DATA attributes;
-        ULARGE_INTEGER ticks;
+        source_file_info attributes;
         record *r;
         if (c->record_count == MAX_RECORDS) fail(c, "Total record capacity exceeded");
         r = &c->records[c->record_count++];
@@ -657,16 +681,13 @@ static void load_records(context *c, collection *table) {
             r->text = try_read_text(c, r->path, &r->size, &problem);
             if (!r->text) { record_problem(c, r, "record-read", problem); continue; }
         } else r->text = read_text(c, r->path, &r->size);
-        if (!GetFileAttributesExW(wide(c, r->path), GetFileExInfoStandard, &attributes)) {
+        attributes = source_stat(r->path);
+        if (attributes.kind != SOURCE_REGULAR) {
             if (c->browse_source) { record_problem(c, r, "record-read", format_text(c, "Cannot stat %s", r->path)); continue; }
             fail(c, "Cannot stat %s", r->path);
         }
-        ticks.LowPart = attributes.ftLastWriteTime.dwLowDateTime; ticks.HighPart = attributes.ftLastWriteTime.dwHighDateTime;
-        ticks.QuadPart -= 116444736000000000ULL;
-        /* Match Node/libuv's seconds + nanosecond fraction arithmetic. */
-        r->mtime_ms = (double)(ticks.QuadPart / 10000000ULL) * 1000.0 + (double)(ticks.QuadPart % 10000000ULL) / 10000.0;
-        ticks.LowPart = attributes.ftCreationTime.dwLowDateTime; ticks.HighPart = attributes.ftCreationTime.dwHighDateTime;
-        r->created_on_disk = ticks.QuadPart;
+        r->mtime_ms = attributes.mtime_ms;
+        r->created_on_disk = attributes.created;
         r->front = read_mapping(c, r->text, &r->body);
         if (!r->front.present && !r->front.problem) {
             r->front.problem_code = "record-frontmatter"; r->front.problem = "Record front matter must be a block mapping.";
@@ -752,12 +773,9 @@ static void project_record(context *c, record *r) {
     bind_value(c, s, 2, lookup(&r->front, "name"), NULL);
     bind_text(c, s, 3, validated_datetime(c, lookup(&r->front, "created_at")->text));
     {
-        ULARGE_INTEGER time;
-        FILETIME ft;
         /* Node's Stats Date accessor rounds fractional milliseconds. */
-        time.QuadPart = (ULONGLONG)floor(r->mtime_ms + 0.5) * 10000ULL + 116444736000000000ULL;
-        ft.dwLowDateTime = time.LowPart; ft.dwHighDateTime = time.HighPart;
-        bind_text(c, s, 4, iso_time(c, ft));
+        source_time time = (source_time)((i64)floor(r->mtime_ms + 0.5) * 10000LL + (i64)SOURCE_UNIX_EPOCH);
+        bind_text(c, s, 4, iso_time(c, time));
     }
     bind_value(c, s, 5, lookup(&r->front, "desc"), NULL);
     bind_value(c, s, 6, lookup(&r->front, "tags"), NULL);

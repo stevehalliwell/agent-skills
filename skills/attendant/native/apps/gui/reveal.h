@@ -7,7 +7,8 @@
 #define GUI_REVEAL_MATCH 0x41544d31u
 #define GUI_REVEAL_ALLOWED 0x41545031u
 #define GUI_REVEAL_ACCEPTED 0x41544131u
-/* Local desktop IPC v1. No pointers, source bytes, edit authority or persistence.
+/* Local IPC v1. Windows desktop / macOS same UID across login sessions.
+ * No pointers, source bytes, edit authority or persistence.
  * Same fixed-width layout for CJIT/Zig. Latest hint wins; receiver owns copies. */
 typedef struct gui_reveal {
     uint32_t version, line;
@@ -17,11 +18,17 @@ typedef struct gui_reveal {
 uintptr_t gui_reveal_receive(const gui_workspace *workspace, gui_reveal *pending,
     int *ready, uintptr_t operation, const void *data, size_t size);
 int gui_reveal_error(int status, const char *code, const char *message);
-HWND gui_find_workspace(const char *project, int *status);
+#if defined(_WIN32)
+typedef HWND gui_endpoint;
+#else
+typedef const char *gui_endpoint; /* Borrowed discovery path; single-threaded CLI. */
+#endif
+gui_endpoint gui_find_workspace(const char *project, int *status);
 int gui_reveal_send(const char *project, const char *path, uint32_t line);
 /* Lines follow InputTextMultiline: LF/CRLF. Bare CR cannot be mapped safely. */
 int gui_reveal_has_line(const char *text, uint32_t line);
-/* Outside message callback. Ordinary local drive ancestry only; no reparse paths.
+/* Outside IPC callback. Ordinary local ancestry only; no application links.
+ * macOS permits standard /tmp, /var and /etc system aliases.
  * Missing final file is left to source reader. Not an atomic filesystem sandbox. */
 int gui_reveal_ordinary_path(const char *path);
 #ifdef ATTENDANT_MODEL_TESTING

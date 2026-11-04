@@ -1,4 +1,4 @@
-// Focused native model and real Win32/D3D checks. All mutations use owned copies.
+// Focused native model and real desktop GUI checks. All mutations use owned copies.
 // Usage: node tests/gui/check.mjs (build both compilers, production and --check first).
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
@@ -9,11 +9,14 @@ import { fileURLToPath } from 'node:url';
 import { guiDirectory, verifyBuild } from '../../tools/gui-build-manifest.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const assets = join(root, 'build/deps/richmd/assets');
-const gui = (compiler, testing = false) => join(root, guiDirectory, `attendant-gui-${compiler}${testing ? '-check' : ''}.exe`);
-const cli = compiler => join(root, `build/attendant-${compiler}.exe`);
+const suffix = process.platform === 'win32' ? '.exe' : '';
+const gui = (compiler, testing = false) => join(root, guiDirectory, `attendant-gui-${compiler}${testing ? '-check' : ''}${suffix}`);
+const cli = compiler => join(root, `build/attendant-${compiler}${suffix}`);
+const guiEnvironment = { ...process.env };
+if (process.platform === 'darwin') delete guiEnvironment.DYLD_LIBRARY_PATH;
 const hash = value => createHash('sha256').update(value).digest('hex');
 mkdirSync(join(root, 'build/gui-check'), { recursive: true });
-const report = { ok: false, run: mkdtempSync(join(root, 'build/gui-check/run-')), cases: [] };
+const report = { ok: false, platform: process.platform, architecture: process.arch, run: mkdtempSync(join(root, 'build/gui-check/run-')), cases: [] };
 function inventory(folder) {
   return Object.fromEntries(readdirSync(folder, { withFileTypes: true }).flatMap(entry => {
     const path = join(folder, entry.name);
@@ -21,7 +24,7 @@ function inventory(folder) {
   }));
 }
 function child(command, args) {
-  const result = spawnSync(command, args, { encoding: 'utf8', timeout: 60000, windowsHide: args.includes('--inspect') || args.includes('--reveal') });
+  const result = spawnSync(command, args, { encoding: 'utf8', timeout: 60000, env: guiEnvironment, windowsHide: args.includes('--inspect') || args.includes('--reveal') });
   assert.equal(result.status, 0, `${result.error || ''}\n${result.stderr}\n${result.stdout}`);
   return JSON.parse(result.stdout);
 }
@@ -45,7 +48,7 @@ function resolveComment(compiler, project, row) {
 }
 async function previewSelection(compiler, mode, text, status) {
   const project = fixture(`${compiler} ${mode}`, text), before = inventory(project);
-  const running = spawn(gui(compiler, true), ['--project', project, '--assets', assets, '--file', 'README.md', '--frames', '240', '--exercise-selection', mode], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const running = spawn(gui(compiler, true), ['--project', project, '--assets', assets, '--file', 'README.md', '--frames', '240', '--exercise-selection', mode], { stdio: ['ignore', 'pipe', 'pipe'], env: guiEnvironment });
   let output = '', error = '';
   running.stderr.on('data', value => { error += value; });
   const ready = new Promise((resolveReady, reject) => {
@@ -95,8 +98,16 @@ try {
     const model = fixture(`${compiler} model`), first = join(model, 'records/tasks/first.md');
     writeFileSync(first, readFileSync(first, 'utf8').replace('depends_on: [second]', 'depends_on: [second, missing]'));
     writeFileSync(join(model, 'records/tasks/unreadable.md'), Buffer.from([0xff, 0xfe, 0]));
-    const modeled = child(join(root, guiDirectory, `model-check-${compiler}.exe`), [model]);
+    const modeled = child(join(root, guiDirectory, `model-check-${compiler}${suffix}`), [model]);
     report.cases.push({ compiler, name: 'document/selection/IPC model, source conflicts and safe feedback', result: modeled });
+    const terminal = fixture(`${compiler} terminal renderer failure`), terminalBefore = inventory(terminal);
+    const failedRender = spawnSync(gui(compiler, true), ['--project', terminal, '--assets', assets, '--file', 'README.md', '--frames', '70', '--exercise-selection', 'render-failure'], {
+      encoding: 'utf8', timeout: 30000, env: guiEnvironment,
+    });
+    assert.equal(failedRender.status, 1, `${failedRender.error || ''}\n${failedRender.stderr}`);
+    assert.match(failedRender.stderr, /Render failure: frame abandoned without normal teardown/);
+    assert.deepEqual(inventory(terminal), terminalBefore);
+    report.cases.push({ compiler, name: 'terminal render failure abandons frame, releases host and preserves source' });
     const diagnostics = fixture(`${compiler} diagnostics`);
     writeFileSync(join(diagnostics, 'records/unavailable'), 'Not a directory.\n');
     const tables = join(diagnostics, '.pi/attendant.tables'); writeFileSync(tables, readFileSync(tables, 'utf8') + '\nrecords/unavailable as unavailable\n');

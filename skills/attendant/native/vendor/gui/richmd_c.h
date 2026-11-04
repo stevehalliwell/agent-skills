@@ -8,10 +8,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#if defined(_WIN32)
 #ifdef RICHMD_C_BUILD
 #define CRMD_API __declspec(dllexport)
 #else
 #define CRMD_API __declspec(dllimport)
+#endif
+#else
+#define CRMD_API __attribute__((visibility("default")))
 #endif
 typedef void (*crmd_link_callback)(const char *url, void *user);
 CRMD_API const char *crmd_version(void);
@@ -24,7 +28,8 @@ CRMD_API int crmd_check_render_failure(void);
 /* Six entries: sizeof + union offset for ImGuiStoragePair, ImGuiStyleMod,
  * ImGuiInputEvent. Checks patched C99 named unions against original C++ ABI. */
 CRMD_API int crmd_check_cimgui_layout(const size_t *layout, size_t count);
-/* HWND and Windows message forwarding, kept opaque to C consumers. */
+/* Native window kept opaque to C consumers: HWND on Windows, GLFWwindow on macOS.
+ * Message forwarding is Windows-only; GLFW installs its own input callbacks. */
 CRMD_API int crmd_init(void *window, const char *assets_folder, crmd_link_callback link, void *user);
 CRMD_API intptr_t crmd_message(void *window, unsigned int message, uintptr_t wparam, intptr_t lparam);
 CRMD_API int crmd_begin_frame(void);

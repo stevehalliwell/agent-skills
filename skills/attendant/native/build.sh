@@ -11,13 +11,16 @@ if [[ $# -gt 1 || ( "$compiler" != cjit && "$compiler" != zig ) ]]; then
 fi
 mkdir -p build
 source ./tools/build-inputs.sh
+source ./tools/build-platform.sh
+output="build/attendant-$compiler$executable_suffix"
 if [[ "$compiler" == cjit ]]; then
     # CJIT is not GCC-compatible; omit -std and pass an empty compiler flag set.
-    "${CJIT:-cjit}" -q -C '' "${flags[@]:1}" -o build/attendant-cjit.exe "${sources[@]}" -l bcrypt -l shell32
+    "${CJIT:-cjit}" -q -C '' ${cjit_platform_flags[@]+"${cjit_platform_flags[@]}"} "${flags[@]:1}" -o "$output" "${sources[@]}" ${native_libraries[@]+"${native_libraries[@]}"}
+    if [[ $(uname -s) == Darwin ]]; then codesign -s - "$output"; fi
 else
     # Isolate the observed broken global cache without touching the user's cache.
     export ZIG_GLOBAL_CACHE_DIR=${ZIG_GLOBAL_CACHE_DIR:-"$root/build/zig-global-cache"}
     export ZIG_LOCAL_CACHE_DIR=${ZIG_LOCAL_CACHE_DIR:-"$root/build/zig-local-cache"}
-    "${ZIG:-zig}" cc -O3 "${flags[@]}" "${sources[@]}" -lbcrypt -lshell32 -o build/attendant-zig.exe
+    "${ZIG:-zig}" cc -O3 ${zig_platform_flags[@]+"${zig_platform_flags[@]}"} "${flags[@]}" "${sources[@]}" ${native_libraries[@]+"${native_libraries[@]}"} -o "$output"
 fi
-printf '%s\n' "$root/build/attendant-$compiler.exe"
+printf '%s\n' "$root/$output"
