@@ -14,7 +14,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 if (-not $RaylibDirectory -or -not (Test-Path -LiteralPath (Join-Path $RaylibDirectory 'lib/raylib.dll') -PathType Leaf)) {
-    throw 'Supply prepared raylib 5.5 SDK with -RaylibDirectory; no download/install attempted.'
+    throw 'Supply prepared raylib 6.0 SDK with -RaylibDirectory; no download/install attempted.'
 }
 $examples = Join-Path (Split-Path $root -Parent) 'examples'
 $sourceFiles = @(Get-ChildItem -LiteralPath $examples -Recurse -File | Sort-Object FullName | ForEach-Object {

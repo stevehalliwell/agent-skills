@@ -4,7 +4,7 @@ Usage: ./build.ps1 [-View [-Graph] -RaylibDirectory PATH | -Test | -ViewerTest |
 Alternate output preserves running views. Stdout returns executable path; no project-data writes.
 -Graph needs explicitly prepared gd-ui.dll from build-ui.ps1.
 -ViewerTest builds headless protocol/transport fixture; does not launch it.
-RaylibDirectory is an extracted raylib 5.5 win64 SDK with lib/raylib.dll.
+RaylibDirectory is an extracted raylib 6.0 win64 SDK with lib/raylib.dll.
 #>
 param(
     [switch]$View,
@@ -27,28 +27,37 @@ $output = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } els
 New-Item -ItemType Directory -Force $output | Out-Null
 $arguments = @('-q', '-DHAVE_CONFIG_H=1', '-DYAML_DECLARE_STATIC=1',
     '-I', (Join-Path $root 'vendor/libyaml/include'),
-    '-I', (Join-Path $root 'vendor/libyaml/src'),
-    (Join-Path $root 'gd_core.c'), (Join-Path $root 'gd_output.c'), (Join-Path $root 'gd_layout.c'), (Join-Path $root 'gd_matrix_grid.c'), (Join-Path $root 'gd_layout_routes.c'), (Join-Path $root 'gd_layout_focus.c'), (Join-Path $root 'gd_focus.c'), (Join-Path $root 'gd_graph_analysis.c'), (Join-Path $root 'gd_similarity.c'), (Join-Path $root 'gd_similarity_projection.c'), (Join-Path $root 'gd_similarity_output.c'), (Join-Path $root 'gd_graph_paths.c'), (Join-Path $root 'gd_graph_closure.c'), (Join-Path $root 'gd_graph_shapes.c'), (Join-Path $root 'gd_graph_overview.c'), (Join-Path $root 'gd_diagnostics.c'), (Join-Path $root 'gd_skills.c'), (Join-Path $root 'gd_skill_unlocks.c'), (Join-Path $root 'gd_draft.c'), (Join-Path $root 'gd_routes.c'), (Join-Path $root 'gd_mda.c'), (Join-Path $root 'gd_controls.c'), (Join-Path $root 'gd_control_import.c'), (Join-Path $root 'gd_rules.c'), (Join-Path $root 'gd_rule_axes.c'), (Join-Path $root 'gd_rule_logic.c'), (Join-Path $root 'gd_rule_quantities.c'), (Join-Path $root 'gd_rule_analysis.c'), (Join-Path $root 'gd_resource_graph.c'), (Join-Path $root 'gd_resource_identity.c'), (Join-Path $root 'gd_effect_graph.c'), (Join-Path $root 'gd_effect_query.c'), (Join-Path $root 'gd_query.c'), (Join-Path $root 'gd_named_query.c'), (Join-Path $root 'gd_query_output.c'), (Join-Path $root 'gd_query_scene.c'), (Join-Path $root 'gd_actor_query.c'), (Join-Path $root 'gd_actor_inventory.c'), (Join-Path $root 'gd_actor_identity.c'), (Join-Path $root 'gd_resource_routes.c'), (Join-Path $root 'gd_resource_output.c'), (Join-Path $root 'gd_explorer.c'), (Join-Path $root 'gd_projection.c'), (Join-Path $root 'gd_structure_query.c'), (Join-Path $root 'gd_structure_cli.c'))
-$arguments += @((Join-Path $root 'gd_viewer.c'), (Join-Path $root 'gd_viewer_capture.c'))
+    '-I', (Join-Path $root 'vendor/libyaml/src'))
+# Shared with native macOS build; paths in manifest are relative to native root.
+function Get-BuildSources([string]$Kind) {
+    Get-Content -LiteralPath (Join-Path $root 'build-sources.txt') | ForEach-Object {
+        if ($_.StartsWith("$Kind ")) { Join-Path $root ($_.Substring($Kind.Length + 1)) }
+    }
+}
+$arguments += @(Get-BuildSources 'core')
 if ($Test) { $arguments += Join-Path $root 'test_core.c' }
 elseif ($ViewerTest) { $arguments += Join-Path $root 'test_viewer.c' }
 elseif ($ExplorerTest) { $arguments += @('-DGD_EXPLORER_TEST=1', (Join-Path $root 'test_explorer_view.c')) }
 else { $arguments += Join-Path $root 'gd_cli.c' }
-foreach ($file in @('api.c', 'parser.c', 'reader.c', 'scanner.c')) {
-    $arguments += Join-Path $root "vendor/libyaml/src/$file"
-}
+$arguments += @(Get-BuildSources 'yaml')
 $arguments += @('-l', 'shell32', '-l', 'advapi32')
 $name = if ($Test) { 'test-core.exe' } elseif ($ViewerTest) { 'test-viewer.exe' } else { 'gd.exe' }
 if ($View) {
-    if (-not $RaylibDirectory) { throw 'View needs -RaylibDirectory PATH or RAYLIB_ROOT (raylib 5.5 win64 SDK). Headless build needs no raylib.' }
+    if (-not $RaylibDirectory) { throw 'View needs -RaylibDirectory PATH or RAYLIB_ROOT (raylib 6.0 win64 SDK). Headless build needs no raylib.' }
     $library = Join-Path $RaylibDirectory 'lib/raylib.dll'
-    if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { throw "Missing raylib 5.5 DLL: $library" }
-    $arguments += @('-DGD_WITH_VIEW=1', '-I', (Join-Path $root 'vendor/raylib'), (Join-Path $root 'gd_view.c'), (Join-Path $root 'gd_resource_view.c'), (Resolve-Path -LiteralPath $library).Path)
+    if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { throw "Missing raylib 6.0 DLL: $library" }
+    $header = Join-Path $RaylibDirectory 'include/raylib.h'
+    if (-not (Test-Path -LiteralPath $header -PathType Leaf) -or -not (Select-String -LiteralPath $header -Pattern '^#define RAYLIB_VERSION\s+"6\.0"' -Quiet)) { throw 'Supply matching raylib 6.0 SDK headers and libraries; do not reuse 5.5 binaries.' }
+    $arguments += @('-DGD_WITH_VIEW=1', '-I', (Join-Path $root 'vendor/raylib'))
+    $arguments += @(Get-BuildSources 'view')
+    $arguments += (Resolve-Path -LiteralPath $library).Path
     Copy-Item -LiteralPath $library -Destination (Join-Path $output 'raylib.dll') -Force
     if ($Graph) {
         if (-not $UiLibrary) { $UiLibrary = Join-Path $root 'build/gd-ui.dll' }
         if (-not (Test-Path -LiteralPath $UiLibrary -PathType Leaf)) { throw 'Graph view needs prepared gd-ui.dll. Run build-ui.ps1 explicitly first.' }
-        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'), (Join-Path $root 'gd_graph_view.c'), (Join-Path $root 'gd_mda_view.c'), (Join-Path $root 'gd_explorer_view.c'), (Join-Path $root 'gd_explorer_controls.c'), (Join-Path $root 'gd_explorer_query_view.c'), (Join-Path $root 'gd_explorer_structure_view.c'), (Join-Path $root 'gd_explorer_similarity_view.c'), (Join-Path $root 'gd_explorer_rules_view.c'), (Join-Path $root 'gd_graph_analysis_ui.c'), (Join-Path $root 'gd_graph_reachability_ui.c'), (Join-Path $root 'gd_diagnostics_ui.c'), (Resolve-Path -LiteralPath $UiLibrary).Path)
+        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'))
+        $arguments += @(Get-BuildSources 'graph')
+        $arguments += (Resolve-Path -LiteralPath $UiLibrary).Path
         $uiDestination = Join-Path $output (Split-Path $UiLibrary -Leaf)
         if ([IO.Path]::GetFullPath($UiLibrary) -ne [IO.Path]::GetFullPath($uiDestination)) { Copy-Item -LiteralPath $UiLibrary -Destination $uiDestination -Force }
     }

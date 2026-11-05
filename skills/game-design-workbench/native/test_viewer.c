@@ -1,10 +1,22 @@
 /* CJIT headless protocol/owner fixture. No window, renderer or project writes.
    build.ps1 -ViewerTest; test-viewer.exe checks; --serve used by native-viewer.test.mjs. */
+#if defined(__APPLE__) && !defined(_DARWIN_C_SOURCE)
+#define _DARWIN_C_SOURCE 1
+#endif
 #include "gd_viewer.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
 #include <windows.h>
+#define fixture_sleep Sleep
+#define fixture_milliseconds GetTickCount
+#elif defined(__APPLE__)
+#include "vendor/local-pipe/native.h"
+#include <signal.h>
+#define fixture_sleep system_sleep
+#define fixture_milliseconds system_milliseconds
+static volatile sig_atomic_t fixture_stopped;
+static void fixture_stop(int number) { (void)number; fixture_stopped=1; }
 #endif
 typedef struct { int live,calls,fail; } Memory;
 static void *allocate(void *context, size_t size) {
@@ -13,7 +25,7 @@ static void *allocate(void *context, size_t size) {
     memory=malloc(size); if (memory && state) ++state->live; return memory;
 }
 static void release(void *context, void *memory) { Memory *state=context; if (memory && state) --state->live; free(memory); }
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
 static int lifecycle(void);
 #endif
 #include "test_viewer_capture.h"
@@ -119,7 +131,7 @@ static int checks(void) {
     w.capacity=4; w.size=0; gd_viewer_quote(&w,"long"); if (!w.failed) return 2;
     w.capacity=sizeof(bytes); gd_viewer_error(&w,"capacity","full");
     if (w.failed || strcmp(bytes,"{\"ok\":false,\"code\":\"capacity\",\"message\":\"full\"}")) return 2;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
     if (!lifecycle()) { fputs("Transport lifecycle/allocation check failed\n",stderr); return 2; }
 #endif
     printf("{\"ok\":true,\"protocol_cases\":%zu,\"writer_checks\":3,\"capture_checks\":%d}\n",sizeof(valid)/sizeof(*valid)+sizeof(invalid)/sizeof(*invalid)+1,capture_count); return 0;
@@ -155,6 +167,29 @@ static int lifecycle(void) {
     }
     return 1;
 }
+#elif defined(__APPLE__)
+static int server_security(const char *session) {
+    char path[104],directory[104]; struct stat status;
+    snprintf(directory,sizeof(directory),"/tmp/proto-pipes-%lu",(unsigned long)getuid());
+    snprintf(path,sizeof(path),"%s/gd-workbench-%s",directory,session);
+    return pipe_macos_directory(directory) && !lstat(path,&status) && S_ISSOCK(status.st_mode) &&
+        status.st_uid==getuid() && (status.st_mode&0777)==0600;
+}
+static int lifecycle(void) {
+    int i;
+    for (i=0;i<5;++i) {
+        Memory memory={0}; GD_Allocator a={&memory,allocate,release}; char error[256],path[104]; GD_ViewerServer *server;
+        memory.fail=i==0?1:0; server=gd_viewer_server_open(a,error,sizeof(error));
+        if (!i && server) { gd_viewer_server_close(server); return 0; }
+        if (i && (!server || !server_security(gd_viewer_session(server)))) { gd_viewer_server_close(server); return 0; }
+        if (server) snprintf(path,sizeof(path),"/tmp/proto-pipes-%lu/gd-workbench-%s",(unsigned long)getuid(),gd_viewer_session(server));
+        gd_viewer_server_close(server);
+        if (memory.live || (i && !access(path,F_OK))) return 0;
+    }
+    return 1;
+}
+#endif
+#if defined(_WIN32) || defined(__APPLE__)
 typedef struct { int mutations; GD_ViewerServer *server; } Owner;
 static void dispatch(void *context, const GD_ViewerRequest *request, GD_ViewerWriter *w) {
     Owner *owner=context;
@@ -174,7 +209,7 @@ static void dispatch(void *context, const GD_ViewerRequest *request, GD_ViewerWr
         ++owner->mutations; gd_viewer_write(w,"{\"ok\":true,\"reloaded\":true}");
     } else {
         ++owner->mutations;
-        if (!strcmp(request->reference,"slow")) Sleep(2300); /* Test-only delayed owner reply. */
+        if (!strcmp(request->reference,"slow")) fixture_sleep(2300); /* Test-only delayed owner reply. */
         if (!strcmp(request->reference,"large") || !strcmp(request->reference,"overflow")) {
             size_t i,limit=!strcmp(request->reference,"large")?256*1024:GD_VIEWER_REPLY_LIMIT;
             gd_viewer_write(w,"{\"ok\":true,\"text\":\"");
@@ -186,15 +221,21 @@ static void dispatch(void *context, const GD_ViewerRequest *request, GD_ViewerWr
 #endif
 int main(int argc, char **argv) {
     if (argc==1) return checks();
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
     if (argc==2 && !strcmp(argv[1],"--serve")) {
-        GD_Allocator a={NULL,allocate,release}; char error[512]; DWORD start=GetTickCount(); Owner owner={0};
+        GD_Allocator a={NULL,allocate,release}; char error[512]; unsigned start=fixture_milliseconds(); Owner owner={0};
+#ifdef __APPLE__
+        signal(SIGTERM,fixture_stop); signal(SIGINT,fixture_stop);
+#endif
         owner.server=gd_viewer_server_open(a,error,sizeof(error));
         if (!owner.server) { fprintf(stderr,"%s\n",error); return 2; }
-        if (!server_security(gd_viewer_session(owner.server))) { fputs("Server DACL check failed\n",stderr); gd_viewer_server_close(owner.server); return 2; }
+        if (!server_security(gd_viewer_session(owner.server))) { fputs("Server access-policy check failed\n",stderr); gd_viewer_server_close(owner.server); return 2; }
         printf("{\"session\":\"%s\"}\n",gd_viewer_session(owner.server)); fflush(stdout);
-        while (GetTickCount()-start<30000 && !gd_viewer_server_error(owner.server)) {
-            gd_viewer_server_poll(owner.server,dispatch,&owner); Sleep(1);
+        while (fixture_milliseconds()-start<30000 && !gd_viewer_server_error(owner.server)) {
+#ifdef __APPLE__
+            if (fixture_stopped) break;
+#endif
+            gd_viewer_server_poll(owner.server,dispatch,&owner); fixture_sleep(1);
         }
         gd_viewer_server_close(owner.server); return 0;
     }

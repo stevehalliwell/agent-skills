@@ -19,11 +19,11 @@
 ## Raylib
 
 - Upstream: https://github.com/raysan5/raylib
-- Version: 5.5; `raylib.h` from `5.5/src/raylib.h`, `rlgl.h` from matching SDK, license retained under `vendor/raylib/`.
+- Version: **6.0**, commit `dbc56a87da87d973a9c5baa4e7438a9d20121d28`. Unmodified `raylib.h`, `rlgl.h`, license and [hashes/provenance](vendor/raylib/PROVENANCE.md) retained under `vendor/raylib/`.
 - License: zlib; see `vendor/raylib/LICENSE`.
-- Optional Windows SDK: https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip
-- Tested archive SHA-256: `fe8feda1b92fc02826e2d19c631d648fd0563b93b144893fe18140e9fe4fb6fd`.
-- SDK/DLL exists only in ignored local cache/build output. Build accepts explicit SDK path and never downloads it. Headless program does not link raylib.
+- Explicit dependency preparation: [Build](README.md#build). Sources/SDK/binaries remain in ignored build/cache or supplied external path. Builds never download.
+- Mac `build-ui.sh` builds raylib and existing UI sources into `libgd-ui.dylib`. Recipe follows c-ink's Mac story-player build and native Attendant's SDK system-header flags. No c-ink audio/window extensions or prebuilt libraries imported.
+- Windows scripts require matching 6.0 SDK headers/libraries; rebuild old 5.5 dependencies. Windows 6.0 runtime remains unverified. Headless program does not link raylib.
 
 ## Proto headers
 
@@ -34,6 +34,11 @@
 - Copied vendored source subset from `D:/Repos/proto-framework/vendor/`, with licenses/provenance intact. No proprietary framework modules, adapter, or prebuilt prototype DLL copied.
 - cimgui pin: `125f397e0982fe9466eb0a162de547be5efec849`; Dear ImGui pin: `b48d1afbe8ee8b238e2961dc363a949dd7304e23` (1.92.9b / 19291). MIT licenses: `vendor/cimgui/LICENSE`, `vendor/cimgui/imgui/LICENSE.txt`.
 - rlImGui pin: `1550009359ad975927f7f0e4a3f47e3f27123ea9`; zlib license: `vendor/rlImGui/LICENSE`. Retained marked local safety patches for backend shutdown and failed texture bookkeeping/upload; source provenance details them.
-- `build-ui.ps1` explicitly compiles source into ignored `gd-ui.dll` with installed Zig C++, exceptions/RTTI disabled, `NO_FONT_AWESOME`, and matching raylib **5.5** headers/import library. No font/icon assets, bindings generator, package install, or download required.
-- Source copy was previously paired with raylib 6.0 in prototype project. Workbench graph tests use newly built UI DLL plus raylib 5.5 SDK/runtime; versions are not silently mixed. Checked native cimgui controls/details and bounded force/column graph capture.
-- Application stays C99; C++ exists only in vendored dependencies. Headless computation and raylib-only table build do not link these libraries.
+- `build-ui.ps1` / `build-ui.sh` explicitly compile existing UI sources with installed Zig C++, exceptions/RTTI disabled, `NO_FONT_AWESOME`, and matching raylib **6.0** headers/library. No font/icon assets, bindings generator, package install, or implicit download required.
+- Existing Windows visual evidence used 5.5. Mac 6.0 compile/link and CPU adapter checks do not establish rendered acceptance.
+- Application stays C99; C++ exists only in vendored dependencies. Headless computation does not link graphics. Windows plain `-View` remains raylib-only; Mac `--view` shares prepared UI dylib to avoid a second dependency build.
+
+## Local message pipes
+
+- [Copied source, permission, license and hashes](vendor/local-pipe/PROVENANCE.md). Reused unchanged from c-ink's extracted proto-framework backend; Mac adapter retains workbench JSON protocol/session policy.
+- Same-user Unix sockets, bounded framed I/O, cancellation and owned-inode cleanup. No automatic stale-endpoint removal or runtime dependency on sibling checkout.

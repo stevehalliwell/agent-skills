@@ -1,4 +1,4 @@
-// Headless Windows IPC only. Build explicitly with CJIT; never starts a GUI.
+// Headless Windows/macOS IPC. Build explicitly with CJIT; never starts a GUI.
 // GD_NATIVE_EXE=.../gd.exe GD_VIEWER_TEST_EXE=.../test-viewer.exe node --test this-file
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,6 +12,10 @@ const cli=process.env.GD_NATIVE_EXE && resolve(process.env.GD_NATIVE_EXE);
 const fixture=process.env.GD_VIEWER_TEST_EXE && resolve(process.env.GD_VIEWER_TEST_EXE);
 const adapter=process.env.GD_VIEWER_ADAPTER_EXE && resolve(process.env.GD_VIEWER_ADAPTER_EXE);
 const examples=resolve(dirname(fileURLToPath(import.meta.url)),'../examples');
+const nativeTransport=['win32','darwin'].includes(process.platform);
+function endpoint(session) {
+  return process.platform==='darwin' ? `/tmp/proto-pipes-${process.getuid()}/gd-workbench-${session}` : '\\\\.\\pipe\\gd-workbench-'+session;
+}
 function invoke(arguments_,status=0) {
   const result=spawnSync(cli,['viewer',...arguments_],{encoding:'utf8',timeout:7000,maxBuffer:2*1024*1024,windowsHide:true});
   assert.equal(result.status,status,result.stderr+'\n'+result.stdout);
@@ -33,15 +37,28 @@ async function owner() {
     return {child,session};
   } catch(error) {child.kill();throw error;}
 }
-function raw(session,request,delay=0) {
+function raw(session,request,delay=0,fragment=false) {
   return new Promise((done,fail)=>{
-    const socket=createConnection('\\\\.\\pipe\\gd-workbench-'+session); let text='';
+    const socket=createConnection(endpoint(session)); let bytes=Buffer.alloc(0);
+    const payload=Buffer.from(request),header=Buffer.alloc(4);header.writeUInt32LE(payload.length);
+    const framed=process.platform==='darwin'?Buffer.concat([header,payload]):payload;
     socket.setTimeout(4000,()=>socket.destroy(new Error('Raw request timed out')));
     socket.on('error',fail);
-    socket.on('connect',()=>{socket.write(request);if(delay){socket.pause();setTimeout(()=>socket.resume(),delay);}});
+    socket.on('connect',()=>{
+      if(fragment) {
+        socket.write(framed.subarray(0,2));
+        setTimeout(()=>socket.write(framed.subarray(2,7)),10);
+        setTimeout(()=>socket.write(framed.subarray(7)),20);
+      } else socket.write(framed);
+      if(delay){socket.pause();setTimeout(()=>socket.resume(),delay);}
+    });
     socket.on('data',chunk=>{
-      text+=chunk;
-      let result;try {result=JSON.parse(text);}catch{return;}
+      bytes=Buffer.concat([bytes,chunk]);let payload=bytes;
+      if(process.platform==='darwin') {
+        if(bytes.length<4 || bytes.length<4+bytes.readUInt32LE(0))return;
+        payload=bytes.subarray(4,4+bytes.readUInt32LE(0));
+      }
+      let result;try {result=JSON.parse(payload.toString('utf8'));}catch{return;}
       socket.destroy();done(result);
     });
   });
@@ -57,7 +74,7 @@ async function sourceHashes(root) {
   }
   await visit(root);return hashes;
 }
-test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:process.platform!=='win32'||!adapter},async t=>{
+test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:!nativeTransport||!adapter},async t=>{
   for(const name of ['crate-puzzle','little-plumber-guy-nes'])await t.test(name,async()=>{
     const root=join(examples,name,'game-design'),before=await sourceHashes(root);
     const result=spawnSync(adapter,['--ipc-helpers',root],{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:2*1024*1024});
@@ -110,7 +127,7 @@ async function close(owner) {
   if(owner.child.exitCode!==null)return;
   await new Promise(done=>{owner.child.once('exit',done);owner.child.kill();});
 }
-test('viewer protocol and native local request/reply without any GUI',{skip:process.platform!=='win32'||!cli||!fixture},async t=>{
+test('viewer protocol and native local request/reply without any GUI',{skip:!nativeTransport||!cli||!fixture},async t=>{
   const checked=spawnSync(fixture,[],{encoding:'utf8',windowsHide:true,timeout:5000});
   assert.equal(checked.status,0,checked.stderr);assert.equal(JSON.parse(checked.stdout).ok,true);
   const first=await owner();let second;
@@ -137,6 +154,9 @@ test('viewer protocol and native local request/reply without any GUI',{skip:proc
       assert.equal(invoke(['navigate','--target',first.session,'--projection','matrix']).reference,'');
       assert.equal(invoke(['inspect','--target',first.session]).mutations,2);
     });
+    await t.test('fragmented framing and payload preserve a read-only request',{skip:process.platform!=='darwin'},async()=>{
+      assert.equal((await raw(first.session,JSON.stringify({protocol:1,command:'inspect'}),0,true)).mutations,2);
+    });
     await t.test('malformed/version/duplicate/inapplicable fields reject before owner dispatch',async()=>{
       for(const request of [
         '{"protocol":2,"command":"inspect"}',
@@ -152,7 +172,7 @@ test('viewer protocol and native local request/reply without any GUI',{skip:proc
     await t.test('oversized and disconnected peers do not poison next request',async()=>{
       assert.equal((await raw(first.session,'x'.repeat(9000))).code,'viewer.capacity');
       await new Promise((done,fail)=>{
-        const socket=createConnection('\\\\.\\pipe\\gd-workbench-'+first.session);
+        const socket=createConnection(endpoint(first.session));
         socket.on('error',fail);socket.on('connect',()=>{socket.destroy();setTimeout(done,30);});
       });
       assert.equal(invoke(['inspect','--target',first.session]).mutations,2);

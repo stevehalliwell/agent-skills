@@ -1,4 +1,7 @@
 /* Local viewer control. Platform I/O owns buffers through cancellation completion. */
+#if defined(__APPLE__) && !defined(_DARWIN_C_SOURCE)
+#define _DARWIN_C_SOURCE 1
+#endif
 #include "gd_viewer.h"
 #include <stdarg.h>
 #include <stdlib.h>
@@ -168,6 +171,7 @@ int gd_viewer_parse(const char *text, size_t size, GD_ViewerRequest *request) {
     return 0;
 }
 
+#if defined(_WIN32) || defined(__APPLE__)
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -352,6 +356,9 @@ fail:
     if (!channel_close(&e->channel)) { snprintf(error,capacity,"IPC cancellation unsettled; outcome unknown, backing retained until exit"); return NULL; }
     a.release(a.context,e); return NULL;
 }
+#else
+#include "gd_viewer_macos.h"
+#endif
 static int session_valid(const char *text) {
     size_t i=0,digits=0;
     while (text[i]>='0' && text[i]<='9') { ++i; ++digits; }
@@ -359,6 +366,7 @@ static int session_valid(const char *text) {
     for (digits=0;digits<16;++digits,++i) if (!((text[i]>='0'&&text[i]<='9') || (text[i]>='a'&&text[i]<='f'))) return 0;
     return !text[i];
 }
+#ifdef _WIN32
 static int instances(char sessions[GD_VIEWER_INSTANCES][GD_VIEWER_SESSION], int *count) {
     WIN32_FIND_DATAA data; HANDLE search;
     *count=0; search=FindFirstFileA("\\\\.\\pipe\\" PIPE_PREFIX "*",&data);
@@ -371,6 +379,7 @@ static int instances(char sessions[GD_VIEWER_INSTANCES][GD_VIEWER_SESSION], int 
     } while (FindNextFileA(search,&data));
     { DWORD error=GetLastError(); FindClose(search); return error==ERROR_NO_MORE_FILES; }
 }
+#endif
 static int cli_failure(const char *code, const char *message) {
     char output[1024]; GD_ViewerWriter w={output,0,sizeof(output),0};
     gd_viewer_error(&w,code,message); puts(output); fprintf(stderr,"%s: %s\n",code,message); return 2;
@@ -454,10 +463,10 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
 }
 #else
 struct GD_ViewerServer { int unused; };
-GD_ViewerServer *gd_viewer_server_open(GD_Allocator a, char *error, size_t capacity) { (void)a; snprintf(error,capacity,"Viewer IPC supports Windows only"); return NULL; }
+GD_ViewerServer *gd_viewer_server_open(GD_Allocator a, char *error, size_t capacity) { (void)a; snprintf(error,capacity,"Viewer IPC supports Windows and macOS only"); return NULL; }
 const char *gd_viewer_session(const GD_ViewerServer *s) { (void)s; return NULL; }
 const char *gd_viewer_server_error(const GD_ViewerServer *s) { (void)s; return NULL; }
 void gd_viewer_server_poll(GD_ViewerServer *s, GD_ViewerHandler h, void *c) { (void)s; (void)h; (void)c; }
 void gd_viewer_server_close(GD_ViewerServer *s) { (void)s; }
-int gd_viewer_command(int argc, char **argv, GD_Allocator a) { (void)argc; (void)argv; (void)a; puts("{\"ok\":false,\"code\":\"viewer.unsupported\",\"message\":\"Viewer IPC supports Windows only\"}"); return 2; }
+int gd_viewer_command(int argc, char **argv, GD_Allocator a) { (void)argc; (void)argv; (void)a; puts("{\"ok\":false,\"code\":\"viewer.unsupported\",\"message\":\"Viewer IPC supports Windows and macOS only\"}"); return 2; }
 #endif

@@ -1,3 +1,6 @@
+#if defined(__APPLE__) && !defined(_DARWIN_C_SOURCE)
+#define _DARWIN_C_SOURCE 1
+#endif
 #include "gd_viewer_capture.h"
 #include <string.h>
 
@@ -49,6 +52,35 @@ static DWORD WINAPI gd_viewer_capture_read(void *argument) {
        after observing this flag even if thread return epilogue is still running. */
     InterlockedExchange(&reader->done,1);
     return 0;
+}
+#endif
+
+#ifdef __APPLE__
+#include <errno.h>
+/* funopen keeps serialization on owner thread. Retain only requested page;
+   count/discard other bytes, fail rather than exceed total output ceiling. */
+typedef struct {
+    char *buffer;
+    size_t offset,capacity,captured,total;
+    int limited;
+} GD_ViewerCaptureSink;
+static int gd_viewer_capture_write(void *context,const char *bytes,int size) {
+    GD_ViewerCaptureSink *sink=context;
+    size_t begin,end,count;
+    if (size<0) { errno=EINVAL; return -1; }
+    count=(size_t)size;
+    if (sink->limited || count>GD_VIEWER_CAPTURE_TOTAL_LIMIT-sink->total) {
+        sink->limited=1; errno=EFBIG; return -1;
+    }
+    begin=sink->offset>sink->total ? sink->offset-sink->total:0;
+    end=sink->offset+sink->capacity>sink->total ? sink->offset+sink->capacity-sink->total:0;
+    if (end>count) end=count;
+    if (begin<end) {
+        memcpy(sink->buffer+sink->captured,bytes+begin,end-begin);
+        sink->captured+=end-begin;
+    }
+    sink->total+=count;
+    return size;
 }
 #endif
 
@@ -114,6 +146,20 @@ int gd_viewer_capture(GD_ViewerCaptureEmit emit, void *context,
                 else if (stream_error || close_error) failure="Capture stream write/close failed";
                 else { result->captured=reader.captured; result->total=reader.total; }
             }
+        }
+    }
+#elif defined(__APPLE__)
+    if (!failure) {
+        GD_ViewerCaptureSink sink={buffer,offset,capacity,0,0,0};
+        FILE *output=funopen(&sink,NULL,gd_viewer_capture_write,NULL,NULL);
+        if (!output) failure="Cannot open capture stream";
+        else {
+            int emitted=emit(output,context),stream_error=ferror(output)!=0;
+            int close_error=fclose(output)!=0;
+            if (sink.limited) failure="Capture exceeds 64 MiB output ceiling";
+            else if (!emitted) failure="Capture serializer failed";
+            else if (stream_error || close_error) failure="Capture stream write/close failed";
+            else { result->captured=sink.captured; result->total=sink.total; }
         }
     }
 #else

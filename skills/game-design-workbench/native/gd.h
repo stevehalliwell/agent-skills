@@ -5,6 +5,17 @@
 #include <stdint.h>
 #include <stdio.h>
 
+/* Same Apple/CJIT float.h compatibility as vendored proto-headers/base.h.
+   Domain sources do not include the test/framework header. */
+#if defined(__APPLE__) && defined(__TINYC__)
+#ifndef __DBL_MAX__
+#define __DBL_MAX__ 1.7976931348623157e+308
+#endif
+#ifndef __FLT_MAX__
+#define __FLT_MAX__ 3.4028234663852886e+38F
+#endif
+#endif
+
 /* Operation limits, not limits on the author's Markdown project. */
 #define GD_MAX_DIRECTORY_ENTRIES 65536
 #define GD_MAX_RECORDS 4096
