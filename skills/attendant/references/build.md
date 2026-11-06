@@ -71,9 +71,21 @@ node tools/benchmark.mjs 5
 
 CLI and production GUI builds above are prerequisites. GUI check builds also produce headless model executables. Checks use unique owned fixture copies under `build/`, not live projects. Both compiler builds are required for combined check scripts. Generated evidence is not imported historical evidence.
 
+### Windows footprint sanity probe
+
+After production builds, from native root with PowerShell 7:
+
+```powershell
+# Match variant used for production GUI builds; omit for build/gui.
+$env:ATTENDANT_GUI_VARIANT = 'windows-regression'
+pwsh -NoProfile -File tools/footprint-windows.ps1 -Seconds 10
+```
+
+Opens one owned viewer at a time for each compiler. Copies test collections and current product docs into unique `build/footprint/run-*/workspace/`; checks source inventory unchanged and closes only its own processes. JSON stdout and `results.json` record startup-to-inspection, idle CPU/working-set/private memory and inspection/reveal round trips. CPU percentage uses one logical core. Startup is not first paint; reveal response acknowledges receipt, not completed Go. No GPU/human-input latency measurement or numeric acceptance budget. Small-workspace sanity check only; macOS needs separate measurement.
+
 ## macOS bring-up checkpoint
 
-Native CLI/API and interactive GLFW/OpenGL3 workspace build/run with Zig and CJIT. Combined acceptance passes 20 CLI groups, 94 API cases, 20 GUI/model groups (194 macOS model assertions per compiler) and 16 local-control groups on owned Unicode-path workspaces. API checks include timezone-independent UTC timestamps from 1601 through 9999, epoch boundaries and invalid-calendar rejection. Windows x64 CLI/API/model cross-link; production/test GUI host and model sources cross-compile. Windows runtime regressions are not tested here.
+Native CLI/API and interactive GLFW/OpenGL3 workspace build/run with Zig and CJIT. Combined acceptance passes 20 CLI groups, 94 API cases, 20 GUI/model groups (194 macOS model assertions per compiler) and 16 local-control groups on owned Unicode-path workspaces. API checks include timezone-independent UTC timestamps from 1601 through 9999, epoch boundaries and invalid-calendar rejection. Post-port Windows x64 qualification also passes: fresh CJIT/Zig CLI/API/production/test GUI/model builds, rebuilt Win32/D3D11 dependency DLL, 20 CLI groups, 94 API cases and 20 GUI/model groups with 193 model assertions per compiler. Pinned dependencies verified offline; checks use owned fixtures and fresh `ATTENDANT_GUI_VARIANT=windows-regression`.
 
 ```sh
 bash build.sh zig
@@ -103,7 +115,7 @@ Output: `build/bin/libcimgui_richmd.dylib`, `build/bin/luajit`, `build/bridge-ch
 
 macOS controls use existing bounded same-UID Unix message pipes. One request at a time; GUI pumps between frames, with frozen selection snapshot, per-connection deadline and bounded work. Discovery rejects ambiguous/unresponsive/malformed/unsafe candidates and never removes stale endpoints. Scope spans same UID across login sessions, not desktop isolation or application authentication. Same-UID processes can inspect selections or impersonate endpoints.
 
-Remaining: human workflow/rollout review, native Windows runtime regression, representative GUI footprint and distribution qualification. Automated acceptance does not authorize switching launcher, committing or publishing.
+Human workflow and distribution/license review accepted as complete by user. Windows small-workspace footprint sanity check completed; macOS footprint remains unmeasured. Known platform/failure limits stay documented, not an exhaustive rollout gate. Explicit approval still required to switch launcher, commit or publish.
 
 ## Missing build or failed setup
 
