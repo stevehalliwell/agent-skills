@@ -3,6 +3,11 @@
 #include <assert.h>
 #include <string.h>
 
+const char *gd_rule_noun_label(const GD_Rules *rules,const GD_RuleParticipant *participant) {
+    if(!rules || !participant || participant->noun_resolution!=GD_RULE_RESOLVED || participant->noun_record<0 || participant->noun_record>=rules->model->record_count)return "[Unresolved noun]";
+    return rules->model->records[participant->noun_record].display_name;
+}
+
 /* gd-rule is a line-oriented domain language, not YAML. In particular, a bare
    {control-vars/name} expression must not become a YAML flow mapping. */
 static int same(const char *text, size_t size, const char *value) {

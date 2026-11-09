@@ -28,10 +28,11 @@ static int gd_explorer_picker_case(GD_ExplorerContext *context,const char *label
     return gd_explorer_picker_case_index(model,rules,text);
 }
 static void gd_explorer_picker_record(GD_ExplorerContext *context,const char *label,GD_Role role,char *text,size_t capacity) {
-    const GD_Model *model=context->project->rules->model; int i;
-    if (gd_explorer_picker_begin(context,label,*text ? text:"All loaded definitions")) {
+    const GD_Model *model=context->project->rules->model; int i,chosen=gd_explorer_record(model,text);
+    const char *preview=!*text ? "All loaded definitions":chosen>=0 ? model->records[chosen].display_name:role==GD_NOUN ? TextFormat("[Unresolved noun] %s",text):text;
+    if (gd_explorer_picker_begin(context,label,preview)) {
         if (gd_explorer_picker_item(context,"All loaded definitions",!*text,0)) *text=0;
-        for (i=0;i<model->record_count;++i) if (model->records[i].role==role && strlen(model->records[i].reference)<capacity && gd_explorer_picker_item(context,TextFormat("%s | %s",model->records[i].name,model->records[i].reference),!strcmp(text,model->records[i].reference),0)) snprintf(text,capacity,"%s",model->records[i].reference);
+        for (i=0;i<model->record_count;++i) if (model->records[i].role==role && strlen(model->records[i].reference)<capacity && gd_explorer_picker_item(context,TextFormat("%s | %s",model->records[i].display_name,model->records[i].reference),!strcmp(text,model->records[i].reference),0)) snprintf(text,capacity,"%s",model->records[i].reference);
         gd_explorer_picker_end();
     }
     { const GD_ResourceNode *node=gd_explorer_picker_resource_node(context); int record=-1;
@@ -43,7 +44,7 @@ static int gd_explorer_picker_local(GD_ExplorerContext *context,const char *labe
     const GD_Rules *rules=context->project->rules; int i; if (root<0 || root>=rules->case_count) return -1;
     if (gd_explorer_picker_begin(context,label,selected>=0 ? rules->participants[selected].name:allow_any ? "All local bindings":"Choose local binding")) {
         const GD_RuleCase *item=&rules->cases[root]; if (allow_any && gd_explorer_picker_item(context,"All local bindings",selected<0,0)) selected=-1;
-        for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) { const GD_RuleParticipant *participant=&rules->participants[i]; igPushID_Int(i); if (gd_explorer_picker_item(context,TextFormat("%s | %s%s",participant->name,participant->noun,i==item->primary_participant ? " [authored A]":""),i==selected,0)) selected=i; igPopID(); }
+        for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) { const GD_RuleParticipant *participant=&rules->participants[i]; igPushID_Int(i); if (gd_explorer_picker_item(context,TextFormat("%s | %s%s",participant->name,gd_rule_noun_label(rules,participant),i==item->primary_participant ? " [authored A]":""),i==selected,0)) selected=i; igPopID(); }
         gd_explorer_picker_end();
     } return selected;
 }

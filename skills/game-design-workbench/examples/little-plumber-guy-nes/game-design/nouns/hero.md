@@ -15,6 +15,7 @@ axes:
   - axes/Stance
   - axes/TargetSpeed
   - axes/LiveSparks
+is_actor: true
 ---
 ## Definition
 

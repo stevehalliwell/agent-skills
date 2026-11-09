@@ -35,7 +35,7 @@ typedef enum { GD_NOUNS, GD_VERB_REF, GD_CONTEXT, GD_MECHANICS,
                GD_INTRODUCES, GD_PRACTISES, GD_REQUIRES, GD_TESTS_MASTERY, GD_NEXT,
                GD_SYSTEMS, GD_DYNAMICS, GD_EXPERIMENTS, GD_AXES, GD_CONTEXT_AXES,
                GD_INTERACTIONS, GD_RESOURCE_NOUN, GD_INITIAL_CONTROL, GD_CAPACITY_CONTROL, GD_FIELD_COUNT } GD_Field;
-typedef struct { const char *alias; const char *directory; GD_Role role; } GD_Collection;
+typedef struct { const char *alias; const char *directory; GD_Role role; int noun_collection; } GD_Collection;
 #define GD_MAX_ENUM_VALUES 64
 typedef enum { GD_LITERAL_NULL, GD_LITERAL_NUMBER, GD_LITERAL_BOOLEAN, GD_LITERAL_STRING } GD_LiteralKind;
 typedef struct {
@@ -52,7 +52,10 @@ typedef struct {
     const char *source_path, *body;
     GD_Role role;
     int collection, load_index, has_rank, rank_line, entry, entry_line, body_line;
+    const char *display_name; /* Presentation only; canonical name/reference remain unchanged. */
+    int is_noun; /* Original noun binding survives normalized snapshot roles. */
     int axis_closed, axis_closed_line, axes_declared, axes_line, context_axes_declared, context_axes_line;
+    int is_actor, is_actor_line; /* Nouns only; line 0 means unclassified, not false. */
     int64_t rank;
 } GD_Record;
 typedef struct { int source, target; GD_Field field; const char *reference; int line; } GD_Edge;
@@ -411,6 +414,8 @@ typedef struct {
     char text[GD_RULE_TEXT_CAPACITY];
 } GD_Rules;
 GD_Rules *gd_read_rules(GD_Model *model);
+/* Presentation label only; authored noun reference and resolution stay authoritative. */
+const char *gd_rule_noun_label(const GD_Rules *rules,const GD_RuleParticipant *participant);
 /* Up to two borrowed scalar effect declarations, in original source-line order.
    Case defaults and explicit participant fields remain separate, not concatenated.
    Indices refer to this immutable rules snapshot; output borrows its lifetime. */

@@ -72,6 +72,9 @@ TEST(explorer_loading,
     TEST_ASSERT(gd_explorer_resource_remap(project->resources,fresh->resources,-1)==-1 && gd_explorer_resource_remap(project->resources,fresh->resources,project->resources->node_count)==-1);
     TEST_ASSERT(gd_explorer_record(mda,"not-loaded/missing")==-1);
     gd_explorer_destroy(fresh); gd_explorer_destroy(project); TEST_ASSERT(!memory.live && !memory.allocations);
+    {GD_Collection noun_inputs[2]={explorer_collections[2],explorer_collections[4]};
+     project=gd_explorer_load(allocator,noun_inputs,2);TEST_ASSERT(project && !gd_explorer_error(project) && (project->available&(1u<<GD_EXPLORER_NOUNS)) && !(project->available&(1u<<GD_EXPLORER_MATRIX)) && project->noun_grid && project->noun_grid->noun_count==1);
+     gd_explorer_destroy(project);TEST_ASSERT(!memory.live && !memory.allocations);}
     fprintf(stderr,"Explorer typed snapshot peak: %zu bytes (two projects, reload overlap).\n",memory.peak);
 )
 TEST(explorer_allocation_failures,

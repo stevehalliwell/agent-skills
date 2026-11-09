@@ -1,5 +1,6 @@
 #include "gd.h"
 #include "gd_matrix_grid.h"
+#include "gd_count_heatmap.h"
 #include "raylib.h"
 #include <stdio.h>
 #include <string.h>
@@ -111,7 +112,7 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
     SetWindowMinSize(960, 600); SetTargetFPS(60);
     while (!WindowShouldClose() && (!frames || frame < frames)) {
         int width = GetScreenWidth(), height = GetScreenHeight();
-        int split = width * 57 / 100, grid_left = 210, grid_top = 128, row_height = 38, column_width = 148;
+        int split = width * 57 / 100, grid_left = 210, grid_top = 164, row_height = 38, column_width = 148;
         int visible_rows = (height-grid_top-52)/row_height, visible_columns = (split-grid_left-16)/column_width;
         int old_row = row, old_column = column, old_case = case_number, cell, i, j, case_record = -1;
         Vector2 mouse = GetMousePosition(); float wheel = GetMouseWheelMove();
@@ -157,27 +158,31 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
             case_number = 0; linked = -1; scroll = 0;
         }
         if (scroll < 0) scroll = 0;
+        GD_CountRange counts={0};
+        for (i=0;i<model->cell_count;++i) gd_count_range_add(&counts,model->cells[i].pair_count);
         BeginDrawing(); ClearBackground(background);
         DrawText("Interaction matrix", 20, 18, 26, foreground);
         DrawText(TextFormat("%d source records | %d declared cells | %d unplaced cases", model->record_count, model->cell_count, model->unplaced_cases), 20, 54, 16, muted);
         DrawText("Arrows: select | Wheel: pan rows | Shift+wheel: columns | F5: reload", 20, 82, 16, muted);
+        gd_count_legend(counts,20,104,split-40,"Declared cases");
         if (stale) {
             DrawRectangle(0, height-34, width, 34, (Color){76, 57, 31, 255});
             clipped_label(reload_message[0] ? TextFormat("STALE — refresh failed: %s", reload_message) : "STALE — source changed. F5 reloads; displayed data is the last loaded snapshot.", 16, height-26, width-32, 16, warning);
         } else DrawText("Active = accepted + defined case. Other cases stay visible. Blank is not a defect.", 20, height-26, 16, muted);
         for (j = first_column; j < verb_count && j < first_column + visible_columns; ++j) {
             int x = grid_left + (j-first_column)*column_width;
-            clipped_label(model->records[verbs[j]].name, x+6, grid_top-25, column_width-10, 16, foreground);
+            clipped_label(model->records[verbs[j]].display_name, x+6, grid_top-25, column_width-10, 16, foreground);
         }
         for (i = first_row; i < noun_count && i < first_row + visible_rows; ++i) {
             int y = grid_top + (i-first_row)*row_height;
-            clipped_label(TextFormat("%s (%d)", model->records[nouns[i]].name, model->connectivity[nouns[i]].partners), 20, y+10, grid_left-30, 16, foreground);
+            clipped_label(TextFormat("%s (%d)", model->records[nouns[i]].display_name, model->connectivity[nouns[i]].partners), 20, y+10, grid_left-30, 16, foreground);
             for (j = first_column; j < verb_count && j < first_column + visible_columns; ++j) {
                 Rectangle area = {(float)(grid_left+(j-first_column)*column_width), (float)y, column_width-3.0f, row_height-3.0f};
                 int index = gd_matrix_grid_cell(model, nouns[i], verbs[j]);
                 int is_selected = row == i && column == j;
-                Color color = index >= 0 && model->cells[index].active ? (Color){36, 85, 85, 255} : panel;
-                DrawRectangleRec(area, is_selected ? selected_color : color);
+                Color color = gd_count_color(counts,index>=0 ? model->cells[index].pair_count:0);
+                DrawRectangleRec(area,color);
+                if (is_selected) DrawRectangleLinesEx(area,2,warning);
                 DrawText(index >= 0 ? TextFormat("%d cases%s", model->cells[index].pair_count, model->cells[index].active ? " *" : "") : "-", (int)area.x+10, y+10, 16, foreground);
                 if (CheckCollisionPointRec(mouse, area) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                     row = i; column = j; case_number = 0; linked = -1; scroll = 0;
@@ -197,8 +202,8 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
             if (old_case != case_number) { linked = -1; scroll = 0; }
             case_record = model->pairs[selected->first_pair+case_number].interaction;
             record = &model->records[case_record];
-            clipped_label(TextFormat("%s x %s", model->records[selected->noun].name, model->records[selected->verb].name), x, 110, detail_width, 20, foreground);
-            clipped_label(TextFormat("Case %d/%d: %s", case_number+1, selected->pair_count, record->name), x, 144, detail_width, 17, foreground);
+            clipped_label(TextFormat("%s x %s", model->records[selected->noun].display_name, model->records[selected->verb].display_name), x, 110, detail_width, 20, foreground);
+            clipped_label(TextFormat("Case %d/%d: %s", case_number+1, selected->pair_count, record->display_name), x, 144, detail_width, 17, foreground);
             clipped_label(TextFormat("status: %s | coverage: %s", record->status ? record->status : "unset", record->coverage ? record->coverage : "unset"), x, 172, detail_width, 16, muted);
             if (button((Rectangle){x, 201, 120, 30}, "Previous") && selected->pair_count > 1) { --case_number; if (case_number < 0) case_number += selected->pair_count; linked = -1; scroll = 0; }
             if (button((Rectangle){x+128, 201, 120, 30}, "Next") && selected->pair_count > 1) { case_number = (case_number+1)%selected->pair_count; linked = -1; scroll = 0; }

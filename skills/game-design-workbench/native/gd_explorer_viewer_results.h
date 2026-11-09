@@ -35,6 +35,8 @@ static int viewer_write_comparison(FILE *out,GD_ExplorerContext *c) {
 typedef struct { GD_ExplorerContext *context; const GD_ViewerRequest *request; } ViewerResult;
 static int viewer_result_emit(FILE *out,void *data) {
     ViewerResult *result=data;GD_ExplorerContext *c=result->context;const GD_ViewerRequest *r=result->request;GD_ExplorerPane *p=c->pane;const char *fields=*r->fields ? r->fields:NULL;GD_Model *model=gd_explorer_model(c->project,p->view);
+    if(!strcmp(r->form,"noun-grid")) return !fields && p->view==GD_EXPLORER_NOUNS && gd_noun_grid_write(out,c->project->noun_grid);
+    if(!strcmp(r->form,"actor-overview")) return !fields && p->query_state && gd_query_scene_overview_write(out,p->query_state->scene);
     if(!strcmp(r->form,"query")) return p->query_state && p->query_state->query && (!fields || gd_query_fields(p->query_state->query->request.kind,fields)) && gd_write_query_selection(out,model,p->query_state->query,p->query_state->selected,1,fields);
     if(!strcmp(r->form,"structure")) return p->structure_state && p->structure_state->result && gd_write_structure_retained(out,p->structure_state->result,1,fields);
     if(!strcmp(r->form,"rules")) return p->rule_state && p->rule_state->result && (!fields || gd_named_fields(p->rule_state->result->request.kind,fields)) && gd_write_named_result(out,p->rule_state->result,1,fields);
@@ -57,6 +59,8 @@ static int viewer_result_field_names(const char *fields,const char *names) {
 }
 static int viewer_result_fields(GD_ExplorerContext *c,const GD_ViewerRequest *r) {
     GD_ExplorerPane *p=c->pane;if(!*r->fields)return 1;
+    if(!strcmp(r->form,"noun-grid"))return 0;
+    if(!strcmp(r->form,"actor-overview"))return 0; /* Bounded byte pages, whole retained overview only. */
     if(!strcmp(r->form,"query"))return p->query_state && p->query_state->query && gd_query_fields(p->query_state->query->request.kind,r->fields);
     if(!strcmp(r->form,"bindings"))return gd_query_fields(GD_QUERY_BINDINGS,r->fields);
     if(!strcmp(r->form,"structure"))return p->structure_state && p->structure_state->result && gd_structure_question_fields(p->structure_state->result->options.question,r->fields);

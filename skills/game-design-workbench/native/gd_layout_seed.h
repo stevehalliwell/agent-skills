@@ -19,6 +19,7 @@ int gd_layout_seed_neighborhood(GD_Layout *layout,GD_Allocator allocator,float a
     LayoutSeedWork *work; int i,e,components=0,okay=0;
     double area=0,widest=0,target,x=32,y=32,row=0,width=0,height=0;
     if (!layout || !allocator.allocate || !allocator.release || !isfinite(aspect) || aspect<=0 ||
+        !isfinite(layout->spring_gap) || layout->spring_gap<0 || layout->spring_gap>1048576 ||
         layout->mode!=GD_LAYOUT_FORCE || layout->node_count<0 || layout->node_count>GD_MAX_RECORDS ||
         layout->edge_count<0 || layout->edge_count>GD_MAX_PAIRS || layout->group_count<0 || layout->group_count>GD_MAX_RECORDS) return 0;
     work=allocator.allocate(allocator.context,sizeof(*work)); if (!work) return 0;
@@ -52,7 +53,7 @@ int gd_layout_seed_neighborhood(GD_Layout *layout,GD_Allocator allocator,float a
         work->queue[0]=start; work->component[start]=c;
         while (first<last) {
             int node=work->queue[first++]; const GD_LayoutBounds *b=&layout->nodes[node].footprint;
-            cell_width=fmaxf(cell_width,b->right-b->left+16); cell_height=fmaxf(cell_height,b->bottom-b->top+16);
+            cell_width=fmaxf(cell_width,b->right-b->left+fmaxf(16,(float)spring_clearance(layout))); cell_height=fmaxf(cell_height,b->bottom-b->top+fmaxf(16,(float)spring_clearance(layout)));
             if (work->degree[node]>work->degree[hub] || (work->degree[node]==work->degree[hub] && layout->position[node]<layout->position[hub])) hub=node;
             for (e=work->head[node];e>=0;e=work->next[e]) {
                 int other=seed_other(layout,e);

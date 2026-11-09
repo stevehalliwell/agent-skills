@@ -11,6 +11,11 @@ typedef struct {
     int order[GD_MAX_RECORDS], slot[GD_MAX_RECORDS];
 } GD_MatrixGrid;
 typedef struct { int first_row, end_row, first_column, end_column; } GD_MatrixGridRange;
+/* Positive populated counts only; blank/zero cells stay outside gradient.
+   Empty range is {0,0}; uniform ranges map to midpoint, never divide by zero. */
+typedef struct { int minimum, maximum; } GD_CountRange;
+void gd_count_range_add(GD_CountRange *range, int count);
+float gd_count_fraction(GD_CountRange range, int count);
 int gd_matrix_grid_prepare(GD_MatrixGrid *grid, const GD_Model *model, GD_LayoutSort sort);
 int gd_matrix_grid_cell(const GD_Model *model, int noun, int verb);
 /* Half-open cell bounds. Headers and points outside axes are not cells. */

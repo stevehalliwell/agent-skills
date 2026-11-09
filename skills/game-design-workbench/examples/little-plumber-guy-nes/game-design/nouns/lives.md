@@ -7,6 +7,7 @@ tags: []
 status: accepted
 axes:
   - axes/Amount
+is_actor: false
 ---
 ## Definition
 

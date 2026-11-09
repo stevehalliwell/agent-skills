@@ -4,11 +4,13 @@
 #include "gd_layout.h"
 enum { GD_QUERY_SCENE_LABEL=192 };
 typedef enum { GD_QUERY_ALL_VARIANTS, GD_QUERY_PRIMARY_VARIANT, GD_QUERY_STACKED_VARIANTS } GD_QueryGhostMode;
-typedef enum { GD_QUERY_NODE_BINDING, GD_QUERY_NODE_VARIANT, GD_QUERY_NODE_ACTIVATION, GD_QUERY_NODE_EFFECT, GD_QUERY_NODE_PARTNER, GD_QUERY_NODE_COVERAGE, GD_QUERY_NODE_OBJECT } GD_QueryNodeKind;
-typedef enum { GD_QUERY_EDGE_ASSUMPTION, GD_QUERY_EDGE_INVOCATION, GD_QUERY_EDGE_EFFECT, GD_QUERY_EDGE_PARTICIPANT, GD_QUERY_EDGE_FRONTIER } GD_QueryEdgeKind;
+typedef enum { GD_QUERY_NODE_BINDING, GD_QUERY_NODE_VARIANT, GD_QUERY_NODE_ACTIVATION, GD_QUERY_NODE_EFFECT, GD_QUERY_NODE_PARTNER, GD_QUERY_NODE_COVERAGE, GD_QUERY_NODE_OBJECT, GD_QUERY_NODE_AXIS } GD_QueryNodeKind;
+typedef enum { GD_QUERY_EDGE_ASSUMPTION, GD_QUERY_EDGE_INVOCATION, GD_QUERY_EDGE_EFFECT, GD_QUERY_EDGE_PARTICIPANT, GD_QUERY_EDGE_FRONTIER, GD_QUERY_EDGE_INTERACTION, GD_QUERY_EDGE_USAGE, GD_QUERY_EDGE_AXIS } GD_QueryEdgeKind;
 typedef struct { GD_QueryNodeKind kind; int source,variant,incoming,ghost; GD_RuleTruth applicability; int comparison; } GD_QuerySceneNode;
 typedef struct { GD_QueryEdgeKind kind; int source,variant; } GD_QuerySceneEdge;
 typedef struct GD_QueryFree GD_QueryFree;
+typedef struct GD_ActorOverview GD_ActorOverview;
+typedef enum { GD_ACTOR_INTERACTIONS, GD_ACTOR_USAGE } GD_ActorOverviewMode;
 typedef struct {
     GD_Allocator allocator; const GD_Query *query; const GD_EffectQuery *effect_scope;
     GD_Layout layout;
@@ -16,6 +18,7 @@ typedef struct {
     char labels[GD_MAX_RECORDS][GD_QUERY_SCENE_LABEL];
     GD_LayoutPoint native_points[GD_MAX_RECORDS]; GD_LayoutGroup native_group;
     float native_width,native_height; GD_QueryFree *free_geometry;
+    GD_ActorOverview *overview;
     GD_QueryGhostMode ghosts; int primary,weighted,include_excluded;
     int work,work_limit,limited,capacity_limited,unexamined_items_upper_bound,label_truncations,excluded_activations;
 } GD_QueryScene;
@@ -27,6 +30,16 @@ typedef struct {
    variant/ghost copies never supply convergence weights. Partial presentation
    remains marked; allocation/invalid input returns NULL, never mutates old scene. */
 GD_QueryScene *gd_query_scene_build(const GD_Query *query, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit);
+/* Explicit-actor overview over a binding query; no query evaluation or filtering
+   changes. Interaction records only, same-case pairs, record-deduplicated counts.
+   Cloud uses actors' own declared axes; no referenced-mechanic/call expansion. */
+GD_QueryScene *gd_query_scene_overview(const GD_Query *query,GD_ActorOverviewMode mode,int work_limit);
+int gd_query_scene_overview_mode(const GD_QueryScene *scene); /* -1 for query scenes. */
+int gd_query_scene_overview_count(const GD_QueryScene *scene,int edge);
+int gd_query_scene_overview_case(const GD_QueryScene *scene,int edge,int case_index);
+int gd_query_scene_overview_unclassified(const GD_QueryScene *scene);
+int gd_query_scene_overview_incomplete(const GD_QueryScene *scene);
+int gd_query_scene_overview_write(FILE *out,const GD_QueryScene *scene);
 /* Canonical finite actor topology: all retained variants/excluded checks,
    independent of drawing controls. Caller allocator owns scene, query borrowed. */
 GD_QueryScene *gd_query_scene_actor_topology(GD_Allocator allocator, const GD_Query *query, int work_limit);

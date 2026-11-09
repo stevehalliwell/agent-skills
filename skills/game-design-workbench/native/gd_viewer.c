@@ -401,7 +401,7 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
              "configure --projection VIEW --form FORM --control NAME --value TEXT --expect TOKEN stages analytical input; presentation applies immediately like GUI. Empty text clears.\n"
              "evidence [--projection VIEW] [--form links|cells|cases|diagnostics|layers|starts|known] [--offset N --limit N] reads retained pages.\n"
              "select --projection VIEW --form link|cell|case|source --id KEY --expect TOKEN changes exact inspection; cell also accepts --reference NOUN --id VERB.\n"
-             "result --projection VIEW --form query|structure|rules|bindings|resource|mda|challenges [--fields NATIVE_FIELDS --offset BYTE --limit KIB --expect TOKEN] reads base64 native JSON chunks; no evaluation.\n"
+             "result --projection VIEW --form query|structure|rules|bindings|resource|mda|challenges|actor-overview|noun-grid [--fields NATIVE_FIELDS --offset BYTE --limit KIB --expect TOKEN] reads base64 native JSON chunks; no evaluation.\n"
              "refresh reloads original source bindings now; active edits/dirty drafts block, never discard.\n"
              "JSON stdout; diagnostics stderr; exit 0 success / 2 failure. No auto-start, source writes or OS focus changes.\n"
              "inspect/list are non-consuming. Multiple viewers require exact --target from list. Timeout outcome may be unknown; never auto-retry mutations."); return 0;

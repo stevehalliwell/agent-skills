@@ -43,6 +43,7 @@ typedef struct {
     unsigned tick;
     int horizontal, direct_routes;
     float width, height;
+    float spring_gap; /* Desired Free edge gap outside footprints; 0 keeps default 8. Not a hard collision gap. */
     GD_LayoutCollisionItem collision_order[GD_MAX_RECORDS];
     float collision_remaining[GD_MAX_RECORDS];
     unsigned collision_cursor,collision_checks,collision_moves;
@@ -84,6 +85,9 @@ int gd_layout_set_footprint(GD_LayoutNode *node,float left,float top,float right
    Existing directed/column constraints unchanged. Scratch belongs to layout.
    held_node is temporarily fixed by pointer drag, or -1. No wall-clock dependency. */
 void gd_layout_step(GD_Layout *layout, int held_node);
+/* Optional per-edge positive declaration counts, same edge order/count as layout.
+   Spring multiplier 1+min(3,log2(count)); other forces/limits unchanged. */
+void gd_layout_step_weighted(GD_Layout *layout,int held_node,const int *counts);
 /* Directed layers lock the ordering axis, including paused pointer dragging.
    layer=-1 denotes an explicitly unplaced shelf; caller owns layer semantics. */
 void gd_layout_move_node(GD_Layout *layout, int node, float x, float y);

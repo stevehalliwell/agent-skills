@@ -130,7 +130,8 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
         CHECK(!project->draft->modified_count && !project->draft->history_count);
     }
     {
-        GD_ExplorerProject *last=c.project; uint64_t generation=viewer.reload_generation;
+        GD_ExplorerProject *last=c.project; uint64_t generation=viewer.reload_generation;char noun_a[260],noun_b[260];int noun_cases;
+        {GD_ExplorerContext target=c;const GD_NounPair *pair=&c.project->noun_grid->pairs[0];target.pane=&panes[GD_EXPLORER_NOUNS];noun_grid_choose(&target,pair->a,pair->b);CHECK(gd_explorer_presentation_set(&target,"layout","free",target.pane->query_message,sizeof(target.pane->query_message)));noun_cases=pair->count;snprintf(noun_a,sizeof(noun_a),"%s",c.project->rules->model->records[pair->a].reference);snprintf(noun_b,sizeof(noun_b),"%s",c.project->rules->model->records[pair->b].reference);}
         GD_ExplorerQueryOptions actor_options=panes[GD_EXPLORER_ACTORS].query_options,effect_options=panes[GD_EXPLORER_EFFECTS].query_options;
         panes[GD_EXPLORER_ACTORS].query_options=panes[GD_EXPLORER_ACTORS].query_state->applied;
         panes[GD_EXPLORER_EFFECTS].query_options=panes[GD_EXPLORER_EFFECTS].query_state->applied;
@@ -149,6 +150,7 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
         CHECK(panes[GD_EXPLORER_MDA].layout && panes[GD_EXPLORER_MDA].structure_state && panes[GD_EXPLORER_MDA].structure_state->has_applied && panes[GD_EXPLORER_MDA].structure_state->result);
         CHECK(!strncmp(reply,"{\"ok\":true",10) && c.project!=last && active==GD_EXPLORER_MATRIX);
         CHECK(viewer.reload_generation==generation+1 && !stale && !viewer_hint_current(&viewer));
+        CHECK(free_graph(&panes[GD_EXPLORER_NOUNS]) && panes[GD_EXPLORER_NOUNS].layout->edge_count==project->noun_grid->pair_count && panes[GD_EXPLORER_NOUNS].selection.cell>=0 && project->noun_grid->pairs[panes[GD_EXPLORER_NOUNS].selection.cell].count==noun_cases && !strcmp(project->rules->model->records[panes[GD_EXPLORER_NOUNS].grid.noun].reference,noun_a) && !strcmp(project->rules->model->records[panes[GD_EXPLORER_NOUNS].grid.verb].reference,noun_b));
         CHECK(!project->draft->modified_count && !project->draft->history_count);
         panes[GD_EXPLORER_ACTORS].query_options=actor_options; panes[GD_EXPLORER_EFFECTS].query_options=effect_options;
     }

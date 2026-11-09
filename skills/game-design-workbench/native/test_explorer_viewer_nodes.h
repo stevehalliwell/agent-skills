@@ -4,13 +4,14 @@
 static int explorer_viewer_nodes_checks(ExplorerViewer *viewer, GD_ExplorerPane *before, char *reply, int *fail_at, int *calls, int *checks) {
     GD_ExplorerContext *c=viewer->context; GD_ExplorerPane *panes=viewer->panes;
     GD_ViewerRequest request={0}; GD_ViewerWriter w; ViewerIdentities ids;
-    char identity[GD_MAX_PATH],selected[GD_MAX_PATH],old_actor[GD_MAX_PATH]="";
+    char identity[GD_MAX_PATH],selected[GD_MAX_PATH],old_actor[GD_MAX_PATH]="__no_classified_actor__";
     int v,node,i,ok=0;
 #define NODE_CHECK(value) do { ++*checks; if (!(value)) { fprintf(stderr,"Viewer native-ID check failed: %s (line %d)\n",#value,__LINE__); goto cleanup; } } while (0)
 #define REQUEST(command_,view_,id_) do { memset(&request,0,sizeof(request)); snprintf(request.command,sizeof(request.command),"%s",command_); snprintf(request.projection,sizeof(request.projection),"%s",view_); snprintf(request.id,sizeof(request.id),"%s",id_); w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_dispatch(viewer,&request,&w); } while (0)
     for (v=0;v<GD_EXPLORER_VIEWS;++v) if (c->project->available&(1u<<v)) {
         GD_ExplorerContext target=*c; target.pane=&panes[v]; viewer_identities(&target,&ids); node=-1;
         for (i=0;i<viewer_canvas_count(&target);++i) if (viewer_canvas_visible(&target,i) && viewer_canvas_id(&target,i,&ids,identity,sizeof(identity))) { node=i; break; }
+        if(v==GD_EXPLORER_ACTORS && !viewer_canvas_count(&target)) continue; /* No noun is implicitly an actor. */
         NODE_CHECK(node>=0);
         if (v==GD_EXPLORER_ACTORS) snprintf(old_actor,sizeof(old_actor),"%s",identity);
         memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);
@@ -115,6 +116,12 @@ static int explorer_viewer_nodes_checks(ExplorerViewer *viewer, GD_ExplorerPane 
         NODE_CHECK(!viewer_canvas_id(c,0,&ids,selected,sizeof(selected)) && !*selected);
         REQUEST("nodes","actors",""); NODE_CHECK(strstr(reply,"\"identity_available\":false")!=NULL);
         snprintf(pane->query_options.values,sizeof(pane->query_options.values),"unapplied Ω");
+        {GD_ExplorerQueryState *last=pane->query_state;int retained=gd_explorer_query_record(pane);
+         *fail_at=*calls+1;found=gd_explorer_query_overview(c,GD_ACTOR_USAGE);*fail_at=0;
+         NODE_CHECK(!found && pane->query_state==last && !strcmp(pane->query_options.values,"unapplied Ω"));
+         NODE_CHECK(gd_explorer_query_overview(c,GD_ACTOR_USAGE) && pane->query_state!=last && pane->query_state->scene->overview);
+         NODE_CHECK(pane->query_state->query->request.kind==GD_QUERY_BINDINGS && !strcmp(pane->query_options.values,"unapplied Ω") && !*pane->query_state->applied.values);
+         if(retained>=0) NODE_CHECK(gd_explorer_query_record(pane)==retained);}
     }
     {
         GD_ExplorerPane *pane=&panes[GD_EXPLORER_MDA]; GD_ExplorerStructureState *state; Camera2D camera=pane->camera;

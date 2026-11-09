@@ -24,6 +24,7 @@ static unsigned query_free_slot(uint64_t key) {
 }
 int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhood,float aspect) {
     GD_QueryFree *fresh;QueryFreeHash *hash=NULL;GD_Allocator allocator;int i,primary=-1;unsigned work=0;
+    if(scene && scene->overview) mode=scene->overview->mode==GD_ACTOR_USAGE ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE;
     if(!scene || (mode!=GD_LAYOUT_FORCE && mode!=GD_LAYOUT_DIRECTED) || (neighborhood!=0 && neighborhood!=1) || !isfinite(aspect) || aspect<=0) return 0;
     if(scene->layout.node_count<0 || scene->layout.node_count>GD_MAX_RECORDS || scene->layout.edge_count<0 || scene->layout.edge_count>GD_MAX_PAIRS || scene->layout.group_count!=(scene->layout.node_count ? 1:0)) return 0;
     for(i=0;i<scene->layout.node_count;++i) if(scene->layout.nodes[i].key!=i || !isfinite(scene->native_points[i].x) || !isfinite(scene->native_points[i].y)) return 0;
@@ -88,11 +89,11 @@ failed:
 }
 void gd_query_scene_step(GD_QueryScene *scene,int held_node) {
     if(!scene || !scene->free_geometry) return;
-    gd_layout_step(&scene->free_geometry->layout,held_node>=0 && held_node<scene->layout.node_count ? scene->free_geometry->unit[held_node]:-1);query_free_scatter(scene);
+    gd_layout_step_weighted(&scene->free_geometry->layout,held_node>=0 && held_node<scene->layout.node_count ? scene->free_geometry->unit[held_node]:-1,scene->overview ? scene->overview->counts:NULL);query_free_scatter(scene);
 }
 void gd_query_scene_drag(GD_QueryScene *scene,int node,float x,float y) {
     GD_QueryFree *free;
-    if(!scene || node<0 || node>=scene->layout.node_count || !isfinite(x) || !isfinite(y)) return;
+    if(!scene || node<0 || node>=scene->layout.node_count || !isfinite(x) || !isfinite(y) || (scene->overview && scene->overview->mode==GD_ACTOR_USAGE)) return;
     gd_layout_drag_node(&scene->layout,node,x,y);free=scene->free_geometry;
     if(free) {
         int index=free->unit[node],anchor=free->layout.nodes[index].key;

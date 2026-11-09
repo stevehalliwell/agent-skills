@@ -241,7 +241,7 @@ static void detail(const GD_ResourceGraph *graph, int selected, int x, int width
         const GD_RuleParticipant *actor=&graph->rules->participants[node->participant];
         source=&graph->model->records[graph->rules->sources[graph->rules->cases[node->case_index].source].record];
         DrawText(TextFormat("participant: %.40s",actor->name),x,y,15,muted); y+=23;
-        DrawText(TextFormat("noun: %.48s",actor->noun ? actor->noun:"unspecified"),x,y,15,muted); y+=23;
+        DrawText(TextFormat("noun: %.48s",gd_rule_noun_label(graph->rules,actor)),x,y,15,muted); y+=23;
         DrawText(TextFormat("axis: %.48s",node->axis>=0 ? graph->model->records[node->axis].reference:"unresolved"),x,y,15,muted); y+=23;
     }
     if (source) {
@@ -659,7 +659,7 @@ void gd_explorer_resource_details(GD_ExplorerContext *context) {
     }
     if (node->participant>=0 && !node->pool_reference) {
         const GD_RuleParticipant *actor=&graph->rules->participants[node->participant];
-        igTextWrapped("Participant: %s | noun: %s",actor->name,actor->noun ? actor->noun:"unspecified");
+        igTextWrapped("Participant: %s | noun: %s",actor->name,gd_rule_noun_label(graph->rules,actor));
     }
     if (node->axis>=0) igTextWrapped("Axis: %s",graph->model->records[node->axis].reference);
     if (node->kind==GD_RESOURCE_ROLE) igTextWrapped("Resolution: %s",gd_rule_resolution_name(node->resolution));

@@ -36,7 +36,7 @@ int gd_focus_layout(const GD_Model *model, GD_Focus *focus, GD_Layout *layout, G
         if (focus->visible[i]) {
             GD_LayoutNode *node = &layout->nodes[layout->node_count];
             map[i] = layout->node_count++; node->key = i;
-            node->label = model->records[i].name ? model->records[i].name:model->records[i].reference;
+            node->label = model->records[i].display_name ? model->records[i].display_name:model->records[i].name ? model->records[i].name:model->records[i].reference;
             node->side = i == focus->root;
         }
     }

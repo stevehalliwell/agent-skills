@@ -3,7 +3,7 @@
 #define GD_EXPLORER_VIEWER_H
 #include "gd_viewer.h"
 #include "gd_actor_identity.h"
-static const char *const viewer_projections[GD_EXPLORER_VIEWS]={"skills","challenges","relationships","matrix","mda","resources","actors","effects"};
+static const char *const viewer_projections[GD_EXPLORER_VIEWS]={"skills","challenges","relationships","matrix","mda","resources","actors","effects","noun-interactions"};
 typedef struct {
     GD_ExplorerContext *context; GD_ExplorerPane *panes; GD_ViewerServer *server;
     int *active,*stale; uint64_t reload_generation;
@@ -62,6 +62,7 @@ static void viewer_selection(GD_ViewerWriter *w, GD_ExplorerContext *c) {
         gd_viewer_write(w,",\"matrix_cell\":");
         if(noun>=0 && noun<model->record_count && verb>=0 && verb<model->record_count) {gd_viewer_write(w,"{");viewer_member(w,"noun",model->records[noun].reference);gd_viewer_write(w,",");viewer_member(w,"verb",model->records[verb].reference);gd_viewer_write(w,",\"declared\":%s}",cell>=0 ? "true":"false");}else gd_viewer_write(w,"null");
     }
+    if(p->view==GD_EXPLORER_NOUNS){gd_viewer_write(w,",\"noun_cell\":");if(p->grid.noun>=0 && p->grid.verb>=0){gd_viewer_write(w,"{");viewer_member(w,"row",model->records[p->grid.noun].reference);gd_viewer_write(w,",");viewer_member(w,"column",model->records[p->grid.verb].reference);gd_viewer_write(w,",\"case_count\":%d,\"metric\":\"distinct declared cases\"}",p->selection.cell<0 ? 0:c->project->noun_grid->pairs[p->selection.cell].count);}else gd_viewer_write(w,"null");}
     gd_viewer_write(w,",\"snapshot_local\":{\"node\":%d,\"cell\":%d,\"case_offset\":%d,\"mda_link\":%d},\"identity_available\":%s,\"identity_limited\":%s}",node,p->selection.cell,p->selection.interaction,p->mda.link,available?"true":"false",ids.limited?"true":"false");
 }
 static void viewer_resource_id(GD_ViewerWriter *w, const GD_ResourceGraph *graph, int node) {
@@ -99,7 +100,7 @@ static void viewer_node_id(GD_ViewerWriter *w, GD_ExplorerContext *c, int node) 
 static void viewer_layers(GD_ViewerWriter *w, GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int i,emitted=0;
     gd_viewer_write(w,"{\"available\":%s,\"shared\":%s,\"lens\":%d,\"branches\":%s,\"foundations\":%s,\"shapes\":%s,\"overlay\":%s,\"peer_node\":%d,\"foundation_peer_node\":%d,\"paths\":{\"enabled\":%s,\"declared\":%s,\"lost\":%d,\"compare\":%d,\"starts\":[",
-        !query_view(p->view)&&!grid_view(p)?"true":"false",p->shared?"true":"false",p->lens,p->branches?"true":"false",p->foundations?"true":"false",p->shapes?"true":"false",p->overlay?"true":"false",p->peer,p->foundation_peer,p->paths.enabled?"true":"false",p->paths.declared?"true":"false",p->paths.lost,p->paths.compare);
+        p->view!=GD_EXPLORER_NOUNS&&!query_view(p->view)&&!grid_view(p)?"true":"false",p->shared?"true":"false",p->lens,p->branches?"true":"false",p->foundations?"true":"false",p->shapes?"true":"false",p->overlay?"true":"false",p->peer,p->foundation_peer,p->paths.enabled?"true":"false",p->paths.declared?"true":"false",p->paths.lost,p->paths.compare);
     for (i=0;i<p->paths.count;++i) { if (i) gd_viewer_write(w,","); viewer_key(w,c,p->paths.keys[i]); }
     gd_viewer_write(w,"]},\"reach\":{\"enabled\":%s,\"relation\":%d,\"reverse\":%d,\"peer_node\":%d,\"target_node\":%d},\"overview\":{\"enabled\":%s,\"row\":%d,\"column\":%d},\"relationship_root\":",
         p->reach.enabled?"true":"false",p->reach.relation,p->reach.reverse,p->reach.peer,p->reach.target,p->overview.enabled?"true":"false",p->overview.row,p->overview.column);

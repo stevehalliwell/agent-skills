@@ -1,6 +1,7 @@
 /* CPU-only production IPC investigation, with independently owned panes/cache. */
 #ifndef TEST_EXPLORER_PRESENTATION_H
 #define TEST_EXPLORER_PRESENTATION_H
+#include <float.h>
 static int presentation_decode(const char *reply,char *out,size_t capacity) {
     const char *p=strstr(reply,"\"data\":\"");unsigned value=0;int bits=0;size_t count=0;
     if(!p)return -1;p+=8;
@@ -47,6 +48,13 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
 #define PRESENT_REQUEST(command_,view_) do {memset(&request,0,sizeof(request));strcpy(request.command,command_);strcpy(request.projection,viewer_projections[view_]);request.limit=64;target=c;target.pane=&panes[view_];}while(0)
 #define PRESENT_STAGE(view_,field_,value_) do {PRESENT_REQUEST("configure",view_);strcpy(request.form,"presentation");strcpy(request.control,field_);snprintf(request.value,sizeof(request.value),"%s",value_);viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));PRESENT_SEND();}while(0)
 #define PRESENT_ACTION(view_,action_) do {PRESENT_REQUEST("action",view_);strcpy(request.action,action_);viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));PRESENT_SEND();}while(0)
+    {
+        GD_CountRange counts={2,10};Color low=gd_count_color(counts,2),high=gd_count_color(counts,10),blank=gd_count_color(counts,0);
+        PRESENT_CHECK(low.r==32 && low.g==48 && low.b==82 && high.r==24 && high.g==112 && high.b==96 && blank.r==29 && blank.g==38 && blank.b==51);
+        counts=(GD_CountRange){7,7};low=gd_count_color(counts,7);
+        PRESENT_CHECK(low.r==28 && low.g==80 && low.b==89 && low.a==255);
+        counts=(GD_CountRange){0};low=gd_count_color(counts,0);PRESENT_CHECK(!memcmp(&low,&blank,sizeof(low)));
+    }
     {
         GD_LayoutNode node={.x=10,.y=20};
         PRESENT_CHECK(gd_layout_set_footprint(&node,-1,-1,1,1));
@@ -167,7 +175,59 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             if(v==GD_EXPLORER_MDA) {PRESENT_STAGE(v,"layout","bands");PRESENT_CHECK(strstr(reply,"\"configured\":true"));}
             a.release(a.context,retained);a.release(a.context,seeded);a.release(a.context,native);
         }
-        if(query_view((GD_ExplorerView)v) && panes[v].query_state && panes[v].query_state->scene) {
+        if(v==GD_EXPLORER_ACTORS && panes[v].query_state && panes[v].query_state->scene && panes[v].query_state->scene->overview) {
+            GD_ExplorerQueryState *state=panes[v].query_state;GD_Query *query=state->query;GD_QueryScene *scene=state->scene;
+            GD_ExplorerQueryOptions *saved=a.allocate(a.context,2*sizeof(*saved));int allocation;
+            PRESENT_CHECK(saved!=NULL);saved[0]=panes[v].query_options;saved[1]=state->applied;
+            PRESENT_CHECK(scene->overview && free_graph(&panes[v]) && layout_settles(&panes[v]));
+            PRESENT_CHECK(viewer_retained_smoke(&viewer,(GD_ExplorerView)v,"actor-overview","\"mode\":\"interactions\"",reply));
+            snprintf(panes[v].query_options.contexts,sizeof(panes[v].query_options.contexts),"pending overview test");
+            PRESENT_STAGE(v,"layout","native");PRESENT_CHECK(strstr(reply,"viewer.control") && state->scene==scene);
+            for(allocation=1;allocation<=3;++allocation) {*fail_at=*calls+allocation;PRESENT_STAGE(v,"actor_overview","usage");*fail_at=-1;PRESENT_CHECK(strstr(reply,"viewer.control") && state->scene==scene && panes[v].actor_overview==GD_ACTOR_INTERACTIONS);}
+            PRESENT_STAGE(v,"actor_overview","usage");PRESENT_CHECK(strstr(reply,"\"configured\":true") && state->scene!=scene && state->query==query && !free_graph(&panes[v]) && !layout_settles(&panes[v]));
+            PRESENT_CHECK(!strcmp(panes[v].query_options.contexts,"pending overview test") && !memcmp(&saved[1],&state->applied,sizeof(saved[1])));
+            PRESENT_CHECK(viewer_retained_smoke(&viewer,(GD_ExplorerView)v,"actor-overview","\"mode\":\"usage\"",reply));
+            PRESENT_STAGE(v,"actor_overview","interactions");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]));
+            panes[v].query_options=saved[0];a.release(a.context,saved);
+        }
+        if(v==GD_EXPLORER_NOUNS){
+            const GD_NounGrid *grid=c.project->noun_grid;const GD_Model *model=grid->rules->model;
+            PRESENT_CHECK(grid_view(&panes[v]) && !layout_settles(&panes[v]) && panes[v].layout->node_count==grid->noun_count && grid->pair_count>0);
+            PRESENT_STAGE(v,"noun_row",model->records[grid->pairs[0].a].reference);PRESENT_CHECK(strstr(reply,"\"configured\":true"));
+            PRESENT_STAGE(v,"noun_column",model->records[grid->pairs[0].b].reference);PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].selection.cell==0 && !panes[v].query_state);
+            PRESENT_ACTION(v,"view.cell.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true"));
+            PRESENT_CHECK(viewer_result_reassemble(&viewer,(GD_ExplorerView)v,"noun-grid",NULL,reply) && strstr(reply,"distinct declared cases") && strstr(reply,"\"is_actor\":null"));
+            PRESENT_REQUEST("evidence",v);strcpy(request.form,"noun-cases");PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"\"participants\":[") && strstr(reply,"\"requires\":"));
+            {GD_Layout *last=panes[v].layout;int allocation;for(allocation=1;allocation<=2;++allocation){*fail_at=*calls+allocation;PRESENT_STAGE(v,"layout","free");*fail_at=-1;PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].layout==last && grid_view(&panes[v]) && panes[v].selection.cell==0);}}
+            PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]) && !grid_view(&panes[v]) && layout_settles(&panes[v]) && panes[v].selection.cell==0 && panes[v].layout->node_count==grid->noun_count && panes[v].layout->edge_count==grid->pair_count);
+            {
+                /* Both seeds: 4096 fixed steps; bound motion/drift over final 256.
+                   Old Mario collapsed to 61-unit centers and drifted 34 units. */
+                GD_Layout *probe=a.allocate(a.context,sizeof(*probe));GD_LayoutPoint *previous=a.allocate(a.context,GD_MAX_RECORDS*sizeof(*previous));int seed,valid=1;
+                PRESENT_CHECK(probe && previous);
+                for(seed=0;seed<2;++seed){int step,node;double square=0,maximum=0,first_x=0,first_y=0,last_x=0,last_y=0;float minimum=FLT_MAX;
+                memcpy(probe,panes[v].layout,sizeof(*probe));if(seed)PRESENT_CHECK(gd_layout_seed_neighborhood(probe,a,1.4f));
+                for(step=0;step<4096;++step){
+                    if(step>=3840)for(node=0;node<probe->node_count;++node){previous[node]=(GD_LayoutPoint){probe->nodes[node].x,probe->nodes[node].y};if(step==3840){first_x+=previous[node].x;first_y+=previous[node].y;}}
+                    gd_layout_step(probe,-1);
+                    if(step>=3840)for(node=0;node<probe->node_count;++node){double dx=probe->nodes[node].x-previous[node].x,dy=probe->nodes[node].y-previous[node].y,movement=dx*dx+dy*dy;square+=movement;if(movement>maximum)maximum=movement;}
+                }
+                for(node=0;node<probe->node_count;++node){if(!isfinite(probe->nodes[node].x) || !isfinite(probe->nodes[node].y))valid=0;last_x+=probe->nodes[node].x;last_y+=probe->nodes[node].y;}
+                for(node=0;node<probe->edge_count;++node){const GD_LayoutEdge *edge=&probe->edges[node];if(edge->a!=edge->b){const GD_LayoutNode *left=&probe->nodes[edge->a],*right=&probe->nodes[edge->b];minimum=fminf(minimum,hypotf(left->x-right->x,left->y-right->y));}}
+                fprintf(stderr,"Noun force probe (%s): %d nodes / %d edges / min linked centers %.3f / tail RMS %.6f max %.6f / centroid drift %.6f / overlaps %lu / limited %d\n",seed ? "neighborhood":"native",probe->node_count,probe->edge_count,minimum,sqrt(square/(256*probe->node_count)),sqrt(maximum),hypot(last_x-first_x,last_y-first_y)/probe->node_count,presentation_footprint_overlaps(probe),probe->collision_limited);
+                if(minimum<128 || square/(256*probe->node_count)>0.05*0.05 || maximum>0.2*0.2 || hypot(last_x-first_x,last_y-first_y)/probe->node_count>1 || presentation_footprint_overlaps(probe))valid=0;
+                }
+                a.release(a.context,previous);a.release(a.context,probe);PRESENT_CHECK(valid);
+            }
+            PRESENT_REQUEST("evidence",v);strcpy(request.form,"links");PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"\"case_count\":") && strstr(reply,"distinct declared cases") && presentation_token(reply,"selection_token",token,sizeof(token)) && presentation_token(reply,"key",key,sizeof(key)));
+            PRESENT_REQUEST("select",v);strcpy(request.form,"link");strcpy(request.id,key);strcpy(request.expect,token);PRESENT_SEND();PRESENT_CHECK(strstr(reply,"\"selected\":true") && panes[v].selection.cell==0 && panes[v].grid.noun==grid->pairs[0].a && panes[v].grid.verb==grid->pairs[0].b);
+            PRESENT_REQUEST("evidence",v);strcpy(request.form,"noun-cases");PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"\"participants\":["));
+            PRESENT_STAGE(v,"layout","grid");PRESENT_CHECK(strstr(reply,"\"configured\":true") && grid_view(&panes[v]) && panes[v].selection.cell==0 && !layout_settles(&panes[v]));
+            PRESENT_STAGE(v,"noun_row","__missing_noun__");PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].selection.cell==0);
+            PRESENT_STAGE(v,"noun_case_page","4096");PRESENT_CHECK(strstr(reply,"viewer.control") && !panes[v].noun_case_page);
+            PRESENT_ACTION(v,"view.rearrange");PRESENT_CHECK(strstr(reply,"\"executed\":true") && panes[v].selection.cell==0);
+        }
+        if(query_view((GD_ExplorerView)v) && panes[v].query_state && panes[v].query_state->scene && !panes[v].query_state->scene->overview) {
             GD_ExplorerQueryState *state=panes[v].query_state;GD_QueryScene *scene=state->scene;GD_Query *query=state->query;GD_EffectQuery *scope=state->selected;
             GD_ExplorerQueryOptions pending=panes[v].query_options,applied=state->applied;GD_ExplorerSelection selection=panes[v].selection;
             GD_Layout *native=a.allocate(a.context,sizeof(*native));int node,allocation,work=scene->work;
@@ -206,9 +266,12 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             PRESENT_STAGE(v,"layout","native");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !layout_settles(&panes[v]));
             panes[v].query_options=pending;a.release(a.context,native);
         }
-        PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !strcmp(panes[v].filter,"test source") && active==GD_EXPLORER_MATRIX);
-        PRESENT_SEND();PRESENT_CHECK(strstr(reply,"viewer.stale_controls")!=NULL);
-        PRESENT_STAGE(v,"filter","");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !*panes[v].filter);
+        if(v==GD_EXPLORER_NOUNS){PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(!strstr(reply,"\"configured\":true") && !*panes[v].filter && !gd_explorer_presentation_editable(&target,"paused"));}
+        else {
+            PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !strcmp(panes[v].filter,"test source") && active==GD_EXPLORER_MATRIX);
+            PRESENT_SEND();PRESENT_CHECK(strstr(reply,"viewer.stale_controls")!=NULL);
+            PRESENT_STAGE(v,"filter","");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !*panes[v].filter);
+        }
         PRESENT_ACTION(v,"view.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true")!=NULL);
         PRESENT_REQUEST("evidence",v);strcpy(request.form,"links");before=*calls;PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"total_slots") && *calls==before);
         if(panes[v].layout && panes[v].layout->edge_count && !query_view((GD_ExplorerView)v)) {
@@ -217,7 +280,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             if(v==GD_EXPLORER_MDA){const GD_LayoutEdge *edge=&panes[v].layout->edges[0];PRESENT_CHECK(panes[v].mda.link==edge->key && panes[v].mda.record==gd_explorer_model(c.project,GD_EXPLORER_MDA)->edges[c.project->mda->links[edge->key].edge].source);}
             strcpy(request.expect,"stale");PRESENT_SEND();PRESENT_CHECK(strstr(reply,"viewer.stale_controls")!=NULL);
         }
-        if(!query_view((GD_ExplorerView)v)) {
+        if(!query_view((GD_ExplorerView)v) && v!=GD_EXPLORER_NOUNS) {
             PRESENT_STAGE(v,"shared","true");PRESENT_CHECK(strstr(reply,"\"configured\":true")!=NULL);
             PRESENT_STAGE(v,"paths_enabled","true");PRESENT_CHECK(strstr(reply,"\"configured\":true")!=NULL);
             PRESENT_STAGE(v,"shapes","true");PRESENT_CHECK(strstr(reply,"\"configured\":true")!=NULL);

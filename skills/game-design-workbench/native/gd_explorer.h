@@ -2,11 +2,12 @@
 #define GD_EXPLORER_H
 #include "gd_resource_graph.h"
 #include "gd_skill_unlocks.h"
+#include "gd_noun_grid.h"
 
 /* Existing typed readers remain independent. Snapshot families borrow no memory
    from another family; qualified source references bridge their local indices. */
 typedef enum { GD_EXPLORER_SKILLS, GD_EXPLORER_CHALLENGES, GD_EXPLORER_RELATIONSHIPS,
-               GD_EXPLORER_MATRIX, GD_EXPLORER_MDA, GD_EXPLORER_RESOURCES, GD_EXPLORER_ACTORS, GD_EXPLORER_EFFECTS, GD_EXPLORER_VIEWS } GD_ExplorerView;
+               GD_EXPLORER_MATRIX, GD_EXPLORER_MDA, GD_EXPLORER_RESOURCES, GD_EXPLORER_ACTORS, GD_EXPLORER_EFFECTS, GD_EXPLORER_NOUNS, GD_EXPLORER_VIEWS } GD_ExplorerView;
 typedef enum { GD_EXPLORER_SKILL_DATA, GD_EXPLORER_MATRIX_DATA, GD_EXPLORER_MDA_DATA,
                GD_EXPLORER_RULE_DATA, GD_EXPLORER_FAMILIES } GD_ExplorerFamily;
 typedef struct {
@@ -18,6 +19,7 @@ typedef struct {
     GD_Rules *rules;
     GD_RuleAnalysis *calls;
     GD_ResourceGraph *resources;
+    GD_NounGrid *noun_grid;
     unsigned available;
     unsigned revision;
 } GD_ExplorerProject;

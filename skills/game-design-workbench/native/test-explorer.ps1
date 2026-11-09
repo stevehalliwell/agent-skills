@@ -60,7 +60,7 @@ try {
         foreach ($name in @('skill-atoms', 'challenges', 'nouns', 'verbs', 'interactions', 'mechanics', 'systems', 'dynamics', 'aesthetics', 'axes', 'resources', 'control-vars')) {
             $inputs += @("--$name", "$name=$(Join-Path $game $name)")
         }
-        foreach ($mode in @('skills', 'challenges', 'relationships', 'matrix', 'mda', 'resources', 'actors', 'effects')) {
+        foreach ($mode in @('skills', 'challenges', 'relationships', 'matrix', 'mda', 'resources', 'actors', 'effects', 'noun-interactions')) {
             $capture = Join-Path $fixture "$mode.png"
             $log = Join-Path $fixture "$mode-draft"
             Invoke-OwnedProbe (Join-Path $run 'gd-view.exe') (@('view', 'explorer') + $inputs + @('--mode', $mode, '--frames', '4', '--screenshot', $capture)) $log

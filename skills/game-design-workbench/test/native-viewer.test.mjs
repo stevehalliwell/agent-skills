@@ -100,7 +100,8 @@ test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:
     assert.equal(resourceForm.fields.find(field=>field.name==='work_limit').maximum,16777216);
     assert.deepEqual(value.resource_actions.actions.filter(action=>action.form==='resource').map(action=>action.name),['resource.run','resource.clear']);
     const snapshot=value.snapshot;assert.equal(snapshot.ok,true);assert.equal(snapshot.projection,'matrix');
-    assert.equal(snapshot.panes.length,8);assert.equal(snapshot.draft.modified_records,0);assert.equal(snapshot.draft.undo_steps,0);
+    assert.equal(snapshot.panes.length,9);
+    assert.equal(snapshot.panes.find(pane=>pane.projection==='noun-interactions').available,true);assert.equal(snapshot.draft.modified_records,0);assert.equal(snapshot.draft.undo_steps,0);
     assert.equal(snapshot.panes.find(pane=>pane.projection==='actors').query.pending.values,'unapplied Ω');
     assert.notEqual(snapshot.panes.find(pane=>pane.projection==='actors').query.applied?.values,'unapplied Ω');
     const rules=snapshot.panes.find(pane=>pane.projection==='resources').rules;

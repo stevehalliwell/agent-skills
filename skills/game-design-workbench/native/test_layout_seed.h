@@ -32,6 +32,8 @@ TEST(layout_neighborhood_seed,
     for(i=0;i<12;++i) TEST_ASSERT(layout->nodes[i].x==positions[i].x && layout->nodes[i].y==positions[i].y && layout->nodes[i].vx==0);
     /* Distinct-neighbor tie picks 8, not parallel-edge-biased 7. */
     TEST_ASSERT(layout->nodes[7].x>layout->nodes[8].x && layout->nodes[9].y>layout->nodes[8].y);
+    layout->spring_gap=282;TEST_ASSERT(gd_layout_seed_neighborhood(layout,allocator,2));
+    for(i=0;i<layout->edge_count;++i){const GD_LayoutEdge *edge=&layout->edges[i];if(edge->active && edge->a!=edge->b)TEST_ASSERT(hypotf(layout->nodes[edge->a].x-layout->nodes[edge->b].x,layout->nodes[edge->a].y-layout->nodes[edge->b].y)>=329);}
     release(storage,before); release(storage,layout);
 )
 TEST(layout_neighborhood_aspect_capacity,
@@ -58,6 +60,7 @@ TEST(layout_neighborhood_failure,
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,failing,1) && !memcmp(layout,before,sizeof(*layout)));
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,NAN) && !memcmp(layout,before,sizeof(*layout)));
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,0) && !memcmp(layout,before,sizeof(*layout)));
+    {float gaps[]={-1,NAN,1048577};int i;for(i=0;i<3;++i){layout->spring_gap=gaps[i];memcpy(before,layout,sizeof(*before));TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,1) && !memcmp(layout,before,sizeof(*layout)));}layout->spring_gap=0;}
     layout->edge_count=1;layout->edges[0].b=2;memcpy(before,layout,sizeof(*before));
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,1) && !memcmp(layout,before,sizeof(*layout)));
     layout->edge_count=0;layout->mode=GD_LAYOUT_DIRECTED;memcpy(before,layout,sizeof(*before));

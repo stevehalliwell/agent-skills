@@ -26,7 +26,7 @@ int gd_matrix_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mod
         const GD_Record *record=&model->records[i]; GD_LayoutNode *node; record_node[i]=-1;
         if (record->role!=GD_NOUN && record->role!=GD_VERB) continue;
         record_node[i]=layout->node_count; node=&layout->nodes[layout->node_count++];
-        node->key=i; node->label=record->name; node->group=model->component_of[i]; node->side=record->role==GD_VERB; node->degree=model->connectivity[i].partners;
+        node->key=i; node->label=record->display_name ? record->display_name:record->name; node->group=model->component_of[i]; node->side=record->role==GD_VERB; node->degree=model->connectivity[i].partners;
     }
     for (i=0;i<model->cell_count;++i) {
         GD_LayoutEdge *edge=&layout->edges[layout->edge_count++]; edge->a=record_node[model->cells[i].noun]; edge->b=record_node[model->cells[i].verb];
@@ -64,6 +64,7 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
     if (!layout || layout->node_count < 0 || layout->node_count > GD_MAX_RECORDS ||
         layout->edge_count < 0 || layout->edge_count > GD_MAX_PAIRS ||
         layout->group_count < 0 || layout->group_count > GD_MAX_RECORDS ||
+        !isfinite(layout->spring_gap) || layout->spring_gap<0 || layout->spring_gap>1048576 ||
         (mode != GD_LAYOUT_FORCE && mode != GD_LAYOUT_COLUMNS && mode != GD_LAYOUT_DIRECTED) ||
         (sort != GD_SORT_NAME && sort != GD_SORT_PARTNERS)) return 0;
     memset(layout->groups, 0, sizeof(layout->groups));
@@ -107,15 +108,15 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
             int j, side_rows[2] = {0, 0};
             if (!group->count || ((group->count == 1) != pass)) continue;
             if (pass) {
-                group->width = mode==GD_LAYOUT_FORCE ? fmaxf(170,group->width+32):170;
-                group->height = mode==GD_LAYOUT_FORCE ? fmaxf(100,group->height+32):100;
+                group->width = mode==GD_LAYOUT_FORCE ? fmaxf(170,group->width+fmaxf(32,(float)spring_clearance(layout))):170;
+                group->height = mode==GD_LAYOUT_FORCE ? fmaxf(100,group->height+fmaxf(32,(float)spring_clearance(layout))):100;
             }
             else if (mode == GD_LAYOUT_COLUMNS) {
                 int rows = counts[i][0] > counts[i][1] ? counts[i][0] : counts[i][1];
                 group->width = 340; group->height = rows * 52.0f + 90;
             } else {
-                group->width = 140 + sqrtf((float)group->count) * fmaxf(90,group->width+8);
-                group->height = 140 + sqrtf((float)group->count) * fmaxf(90,group->height+8);
+                group->width = 140 + sqrtf((float)group->count) * fmaxf(90,group->width+(float)spring_clearance(layout));
+                group->height = 140 + sqrtf((float)group->count) * fmaxf(90,group->height+(float)spring_clearance(layout));
             }
             group->x = x; group->y = y;
             for (j = 0; j < group->count; ++j) {
@@ -143,7 +144,7 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
     layout->mode = mode; layout->sort = sort; layout->tick = 0;
     return 1;
 }
-void gd_layout_step(GD_Layout *layout, int held_node) {
+void gd_layout_step_weighted(GD_Layout *layout, int held_node,const int *counts) {
     int i;
     if (layout->mode != GD_LAYOUT_FORCE && layout->mode != GD_LAYOUT_DIRECTED) return;
     for (i = 0; i < layout->node_count; ++i) {
@@ -183,7 +184,8 @@ void gd_layout_step(GD_Layout *layout, int held_node) {
         a = &layout->nodes[edge->a]; b = &layout->nodes[edge->b];
         dx = b->x-a->x; dy = b->y-a->y; distance = sqrtf(dx*dx+dy*dy);
         if (distance < 1) continue;
-        force = (distance-collision_spring_length(a,b,dx,dy,distance))*0.015f/distance;
+        force = (distance-collision_spring_length(layout,a,b,dx,dy,distance))*0.015f/distance;
+        if (counts && counts[i]>1) force*=1+fminf(3,log2f((float)counts[i]));
         a->vx += dx*force; a->vy += dy*force; b->vx -= dx*force; b->vy -= dy*force;
     }
     for (i = 0; i < layout->node_count; ++i) {
@@ -202,6 +204,7 @@ void gd_layout_step(GD_Layout *layout, int held_node) {
     if (layout->mode==GD_LAYOUT_FORCE) collision_separate(layout,held_node);
     ++layout->tick;
 }
+void gd_layout_step(GD_Layout *layout,int held_node) { gd_layout_step_weighted(layout,held_node,NULL); }
 void gd_layout_move_node(GD_Layout *layout, int node, float x, float y) {
     if (node < 0 || node >= layout->node_count) return;
     if (!isfinite(x) || !isfinite(y) || (layout->nodes[node].x==x && layout->nodes[node].y==y)) return;

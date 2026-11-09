@@ -4,7 +4,7 @@ Live schemas and usage are authoritative for actual fields. Shipped template fil
 
 ## Owners
 
-- `nouns`, `verbs`: entity/action identity and meaning. Noun `axes` explicitly references applicable typed dimensions; do not infer applicability from rule mentions.
+- `nouns`, `verbs`: entity/action identity and meaning. Optional noun `is_actor` is boolean: true classifies actor, false classifies non-actor, omission remains unclassified. Keep one noun identity and existing queries across all classifications. See [noun field contract](../templates/nouns/.usage.md). Noun `axes` explicitly references applicable typed dimensions; do not infer applicability from rule mentions.
 - `axes`: independent enum/integer/number definitions, open named-state vocabularies by default, units and optional literal bounds. No per-state files, initial/current actor values, mandatory role taxonomy or implicit reachability. See [typed axis contract](../native/axes.md).
 - `interactions`: conditional interaction record; applicable `nouns`, one `verb`, separate `context_nouns`, coverage and shared-rule links. One labelled `gd-rule` body block owns unordered named cases, participant bindings, conditions and effects; prose explains intent.
 - `mechanics`: shared rules/state transitions; refer to control variables for configuration values and resources for pools.
@@ -43,7 +43,7 @@ At most one accepted resource extension per noun. Mechanics/interactions own exp
 
 ## Types and unavailable semantics
 
-Attendant schemas are flat. `null` declarations are optional/untyped, not invented integer markers. Generic `validate` **does not enforce all rank/control-variable/axis semantic types**. Native skill/control/rule consumers check their documented consumed types and operations; they do not replace live Attendant schema validation. State performed checks and unsupported coverage separately from Attendant output. No fake `ref:any` field exists; generic documentation/subject strings require deliberate source interpretation.
+Attendant schemas are flat. `null` declarations are optional/untyped, not invented integer markers. Generic `validate` **does not enforce all rank/control-variable/axis semantic types or optional noun `is_actor` boolean type**. Native skill/control/rule consumers check their documented consumed types and operations; they do not replace live Attendant schema validation. State performed checks and unsupported coverage separately from Attendant output. No fake `ref:any` field exists; generic documentation/subject strings require deliberate source interpretation.
 
 Intended numeric contract: binary64 numbers; exact integers within ±9,007,199,254,740,991. Control variables use integer/number/boolean/enum. Shared C99 control resolver consumes: `{control-vars/walk-duration}` references (no dollar prefix), opaque case-sensitive unit symbols, explicit conversions, fixed functions. Do not `eval` formula strings, send them to a shell, or duplicate evaluation in experiment code; use common resolver and document its coverage. Ambiguous/invalid declarations stay unresolved until authorized correction.
 

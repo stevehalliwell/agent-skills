@@ -20,13 +20,15 @@ test('unified explorer validates options without prompting or opening a window',
     ['--related','context=.','--screenshot','capture.png'],['--related','context=.','--frames','1','--screenshot','capture.jpg'],
     ['--nouns','one=.','--nouns','two=.'],['--related','context=.','--fields','nodes'],
     ['--related','context=.','--layout','grid'],['--related','context=.','--mode','mda','--layout','grid'],
-    ['--related','context=.','--mode','matrix','--layout','table']]) {
+    ['--related','context=.','--mode','matrix','--layout','table'],
+    ['--related','context=.','--mode','noun-interactions','--layout','columns']]) {
     assert.equal(failure(args).errors[0].code,'cli.arguments',JSON.stringify(args));
   }
 });
 test('unified entry reports absent graph build or unavailable projection structurally', {skip:!executable},()=>{
   const output=failure(['--related','context=.']);
   assert.ok(['view.graph_unavailable','explorer.unavailable'].includes(output.errors[0].code));
+  for (const layout of ['grid','graph']) assert.ok(['view.graph_unavailable','explorer.unavailable'].includes(failure(['--related','context=.','--mode','noun-interactions','--layout',layout]).errors[0].code));
   for (const mode of ['actors','effects']) assert.ok(['view.graph_unavailable','explorer.unavailable'].includes(failure(['--related','context=.','--mode',mode]).errors[0].code));
   const help=spawnSync(executable,['--help'],{encoding:'utf8',timeout:30000});
   assert.equal(help.status,0);

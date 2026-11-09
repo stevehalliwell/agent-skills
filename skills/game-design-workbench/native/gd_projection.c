@@ -35,7 +35,7 @@ int gd_actor_inventory_layout(const GD_ActorInventory *inventory, GD_Layout *lay
     for (i=0;i<inventory->node_count;++i) {
         const GD_ActorInventoryNode *node=&inventory->nodes[i]; GD_LayoutNode *target=&layout->nodes[i];
         target->key=i; target->group=(int)node->kind;
-        target->label=node->kind==GD_ACTOR_CASE ? rules->cases[node->case_index].name:node->kind==GD_ACTOR_LOCAL_BINDING ? rules->participants[node->participant].name:model->records[node->record].reference;
+        target->label=node->kind==GD_ACTOR_CASE ? rules->cases[node->case_index].name:node->kind==GD_ACTOR_LOCAL_BINDING ? rules->participants[node->participant].name:model->records[node->record].is_noun ? model->records[node->record].display_name:model->records[node->record].reference;
     }
     for (i=0;i<inventory->link_count;++i) {
         const GD_ActorInventoryLink *edge=&inventory->links[i];

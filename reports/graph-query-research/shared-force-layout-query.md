@@ -44,7 +44,60 @@ Findings:
 
 User requested record findings, commit checkpoint and stop for later pickup. No further layout correction attempted.
 
-Next slice: investigate default applied scenes and rendered geometry for Actors/Effects, then refine a visual-communication approach before coding. Distinguish absent topology from hidden/misleading scope and presentation. Diagnose Effects centre attraction, footprint clearance and persistent motion with evidence; no cause or replacement algorithm selected. Do not fabricate edges or automatically apply staged query inputs to make a default look connected. Preserve native layouts and agreed stacked-ghost movement.
+Next slice: refine confirmed Actor interaction-map default below against source representation before coding. Diagnose Effects centre attraction, footprint clearance and persistent motion separately; no cause or replacement algorithm selected for Effects. Do not fabricate edges or automatically apply staged query inputs to make a default look connected. Preserve existing queried layouts and agreed stacked-ghost movement.
+
+### Confirmed Actor overview directions
+
+Replace list-like default inventory canvas with weighted actor interaction map; add separate actor usage-cloud view. User accepted both angles and record-level interaction counting. Existing explicit Actor queries retain their current purpose and behavior. These are new content projections, not merely different placements of existing query scenes.
+
+#### Actor interaction map — default
+
+Question: which actors share the most authored interaction content?
+
+- Show all qualifying actor types, including isolates. Use explicit noun `is_actor: true`, not all nouns. Lives is a supporting resource concept, not an actor. Missing classification stays unclassified, never silently false; overviews must disclose unclassified scope.
+- Connect actor types through sourced interaction evidence. Count each distinct interaction record once per actor-type pair, not once per conditional case. Retain contributing records/cases and conditions for link inspection.
+- Draw larger counts with thicker links. Default force graph uses stronger attraction for higher weights; preserve readable node separation rather than collapsing related types into overlapping piles.
+- Proximity expresses shared interaction declarations, not similarity, runtime frequency, gameplay importance or proven execution.
+
+#### Actor usage cloud — separate view
+
+Question: which nouns/concepts and axes connect actors across the design?
+
+- Place all qualifying actors around an outer ring. Place used non-actor nouns/concepts and axes in the middle; actors are not duplicated as central concept nodes by implication.
+- Link actors to central nodes through declared interaction/usage evidence, not incidental prose mentions. Lives can appear centrally without being classified as an actor.
+- Grow central node size with connection count, like a word cloud. Keep actors on ring; central nodes may settle spatially. Actor proximity on ring does not encode relatedness.
+- Distinguish actors, central nouns and axes visually. Bound node sizes to preserve readability.
+- Selecting actor highlights its usages; selecting central concept highlights actors using it. Link inspection exposes contributing declarations and conditions.
+- Central size uses distinct connected actors (breadth), labelled explicitly. Interaction-record count remains link evidence, not the size metric.
+
+#### Preserved behavior and open refinement
+
+- Explicit case/state queries replace overview with existing query analysis. Do not implicitly Run queries or consume pending inputs to populate overviews. Preserve source browsing, drafts/Undo and last-good failure behavior.
+- Actor-wide state-machine approximation remains separate deferred work in `todo.md`.
+- Confirmed extraction: explicit same-case participation in interaction records only, with record-deduplicated pair counts. No cross-case pairing, inference from prose or automatic referenced-mechanic/call expansion. Cloud connects actor to other non-actor/unclassified noun participants in those cases and to that actor's own declared axes; unclassified concepts remain visibly distinct. Shared-case use does not mean direct modification. Existing source statuses/coverage remain evidence, not gameplay frequency or applicability proof.
+- Implementation slice: bounded log-scaled widths/attraction and concept sizes; deterministic record-order outer ring and central packed concept cloud. Cloud is a fixed overview, not another physics solver; central settling is optional future polish. Overview switching must preserve pending inputs and existing case/state query behavior.
+- Open: classify remaining example nouns under agreed project policy. Self-type participation does not create an inter-type pair; no inferred runtime instances.
+
+### Actor classification foundation — implemented
+
+- Optional `is_actor` lives on canonical noun; no actor collection or duplicate state list. Axes retain state vocabularies/types and applicability; rules retain conditions/changes.
+- Native model retains boolean plus declaration line; missing line means unclassified. Supplied null, strings, numbers, collections and duplicate fields fail loading. Existing queries accept all noun classifications.
+- Participant query JSON exposes `is_actor: true | false | null`; unresolved nouns also report null with separate resolution status. Inventory inspector shows classification without filtering inventory.
+- Shipped noun schema/usage and both example contracts updated. Attendant lacks optional typed booleans: schema declares optional/untyped field without default, native reader enforces semantic type. Generic schema validation alone is insufficient.
+- Mario Hero/Walker explicitly true; Lives explicitly false, updated through Attendant. Other nouns remain unclassified, not guessed from prose. Overview implementation follows below.
+- Checks: CJIT core 138/138; focused query tests 4/4; full native Node suite 62 passed, zero failed, one Mac-only socket test skipped. Includes Windows transport and both CPU production adapters. CLI/graph/explorer/protocol fixtures build in separate `native/build/actor-classification-work/`. Strict Attendant validation: Mario 225 records and Crate 67, zero diagnostics/corrections. Mario binding query confirms Hero/Walker true and Lives false.
+- Evidence in that build directory: `build-core.log`, `native-node.log`, `attendant-update.json`, `validate-{crate-puzzle,little-plumber-guy-nes}.json`, `mario-bindings.json`. Running review viewer untouched; no new GUI launched. New inspector text compiled and exercised by CPU adapters, not visually accepted; Mac build not rerun for this slice.
+
+### Actor overviews — implemented, visual review pending
+
+- Default interaction map and separate usage cloud follow confirmed extraction above. Rule snapshots normalize record roles; extraction checks restored original collection role, not normalized `GD_Record.role`. Only bound interaction collections contribute pairs. Mechanics remain inspectable query evidence, never automatic pair expansion.
+- Shared weighted solver multiplies spring force by `1 + min(3, log2(record_count))`; unweighted callers retain existing behavior. Width and concept dimensions use bounded log scales. Usage uses fixed ring/grid; no additional solver or per-frame allocations.
+- New owned metadata: 131,084 bytes per overview; construction scratch: 446,464 bytes, released before Free placement. Existing scene/native-pose and Free geometry ownership remain unchanged. Construction uses existing 4096-node/32768-link and charged-work limits; partial scopes are labelled.
+- Shared presentation `actor_overview: interactions | usage` works from overview or analytical scene. Pending Query inputs never run implicitly. Switching preserves source selection even when definition is absent from new canvas. Allocation failures retain previous scene/mode. Generic layout unavailable during overview; interaction map retains Native/Neighborhood, Pause and dragging. Usage is fixed, without dragging/settling.
+- All nouns remain searchable and queryable regardless of classification. Current Mario map has Hero/Walker; Lives remains non-actor concept in usage. Remaining Mario nouns and all Crate nouns stay unclassified. Empty overview explains explicit classification requirement.
+- Retained IPC `result --projection actors --form actor-overview` exposes nodes, counts and scope disclosures, with first contributing source per link. Whole-result bounded byte paging only; nonempty `--fields` rejected. Existing native Query result retains full cases/bindings; GUI edge inspector pages matching cases/conditions. Typed definition references and analytical scene identities remain separate.
+- Checks: CJIT core **140/140**; native Node **62 passed, zero failed, one Mac-only socket skip**. CPU production adapters cover both examples without source writes/leaks. New regressions cover repeated bindings/cases, once-per-record pair counts, no cross-case/self/concept-concept links, isolates, non-actor/unclassified concepts, own-axis deduplication, connected-actor sizing, fixed pose, weighted spring behavior, source-kind exclusion, work limits, allocation failures, retained JSON and overview switching from analytical state without applying pending inputs.
+- CLI, protocol fixture, graph and production adapter compile in `native/build/actor-overview-work/`. No new GUI launched; existing review viewer/drafts untouched. Visual acceptance, remaining classifications and Effects crowding/motion diagnosis remain open. Full compiler matrix remains final Step 6.
 
 ## Technical constraints
 

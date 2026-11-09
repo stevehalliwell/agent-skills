@@ -52,7 +52,7 @@ static int viewer_canvas_id(const GD_ExplorerContext *c, int node, ViewerIdentit
         const GD_QueryScene *scene=p->query_state?p->query_state->scene:NULL;
         if (!scene || !scene->query) return 0;
         if (scene->query->effects) return gd_effect_node_id(scene->query->effects,scene->nodes[node].source,output,capacity);
-        if (scene->nodes[node].kind!=GD_QUERY_NODE_OBJECT) {
+        if (!scene->overview && scene->nodes[node].kind!=GD_QUERY_NODE_OBJECT) {
             int okay=gd_actor_scene_node_id(scene,node,output,capacity,&ids->work,GD_ACTOR_WORK);
             if (!okay && ids->work>=GD_ACTOR_WORK) ids->limited=1;
             return okay;
@@ -102,6 +102,7 @@ static void viewer_nodes(ExplorerViewer *viewer, const GD_ViewerRequest *request
         gd_viewer_write(w,","); viewer_member(w,"label",label);
         gd_viewer_write(w,","); viewer_member(w,"kind",viewer_canvas_kind(c,i));
         gd_viewer_write(w,","); viewer_member(w,"source",record>=0?model->records[record].reference:NULL);
+        if(record>=0 && model->records[record].is_noun)gd_viewer_write(w,",\"is_actor\":%s",!model->records[record].is_actor_line ? "null":model->records[record].is_actor ? "true":"false");
         gd_viewer_write(w,",\"visible\":%s,\"selected\":%s,\"snapshot_local\":%d,\"identity_available\":%s}",viewer_canvas_visible(c,i)?"true":"false",viewer_selected_node(c)==i?"true":"false",i,available?"true":"false");
     }
     if (ids.limited) { gd_viewer_error(w,"viewer.identity_limit","Native identity work limit reached; request narrower page"); return; }
@@ -159,6 +160,8 @@ static void viewer_source(GD_ExplorerContext *c, GD_ViewerWriter *w) {
     GD_Model *model=gd_explorer_model(c->project,c->pane->view); int record=c->pane->prepared?selected_record(c):-1;
     if (!model || record<0 || record>=model->record_count) { gd_viewer_write(w,"null"); return; }
     gd_viewer_write(w,"{"); viewer_member(w,"reference",model->records[record].reference);
+    gd_viewer_write(w,","); viewer_member(w,"label",model->records[record].display_name);
+    if(model->records[record].is_noun)gd_viewer_write(w,",\"is_actor\":%s",!model->records[record].is_actor_line ? "null":model->records[record].is_actor ? "true":"false");
     gd_viewer_write(w,","); viewer_member(w,"path",model->records[record].source_path);
     gd_viewer_write(w,","); viewer_member(w,"status",model->records[record].status);
     gd_viewer_write(w,","); viewer_member(w,"body",model->records[record].body);

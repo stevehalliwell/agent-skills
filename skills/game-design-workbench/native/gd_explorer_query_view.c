@@ -85,7 +85,7 @@ static GD_ExplorerQueryState *build_state(GD_ExplorerContext *context, const GD_
         for (i=0;i<state->query->effects->node_count;++i) if (state->query->effects->nodes[i].kind!=GD_EFFECT_ACTIVATION && (best<0 || state->query->contributors->incoming[i]>state->query->contributors->incoming[best])) best=i;
         if (best>=0 && !focus_result(context,state,best)) goto failure;
     }
-    if (!state->scene) state->scene=gd_query_scene_build(state->query,(GD_QueryGhostMode)state->applied.ghosts,state->applied.primary,state->applied.weighted,state->applied.include_excluded,GD_EFFECT_WORK);
+    if (!state->scene) state->scene=inventory ? gd_query_scene_overview(state->query,(GD_ActorOverviewMode)context->pane->actor_overview,GD_EFFECT_WORK):gd_query_scene_build(state->query,(GD_QueryGhostMode)state->applied.ghosts,state->applied.primary,state->applied.weighted,state->applied.include_excluded,GD_EFFECT_WORK);
     if (!state->scene || (state->applied.compare>=0 && !gd_query_scene_compare(state->scene,state->applied.primary,state->applied.compare))) goto failure;
     if(!query_place(context,state->scene,(GD_LayoutMode)context->pane->layout_choice,context->pane->initial_arrangement)) goto failure;
     model->error_count=errors; model->errors_omitted=omitted; return state;
@@ -93,6 +93,26 @@ failure:
     if (model->error_count>errors) snprintf(context->pane->query_message,sizeof(context->pane->query_message),"%s: %s. Last good query retained.",model->errors[errors].code,model->errors[errors].message);
     else if (!*context->pane->query_message) snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Cannot prepare bounded query/drawing; last good query retained.");
     model->error_count=errors; model->errors_omitted=omitted; gd_explorer_query_destroy(state); return NULL;
+}
+int gd_explorer_query_overview(GD_ExplorerContext *context,int mode) {
+    GD_ExplorerPane *pane=context->pane;GD_ExplorerQueryState *state=pane->query_state,*fresh=NULL;GD_QueryScene *scene;int old=pane->actor_overview,record=gd_explorer_query_record(pane),i;
+    if(pane->view!=GD_EXPLORER_ACTORS || mode<GD_ACTOR_INTERACTIONS || mode>GD_ACTOR_USAGE || !state) return 0;
+    if(state->query && state->query->request.kind==GD_QUERY_BINDINGS) {
+        scene=gd_query_scene_overview(state->query,(GD_ActorOverviewMode)mode,GD_EFFECT_WORK);
+        if(!scene || !query_place(context,scene,(GD_LayoutMode)pane->layout_choice,pane->initial_arrangement)) {gd_query_scene_destroy(scene);return 0;}
+        gd_query_scene_destroy(state->scene);state->scene=scene;
+    } else {
+        GD_ExplorerQueryOptions defaults;gd_explorer_form_defaults(GD_FORM_QUERY,&defaults);
+        pane->actor_overview=mode;fresh=build_state(context,&defaults,1,NULL);pane->actor_overview=old;
+        if(!fresh) return 0;
+        gd_explorer_query_destroy(state);pane->query_state=state=fresh;
+    }
+    pane->actor_overview=mode;pane->layout=&state->scene->layout;pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
+    for(i=0;i<pane->layout->node_count;++i) if(gd_query_scene_record(state->scene,i)==record) pane->selection.node=i;
+    if(record>=0 && pane->selection.node<0) pane->selection.linked=record; /* Keep source inspection when definition is absent from new canvas. */
+    memset(pane->match_nodes,0,sizeof(pane->match_nodes));memset(pane->match_edges,0,sizeof(pane->match_edges));*pane->find_reference=0;pane->visible_matches=pane->hidden_matches=0;
+    pane->fit=1;pane->paused=false;++pane->revision;
+    snprintf(pane->query_message,sizeof(pane->query_message),"Actor overview changed. Pending query inputs retained; no analytical Run or source writes.");return 1;
 }
 /* First canvas uses default applied scope. Staged inputs require explicit Run. */
 int gd_explorer_query_prepare(GD_ExplorerContext *context) {
@@ -196,7 +216,7 @@ int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProjec
     if (prior->query_state && prior->query_state->query && prior->query_state->query->request.kind==GD_QUERY_BINDINGS && prior->selection.node>=0) {
         int source=gd_query_scene_record(prior->query_state->scene,prior->selection.node),mapped=remap_record(before,fresh,source);
         if (mapped>=0) for (i=0;i<pane->layout->node_count;++i) if (gd_query_scene_record(pane->query_state->scene,i)==mapped) pane->selection.node=i;
-        snprintf(pane->query_message,sizeof(pane->query_message),"Object inventory reloaded; exact selected definition %s.",pane->selection.node>=0 ? "retained":"cleared (missing/replaced)"); return 1;
+        snprintf(pane->query_message,sizeof(pane->query_message),"Actor overview reloaded; exact selected definition %s.",pane->selection.node>=0 ? "retained":"cleared (missing/replaced)"); return 1;
     }
     if (prior->view==GD_EXPLORER_ACTORS && prior->selection.node>=0) snprintf(pane->query_message,sizeof(pane->query_message),pane->query_options.coverage ? "Coverage selectors retained; native coverage recomputed; transient inspection cleared after reload.":"Root, binding, axis, primary value and facts retained; transient inspection cleared after reload.");
     return 1;
@@ -205,6 +225,7 @@ int gd_explorer_query_record(const GD_ExplorerPane *pane) {
     if (pane->selection.linked>=0) return pane->selection.linked;
     if(pane->query_state && pane->query_state->scene && pane->selection.cell>=0 && pane->selection.cell<pane->query_state->scene->layout.edge_count) {
         const GD_QueryScene *scene=pane->query_state->scene; const GD_QuerySceneEdge *edge=&scene->edges[pane->selection.cell]; int source_case=-1;
+        if(scene->overview) return edge->kind==GD_QUERY_EDGE_AXIS ? scene->query->model->edges[edge->source].source:scene->query->rules->sources[scene->query->rules->cases[edge->source].source].record;
         if(scene->query->effects) source_case=scene->query->resource->relations[scene->query->effects->links[edge->source].relation].source_case;
         else if(edge->kind==GD_QUERY_EDGE_EFFECT && scene->query->variants) source_case=scene->query->variants->writes[edge->source].origin_case;
         if(source_case>=0) return scene->query->rules->sources[scene->query->rules->cases[source_case].source].record;
@@ -220,6 +241,7 @@ int gd_explorer_query_compare(GD_ExplorerContext *context) {
 int gd_explorer_query_display(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; GD_QueryScene *fresh; int i,kind=-1,source=-1,variant=-1;
     if (!state || !state->query) return 0;
+    if(state->scene && state->scene->overview) return gd_explorer_query_overview(context,pane->actor_overview);
     fresh=state->selected ? gd_query_scene_effect_context(state->query,state->selected,pane->query_options.weighted,GD_EFFECT_WORK):gd_query_scene_build(state->query,(GD_QueryGhostMode)pane->query_options.ghosts,pane->query_options.primary,pane->query_options.weighted,pane->query_options.include_excluded,GD_EFFECT_WORK);
     if (fresh && pane->query_options.compare>=0 && !gd_query_scene_compare(fresh,pane->query_options.primary,pane->query_options.compare)) { gd_query_scene_destroy(fresh); fresh=NULL; }
     if(fresh && !query_place(context,fresh,(GD_LayoutMode)pane->layout_choice,pane->initial_arrangement)) {gd_query_scene_destroy(fresh);fresh=NULL;}
@@ -242,7 +264,7 @@ static void coverage_summary(const GD_Query *query) {
     igTextWrapped("Applied coverage axis: %s | %s | unit %s",axis->reference,axis->axis.type,axis->axis.unit && *axis->axis.unit ? axis->axis.unit:"unspecified");
     igTextWrapped("Applied root statuses: %s",query->request.status_count ? query->request.statuses[0]:"all");
     igTextWrapped("Bounds: %s .. %s | declared values %d | closed %s",axis->axis.minimum ? axis->axis.minimum:"unspecified",axis->axis.maximum ? axis->axis.maximum:"unspecified",axis->axis.allowed_count,axis->axis_closed ? "yes":"no");
-    igTextWrapped("Applied object: %s | case: %s | local participant: %s",query->request.noun>=0 ? query->model->records[query->request.noun].reference:"all",query->request.case_index>=0 ? query->rules->cases[query->request.case_index].name:"all",query->request.participant ? query->request.participant:"all explicit bindings (not default A)");
+    igTextWrapped("Applied object: %s | case: %s | local participant: %s",query->request.noun>=0 ? query->model->records[query->request.noun].display_name:"all",query->request.case_index>=0 ? query->rules->cases[query->request.case_index].name:"all",query->request.participant ? query->request.participant:"all explicit bindings (not default A)");
     igTextWrapped("%d bindings; %d evaluated; %d unexamined; %d excluded roots",query->binding_count,coverage->evaluated_bindings,query->unexamined_bindings,query->excluded_roots);
     igTextWrapped("%d finite values | inventory work %d | hypothesis work %d | query %s | source %s",coverage->value_count,query->work,coverage->work,query->limited || coverage->limited ? "unfinished":"checked",coverage->source_incomplete ? "incomplete":"checked");
     igTextWrapped("Cards separate deduplicated case counts from local-binding counts. Unfinished cases may overlap known memberships. Unknown guards remain candidates. No retained candidate is nullable checked absence, not a defect or universal gameplay proof. Numeric values are finite samples, not a range.");
@@ -255,10 +277,15 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
         if (inventory) {
             const GD_QueryScene *scene=pane->query_state->scene; int selected=gd_explorer_query_record(pane);
             if (selected>=0 && model->records[selected].role!=GD_NOUN) selected=-1;
-            igTextWrapped("Declared objects / actors: %d definitions, %d local bindings. Click an object, then choose its case/binding and axis to inspect states. Definitions are not runtime instances.",scene->layout.node_count,pane->query_state->query->binding_count);
-            if (gd_explorer_picker_begin(context,"Browse object / actor",selected>=0 ? model->records[selected].reference:NULL)) {
-                for (i=0;i<scene->layout.node_count;++i) { int record=scene->nodes[i].source; if (gd_explorer_picker_item(context,TextFormat("%s | %s",model->records[record].name,model->records[record].reference),record==selected,0)) { pane->selection=(GD_ExplorerSelection){-1,i,0,-1,-1}; } }
+            igTextWrapped("Actor overview: explicit is_actor:true only on perimeter/map. %d unclassified nouns are not actors by default. Scope %s; missing connections are not proof of absence.",gd_query_scene_overview_unclassified(scene),gd_query_scene_overview_incomplete(scene) ? "incomplete":"loaded declarations");
+            igTextWrapped(pane->actor_overview==GD_ACTOR_USAGE ? "Actors on fixed outer ring; used noun concepts and own declared axes inside. Central size: distinct connected actors. Unclassified noun concepts labelled separately. Select nodes to highlight usages. Fixed overview; no settling or dragging.":"Links count distinct interaction records sharing actor types within a case. Thicker links have stronger bounded attraction. Not direct contact, runtime frequency or applicability proof.");
+            if (gd_explorer_picker_begin(context,"Browse object / actor",selected>=0 ? model->records[selected].display_name:NULL)) {
+                for (i=0;i<model->record_count;++i) if(model->records[i].role==GD_NOUN) { if (gd_explorer_picker_item(context,TextFormat("%s | %s",model->records[i].display_name,model->records[i].reference),i==selected,0)) { int n;pane->selection=(GD_ExplorerSelection){-1,-1,0,i,-1};for(n=0;n<scene->layout.node_count;++n) if(scene->nodes[n].source==i) {pane->selection.node=n;pane->selection.linked=-1;break;} } }
                 gd_explorer_picker_end();
+            }
+            if (selected>=0) {
+                const GD_Record *record=&model->records[selected];
+                igTextWrapped("Actor classification: %s. Classification does not restrict noun queries.",record->is_actor_line ? (record->is_actor ? "actor":"non-actor"):"unclassified");
             }
             igTextWrapped("Browsing does not change pending analysis. Choose a case/local occurrence explicitly to set analysis context.");
             if (options->root_case>=0) igTextWrapped("Pending analysis: %s / %s / %s",rules->cases[options->root_case].name,options->participant>=0 ? rules->participants[options->participant].name:"no binding",options->axis>=0 ? model->records[options->axis].name:"choose axis");
@@ -267,18 +294,17 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
                 for (i=0;i<query->binding_count;++i) { const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleParticipant *participant=&rules->participants[binding->participant]; const GD_RuleCase *item=&rules->cases[binding->case_index]; if (participant->noun_resolution==GD_RULE_RESOLVED && participant->noun_record==selected) { igPushID_Int(i); if (gd_explorer_picker_item(context,TextFormat("%s / %s | %s",item->name,participant->name,model->records[rules->sources[item->source].record].reference),options->participant==binding->participant,0)) { gd_explorer_query_root(options,rules,binding->case_index); gd_explorer_query_participant(options,rules,binding->participant); } igPopID(); } }
                 gd_explorer_picker_end();
             }
-        } else if (igButton("Return to actor inventory",(ImVec2_c){0,0})) {
-            gd_explorer_query_inventory(options);
-            gd_explorer_action_run(context,GD_ACTION_QUERY_RUN); return;
+        } else if (igButton("Return to actor overviews (keep query inputs)",(ImVec2_c){0,0})) {
+            gd_explorer_query_overview(context,pane->actor_overview); return;
         }
         if (gd_explorer_form_widget(GD_FORM_QUERY,options,"coverage",NULL)) gd_explorer_query_question(options,options->coverage);
         igTextWrapped("Changing question clears pending selectors/values/facts, not drawn result. Apply to replace result.");
         const GD_RuleCase *root=options->root_case>=0 ? &rules->cases[options->root_case]:NULL;
         if (options->coverage) {
             igTextWrapped("Each binding independently receives each finite value. Other bindings/context stay unknown; no same-noun simultaneous assignment or default A.");
-            if (gd_explorer_picker_begin(context,"Object filter",options->noun>=0 ? model->records[options->noun].reference:"All explicitly declared nouns")) {
+            if (gd_explorer_picker_begin(context,"Object filter",options->noun>=0 ? model->records[options->noun].display_name:"All explicitly declared nouns")) {
                 if (gd_explorer_picker_item(context,"All explicitly declared nouns",options->noun<0,0)) options->noun=-1;
-                for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_NOUN && gd_explorer_picker_item(context,model->records[i].reference,i==options->noun,0)) options->noun=i;
+                for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_NOUN && gd_explorer_picker_item(context,model->records[i].display_name,i==options->noun,0)) options->noun=i;
                 gd_explorer_picker_end();
             }
         }
@@ -363,17 +389,26 @@ static Color node_color(const GD_QuerySceneNode *node) {
     if (node->applicability==GD_RULE_TRUTH_FALSE) color=(Color){125,132,145,255}; if (node->ghost) color.a=85; return color;
 }
 void gd_explorer_query_draw(GD_ExplorerContext *context) {
-    GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; GD_QueryScene *scene=state ? state->scene:NULL; int i,pass;
+    GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; GD_QueryScene *scene=state ? state->scene:NULL; int i,pass;unsigned char highlighted[GD_MAX_RECORDS]={0};
+    if(scene && scene->overview && pane->selection.node>=0) {highlighted[pane->selection.node]=1;for(i=0;i<scene->layout.edge_count;++i) {const GD_LayoutEdge *e=&scene->layout.edges[i];if(e->a==pane->selection.node || e->b==pane->selection.node) highlighted[e->a]=highlighted[e->b]=1;}}
     if (!scene) { DrawText(pane->query_options.coverage ? "Choose typed axis and finite values; apply coverage. Case/object optional.":"Choose source case, local participant and typed axis; apply query.",(int)context->viewport.x+24,(int)context->viewport.y+24,18,(Color){170,188,209,255}); return; }
+    if(scene->overview && !scene->layout.node_count) {DrawText("No retained actors. Explicit noun is_actor: true is required; review scope and limits.",(int)context->viewport.x+24,(int)context->viewport.y+24,18,(Color){170,188,209,255});return;}
     BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); BeginMode2D(pane->camera);
     for (i=0;i<pane->layout->edge_count;++i) {
         const GD_LayoutEdge *edge=&pane->layout->edges[i]; const GD_QuerySceneEdge *metadata=&scene->edges[i]; GD_LayoutRoute route; int j,marked=state->selected && state->selected->highlighted[metadata->source];
+        float thickness=1.5f;
+        if(scene->overview) {marked=pane->selection.cell==i || pane->selection.node==edge->a || pane->selection.node==edge->b;thickness=1.5f+fminf(5,log2f((float)gd_query_scene_overview_count(scene,i)));}
         Color color=marked ? (Color){65,227,195,255}:metadata->kind==GD_QUERY_EDGE_INVOCATION || metadata->kind==GD_QUERY_EDGE_FRONTIER ? (Color){180,160,222,160}:(Color){120,151,175,110};
+        if(scene->overview && pane->selection.node>=0 && !marked) color.a=35;
         gd_layout_route(pane->layout,i,&route);
         for (j=1;j<route.count;++j) {
             Vector2 a={route.points[j-1].x,route.points[j-1].y},b={route.points[j].x,route.points[j].y};
             if (metadata->kind==GD_QUERY_EDGE_INVOCATION || metadata->kind==GD_QUERY_EDGE_FRONTIER) { int segment; for (segment=0;segment<12;segment+=2) DrawLineEx((Vector2){a.x+(b.x-a.x)*segment/12,a.y+(b.y-a.y)*segment/12},(Vector2){a.x+(b.x-a.x)*(segment+1)/12,a.y+(b.y-a.y)*(segment+1)/12},(marked ? 3:1.5f)/pane->camera.zoom,color); }
-            else DrawLineEx(a,b,(marked ? 3:1.5f)/pane->camera.zoom,color);
+            else DrawLineEx(a,b,(marked ? thickness+1.5f:thickness)/pane->camera.zoom,color);
+        }
+        if(scene->overview && metadata->kind!=GD_QUERY_EDGE_AXIS && pane->camera.zoom*14>=8 && (marked || gd_query_scene_overview_mode(scene)==GD_ACTOR_INTERACTIONS)) {
+            const GD_LayoutNode *a=&pane->layout->nodes[edge->a],*b=&pane->layout->nodes[edge->b];
+            DrawText(TextFormat("%d records",gd_query_scene_overview_count(scene,i)),(int)((a->x+b->x)/2),(int)((a->y+b->y)/2),14,(Color){210,224,230,255});
         }
         if (route.count>1 && (metadata->kind==GD_QUERY_EDGE_EFFECT || metadata->kind==GD_QUERY_EDGE_INVOCATION)) {
             Vector2 a={route.points[route.count-2].x,route.points[route.count-2].y},b={route.points[route.count-1].x,route.points[route.count-1].y}; float dx=b.x-a.x,dy=b.y-a.y,length=hypotf(dx,dy),size=7/pane->camera.zoom;
@@ -394,9 +429,10 @@ void gd_explorer_query_draw(GD_ExplorerContext *context) {
     for (pass=0;pass<2;++pass) for (i=0;i<pane->layout->node_count;++i) {
         const GD_LayoutNode *node=&pane->layout->nodes[i]; const GD_QuerySceneNode *metadata=&scene->nodes[i]; Color color=node_color(metadata); Rectangle card={node->x-node->width/2,node->y-node->height/2,node->width,node->height};
         if ((pass==0)!=!!metadata->ghost) continue;
+        if(scene->overview) {const GD_Record *record=&scene->query->model->records[metadata->source];color=record->role==GD_AXIS ? (Color){230,180,100,255}:!record->is_actor_line ? (Color){190,140,220,255}:record->is_actor ? (Color){125,171,215,255}:(Color){90,190,170,255};if(pane->selection.node>=0 && !highlighted[i]) color.a=90;}
         if (scene->query->variants && state->applied.compare>=0) { color=metadata->comparison==3 ? (Color){90,220,160,255}:metadata->comparison==1 ? (Color){105,170,245,255}:metadata->comparison==2 ? (Color){235,135,200,255}:(Color){104,112,128,100}; if (metadata->ghost && metadata->variant!=state->applied.compare) color.a=85; }
         DrawRectangleRounded(card,0.14f,5,(Color){27,37,53,metadata->ghost ? 120:245}); DrawRectangleRoundedLinesEx(card,0.14f,5,(i==pane->selection.node ? 3:1.5f)/pane->camera.zoom,i==pane->selection.node ? (Color){255,218,120,255}:color);
-        if (pane->camera.zoom*16>=8) { Vector2 screen=GetWorldToScreen2D((Vector2){card.x+8,card.y+6},pane->camera); Rectangle clip=GetCollisionRec((Rectangle){screen.x,screen.y,(card.width-16)*pane->camera.zoom,(card.height-12)*pane->camera.zoom},context->viewport); if (clip.width<=0 || clip.height<=0) continue; BeginScissorMode((int)clip.x,(int)clip.y,(int)clip.width,(int)clip.height); DrawText(metadata->ghost && metadata->kind==GD_QUERY_NODE_VARIANT ? state->query->variants->variants[metadata->variant].value:node->label,(int)card.x+10,(int)(card.y+(metadata->ghost && metadata->kind==GD_QUERY_NODE_VARIANT ? card.height-22:9)),16,color); if (state->query->effects && metadata->kind==GD_QUERY_NODE_EFFECT) DrawText(TextFormat("%d direct declarations%s",metadata->incoming,state->query->contributors->limited ? " (partial)":""),(int)card.x+10,(int)(card.y+card.height-23),14,color); EndScissorMode(); BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); }
+        if (pane->camera.zoom*16>=8) { Vector2 screen=GetWorldToScreen2D((Vector2){card.x+8,card.y+6},pane->camera); Rectangle clip=GetCollisionRec((Rectangle){screen.x,screen.y,(card.width-16)*pane->camera.zoom,(card.height-12)*pane->camera.zoom},context->viewport); if (clip.width<=0 || clip.height<=0) continue; BeginScissorMode((int)clip.x,(int)clip.y,(int)clip.width,(int)clip.height); DrawText(metadata->ghost && metadata->kind==GD_QUERY_NODE_VARIANT ? state->query->variants->variants[metadata->variant].value:node->label,(int)card.x+10,(int)(card.y+(metadata->ghost && metadata->kind==GD_QUERY_NODE_VARIANT ? card.height-22:9)),16,color); if(scene->overview && metadata->incoming) DrawText(TextFormat("%d connected actors",metadata->incoming),(int)card.x+10,(int)(card.y+card.height-23),14,color); if (state->query->effects && metadata->kind==GD_QUERY_NODE_EFFECT) DrawText(TextFormat("%d direct declarations%s",metadata->incoming,state->query->contributors->limited ? " (partial)":""),(int)card.x+10,(int)(card.y+card.height-23),14,color); EndScissorMode(); BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); }
     }
     EndMode2D(); EndScissorMode();
     if (pane->camera.zoom*16<8) DrawText("Labels hidden below 8 screen pixels; zoom to inspect.",(int)context->viewport.x+12,(int)context->viewport.y+12,15,(Color){185,200,219,255});
@@ -425,13 +461,22 @@ static void case_details(GD_ExplorerContext *context, int index) {
     igTextWrapped("%s | status %s | %s",record->reference,record->status ? record->status:"unspecified",record->source_path);
     igTextWrapped("Case %s | line %d | authored A %s | context %s",item->name,item->line,item->primary_target ? item->primary_target:"unspecified",item->context ? item->context:"unspecified");
     if (item->unknown_conditions) igTextWrapped("Unknown conditions: %s",item->unknown_conditions); if (item->unknown_effects) igTextWrapped("Unknown effects: %s",item->unknown_effects);
-    for (i=item->first_participant;i<item->first_participant+item->participant_count && i<item->first_participant+64;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s (%s): requires %s | excludes %s | other axes %s | becomes %s | preserves %s | calls %s",actor->name,actor->noun ? actor->noun:"unresolved",actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->other_axes ? actor->other_axes:"unspecified",actor->becomes ? actor->becomes:"none",actor->preserve ? actor->preserve:"none",actor->causes ? actor->causes:"none"); }
+    for (i=item->first_participant;i<item->first_participant+item->participant_count && i<item->first_participant+64;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s (%s): requires %s | excludes %s | other axes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->other_axes ? actor->other_axes:"unspecified",actor->becomes ? actor->becomes:"none",actor->preserve ? actor->preserve:"none",actor->causes ? actor->causes:"none"); }
     if (item->participant_count>64) igText("%d more participants in full source/native CLI; inspection list capped at 64.",item->participant_count-64);
 }
 void gd_explorer_query_source(GD_ExplorerContext *context, int edge) {
     GD_ExplorerQueryState *state=context->pane->query_state; const GD_QuerySceneEdge *item; const GD_Rules *rules=context->project->rules;
     if (!state || !state->scene || edge<0 || edge>=state->scene->layout.edge_count) return;
     item=&state->scene->edges[edge];
+    if(state->scene->overview) {
+        if(item->kind==GD_QUERY_EDGE_AXIS) {const GD_Edge *reference=&state->query->model->edges[item->source];igTextWrapped("Declared axis usage: %s | line %d | %s",state->query->model->records[reference->source].reference,reference->line,reference->reference);return;}
+        igTextWrapped("%d distinct interaction records; same-case participation, not direct modification or frequency. Conditional/excluded declarations stay evidence, not proven applicability.",gd_query_scene_overview_count(state->scene,edge));
+        {int c,start,pages=(rules->case_count+63)/64;if(pages<1) return;if(state->coverage_page>=pages) state->coverage_page=pages-1;
+         igSliderInt("Interaction evidence source-slot page",&state->coverage_page,0,pages-1,"%d",0);start=state->coverage_page*64;
+         igTextWrapped("Scanning case slots %d..%d of %d; page may contain no matches. Full declarations remain in query result/source.",start,start+64<rules->case_count ? start+64:rules->case_count,rules->case_count);
+         for(c=start;c<start+64 && c<rules->case_count;++c) if(gd_query_scene_overview_case(state->scene,edge,c)) {igPushID_Int(c);case_details(context,c);igPopID();}}
+        return;
+    }
     if (state->query->effects) {
         const GD_EffectLink *link=&state->query->effects->links[item->source]; const GD_ResourceRelation *declaration=&state->query->resource->relations[link->relation];
         igTextWrapped("%s | line %d | concrete target %s",item->kind==GD_QUERY_EDGE_EFFECT ? "Direct conditional effect":"Mapped invocation, not temporal sequence",declaration->line,link->participant>=0 ? rules->participants[link->participant].name:"unresolved");
@@ -456,23 +501,25 @@ static void coverage_details(GD_ExplorerContext *context, int value_index) {
         const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleCase *root=&query->rules->cases[binding->case_index]; const GD_RuleParticipant *participant=&query->rules->participants[binding->participant];
         const char *truth=!(coverage->present[i]&bit) ? "unavailable":coverage->definite[i]&bit ? "definite":coverage->undetermined[i]&bit ? "undetermined":"excluded";
         igPushID_Int(i);
-        if (igTreeNode_Str(TextFormat("%s#%s / %s: %s [%s]",query->model->records[query->rules->sources[root->source].record].reference,root->name,participant->name,truth,coverage->finished[i]&bit ? "examined":"unfinished"))) { igTextWrapped("Object: %s; value applies only this local binding. Whole root guards/context remain native; other bindings stay unknown.",participant->noun ? participant->noun:"unresolved"); case_details(context,binding->case_index); igTreePop(); }
+        if (igTreeNode_Str(TextFormat("%s#%s / %s: %s [%s]",query->model->records[query->rules->sources[root->source].record].reference,root->name,participant->name,truth,coverage->finished[i]&bit ? "examined":"unfinished"))) { igTextWrapped("Object: %s; value applies only this local binding. Whole root guards/context remain native; other bindings stay unknown.",gd_rule_noun_label(query->rules,participant)); case_details(context,binding->case_index); igTreePop(); }
         igPopID();
     }
 }
 void gd_explorer_query_details(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; int record=gd_explorer_query_record(pane),selected=pane->selection.node,i;
     if (state && state->scene && selected>=0 && selected<state->scene->layout.node_count) {
-        const GD_QuerySceneNode *item=&state->scene->nodes[selected]; igTextWrapped("%s",state->scene->layout.nodes[selected].label); if (item->kind==GD_QUERY_NODE_OBJECT) {
+        const GD_QuerySceneNode *item=&state->scene->nodes[selected]; igTextWrapped("%s",state->scene->layout.nodes[selected].label);
+        if(state->scene->overview) igTextWrapped("Source-backed overview definition; %d connected actors. Positions and shared case counts are not applicability, runtime instances or reachable states.",item->incoming);
+        if (item->kind==GD_QUERY_NODE_OBJECT) {
             int edge,axes=0; const GD_Model *model=state->query->model;
-            igTextWrapped("Loaded object definition; %d exact local-binding occurrences. No applicability or runtime-instance claim.",item->incoming);
+            if(!state->scene->overview) igTextWrapped("Loaded object definition; %d exact local-binding occurrences. No applicability or runtime-instance claim.",item->incoming);
             for (edge=state->query->rules->actor_first[item->source];edge>=0;edge=state->query->rules->next_axis[edge]) {
                 const GD_Edge *reference=&model->edges[edge]; ++axes;
                 if (state->query->rules->axis_resolution[edge]==GD_RULE_RESOLVED) { const GD_Record *axis=&model->records[reference->target]; igTextWrapped("%s | type %s | unit %s | %d declared values",axis->reference,axis->axis.type ? axis->axis.type:"unspecified",axis->axis.unit && *axis->axis.unit ? axis->axis.unit:"unspecified",axis->axis.allowed_count); }
                 else igTextWrapped("Unresolved declared axis: %s",reference->reference);
             }
             if (!axes) igTextWrapped("No retained axis references. Inspect source to distinguish unknown inventory from explicitly empty inventory.");
-        } else if (state->query->state_coverage) igTextWrapped("Aggregate independent binding hypotheses; card is not one case applicability verdict."); else igTextWrapped("Applicability %s | %s",gd_rule_truth_name(item->applicability),item->ghost ? "ghost context, not additional declaration":"native context");
+        } else if (state->query->state_coverage) igTextWrapped("Aggregate independent binding hypotheses; card is not one case applicability verdict."); else if(!state->scene->overview) igTextWrapped("Applicability %s | %s",gd_rule_truth_name(item->applicability),item->ghost ? "ghost context, not additional declaration":"native context");
         if (state->query->state_coverage) coverage_details(context,item->source);
         if (state->query->effects) {
             char id[GD_EFFECT_ID_CAPACITY]; const GD_EffectNode *node=&state->query->effects->nodes[item->source];
@@ -488,5 +535,5 @@ void gd_explorer_query_details(GD_ExplorerContext *context) {
         igTreePop();
     }
     if (pane->selection.cell>=0) gd_explorer_query_source(context,pane->selection.cell);
-    if (record>=0) { GD_Model *model=gd_explorer_model(context->project,pane->view); const GD_Record *source=&model->records[record]; igTextWrapped("%s | status %s | %s",source->reference,source->status ? source->status:"unspecified",source->source_path); if (igSmallButton("Copy source path")) SetClipboardText(source->source_path); if (igTreeNode_Str("Full authored source (other effects retained)")) { igPushTextWrapPos(0); igTextUnformatted(source->body,NULL); igPopTextWrapPos(); igTreePop(); } }
+    if (record>=0) { GD_Model *model=gd_explorer_model(context->project,pane->view); const GD_Record *source=&model->records[record]; igTextWrapped("%s | status %s | %s",TextFormat("%s | %s",source->display_name,source->reference),source->status ? source->status:"unspecified",source->source_path); if (igSmallButton("Copy source path")) SetClipboardText(source->source_path); if (igTreeNode_Str("Full authored source (other effects retained)")) { igPushTextWrapPos(0); igTextUnformatted(source->body,NULL); igPopTextWrapPos(); igTreePop(); } }
 }

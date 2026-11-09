@@ -3,15 +3,16 @@
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
+struct GD_ActorOverview { GD_ActorOverviewMode mode; int unclassified,incomplete; int counts[GD_MAX_PAIRS]; };
 #include "gd_query_scene_free.h"
 
 const char *gd_query_scene_node_kind_name(GD_QueryNodeKind kind) {
-    static const char *const names[]={"selected_binding","state_hypothesis","checked_activation","effect_concept","partner_binding","coverage_value","object_definition"};
-    return kind>=GD_QUERY_NODE_BINDING && kind<=GD_QUERY_NODE_OBJECT ? names[kind]:NULL;
+    static const char *const names[]={"selected_binding","state_hypothesis","checked_activation","effect_concept","partner_binding","coverage_value","object_definition","axis_definition"};
+    return kind>=GD_QUERY_NODE_BINDING && kind<=GD_QUERY_NODE_AXIS ? names[kind]:NULL;
 }
 const char *gd_query_scene_edge_kind_name(GD_QueryEdgeKind kind) {
-    static const char *const names[]={"hypothesis_association","invocation","effect_proposal","partner_association","call_frontier"};
-    return kind>=GD_QUERY_EDGE_ASSUMPTION && kind<=GD_QUERY_EDGE_FRONTIER ? names[kind]:NULL;
+    static const char *const names[]={"hypothesis_association","invocation","effect_proposal","partner_association","call_frontier","shared_interaction","shared_case_usage","declared_axis_usage"};
+    return kind>=GD_QUERY_EDGE_ASSUMPTION && kind<=GD_QUERY_EDGE_AXIS ? names[kind]:NULL;
 }
 static int charge(GD_QueryScene *scene, int amount) {
     if (scene->limited || amount>scene->work_limit-scene->work) { scene->limited=1; return 0; }
@@ -41,6 +42,7 @@ static void add_edge(GD_QueryScene *scene, int a, int b, GD_QueryEdgeKind kind, 
     scene->layout.edges[index]=(GD_LayoutEdge){a,b,index,1,GD_RELATION_QUERY_BASE+(int)kind};
     scene->edges[index]=(GD_QuerySceneEdge){kind,source,variant};
 }
+#include "gd_query_scene_overview.h"
 static void objects(GD_QueryScene *scene) {
     const GD_Query *query=scene->query; int counts[GD_MAX_RECORDS]={0},i;
     if (!charge(scene,query->model->record_count+query->binding_count)) return;
@@ -50,7 +52,7 @@ static void objects(GD_QueryScene *scene) {
     }
     for (i=0;i<query->model->record_count && !scene->limited;++i) if (query->model->records[i].role==GD_NOUN) {
         const GD_Record *record=&query->model->records[i]; int node;
-        node=add_node(scene,GD_QUERY_NODE_OBJECT,i,-1,0,GD_RULE_TRUTH_UNKNOWN,"%s\n%d local bindings%s",record->name,counts[i],query->limited ? " (partial)":"");
+        node=add_node(scene,GD_QUERY_NODE_OBJECT,i,-1,0,GD_RULE_TRUTH_UNKNOWN,"%s\n%d local bindings%s",record->display_name,counts[i],query->limited ? " (partial)":"");
         if (node>=0) scene->nodes[node].incoming=counts[i];
     }
 }
@@ -106,7 +108,7 @@ static void actors(GD_QueryScene *scene) {
     for (i=0;i<GD_MAX_RULE_PARTICIPANTS;++i) partners[i]=-1;
     for (i=0;i<GD_ACTOR_WRITES;++i) concepts[i]=-1;
     for (i=0;i<GD_ACTOR_VARIANTS;++i) variants[i]=-1;
-    base=add_node(scene,GD_QUERY_NODE_BINDING,source->participant,-1,0,GD_RULE_TRUTH_UNKNOWN,"%s\n%s",binding->name,binding->noun ? binding->noun:"[unresolved noun]");
+    base=add_node(scene,GD_QUERY_NODE_BINDING,source->participant,-1,0,GD_RULE_TRUTH_UNKNOWN,"%s\n%s",binding->name,gd_rule_noun_label(query->rules,binding));
     for (v=0;v<source->variant_count && !scene->limited;++v) {
         const GD_ActorVariant *variant=&source->variants[v]; int parents[GD_MAX_RULE_EXPANSION_DEPTH];
         if (scene->ghosts==GD_QUERY_PRIMARY_VARIANT && v!=scene->primary) continue;
@@ -131,7 +133,7 @@ static void actors(GD_QueryScene *scene) {
                 if (!charge(scene,GD_MAX_RULE_EXPANSION_DEPTH*GD_MAX_RULE_CALL_BINDINGS)) break;
                 mapped=gd_actor_trace_participant(query->analysis,entry,p);
                 if (mapped<query->rules->cases[source->case_index].first_participant || mapped>=query->rules->cases[source->case_index].first_participant+query->rules->cases[source->case_index].participant_count || mapped==source->participant) continue;
-                if (partners[mapped]<0) { const GD_RuleParticipant *peer=&query->rules->participants[mapped]; partners[mapped]=add_node(scene,GD_QUERY_NODE_PARTNER,mapped,-1,0,GD_RULE_TRUTH_UNKNOWN,"%s\n%s",peer->name,peer->noun ? peer->noun:"[unresolved noun]"); }
+                if (partners[mapped]<0) { const GD_RuleParticipant *peer=&query->rules->participants[mapped]; partners[mapped]=add_node(scene,GD_QUERY_NODE_PARTNER,mapped,-1,0,GD_RULE_TRUTH_UNKNOWN,"%s\n%s",peer->name,gd_rule_noun_label(query->rules,peer)); }
                 add_edge(scene,node,partners[mapped],GD_QUERY_EDGE_PARTICIPANT,p,v);
             }
         }
@@ -229,12 +231,12 @@ int gd_query_scene_hit(const GD_QueryScene *scene, float x, float y) {
     }
     return -1;
 }
-void gd_query_scene_destroy(GD_QueryScene *scene) { if (scene) {if(scene->free_geometry) scene->allocator.release(scene->allocator.context,scene->free_geometry);scene->allocator.release(scene->allocator.context,scene);} }
+void gd_query_scene_destroy(GD_QueryScene *scene) { if (scene) {if(scene->overview) scene->allocator.release(scene->allocator.context,scene->overview);if(scene->free_geometry) scene->allocator.release(scene->allocator.context,scene->free_geometry);scene->allocator.release(scene->allocator.context,scene);} }
 int gd_query_scene_record(const GD_QueryScene *scene, int node) {
     const GD_QuerySceneNode *item; const GD_Query *query;
     if (!scene || node<0 || node>=scene->layout.node_count) return -1;
     item=&scene->nodes[node]; query=scene->query;
-    if (item->kind==GD_QUERY_NODE_OBJECT) return item->source;
+    if (item->kind==GD_QUERY_NODE_OBJECT || item->kind==GD_QUERY_NODE_AXIS) return item->source;
     if (query->state_coverage) return query->request.axis;
     if (query->effects) {
         const GD_EffectNode *effect=&query->effects->nodes[item->source];

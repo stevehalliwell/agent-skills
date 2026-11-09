@@ -12,6 +12,24 @@ function invoke(arguments_,status=0,environment={}) {
   return result;
 }
 function run(arguments_,status=0) { const result=invoke(arguments_,status); const value=JSON.parse(result.stdout); assert.equal(value.ok,status===0); return value; }
+test('noun actor classification preserves true, false and unclassified bindings without filtering queries',{skip:!executable},async()=>{
+  const root=await mkdtemp(join(tmpdir(),'gd-actor-classification-'));
+  try {
+    for(const role of ['nouns','axes','mechanics']) await mkdir(join(root,role));
+    await writeFile(join(root,'axes/State.md'),'---\nvalue_type: enum\nallowed_values: [ready, spent]\nclosed: true\n---\n','utf8');
+    for(const [name,classification] of [['hero','is_actor: true\n'],['lives','is_actor: false\n'],['unknown','']]) {
+      await writeFile(join(root,`nouns/${name}.md`),`---\n${classification}axes: [axes/State]\n---\n`,'utf8');
+    }
+    await writeFile(join(root,'mechanics/use.md'),'```gd-rule\ncase use:\n    target: Hero\n    context: ANY\n    Hero:\n        noun: nouns/hero\n        requires: ANY\n    Lives:\n        noun: nouns/lives\n        requires: ANY\n    Unknown:\n        noun: nouns/unknown\n        requires: ANY\n```\n','utf8');
+    const inputs=['nouns','axes','mechanics'].flatMap(role=>['--'+role,`${role}=${join(root,role)}`]);
+    const bindings=run(['--question','object-bindings','--projection','actors',...inputs]).data.bindings;
+    assert.deepEqual(Object.fromEntries(bindings.map(binding=>[binding.actor.noun,binding.actor.is_actor])),{'nouns/hero':true,'nouns/lives':false,'nouns/unknown':null});
+    for(const participant of ['Hero','Lives','Unknown']) {
+      const value=run(['--question','actor-states','--projection','actors',...inputs,'--case','mechanics/use#use','--participant',participant,'--axis','axes/State']);
+      assert.deepEqual(value.data.variants.map(variant=>variant.value),['ready','spent']);
+    }
+  } finally { await rm(root,{recursive:true,force:true}); }
+});
 test('built-in catalogue is explicit, machine-readable and rejects unsupported projection/parameters',{skip:!executable},()=>{
   assert.match(invoke(['--help']).stdout,/gd query --list/);
   const catalogue=run(['--list']);

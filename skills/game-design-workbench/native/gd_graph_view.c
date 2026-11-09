@@ -156,7 +156,7 @@ static void draw_graph(const GD_Model *model, GD_Layout *layout, const GraphSele
         const char *prefix = group->member_count == 1 && !group->edge_count ? "Isolated: " : "Group: ";
         if (model->skill_mode && group->member_count == 1 && model->skills[group->anchor].incomplete)
             prefix = model->skills[group->anchor].cycle ? "Cycle: " : "Unresolved: ";
-        DrawText(TextFormat("%s%s", prefix, model->records[group->anchor].name),
+        DrawText(TextFormat("%s%s", prefix, model->records[group->anchor].display_name),
                  (int)bounds[i].x+10, (int)bounds[i].y+9, 14, graph_muted);
     }
     for (i = 0; i < layout->edge_count; ++i) {
@@ -376,30 +376,30 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
     if (selection->linked>=model->record_count) selection->linked=-1;
     if (selection->cell >= 0 && (challenges || focused)) {
         const GD_Edge *edge=&model->edges[selection->cell];
-        igText("%s -> %s",model->records[edge->source].name,edge->reference);
+        igText("%s -> %s",model->records[edge->source].display_name,edge->target>=0 && model->records[edge->target].is_noun ? model->records[edge->target].display_name:edge->reference);
         igText("Authored %s reference, source line %d. Not causal evidence.",gd_field_name(edge->field),edge->line);
         record_index=edge->source;
         if (igButton(focused ? "Inspect reference target" : "Inspect next challenge",(ImVec2_c){0,0}) && edge->target>=0) *navigate=edge->target;
     } else if (selection->cell >= 0 && model->skill_mode) {
         const GD_SkillLink *link = &model->skill_links[selection->cell];
-        igText("%s -> %s", model->records[link->prerequisite].name, model->records[link->dependent].name);
+        igText("%s -> %s", model->records[link->prerequisite].display_name, model->records[link->dependent].display_name);
         igTextUnformatted("Prerequisite -> dependent. All declared statuses included.", NULL);
         record_index = link->dependent;
         if (igButton("Inspect prerequisite", (ImVec2_c){0,0})) *navigate = link->prerequisite;
     } else if (selection->cell >= 0) {
         const GD_Cell *cell = &model->cells[selection->cell];
-        igText("%s x %s", model->records[cell->noun].name, model->records[cell->verb].name);
+        igText("%s x %s", model->records[cell->noun].display_name, model->records[cell->verb].display_name);
         igText("%d conditional cases | active pair: %s", cell->pair_count, cell->active ? "yes" : "no");
         if (selection->interaction >= cell->pair_count) selection->interaction = 0;
         if (igButton("Previous case", (ImVec2_c){0,0})) { selection->interaction = (selection->interaction+cell->pair_count-1)%cell->pair_count; selection->linked = -1; }
         igSameLine(0, -1);
         if (igButton("Next case", (ImVec2_c){0,0})) { selection->interaction = (selection->interaction+1)%cell->pair_count; selection->linked = -1; }
         record_index = model->pairs[cell->first_pair+selection->interaction].interaction;
-        igText("Case %d/%d: %s", selection->interaction+1, cell->pair_count, model->records[record_index].name);
+        igText("Case %d/%d: %s", selection->interaction+1, cell->pair_count, model->records[record_index].display_name);
         igText("Coverage: %s", model->records[record_index].coverage ? model->records[record_index].coverage : "unset");
     } else if (selection->node >= 0) {
         record_index = layout->nodes[selection->node].key;
-        igText("%s: %s", focused ? "Record" : challenges ? "Challenge" : model->skill_mode ? "Skill" : model->records[record_index].role == GD_NOUN ? "Noun" : "Verb", model->records[record_index].name);
+        igText("%s: %s", focused ? "Record" : challenges ? "Challenge" : model->skill_mode ? "Skill" : model->records[record_index].role == GD_NOUN ? "Noun" : "Verb", model->records[record_index].display_name);
         if (!focused && !challenges && model->skill_mode) igText("%d loaded prerequisites | %d dependents", model->skills[record_index].prerequisite_count, model->skills[record_index].dependent_count);
         else if (!focused && !challenges) igText("%d active partners | %d total cases", model->connectivity[record_index].partners, model->connectivity[record_index].cases);
     }
@@ -524,7 +524,7 @@ static void unlock_panel(const GD_Model *model, GD_SkillUnlocks *query, unsigned
     for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL) {
         bool checked=known[i]!=0;
         igPushID_Int(i);
-        if (igCheckbox(model->records[i].name,&checked)) { known[i]=(unsigned char)checked; *dirty=1; }
+        if (igCheckbox(model->records[i].display_name,&checked)) { known[i]=(unsigned char)checked; *dirty=1; }
         igPopID();
     }
     igEndChild();

@@ -73,7 +73,7 @@ typedef struct {
 } GD_ExplorerResourceForm;
 /* Value snapshot only; pane/domain state remains authoritative. */
 typedef struct {
-    int layout,initial_arrangement,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
+    int layout,initial_arrangement,actor_overview,noun_row,noun_column,noun_case_page,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
     int focus_root,mda_root,mda_direction,resource_witness,route_witness,similarity_row,similarity_peer;
     int overview_row,overview_column,coverage_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
     bool paused,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
@@ -105,6 +105,7 @@ typedef struct {
     bool resource_only_witness;
     char resource_message[160];
     GD_MatrixGrid grid; /* Caller-owned presentation, never typed snapshot data. */
+    int noun_case_page;
     GD_ExplorerSkillEditor editor;
     GD_ExplorerMdaDisplay mda;
     GD_Focus focus;
@@ -114,7 +115,7 @@ typedef struct {
     GD_OverviewControls overview;
     GD_GraphLens lens;
     bool shared, branches, foundations, shapes, paused, overlay;
-    int peer, foundation_peer, layout_choice, initial_arrangement, sort, horizontal, rank, witness;
+    int peer, foundation_peer, layout_choice, initial_arrangement, actor_overview, sort, horizontal, rank, witness;
     int prepared, fit, navigate, focus_root, focus_expand, inspected_record;
     unsigned revision;
     char filter[129], find_reference[260];
@@ -161,6 +162,7 @@ int gd_explorer_query_prepare(GD_ExplorerContext *context);
 int gd_explorer_query_run(GD_ExplorerContext *context);
 int gd_explorer_query_display(GD_ExplorerContext *context);
 int gd_explorer_query_arrange(GD_ExplorerContext *context,GD_LayoutMode mode,int neighborhood);
+int gd_explorer_query_overview(GD_ExplorerContext *context,int mode);
 int gd_explorer_query_select_result(GD_ExplorerContext *context, int target);
 int gd_explorer_query_compare(GD_ExplorerContext *context);
 void gd_explorer_query_destroy(GD_ExplorerQueryState *state);

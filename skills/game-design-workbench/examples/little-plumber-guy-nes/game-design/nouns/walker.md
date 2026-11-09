@@ -7,6 +7,7 @@ tags: []
 status: accepted
 axes:
   - axes/Life
+is_actor: true
 ---
 ## Definition
 

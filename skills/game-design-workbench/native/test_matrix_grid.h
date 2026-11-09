@@ -2,6 +2,18 @@
 TEST(matrix_grid,
     GD_Model *model=model_create(); GD_MatrixGrid *grid=allocate(storage,sizeof(*grid));
     GD_MatrixGridRange range; int i,row=-1,column=-1;
+    {
+        GD_CountRange counts={0};
+        gd_count_range_add(&counts,0);gd_count_range_add(&counts,-1);
+        TEST_ASSERT(!counts.minimum && !counts.maximum && gd_count_fraction(counts,1)==0);
+        gd_count_range_add(&counts,7);gd_count_range_add(&counts,7);
+        TEST_ASSERT(counts.minimum==7 && counts.maximum==7 && gd_count_fraction(counts,7)==0.5f);
+        gd_count_range_add(&counts,2);gd_count_range_add(&counts,10);
+        TEST_ASSERT(counts.minimum==2 && counts.maximum==10 && gd_count_fraction(counts,2)==0 && gd_count_fraction(counts,10)==1 && gd_count_fraction(counts,6)==0.5f);
+        TEST_ASSERT(gd_count_fraction(counts,1)==0 && gd_count_fraction(counts,INT_MAX)==1);
+        counts=(GD_CountRange){INT_MAX-1,INT_MAX};
+        TEST_ASSERT(gd_count_fraction(counts,INT_MAX-1)==0 && gd_count_fraction(counts,INT_MAX)==1);
+    }
     TEST_ASSERT(model && grid); memset(grid,0,sizeof(*grid)); grid->noun=grid->verb=-1;
     model->record_count=6;
     for (i=0;i<6;++i) { model->records[i].name="axis"; model->records[i].role=i%2 ? GD_VERB:GD_NOUN; }

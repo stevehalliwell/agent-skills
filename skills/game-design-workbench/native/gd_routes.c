@@ -211,7 +211,7 @@ int gd_route_layout(const GD_Model *model, GD_Layout *layout, int horizontal, GD
     for (i=0;i<model->record_count;++i) { nodes[i]=head[i]=distance[i]=-1; }
     for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_CHALLENGE) {
         GD_LayoutNode *node=&layout->nodes[layout->node_count]; nodes[i]=layout->node_count++;
-        node->key=i; node->label=model->records[i].name; node->group=0; node->side=model->records[i].entry;
+        node->key=i; node->label=model->records[i].display_name ? model->records[i].display_name:model->records[i].name; node->group=0; node->side=model->records[i].entry;
         if (model->records[i].entry) { distance[i]=0; queue[write++]=i; }
     }
     for (i=0;i<model->edge_count;++i) {

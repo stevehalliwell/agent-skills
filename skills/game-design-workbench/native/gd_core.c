@@ -20,7 +20,7 @@ static const char *field_names[] = {
     "introduces", "practises", "requires", "tests_mastery", "next", "systems", "dynamics", "experiments", "axes", "context_axes",
     "interactions", "noun", "initial_control", "capacity_control"
 };
-enum { RANK_KEY = 5 + GD_FIELD_COUNT, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7 }; /* Consumed-field indices; byte markers avoid width-dependent bit shifts. */
+enum { RANK_KEY = 5 + GD_FIELD_COUNT, ENTRY_KEY, CONTROL_KEY, AXIS_CLOSED_KEY = CONTROL_KEY + 7, IS_ACTOR_KEY }; /* Consumed-field indices; byte markers avoid width-dependent bit shifts. */
 const char *gd_field_name(GD_Field field) { return field_names[field]; }
 
 GD_Model *gd_create(GD_Allocator allocator) {
@@ -316,7 +316,7 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
     Reader reader;
     yaml_event_t event;
     GD_Record *record = &model->records[index];
-    unsigned char seen[AXIS_CLOSED_KEY+1] = {0};
+    unsigned char seen[IS_ACTOR_KEY+1] = {0};
     int stage, success = 0;
     memset(&reader, 0, sizeof(reader)); reader.model = model; reader.path = record->source_path;
     if (!yaml_parser_initialize(&reader.parser)) {
@@ -365,6 +365,7 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
         else if ((record->role == GD_RESOURCE || record->role == GD_RELATED) && !strcmp(key, "initial_control")) key_index = 5 + GD_INITIAL_CONTROL;
         else if ((record->role == GD_RESOURCE || record->role == GD_RELATED) && !strcmp(key, "capacity_control")) key_index = 5 + GD_CAPACITY_CONTROL;
         else if (!strcmp(key,"axes") && record->role == GD_NOUN) key_index = 5 + GD_AXES;
+        else if (!strcmp(key,"is_actor") && record->is_noun) key_index = IS_ACTOR_KEY;
         else if (!strcmp(key,"context_axes") && (record->role == GD_RULE || record->role == GD_CASE)) key_index = 5 + GD_CONTEXT_AXES;
         else if (record->role == GD_AXIS && !strcmp(key,"closed")) key_index = AXIS_CLOSED_KEY;
         else if (record->role == GD_CONTROL || record->role == GD_AXIS) {
@@ -403,6 +404,10 @@ static int parse_metadata(GD_Model *model, int index, const char *start, size_t 
             int before = model->edge_count;
             if (!consume_links(&reader,index,GD_RESOURCE_NOUN,&event)) goto done;
             record->resource_noun = model->edge_count > before ? model->edges[before].reference : NULL;
+        } else if (key_index == IS_ACTOR_KEY) {
+            int ok = consume_boolean(&reader,&event,&record->is_actor,&record->is_actor_line,
+                "noun.is_actor_type","is_actor requires boolean true or false; omit for unclassified; no coercion");
+            yaml_event_delete(&event); if (!ok) goto done;
         } else if (key_index == AXIS_CLOSED_KEY) {
             int ok = consume_boolean(&reader,&event,&record->axis_closed,&record->axis_closed_line,
                 "rules.axis_closed_type","Axis closed requires boolean true or false; no coercion");
@@ -464,6 +469,7 @@ static int load_record(GD_Model *model, int collection, const char *path, size_t
     record = &model->records[index]; memset(record, 0, sizeof(*record));
     record->source_path = path; record->role = model->collections[collection].role;
     record->collection = collection; record->load_index = index;
+    record->is_noun=record->role==GD_NOUN || model->collections[collection].noun_collection;
     if (size >= 3 && !memcmp(model->input, "\xef\xbb\xbf", 3)) offset = 3;
     body = offset;
     if (fence(model->input + offset, size - offset, &advance)) {
@@ -492,6 +498,13 @@ static int load_record(GD_Model *model, int collection, const char *path, size_t
         strcmp(record->coverage, "excluded") && strcmp(record->coverage, "not_applicable")) {
         gd_error(model, "matrix.coverage", "Unsupported case coverage; cannot classify it", path, 0);
         model->edge_count = edge_start; return 0;
+    }
+    record->display_name=record->name;
+    if(record->is_noun) {
+        char label[160];
+        snprintf(label,sizeof(label),"[%s] %s",!record->is_actor_line ? "Unclassified":record->is_actor ? "Actor":"Non-actor",record->name);
+        record->display_name=copy_text(model,label,strlen(label));
+        if(!record->display_name) {model->edge_count=edge_start;return 0;}
     }
     snprintf(reference, sizeof(reference), "%s/%s", model->collections[collection].alias, record->name);
     record->reference = copy_text(model, reference, strlen(reference));

@@ -50,8 +50,8 @@ static void help(void) {
          "  Structural --direction forward|backward|both; --avoid only native support candidates.\n\n"
          "Unified explorer: gd view explorer with explicit collection bindings below.\n"
          "  One window; eight projections; unavailable views explain missing roles.\n"
-         "  --mode skills|challenges|relationships|matrix|mda|resources|actors|effects (default first available)\n"
-         "  --layout grid|graph|columns             Explorer: requires --mode matrix\n"
+         "  --mode skills|challenges|relationships|matrix|mda|resources|actors|effects|noun-interactions (default first available)\n"
+         "  --layout grid|graph|columns             Explorer: matrix; noun-interactions: grid|graph\n"
          "  Supports --frames, --screenshot, --output and error-output format flags.\n"
          "  Standalone view commands also available. No automatic folder discovery.\n\n"
          "Resources: gd resources uses explicit rule bindings; direct and concretely instantiated declarations.\n"
@@ -289,7 +289,7 @@ static int application(int argc, char **argv) {
             memcpy(aliases[count], argv[i], length); aliases[count][length] = 0;
             if (!absolute_folder(equals + 1, folders[count])) { error = "Collection path is invalid or exceeds 4095 UTF-8 bytes"; break; }
             collections[count].alias = aliases[count]; collections[count].directory = folders[count];
-            source_roles[count]=role;
+            source_roles[count]=role;collections[count].noun_collection=role==GD_NOUN;
             collections[count].role = rule_command && (role == GD_CASE || role == GD_MDA_MECHANIC) ? GD_RULE :
                 (command == 12 || command == 14 || command == 15) && role == GD_MDA_SYSTEM ? GD_RELATED:role;
             if (role != GD_RELATED) roles |= 1 << role;
@@ -397,20 +397,20 @@ static int application(int argc, char **argv) {
             explorer_mode_supplied = 1;
             if (++i == argc) { error="--mode requires a supported projection name"; break; }
             if (command==13) {
-                const char *names[]={"skills","challenges","relationships","matrix","mda","resources","actors","effects"}; int m;
+                const char *names[]={"skills","challenges","relationships","matrix","mda","resources","actors","effects","noun-interactions"}; int m;
                 unified_mode=-1;
                 for (m=0;m<GD_EXPLORER_VIEWS;++m) if (!strcmp(argv[i],names[m])) unified_mode=m;
-                if (unified_mode<0) { error="Explorer --mode requires skills, challenges, relationships, matrix, mda, resources, actors or effects"; break; }
+                if (unified_mode<0) { error="Explorer --mode requires skills, challenges, relationships, matrix, mda, resources, actors, effects or noun-interactions"; break; }
             } else {
                 if (strcmp(argv[i],"skills") && strcmp(argv[i],"challenges") && strcmp(argv[i],"relationships")) { error="--mode requires skills, challenges, or relationships"; break; }
                 explorer_mode = !strcmp(argv[i],"relationships") ? GD_EXPLORE_RELATIONSHIPS : !strcmp(argv[i],"challenges") ? GD_EXPLORE_CHALLENGES : GD_EXPLORE_SKILLS;
             }
         } else if (!strcmp(argv[i], "--layout")) {
-            if (++i == argc) { error = command==13 ? "Explorer --layout requires grid, graph or columns with --mode matrix":"--layout requires table, graph, columns, prerequisites, or rank"; break; }
+            if (++i == argc) { error = command==13 ? "Explorer --layout requires grid|graph for noun-interactions or grid|graph|columns for matrix":"--layout requires table, graph, columns, prerequisites, or rank"; break; }
             layout_supplied = 1;
             if (command==13) {
                 matrix_layout=!strcmp(argv[i],"grid") ? GD_MATRIX_GRID_CHOICE:!strcmp(argv[i],"graph") ? GD_LAYOUT_FORCE:!strcmp(argv[i],"columns") ? GD_LAYOUT_COLUMNS:-1;
-                if (matrix_layout<0) error="Explorer --layout requires grid, graph or columns with --mode matrix";
+                if (matrix_layout<0) error="Explorer --layout requires grid|graph for noun-interactions or grid|graph|columns for matrix";
             }
             else if (!strcmp(argv[i], "table")) layout = GD_VIEW_TABLE;
             else if (!strcmp(argv[i], "graph")) layout = GD_VIEW_GRAPH;
@@ -486,8 +486,8 @@ static int application(int argc, char **argv) {
     if (command==13) {
         if (!error && (!count || fields || from || known_count || analyze || case_name || assumption_count || context_assumption_count ||
             import_option || as_supplied || override_count || control_filter.status_count || control_filter.include_count || control_filter.exclude_count ||
-            (layout_supplied && unified_mode!=GD_EXPLORER_MATRIX) || direction_supplied || other_pairs))
-            error="view explorer requires explicit collections; supports --mode, matrix-only --layout grid|graph|columns, --frames, --screenshot, --output and error-output format flags";
+            (layout_supplied && ((unified_mode!=GD_EXPLORER_MATRIX && unified_mode!=GD_EXPLORER_NOUNS) || (unified_mode==GD_EXPLORER_NOUNS && matrix_layout==GD_LAYOUT_COLUMNS))) || direction_supplied || other_pairs))
+            error="view explorer requires explicit collections; supports --mode, --layout grid|graph|columns for matrix or grid|graph for noun-interactions, --frames, --screenshot, --output and error-output format flags";
         if (!error && screenshot && (!frames || strlen(screenshot)<4 || strcmp(screenshot+strlen(screenshot)-4,".png")))
             error="--screenshot requires bounded --frames and a .png path";
         model=gd_create(allocator);

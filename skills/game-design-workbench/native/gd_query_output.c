@@ -39,6 +39,10 @@ static void actor(FILE *out, const GD_Query *query, int index) {
     const GD_RuleParticipant *item;
     if (index<0 || index>=query->rules->participant_count) { fputs("null",out); return; }
     item=&query->rules->participants[index]; fputs("{\"participant\":",out); gd_json_string(out,item->name); member(out,"noun",item->noun);
+    fputs(",\"is_actor\":",out);
+    if (item->noun_resolution==GD_RULE_RESOLVED && query->model->records[item->noun_record].is_actor_line)
+        fputs(query->model->records[item->noun_record].is_actor ? "true":"false",out);
+    else fputs("null",out);
     member(out,"noun_resolution",gd_rule_resolution_name(item->noun_resolution)); member(out,"noun_reference",item->noun_resolution==GD_RULE_RESOLVED ? query->model->records[item->noun_record].reference:NULL); member(out,"noun_record_id",item->noun_resolution==GD_RULE_RESOLVED ? query->model->records[item->noun_record].id:NULL); fprintf(out,",\"line\":%d,\"snapshot_participant_index\":%d}",item->line,index);
 }
 static void selectors(FILE *out, const GD_Query *query) {

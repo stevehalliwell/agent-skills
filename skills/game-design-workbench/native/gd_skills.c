@@ -170,7 +170,7 @@ int gd_skill_layout(const GD_Model *model, GD_Layout *layout, int rank_mode, int
         if (model->records[i].role != GD_SKILL) continue;
         record_node[i] = layout->node_count;
         node = &layout->nodes[layout->node_count++];
-        node->key = i; node->label = model->records[i].name; node->group = model->component_of[i];
+        node->key = i; node->label = model->records[i].display_name ? model->records[i].display_name:model->records[i].name; node->group = model->component_of[i];
         node->degree = state->prerequisite_count+state->dependent_count;
         node->layer = state->layout_layer;
         if (rank_mode) {

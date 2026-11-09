@@ -15,6 +15,10 @@ typedef struct { GD_ExplorerControl control; unsigned views; size_t source; int 
 #define VF(name,label,type,views) {{#name,label,NULL,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,NULL},views,(size_t)-1,0}
 static const PresentationField presentation_fields[]={
  VF(layout,"Layout",GD_CONTROL_INT,PV_ALL&~PV_RESOURCE),
+ PF(noun_row,"Row noun",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,grid.noun,0),
+ PF(noun_column,"Column noun",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,grid.verb,0),
+ PF(noun_case_page,"Case evidence page",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,noun_case_page,0),
+ PF(actor_overview,"Actor overview",GD_CONTROL_INT,"Interaction map\0Usage cloud\0","interactions\0usage\0",1u<<GD_EXPLORER_ACTORS,actor_overview,0),
  PF(initial_arrangement,"Initial arrangement",GD_CONTROL_INT,"Native\0Neighborhood\0","native\0neighborhood\0",PV_ALL,initial_arrangement,0),
  PF(sort,"Sort / initial order",GD_CONTROL_INT,"Name\0Degree\0","name\0degree\0",15,sort,0),
  PF(direction,"Layout direction",GD_CONTROL_INT,"Top to bottom\0Left to right\0","vertical\0horizontal\0",3,horizontal,0),
@@ -49,7 +53,7 @@ static const PresentationField presentation_fields[]={
  PF(role1,"Systems / Resource facets",GD_CONTROL_BOOL,NULL,NULL,PV_MDA|PV_RESOURCE,mda.roles[1],0),
  PF(role2,"Dynamics / Resource roles",GD_CONTROL_BOOL,NULL,NULL,PV_MDA|PV_RESOURCE,mda.roles[2],0),
  PF(role3,"Aesthetics",GD_CONTROL_BOOL,NULL,NULL,PV_MDA,mda.roles[3],0),
- PF(filter,"Browse / Resource filter",GD_CONTROL_TEXT,NULL,NULL,PV_ALL,filter,0),
+ PF(filter,"Browse / Resource filter",GD_CONTROL_TEXT,NULL,NULL,PV_ALL&~(1u<<GD_EXPLORER_NOUNS),filter,0),
  PF(mda_filter,"MDA reference filter",GD_CONTROL_TEXT,NULL,NULL,PV_MDA,mda.filter,0),
  PF(only_witness,"Only Resource witness",GD_CONTROL_BOOL,NULL,NULL,PV_RESOURCE,resource_only_witness,0),
  VF(resource_witness,"Resource witness",GD_CONTROL_INT,PV_RESOURCE),
@@ -108,8 +112,12 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
 int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *name) {
     const PresentationField *field=presentation_field(name); const GD_ExplorerPane *p=c->pane;
     if(!field || !(field->views&(1u<<p->view))) return 0;
+    if(p->view==GD_EXPLORER_NOUNS && !strcmp(name,"paused"))return p->prepared && !grid_view(p);
     if(!strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
     if(!p->prepared) return 0;
+    if(!strcmp(name,"noun_case_page")) return c->project->noun_grid && p->selection.cell>=0 && p->selection.cell<c->project->noun_grid->pair_count;
+    if(!strcmp(name,"actor_overview")) return p->query_state && !gd_explorer_similarity_active(c);
+    if(query_view(p->view) && p->query_state && p->query_state->scene && p->query_state->scene->overview && !strcmp(name,"layout")) return 0;
     if(!strcmp(name,"layout") && gd_explorer_similarity_active(c)) return 0;
     if(query_view(p->view) && (!strcmp(name,"layout") || !strcmp(name,"initial_arrangement")) && (!p->query_state || !p->query_state->scene)) return 0;
     if(!strcmp(name,"initial_arrangement")) return free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c);
@@ -133,6 +141,10 @@ static int presentation_node_id(const GD_ExplorerContext *c,int node,char *key,s
     if(p->view==GD_EXPLORER_RESOURCES) return gd_resource_node_id(c->project->resources,p->layout->nodes[node].key,-1,key,capacity);
     if(query_view(p->view)) {
         if(p->query_state->scene->query->effects) return gd_effect_node_id(p->query_state->scene->query->effects,p->query_state->scene->nodes[node].source,key,capacity);
+        if(p->query_state->scene->overview || p->query_state->scene->nodes[node].kind==GD_QUERY_NODE_OBJECT) {
+            int record=gd_query_scene_record(p->query_state->scene,node);const char *reference=record>=0 ? c->project->rules->model->records[record].reference:NULL;
+            if(!reference || strlen(reference)>=capacity) return 0;memcpy(key,reference,strlen(reference)+1);return 1;
+        }
         return gd_actor_scene_node_id(p->query_state->scene,node,key,capacity,&work,GD_ACTOR_WORK);
     }
     id=gd_explorer_model(c->project,p->view)->records[p->layout->nodes[node].key].reference;
@@ -140,7 +152,7 @@ static int presentation_node_id(const GD_ExplorerContext *c,int node,char *key,s
 }
 static int presentation_node_field(const char *name) { return !strcmp(name,"peer") || !strcmp(name,"foundation_peer") || !strcmp(name,"reach_peer") || !strcmp(name,"reach_target"); }
 static const char *presentation_list(const GD_ExplorerContext *c,const GD_ExplorerControl *field) {
-    if(!strcmp(field->name,"layout")) return c->pane->view==GD_EXPLORER_SKILLS ? "depth\0rank\0free\0":c->pane->view==GD_EXPLORER_MATRIX ? "free\0columns\0grid\0":c->pane->view==GD_EXPLORER_RELATIONSHIPS || query_view(c->pane->view) ? "native\0free\0":"bands\0free\0";
+    if(!strcmp(field->name,"layout")) return c->pane->view==GD_EXPLORER_SKILLS ? "depth\0rank\0free\0":c->pane->view==GD_EXPLORER_NOUNS ? "grid\0free\0":c->pane->view==GD_EXPLORER_MATRIX ? "free\0columns\0grid\0":c->pane->view==GD_EXPLORER_RELATIONSHIPS || query_view(c->pane->view) ? "native\0free\0":"bands\0free\0";
     if(!strcmp(field->name,"mda_direction")) return "both\0forward\0backward\0";
     return field->keys ? field->keys:field->choices;
 }
@@ -169,7 +181,7 @@ int gd_explorer_presentation_options(const GD_ExplorerContext *c,const GD_Explor
     if(list) { while(*list) {++count;list+=strlen(list)+1;} return count; }
     if(!strcmp(name,"bypass_candidate"))return presentation_cache(c) && c->analysis->paths.valid ? c->analysis->paths.selection.candidate_count:0;
     if(presentation_node_field(name)) return c->pane->layout ? c->pane->layout->node_count+1:1;
-    if(!strcmp(name,"focus_root") || !strcmp(name,"mda_root")) return gd_explorer_model(c->project,c->pane->view)->record_count+1;
+    if(!strcmp(name,"focus_root") || !strcmp(name,"mda_root") || !strcmp(name,"noun_row") || !strcmp(name,"noun_column")) return gd_explorer_model(c->project,c->pane->view)->record_count+1;
     if(!strcmp(name,"reach_relation")) return GD_STRUCTURE_KINDS+1;
     if(!strcmp(name,"similarity_row") || !strcmp(name,"similarity_peer")) return c->pane->structure_state && c->pane->structure_state->result && c->pane->structure_state->result->similarity ? c->pane->structure_state->result->similarity->entry_count+1:1;
     if(!strcmp(name,"resource_witness")) return c->pane->resource_routes ? c->pane->resource_routes->witness_count+1:1;
@@ -186,9 +198,11 @@ int gd_explorer_presentation_option(const GD_ExplorerContext *c,const GD_Explore
         *native=ordinal-1;
         if(presentation_node_field(name)) return presentation_node_id(c,*native,key,capacity) ? 1:-1;
         if(!ordinal) id="";
-        else if(!strcmp(name,"focus_root") || !strcmp(name,"mda_root")) {
+        else if(!strcmp(name,"focus_root") || !strcmp(name,"mda_root") || !strcmp(name,"noun_row") || !strcmp(name,"noun_column")) {
             const GD_Record *record=&gd_explorer_model(c->project,c->pane->view)->records[*native];
-            if(!strcmp(name,"mda_root") && !gd_mda_role(record->role)) return 0; id=record->reference;
+            if(!strcmp(name,"mda_root") && !gd_mda_role(record->role)) return 0;
+            if((!strcmp(name,"noun_row") || !strcmp(name,"noun_column")) && record->role!=GD_NOUN)return 0;
+            id=record->reference;
         } else if(!strcmp(name,"reach_relation")) id=gd_graph_relation_name(*native);
         else if(!strcmp(name,"resource_witness") || !strcmp(name,"route_witness")) return presentation_witness_key(c,!strcmp(name,"resource_witness"),*native,key,capacity) ? 1:-1;
         else id=c->pane->structure_state->result->similarity->ids[*native];
@@ -235,7 +249,7 @@ static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresent
         int i,node_key=p->selection.node>=0 && p->selection.node<p->layout->node_count ? p->layout->nodes[p->selection.node].key:-1;
         next->selection=p->selection;next->selection.held=-1;
         if(node_key>=0){next->selection.node=-1;for(i=0;i<next->layout->node_count;++i)if(next->layout->nodes[i].key==node_key)next->selection.node=i;}
-        if(next->selection.cell>=0){int found=0;for(i=0;i<next->layout->edge_count;++i)if(next->layout->edges[i].key==next->selection.cell)found=1;if(!found)next->selection.cell=-1;}
+        if(next->selection.cell>=0 && p->view!=GD_EXPLORER_NOUNS){int found=0;for(i=0;i<next->layout->edge_count;++i)if(next->layout->edges[i].key==next->selection.cell)found=1;if(!found)next->selection.cell=-1;}
         if(p->view==GD_EXPLORER_MATRIX){next->grid.noun=p->grid.noun;next->grid.verb=p->grid.verb;if(next->selection.cell>=0){const GD_Cell *cell=&gd_explorer_model(c->project,p->view)->cells[next->selection.cell];next->grid.noun=cell->noun;next->grid.verb=cell->verb;}}
     }
     same_topology=presentation_same_topology(p->layout,next->layout);
@@ -279,6 +293,9 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
         if(!presentation_rearrange(c,&next,!strcmp(name,"initial_arrangement"))) goto failed;
         if(!strcmp(name,"initial_arrangement") || (!strcmp(name,"layout") && free_graph(p))) p->paused=false;
     }
+    else if(!strcmp(name,"noun_row") || !strcmp(name,"noun_column")) noun_grid_choose(c,next.noun_row,next.noun_column);
+    else if(!strcmp(name,"noun_case_page")) {if(next.noun_case_page>=(c->project->rules->case_count+63)/64 && next.noun_case_page!=0)goto failed;p->noun_case_page=next.noun_case_page;}
+    else if(!strcmp(name,"actor_overview")) {if(!gd_explorer_query_overview(c,next.actor_overview)) goto failed;}
     else if(!strcmp(name,"distance_focus")) { if(!distance_focus_toggle(c,next.distance_focus)) goto failed; }
     else if(!strcmp(name,"focus_root")) { if(next.focus_root<0) goto failed; { GD_Focus old=p->focus; p->focus=(GD_Focus){0}; gd_focus_reset(gd_explorer_model(c->project,p->view),&p->focus,next.focus_root); if(!presentation_rearrange(c,&next,0)) {p->focus=old;goto failed;} } }
     else if(!strcmp(name,"mda_root") || !strcmp(name,"mda_direction")) { if(!gd_mda_query(gd_explorer_model(c->project,p->view),c->project->mda,next.mda_root,(GD_MdaDirection)next.mda_direction)) goto failed; }
@@ -307,13 +324,13 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     }
     if(!strcmp(name,"view.find.clear")) {*p->find_reference=0;matches(c);return 1;}
     if(!strcmp(name,"view.witness.fit")) {if(p->view!=GD_EXPLORER_RESOURCES || !p->resource_routes || !p->resource_routes->witness_count)return 0;p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;return 1;}
-    if(!strcmp(name,"view.cell.fit")) {if(p->view!=GD_EXPLORER_MATRIX || !grid_view(p) || p->grid.noun<0 || p->grid.verb<0)return 0;grid_frame_selection(c);return 1;}
+    if(!strcmp(name,"view.cell.fit")) {if((p->view!=GD_EXPLORER_MATRIX && p->view!=GD_EXPLORER_NOUNS) || !grid_view(p) || p->grid.noun<0 || p->grid.verb<0)return 0;grid_frame_selection(c);return 1;}
     if(!strcmp(name,"view.fit")) { if(gd_explorer_similarity_active(c)) p->structure_state->similarity_fit=true; else p->fit=1; return 1; }
     if(!strcmp(name,"view.rearrange")) { gd_explorer_presentation_read(c,&values); return presentation_rearrange(c,&values,1); }
     if(!strcmp(name,"view.start.clear")) { p->paths.count=p->paths.lost=0; return 1; }
     if(!strcmp(name,"view.start.add")) { int node=analyze(c); return node>=0 && gd_graph_path_start(&p->paths,p->layout->nodes[node].key)>=0; }
     if(!strcmp(name,"view.expand")) { int record=selected_record(c); GD_Focus prior=p->focus; if(p->view!=GD_EXPLORER_RELATIONSHIPS || record<0) return 0; gd_focus_expand(gd_explorer_model(c->project,p->view),&p->focus,record); gd_explorer_presentation_read(c,&values); if(presentation_rearrange(c,&values,0)) return 1; p->focus=prior; return 0; }
-    if(!strcmp(name,"view.analyze")) { int selected;if(query_view(p->view) || grid_view(p) || gd_explorer_similarity_active(c)) return 0;selected=analyze(c); if(c->pane->view==GD_EXPLORER_SKILLS && (!c->query || !gd_skill_unlocks(gd_explorer_model(c->project,c->pane->view),p->known,selected_record(c),c->query))) return 0; (void)evidence(c,selected); if(p->paths.enabled && selected>=0) gd_graph_path_selection(c->analysis,selected); if(p->shared && selected>=0 && p->peer>=0) gd_graph_compare(c->analysis,selected,p->peer); return 1; }
+    if(!strcmp(name,"view.analyze")) { int selected;if(p->view==GD_EXPLORER_NOUNS || query_view(p->view) || grid_view(p) || gd_explorer_similarity_active(c)) return 0;selected=analyze(c); if(c->pane->view==GD_EXPLORER_SKILLS && (!c->query || !gd_skill_unlocks(gd_explorer_model(c->project,c->pane->view),p->known,selected_record(c),c->query))) return 0; (void)evidence(c,selected); if(p->paths.enabled && selected>=0) gd_graph_path_selection(c->analysis,selected); if(p->shared && selected>=0 && p->peer>=0) gd_graph_compare(c->analysis,selected,p->peer); return 1; }
     if(!strcmp(name,"view.compare")) return !gd_explorer_similarity_active(c) && c->pane->view==GD_EXPLORER_ACTORS ? gd_explorer_query_compare(c):gd_explorer_similarity_compare(c);
     return 0;
 }

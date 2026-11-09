@@ -181,7 +181,7 @@ int gd_mda_layout(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, i
         mapping[i] = -1;
         if (gd_mda_role(model->records[i].role)) {
             GD_LayoutNode *node = &layout->nodes[layout->node_count]; int role = model->records[i].role-GD_MDA_MECHANIC;
-            mapping[i] = layout->node_count++; node->key = i; node->label = model->records[i].name;
+            mapping[i] = layout->node_count++; node->key = i; node->label = model->records[i].display_name ? model->records[i].display_name:model->records[i].name;
             node->layer = role-(!has_systems && role > 1); node->width=220; node->height=96;
             { float scale=bands ? 1:3; gd_layout_set_footprint(node,-121/scale,-48/scale,121/scale,48/scale); }
         }

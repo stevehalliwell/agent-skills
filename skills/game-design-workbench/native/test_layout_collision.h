@@ -41,6 +41,25 @@ TEST(layout_rectangle_separation,
         for (step=0;step<120;++step) gd_layout_step(layout,held);
         TEST_ASSERT(!collision_overlaps(&layout->nodes[0],&layout->nodes[1]));
     }
+    {
+        float short_span=0;int variant;
+        for(variant=0;variant<2;++variant){
+            memset(layout,0,sizeof(*layout));layout->node_count=2;layout->group_count=1;layout->edge_count=1;layout->spring_gap=variant ? 282:0;
+            layout->nodes[0]=(GD_LayoutNode){.label="first",.width=240,.height=48};layout->nodes[1]=(GD_LayoutNode){.label="second",.width=240,.height=48};layout->edges[0]=(GD_LayoutEdge){0,1,0,1,0};
+            TEST_ASSERT(gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME));
+            layout->nodes[0].x=layout->nodes[1].x=layout->groups[0].x+layout->groups[0].width/2;
+            layout->nodes[0].y=layout->groups[0].y+layout->groups[0].height/2-50;layout->nodes[1].y=layout->nodes[0].y+100;
+            gd_layout_step(layout,-1);
+            if(!variant)short_span=layout->nodes[1].y-layout->nodes[0].y;
+            else TEST_ASSERT(layout->nodes[1].y-layout->nodes[0].y>short_span+4);
+            for(step=0;step<1024;++step)gd_layout_step(layout,-1);
+            if(variant)TEST_ASSERT(layout->nodes[1].y-layout->nodes[0].y>=300);
+            TEST_ASSERT(layout->edge_count==1 && layout->edges[0].a==0 && layout->edges[0].b==1 && !collision_overlaps(&layout->nodes[0],&layout->nodes[1]));
+        }
+        layout->spring_gap=NAN;TEST_ASSERT(!gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME));
+        layout->spring_gap=-1;TEST_ASSERT(!gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME));
+        layout->spring_gap=1048577;TEST_ASSERT(!gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME));
+    }
     release(storage,layout);
 )
 TEST(layout_collision_components,

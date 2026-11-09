@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <string.h>
 
-const char *const gd_explorer_view_names[GD_EXPLORER_VIEWS]={"Skills","Challenges","Relationships","Interactions","MDA","Resources","Actors / states","Effect convergence"};
+const char *const gd_explorer_view_names[GD_EXPLORER_VIEWS]={"Skills","Challenges","Relationships","Verb usage","MDA","Resources","Actors / states","Effect convergence","Noun interactions"};
 GD_ExplorerFamily gd_explorer_family(GD_ExplorerView view) {
     assert(view>=0 && view<GD_EXPLORER_VIEWS);
     return view<=GD_EXPLORER_RELATIONSHIPS ? GD_EXPLORER_SKILL_DATA :
@@ -31,6 +31,7 @@ const GD_Error *gd_explorer_error(const GD_ExplorerProject *project) {
 void gd_explorer_destroy(GD_ExplorerProject *project) {
     int i;
     if (!project) return;
+    gd_noun_grid_destroy(project->noun_grid);
     gd_resource_graph_destroy(project->resources); gd_rule_analysis_destroy(project->calls); gd_rules_destroy(project->rules);
     gd_mda_destroy(project->mda); gd_routes_destroy(project->routes); gd_draft_destroy(project->draft);
     for (i=0;i<GD_EXPLORER_FAMILIES;++i) gd_destroy(project->models[i]);
@@ -71,6 +72,7 @@ GD_ExplorerProject *gd_explorer_load(GD_Allocator allocator, const GD_Collection
         if (roles&(1u<<GD_CHALLENGE)) project->available|=1u<<GD_EXPLORER_CHALLENGES;
     }
     if ((roles&7u)==7u) project->available|=1u<<GD_EXPLORER_MATRIX;
+    if((roles&((1u<<GD_NOUN)|(1u<<GD_CASE)))==((1u<<GD_NOUN)|(1u<<GD_CASE))) project->available|=1u<<GD_EXPLORER_NOUNS;
     { unsigned required=(1u<<GD_MDA_MECHANIC)|(1u<<GD_MDA_DYNAMIC)|(1u<<GD_MDA_AESTHETIC);
       if ((roles&required)==required) project->available|=1u<<GD_EXPLORER_MDA; }
     if (roles&((1u<<GD_CASE)|(1u<<GD_MDA_MECHANIC)|(1u<<GD_RULE))) {
@@ -83,7 +85,7 @@ GD_ExplorerProject *gd_explorer_load(GD_Allocator allocator, const GD_Collection
         if (!wanted) continue;
         project->models[f]=gd_create(allocator);
         if (!project->models[f]) { gd_explorer_destroy(project); return NULL; }
-        for (i=0;i<count;++i) { inputs[i]=collections[i]; inputs[i].role=family_role((GD_ExplorerFamily)f,collections[i].role); }
+        for (i=0;i<count;++i) { inputs[i]=collections[i]; inputs[i].role=family_role((GD_ExplorerFamily)f,collections[i].role); inputs[i].noun_collection=collections[i].role==GD_NOUN; }
         if (!gd_load(project->models[f],inputs,count)) return project;
         if (f==GD_EXPLORER_SKILL_DATA) {
             project->draft=gd_draft_create(project->models[f]);
@@ -100,6 +102,10 @@ GD_ExplorerProject *gd_explorer_load(GD_Allocator allocator, const GD_Collection
             if (project->calls) project->resources=gd_resource_graph_build(project->models[f],project->rules);
             if (!project->resources) {
                 gd_error(project->models[f],"explorer.resources","Cannot prepare resource incidence projection",NULL,0); return project;
+            }
+            if(project->available&(1u<<GD_EXPLORER_NOUNS)) {
+                project->noun_grid=gd_noun_grid_build(project->rules,GD_NOUN_GRID_WORK);
+                if(!project->noun_grid) {gd_error(project->models[f],"explorer.noun_grid","Cannot prepare noun interaction grid",NULL,0);return project;}
             }
             gd_resource_graph_bind_calls(project->resources,project->calls); /* Limited projections remain explicitly partial. */
         }

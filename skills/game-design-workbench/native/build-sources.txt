@@ -2,6 +2,7 @@ core gd_core.c
 core gd_output.c
 core gd_layout.c
 core gd_matrix_grid.c
+core gd_noun_grid.c
 core gd_layout_routes.c
 core gd_layout_focus.c
 core gd_focus.c

@@ -3,6 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+void gd_count_range_add(GD_CountRange *range, int count) {
+    if (count<=0) return;
+    if (!range->minimum || count<range->minimum) range->minimum=count;
+    if (count>range->maximum) range->maximum=count;
+}
+float gd_count_fraction(GD_CountRange range, int count) {
+    float value;
+    if (count<=0 || !range.maximum) return 0;
+    if (range.minimum==range.maximum) return 0.5f;
+    value=(float)(count-range.minimum)/(range.maximum-range.minimum);
+    return fminf(1,fmaxf(0,value));
+}
 typedef struct { int record, side, degree; const char *label; } GridOrder;
 static int compare_grid_order(const void *a, const void *b) {
     const GridOrder *left=a,*right=b; int order;

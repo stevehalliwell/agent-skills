@@ -37,7 +37,7 @@ static int setup(const char *name) {
     for (i = 0; i < 3; ++i) {
         if (snprintf(folders[i], sizeof(folders[i]), "%s/%s", directory, aliases[i]) >= (int)sizeof(folders[i]) ||
             !file_directory_create(folders[i], 1)) return 0;
-        collections[i].alias = aliases[i]; collections[i].directory = folders[i]; collections[i].role = (GD_Role)i;
+        collections[i].alias = aliases[i]; collections[i].directory = folders[i]; collections[i].role = (GD_Role)i; collections[i].noun_collection=0;
     }
     return 1;
 }
@@ -364,6 +364,35 @@ TEST(rule_effect_bindings,
     TEST_ASSERT(!strcmp(rules->assignments[1].expression,"this + 1[life]"));
     TEST_ASSERT(rules->symbol_work > 0 && rules->symbol_work <= GD_RULE_SYMBOL_WORK_LIMIT && !gd_sources_changed(model));
     gd_rules_destroy(rules); gd_destroy(model);
+)
+TEST(noun_actor_classification,
+    GD_Model *model = model_create(); int hero, lives, unknown;
+    TEST_ASSERT(model && setup("noun-actor-classification"));
+    TEST_ASSERT(write_record(0,"hero","---\nis_actor: true\n---\nActor."));
+    TEST_ASSERT(write_record(0,"lives","---\nis_actor: false\n---\nResource concept."));
+    TEST_ASSERT(write_record(0,"unknown","Unclassified noun."));
+    TEST_ASSERT(gd_load(model,collections,3));
+    hero=find_record(model,"things/hero"); lives=find_record(model,"things/lives"); unknown=find_record(model,"things/unknown");
+    TEST_ASSERT(model->records[hero].is_actor && model->records[hero].is_actor_line==2);
+    TEST_ASSERT(!model->records[lives].is_actor && model->records[lives].is_actor_line==2);
+    TEST_ASSERT(!model->records[unknown].is_actor_line);
+    TEST_ASSERT(!gd_sources_changed(model));
+    gd_destroy(model);
+)
+TEST(noun_actor_classification_errors,
+    const char *values[] = {"null","\"true\"","1","yes","[]","{}","!!str true","&flag true\nis_actor: *flag","true\nis_actor: false"};
+    int i;
+    for (i=0;i<(int)(sizeof(values)/sizeof(values[0]));++i) {
+        GD_Model *model=model_create(); char name[64],text[256];
+        snprintf(name,sizeof(name),"noun-actor-invalid-%d",i);
+        TEST_ASSERT(model && setup(name));
+        snprintf(text,sizeof(text),"---\nis_actor: %s\n---\nNoun.",values[i]);
+        TEST_ASSERT(write_record(0,"noun",text));
+        TEST_ASSERT(!gd_load(model,collections,3));
+        TEST_ASSERT(has_error(model,i>=7 ? "input.duplicate_field":"noun.is_actor_type"));
+        TEST_ASSERT(model->errors[0].line>0);
+        gd_destroy(model);
+    }
 )
 TEST(rule_axis_definitions,
     GD_Model *model = model_create(); GD_Rules *rules; int life, amount, hero, isolated, empty, null_axes;
@@ -2454,6 +2483,8 @@ TEST(rules_allocation_failure,
 #include "test_effect_graph.h"
 #include "test_actor_inventory.h"
 #include "test_query_scene_free.h"
+#include "test_actor_overview.h"
+#include "test_noun_grid.h"
 #include "test_effect_query.h"
 #include "test_actor_query.h"
 #include "test_state_coverage.h"
@@ -2482,6 +2513,9 @@ int main(int argc, char **argv) {
     failed += test_rule_outcomes();
     failed += test_rule_quantities(); failed += test_rule_numeric_comparisons();
     failed += test_rule_condition_logic(); failed += test_rule_exclusion_limits(); failed += test_rule_effect_bindings();
+    failed += test_noun_labels_preserve_canonical_identity(); failed += test_noun_grid_case_counts_diagonal_limits_and_evidence();
+    failed += test_actor_overview_pairs_cloud_and_evidence(); failed += test_actor_overview_limits_and_allocations();
+    failed += test_noun_actor_classification(); failed += test_noun_actor_classification_errors();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
     failed += test_rule_primary_targets(); failed += test_rule_primary_equivalence(); failed += test_rule_primary_errors(); failed += test_rule_primary_allocation_failure();
     failed += test_rule_primary_partial_lists(); failed += test_rule_primary_partial_limits();
@@ -2519,6 +2553,6 @@ int main(int argc, char **argv) {
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/136 passed\n", 136-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/142 passed\n", 142-failed);
     return failed ? 1 : 0;
 }

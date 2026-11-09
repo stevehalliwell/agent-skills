@@ -9,6 +9,9 @@
 #define GD_LAYOUT_SEPARATION_SHIFT 20.0f
 #define GD_LAYOUT_CONTACT_EPSILON 0.0001
 #define GD_LAYOUT_CONTACT_RELAXATION 1.15
+static double spring_clearance(const GD_Layout *layout) {
+    return layout->spring_gap>0 ? layout->spring_gap:GD_LAYOUT_CLEARANCE;
+}
 int gd_layout_set_footprint(GD_LayoutNode *node,float left,float top,float right,float bottom) {
     if (!node || !isfinite(left) || !isfinite(top) || !isfinite(right) || !isfinite(bottom) ||
         fabsf(left)>1048576 || fabsf(top)>1048576 || fabsf(right)>1048576 || fabsf(bottom)>1048576 ||
@@ -38,12 +41,12 @@ static void collision_sort(GD_LayoutCollisionItem *items,int count) {
         collision_sift(items,0,i);
     }
 }
-static float collision_spring_length(const GD_LayoutNode *a,const GD_LayoutNode *b,float dx,float dy,float distance) {
-    double x=DBL_MAX,y=DBL_MAX;
-    if (dx>0) x=((double)a->footprint.right-b->footprint.left+GD_LAYOUT_CLEARANCE)*distance/dx;
-    else if (dx<0) x=((double)b->footprint.right-a->footprint.left+GD_LAYOUT_CLEARANCE)*distance/-dx;
-    if (dy>0) y=((double)a->footprint.bottom-b->footprint.top+GD_LAYOUT_CLEARANCE)*distance/dy;
-    else if (dy<0) y=((double)b->footprint.bottom-a->footprint.top+GD_LAYOUT_CLEARANCE)*distance/-dy;
+static float collision_spring_length(const GD_Layout *layout,const GD_LayoutNode *a,const GD_LayoutNode *b,float dx,float dy,float distance) {
+    double x=DBL_MAX,y=DBL_MAX,clearance=spring_clearance(layout);
+    if (dx>0) x=((double)a->footprint.right-b->footprint.left+clearance)*distance/dx;
+    else if (dx<0) x=((double)b->footprint.right-a->footprint.left+clearance)*distance/-dx;
+    if (dy>0) y=((double)a->footprint.bottom-b->footprint.top+clearance)*distance/dy;
+    else if (dy<0) y=((double)b->footprint.bottom-a->footprint.top+clearance)*distance/-dy;
     return (float)fmax(110,fmin(x,y));
 }
 static int collision_pair(GD_Layout *layout,int first,int second,int held) {
