@@ -13,48 +13,30 @@ When no clear implementation focus is supplied or selected, load and follow [Fin
 
 ## Required read
 
-Load [Coding](../coding/SKILL.md) before inspecting implementation paths or editing code. This workflow covers code changes, so complete Coding's required read and apply its workflow alongside this one. Done when Coding is loaded before any code-change work begins.
+Load [Coding](../coding/SKILL.md) before tracing or editing. Coding owns engineering method and verification; this skill owns acceptance, delivery, and tracking. Done when Coding is loaded.
 
 ## Workflow
 
 1. Anchor work. Use the agreed request as the behavior and acceptance source. When `.pi/attendant.tables` configures `tasks`, load [Attendant](../attendant/SKILL.md), run `schema`, and read the configured task schema, usage guidance, and selected record. Follow the collection's documented readiness, active-work limits, approval gates, and transitions; start ready work in its implementation-active state and resume authorized active work without resetting it. Resolve material ambiguity when usage is missing or contradicts the schema. Do not start unready or blocked work. Without task storage, proceed from the agreed request without creating a tracker. Preserve stated behavior and decisions. Done when target behavior, tracking state, and slice boundary are known.
-2. Bound the slice. Establish the whole task's goal, exclusions, expected result, and acceptance from the agreed request. Keep the technical contract and representative code/artifacts in the task record when one exists; do not invent missing behavior or create a tracker. Select the smallest coherent slice. Proceed without another approval gate when scope and approach are established. Use `ask_user` only for unresolved decisions materially affecting behavior, scope, security, data, public API, compatibility, irreversible action, or an explicit review gate. Do not emit routine preambles or progress summaries. Give a brief anchor when useful to orient user before multi-step work or at a meaningful phase change; do not repeat unchanged context. Present necessary rationale for material decisions. Done when one bounded slice is authorized or a necessary decision is explicit.
-3. Trace before edit. Apply Coding's understanding and smallest-solution workflow. Treat untraced paths and unconfirmed assumptions as delivery risk. Inspect callers, interfaces, data flow, tests, edge cases, operational impact, and local conventions needed to avoid a wrong change. Done when changed path and preserved behavior are known.
-4. Implement slice. Prefer existing patterns, standard-library behavior, and small diffs; make the smallest complete change. Pause for decisions affecting behavior, scope, security, data, public API, or compatibility. Done when slice behavior is implemented without unrelated refactoring.
-5. Handle replacement. Remove obsolete local references, tests, docs, and files within agreed scope. Use `ask_user` before broad deletion outside that scope or irreversible cleanup; leave those parts untouched while blocked. Done when in-scope cleanup is complete and broader cleanup is agreed or explicitly deferred.
-6. Validate proportionately. Run the smallest credible agreed or low-risk local check against acceptance. Correct in-scope failures and rerun affected checks; stop with a precise blocker when correction needs a material decision or unavailable capability. Report checks not run and remaining risk. Do not run broad suites by habit. Done when checks pass or unresolved failures are explicit.
-7. Record and report. When tracking is configured, update Plan progress and Checks evidence in place; update changed contracts in their specification section rather than appending repeated summaries. Follow collection usage for layout; omit irrelevant headings and empty placeholders. In the default task layout, one final Comments section holds errata and incidental notes, not a second specification or check log. Keep its declared active state while coherent work remains; use its review state only when the requested work is complete. Without tracking, report the outcome directly. Report completed work, non-obvious inspection path, validation, and any remaining material decision or blocker. Do not report a routine next slice before continuing it. Done when work is complete or a necessary user action is clear.
+2. Bound the slice. Establish goal, exclusions, expected result, and acceptance; select the smallest coherent slice. Keep the technical contract and representative code/artifacts in the existing task record. Proceed within agreed scope; follow global decision and approval rules. Done when one bounded slice is authorized or a necessary decision is explicit.
+3. Trace before edit. Follow Coding's trace-and-select workflow against this slice's acceptance and preserved behavior. Done when the change point and approach are known.
+4. Implement slice. Follow Coding's change-and-cleanup workflow. For product feedback, change the implementation or artifact first; return the relevant build, test result, preview, or reproduction, not a revised report. When feedback targets the report itself, edit it directly. Done when the requested change is available for assessment.
+5. Handle delivery effects. Keep task documentation and acceptance aligned with agreed changes. Leave broader cleanup untouched unless authorized under global rules. Done when delivery effects are addressed or explicitly deferred.
+6. Check acceptance. Apply Coding's verification workflow, then compare the delivered change against agreed acceptance and exclusions. A passing check proves only what it exercised; name unmet or unverified conditions. Done when acceptance is supported by observed results or gaps are explicit.
+7. Record and report. Update existing task progress, contracts, and check evidence at meaningful checkpoints or when requested, not after every feedback exchange. Follow collection usage for layout and lifecycle; keep work active while coherent work remains, and use review state only when requested work is complete. Without tracking, report directly. Done when completion or necessary user action is clear.
 
 ## Output shape
 
-Before implementation begins, use a short paragraph or a few bullets, not a mandatory section dump. For example:
+When orientation is needed under global guidance, state intended behavior, scope boundary, and the result the user can inspect. For example:
 
 > Add CSV export for the currently filtered tasks, in displayed order. The download uses the agreed columns; filters and task data stay unchanged, and column selection is out of scope. Details: `records/tasks/export-filtered-tasks.md`.
 
-Chat is the orientation summary; the task record holds the concise technical contract, code/artifact examples, acceptance, and check evidence. For technical tasks, explain the important interface or flow change and its point, not only eventual user value. Include only the detail needed to recognize the intended result, and offer depth through the record path rather than copying the record. Without a task record, summarize the agreed request without inventing a tracker. On resuming a task, briefly restate its goal and expected result plus remaining work; do not repeat the summary before every routine slice. Continue without waiting for confirmation unless a material decision or explicit review gate remains.
+Explain important interface or flow changes, not only user value. Link the existing task record for contract details rather than copying it; do not invent a tracker. When resume context is needed, state goal, expected result, and remaining work.
 
-At completion or a blocker, report:
-
-```text
-Implementation: <task>
-
-Completed:
-- <slice and outcome>
-
-Inspected:
-- <non-obvious path or none>
-
-Validation:
-- <check and result>
-
-Status:
-- <complete, review, or blocker>
-```
+At completion or a blocker, lead with outcome and include relevant evidence, remaining risk, and status. Mention non-obvious inspection paths only when useful; omit empty categories.
 
 ## Rules
 
 - Implement only agreed scope.
 - Continue through coherent requested work in the same turn. Stop after a completed slice only when user review is explicitly requested or a material decision or blocker requires it.
-- Prefer existing code, platform features, and focused diffs.
-- Treat user approval as required for material behavior, scope, security, data, public API, or compatibility decisions.
-- State assumptions and unresolved risk; do not claim unrun validation.
+- Keep assumptions distinct from agreed acceptance.

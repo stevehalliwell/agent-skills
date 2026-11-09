@@ -14,7 +14,7 @@ This skill is the mandatory engineering layer for every code change. Other deliv
 1. Understand the change. Trace the affected path, callers, existing patterns, and relevant edge cases before proposing or editing code. Done when the real change point is known.
 2. Choose the smallest solution. Apply the Ponytail ladder below. Prefer the approach that leaves difficult future work understandable, not merely the quickest or most familiar to write. Done when the chosen approach is the simplest correct option and each new abstraction removes current complexity or repetition.
 3. Change and clean up. Implement requested scope, remove obsolete local references created by replacement, and mark deliberate constrained simplifications with a `ponytail:` comment. Done when requested behavior is complete without speculative scaffolding.
-4. Verify proportionately. Run the smallest credible check for non-trivial logic; for bug fixes, prefer a reproduction that fails before the fix and passes after it. Correct in-scope failures and rerun affected checks. If correction is blocked or requires broader scope, report the blocker. State unrun validation and remaining risk without claiming a pass. Done when verification matches the change's risk and unresolved failures are explicit.
+4. Verify proportionately. Run the smallest credible check for non-trivial logic; do not run broad suites by habit. Use observable measures throughout work, not only at the end. Measure the implementation or artifact, not its report; choose check frequency by risk and feedback value, not every tweak. Correct in-scope failures and rerun affected checks; report blockers requiring broader scope or unavailable capability. State unrun checks and remaining risk without claiming a pass. Done when verification matches risk and unresolved failures are explicit.
 
 ## Ponytail: minimum necessary code
 
@@ -30,12 +30,13 @@ Stop at the first rung that holds. Do not descend because a lower rung feels mor
 6. **Can it be one direct expression or statement?** Write it directly.
 7. **Only then:** write the minimum custom code that works.
 
-The ladder is a reflex, not a research project or substitute for understanding. Read relevant code and trace the actual path end to end first. If two rungs work, take the higher rung. A small change in the wrong place creates another bug.
+The ladder follows tracing; it is a reflex, not a research project. If two rungs work, take the higher rung.
 
 ### Bug fixes
 
 - A feature adds behavior; a bug fix restores promised behavior. A report or reproduction identifies a symptom, not necessarily the cause or correct change point.
 - Trace the failing path and relevant callers. Fix the root cause rather than adding a guard only where failure appeared.
+- When independent cases all fail alike, test shared setup or access paths before changing each case.
 - Check similar usages of the same code. When callers share faulty behavior, fix the common cause once rather than repeating patches at known callers.
 - Preserve behavior outside the defect. Do not bundle an unrelated refactor into the repair.
 - Add the smallest credible regression check for a non-trivial defect. A reproduction that fails before the fix and passes after it is stronger evidence than a test that only exercises the new path.
@@ -136,7 +137,7 @@ Before changing a boundary, check:
 ## Rules
 
 - Preserve requested scope. Apply a more specific workflow skill alongside this layer when its trigger fits.
-- Reduce incidental complexity, never required protection, correctness, or understanding. Trace every relevant file and actual data/control flow before choosing a solution.
+- Reduce incidental complexity, never required protection, correctness, or understanding.
 - Preserve trust-boundary validation; do not replace it with assumptions, local guards, or client-side checks.
 - Preserve error handling that prevents data loss, corruption, or partial unsafe results. Do not suppress errors to make a path look uniform.
 - Preserve security controls, authorization, secrets handling, safe defaults, accessibility basics, requested behavior, and compatibility.

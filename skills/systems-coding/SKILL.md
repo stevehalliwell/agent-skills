@@ -33,7 +33,7 @@ Use these rules where resource behavior is part of correctness or product value.
 
 ## Application and verification
 
-On invocation, inspect the supplied target or ask for the code/system and operating constraint when no target is known. Apply the relevant ground rules rather than restating the entire list. For code changes, load [Coding](../coding/SKILL.md). Check ownership, bounds, failure paths, and any performance claim against the operating model using the smallest relevant tests, analysis, or measurement. Correct in-scope violations and rerun affected checks; report unresolved resource or evidence limits as blockers. Done when the review/change has a traceable result and verification state.
+On invocation, inspect the supplied target or ask for the code/system and operating constraint when no target is known. Apply relevant ground rules, not the entire list. For code changes, load [Coding](../coding/SKILL.md) and follow its verification workflow. Check ownership, bounds, failure paths, and performance claims against the operating model with focused tests, analysis, or measurement. For review-only work, report findings and evidence limits without editing. Done when resource constraints and verification state are explicit.
 
 ## References
 
