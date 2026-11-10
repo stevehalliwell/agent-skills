@@ -14,7 +14,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 
 ### Tools and delegation
 
-- [`attendant`](skills/attendant/) — cli tools to generate sqlite dbs from schema light md collections. E.g. keeping a backlog of tasks in the repository.
+- [`attendant`](skills/attendant/) — Native CLI and Markdown workspace GUI for schema-light record collections, queries and human feedback. Windows x64/macOS arm64; build on demand, no Node.js runtime. See [build setup](skills/attendant/references/build.md).
 - [`agent-browser`](skills/agent-browser/) — Drives a visible shared browser for interactive web tasks.
 - [`github-image-attachments`](skills/github-image-attachments/) — Uploads local images into GitHub PRs, issues, and comments through GitHub CLI.
 - [`crawl4ai`](skills/crawl4ai/) — Crawls public pages with Dockerized Crawl4AI when ordinary fetches fall short.

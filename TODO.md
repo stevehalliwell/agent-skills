@@ -2,16 +2,16 @@
 
 ## Promote accepted Attendant spike into maintained skill
 
-Status: implementation under review; rollout not approved.
+Status: native skill cutover complete after checkpoint `cbbd4fb`; cutover changes uncommitted for review.
 
-Native CLI/GUI spike-like accepted. Decision checks record agreed direction; delivery checks record completed work. Implementation authorized; rollout still requires explicit approval.
+Native CLI/GUI accepted. Decision checks record agreed direction; delivery checks record completed work. User authorized JS removal and native skill rewrite.
 
 ### Decisions
 
 - [x] Complete and accept native CLI/GUI spike-like.
 - [x] Determine final layout of Attendant native.
   - Product lives in ordinary `skills/attendant/native/` folder: `apps/cli/`, `apps/gui/`, `src/`, `tests/`, `tools/`, `vendor/`, root build entry points and ignored `build/` output.
-  - Skill keeps `SKILL.md`, `references/` and thin launcher under `scripts/`. No build/runtime dependency on `exploration/` or `spikes/`.
+  - Skill keeps `SKILL.md` and operational `references/`; invokes native executable directly, without JS or launcher wrapper. No build/runtime dependency on `exploration/` or `spikes/`.
   - Building on demand is acceptable: if native tool is not built, skill directs agent to a separate build reference, then agent returns to original task. Prebuilt distribution is not required.
 - [x] Determine final feature set and what to prune from spike-like.
   - Keep native CLI and GUI as one product over shared core. CLI works without GUI; skill provides agent guidance and integration.
@@ -21,8 +21,8 @@ Native CLI/GUI spike-like accepted. Decision checks record agreed direction; del
   - Exclude historical SQLite comparisons, frozen comparison baselines, experiment-only generators, superseded demo hosts, reports and captured evidence from final product tree. Preserve history through Git and README links.
   - Git integration and renderer recovery remain outside this scope. Feature decisions do not complete pruning or release qualification.
 - [x] Decide JS version's future: remove from maintained skill/product after native rollout. No supported fallback or separate JS home.
-  - Document former JS version in final README with historical commit hash or tag. Current reference: `330136285cb1470ccecc00ca244894c9de2122a3` contains `skills/attendant/scripts/attendant.mjs`; tag name remains open if used.
-  - Removal remains future work; current launcher stays unchanged until rollout approval. Update JS-dependent tests as part of removal.
+  - Native README links retired JS through commit `330136285cb1470ccecc00ca244894c9de2122a3`, path `skills/attendant/scripts/attendant.mjs`. No separate tag required.
+  - Rollout approved. Remove JS runtime and JS-only tests/guidance; keep focused native checks and document actual native feature set, without migration/import.
 - [x] Decide repository home: keep Attendant here under `skills/attendant/native/`, without submodule or nested repo.
   - Keep product slim. Revisit own repo if measured footprint or maintenance becomes a problem.
 
@@ -31,7 +31,7 @@ Native CLI/GUI spike-like accepted. Decision checks record agreed direction; del
 - [x] Move maintained CLI, GUI, shared core and required RichMd bridge/patch into agreed `skills/attendant/native/` layout. Update paths so builds/runtime no longer depend on `exploration/` or `spikes/`.
 - [x] Prune historical experiment machinery, superseded demos and reports/evidence from final product tree. Keep history accessible through Git and documentation links.
 - [x] Reduce tests to focused native coverage. Remove JS equivalence checks and redundant permutations; retain direct assertions for important behavior and failure cases, plus reusable performance checks.
-- [x] Add build reference and native skill/launcher guidance. Missing native build directs agent to build reference, then back to original task. Keep active JS launcher unchanged until rollout approval.
+- [x] Add build reference and native skill/launcher guidance. Missing native build directs agent to build reference, then back to original task. Initial qualification kept JS active; approved cutover below replaces invocation guidance.
 - [x] Verify independent CJIT/Zig builds and focused CLI/GUI checks on disposable workspaces. Record results and remaining release limitations.
 - [x] Bring up native Attendant features and automated acceptance on macOS arm64; review/amend imported product and record results. CLI/API, interactive GUI/model/input, rendering, feedback and reveal/inspection now run with Zig/CJIT. Windows backend retained; post-port Windows x64 rebuild and runtime regression checks pass.
   - GUI: use GLFW + OpenGL3, matching pinned upstream RichMd examples. User selected this over custom Cocoa/OpenGL3 and Cocoa/Metal. Explicit pinned GUI dependency acquisition authorized; no tool/package installation authorized.
@@ -42,19 +42,20 @@ Native CLI/GUI spike-like accepted. Decision checks record agreed direction; del
   - [x] Port shared core/CLI file, path, hash, timestamp, publication and diagnostic operations; build/run CLI/API acceptance with both compilers.
   - [x] Keep macOS failed-bootstrap cleanup simple: retain already-published files and report written paths; remove temporary staging and empty owned directories. No locking/quarantine/recovery system. User requested simplest macOS behavior for this low-impact edge case. Preserve Windows handle-based cleanup.
   - [x] Port GUI host/model/input and reveal/inspection; run shared GUI/model suite and macOS transport checks. Use private same-UID Unix message pipes across login sessions, not desktop isolation or application authentication; no new dependency or worker thread.
-  - [x] Review native demo on owned workspace copy. User confirmed GUI works and accepted completed port for commit. Review copy: `skills/attendant/native/build/manual-review-MZMSLp/`. Launcher rollout remains separately unapproved.
+  - [x] Review native demo on owned workspace copy. User confirmed GUI works and accepted completed port for commit. Review copy: `skills/attendant/native/build/manual-review-MZMSLp/`. Demo acceptance preceded separately approved native skill cutover.
 - [x] Accept human/agent workflow. User confirmed existing workflow acceptance is complete; do not repeat as rollout prerequisite.
 - [x] Measure Windows GUI startup, idle CPU/memory and inspection/reveal responsiveness on owned small workspace with real product docs. Record workload and measurement limits; no optimization project or invented numeric budget. Human-input latency and large-project behavior are not measured.
 - [x] Skip macOS GUI footprint measurement by user decision. No macOS footprint qualification claimed; not a rollout prerequisite.
 - [x] Distribution/license review accepted as complete by user. Documentation cleanup preserves required licenses/notices, attribution and current dependency/build information.
 - [x] Consolidate four provenance files into `skills/attendant/native/vendor/README.md`. Remove stale framework paths, broken spike links, import hashes and obsolete binding claims. Keep upstream pins, local patches, usage constraints and attribution; license files unchanged.
-- [ ] Obtain explicit rollout approval before changing active launcher or removing JS.
-- [ ] After approval, switch launcher to native, remove JS runtime and remaining JS-dependent tests, and link former JS version by commit hash or tag in final README. Update skill to describe actual native feature set; JS-only migration is not a native parity requirement. Verify normal invocation and missing-build guidance after switch.
+- [x] Obtain explicit rollout approval before changing active launcher or removing JS. User approved native skill rewrite and JS retirement after checkpoint `cbbd4fb`.
+- [x] Switch skill to direct native CLI invocation, remove JS runtime/YAML bundle/transition tests and migration-only guidance, and link retired JS through Git history. Merge native commands/feedback into operational command reference. Update `init-project` to preserve legacy records and report unsupported conversion. Other Attendant-using skills already delegate through updated skill; no duplicate runner instructions needed. Verify normal task/decision workflows and clean-copy missing-build recovery with both compilers.
 
 Broader qualification is not an open-ended rollout gate. Document known platform/failure limits; investigate concrete defects. Prebuilt installers, signing/notarization, Git integration and renderer draft recovery remain outside this scope.
 
 ### Checks
 
+- Native skill cutover on Windows x64: 20 CLI groups and 94 API cases pass. New workflow check passes 8 groups across CJIT/Zig using actual init-project task/decision schemas, usage and templates; covers setup, capture/status transitions, priority/creation ordering, body preservation, search and revisit-trigger query. Clean-copy installation check passes 2 groups: missing executable, isolated CLI build in Unicode/space path, help and schema back in original owned workspace; no GUI/network needed. Reports: `skills/attendant/native/build/{cli,api,workflow,install}-check-results.json`; runs `cli-check/run-6nLUBR`, `api-check/run-EGKH5d`, `workflow-check/run-Q0f5fE`, `install-check/run-SnMrUm`. Frontmatter/local links pass for all 11 Attendant-using skills and changed operational references. Old invocation/reference scan finds only explicit history and removal assertions. Native core/GUI unchanged by cutover; earlier Windows/macOS runtime evidence retained below. macOS cutover checks not rerun on this Windows host.
 - Windows footprint sanity: owned small fixture plus actual native README, build reference and TODO; one visible production viewer at a time. Two 10-second runs/compiler: startup-to-inspection 188–222 ms, working set 65–66 MiB, private memory 235–237 MiB, idle CPU 2.0–6.9% of one logical core. Inspection round trips 23–26 ms; reveal receipt 31–38 ms. Short 3-second verification run showed 15.4–18.4% CPU; CPU is variable and not near-zero. GUI renders continuously with vsync; no idle-render optimization made. All owned viewers closed cleanly; source inventories unchanged. Probe measures IPC readiness/round trips, not first paint or human-input/Go completion; no GPU or large-project measurement. Evidence: `skills/attendant/native/build/footprint/run-0f88bfe3e3314046ba7431557419451b/results.json`, `run-490a5a9c119b493fa1e3d02715f47da3/results.json`; short verification `run-5b7150242d9243409244a558f83299b2/results.json` under same parent. Reusable PowerShell probe verified successful JSON reports, missing-build failure and source preservation. Changed-doc links, obsolete-reference scan and whitespace check pass.
 - Post-port Windows x64 regression: fresh CJIT/Zig CLI/API and production/test GUI/model builds pass. Rebuilt Win32/D3D11 dependency DLL from offline-verified pinned sources. Runtime checks pass 20 CLI groups, 94 API cases and 20 GUI/model groups with 193 model assertions per compiler; includes real desktop rendering, edits, feedback, cross-compiler inspection and terminal-render cleanup. JS transition tests pass 7/7. No code fixes needed. GUI uses fresh `ATTENDANT_GUI_VARIANT=windows-regression`; existing viewers and active launcher unchanged. Evidence: `skills/attendant/native/build/{cli,api,gui}-check-results.json`; runs `cli-check/run-TCUlhV`, `api-check/run-RiwyYi`, `gui-check/run-jIoH9v`. Build logs: `skills/attendant/native/build/windows-regression/`. Historical macOS/cross-compilation-only notes below describe earlier checkpoints, not current Windows coverage.
 - Initial macOS arm64 baseline: native Zig CLI build fails on Windows-only `bcrypt`/`shell32` link flags. CJIT CLI build fails on missing SDK include search (`assert.h`). Core/API/GUI also contain direct Win32 calls; suffix/link changes alone are insufficient.
@@ -71,8 +72,8 @@ Broader qualification is not an open-ended rollout gate. Document known platform
 - Import proof: 38 checked source files byte-identical to snapshot; only CLI runtime edit is executable name in help. Stale GUI test-state/fault input guards and missing-DLL build guidance passed. Protected old viewer binaries/DLLs unchanged. Details: `skills/attendant/native/build/import-proof.json`.
 - macOS synthetic process benchmark: 3 samples per compiler/command with rotating serial order; `skills/attendant/native/build/bench/run-l1tvZD/results.json`. Checks pass; small warm fixture only, not representative workload evidence.
 - Historical synthetic process benchmark ran with rotating serial compiler order and reported variability. No representative performance or GUI-footprint claim. Existing unchanged JS runner's 7 tests still pass; these are transition checks, not imported native tests.
-- Skill frontmatter/local links, Bash/Node syntax and full candidate whitespace check passed. Pinned upstream vendor formatting remains byte-preserved. Active JS launcher unchanged; rollout remains unapproved.
-- Qualification work complete for agreed scope. User waived macOS footprint measurement; Windows footprint sanity check and obsolete provenance-style documentation cleanup complete. Remaining: explicit launcher-cutover approval, then native skill/launcher update and JS retirement. Human workflow and distribution/license review accepted as complete by user. Broader platform/failure limits stay documented, not an exhaustive acceptance gate. See `skills/attendant/native/README.md`; renderer draft recovery remains explicitly deferred.
+- Skill frontmatter/local links, Bash/Node syntax and full candidate whitespace check passed. Pinned upstream vendor formatting remains byte-preserved. At initial qualification, JS launcher remained unchanged; later native cutover approved.
+- Qualification work complete for agreed scope. User waived macOS footprint measurement; Windows footprint sanity check and obsolete provenance-style documentation cleanup complete. Native skill cutover and JS retirement complete; implementation/checks recorded above. Human workflow and distribution/license review accepted as complete by user. Broader platform/failure limits stay documented, not an exhaustive acceptance gate. See `skills/attendant/native/README.md`; renderer draft recovery remains explicitly deferred.
 
 ### Historical context
 

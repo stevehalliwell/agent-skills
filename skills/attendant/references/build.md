@@ -1,6 +1,14 @@
 # Build native Attendant
 
-Use when explicitly evaluating/building native Attendant, or when a future native-selected invocation reports missing build. Existing JS runner remains default until rollout approval. Building native does not switch launcher or authorize editing live workspaces.
+- [Required tools](#required-tools)
+- [CLI](#cli)
+- [GUI dependencies and application](#gui-dependencies-and-application)
+- [Focused development checks](#focused-development-checks)
+- [Windows footprint sanity probe](#windows-footprint-sanity-probe)
+- [macOS bring-up checkpoint](#macos-bring-up-checkpoint)
+- [Missing build or failed setup](#missing-build-or-failed-setup)
+
+Read when native executable is missing, user requests build/evaluation, or GUI dependencies need setup. Native CLI/GUI is active Attendant implementation; no JS fallback. Build with installed tools, then return to original target project and requested operation. Building does not authorize unrelated source edits.
 
 Resolve `<skill-dir>` from `SKILL.md`; native root is `<skill-dir>/native`. Run commands below from native root. CLI/API/GUI builds support Windows Git Bash and macOS arm64 Bash. Windows commands use `.exe`; omit suffix on macOS. Platform details are below. Paths may contain spaces; quote them.
 
@@ -62,6 +70,8 @@ bash build-gui.sh cjit --check
 bash build-gui.sh zig --check
 node tests/core/cli-check.mjs
 node tests/core/api-check.mjs
+node tests/core/workflow-check.mjs
+node tests/core/install-check.mjs
 node tests/gui/check.mjs
 # macOS only:
 node tests/gui/control-macos-check.mjs
@@ -69,7 +79,7 @@ node tests/gui/bridge-check.mjs
 node tools/benchmark.mjs 5
 ```
 
-CLI and production GUI builds above are prerequisites. GUI check builds also produce headless model executables. Checks use unique owned fixture copies under `build/`, not live projects. Both compiler builds are required for combined check scripts. Generated evidence is not imported historical evidence.
+CLI and production GUI builds above are prerequisites. GUI check builds also produce headless model executables. Checks use unique owned fixture copies under `build/`, not live projects. Both compiler builds are required for combined check scripts. Generated evidence is not imported historical evidence. `workflow-check.mjs` exercises current init-project templates and task/decision flows with both native CLIs; run from repository checkout containing sibling `skills/init-project/templates/`. That test-only dependency is not needed to build or use Attendant. `install-check.mjs` copies skill without builds into owned temporary installation with spaces/Unicode, proves missing-executable failure, builds each CLI and returns to original owned workspace. It needs both compilers/Bash, acquires nothing and leaves logs plus installation path in `build/install-check-results.json`.
 
 ### Windows footprint sanity probe
 
@@ -115,11 +125,11 @@ Output: `build/bin/libcimgui_richmd.dylib`, `build/bin/luajit`, `build/bridge-ch
 
 macOS controls use existing bounded same-UID Unix message pipes. One request at a time; GUI pumps between frames, with frozen selection snapshot, per-connection deadline and bounded work. Discovery rejects ambiguous/unresponsive/malformed/unsafe candidates and never removes stale endpoints. Scope spans same UID across login sessions, not desktop isolation or application authentication. Same-UID processes can inspect selections or impersonate endpoints.
 
-Human workflow and distribution/license review accepted as complete by user. Windows small-workspace footprint sanity check completed; macOS footprint remains unmeasured. Known platform/failure limits stay documented, not an exhaustive rollout gate. Explicit approval still required to switch launcher, commit or publish.
+Human workflow and distribution/license review accepted as complete by user. Windows small-workspace footprint sanity check completed; macOS footprint measurement waived, with no macOS footprint claim. Native skill cutover approved. Known platform/failure limits stay documented, not an exhaustive rollout gate. Build/check success does not authorize committing or publishing.
 
 ## Missing build or failed setup
 
 1. Read this reference, build requested target with installed compiler, then run its `--help` or focused check.
 2. Return to original task and original target project; build working directory is not record workspace.
 3. If tool/dependency/build is unavailable, report exact blocker and reference path. Do not auto-install, silently fall back to JS, or substitute old spike binaries.
-4. Build/check success does not grant native rollout approval. Known limitations: [native README](../native/README.md#remaining-limits-and-history).
+4. Continue only original authorized operation; setup does not grant broader editing authority. Known limitations: [native README](../native/README.md#remaining-limits-and-history).

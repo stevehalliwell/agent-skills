@@ -1,57 +1,53 @@
 # Setup and collections
 
+Use native CLI resolved as `<attendant>` by [skill workflow](../SKILL.md#workflow). Run from target project or supply `-p <project>`. Missing build: [build reference](build.md). Markdown stays source of truth; `.attendant/` is disposable generated state.
+
 ## Setup
 
-Bootstrap Attendant source configuration. Markdown stays source of truth; `.attendant/` is generated local state.
+Bootstrap source configuration for unconfigured project. If `.pi/attendant.tables` exists, preserve it and report current setup state; use empty-collection workflow below for a new collection.
 
-Use this workflow for an unconfigured project. If `.pi/attendant.tables` already exists, preserve it and report current setup state. Use the empty-collection workflow below for a new collection, or [Markdown migration](migration.md) for existing records.
-
-1. Inspect project root, `AGENTS.md`, `.pi/attendant.tables`, `.gitignore`, configured collections and their `.schema.md` files, and unconfigured Markdown folders. Ignore generated/vendor folders and ordinary singleton docs; flag folders containing candidate record sets or front matter. State whether Attendant is configured.
-   - Done: bootstrap files, current Attendant locations, candidate migration sources, and existing Markdown are known.
-2. If candidate record sources exist, explain why migration may preserve more value than a blank setup and ask whether to route to migration. Continue bootstrap only when user chooses fresh setup or candidates are unrelated docs. Create missing `.pi/attendant.tables` as an empty file. Create `.gitignore` if absent, or append `.attendant/` only when no equivalent ignore entry exists. Do not alter existing config lines or ignore rules.
-   - Done: user has chosen migration or project has Attendant config and generated state is ignored.
-3. Create or update a concise `## Attendant` section in project-root `AGENTS.md`. State that Attendant is in use; identify `.pi/attendant.tables` as the collection configuration; list each configured collection directory and its `.schema.md` and `.usage.md` paths; instruct agents to read collection usage before operating on its records; and state that Markdown is source of truth while `.attendant/` is generated state. If no collection exists yet, say so explicitly. Preserve unrelated instructions and an existing Attendant section's relevant project-specific guidance.
-   - Done: `AGENTS.md` tells future agents whether Attendant is in use and where its configuration and schemas are.
-4. Normal Attendant actions automatically validate and refresh generated projection; do not invoke manual validation or sync tools as routine setup. Run `node <skill-dir>/scripts/attendant.mjs doctor` only if setup reports an error or health/projection problem needs diagnosis.
-   - Done: setup result is understood; any error is reported with path and cause.
-5. Explain that setup created no collection, schema, or record. Route new collection work to the workflow below, or existing Markdown work to [migration](migration.md).
-   - Done: next workflow is explicit.
+1. Inspect root, `AGENTS.md`, `.pi/attendant.tables`, `.gitignore`, configured collection schemas and unconfigured Markdown folders. Ignore generated/vendor folders and ordinary singleton docs. Flag existing record sets or front matter; native migration/import is unavailable.
+   - Done: bootstrap state, configured collections and existing record sources are known.
+2. Preserve existing Markdown. If existing record sets appear intended for conversion, report unsupported migration and stop conversion; do not register/adopt folders or replace them with blank collections. Continue fresh setup only when explicitly requested or candidates are unrelated docs. Create missing `.pi/attendant.tables` empty. Create `.gitignore` if absent, or append `.attendant/` only if no equivalent entry exists. Preserve existing config lines and ignore rules.
+   - Done: fresh setup does not replace/adopt existing records; config exists and generated state is ignored.
+3. Create/update concise `## Attendant` section in root `AGENTS.md`: identify native Attendant skill, `.pi/attendant.tables`, configured directories and `.schema.md`/`.usage.md` paths. Require reading schema/usage before operating on records. State Markdown is source of truth and `.attendant/` generated. Say explicitly if no collections exist. Preserve unrelated instructions and relevant project-specific guidance.
+   - Done: future agents can locate configuration, schemas and usage.
+4. Setup creates no collection, schema or record. Report paths and route requested empty collection to workflow below. Normal CLI actions prepare projection; do not invoke validation/sync as routine setup. Use `<attendant> doctor` only for health/projection problems.
+   - Done: setup result and any blocker are understood.
 
 Rules:
 
-- Write only missing `.pi/attendant.tables`, the `.attendant/` Git-ignore entry, and the scoped `AGENTS.md` Attendant section.
-- Preserve all Markdown, existing config, schemas, records, and unrelated Git-ignore and agent instructions.
-- Never infer schema, create a collection, or migrate existing Markdown during setup.
+- Write only missing config, generated-state ignore entry and scoped `AGENTS.md` section.
+- Preserve Markdown, schemas, records and unrelated instructions.
+- Never infer schema, create collection or convert records during setup.
 
 ## Add an empty collection
 
-Create one empty Attendant collection. Markdown remains source of truth; `.attendant/` remains generated state.
+Use only for new empty collection. Complete setup first if config is missing. Non-empty folders cannot be adopted here; preserve them and report unsupported conversion.
 
-Use only for a new collection. If `.pi/attendant.tables` is missing, complete setup first. If target folder already contains Markdown records, use [migration](migration.md); do not adopt or move records here.
-
-1. Inspect `AGENTS.md`, `.pi/attendant.tables`, `.gitignore`, configured collection schemas, requested target folder, and nearby unconfigured Markdown folders. Use `node <skill-dir>/scripts/attendant.mjs doctor` when health diagnostics are needed; normal actions automatically validate and refresh generated projection.
-   - Done: existing collection names, documented locations, target state, and possible migration sources are known.
-2. Use supplied collection directory and alias; ask for directory only if missing. Alias is optional; default to directory basename. Do not ask for schema fields; collection creation intentionally starts with empty `.schema.md`, `.usage.md`, and `.template.md`. Purpose and usage authoring is a separate step; do not invent policy during empty setup.
-   - Done: proposed config line and empty source files are concrete.
-3. Check target directory and migration fit. Accept only a nonexistent directory or an empty existing directory. Reject duplicate collection alias/name, reserved `__attendant_` name, duplicate config entry, unsafe path, and non-empty directory. If existing Markdown appears intended as collection data, explain that migration preserves and maps it; route there unless user explicitly confirms a separate empty collection.
-   - Done: creation cannot overwrite, adopt, or hide source records; migration alternative is considered.
-4. Present proposed directory and config line. Require explicit confirmation of this proposal before creation; do not repeat confirmation if user already approved the same proposal. Run:
+1. Inspect `AGENTS.md`, config, ignore rules, configured schemas, requested target and nearby record folders. Use `doctor` only when health diagnostics are needed.
+   - Done: names, source paths and target state are known.
+2. Use supplied directory/alias; ask directory only if missing. Alias defaults to directory basename. Do not ask schema fields: creation intentionally starts with empty `.schema.md`, `.usage.md` and `.template.md`. Purpose/usage authoring is separate; do not invent policy.
+   - Done: proposed config line and empty files are concrete.
+3. Accept nonexistent or empty directory only. Reject duplicate alias/name/config entry, reserved `__attendant_` name, unsafe path and non-empty directory. Preserve possible existing record sources; require explicit request before creating separate empty collection alongside them.
+   - Done: creation cannot overwrite, adopt or hide records.
+4. Present directory and config line; require explicit confirmation before creation, reusing approval of same proposal. Run:
 
    ```sh
-   node <skill-dir>/scripts/attendant.mjs add-table --directory <directory> [--alias <alias>]
+   <attendant> add-table --directory <directory> [--alias <alias>]
    ```
 
-   Do not write collection files directly, add fields, author usage rules, or create records.
-   - Done: runner result reports one declared empty collection and created source paths.
-5. Update the project-root `AGENTS.md` `## Attendant` section to list the new collection directory and `.schema.md` and `.usage.md` paths, with instructions to read usage before operating on records, while preserving existing project-specific Attendant guidance and unrelated instructions. Report collection path/name, empty declared fields, and created source paths. Do not invoke manual validation, sync, or doctor after success; normal actions handle preparation automatically. Use `doctor` only if an error or health/projection problem needs diagnosis.
-   - Done: `AGENTS.md` and the operation result identify the new collection and schema; any diagnostic is reported with path and cause.
+   Do not write collection files directly, add fields, author usage or create records. Inspect output and any reported partial writes before retry; platform-specific publication cleanup is documented in [source contract](../native/README.md#source-and-data-contract).
+   - Done: CLI reports declared empty collection and created source paths, or precise partial result/blocker.
+5. Update root `AGENTS.md` Attendant section with new directory/schema/usage paths and read-usage rule. Preserve existing guidance. Report name/path, empty declared fields and created source paths. Do not run manual validation/sync/doctor after success; normal actions prepare projection.
+   - Done: guidance matches created collection and diagnostics are reported.
 
 Rules:
 
-- Preserve existing config lines, schemas, records, `.gitignore`, and unrelated agent instructions.
-- Keep schema flat. `.schema.md` defines front-matter fields; `.usage.md` defines collection purpose and operating guidance; `.template.md` defines optional record body copy.
-- Preserve existing collections without `.usage.md`; inspection reports their usage as missing rather than retrofitting policy.
-- Stop after empty collection setup; field authoring, usage authoring, and record creation are separate steps.
-- Never create nested YAML, database migrations, or an alternate manifest.
-- Do not choose a first record or semantic fields for user.
-- Use project-relative paths unless user explicitly chooses a configured external directory.
+- Preserve existing config, schemas, records, ignore rules and unrelated instructions.
+- Keep schema flat. Schema defines fields, usage defines purpose/rules, template supplies optional body copy.
+- Preserve collections missing usage; do not retrofit policy.
+- Stop after empty setup. Field/usage authoring and record creation are separate steps.
+- Do not choose first record or semantic fields for user.
+- Use project-relative paths unless user explicitly chooses configured external directory.
+- No nested YAML, database migration or alternate manifest.
