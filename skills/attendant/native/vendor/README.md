@@ -40,7 +40,7 @@ Keep upstream pins, licenses and local patch rules here. Build outputs and acqui
 - LuaJIT, generation only: `a4c064539ea931274d407e1249b4bb575424a0f4`, <https://github.com/LuaJIT/LuaJIT>, MIT.
 - GLFW, macOS only: `7b6aead9fb88b3623e3b3725ebb42670cbe4c579` (3.4), <https://github.com/glfw/glfw>, zlib/libpng license.
 
-macOS uses GLFW/OpenGL3 following upstream RichMd examples. Windows uses Win32/D3D11. Retain upstream licenses/notices with redistributed libraries/assets, including font and embedded third-party notices in pinned checkouts. Core source notices: [third-party notices](../../references/third-party-notices.md).
+macOS uses GLFW/OpenGL3 following upstream RichMd examples. Windows uses Win32/D3D11. Retain upstream licenses/notices with redistributed libraries/assets, including font and embedded third-party notices in pinned checkouts. Core license files remain beside vendored sources: `libyaml/License`, `json-build/LICENSE` and `libpdjson5/UNLICENSE`; SQLite dedication remains in source headers.
 
 ### Maintained bridge and patches
 
