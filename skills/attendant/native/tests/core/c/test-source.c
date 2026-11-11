@@ -194,7 +194,8 @@ TEST(feedback_preserves_changed_seed_and_rejects_retry,
         TEST_ASSERT(source_stat(result.written[i]).kind == SOURCE_REGULAR);
         if (!source_path_compare(result.written[i], canonical)) reported = 1;
     }
-    TEST_ASSERT(reported && source_test_ends_with(seed, source_test_external));
+    TEST_ASSERT(reported);
+    TEST_ASSERT_FILE_ENDS_WITH_TEXT(((cstring){seed}), source_test_external);
     TEST_ASSERT(source_test_baseline_create(&before, fixture.root));
     result = attendant_send_feedback(source_test_session, &fixture.input);
     TEST_ASSERT(!result.ok && !strcmp(result.code, "feedback-conflict"));
@@ -212,7 +213,7 @@ static int source_test_first_send(attendant_feedback_mode mode, const char *name
     TEST_ASSERT(result.ok && result.written_count == 5);
     snprintf(document, sizeof(document), "%s", result.path);
     for (int i = 0; i < result.written_count; i++) TEST_ASSERT(source_stat(result.written[i]).kind == SOURCE_REGULAR);
-    TEST_ASSERT(source_test_ends_with(document, mode == ATTENDANT_FEEDBACK_SOURCE ? source_test_comment : source_test_context));
+    TEST_ASSERT_FILE_ENDS_WITH_TEXT(((cstring){document}), mode == ATTENDANT_FEEDBACK_SOURCE ? source_test_comment : source_test_context);
     TEST_ASSERT_FILE_TEXT(((cstring){fixture.target}), source_test_saved);
     snprintf(path, sizeof(path), "%s/.attendant", fixture.root); TEST_ASSERT(source_stat(path).kind == SOURCE_MISSING);
     snprintf(path, sizeof(path), "%s/.pi/attendant.tables", fixture.root);
@@ -294,9 +295,9 @@ TEST(readonly_save_preserves_source_and_removes_staging,
     source_test_baseline before;
     TEST_ASSERT(source_test_fixture_open(&fixture, "readonly-save", ATTENDANT_FEEDBACK_SOURCE));
     TEST_ASSERT(source_test_baseline_create(&before, fixture.root));
-    TEST_ASSERT(source_test_readonly(fixture.target, 1));
+    TEST_ASSERT_FILE_OK(file_set_read_only((cstring){fixture.target}, 1));
     attendant_result result = attendant_save_document(source_test_session, fixture.target, fixture.hash, "must not replace");
-    int restored = source_test_readonly(fixture.target, 0);
+    int restored = file_set_read_only((cstring){fixture.target}, 0) == file_error_ok;
     TEST_ASSERT(restored && !result.ok && result.written_count == 0);
     TEST_ASSERT_DIRECTORIES_EQUAL(&source_test_files, ((cstring){before.path}), ((cstring){fixture.root}));
     TEST_ASSERT(source_test_recovered(&fixture));

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Generate/build/run native and framework self-check suites. Usage: bash test.sh [cjit|zig]
-# Requires installed compiler/Bash only. No Node, downloads or dependency installs.
+# Generate/build/run core, framework and subprocess integration. Usage: bash test.sh [cjit|zig]
+# Requires installed compiler/Bash and repository templates. No Node or downloads.
 # Stdout: retained run-directory path. TSV/results/logs stay below that directory.
 set -euo pipefail
 root=$(cd -- "$(dirname -- "$0")" && pwd)
@@ -25,6 +25,15 @@ compile() {
 }
 generator="$run/generator$executable_suffix"
 runner="$run/runner$executable_suffix"
+helper="$run/command-child$executable_suffix"
+if ! compile "$helper" tests/framework/command-child.c > "$run/command-child-build.log" 2>&1; then
+  echo "Command child build failed: $run/command-child-build.log" >&2; exit 2
+fi
+if [[ $(uname -s) == Darwin ]]; then
+  export ATTENDANT_TEST_COMMAND_HELPER="$root/$helper"
+else
+  export ATTENDANT_TEST_COMMAND_HELPER=$(cygpath -m "$root/$helper")
+fi
 if ! compile "$generator" tests/core/generate.c > "$run/generator-build.log" 2>&1; then
   echo "Generator build failed: $run/generator-build.log" >&2; exit 2
 fi
@@ -54,4 +63,22 @@ for zone in UTC Pacific/Auckland; do
 done
 source tests/framework/check.sh
 check_test_framework
+if ! bash build.sh "$compiler" > "$run/cli-build.log" 2>&1 ||
+   ! bash tools/build-api-check.sh "$compiler" > "$run/api-probe-build.log" 2>&1; then
+  echo "Integration CLI/API build failed: $run/{cli,api-probe}-build.log" >&2; exit 2
+fi
+if ! compile "$run/integration-generator$executable_suffix" tests/core/generate-integration.c > "$run/integration-generator-build.log" 2>&1 ||
+   ! "$run/integration-generator$executable_suffix" > "$run/integration-runner.c" 2> "$run/integration-generator.log" ||
+   ! compile "$run/integration-runner$executable_suffix" -DATTENDANT_TEST_FAULTS -ULIBPDJSON5_STACK_MAX -DLIBPDJSON5_STACK_MAX=16 "$run/integration-runner.c" "${sources[@]:1}" > "$run/integration-runner-build.log" 2>&1; then
+  echo "Integration runner generation/build failed: $run/integration-*-build.log" >&2; exit 2
+fi
+mkdir "$run/integration"
+if TZ=UTC ATTENDANT_TEST_COMPILER="$compiler" ATTENDANT_TEST_DIRECTORY="$run/integration" "$run/integration-runner$executable_suffix" -tsv > "$run/integration/results.tsv" 2> "$run/integration/diagnostics.log"; then
+  :
+else
+  status=$?
+  echo "Integration tests failed ($compiler): $run/integration/{results.tsv,diagnostics.log}" >&2
+  if [[ "$status" -eq 1 ]]; then exit 1; else exit 2; fi
+fi
+awk -F '\t' '$1 == "complete" { printf "Integration: %s passed, %s failed (23 contract groups)\n", $4, $2 }' "$run/integration/results.tsv" >&2
 printf '%s\n' "$root/$run"
