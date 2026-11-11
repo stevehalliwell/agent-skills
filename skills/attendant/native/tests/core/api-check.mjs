@@ -1,23 +1,23 @@
-// Headless feedback/source API acceptance. Generated owned workspaces only.
-// Usage: node tests/core/api-check.mjs; first tools/build-api-check.sh and build.sh for both compilers.
+// Retained subprocess integration: source API feedback consumed/resolved by CLI.
+// Direct source/fault/datetime assertions moved to test.sh and tests/core/c/.
+// Usage: node tests/core/api-check.mjs (build API probes and both CLIs first).
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, readdirSync, existsSync, renameSync, chmodSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, readdirSync, renameSync } from 'node:fs';
 import { dirname, join, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const hash = text => createHash('sha256').update(text).digest('hex');
-const retainsPublished = process.platform === 'darwin';
 function inventory(folder) {
   return Object.fromEntries(readdirSync(folder, { withFileTypes: true }).filter(entry => entry.name !== '.attendant').flatMap(entry => {
     const path = join(folder, entry.name);
     return entry.isDirectory() ? Object.entries(inventory(path)) : [[path, hash(readFileSync(path))]];
   }));
 }
-function child(command, args, status = 0, environment = {}) {
-  const result = spawnSync(command, args, { encoding: 'utf8', timeout: 30000, env: { ...process.env, ...environment } });
-  assert.equal(result.status, status, `${command}: ${result.error || result.stderr}\n${result.stdout}`);
+function child(command, args) {
+  const result = spawnSync(command, args, { encoding: 'utf8', timeout: 30000, env: { ...process.env, ATTENDANT_FEEDBACK_FAULT: '' } });
+  assert.equal(result.status, 0, `${command}: ${result.error || result.stderr}\n${result.stdout}`);
   return JSON.parse(result.stdout);
 }
 mkdirSync(join(root, 'build/api-check'), { recursive: true });
@@ -28,162 +28,45 @@ try {
     const probe = join(root, `build/api-probe-${compiler}${suffix}`), cli = join(root, `build/attendant-${compiler}${suffix}`);
     const project = join(report.run, `${compiler}-${spelling} caf\u00e9 \u03a9`);
     mkdirSync(project);
-    const target = join(project, 'document.md'), original = '---\r\nname: file\r\n---\r\nHello caf\u00e9 \ud83d\ude00\r\nNext line.\r\n';
-    writeFileSync(target, original);
-    const recordCase = name => report.cases.push({ compiler, spelling, name });
-    if (spelling === 'relative') {
-      for (const TZ of ['UTC', 'Pacific/Auckland']) {
-        for (const value of ['1601-01-01T00:00:00.000Z', '1969-12-31T23:59:59.000Z', '1970-01-01T00:00:00.000Z', '2026-10-04T23:45:59.000Z', '2028-02-29T01:02:03.123Z', '9999-12-31T23:59:59.999Z']) {
-          const date = child(probe, ['datetime', value], 0, { TZ });
-          assert.equal(date.value, value);
-          assert.equal(BigInt(date.ticks), BigInt(Date.parse(value)) * 10000n + 116444736000000000n);
-        }
-        for (const value of ['1600-12-31T23:59:59.999Z', '1900-02-29T00:00:00.000Z', '2026-04-31T00:00:00.000Z', '2026-01-01T24:00:00.000Z', '2026-01-01T00:00:60.000Z', '2026-01-01T00:00:00.000+01:00']) {
-          assert.equal(child(probe, ['datetime', value], 1, { TZ }).ok, false);
-        }
-      }
-      recordCase('UTC datetime round-trip, epoch boundaries, leap dates and timezone independence');
-    }
-    let snapshot = inventory(project), read = child(probe, ['read', target]);
-    assert.equal(read.text, original); assert.equal(read.hash, hash(original)); assert.deepEqual(inventory(project), snapshot);
-    assert(!existsSync(join(project, '.pi'))); recordCase('read does not bootstrap workspace');
-    let failure = child(probe, ['save', target, '0'.repeat(64), 'replacement'], 1);
-    assert.equal(failure.code, 'source-changed'); assert.equal(failure.recovered, true); assert.deepEqual(inventory(project), snapshot);
-    recordCase('stale save recovers in same process without writes');
-    const saved = original + 'Saved before comment.\n';
-    let result = child(probe, ['save', target, hash(original), saved]);
-    assert.equal(readFileSync(target, 'utf8'), saved); assert.equal(result.hash, hash(saved)); assert.equal(result.written.length, 1);
-    recordCase('atomic save preserves intended UTF-8 and CRLF');
+    const target = join(project, 'document.md'), saved = '---\r\nname: file\r\n---\r\nHello caf\u00e9 \ud83d\ude00\r\nNext line.\r\nSaved before comment.\n';
+    writeFileSync(target, saved);
     const selected = 'caf\u00e9 \ud83d\ude00\r\nNext', start = [...saved.slice(0, saved.indexOf('caf\u00e9'))].length, end = start + [...selected].length;
     const comment = 'Please check **this passage**.\r\n\r\nKeep the rest unchanged.\n';
-    const send = (options = {}) => child(probe, ['send', project, target, options.hash ?? hash(saved), String(options.start ?? start), String(options.end ?? end),
-      options.selected ?? selected, options.comment ?? comment, 'probe'], options.status ?? 0, { ATTENDANT_FEEDBACK_FAULT: options.fault || '' });
-    snapshot = inventory(project);
-    for (const options of [{ hash: hash(original) }, { selected: 'wrong' }, { end: end + 1 }, { end: 18446744073709551615n }, { start: 0, end: 0 }, { comment: ' \r\n' }]) {
-      failure = send({ ...options, status: 1 }); assert.equal(failure.recovered, true); assert.deepEqual(inventory(project), snapshot);
-    }
-    recordCase('hash, code-point text, bounds and empty comment preflight leave no files');
-    for (const fault of ['staged', 'seeds-published', 'comment-published']) {
-      failure = send({ fault, status: 1 }); assert.equal(failure.recovered, true);
-      const published = retainsPublished ? { staged: 0, 'seeds-published': 3, 'comment-published': 4 }[fault] : 0;
-      assert.equal(failure.written.length, published);
-      assert.equal(readFileSync(target, 'utf8'), saved);
-      assert.deepEqual(Object.keys(inventory(project)).sort(), [...Object.keys(snapshot), ...failure.written].sort());
-      if (published) {
-        assert.match(failure.message, /retained published files/);
-        assert(failure.written.every(path => existsSync(path) && path.startsWith(join(project, 'records/_meta_comments/'))));
-        rmSync(join(project, 'records'), { recursive: true });
-      }
-      assert.deepEqual(inventory(project), snapshot); assert(!existsSync(join(project, '.pi'))); assert(!existsSync(join(project, 'records')));
-    }
-    recordCase(retainsPublished ? 'failed bootstrap retains and reports published files; staging is removed' : 'staging and partial-bootstrap publication failures roll back owned files/directories');
-    failure = send({ fault: 'target-change', status: 1 });
-    assert.equal(failure.code, 'feedback-stale'); assert.equal(failure.recovered, true);
-    assert.equal(readFileSync(target, 'utf8'), saved + '\n# Concurrent external edit\n');
-    assert(!existsSync(join(project, 'records'))); assert(!existsSync(join(project, '.pi')));
-    writeFileSync(target, saved); recordCase('target edit after staging rejects comment and preserves external bytes');
-    failure = send({ fault: 'config-change', status: 1 });
-    assert.equal(failure.recovered, true); assert.equal(failure.written.length, retainsPublished ? 4 : 0);
-    assert.equal(readFileSync(join(project, '.pi/attendant.tables'), 'utf8'), '\n# Concurrent external edit\n');
-    if (retainsPublished) {
-      assert(failure.written.every(path => existsSync(path)));
-      rmSync(join(project, 'records'), { recursive: true });
-    }
-    assert(!existsSync(join(project, 'records')));
-    rmSync(join(project, '.pi'), { recursive: true }); recordCase('external config publication wins; cleanup preserves external config and reports remaining files');
-    failure = send({ fault: 'published-edit', status: 1 });
-    const preservedSeed = join(project, 'records/_meta_comments/.schema.md');
-    assert.equal(failure.written.length, retainsPublished ? 4 : 1);
-    assert(failure.written.includes(preservedSeed)); assert(failure.written.every(path => existsSync(path)));
-    assert.match(failure.message, retainsPublished ? /retained published files/ : /preserved changed or busy files/);
-    assert(readFileSync(preservedSeed, 'utf8').endsWith('\n# Concurrent external edit\n'));
-    snapshot = inventory(project); send({ status: 1 }); assert.deepEqual(inventory(project), snapshot);
-    rmSync(join(project, 'records'), { recursive: true }); recordCase('rollback preserves changed published file, reports it, and retry conflicts without overwrite');
-    result = send(); assert.equal(result.written.length, 5);
-    const first = result.path, config = join(project, '.pi/attendant.tables'), comments = join(project, 'records/_meta_comments');
-    assert(readFileSync(first, 'utf8').endsWith('---\n' + comment)); assert.equal(readFileSync(target, 'utf8'), saved);
-    assert(!existsSync(join(project, '.attendant'))); recordCase('first Send publishes managed seeds/comment then config, without DB preparation');
-    const schema = readFileSync(join(comments, '.schema.md'), 'utf8');
-    snapshot = inventory(project); const second = send();
-    assert.equal(second.written.length, 1); delete snapshot[second.path];
-    const after = inventory(project); delete after[second.path]; assert.deepEqual(after, snapshot);
-    recordCase('later Send creates only one comment and never saves target');
-    writeFileSync(join(comments, '.schema.md'), schema.replace('selected_text: ""', 'selected_text: 0'));
-    snapshot = inventory(project); failure = send({ status: 1 }); assert.equal(failure.code, 'feedback-conflict'); assert.deepEqual(inventory(project), snapshot);
-    writeFileSync(join(comments, '.schema.md'), schema); recordCase('full managed schema conflict is recoverable and unchanged');
-    // Compatible nondefault collection directory; config comments/spelling preserved.
-    const alternate = join(project, 'feedback elsewhere'); renameSync(comments, alternate);
+    const send = () => child(probe, ['send', project, target, hash(saved), String(start), String(end), selected, comment, 'probe']);
+    const first = send(), second = send();
+    const alternate = join(project, 'feedback elsewhere');
+    renameSync(join(project, 'records/_meta_comments'), alternate);
     const configText = '# Human config comment\r\n' + (spelling === 'absolute' ? alternate.replaceAll('\\', '/') : 'feedback elsewhere') + ' as _meta_comments\r\n';
-    writeFileSync(config, configText);
-    result = send(); assert.equal(dirname(result.path), alternate); assert.equal(readFileSync(config, 'utf8'), configText);
-    assert(!existsSync(comments)); recordCase('compatible alternate relative/absolute directory reused without config rewrite');
-    const query = () => child(cli,
-      ['query', '-p', project, '-s', 'SELECT name,status,target_path,range_start,range_end,selected_text FROM _meta_comments ORDER BY name']);
-    snapshot = inventory(project); let rows = query();
+    writeFileSync(join(project, '.pi/attendant.tables'), configText); send();
+    const recordCase = name => report.cases.push({ compiler, spelling, name });
+    const query = () => child(cli, ['query', '-p', project, '-s', 'SELECT name,status,target_path,range_start,range_end,selected_text FROM _meta_comments ORDER BY name']);
+    const before = inventory(project), rows = query();
     assert.equal(rows.returned, 3); assert.equal(rows.meta_comments.pending, 3);
     for (const row of rows.rows) {
       assert.equal(row.selected_text, selected); assert.equal(row.range_start, start); assert.equal(row.range_end, end);
       assert.equal(resolve(row.target_path), resolve(target));
     }
-    assert.deepEqual(query().rows, rows.rows); assert.deepEqual(inventory(project), snapshot);
-    recordCase('native reads exact records/ranges without consuming or changing source');
+    assert.deepEqual(query().rows, rows.rows); assert.deepEqual(inventory(project), before);
+    recordCase('CLI reads API-created records/ranges without consuming or changing source');
     for (const row of rows.rows.slice(0, 2))
       child(cli, ['update', '-p', project, '-c', '_meta_comments', '-i', JSON.stringify([{ name: row.name, fields: { status: 'resolved' } }])]);
     assert.equal(query().meta_comments.pending, 1);
-    for (const name of [basename(first), basename(second.path)]) assert(readFileSync(join(alternate, name), 'utf8').endsWith('---\n' + comment));
-    recordCase('explicit resolution preserves human body and decreases pending count');
-    chmodSync(target, 0o444);
-    try { failure = child(probe, ['save', target, hash(saved), 'must not replace'], 1); assert.equal(failure.recovered, true); }
-    finally { chmodSync(target, 0o666); }
-    assert.equal(readFileSync(target, 'utf8'), saved);
-    assert(!readdirSync(project).some(name => name.endsWith('.tmp'))); recordCase('failed source publication leaves original intact and removes staging');
-    // Source already saved remains saved if comment publication fails.
-    const later = saved + 'Another edit.\n'; child(probe, ['save', target, hash(saved), later]);
-    failure = send({ hash: hash(later), fault: 'staged', status: 1 });
-    assert.equal(readFileSync(target, 'utf8'), later); assert.deepEqual(failure.written, []);
-    recordCase('saved-but-not-queued is truthful; failed Send never rolls back successful save');
-    // Fresh conflicting directory must never be adopted or overwritten.
-    const conflict = join(report.run, `${compiler}-${spelling}-conflict`); mkdirSync(join(conflict, 'records/_meta_comments'), { recursive: true });
-    writeFileSync(join(conflict, 'records/_meta_comments/keep.md'), 'Do not overwrite.');
-    snapshot = inventory(conflict);
-    failure = child(probe, ['send', conflict, target, hash(later), String(start), String(end), selected, comment, 'probe'], 1);
-    assert.equal(failure.code, 'feedback-conflict'); assert.deepEqual(inventory(conflict), snapshot); recordCase('unregistered nonempty managed directory conflicts without overwrite');
+    for (const name of [basename(first.path), basename(second.path)]) assert(readFileSync(join(alternate, name), 'utf8').endsWith('---\n' + comment));
+    recordCase('explicit CLI resolution preserves human body and decreases pending count');
     const contextual = join(report.run, `${compiler}-${spelling}-context`); mkdirSync(contextual);
     const contextTarget = join(contextual, 'preview.md'), contextBody = 'Context note: caf\u00e9 \ud83d\ude00.\r\n\nRendered context lives in note body.\n';
     writeFileSync(contextTarget, saved);
-    const contextSend = (options = {}) => child(probe, [options.operation ?? 'send-context', contextual, contextTarget, options.hash ?? hash(saved), String(options.start ?? 0), String(options.end ?? 0), options.selected ?? '', contextBody, 'probe'], options.status ?? 0, {ATTENDANT_FEEDBACK_FAULT: options.fault ?? ''});
-    snapshot = inventory(contextual);
-    for (const options of [{operation: 'send'}, {hash: '0'.repeat(64)}, {start: 1}, {end: 1}, {selected: 'invented'}]) {
-      failure = contextSend({...options, status: 1}); assert.equal(failure.recovered, true); assert.deepEqual(inventory(contextual), snapshot);
-    }
-    recordCase('absent anchor requires explicit context mode, zero bounds, empty source text and saved hash');
-    for (const fault of ['staged', 'seeds-published', 'comment-published']) {
-      failure = contextSend({fault, status: 1});
-      const published = retainsPublished ? { staged: 0, 'seeds-published': 3, 'comment-published': 4 }[fault] : 0;
-      assert.equal(failure.written.length, published);
-      assert.equal(readFileSync(contextTarget, 'utf8'), saved);
-      assert.deepEqual(Object.keys(inventory(contextual)).sort(), [...Object.keys(snapshot), ...failure.written].sort());
-      if (published) rmSync(join(contextual, 'records'), { recursive: true });
-      assert.deepEqual(inventory(contextual), snapshot);
-    }
-    recordCase(retainsPublished ? 'context-only failed bootstrap reports retained files without changing source' : 'context-only first-send rollback preserves original source and leaves no seeds');
-    failure = contextSend({fault: 'target-change', status: 1}); assert.equal(failure.code, 'feedback-stale');
-    assert.equal(readFileSync(contextTarget, 'utf8'), saved + '\n# Concurrent external edit\n');
-    assert(!existsSync(join(contextual, '.pi')) && !existsSync(join(contextual, 'records'))); writeFileSync(contextTarget, saved);
-    recordCase('context-only target hash rechecked after staging without guessed source validation');
-    const contextResult = contextSend(); assert.equal(contextResult.written.length, 5);
-    assert(readFileSync(contextResult.path, 'utf8').endsWith('---\n' + contextBody)); assert.equal(readFileSync(contextTarget, 'utf8'), saved);
-    assert(!existsSync(join(contextual, '.attendant'))); recordCase('context-only first Send bootstraps same schema and preserves supplied body bytes');
-    const contextSQL = 'SELECT name,status,range_start,range_end,selected_text FROM _meta_comments';
-    const contextQuery = () => child(cli, ['query', '-p', contextual, '-s', contextSQL]);
+    const contextResult = child(probe, ['send-context', contextual, contextTarget, hash(saved), '0', '0', '', contextBody, 'probe']);
+    const contextQuery = () => child(cli, ['query', '-p', contextual, '-s', 'SELECT name,status,range_start,range_end,selected_text FROM _meta_comments']);
     const contextRows = contextQuery(); assert.equal(contextRows.meta_comments.pending, 1);
     assert.deepEqual([contextRows.rows[0].range_start, contextRows.rows[0].range_end, contextRows.rows[0].selected_text], [0, 0, '']);
-    assert.deepEqual(contextQuery().rows, contextRows.rows); recordCase('query reads explicit absent anchor without consuming');
-    child(cli, ['update', '-p', contextual, '-c', '_meta_comments', '-i', JSON.stringify([{name: contextRows.rows[0].name, fields: {status: 'resolved'}}])]);
+    assert.deepEqual(contextQuery().rows, contextRows.rows);
+    recordCase('CLI reads API-created absent anchor without consuming');
+    child(cli, ['update', '-p', contextual, '-c', '_meta_comments', '-i', JSON.stringify([{ name: contextRows.rows[0].name, fields: { status: 'resolved' } }])]);
     assert.equal(contextQuery().rows[0].status, 'resolved'); assert.equal(contextQuery().meta_comments.pending, 0);
     assert(readFileSync(contextResult.path, 'utf8').endsWith('---\n' + contextBody));
-    recordCase('explicit context-only resolution preserves body and absent anchor');
+    recordCase('explicit CLI context resolution preserves body and absent anchor');
   }
   report.ok = true;
 } finally { writeFileSync(join(root, 'build/api-check-results.json'), JSON.stringify(report, null, 2) + '\n'); }
-console.log(JSON.stringify({ ok: true, cases: report.cases.length, run: report.run }));
+console.log(JSON.stringify({ ok: report.ok, cases: report.cases.length, run: report.run }));

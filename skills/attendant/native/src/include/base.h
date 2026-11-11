@@ -14,8 +14,9 @@ Contents:
   compile-time fit/alignment/minimum payload, splitting and coalescing
 - number: checked whole-span signed decimal parsing and caller-buffer formatting
 - string: byte strings, views, builder
-- file: whole-file and caller-buffer read/write/stat helpers, Windows mutable
-  file mapping with explicit flush/unmap
+- file: whole-file and caller-buffer read/write/stat helpers, exclusive creation,
+  exact file/tree comparison, bounded tree copy/removal, Windows mutable mapping
+  with explicit flush/unmap
 - memory_region: dedicated page-isolated OS backing with read-only/read-write protection
 - file_watcher: allocator-backed multiple-file watching and caller-owned change bitset
 - collections: fixed views, dynamic arrays, and hash maps with shared operations
@@ -701,6 +702,8 @@ typedef struct string_result {
     arena_error error;
 } string_result;
 
+enum { NATIVE_PATH_SIZE = 1024 };
+
 typedef enum file_error {
     file_error_ok = 0,
     file_error_invalid,
@@ -715,6 +718,7 @@ typedef enum file_error {
     file_error_flush_failed,
     file_error_cleanup_failed,
     file_error_unsupported,
+    file_error_exists,
 } file_error;
 
 /* Caller-owned, zero-initialized metadata. A Windows mapping owns its OS file,
@@ -3015,6 +3019,22 @@ static file_error file_error_from_arena_error(arena_error error) {
     return file_error_invalid;
 }
 
+/* UTF-8 paths, including on Windows. stdio retains its ordinary buffering. */
+static FILE *file_open_utf8(const char *path, const char *mode) {
+    if (!path || !mode) return NULL;
+#if defined(_WIN32)
+    wchar_t wide[NATIVE_PATH_SIZE], wide_mode[8];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, NATIVE_PATH_SIZE) ||
+        !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, mode, -1, wide_mode, 8)) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return _wfopen(wide, wide_mode);
+#else
+    return fopen(path, mode);
+#endif
+}
+
 static file_result file_read_all(arena *arena, cstring path) {
     file_result out = {0};
     FILE *file;
@@ -3027,7 +3047,7 @@ static file_result file_read_all(arena *arena, cstring path) {
         return out;
     }
 
-    file = fopen(path.data, "rb");
+    file = file_open_utf8(path.data, "rb");
     if (file == NULL) {
         out.error = file_error_open_failed;
         return out;
@@ -3093,7 +3113,7 @@ static file_error file_read_into(cstring path, void *output, usize capacity, usi
         return file_error_invalid;
     }
 
-    FILE *file = fopen(path.data, "rb");
+    FILE *file = file_open_utf8(path.data, "rb");
     if (!file) {
         return errno == ENOENT ? file_error_not_found : file_error_open_failed;
     }
@@ -3127,7 +3147,7 @@ static file_error file_write_bytes(cstring path, const void *bytes, usize size) 
         return file_error_invalid;
     }
 
-    FILE *file = fopen(path.data, "wb");
+    FILE *file = file_open_utf8(path.data, "wb");
     if (!file) {
         return file_error_open_failed;
     }
@@ -3156,7 +3176,7 @@ static const char *file_error_message(file_error error) {
     case file_error_not_found:
         return "file not found";
     case file_error_capacity:
-        return "file read capacity exhausted";
+        return "file operation capacity exhausted";
     case file_error_size_mismatch:
         return "mapped file size mismatch";
     case file_error_mapping_failed:
@@ -3166,7 +3186,9 @@ static const char *file_error_message(file_error error) {
     case file_error_cleanup_failed:
         return "mapped file cleanup failed";
     case file_error_unsupported:
-        return "file mapping is unsupported on this platform";
+        return "unsupported file operation or entry";
+    case file_error_exists:
+        return "destination already exists";
     }
     return "unknown file error";
 }
@@ -3890,8 +3912,13 @@ static file_error file_unmap(file_mapping *mapping) {
    short transfers fail. Opening/truncation belongs outside simulation. */
 static void *file_stream_open(const char *path, int writing) {
 #if defined(_WIN32)
-    HANDLE handle = CreateFileA(path, writing ? GENERIC_WRITE : GENERIC_READ, 0, NULL,
-                                writing ? CREATE_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    wchar_t wide[NATIVE_PATH_SIZE];
+    if (!path || !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, NATIVE_PATH_SIZE))
+        return NULL;
+    HANDLE handle = CreateFileW(wide, writing ? GENERIC_WRITE : GENERIC_READ,
+                                writing ? 0 : FILE_SHARE_READ, NULL,
+                                writing ? CREATE_ALWAYS : OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
     return handle == INVALID_HANDLE_VALUE ? NULL : handle;
 #else
     int descriptor = open(path, writing ? O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW : O_RDONLY | O_NOFOLLOW, 0600);
@@ -3905,7 +3932,10 @@ static void *file_stream_create(const char *path) {
     if (!path || !path[0])
         return NULL;
 #if defined(_WIN32)
-    HANDLE handle = CreateFileA(path, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    wchar_t wide[NATIVE_PATH_SIZE];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, NATIVE_PATH_SIZE))
+        return NULL;
+    HANDLE handle = CreateFileW(wide, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
     return handle == INVALID_HANDLE_VALUE ? NULL : handle;
 #else
     int descriptor = open(path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
@@ -3988,21 +4018,25 @@ static int file_stream_close(void *handle) {
 
 static file_stat_result file_stat(cstring path) {
     file_stat_result out = {0};
+    if (!path.data) { out.error = file_error_invalid; return out; }
+#if defined(_WIN32)
+    wchar_t wide[NATIVE_PATH_SIZE];
+    WIN32_FILE_ATTRIBUTE_DATA info;
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data, -1, wide, NATIVE_PATH_SIZE)) {
+        out.error = file_error_invalid; return out;
+    }
+    if (!GetFileAttributesExW(wide, GetFileExInfoStandard, &info)) {
+        out.error = file_error_open_failed; return out;
+    }
+    out.size = ((u64)info.nFileSizeHigh << 32) | info.nFileSizeLow;
+    u64 ticks = ((u64)info.ftLastWriteTime.dwHighDateTime << 32) | info.ftLastWriteTime.dwLowDateTime;
+    out.modified_time = (i64)(ticks / 10000000) - 11644473600LL;
+#else
     struct stat info;
-
-    if (path.data == NULL) {
-        out.error = file_error_invalid;
-        return out;
-    }
-
-    if (stat(path.data, &info) != 0) {
-        out.error = file_error_open_failed;
-        return out;
-    }
-
+    if (stat(path.data, &info)) { out.error = file_error_open_failed; return out; }
     out.size = (u64)info.st_size;
     out.modified_time = (i64)info.st_mtime;
-    out.error = file_error_ok;
+#endif
     return out;
 }
 
@@ -4190,7 +4224,7 @@ static file_list_result file_list(arena *arena, string_view dir, string_view pat
 
 /* Native filesystem/process helpers for tools. Caller owns iterator/workspace;
    fixed capacities never grow. No shell, retry, or dependency installation. */
-enum { NATIVE_PATH_SIZE = 1024, PROCESS_MAX_ARGUMENTS = 192, PROCESS_COMMAND_SIZE = 32768 };
+enum { PROCESS_MAX_ARGUMENTS = 192, PROCESS_COMMAND_SIZE = 32768 };
 
 typedef struct file_directory {
 #if defined(_WIN32)
@@ -4361,6 +4395,460 @@ static int file_copy(const char *source, const char *destination, int exclusive)
         success = 0;
     return success;
 #endif
+}
+
+/* Bounded tree operations. Scratch memory belongs to caller. list_tree keeps
+   its result in that arena; other operations rewind their temporary allocations.
+   Root depth is 0; max_entries excludes root and applies separately to each tree.
+   Names/kinds/bytes are exact; metadata is ignored. Links and special entries
+   are unsupported, including in root ancestors. Trees must be externally quiet:
+   these checks are not an adversarial filesystem sandbox or atomic transaction. */
+typedef enum file_entry_kind {
+    file_entry_regular,
+    file_entry_directory,
+} file_entry_kind;
+
+typedef struct file_tree_entry {
+    char *path; /* Root-relative UTF-8 path, '/' separators. */
+    file_entry_kind kind;
+    usize depth;
+} file_tree_entry;
+
+typedef struct file_tree {
+    file_tree_entry *entries;
+    usize count;
+} file_tree;
+
+typedef struct file_tree_workspace {
+    arena *memory;
+    usize max_depth, max_entries;
+} file_tree_workspace;
+
+static file_error file_native_kind(const char *path, file_entry_kind *kind) {
+#if defined(_WIN32)
+    wchar_t wide[NATIVE_PATH_SIZE];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, NATIVE_PATH_SIZE))
+        return file_error_invalid;
+    DWORD attributes = GetFileAttributesW(wide);
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        DWORD error = GetLastError();
+        return error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND ?
+               file_error_not_found : file_error_open_failed;
+    }
+    if (attributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DEVICE))
+        return file_error_unsupported;
+    *kind = attributes & FILE_ATTRIBUTE_DIRECTORY ? file_entry_directory : file_entry_regular;
+#else
+    struct stat status;
+    if (lstat(path, &status))
+        return errno == ENOENT ? file_error_not_found : file_error_open_failed;
+    if (!S_ISREG(status.st_mode) && !S_ISDIR(status.st_mode))
+        return file_error_unsupported;
+    *kind = S_ISDIR(status.st_mode) ? file_entry_directory : file_entry_regular;
+#endif
+    return file_error_ok;
+}
+
+static usize file_path_root_size(const char *path) {
+#if defined(_WIN32)
+    if (path[0] == '/' && path[1] == '/') {
+        const char *share = strchr(path + 2, '/');
+        if (!share) return 0;
+        const char *end = strchr(share + 1, '/');
+        return end ? (usize)(end - path + 1) : strlen(path);
+    }
+    return strlen(path) >= 3 && path[1] == ':' && path[2] == '/' ? 3 : 0;
+#else
+    return path[0] == '/' ? 1 : 0;
+#endif
+}
+
+/* Canonical absolute path; missing leaf allowed only for exclusive creation.
+   Validate original POSIX prefixes before realpath so links followed by '..'
+   cannot disappear during normalization. No OS resource survives this call. */
+static file_error file_tree_path(cstring input, char output[NATIVE_PATH_SIZE], int missing_leaf) {
+    if (!input.data || !input.data[0]) return file_error_invalid;
+    char raw[NATIVE_PATH_SIZE];
+#if defined(_WIN32)
+    wchar_t wide[NATIVE_PATH_SIZE], absolute[NATIVE_PATH_SIZE];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, input.data, -1, wide, NATIVE_PATH_SIZE))
+        return file_error_invalid;
+    DWORD length = GetFullPathNameW(wide, NATIVE_PATH_SIZE, absolute, NULL);
+    if (!length) return file_error_invalid;
+    if (length >= NATIVE_PATH_SIZE || !WideCharToMultiByte(CP_UTF8, 0, absolute, -1,
+                                                         raw, sizeof(raw), NULL, NULL))
+        return file_error_capacity;
+    for (char *p = raw; *p; ++p) if (*p == '\\') *p = '/';
+#else
+    int length;
+    if (input.data[0] == '/') length = snprintf(raw, sizeof(raw), "%s", input.data);
+    else {
+        char current[NATIVE_PATH_SIZE];
+        if (!getcwd(current, sizeof(current))) return file_error_open_failed;
+        length = snprintf(raw, sizeof(raw), "%s/%s", current, input.data);
+    }
+    if (length < 0 || (usize)length >= sizeof(raw)) return file_error_capacity;
+#endif
+    usize root = file_path_root_size(raw), size = strlen(raw);
+    if (!root) return file_error_invalid;
+    while (size > root && raw[size - 1] == '/') raw[--size] = 0;
+    for (usize i = root; i <= size; ++i) {
+        if (i != size && raw[i] != '/') continue;
+        char saved = raw[i];
+        raw[i] = 0;
+        file_entry_kind kind;
+        file_error error = file_native_kind(raw, &kind);
+        raw[i] = saved;
+        if (error == file_error_not_found && i == size && missing_leaf) break;
+        if (error != file_error_ok) return error;
+        if (i != size && kind != file_entry_directory) return file_error_invalid;
+    }
+#if defined(_WIN32)
+    memcpy(output, raw, size + 1);
+#else
+    char resolved[PATH_MAX];
+    if (!realpath(raw, resolved)) {
+        if (!missing_leaf || errno != ENOENT) return file_error_open_failed;
+        char *leaf = strrchr(raw, '/');
+        char name[NATIVE_PATH_SIZE];
+        snprintf(name, sizeof(name), "%s", leaf + 1);
+        if (leaf == raw) leaf[1] = 0; else *leaf = 0;
+        if (!realpath(raw, resolved)) return file_error_open_failed;
+        int count = snprintf(output, NATIVE_PATH_SIZE, "%s%s%s", resolved,
+                             strcmp(resolved, "/") ? "/" : "", name);
+        return count < 0 || count >= NATIVE_PATH_SIZE ? file_error_capacity : file_error_ok;
+    }
+    if (strlen(resolved) >= NATIVE_PATH_SIZE) return file_error_capacity;
+    memcpy(output, resolved, strlen(resolved) + 1);
+#endif
+    return file_error_ok;
+}
+
+/* Exclusive byte/text creation; partial new file can remain after I/O failure.
+   Text excludes terminating NUL. No implicit parent creation or durability flush. */
+static file_error file_create_bytes(cstring path, const void *bytes, usize size) {
+    if (size && !bytes) return file_error_invalid;
+    char absolute[NATIVE_PATH_SIZE];
+    file_error error = file_tree_path(path, absolute, 1);
+    if (error != file_error_ok) return error;
+    file_entry_kind kind;
+    error = file_native_kind(absolute, &kind);
+    if (error == file_error_ok) return file_error_exists;
+    if (error != file_error_not_found) return error;
+    error = file_error_ok;
+    void *stream = file_stream_create(absolute);
+    if (!stream) {
+#if defined(_WIN32)
+        DWORD native = GetLastError();
+        return native == ERROR_FILE_EXISTS || native == ERROR_ALREADY_EXISTS ?
+               file_error_exists : file_error_open_failed;
+#else
+        return errno == EEXIST ? file_error_exists : file_error_open_failed;
+#endif
+    }
+    for (usize offset = 0; offset < size;) {
+        usize count = size - offset > 16384 ? 16384 : size - offset;
+        if (!file_stream_transfer(stream, (void *)((const u8 *)bytes + offset), count, 1)) {
+            error = file_error_write_failed;
+            break;
+        }
+        offset += count;
+    }
+    if (!file_stream_close(stream) && error == file_error_ok) error = file_error_cleanup_failed;
+    return error;
+}
+
+static file_error file_create_text(cstring path, const char *text) {
+    return text ? file_create_bytes(path, text, strlen(text)) : file_error_invalid;
+}
+
+/* right.data == NULL selects expected bytes. Output unchanged on any I/O error.
+   Fixed 16 KiB stack scratch; streams permit other readers, not writers. */
+static file_error file_compare_contents(cstring left, cstring right, const void *expected,
+                                        usize expected_size, int *equal) {
+    if (!equal || (!right.data && expected_size && !expected)) return file_error_invalid;
+    char first[NATIVE_PATH_SIZE], second[NATIVE_PATH_SIZE];
+    file_entry_kind kind;
+    file_error error = file_tree_path(left, first, 0);
+    if (error != file_error_ok) return error;
+    if ((error = file_native_kind(first, &kind)) != file_error_ok) return error;
+    if (kind != file_entry_regular) return file_error_invalid;
+    if (right.data) {
+        if ((error = file_tree_path(right, second, 0)) != file_error_ok) return error;
+        if ((error = file_native_kind(second, &kind)) != file_error_ok) return error;
+        if (kind != file_entry_regular) return file_error_invalid;
+    }
+    void *input = file_stream_open(first, 0), *other = NULL;
+    if (!input) return file_error_open_failed;
+    if (right.data && !(other = file_stream_open(second, 0))) error = file_error_open_failed;
+    u64 size = 0, other_size = expected_size;
+    int match = 1;
+    if (error == file_error_ok && (!file_stream_size(input, &size) ||
+                                  (other && !file_stream_size(other, &other_size))))
+        error = file_error_read_failed;
+    if (size != other_size) match = 0;
+    u8 first_bytes[8192], second_bytes[8192];
+    for (u64 offset = 0; error == file_error_ok && match && offset < size;) {
+        usize count = size - offset > sizeof(first_bytes) ? sizeof(first_bytes) : (usize)(size - offset);
+        if (!file_stream_transfer(input, first_bytes, count, 0) ||
+            (other && !file_stream_transfer(other, second_bytes, count, 0))) {
+            error = file_error_read_failed;
+            break;
+        }
+        match = !memcmp(first_bytes, other ? second_bytes : (const u8 *)expected + (usize)offset, count);
+        offset += count;
+    }
+    int closed = file_stream_close(other);
+    if (!file_stream_close(input)) closed = 0;
+    if (!closed && error == file_error_ok) error = file_error_cleanup_failed;
+    if (error == file_error_ok) *equal = match;
+    return error;
+}
+
+static file_error file_equal_bytes(cstring path, const void *expected, usize size, int *equal) {
+    return file_compare_contents(path, (cstring){0}, expected, size, equal);
+}
+static file_error file_equal_text(cstring path, const char *expected, int *equal) {
+    return expected ? file_equal_bytes(path, expected, strlen(expected), equal) : file_error_invalid;
+}
+static file_error file_equal(cstring left, cstring right, int *equal) {
+    return right.data ? file_compare_contents(left, right, NULL, 0, equal) : file_error_invalid;
+}
+
+static file_error file_tree_join(char output[NATIVE_PATH_SIZE], const char *root, const char *relative) {
+    if (!output || !root || !root[0] || !relative) return file_error_invalid;
+    int size = snprintf(output, NATIVE_PATH_SIZE, "%s%s%s", root,
+                        root[strlen(root) - 1] == '/' || !relative[0] ? "" : "/", relative);
+    return size < 0 || size >= NATIVE_PATH_SIZE ? file_error_capacity : file_error_ok;
+}
+
+/* Breadth-first inventory; no recursion. Each directory handle closes before
+   visiting next directory. Error rewinds scratch and leaves output unchanged. */
+static file_error file_directory_list_tree(file_tree_workspace *workspace, cstring path, file_tree *out) {
+    if (!workspace || !workspace->memory || !out || !workspace->max_entries ||
+        !workspace->max_depth || workspace->max_entries > SIZE_MAX / sizeof(file_tree_entry))
+        return file_error_invalid;
+    char root[NATIVE_PATH_SIZE], parent[NATIVE_PATH_SIZE], child[NATIVE_PATH_SIZE];
+    file_error error = file_tree_path(path, root, 0);
+    file_entry_kind kind;
+    if (error != file_error_ok) return error;
+    if ((error = file_native_kind(root, &kind)) != file_error_ok) return error;
+    if (kind != file_entry_directory) return file_error_invalid;
+    arena_position_marker mark = arena_position_mark(workspace->memory);
+    arena_result allocation = arena_alloc(workspace->memory,
+        workspace->max_entries * sizeof(file_tree_entry), _Alignof(file_tree_entry));
+    if (allocation.error != arena_error_ok) {
+        (void)arena_pop_to_marker(mark);
+        return file_error_from_arena_error(allocation.error);
+    }
+    file_tree tree = { .entries = allocation.ptr };
+    for (usize cursor = 0; cursor <= tree.count && error == file_error_ok; ++cursor) {
+        const char *relative = cursor ? tree.entries[cursor - 1].path : "";
+        usize depth = cursor ? tree.entries[cursor - 1].depth : 0;
+        if (cursor && tree.entries[cursor - 1].kind != file_entry_directory) continue;
+        error = file_tree_join(parent, root, relative);
+        if (error != file_error_ok) break;
+        file_directory directory;
+        if (!file_directory_open(&directory, parent)) { error = file_error_open_failed; break; }
+        int next = 0;
+        while ((next = file_directory_read(&directory)) > 0) {
+            if (!strcmp(directory.name, ".") || !strcmp(directory.name, "..")) continue;
+            if (tree.count == workspace->max_entries || depth == workspace->max_depth) {
+                error = file_error_capacity; break;
+            }
+            int size = snprintf(child, sizeof(child), "%s%s%s", relative,
+                                relative[0] ? "/" : "", directory.name);
+            if (size < 0 || size >= (int)sizeof(child)) { error = file_error_capacity; break; }
+            char absolute[NATIVE_PATH_SIZE];
+            error = file_tree_join(absolute, root, child);
+            if (error != file_error_ok || (error = file_native_kind(absolute, &kind)) != file_error_ok) break;
+            allocation = arena_alloc(workspace->memory, (usize)size + 1, 1);
+            if (allocation.error != arena_error_ok) { error = file_error_from_arena_error(allocation.error); break; }
+            memcpy(allocation.ptr, child, (usize)size + 1);
+            tree.entries[tree.count++] = (file_tree_entry){ allocation.ptr, kind, depth + 1 };
+        }
+        if (next < 0 && error == file_error_ok) error = file_error_read_failed;
+        if (!file_directory_close(&directory) && error == file_error_ok) error = file_error_cleanup_failed;
+    }
+    if (error == file_error_ok) *out = tree;
+    else (void)arena_pop_to_marker(mark);
+    return error;
+}
+
+/* In-place heapsort: bounded stack/work; libc qsort may allocate scratch. */
+static void file_tree_sift(file_tree_entry *entries, usize count, usize root) {
+    while (root < count / 2) {
+        usize child = root * 2 + 1;
+        if (child + 1 < count && strcmp(entries[child].path, entries[child + 1].path) < 0) ++child;
+        if (strcmp(entries[root].path, entries[child].path) >= 0) break;
+        file_tree_entry swap = entries[root]; entries[root] = entries[child]; entries[child] = swap;
+        root = child;
+    }
+}
+static void file_tree_sort(file_tree_entry *entries, usize count) {
+    for (usize root = count / 2; root > 0; --root) file_tree_sift(entries, count, root - 1);
+    for (usize end = count; end > 1; --end) {
+        file_tree_entry swap = entries[0]; entries[0] = entries[end - 1]; entries[end - 1] = swap;
+        file_tree_sift(entries, end - 1, 0);
+    }
+}
+
+static file_error file_directory_equal(file_tree_workspace *workspace, cstring left, cstring right, int *equal) {
+    if (!workspace || !workspace->memory || !equal) return file_error_invalid;
+    arena_position_marker mark = arena_position_mark(workspace->memory);
+    file_tree first = {0}, second = {0};
+    file_error error = file_directory_list_tree(workspace, left, &first);
+    if (error == file_error_ok) error = file_directory_list_tree(workspace, right, &second);
+    int match = first.count == second.count;
+    if (error == file_error_ok && match) {
+        file_tree_sort(first.entries, first.count);
+        file_tree_sort(second.entries, second.count);
+        for (usize i = 0; i < first.count && match; ++i) {
+            if (first.entries[i].kind != second.entries[i].kind || strcmp(first.entries[i].path, second.entries[i].path)) {
+                match = 0; break;
+            }
+            if (first.entries[i].kind == file_entry_directory) continue;
+            char a[NATIVE_PATH_SIZE], b[NATIVE_PATH_SIZE];
+            error = file_tree_join(a, left.data, first.entries[i].path);
+            if (error == file_error_ok) error = file_tree_join(b, right.data, second.entries[i].path);
+            if (error == file_error_ok) error = file_equal((cstring){a}, (cstring){b}, &match);
+            if (error != file_error_ok) break;
+        }
+    }
+    (void)arena_pop_to_marker(mark);
+    if (error == file_error_ok) *equal = match;
+    return error;
+}
+
+/* Filesystem identity, not spelling/case, protects against copying into source
+   and removing cwd/ancestors. Includes Unicode/case aliases on Windows. */
+static file_error file_directory_identity(const char *path, u64 identity[3]) {
+#if defined(_WIN32)
+    wchar_t wide[NATIVE_PATH_SIZE];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, NATIVE_PATH_SIZE))
+        return file_error_invalid;
+    HANDLE handle = CreateFileW(wide, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+    if (handle == INVALID_HANDLE_VALUE) return file_error_open_failed;
+    BY_HANDLE_FILE_INFORMATION info;
+    int read = GetFileInformationByHandle(handle, &info);
+    int closed = CloseHandle(handle);
+    if (!read) return file_error_read_failed;
+    if (!closed) return file_error_cleanup_failed;
+    identity[0] = info.dwVolumeSerialNumber;
+    identity[1] = info.nFileIndexHigh;
+    identity[2] = info.nFileIndexLow;
+#else
+    struct stat info;
+    if (lstat(path, &info)) return file_error_open_failed;
+    identity[0] = (u64)info.st_dev;
+    identity[1] = (u64)info.st_ino;
+    identity[2] = 0;
+#endif
+    return file_error_ok;
+}
+
+static file_error file_directory_contains(const char *root, const char *path, int *contains) {
+    u64 root_identity[3], identity[3];
+    file_error error = file_directory_identity(root, root_identity);
+    if (error != file_error_ok) return error;
+    char parent[NATIVE_PATH_SIZE];
+    snprintf(parent, sizeof(parent), "%s", path);
+    usize root_size = file_path_root_size(parent);
+    *contains = 0;
+    for (;;) {
+        file_entry_kind kind;
+        error = file_native_kind(parent, &kind);
+        if (error == file_error_ok) {
+            if (kind != file_entry_directory) return file_error_invalid;
+            error = file_directory_identity(parent, identity);
+            if (error != file_error_ok) return error;
+            if (!memcmp(root_identity, identity, sizeof(identity))) { *contains = 1; return file_error_ok; }
+        } else if (error != file_error_not_found) return error;
+        if (strlen(parent) <= root_size) break;
+        char *slash = strrchr(parent, '/');
+        usize length = (usize)(slash - parent);
+        parent[length < root_size ? root_size : length] = 0;
+    }
+    return file_error_ok;
+}
+
+/* Preflight inventories reject links/limits before mutation. Copy requires a
+   missing destination outside source; partial destination can remain on error. */
+static file_error file_directory_copy(file_tree_workspace *workspace, cstring source, cstring destination) {
+    if (!workspace || !workspace->memory) return file_error_invalid;
+    char root[NATIVE_PATH_SIZE], output[NATIVE_PATH_SIZE];
+    file_error error = file_tree_path(source, root, 0);
+    if (error == file_error_ok) error = file_tree_path(destination, output, 1);
+    if (error != file_error_ok) return error;
+    file_entry_kind kind;
+    error = file_native_kind(output, &kind);
+    if (error == file_error_ok) return file_error_exists;
+    if (error != file_error_not_found) return error;
+    int overlap = 0;
+    if ((error = file_directory_contains(root, output, &overlap)) != file_error_ok) return error;
+    if (overlap) return file_error_invalid;
+    arena_position_marker mark = arena_position_mark(workspace->memory);
+    file_tree tree = {0};
+    error = file_directory_list_tree(workspace, (cstring){root}, &tree);
+    if (error == file_error_ok && !file_directory_create(output, 1)) error = file_error_open_failed;
+    for (usize i = 0; error == file_error_ok && i < tree.count; ++i) {
+        char from[NATIVE_PATH_SIZE], to[NATIVE_PATH_SIZE];
+        error = file_tree_join(from, root, tree.entries[i].path);
+        if (error == file_error_ok) error = file_tree_join(to, output, tree.entries[i].path);
+        if (error != file_error_ok) break;
+        if (tree.entries[i].kind == file_entry_directory) {
+            if (!file_directory_create(to, 1)) error = file_error_write_failed;
+        } else if (!file_copy(from, to, 1)) error = file_error_write_failed;
+    }
+    (void)arena_pop_to_marker(mark);
+    return error;
+}
+
+static file_error file_native_remove(const char *path, int directory) {
+#if defined(_WIN32)
+    wchar_t wide[NATIVE_PATH_SIZE];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, NATIVE_PATH_SIZE))
+        return file_error_invalid;
+    return (directory ? RemoveDirectoryW(wide) : DeleteFileW(wide)) ? file_error_ok : file_error_cleanup_failed;
+#else
+    return (directory ? rmdir(path) : unlink(path)) == 0 ? file_error_ok : file_error_cleanup_failed;
+#endif
+}
+
+/* Remove one regular file; refuse links/directories and validate ancestors. */
+static file_error file_remove(cstring path) {
+    char absolute[NATIVE_PATH_SIZE];
+    file_entry_kind kind;
+    file_error error = file_tree_path(path, absolute, 0);
+    if (error == file_error_ok) error = file_native_kind(absolute, &kind);
+    if (error != file_error_ok) return error;
+    return kind == file_entry_regular ? file_native_remove(absolute, 0) : file_error_invalid;
+}
+
+/* Removes directory including root. Missing root is not_found, not success.
+   Refuse filesystem root, cwd and cwd ancestors. Never change read-only flags. */
+static file_error file_directory_remove_tree(file_tree_workspace *workspace, cstring path) {
+    if (!workspace || !workspace->memory) return file_error_invalid;
+    char root[NATIVE_PATH_SIZE], current[NATIVE_PATH_SIZE];
+    file_error error = file_tree_path(path, root, 0);
+    if (error != file_error_ok) return error;
+    if (strlen(root) <= file_path_root_size(root)) return file_error_invalid;
+    if ((error = file_tree_path((cstring){"."}, current, 0)) != file_error_ok) return error;
+    int contains = 0;
+    if ((error = file_directory_contains(root, current, &contains)) != file_error_ok) return error;
+    if (contains) return file_error_invalid;
+    arena_position_marker mark = arena_position_mark(workspace->memory);
+    file_tree tree = {0};
+    error = file_directory_list_tree(workspace, (cstring){root}, &tree);
+    for (usize i = tree.count; error == file_error_ok && i > 0; --i) {
+        char child[NATIVE_PATH_SIZE];
+        error = file_tree_join(child, root, tree.entries[i - 1].path);
+        if (error == file_error_ok) error = file_native_remove(child, tree.entries[i - 1].kind == file_entry_directory);
+    }
+    if (error == file_error_ok) error = file_native_remove(root, 1);
+    (void)arena_pop_to_marker(mark);
+    return error;
 }
 
 typedef struct process_workspace {
