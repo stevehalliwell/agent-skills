@@ -9,7 +9,7 @@ sdk=${SDKROOT:-$(xcrun --show-sdk-path)}
 # First arm64 macOS release; LuaJIT requires explicit deployment target.
 export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-11.0}
 if [[ ! -d "$sdk/usr/include" || ! -f build/deps/glfw/src/cocoa_window.m ]]; then
-  echo 'Missing Apple SDK or pinned GLFW sources; see references/build.md and run node tools/prepare-gui.mjs explicitly.' >&2
+  echo 'Missing Apple SDK or pinned GLFW sources; see references/build.md and run bash tools/native-tool.sh prepare explicitly.' >&2
   exit 1
 fi
 # Mark SDK frameworks as system headers; Clang 22 otherwise promotes Apple's
@@ -31,7 +31,7 @@ cp build/deps/luajit/src/luajit build/bin/luajit
   cd build/deps/cimgui/generator
   "$root/build/bin/luajit" generator.lua 'zig cc' 'internal' > "$root/build/generator.log" 2>&1
 )
-node tools/fix-generated.mjs
+ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-zig}" bash tools/native-tool.sh fix-generated
 cimgui=build/deps/cimgui
 imgui="$cimgui/imgui"
 richmd=build/deps/richmd
@@ -69,5 +69,5 @@ done
 "$zig" c++ -shared --sysroot "$sdk" -F/System/Library/Frameworks -L/usr/lib \
   "${objects[@]}" build/md4c.o -o build/bin/libcimgui_richmd.dylib \
   -Wl,-install_name,@rpath/libcimgui_richmd.dylib -framework Cocoa -framework OpenGL -framework IOKit
-node tools/gui-stack-manifest.mjs
+ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-zig}" bash tools/native-tool.sh stack-manifest
 printf '%s\n' 'Built libcimgui_richmd.dylib (GLFW/OpenGL3).'

@@ -63,19 +63,24 @@ From repository checkout, native root (GUI checks need builds described in build
 # C core/source, process contracts and CLI/API/workflow/install integration:
 bash test.sh cjit
 bash test.sh zig
-# Retained desktop/IPC orchestration:
-node tests/gui/check.mjs
-# macOS transport-specific checks:
-node tests/gui/control-macos-check.mjs
-node tests/gui/bridge-check.mjs
-node tools/benchmark.mjs 5
+# Native tooling regression, selected helper compiler (default CJIT):
+bash tools/check-native-tools.sh
+ATTENDANT_TOOL_COMPILER=zig bash tools/check-native-tools.sh
+# Shared desktop acceptance and warm synthetic benchmark:
+bash tools/check-gui.sh
+bash tools/benchmark.sh 5
+# macOS transport-specific checks (new C replacements unvalidated here):
+bash tools/check-control-macos.sh
+bash tools/check-bridge.sh
 ```
 
 Native `test.sh` needs installed selected compiler/Bash, not Node, GUI, downloads or prebuilt CLI. It runs 47 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios, then five subprocess integration cases with 23 contract groups per compiler. Builds matching CLI/API probe automatically. Integration requires sibling `skills/init-project/templates/` from repository checkout; normal product builds do not.
 
-Reusable `base.h` owns ordinary file/environment operations. `test.h` owns hooks, assertions, optional fixture-directory policy and bounded synchronous/caller-polled live test commands. Existing application `process_run` is unchanged. Neither header depends on Attendant. Actual CLI/API interoperability, stdin/output/deadlines, body preservation, workflows and cold isolated installation checks moved into C; four core `.mjs` harnesses were removed, not duplicated. GUI model already uses direct C assertions. Shared GUI acceptance runs all ten groups per compiler in generated C suite, including two caller-polled live previews with opposite-compiler inspection; JS keeps provenance/build/result coordination only. Total remains 20 GUI/model groups across both compilers. macOS control/bridge orchestration stays external. See [test interfaces/limits](tests/README.md) and [migration/progress](../../../TODO.md#native-test-migration).
+Reusable `base.h` owns ordinary file/environment operations. `test.h` owns hooks, assertions, optional fixture-directory policy and bounded synchronous/caller-polled live test commands. Existing application `process_run` is unchanged. Neither header depends on Attendant. Actual CLI/API interoperability, stdin/output/deadlines, body preservation, workflows and cold isolated installation checks moved into C; four core `.mjs` harnesses were removed, not duplicated. GUI model already uses direct C assertions. Shared GUI acceptance runs all ten groups per compiler in generated C suite, including two caller-polled live previews with opposite-compiler inspection. C coordinator owns provenance/build/result checks; total remains 20 GUI/model groups across both compilers. All nine remaining JS tools/tests are replaced by C/Bash, including dependency preparation, strict patches, manifests, benchmark and macOS control/bridge coordination. No Attendant build/check command needs Node. macOS replacements need user compilation/runtime validation. See [test interfaces/limits](tests/README.md) and [migration/progress](../../../TODO.md#native-test-migration).
 
 Checks use owned fixtures, never live projects. Core evidence stays under `build/native-tests/run-*/`: timezone/framework/integration TSV, generated runners, diagnostics and build logs. Successful fixture folders are removed; failures retain/report paths. Isolated installation uses owned OS temp directory, also removed on success and retained on failure. Latest GUI report remains `build/gui-check-results.json`; macOS adds `build/control-check-results.json` and `build/bridge-check-results.json`. GUI manifests bind actual inputs/binaries to checks. macOS model checks include maximum 4 MiB selection plus 4 MiB context, delayed-reader backpressure and frozen-reply independence from later selection changes. Assertions remain active under `NDEBUG`.
+
+Native helper entry points compile fresh under owned `build/native-tools/run-*/`; select installed helper compiler with `ATTENDANT_TOOL_COMPILER=cjit|zig` (default CJIT). `CJIT`/`ZIG` still select compiler executables. Build helpers use unchanged ordinary `base.h` process API plus Bash capture; test/benchmark coordinators use `test.h`. See [tool contracts and limits](tests/README.md#native-tooling).
 
 Benchmark measures warm synthetic fixture launch-to-exit, excluding build/copy/warmup/result checks, rotating serial compiler order. Reports samples and min/median/max. It is not real-project or GUI footprint qualification.
 

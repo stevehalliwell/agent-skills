@@ -45,5 +45,5 @@ fi
 if ! cmp -s "$stack/build/bin/cimgui_richmd.dll" "$output/cimgui_richmd.dll"; then
   cp "$stack/build/bin/cimgui_richmd.dll" "$output/"
 fi
-node tools/gui-build-manifest.mjs "$compiler" ${2:+"$2"}
+ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-$compiler}" bash tools/native-tool.sh gui-manifest "$compiler" ${2:+"$2"} >&2
 printf '%s\n' "$PWD/$output/attendant-gui-$compiler$suffix.exe"

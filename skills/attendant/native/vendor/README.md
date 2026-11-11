@@ -31,7 +31,7 @@ Keep upstream pins, licenses and local patch rules here. Build outputs and acqui
 
 ## GUI stack
 
-`tools/prepare-gui.mjs` acquires exact revisions only when explicitly run. Checkouts, licenses, assets and generated wrappers stay under `build/deps/`:
+`bash tools/native-tool.sh prepare` acquires exact revisions only when explicitly run; `prepare --verify` checks existing pins/patches offline. Checkouts, licenses, assets and generated wrappers stay under `build/deps/`:
 
 - cimgui: `2a6a93fccd10f275ee9206167dc9698f6f00fac1`, <https://github.com/cimgui/cimgui>, MIT.
 - Dear ImGui: `c1aaac65e896a45f81f47a4d68f9959e0f86c859`, <https://github.com/ocornut/imgui>, MIT.
@@ -44,7 +44,7 @@ macOS uses GLFW/OpenGL3 following upstream RichMd examples. Windows uses Win32/D
 
 ### Maintained bridge and patches
 
-`gui/richmd_c.cpp`, `gui/richmd_c.h` and `gui/preview-selection.cpp.inc` are maintained source, not generated output. Generation/patch scripts live under `tools/`.
+`gui/richmd_c.cpp`, `gui/richmd_c.h` and `gui/preview-selection.cpp.inc` are maintained source, not generated output. Native generation/patch helpers live under `tools/native/`; strict ordered ImGui/RichMd patch data lives in `tools/native/patches/`. Preview-method include remains authoritative, not copied into patch data.
 
 1. Guard ImGui `IM_NODEBUGSTEP` for generator compatibility without layout changes.
 2. Remove known duplicate generated C typedefs; name three C-view anonymous unions for C99. GUI startup checks C/C++ sizes and union offsets.

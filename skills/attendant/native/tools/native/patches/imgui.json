@@ -1,0 +1,11 @@
+[
+  {
+    "path": "imgui.h",
+    "operations": [
+      {
+        "before": "#if (defined(__clang__) && (__clang_major__ >= 7)) || (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))\n#define IM_NODEBUGSTEP      [[gnu::artificial]]\n#elif defined(_MSC_VER) && (_MSC_VER >= 1915)\n#define IM_NODEBUGSTEP      __declspec(non_user_code)\n#else\n#define IM_NODEBUGSTEP\n#endif",
+        "after": "#ifndef IM_NODEBUGSTEP\n#if (defined(__clang__) && (__clang_major__ >= 7)) || (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))\n#define IM_NODEBUGSTEP      [[gnu::artificial]]\n#elif defined(_MSC_VER) && (_MSC_VER >= 1915)\n#define IM_NODEBUGSTEP      __declspec(non_user_code)\n#else\n#define IM_NODEBUGSTEP\n#endif\n#endif"
+      }
+    ]
+  }
+]
