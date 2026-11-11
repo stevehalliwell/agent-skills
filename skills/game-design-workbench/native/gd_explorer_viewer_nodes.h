@@ -154,7 +154,7 @@ static int viewer_select_node(GD_ExplorerContext *c, int node, GD_ViewerWriter *
     }
     p->camera.target=center; p->camera.offset=(Vector2){c->viewport.x+c->viewport.width/2,c->viewport.y+c->viewport.height/2};
     p->camera.zoom=fmaxf(0.0001f,fminf(1.2f,fminf(c->viewport.width/(width+80),c->viewport.height/(height+80))));
-    p->fit=0; return 1;
+    p->fit=0;p->find_hold_node=-1;return 1;
 }
 static void viewer_source(GD_ExplorerContext *c, GD_ViewerWriter *w) {
     GD_Model *model=gd_explorer_model(c->project,c->pane->view); int record=c->pane->prepared?selected_record(c):-1;

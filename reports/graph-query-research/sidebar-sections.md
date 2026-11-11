@@ -64,7 +64,7 @@ Common sidebar drawing reorganized in owner loop. MDA traversal/root now under A
 
 User authorized separate Mario viewer. Opened `native/build/sidebar-sections-work/gd-view.exe`, PID37632, session `37632-49e9a9433090d86f`, MDA bands, enemy-contact selected and readable Focus applied. Existing viewers untouched; no OS input posted. Artifacts: `review-existing.json`, `review-pid.txt`, `review-session.txt`, `review-configure.jsonl`, stdout/stderr logs.
 
-User accepted reviewed folds/standardization presentation. Acceptance does not establish unperformed restart, every-view or pointer checks. Default90-second integration timing gate remains open; macOS/Linux execution and final compiler matrix remain unperformed. Changes uncommitted. Next recommended: complete search/filter/scope wording, preserving behavior, then refine pending/applied/display consistency.
+User accepted reviewed folds/standardization presentation. Acceptance does not establish unperformed restart, every-view or pointer checks. Default90-second integration timing gate remains open; macOS/Linux execution and final compiler matrix remain unperformed. Checkpoint `3294ee8` committed, not pushed. Next recommended: complete search/filter/scope wording, preserving behavior, then refine pending/applied/display consistency.
 
 ## Comments
 

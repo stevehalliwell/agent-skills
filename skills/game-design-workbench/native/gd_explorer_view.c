@@ -85,7 +85,7 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     gd_explorer_form_defaults(GD_FORM_QUERY,&p->query_options);
     p->grid.noun=p->grid.verb=-1; p->resource_witness=-1; gd_explorer_form_defaults(GD_FORM_RESOURCE,&p->resource_pending);
     p->mda=(GD_ExplorerMdaDisplay){.record=-1,.link=-1,.held=-1,.roles={true,true,true,true},.paused=true};
-    p->camera.zoom=1; p->focus_auto_fit=true; p->distance_focus_revision=UINT64_MAX; p->peer=p->foundation_peer=p->witness=-1;
+    p->find_hold_node=-1;p->camera.zoom=1; p->focus_auto_fit=true; p->distance_focus_revision=UINT64_MAX; p->peer=p->foundation_peer=p->witness=-1;
     p->navigate=p->focus_root=p->focus_expand=p->inspected_record=-1;
     p->reach=(GD_ReachControls){0,-1,0,-1,-1}; p->overview=(GD_OverviewControls){0,-1,-1};
     p->shared=true;p->visual_filter=true; p->paused=view==GD_EXPLORER_MDA || view==GD_EXPLORER_RESOURCES || view==GD_EXPLORER_EFFECTS;
@@ -111,7 +111,7 @@ static int pane_prepare(GD_ExplorerContext *c) {
     unsigned revision=gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA ? c->project->revision:1;
     gd_explorer_structure_prepare(c);
     if (p->prepared && p->revision==revision) return 1;
-    if (query_view(p->view)) { if (!gd_explorer_query_prepare(c)) return 0; p->prepared=1; p->revision=revision; return 1; }
+    if (query_view(p->view)) { if (!gd_explorer_query_prepare(c)) return 0; p->find_hold_node=-1;p->prepared=1; p->revision=revision; return 1; }
     if (!p->layout) {
         p->layout=c->project->allocator.allocate(c->project->allocator.context,sizeof(*p->layout));
         if (p->layout) memset(p->layout,0,sizeof(*p->layout));
@@ -144,7 +144,7 @@ static int pane_prepare(GD_ExplorerContext *c) {
         if (!p->distance_focus) return 0;
     }
     if (p->distance_focus) { gd_layout_focus_capture(p->distance_focus,p->layout); p->distance_focus_revision=UINT64_MAX; }
-    p->prepared=1; p->revision=revision; return 1;
+    p->find_hold_node=-1;p->prepared=1; p->revision=revision; return 1;
 }
 static int selected_record(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane;
@@ -206,7 +206,7 @@ static int distance_focus_toggle(GD_ExplorerContext *c, int enabled) {
         if (p->fit==3) p->fit=0;
         p->distance_focus->active=0;
     }
-    p->distance_focus_enabled=enabled!=0; p->selection.held=p->mda.held=-1;
+    p->find_hold_node=-1;p->distance_focus_enabled=enabled!=0; p->selection.held=p->mda.held=-1;
     return 1;
 }
 static int distance_focus_node(const GD_ExplorerPane *p, int selected) {
@@ -215,6 +215,7 @@ static int distance_focus_node(const GD_ExplorerPane *p, int selected) {
 static void distance_focus_update(GD_ExplorerContext *c, int selected) {
     GD_ExplorerPane *p=c->pane; int result;
     if (grid_view(p) || query_view(p->view) || !p->distance_focus_enabled || !p->distance_focus) return;
+    if(p->find_hold_node>=0){if(p->find_hold_node==selected && p->find_hold_layout==p->layout)return;p->find_hold_node=-1;}
     /* A source-only or edge inspection is not an implicit canonical node. */
     selected=distance_focus_node(p,selected);
     if (p->distance_focus->anchor_node==selected && p->distance_focus_revision==c->scope_revision) {
@@ -761,6 +762,7 @@ static void copy_error(GD_Model *diagnostic, const GD_Error *error) {
     gd_error(diagnostic,owned[0],owned[1],owned[2],error->line);
 }
 #include "gd_explorer_viewer.h"
+#include "gd_explorer_find.h"
 int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int count,
                      int initial_view, int matrix_layout, int frames, const char *screenshot, const char *output_path) {
     GD_Allocator allocator=diagnostic->allocator;
@@ -769,7 +771,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     GD_ExplorerContext c={0};
     ExplorerViewer viewer={0}; char ipc_error[256]="";
     int active=0,v,frame=0,result=0,stale=0,close_seen=0,timed_seen=0,close_next=0;
-    GD_Sidebar sidebar;
+    GD_Sidebar sidebar;GD_ExplorerFind finds[GD_EXPLORER_VIEWS]={0};
     double next_check=0; char failure[GD_MAX_PATH+512]="",report_path[GD_MAX_PATH]="";
     const GD_Error *error=gd_explorer_error(project);
     if (!project || !project->available || error || (initial_view>=0 && (initial_view>=GD_EXPLORER_VIEWS || !(project->available&(1u<<initial_view))))) {
@@ -805,7 +807,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     for (;;) {
         int closing=WindowShouldClose(),width=GetScreenWidth(),height=GetScreenHeight(),split=width*60/100;
         int requested=-1,find_view=-1,reset=0,refresh=0,selected,relationship_root=-1,undo=0;
-        char find_reference[260]="";
+        char find_reference[260]="";int find_shortcut;
         GD_ExplorerPane *p=&panes[active]; GD_Model *model=gd_explorer_model(project,p->view);
         c.pane=p;c.render_pose=render; c.viewport=(Rectangle){14,112,(float)split-28,(float)height-157};
         if (!pane_prepare(&c)) { gd_error(diagnostic,"explorer.projection","Cannot prepare bounded projection layout",NULL,0); result=2; break; }
@@ -834,7 +836,13 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         igBegin("Explorer controls and source",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
         if (*ipc_error) igTextWrapped("%s",ipc_error);
         if (gd_viewer_server_error(viewer.server)) igTextWrapped("%s",gd_viewer_server_error(viewer.server));
+        find_shortcut=find_key(IsKeyPressed(KEY_F),IsKeyDown(KEY_LEFT_CONTROL)||IsKeyDown(KEY_RIGHT_CONTROL),IsKeyDown(KEY_LEFT_SHIFT)||IsKeyDown(KEY_RIGHT_SHIFT)||IsKeyDown(KEY_LEFT_ALT)||IsKeyDown(KEY_RIGHT_ALT)||IsKeyDown(KEY_LEFT_SUPER)||IsKeyDown(KEY_RIGHT_SUPER),igGetIO_Nil()->WantCaptureKeyboard);
+        if(find_shortcut==GD_FIND_OPEN){
+            if(gd_explorer_rank_pending(project,panes) || IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel))snprintf(failure,sizeof(failure),"Finish active rank edit, drag or dialog before Find; no input discarded.");
+            else{finds[active].open=true;finds[active].focus=true;}
+        }
         requested=choose_view(project,"Data / projection",active,1);
+        if(finds[active].open){analyze(&c);find_controls(&c,panes,&finds[active]);}
         if(stale)igTextWrapped("STALE: source changed or could not be checked. Last good snapshot retained.");
         if(*failure)igTextWrapped("%s",failure);
         if(*sidebar.message)igTextWrapped("%s",sidebar.message);
@@ -960,12 +968,12 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
                 igEndPopup();
             }
         }
-        if (!igGetIO_Nil()->WantCaptureKeyboard) {
-            if (IsKeyPressed(KEY_F)) { if (gd_explorer_similarity_active(&c)) p->structure_state->similarity_fit=true; else p->fit=1; }
+        if (!igGetIO_Nil()->WantCaptureKeyboard && !igIsAnyItemActive()) {
+            if (find_shortcut==GD_FIND_FIT) { if (gd_explorer_similarity_active(&c)) p->structure_state->similarity_fit=true; else p->fit=1; }
             if (IsKeyPressed(KEY_F5)) refresh=1;
             if (!gd_explorer_similarity_active(&c) && IsKeyPressed(KEY_SPACE) && layout_settles(p)) p->paused=!p->paused;
         }
-        if (!igGetIO_Nil()->WantTextInput && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_Z)) undo=1;
+        if (!igGetIO_Nil()->WantTextInput && !igIsAnyItemActive() && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_Z)) undo=1;
         /* Both Undo inputs run after inspector readers. Repair revision before
            another selection reader can reinterpret compacted edge offsets. */
         if (undo) undo_draft(&c,panes);
@@ -993,6 +1001,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         c.display_layout=NULL;if(p->fit)render->valid=0;
         if (!gd_explorer_similarity_active(&c) && p->fit) { fit_view(&c,p->fit==GD_EXPLORER_FIT_SELECTION ? GD_EXPLORER_FIT_SELECTION:p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
         if(render_active(&c)){if(gd_render_pose_matches(render,p->layout,render_identity(&c)))c.display_layout=&render->layout;else render_update(&c,render,0,1);}else render->valid=0;
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !igGetIO_Nil()->WantCaptureMouse && CheckCollisionPointRec(GetMousePosition(),c.viewport))p->find_hold_node=-1;
         if (gd_explorer_similarity_active(&c)) gd_explorer_similarity_input(&c);
         else if (grid_view(p)) grid_input(&c);
         else if (p->view==GD_EXPLORER_NOUNS) noun_graph_input(&c);
@@ -1083,5 +1092,6 @@ cleanup:
 }
 #ifdef GD_EXPLORER_TEST
 #include "test_explorer_viewer.h"
+#include "test_explorer_find.h"
 #include "test_explorer_view.h"
 #endif

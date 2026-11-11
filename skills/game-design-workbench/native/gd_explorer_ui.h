@@ -97,6 +97,8 @@ typedef struct {
     GD_LayoutFocus *distance_focus;
     bool distance_focus_enabled,focus_auto_fit;
     uint64_t distance_focus_revision;
+    const GD_Layout *find_hold_layout;
+    int find_hold_node; /* Camera-only Find must not implicitly refocus layout. */
     Vector2 right_origin;
     int right_started;
     GD_ExplorerSelection selection;
@@ -187,6 +189,7 @@ void gd_explorer_query_destroy(GD_ExplorerQueryState *state);
 int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProject *old, const GD_ExplorerPane *prior);
 void gd_explorer_query_controls(GD_ExplorerContext *context);
 void gd_explorer_query_display_controls(GD_ExplorerContext *context);
+const char *gd_explorer_query_node_label(const GD_ExplorerContext *context,int node);
 void gd_explorer_query_draw(GD_ExplorerContext *context);
 void gd_explorer_query_input(GD_ExplorerContext *context);
 void gd_explorer_query_details(GD_ExplorerContext *context);

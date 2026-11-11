@@ -74,6 +74,15 @@ async function sourceHashes(root) {
   }
   await visit(root);return hashes;
 }
+test('current-view Find adapter: both examples unchanged',{skip:!adapter},async t=>{
+  for(const name of ['crate-puzzle','little-plumber-guy-nes'])await t.test(name,async()=>{
+    const root=join(examples,name,'game-design'),before=await sourceHashes(root);
+    const result=spawnSync(adapter,['--find-helpers',root],{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:1024*1024});
+    assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
+    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.find_checks>=100);
+    assert.deepEqual(await sourceHashes(root),before);
+  });
+});
 test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:!nativeTransport||!adapter},async t=>{
   for(const name of ['crate-puzzle','little-plumber-guy-nes'])await t.test(name,async()=>{
     const root=join(examples,name,'game-design'),before=await sourceHashes(root);
