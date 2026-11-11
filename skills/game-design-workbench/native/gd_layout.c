@@ -17,6 +17,7 @@ static int compare_order(const void *a, const void *b) {
 }
 #include "gd_layout_directed.h"
 #include "gd_layout_collision.h"
+#include "gd_layout_workspace.h"
 #include "gd_layout_seed.h"
 int gd_matrix_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort) {
     int record_node[GD_MAX_RECORDS],i;
@@ -67,6 +68,7 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
         !isfinite(layout->spring_gap) || layout->spring_gap<0 || layout->spring_gap>1048576 ||
         (mode != GD_LAYOUT_FORCE && mode != GD_LAYOUT_COLUMNS && mode != GD_LAYOUT_DIRECTED) ||
         (sort != GD_SORT_NAME && sort != GD_SORT_PARTNERS)) return 0;
+    memset(&layout->workspace,0,sizeof(layout->workspace));
     memset(layout->groups, 0, sizeof(layout->groups));
     for (i = 0; i < layout->node_count; ++i) {
         GD_LayoutNode *node = &layout->nodes[i];
@@ -201,7 +203,7 @@ void gd_layout_step_weighted(GD_Layout *layout, int held_node,const int *counts)
         if (speed > 5) { node->vx *= 5/speed; node->vy *= 5/speed; }
         node->x += node->vx; node->y += node->vy;
     }
-    if (layout->mode==GD_LAYOUT_FORCE) collision_separate(layout,held_node);
+    if (layout->mode==GD_LAYOUT_FORCE) {collision_separate(layout,held_node);workspace_contain(layout,held_node);}
     ++layout->tick;
 }
 void gd_layout_step(GD_Layout *layout,int held_node) { gd_layout_step_weighted(layout,held_node,NULL); }

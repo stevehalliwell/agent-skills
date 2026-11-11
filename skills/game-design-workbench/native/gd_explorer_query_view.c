@@ -17,7 +17,13 @@ static int query_place(GD_ExplorerContext *context,GD_QueryScene *scene,GD_Layou
     if(isfinite(context->viewport.width) && isfinite(context->viewport.height) && context->viewport.width>0 && context->viewport.height>0) {
         float measured=context->viewport.width/context->viewport.height;if(isfinite(measured) && measured>0) aspect=measured;
     }
-    return gd_query_scene_place(scene,mode,neighborhood,aspect);
+    {
+        GD_LayoutWorkspace prior=scene->layout.workspace;int placed;
+        scene->layout.workspace.enabled=context->pane->workspace_bounds;
+        placed=gd_query_scene_place(scene,mode,neighborhood,aspect);
+        if(!placed)scene->layout.workspace=prior;
+        return placed;
+    }
 }
 int gd_explorer_query_arrange(GD_ExplorerContext *context,GD_LayoutMode mode,int neighborhood) {
     GD_ExplorerPane *pane=context->pane;
@@ -389,25 +395,25 @@ static Color node_color(const GD_QuerySceneNode *node) {
     if (node->applicability==GD_RULE_TRUTH_FALSE) color=(Color){125,132,145,255}; if (node->ghost) color.a=85; return color;
 }
 void gd_explorer_query_draw(GD_ExplorerContext *context) {
-    GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; GD_QueryScene *scene=state ? state->scene:NULL; int i,pass;unsigned char highlighted[GD_MAX_RECORDS]={0};
+    GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; GD_QueryScene *scene=state ? state->scene:NULL;GD_Layout *layout=gd_explorer_display_layout(context); int i,pass;unsigned char highlighted[GD_MAX_RECORDS]={0};
     if(scene && scene->overview && pane->selection.node>=0) {highlighted[pane->selection.node]=1;for(i=0;i<scene->layout.edge_count;++i) {const GD_LayoutEdge *e=&scene->layout.edges[i];if(e->a==pane->selection.node || e->b==pane->selection.node) highlighted[e->a]=highlighted[e->b]=1;}}
     if (!scene) { DrawText(pane->query_options.coverage ? "Choose typed axis and finite values; apply coverage. Case/object optional.":"Choose source case, local participant and typed axis; apply query.",(int)context->viewport.x+24,(int)context->viewport.y+24,18,(Color){170,188,209,255}); return; }
     if(scene->overview && !scene->layout.node_count) {DrawText("No retained actors. Explicit noun is_actor: true is required; review scope and limits.",(int)context->viewport.x+24,(int)context->viewport.y+24,18,(Color){170,188,209,255});return;}
     BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); BeginMode2D(pane->camera);
-    for (i=0;i<pane->layout->edge_count;++i) {
-        const GD_LayoutEdge *edge=&pane->layout->edges[i]; const GD_QuerySceneEdge *metadata=&scene->edges[i]; GD_LayoutRoute route; int j,marked=state->selected && state->selected->highlighted[metadata->source];
+    for (i=0;i<layout->edge_count;++i) {
+        const GD_LayoutEdge *edge=&layout->edges[i]; const GD_QuerySceneEdge *metadata=&scene->edges[i]; GD_LayoutRoute route; int j,marked=state->selected && state->selected->highlighted[metadata->source];
         float thickness=1.5f;
         if(scene->overview) {marked=pane->selection.cell==i || pane->selection.node==edge->a || pane->selection.node==edge->b;thickness=1.5f+fminf(5,log2f((float)gd_query_scene_overview_count(scene,i)));}
         Color color=marked ? (Color){65,227,195,255}:metadata->kind==GD_QUERY_EDGE_INVOCATION || metadata->kind==GD_QUERY_EDGE_FRONTIER ? (Color){180,160,222,160}:(Color){120,151,175,110};
         if(scene->overview && pane->selection.node>=0 && !marked) color.a=35;
-        gd_layout_route(pane->layout,i,&route);
+        gd_layout_route(layout,i,&route);
         for (j=1;j<route.count;++j) {
             Vector2 a={route.points[j-1].x,route.points[j-1].y},b={route.points[j].x,route.points[j].y};
             if (metadata->kind==GD_QUERY_EDGE_INVOCATION || metadata->kind==GD_QUERY_EDGE_FRONTIER) { int segment; for (segment=0;segment<12;segment+=2) DrawLineEx((Vector2){a.x+(b.x-a.x)*segment/12,a.y+(b.y-a.y)*segment/12},(Vector2){a.x+(b.x-a.x)*(segment+1)/12,a.y+(b.y-a.y)*(segment+1)/12},(marked ? 3:1.5f)/pane->camera.zoom,color); }
             else DrawLineEx(a,b,(marked ? thickness+1.5f:thickness)/pane->camera.zoom,color);
         }
         if(scene->overview && metadata->kind!=GD_QUERY_EDGE_AXIS && pane->camera.zoom*14>=8 && (marked || gd_query_scene_overview_mode(scene)==GD_ACTOR_INTERACTIONS)) {
-            const GD_LayoutNode *a=&pane->layout->nodes[edge->a],*b=&pane->layout->nodes[edge->b];
+            const GD_LayoutNode *a=&layout->nodes[edge->a],*b=&layout->nodes[edge->b];
             DrawText(TextFormat("%d records",gd_query_scene_overview_count(scene,i)),(int)((a->x+b->x)/2),(int)((a->y+b->y)/2),14,(Color){210,224,230,255});
         }
         if (route.count>1 && (metadata->kind==GD_QUERY_EDGE_EFFECT || metadata->kind==GD_QUERY_EDGE_INVOCATION)) {
@@ -415,7 +421,7 @@ void gd_explorer_query_draw(GD_ExplorerContext *context) {
             if (length>2*size) { Vector2 tip={a.x+dx*0.7f,a.y+dy*0.7f}; dx/=length; dy/=length; DrawTriangle(tip,(Vector2){tip.x-dx*size-dy*size/2,tip.y-dy*size+dx*size/2},(Vector2){tip.x-dx*size+dy*size/2,tip.y-dy*size-dx*size/2},color); }
         }
         if (metadata->kind==GD_QUERY_EDGE_EFFECT && pane->camera.zoom*14>=8) {
-            const char *target=NULL; const GD_LayoutNode *a=&pane->layout->nodes[edge->a],*b=&pane->layout->nodes[edge->b];
+            const char *target=NULL; const GD_LayoutNode *a=&layout->nodes[edge->a],*b=&layout->nodes[edge->b];
             if (state->query->effects) { int actor=state->query->effects->links[metadata->source].participant; if (actor>=0) target=context->project->rules->participants[actor].name; }
             else { int actor=state->query->variants->writes[metadata->source].actor; if (actor>=0) target=context->project->rules->participants[actor].name; }
             if (target) {
@@ -426,8 +432,8 @@ void gd_explorer_query_draw(GD_ExplorerContext *context) {
             }
         }
     }
-    for (pass=0;pass<2;++pass) for (i=0;i<pane->layout->node_count;++i) {
-        const GD_LayoutNode *node=&pane->layout->nodes[i]; const GD_QuerySceneNode *metadata=&scene->nodes[i]; Color color=node_color(metadata); Rectangle card={node->x-node->width/2,node->y-node->height/2,node->width,node->height};
+    for (pass=0;pass<2;++pass) for (i=0;i<layout->node_count;++i) {
+        const GD_LayoutNode *node=&layout->nodes[i]; const GD_QuerySceneNode *metadata=&scene->nodes[i]; Color color=node_color(metadata); Rectangle card={node->x-node->width/2,node->y-node->height/2,node->width,node->height};
         if ((pass==0)!=!!metadata->ghost) continue;
         if(scene->overview) {const GD_Record *record=&scene->query->model->records[metadata->source];color=record->role==GD_AXIS ? (Color){230,180,100,255}:!record->is_actor_line ? (Color){190,140,220,255}:record->is_actor ? (Color){125,171,215,255}:(Color){90,190,170,255};if(pane->selection.node>=0 && !highlighted[i]) color.a=90;}
         if (scene->query->variants && state->applied.compare>=0) { color=metadata->comparison==3 ? (Color){90,220,160,255}:metadata->comparison==1 ? (Color){105,170,245,255}:metadata->comparison==2 ? (Color){235,135,200,255}:(Color){104,112,128,100}; if (metadata->ghost && metadata->variant!=state->applied.compare) color.a=85; }
@@ -445,14 +451,15 @@ void gd_explorer_query_input(GD_ExplorerContext *context) {
     if (GetMouseWheelMove()) { Vector2 after; pane->camera.zoom=fmaxf(0.002f,fminf(4,pane->camera.zoom*powf(1.15f,GetMouseWheelMove()))); after=GetScreenToWorld2D(mouse,pane->camera); pane->camera.target.x+=world.x-after.x; pane->camera.target.y+=world.y-after.y; }
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) { Vector2 delta=GetMouseDelta(); pane->camera.target.x-=delta.x/pane->camera.zoom; pane->camera.target.y-=delta.y/pane->camera.zoom; }
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        int hit=gd_query_scene_hit(pane->query_state->scene,world.x,world.y);
+        const GD_Layout *shown=gd_explorer_display_layout(context);int hit=gd_query_scene_hit_layout(pane->query_state->scene,shown,world.x,world.y);
         if (hit>=0) {
-            pane->selection=(GD_ExplorerSelection){-1,hit,0,-1,hit}; gd_layout_pickup_node(pane->layout,hit,world.x,world.y);
+            pane->selection=(GD_ExplorerSelection){-1,hit,0,-1,hit};
+            gd_layout_pickup_node(pane->layout,hit,world.x,world.y);
             if (pane->query_state && pane->query_state->query && pane->query_state->query->effects) {
                 GD_ExplorerQueryState *state=pane->query_state; int source=state->scene->nodes[hit].source;
                 if (state->query->effects->nodes[source].kind!=GD_EFFECT_ACTIVATION && !gd_explorer_query_select_result(context,source)) snprintf(pane->query_message,sizeof(pane->query_message),"Cannot allocate contributor selection/drawing; previous result retained.");
             }
-        } else for (i=0;i<pane->layout->edge_count;++i) if (gd_layout_route_distance(pane->layout,i,world.x,world.y)<=7/pane->camera.zoom) { pane->selection=(GD_ExplorerSelection){i,-1,0,-1,-1}; break; }
+        } else for (i=0;i<pane->layout->edge_count;++i) if (gd_layout_route_distance(shown,i,world.x,world.y)<=7/pane->camera.zoom) { pane->selection=(GD_ExplorerSelection){i,-1,0,-1,-1}; break; }
     }
     if (pane->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_query_scene_drag(pane->query_state->scene,pane->selection.held,world.x,world.y);
 }

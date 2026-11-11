@@ -54,6 +54,8 @@ int gd_query_scene_compare(GD_QueryScene *scene, int first, int second);
    Free uses shared solver with compound stacked-variant footprints. Candidate
    allocation/work failure leaves prior geometry intact; no per-frame allocation. */
 int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhood,float aspect);
+/* Optional shared workspace over spatial units, including compound stacks. */
+int gd_query_scene_workspace(GD_QueryScene *scene,int enabled,float aspect);
 void gd_query_scene_step(GD_QueryScene *scene,int held_node);
 void gd_query_scene_drag(GD_QueryScene *scene,int node,float x,float y);
 void gd_query_scene_destroy(GD_QueryScene *scene);
@@ -61,4 +63,8 @@ void gd_query_scene_destroy(GD_QueryScene *scene);
 int gd_query_scene_record(const GD_QueryScene *scene, int node);
 /* Reverse painter order: visible non-ghost cards before exposed ghost strips. */
 int gd_query_scene_hit(const GD_QueryScene *scene, float x, float y);
+/* Same typed hit ordering, supplied presentation geometry only. */
+int gd_query_scene_hit_layout(const GD_QueryScene *scene,const GD_Layout *layout,float x,float y);
+/* Visible anchor of compound spatial unit; no geometry mutation. */
+int gd_query_scene_anchor(const GD_QueryScene *scene,int node);
 #endif

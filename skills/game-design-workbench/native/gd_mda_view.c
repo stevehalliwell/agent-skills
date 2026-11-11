@@ -71,7 +71,7 @@ static void fit(Camera2D *camera, const GD_Model *model, const GD_Mda *mda, cons
     if (camera->zoom > 1.2f) camera->zoom = 1.2f;
     if (camera->zoom < 0.002f) camera->zoom = 0.002f;
 }
-static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, MdaDisplay *display, Camera2D *camera, Rectangle viewport, int blocked) {
+static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout,const GD_Layout *shown, MdaDisplay *display, Camera2D *camera, Rectangle viewport, int blocked) {
     Vector2 mouse = GetMousePosition(), world; int i;
     camera->offset = (Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) display->held = -1;
@@ -92,8 +92,8 @@ static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, M
     if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
     world = GetScreenToWorld2D(mouse,*camera);
     for (i = layout->node_count-1; i >= 0; --i) {
-        const GD_LayoutNode *node = &layout->nodes[i];
-        Vector2 position = point(layout,node);
+        const GD_LayoutNode *node = &shown->nodes[i];
+        Vector2 position = point(shown,node);
         if (visible(model,mda,display,node->key) && CheckCollisionPointRec(world,(Rectangle){position.x-105,position.y-32,210,64})) {
             display->record = node->key; display->held = i; display->link = -1;
             gd_layout_pickup_node(layout,i,world.x/spacing(layout),world.y/spacing(layout)); return;
@@ -101,7 +101,7 @@ static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, M
     }
     for (i = 0; i < layout->edge_count; ++i) {
         const GD_LayoutEdge *edge = &layout->edges[i]; int k;
-        Vector2 a = point(layout,&layout->nodes[edge->a]), b = point(layout,&layout->nodes[edge->b]), c = control(a,b), previous = a;
+        Vector2 a = point(shown,&shown->nodes[edge->a]), b = point(shown,&shown->nodes[edge->b]), c = control(a,b), previous = a;
         if (!visible(model,mda,display,layout->nodes[edge->a].key) || !visible(model,mda,display,layout->nodes[edge->b].key)) continue;
         for (k = 1; k <= 20; ++k) {
             Vector2 next = curve(a,c,b,k/20.0f);
@@ -125,7 +125,7 @@ static void projected_source(const GD_Model *model, const GD_Mda *mda, const GD_
     const GD_Edge *edge=&model->edges[mda->links[layout->edges[index].key].edge];
     igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
 }
-static void draw(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
+static void draw(const GD_Model *model, const GD_Mda *mda,GD_Layout *raw, GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
     const Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selected,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
@@ -161,43 +161,43 @@ static void draw(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, co
         if (display->link == edge->key) DrawText(gd_field_name(model->edges[mda->links[edge->key].edge].field),(int)tip.x+5,(int)tip.y-22,14,selected_color);
     }
     for (i = 0; i < layout->node_count; ++i) {
-        GD_LayoutNode *node = &layout->nodes[i]; const GD_Record *record = &model->records[node->key];
+        GD_LayoutNode *node = &layout->nodes[i],*physical=&raw->nodes[i]; const GD_Record *record = &model->records[node->key];
         float scale=spacing(layout);
         Color color = role_color(record->role); char label[32]; Vector2 position = point(layout,node);
         if (!visible(model,mda,display,node->key)) continue;
         ++drawn;
-        gd_layout_set_footprint(node,-121/scale,-48/scale,121/scale,48/scale);
+        gd_layout_set_footprint(physical,-121/scale,-48/scale,121/scale,48/scale);
         if (!mda->selected[node->key]) color = Fade(color,0.40f);
         DrawRectangleRounded((Rectangle){position.x-105,position.y-32,210,64},0.17f,6,(Color){27,36,48,255});
         DrawRectangleRoundedLinesEx((Rectangle){position.x-105,position.y-32,210,64},0.17f,6,display->record == node->key ? 3:1.5f,display->path_nodes[node->key] || display->record == node->key ? selected_color:color);
         snprintf(label,sizeof(label),"%.24s%s",record->name,strlen(record->name) > 24 ? "...":"");
-        gd_graph_node_text(node,gd_mda_role_name(record->role),(int)position.x-96,(int)position.y-24,12,color,scale);
-        gd_graph_node_text(node,label,(int)position.x-96,(int)position.y-5,16,mda->selected[node->key] ? foreground:muted,scale);
-        if (node->key == mda->root) gd_graph_node_text(node,"ROOT",(int)position.x+60,(int)position.y-24,12,selected_color,scale);
+        gd_graph_node_text_at(physical,node,gd_mda_role_name(record->role),(int)position.x-96,(int)position.y-24,12,color,scale);
+        gd_graph_node_text_at(physical,node,label,(int)position.x-96,(int)position.y-5,16,mda->selected[node->key] ? foreground:muted,scale);
+        if (node->key == mda->root) gd_graph_node_text_at(physical,node,"ROOT",(int)position.x+60,(int)position.y-24,12,selected_color,scale);
         if (shared) {
-            gd_graph_node_text(node,TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)position.x-96,(int)position.y+35,13,shared_color,scale);
+            gd_graph_node_text_at(physical,node,TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)position.x-96,(int)position.y+35,13,shared_color,scale);
             if (comparison) {
                 unsigned category=comparison->nodes[i];
                 if (category) {
                     Color branch_color=gd_graph_branch_color(category);
                     DrawRectangle((int)position.x+100,(int)position.y-20,3,40,branch_color);
-                    gd_graph_footprint_rect(node,gd_graph_branch_badge(category,(int)position.x-40,(int)position.y+35,background),scale);
+                    gd_graph_footprint_rect_at(physical,node,gd_graph_branch_badge(category,(int)position.x-40,(int)position.y+35,background),scale);
                 }
-                if (i==comparison->a || i==comparison->b) gd_graph_node_text(node,i==comparison->a ? "A":"B",(int)position.x+83,(int)position.y+35,13,foreground,scale);
-            } else if (pair>=0 && i==left->neighbor) gd_graph_node_text(node,"shared",(int)position.x+25,(int)position.y+35,13,shared_color,scale);
+                if (i==comparison->a || i==comparison->b) gd_graph_node_text_at(physical,node,i==comparison->a ? "A":"B",(int)position.x+83,(int)position.y+35,13,foreground,scale);
+            } else if (pair>=0 && i==left->neighbor) gd_graph_node_text_at(physical,node,"shared",(int)position.x+25,(int)position.y+35,13,shared_color,scale);
         }
         if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){position.x-121,position.y-48,242,96},2,selected_color);
         if (shapes) {
-            gd_graph_footprint_rect(node,gd_graph_shape_badge(shapes,i,(int)position.x-96,(int)position.y+52,background),scale);
+            gd_graph_footprint_rect_at(physical,node,gd_graph_shape_badge(shapes,i,(int)position.x-96,(int)position.y+52,background),scale);
             if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){position.x-117,position.y-44,234,88},2,(Color){220,205,148,255});
         }
         if (reachability) {
-            gd_graph_footprint_rect(node,gd_graph_reachability_badge(reachability,i,(int)position.x-96,(int)position.y-48,background),scale);
+            gd_graph_footprint_rect_at(physical,node,gd_graph_reachability_badge(reachability,i,(int)position.x-96,(int)position.y-48,background),scale);
             if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){position.x-113,position.y-40,226,80},2,gd_graph_branch_color(reach_pair->nodes[i]));
-            if (reach_pair && (i==reach_pair->a || i==reach_pair->b)) gd_graph_node_text(node,i==reach_pair->a ? "T-A":"T-B",(int)position.x+65,(int)position.y-48,12,foreground,scale);
+            if (reach_pair && (i==reach_pair->a || i==reach_pair->b)) gd_graph_node_text_at(physical,node,i==reach_pair->a ? "T-A":"T-B",(int)position.x+65,(int)position.y-48,12,foreground,scale);
         }
         if (paths) {
-            gd_graph_footprint_rect(node,gd_graph_path_badge(paths,path_selection,bypass,i,(int)position.x-96,(int)position.y+15,background),scale);
+            gd_graph_footprint_rect_at(physical,node,gd_graph_path_badge(paths,path_selection,bypass,i,(int)position.x-96,(int)position.y+15,background),scale);
             if (paths->roots[i]) gd_graph_path_start_marker((int)position.x+94,(int)position.y+17);
         }
     }
@@ -361,7 +361,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         mark_path(mda,&display);
         camera.offset = (Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
         if (fit_next) { fit(&camera,model,mda,layout,&display,viewport); fit_next = 0; }
-        input(model,mda,layout,&display,&camera,viewport,gd_graph_overview_hit(&overview_controls,viewport,GetMousePosition())); mark_path(mda,&display);
+        input(model,mda,layout,layout,&display,&camera,viewport,gd_graph_overview_hit(&overview_controls,viewport,GetMousePosition())); mark_path(mda,&display);
         if (!display.paused) gd_layout_step(layout,display.held);
         shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls,NULL,0);
@@ -370,7 +370,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,shared_selected,&reach_controls.peer):NULL;
         const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
         const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,0);
-        draw(model,mda,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair,shapes,overview);
+        draw(model,mda,layout,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair,shapes,overview);
         gd_graph_overview_draw(analysis,&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
         if (paths) DrawText(TextFormat("D: dominated targets | J: incoming neighbors | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,155,12,gd_path_color);
         if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
@@ -430,7 +430,7 @@ int gd_explorer_mda_visible(GD_ExplorerContext *context, int record) {
 }
 void gd_explorer_mda_input(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane;
-    input(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,p->layout,&p->mda,&p->camera,context->viewport,
+    input(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,p->layout,gd_explorer_display_layout(context),&p->mda,&p->camera,context->viewport,
           gd_graph_overview_hit(&p->overview,context->viewport,GetMousePosition()) || igGetIO_Nil()->WantCaptureMouse);
     mark_path(context->project->mda,&p->mda);
 }
@@ -438,7 +438,7 @@ void gd_explorer_mda_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence
     GD_ExplorerPane *p=context->pane; int i,selected=-1;
     for (i=0;i<p->layout->node_count;++i) if (p->layout->nodes[i].key==p->mda.record) selected=i;
     mark_path(context->project->mda,&p->mda);
-    draw(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,p->layout,&p->mda,p->camera,context->viewport,
+    draw(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,p->layout,gd_explorer_display_layout(context),&p->mda,p->camera,context->viewport,
          context->analysis,p->shared,selected,p->peer,p->branches,e->paths,e->bypass,e->reachability,e->reach_pair,e->shapes,e->overview);
 }
 void gd_explorer_mda_details(GD_ExplorerContext *context) {

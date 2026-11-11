@@ -222,10 +222,11 @@ int gd_query_scene_compare(GD_QueryScene *scene, int first, int second) {
     }
     return 1;
 }
-int gd_query_scene_hit(const GD_QueryScene *scene, float x, float y) {
-    int pass,i; if (!scene) return -1;
-    for (pass=0;pass<2;++pass) for (i=scene->layout.node_count-1;i>=0;--i) {
-        const GD_LayoutNode *node=&scene->layout.nodes[i];
+int gd_query_scene_hit(const GD_QueryScene *scene,float x,float y) {return gd_query_scene_hit_layout(scene,scene ? &scene->layout:NULL,x,y);}
+int gd_query_scene_hit_layout(const GD_QueryScene *scene,const GD_Layout *layout,float x,float y) {
+    int pass,i; if (!scene || !layout || layout->node_count!=scene->layout.node_count) return -1;
+    for (pass=0;pass<2;++pass) for (i=layout->node_count-1;i>=0;--i) {
+        const GD_LayoutNode *node=&layout->nodes[i];
         if (!!scene->nodes[i].ghost!=pass) continue;
         if (x>=node->x-node->width/2 && x<=node->x+node->width/2 && y>=node->y-node->height/2 && y<=node->y+node->height/2) return i;
     }

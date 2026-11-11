@@ -20,7 +20,7 @@ static int explorer_viewer_nodes_checks(ExplorerViewer *viewer, GD_ExplorerPane 
         NODE_CHECK(*viewer->active==v && viewer_selected_node(c)>=0);
         NODE_CHECK(c->pane->camera.offset.x==400 && c->pane->camera.offset.y==300 && c->pane->camera.zoom>0 && !c->pane->fit);
         if (!grid_view(c->pane)) {
-            Vector2 center=position(c->pane,viewer_selected_node(c));
+            Vector2 center=position(c,viewer_selected_node(c));
             NODE_CHECK(c->pane->camera.target.x==center.x && c->pane->camera.target.y==center.y);
         }
         viewer_identities(c,&ids); NODE_CHECK(viewer_canvas_id(c,viewer_selected_node(c),&ids,selected,sizeof(selected)) && !strcmp(identity,selected));

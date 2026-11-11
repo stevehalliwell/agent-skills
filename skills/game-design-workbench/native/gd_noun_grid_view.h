@@ -66,7 +66,7 @@ static void noun_grid_draw(GD_ExplorerContext *c) {
     if(!igGetIO_Nil()->WantCaptureMouse && CheckCollisionPointRec(GetMousePosition(),c->viewport)){int row,column;Vector2 world=GetScreenToWorld2D(GetMousePosition(),p->camera);if(gd_matrix_grid_hit(&p->grid,world.x,world.y,&row,&column)){int a=p->grid.order[row],b=p->grid.order[column],pair=gd_noun_grid_pair(grid,a,b);igSetTooltip("%s x %s\n%d distinct declared cases. Shared participation, not proven applicability.",model->records[a].display_name,model->records[b].display_name,pair<0 ? 0:grid->pairs[pair].count);}}
 }
 static void noun_graph_input(GD_ExplorerContext *c) {
-    GD_ExplorerPane *p=c->pane;Vector2 mouse=GetMousePosition(),world;int i;
+    GD_ExplorerPane *p=c->pane;const GD_Layout *shown=gd_explorer_display_layout(c);Vector2 mouse=GetMousePosition(),world;int i;
     if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT))p->selection.held=-1;
     if(igGetIO_Nil()->WantCaptureMouse || !CheckCollisionPointRec(mouse,c->viewport))return;
     world=GetScreenToWorld2D(mouse,p->camera);
@@ -75,19 +75,19 @@ static void noun_graph_input(GD_ExplorerContext *c) {
     world=GetScreenToWorld2D(mouse,p->camera);
     if(p->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){gd_layout_drag_node(p->layout,p->selection.held,world.x,world.y);return;}
     if(!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))return;
-    for(i=p->layout->node_count-1;i>=0;--i){const GD_LayoutNode *node=&p->layout->nodes[i];if(CheckCollisionPointRec(world,(Rectangle){node->x-node->width/2,node->y-24,node->width,48})){p->selection=(GD_ExplorerSelection){-1,i,0,-1,i};gd_layout_pickup_node(p->layout,i,world.x,world.y);return;}}
-    for(i=0;i<p->layout->edge_count;++i)if(gd_layout_route_distance(p->layout,i,world.x,world.y)<=7/p->camera.zoom){const GD_NounPair *pair=&c->project->noun_grid->pairs[p->layout->edges[i].key];noun_grid_choose(c,pair->a,pair->b);return;}
+    for(i=shown->node_count-1;i>=0;--i){const GD_LayoutNode *node=&shown->nodes[i];if(CheckCollisionPointRec(world,(Rectangle){node->x-node->width/2,node->y-24,node->width,48})){p->selection=(GD_ExplorerSelection){-1,i,0,-1,i};gd_layout_pickup_node(p->layout,i,world.x,world.y);return;}}
+    for(i=0;i<p->layout->edge_count;++i)if(gd_layout_route_distance(shown,i,world.x,world.y)<=7/p->camera.zoom){const GD_NounPair *pair=&c->project->noun_grid->pairs[p->layout->edges[i].key];noun_grid_choose(c,pair->a,pair->b);return;}
 }
 static void noun_graph_draw(GD_ExplorerContext *c) {
-    GD_ExplorerPane *p=c->pane;const GD_NounGrid *grid=c->project->noun_grid;GD_CountRange counts={0};int i;
+    GD_ExplorerPane *p=c->pane;GD_Layout *layout=gd_explorer_display_layout(c);const GD_NounGrid *grid=c->project->noun_grid;GD_CountRange counts={0};int i;
     for(i=0;i<grid->pair_count;++i)gd_count_range_add(&counts,grid->pairs[i].count);
-    for(i=0;i<p->layout->node_count;++i){GD_LayoutNode *node=&p->layout->nodes[i];node->width=fmaxf(240,MeasureText(node->label,18)+20);gd_layout_set_footprint(node,-node->width/2,-24,node->width/2,24);}
+    for(i=0;i<layout->node_count;++i){GD_LayoutNode *node=&layout->nodes[i],*raw=&p->layout->nodes[i];node->width=fmaxf(240,MeasureText(node->label,18)+20);raw->width=node->width;gd_layout_set_footprint(raw,-node->width/2,-24,node->width/2,24);node->footprint=raw->footprint;}
     BeginScissorMode((int)c->viewport.x,(int)c->viewport.y,(int)c->viewport.width,(int)c->viewport.height);BeginMode2D(p->camera);
-    for(i=0;i<p->layout->edge_count;++i){const GD_LayoutEdge *edge=&p->layout->edges[i];const GD_NounPair *pair=&grid->pairs[edge->key];GD_LayoutRoute route;int j;Color color=gd_count_color(counts,pair->count);float thickness=(2+fminf(4,log2f((float)pair->count)))/p->camera.zoom;gd_layout_route(p->layout,i,&route);
+    for(i=0;i<layout->edge_count;++i){const GD_LayoutEdge *edge=&layout->edges[i];const GD_NounPair *pair=&grid->pairs[edge->key];GD_LayoutRoute route;int j;Color color=gd_count_color(counts,pair->count);float thickness=(2+fminf(4,log2f((float)pair->count)))/p->camera.zoom;gd_layout_route(layout,i,&route);
         for(j=1;j<route.count;++j){Vector2 a={route.points[j-1].x,route.points[j-1].y},b={route.points[j].x,route.points[j].y};DrawLineEx(a,b,thickness+2/p->camera.zoom,p->selection.cell==edge->key ? gold:(Color){120,143,165,255});DrawLineEx(a,b,thickness,color);}
         if(route.count>1 && p->camera.zoom*14>=8){int middle=route.count/2;Vector2 point={(route.points[middle-1].x+route.points[middle].x)/2,(route.points[middle-1].y+route.points[middle].y)/2};const char *label=TextFormat("%d",pair->count);float width=MeasureText(label,14)+12;DrawRectangleRec((Rectangle){point.x-width/2,point.y-10,width,20},color);DrawText(label,(int)(point.x-width/2+6),(int)point.y-7,14,foreground);}
     }
-    for(i=0;i<p->layout->node_count;++i){const GD_LayoutNode *node=&p->layout->nodes[i];Rectangle area={node->x-node->width/2,node->y-24,node->width,48};DrawRectangleRounded(area,0.14f,4,(Color){29,38,51,255});DrawRectangleRoundedLinesEx(area,0.14f,4,(i==p->selection.node || p->match_nodes[i] ? 3:1)/p->camera.zoom,i==p->selection.node || p->match_nodes[i] ? gold:muted);if(p->camera.zoom*18>=8)DrawText(node->label,(int)area.x+10,(int)node->y-9,18,foreground);}
+    for(i=0;i<layout->node_count;++i){const GD_LayoutNode *node=&layout->nodes[i];Rectangle area={node->x-node->width/2,node->y-24,node->width,48};DrawRectangleRounded(area,0.14f,4,(Color){29,38,51,255});DrawRectangleRoundedLinesEx(area,0.14f,4,(i==p->selection.node || p->match_nodes[i] ? 3:1)/p->camera.zoom,i==p->selection.node || p->match_nodes[i] ? gold:muted);if(p->camera.zoom*18>=8)DrawText(node->label,(int)area.x+10,(int)node->y-9,18,foreground);}
     EndMode2D();EndScissorMode();
     DrawText(TextFormat("All %d nouns | Undirected shared cases, not flow | %s%s",grid->noun_count,grid->incomplete ? "Incomplete scope":"Loaded declarations",grid->limited ? " / limited":""),(int)c->viewport.x+6,(int)c->viewport.y-GD_COUNT_GRID_HEADER+5,14,muted);
     gd_count_legend(counts,c->viewport.x+6,c->viewport.y-GD_COUNT_GRID_HEADER+24,fminf(360,c->viewport.width-12),"Declared cases");

@@ -150,7 +150,7 @@ static int viewer_select_node(GD_ExplorerContext *c, int node, GD_ViewerWriter *
         Rectangle area=grid_bounds(&p->grid,model->records[record].role==GD_NOUN?record:-1,model->records[record].role==GD_VERB?record:-1);
         center=(Vector2){area.x+area.width/2,area.y+area.height/2}; width=area.width; height=area.height;
     } else {
-        center=position(p,node); width=fmaxf(250,gd_layout_node_width(&p->layout->nodes[node])); height=fmaxf(170,p->layout->nodes[node].height);
+        center=position(c,node); width=fmaxf(250,gd_layout_node_width(&p->layout->nodes[node])); height=fmaxf(170,p->layout->nodes[node].height);
     }
     p->camera.target=center; p->camera.offset=(Vector2){c->viewport.x+c->viewport.width/2,c->viewport.y+c->viewport.height/2};
     p->camera.zoom=fmaxf(0.0001f,fminf(1.2f,fminf(c->viewport.width/(width+80),c->viewport.height/(height+80))));

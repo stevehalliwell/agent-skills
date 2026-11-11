@@ -13,6 +13,7 @@ static int query_scene_free_checks(GD_QueryScene *scene) {
     for(i=0;i<scene->layout.node_count;++i) if(scene->nodes[i].kind==GD_QUERY_NODE_VARIANT) {if(scene->nodes[i].ghost) ghost=i;else primary=i;}
     FREE_CHECK(gd_query_scene_place(scene,GD_LAYOUT_FORCE,0,1.5f));
     for(i=0;i<scene->layout.node_count;++i) FREE_CHECK(scene->layout.nodes[i].x==before->layout.nodes[i].x && scene->layout.nodes[i].y==before->layout.nodes[i].y);
+    FREE_CHECK(gd_query_scene_workspace(scene,1,1.5f) && scene->layout.workspace.enabled==(scene->layout.node_count>0));
     FREE_CHECK(gd_query_scene_place(scene,GD_LAYOUT_FORCE,1,1.5f));
     for(i=0;i<scene->layout.node_count;++i) points[i]=(GD_LayoutPoint){scene->layout.nodes[i].x,scene->layout.nodes[i].y};
     FREE_CHECK(gd_query_scene_place(scene,GD_LAYOUT_FORCE,1,1.5f));
@@ -28,7 +29,9 @@ static int query_scene_free_checks(GD_QueryScene *scene) {
     }
     for(step=0;step<160;++step) gd_query_scene_step(scene,-1);
     for(i=0;i<scene->layout.node_count;++i) FREE_CHECK(isfinite(scene->layout.nodes[i].x) && isfinite(scene->layout.nodes[i].y));
+    if(scene->layout.node_count){float x=before->layout.nodes[0].x,y=before->layout.nodes[0].y;FREE_CHECK(gd_query_scene_hit_layout(scene,&before->layout,x,y)==gd_query_scene_hit(before,x,y));}
     if(scene->ghosts==GD_QUERY_STACKED_VARIANTS && primary>=0 && ghost>=0) {
+        FREE_CHECK(gd_query_scene_anchor(scene,ghost)==gd_query_scene_anchor(scene,primary));
         float dx=before->layout.nodes[ghost].x-before->layout.nodes[primary].x,dy=before->layout.nodes[ghost].y-before->layout.nodes[primary].y;
         float x=scene->layout.nodes[ghost].x,y=scene->layout.nodes[ghost].y;
         FREE_CHECK(fabsf(scene->layout.nodes[ghost].x-scene->layout.nodes[primary].x-dx)<0.001f && fabsf(scene->layout.nodes[ghost].y-scene->layout.nodes[primary].y-dy)<0.001f);
@@ -39,7 +42,7 @@ static int query_scene_free_checks(GD_QueryScene *scene) {
         x=scene->layout.nodes[ghost].x;y=scene->layout.nodes[ghost].y;gd_query_scene_step(scene,ghost);
         FREE_CHECK(scene->layout.nodes[ghost].x==x && scene->layout.nodes[ghost].y==y);
     }
-    FREE_CHECK(gd_query_scene_place(scene,GD_LAYOUT_DIRECTED,0,1));
+    FREE_CHECK(gd_query_scene_place(scene,GD_LAYOUT_DIRECTED,0,1) && !scene->layout.workspace.enabled);
     FREE_CHECK(scene->query==before->query && scene->effect_scope==before->effect_scope && scene->work==before->work && scene->limited==before->limited);
     FREE_CHECK(!memcmp(scene->nodes,before->nodes,sizeof(scene->nodes)) && !memcmp(scene->edges,before->edges,sizeof(scene->edges)) && !memcmp(scene->labels,before->labels,sizeof(scene->labels)));
     FREE_CHECK(!memcmp(scene->layout.edges,before->layout.edges,sizeof(scene->layout.edges)) && scene->layout.node_count==before->layout.node_count && scene->layout.edge_count==before->layout.edge_count);

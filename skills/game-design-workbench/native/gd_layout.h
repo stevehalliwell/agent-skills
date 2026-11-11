@@ -26,6 +26,7 @@ typedef struct { int a, b, key, active, relation; } GD_LayoutEdge;
 typedef struct { float x, y, width, height; int first, count; } GD_LayoutGroup;
 typedef struct { int a,b,edge,ordinal,count; } GD_LayoutLane;
 typedef struct { float x,y; } GD_LayoutPoint;
+typedef struct { GD_LayoutBounds bounds; int enabled; } GD_LayoutWorkspace;
 typedef struct { GD_LayoutPoint points[8]; int count; } GD_LayoutRoute;
 typedef struct {
     GD_LayoutNode nodes[GD_MAX_RECORDS];
@@ -44,6 +45,7 @@ typedef struct {
     int horizontal, direct_routes;
     float width, height;
     float spring_gap; /* Desired Free edge gap outside footprints; 0 keeps default 8. Not a hard collision gap. */
+    GD_LayoutWorkspace workspace; /* Optional fixed containment; never follows moving nodes. */
     GD_LayoutCollisionItem collision_order[GD_MAX_RECORDS];
     float collision_remaining[GD_MAX_RECORDS];
     unsigned collision_cursor,collision_checks,collision_moves;
@@ -57,6 +59,13 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
    direction. Presentation groups only; no new edges or semantic equivalence.
    Reuses order/position scratch; call before arrange. */
 int gd_layout_components(GD_Layout *layout);
+/* Opt-in Free workspace: base footprint area times 4..8 by spring density,
+   shaped to aspect with 20% extra room on each axis; also fits current pose.
+   Setup changes no geometry/velocity. Post-contact containment exempts held
+   nodes; release returns them inside and removes outward velocity. Reapply
+   explicitly after reseed; disable succeeds in other modes. Invalid input
+   retains previous workspace. Oversize future footprints cannot fit fully. */
+int gd_layout_workspace(GD_Layout *layout,int enabled,float aspect);
 /* One-shot compact BFS seed, graph-derived distinct-neighbor hubs, active edges.
    Prepared Free layout only. Preserves topology, groups, order and footprint data.
    Linear bounded adjacency/BFS/shelf work; <=1 MiB temporary allocator workspace,

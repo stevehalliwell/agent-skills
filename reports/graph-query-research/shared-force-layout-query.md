@@ -1,6 +1,6 @@
 # Actor/Effect Free placement — Step 5
 
-Status: implementation checkpoint authorized; visually reviewed, not accepted. Follows reviewed Step 4 checkpoint `a99c028`. User chose to keep stacked ghosts together. Pause here; improve default visual communication on resume.
+Status: checkpoint `a2537f2` committed after guided review. Actor overviews and noun interactions implemented; UX feedback retained in `todo.md`. Effects crowding/motion reproduced below, not fixed or visually accepted. User chose to keep stacked ghosts together.
 
 ## Result
 
@@ -98,6 +98,17 @@ Question: which nouns/concepts and axes connect actors across the design?
 - Retained IPC `result --projection actors --form actor-overview` exposes nodes, counts and scope disclosures, with first contributing source per link. Whole-result bounded byte paging only; nonempty `--fields` rejected. Existing native Query result retains full cases/bindings; GUI edge inspector pages matching cases/conditions. Typed definition references and analytical scene identities remain separate.
 - Checks: CJIT core **140/140**; native Node **62 passed, zero failed, one Mac-only socket skip**. CPU production adapters cover both examples without source writes/leaks. New regressions cover repeated bindings/cases, once-per-record pair counts, no cross-case/self/concept-concept links, isolates, non-actor/unclassified concepts, own-axis deduplication, connected-actor sizing, fixed pose, weighted spring behavior, source-kind exclusion, work limits, allocation failures, retained JSON and overview switching from analytical state without applying pending inputs.
 - CLI, protocol fixture, graph and production adapter compile in `native/build/actor-overview-work/`. No new GUI launched; existing review viewer/drafts untouched. Visual acceptance, remaining classifications and Effects crowding/motion diagnosis remain open. Full compiler matrix remains final Step 6.
+
+### Effects motion diagnosis — checkpoint follow-up
+
+- Added CPU production-adapter probe over both loaded examples. Run 4096 steps per Native/Neighborhood seed; measure final 256 steps. Restore native pose before existing geometry/evidence retention checks. Probe asserts finite coordinates and collision work bounds, not settling acceptance.
+- Mario default contributor context: 44 nodes / 68 edges. Native: RMS **2.452279**, max step **22.421452**, centroid drift **85.536084**, **4** final overlaps. Neighborhood: RMS **0.692194**, max **3.810456**, drift **27.339965**, **0** overlaps. Both report collision limits. Motion units are world units/step; drift spans final 256 steps.
+- Crate default context: 3 nodes / 2 edges. Native/Neighborhood RMS **0.000059 / 0.000370**, max **0.000076 / 0.000531**, drift **0.001630 / 0.035670**. No overlaps or collision limits. Dense Mario failure is not universal.
+- Tested Effects-only soft gaps 250 and 500. Both remove final Mario Native overlaps but retain motion: Native RMS **1.001501 / 0.201472**, drift **5.027779 / 15.159576**. Larger gap with Neighborhood reaches RMS **0.027914**, max **0.219240**, drift **0.393799**, still reports collision limit. This does not fix Native or establish readable composition.
+- Constant 450-unit radial spring trial does not resolve Native motion. Relative-compression velocity projection reduces centroid drift but worsens Effects RMS and Resource motion. Removed all trial runtime changes; do not ship these as fixes. Original solver, spring settings and defaults remain unchanged.
+- Root cause remains unresolved. User chose Resources/Verb usage comparison before further tuning; matched measurements now complete. Effects has one connected component, no parallel springs and a 25-neighbor hub; unweighted display alone still moves. Next isolate dense-hub contact/pass/movement limits. [Matched findings and next repair investigation](shared-force-layout-reference-review.md). No new solver/default policy selected.
+- Checks: CJIT adapter rebuilt; focused CLI/both-example production-adapter tests **5/5**. Separate baseline probes repeated against both private example copies. Source hashes and owned allocations preserved. Checkpoint core **142/142**; no subsequent core-runtime changes. Existing review viewer untouched; no new window or compiler-matrix run.
+- Evidence: `native/build/effect-spacing-work/{mario-baseline,mario-gap250,mario-gap500,mario-radial450,mario-relative,mario-final,crate-final}.{log,json}`, `build-final.log`, `adapter-final.log`. Effects-only probe subsequently consolidated into reusable matched reference diagnostic; see comparison report. Only tests/diagnostics and documentation changed after checkpoint; no additional commit made.
 
 ## Technical constraints
 

@@ -62,7 +62,7 @@ static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle view
     if (camera->zoom > 1.2f) camera->zoom = 1.2f;
     if (camera->zoom < 0.002f) camera->zoom = 0.002f;
 }
-static void graph_input(GD_Layout *layout, GraphSelection *selection, Camera2D *camera,
+static void graph_input(GD_Layout *layout,const GD_Layout *shown, GraphSelection *selection, Camera2D *camera,
                         Rectangle viewport, int other_pairs, int blocked) {
     Vector2 mouse = GetMousePosition(), world;
     int i;
@@ -89,7 +89,7 @@ static void graph_input(GD_Layout *layout, GraphSelection *selection, Camera2D *
     if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
     world = GetScreenToWorld2D(mouse, *camera);
     for (i = layout->node_count-1; i >= 0; --i) {
-        Vector2 point = node_point(&layout->nodes[i]);
+        Vector2 point = node_point(&shown->nodes[i]);
         float dx = point.x-world.x, dy = point.y-world.y;
         if (dx*dx+dy*dy <= 22*22) {
             selection->node = selection->held = i; selection->cell = selection->linked = -1;
@@ -100,7 +100,7 @@ static void graph_input(GD_Layout *layout, GraphSelection *selection, Camera2D *
     for (i = 0; i < layout->edge_count; ++i) {
         const GD_LayoutEdge *edge = &layout->edges[i];
         if (!edge->active && !other_pairs) continue;
-        float distance = gd_layout_route_distance(layout,i,world.x,world.y);
+        float distance = gd_layout_route_distance(shown,i,world.x,world.y);
         if (distance <= 7/camera->zoom) {
             selection->cell = edge->key; selection->node = selection->linked = -1;
             selection->interaction = 0; return;
@@ -119,7 +119,7 @@ static int witness_edge(const GD_Routes *routes, int witness, int source, int ta
     for (i=1;i<routes->witnesses[witness].length;++i) if (routes->witnesses[witness].path[i-1]==source && routes->witnesses[witness].path[i]==target) return 1;
     return 0;
 }
-static void draw_graph(const GD_Model *model, GD_Layout *layout, const GraphSelection *selection,
+static void draw_graph(const GD_Model *model,GD_Layout *raw, GD_Layout *layout, const GraphSelection *selection,
                        Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
                        GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass,
                        const GD_GraphClosure *foundations, const GD_GraphComparison *foundation_pair,
@@ -194,25 +194,25 @@ static void draw_graph(const GD_Model *model, GD_Layout *layout, const GraphSele
         }
     }
     for (i = 0; i < layout->node_count; ++i) {
-        GD_LayoutNode *node = &layout->nodes[i];
-        gd_layout_set_footprint(node,-40,-40,40,40);
+        GD_LayoutNode *node = &layout->nodes[i],*physical=&raw->nodes[i];
+        gd_layout_set_footprint(physical,-40,-40,40,40);
         Color color = selection->node == i ? graph_selected : node->side ? (Color){224, 160, 109, 255} : (Color){108, 171, 230, 255};
         if (challenges && witness_node(routes,witness,node->key)) color=graph_selected;
         if (node->side) DrawRectangle((int)node->x-12, (int)node->y-12, 24, 24, color);
         else DrawCircleV(node_point(node), 13, color);
-        gd_graph_node_text(node,node->label, (int)node->x-MeasureText(node->label, 18)/2, (int)node->y+22, 18, graph_text,1);
+        gd_graph_node_text_at(physical,node,node->label, (int)node->x-MeasureText(node->label, 18)/2, (int)node->y+22, 18, graph_text,1);
         if (draft && (draft->rank_changed[node->key] || draft->prerequisites_changed[node->key])) {
             DrawCircleLines((int)node->x, (int)node->y, 25, graph_selected);
-            gd_graph_node_text(node,"*", (int)node->x+22, (int)node->y-28, 24, graph_selected,1);
+            gd_graph_node_text_at(physical,node,"*", (int)node->x+22, (int)node->y-28, 24, graph_selected,1);
         }
         if (focused) {
             int collection=model->records[node->key].collection;
             const char *alias=collection>=0 && collection<model->collection_count ? model->collections[collection].alias:"loaded record";
             const char *caption = node->side ? TextFormat("ROOT | %s",alias):alias;
-            gd_graph_node_text(node,caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted,1);
+            gd_graph_node_text_at(physical,node,caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted,1);
         } else if (challenges) {
             const char *caption = model->records[node->key].entry ? "ENTRY" : routes && routes->reachable[node->key] ? "declared reachable" : "no declared entry path";
-            gd_graph_node_text(node,caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted,1);
+            gd_graph_node_text_at(physical,node,caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted,1);
         } else if (model->skill_mode) {
             const GD_Record *record = &model->records[node->key]; const GD_SkillState *state = &model->skills[node->key];
             const char *caption = state->cycle ? "CYCLE" : state->incomplete ? "UNKNOWN ANCESTRY" :
@@ -221,43 +221,43 @@ static void draw_graph(const GD_Model *model, GD_Layout *layout, const GraphSele
             if (layout->mode==GD_LAYOUT_FORCE) caption=node->layer<0 ? TextFormat("Unplaced | %s",caption):TextFormat("Band %d | %s",node->layer,caption);
             Color warning = state->incomplete ? (Color){238,114,120,255} : (Color){245,179,96,255};
             if (state->incomplete || state->rank_conflict) DrawCircleLines((int)node->x, (int)node->y, 18, warning);
-            gd_graph_node_text(node,caption, (int)node->x-MeasureText(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted,1);
+            gd_graph_node_text_at(physical,node,caption, (int)node->x-MeasureText(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted,1);
         }
         if (shared) {
             const char *badge=TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+");
-            gd_graph_node_text(node,badge,(int)node->x-MeasureText(badge,13)/2,(int)node->y-37,13,shared_color,1);
+            gd_graph_node_text_at(physical,node,badge,(int)node->x-MeasureText(badge,13)/2,(int)node->y-37,13,shared_color,1);
             if (pair>=0 && (i==analysis->pairs[pair].a || i==analysis->pairs[pair].b)) DrawCircleLines((int)node->x,(int)node->y,30,shared_color);
             if (comparison) {
                 unsigned category=comparison->nodes[i];
                 if (category) {
                     Color branch_color=gd_graph_branch_color(category);
                     DrawCircleLines((int)node->x,(int)node->y,21,branch_color);
-                    gd_graph_footprint_rect(node,gd_graph_branch_badge(category,(int)node->x+36,(int)node->y-8,graph_background),1);
+                    gd_graph_footprint_rect_at(physical,node,gd_graph_branch_badge(category,(int)node->x+36,(int)node->y-8,graph_background),1);
                 }
-                if (i==comparison->a || i==comparison->b) gd_graph_node_text(node,i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text,1);
-            } else if (pair>=0 && i==left->neighbor) gd_graph_node_text(node,"shared",(int)node->x+19,(int)node->y-8,13,shared_color,1);
+                if (i==comparison->a || i==comparison->b) gd_graph_node_text_at(physical,node,i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text,1);
+            } else if (pair>=0 && i==left->neighbor) gd_graph_node_text_at(physical,node,"shared",(int)node->x+19,(int)node->y-8,13,shared_color,1);
         }
         if (overview && overview->selected_nodes[i]) DrawCircleLines((int)node->x,(int)node->y,40,graph_selected);
         if (shapes) {
-            gd_graph_footprint_rect(node,gd_graph_shape_badge(shapes,i,(int)node->x-65,(int)node->y-71,graph_background),1);
+            gd_graph_footprint_rect_at(physical,node,gd_graph_shape_badge(shapes,i,(int)node->x-65,(int)node->y-71,graph_background),1);
             if (gd_graph_shape_peer(shapes,i,selection->node)) DrawCircleLines((int)node->x,(int)node->y,36,(Color){220,205,148,255});
         }
         if (reachability) {
-            gd_graph_footprint_rect(node,gd_graph_reachability_badge(reachability,i,(int)node->x+36,(int)node->y-53,graph_background),1);
+            gd_graph_footprint_rect_at(physical,node,gd_graph_reachability_badge(reachability,i,(int)node->x+36,(int)node->y-53,graph_background),1);
             if (reach_pair) {
                 if (reach_pair->nodes[i]) DrawCircleLines((int)node->x,(int)node->y,32,gd_graph_branch_color(reach_pair->nodes[i]));
-                if (i==reach_pair->a || i==reach_pair->b) gd_graph_node_text(node,i==reach_pair->a ? "T-A":"T-B",(int)node->x-67,(int)node->y-53,12,graph_text,1);
+                if (i==reach_pair->a || i==reach_pair->b) gd_graph_node_text_at(physical,node,i==reach_pair->a ? "T-A":"T-B",(int)node->x-67,(int)node->y-53,12,graph_text,1);
             }
         }
         if (foundations && foundations->eligible[i]) {
-            gd_graph_footprint_rect(node,gd_graph_foundation_badge(foundations,i,(int)node->x+36,(int)node->y-23,graph_background),1);
+            gd_graph_footprint_rect_at(physical,node,gd_graph_foundation_badge(foundations,i,(int)node->x+36,(int)node->y-23,graph_background),1);
             if (foundation_pair) {
                 if (foundation_pair->nodes[i]) DrawCircleLines((int)node->x,(int)node->y,28,gd_graph_branch_color(foundation_pair->nodes[i]));
-                if (i==foundation_pair->a || i==foundation_pair->b) gd_graph_node_text(node,i==foundation_pair->a ? "A":"B",(int)node->x-43,(int)node->y-23,13,graph_text,1);
+                if (i==foundation_pair->a || i==foundation_pair->b) gd_graph_node_text_at(physical,node,i==foundation_pair->a ? "A":"B",(int)node->x-43,(int)node->y-23,13,graph_text,1);
             }
         }
         if (paths) {
-            gd_graph_footprint_rect(node,gd_graph_path_badge(paths,path_selection,bypass,i,(int)node->x+36,(int)node->y+7,graph_background),1);
+            gd_graph_footprint_rect_at(physical,node,gd_graph_path_badge(paths,path_selection,bypass,i,(int)node->x+36,(int)node->y+7,graph_background),1);
             if (paths->roots[i]) gd_graph_path_start_marker((int)node->x-49,(int)node->y-24);
         }
     }
@@ -795,7 +795,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F)) fit = 1;
         if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F5)) refresh = 1;
         if (fit) { fit_camera(&camera, layout, viewport); fit = 0; }
-        graph_input(layout, &selection, &camera, viewport, overlay,gd_graph_overview_hit(&overview_controls,viewport,GetMousePosition()));
+        graph_input(layout,layout, &selection, &camera, viewport, overlay,gd_graph_overview_hit(&overview_controls,viewport,GetMousePosition()));
         if (!focused && !challenges && !paused && layout->mode != GD_LAYOUT_COLUMNS) {
             accumulator += fminf(GetFrameTime(), 0.05f);
             while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
@@ -810,7 +810,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selection.node,&reach_controls[focused ? 2:challenges ? 1:0].peer):NULL;
         const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
         const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,!focused && !model->skill_mode);
-        draw_graph(model, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair,reachability,reach_pair,shapes,overview);
+        draw_graph(model,layout, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair,reachability,reach_pair,shapes,overview);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
             for (i=0;i<layout->node_count;++i) {
@@ -911,7 +911,7 @@ int gd_explorer_graph_prepare(GD_ExplorerContext *context) {
 }
 void gd_explorer_graph_input(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; GD_ExplorerSelection before=p->selection,choice;
-    graph_input(p->layout,&p->selection,&p->camera,context->viewport,p->overlay,
+    graph_input(p->layout,gd_explorer_display_layout(context),&p->selection,&p->camera,context->viewport,p->overlay,
                 gd_graph_overview_hit(&p->overview,context->viewport,GetMousePosition()) || igGetIO_Nil()->WantCaptureMouse);
     choice=p->selection;
     if (choice.node!=before.node || choice.cell!=before.cell || choice.linked!=before.linked || choice.interaction!=before.interaction) {
@@ -960,7 +960,7 @@ void gd_explorer_graph_unlocks(GD_ExplorerContext *context) {
 }
 void gd_explorer_graph_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *e) {
     GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
-    draw_graph(model,p->layout,&p->selection,p->camera,context->viewport,p->overlay,
+    draw_graph(model,p->layout,gd_explorer_display_layout(context),&p->selection,p->camera,context->viewport,p->overlay,
         gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA ? context->project->draft:NULL,
         p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS,context->project->routes,p->witness,
         context->analysis,p->shared,p->peer,p->branches,e->paths,e->bypass,e->foundations,e->foundation_pair,
@@ -970,7 +970,7 @@ void gd_explorer_graph_draw(GD_ExplorerContext *context, const GD_ExplorerEviden
         BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height);
         BeginMode2D(p->camera);
         for (i=0;i<p->layout->node_count;++i) {
-            int record=p->layout->nodes[i].key; Vector2 point=node_point(&p->layout->nodes[i]);
+            int record=p->layout->nodes[i].key; Vector2 point=node_point(&gd_explorer_display_layout(context)->nodes[i]);
             if (context->query->known[record]) DrawCircleV(point,7,(Color){65,200,175,255});
             if (context->query->ancestors[record] || context->query->descendants[record]) DrawCircleLines((int)point.x,(int)point.y,24,graph_selected);
         }

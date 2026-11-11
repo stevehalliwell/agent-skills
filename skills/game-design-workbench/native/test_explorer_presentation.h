@@ -39,6 +39,7 @@ static unsigned long presentation_footprint_overlaps(const GD_Layout *layout) {
     }
     return count;
 }
+#include "test_layout_reference.h"
 static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int *calls,char *reply) {
     GD_Allocator a=original->context->project->allocator;GD_ExplorerContext c=*original->context,target;GD_ExplorerPane *panes=NULL;ExplorerViewer viewer={0};GD_ViewerRequest request={0};GD_ViewerWriter w;
     int checks=0,result=0,active=GD_EXPLORER_MATRIX,stale=0,v,before,i;char decoded[65537],token[64],key[GD_MAX_PATH];
@@ -65,6 +66,12 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         PRESENT_CHECK(fabsf(node.footprint.right-90)<0.001f && fabsf(node.footprint.bottom-59.0f/3)<0.001f);
         PRESENT_CHECK(fabsf(node.footprint.left+35)<0.001f && fabsf(node.footprint.top+32.0f/3)<0.001f);
     }
+    for(i=1;i<=3;i+=2){float scale=(float)i;GD_LayoutNode raw={.x=-10.4f,.y=20.6f},shown={.x=110.9f,.y=-4.6f},expected=raw;
+        gd_layout_set_footprint(&raw,-1,-1,1,1);expected=raw;
+        gd_graph_footprint_rect(&expected,(Rectangle){(int)(raw.x*scale)+36,(int)(raw.y*scale)-8,120,14},scale);
+        gd_graph_footprint_rect_at(&raw,&shown,(Rectangle){(int)(shown.x*scale)+36,(int)(shown.y*scale)-8,120,14},scale);
+        PRESENT_CHECK(!memcmp(&raw,&expected,sizeof(raw)));
+    }
     panes=a.allocate(a.context,GD_EXPLORER_VIEWS*sizeof(*panes));analysis=a.allocate(a.context,sizeof(*analysis));knowledge=a.allocate(a.context,sizeof(*knowledge));PRESENT_CHECK(panes && analysis && knowledge);
     memset(panes,0,GD_EXPLORER_VIEWS*sizeof(*panes));memset(analysis,0,sizeof(*analysis));memset(knowledge,0,sizeof(*knowledge));
     for(v=0;v<GD_EXPLORER_VIEWS;++v)pane_defaults(&panes[v],(GD_ExplorerView)v);
@@ -72,6 +79,16 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(c.project->available&(1u<<v)) {
         PRESENT_REQUEST("controls",v);strcpy(request.form,"presentation");before=*calls;PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"\"presentation\"") && *calls==before && !panes[v].prepared);
         target=c;target.pane=&panes[v];PRESENT_CHECK(pane_prepare(&target));
+        if(v==GD_EXPLORER_MATRIX || v==GD_EXPLORER_RESOURCES || v==GD_EXPLORER_EFFECTS || v==GD_EXPLORER_NOUNS)PRESENT_CHECK(presentation_layout_reference(&target));
+        if(free_graph(&panes[v]) && !grid_view(&panes[v])){
+            GD_LayoutNode node=panes[v].layout->nodes[0];bool paused=panes[v].paused;GD_ExplorerSelection selection=panes[v].selection;
+            PRESENT_STAGE(v,"workspace_bounds","true");PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].workspace_bounds && panes[v].layout->workspace.enabled==(panes[v].layout->node_count>0));
+            PRESENT_CHECK(!memcmp(&node,&panes[v].layout->nodes[0],sizeof(node)) && paused==panes[v].paused && !memcmp(&selection,&panes[v].selection,sizeof(selection)));
+            PRESENT_STAGE(v,"workspace_bounds","false");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !panes[v].workspace_bounds && !panes[v].layout->workspace.enabled);
+            PRESENT_STAGE(v,"visual_filter","false");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !panes[v].visual_filter);
+            PRESENT_STAGE(v,"visual_filter","true");PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].visual_filter);
+            PRESENT_CHECK(!memcmp(&node,&panes[v].layout->nodes[0],sizeof(node)) && paused==panes[v].paused && !memcmp(&selection,&panes[v].selection,sizeof(selection)));
+        }else{PRESENT_STAGE(v,"workspace_bounds","true");PRESENT_CHECK(strstr(reply,"viewer.control") && !panes[v].workspace_bounds);PRESENT_STAGE(v,"visual_filter","false");PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].visual_filter);}
         if(v==GD_EXPLORER_RESOURCES){
             GD_Layout *probe=a.allocate(a.context,sizeof(*probe));unsigned long initial,remaining;int step,node,valid=1;
             GD_LayoutPoint previous[GD_MAX_RECORDS];double square=0,maximum=0;
@@ -237,7 +254,8 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             PRESENT_CHECK(!free_graph(&panes[v]) && !layout_settles(&panes[v]));
             PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]) && layout_settles(&panes[v]));
             for(node=0;node<native->node_count;++node) PRESENT_CHECK(scene->layout.nodes[node].x==native->nodes[node].x && scene->layout.nodes[node].y==native->nodes[node].y);
-            PRESENT_STAGE(v,"initial_arrangement","neighborhood");PRESENT_CHECK(strstr(reply,"\"configured\":true"));
+            PRESENT_STAGE(v,"workspace_bounds","true");PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].workspace_bounds && scene->layout.workspace.enabled==(scene->layout.node_count>0));
+            PRESENT_STAGE(v,"initial_arrangement","neighborhood");PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].workspace_bounds);
             gd_query_scene_step(scene,-1);
             PRESENT_CHECK(state==panes[v].query_state && state->scene==scene && state->query==query && state->selected==scope && scene->work==work && !memcmp(&state->applied,&applied,sizeof(applied)));
             PRESENT_CHECK(!strcmp(panes[v].query_options.contexts,"pending geometry-only test") && !memcmp(&selection,&panes[v].selection,sizeof(selection)));
@@ -264,7 +282,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             panes[v].query_options=state->applied;
             PRESENT_CHECK(gd_explorer_query_run(&target) && panes[v].query_state!=state && free_graph(&panes[v]) && panes[v].initial_arrangement==1);
             PRESENT_STAGE(v,"layout","native");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !layout_settles(&panes[v]));
-            panes[v].query_options=pending;a.release(a.context,native);
+            panes[v].query_options=pending;panes[v].workspace_bounds=false;a.release(a.context,native);
         }
         if(v==GD_EXPLORER_NOUNS){PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(!strstr(reply,"\"configured\":true") && !*panes[v].filter && !gd_explorer_presentation_editable(&target,"paused"));}
         else {

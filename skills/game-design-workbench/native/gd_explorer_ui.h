@@ -76,7 +76,7 @@ typedef struct {
     int layout,initial_arrangement,actor_overview,noun_row,noun_column,noun_case_page,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
     int focus_root,mda_root,mda_direction,resource_witness,route_witness,similarity_row,similarity_peer;
     int overview_row,overview_column,coverage_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
-    bool paused,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
+    bool paused,workspace_bounds,visual_filter,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
     bool paths_enabled,paths_declared,paths_compare,reach_enabled,reach_reverse,overview_enabled;
     bool only_scope,only_path,role0,role1,role2,role3,only_witness,similarity_canvas,known;
     char filter[129],mda_filter[129];
@@ -114,7 +114,7 @@ typedef struct {
     GD_ReachControls reach;
     GD_OverviewControls overview;
     GD_GraphLens lens;
-    bool shared, branches, foundations, shapes, paused, overlay;
+    bool shared, branches, foundations, shapes, paused, workspace_bounds, visual_filter, overlay;
     int peer, foundation_peer, layout_choice, initial_arrangement, actor_overview, sort, horizontal, rank, witness;
     int prepared, fit, navigate, focus_root, focus_expand, inspected_record;
     unsigned revision;
@@ -138,7 +138,9 @@ typedef struct {
     GD_SkillUnlocks *query;
     Rectangle viewport;
     uint64_t scope_revision;
+    GD_Layout *display_layout; /* Borrowed render-only pose; never a solver target. */
 } GD_ExplorerContext;
+static inline GD_Layout *gd_explorer_display_layout(const GD_ExplorerContext *context) {return context->display_layout ? context->display_layout:context->pane->layout;}
 
 int gd_explorer_graph_prepare(GD_ExplorerContext *context);
 void gd_explorer_graph_input(GD_ExplorerContext *context);

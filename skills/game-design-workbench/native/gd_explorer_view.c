@@ -1,4 +1,5 @@
 #include "gd_explorer_controls.h"
+#include "gd_render_pose.h"
 #include "gd_graph_analysis_draw.h"
 #include "gd_graph_overview_draw.h"
 #include "rlImGui.h"
@@ -42,6 +43,16 @@ static int layout_settles(const GD_ExplorerPane *p) {
     return p->layout && !grid_view(p) && (!query_view(p->view) || free_graph(p)) && p->layout->mode!=GD_LAYOUT_COLUMNS &&
         ((p->view!=GD_EXPLORER_CHALLENGES && p->view!=GD_EXPLORER_RELATIONSHIPS) || free_graph(p));
 }
+static int render_active(const GD_ExplorerContext *c) {
+    const GD_ExplorerPane *p=c->pane;return p->visual_filter && free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c) && !p->distance_focus_enabled && !(p->distance_focus && p->distance_focus->animating);
+}
+static const void *render_identity(const GD_ExplorerContext *c) {return query_view(c->pane->view) ? (const void *)c->pane->query_state->scene->free_geometry:(const void *)c->pane;}
+static void render_update(GD_ExplorerContext *c,GD_RenderPose *pose,double seconds,int reset) {
+    GD_ExplorerPane *p=c->pane;int i,held=p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held;
+    for(i=0;i<p->layout->node_count;++i)pose->anchors[i]=query_view(p->view) ? gd_query_scene_anchor(p->query_state->scene,i):i;
+    if(gd_render_pose_update(pose,p->layout,render_identity(c),held,seconds,reset))c->display_layout=&pose->layout;
+    else {pose->valid=0;c->display_layout=NULL;snprintf(p->query_message,sizeof(p->query_message),"Cannot prepare visual filter; showing raw pose.");}
+}
 static const char *missing_roles(GD_ExplorerView view) {
     switch (view) {
         case GD_EXPLORER_SKILLS: case GD_EXPLORER_RELATIONSHIPS: return "Supply --skill-atoms ALIAS=FOLDER";
@@ -67,17 +78,23 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     p->camera.zoom=1; p->focus_auto_fit=true; p->distance_focus_revision=UINT64_MAX; p->peer=p->foundation_peer=p->witness=-1;
     p->navigate=p->focus_root=p->focus_expand=p->inspected_record=-1;
     p->reach=(GD_ReachControls){0,-1,0,-1,-1}; p->overview=(GD_OverviewControls){0,-1,-1};
-    p->shared=true; p->paused=view==GD_EXPLORER_MDA || view==GD_EXPLORER_RESOURCES || view==GD_EXPLORER_EFFECTS;
+    p->shared=true;p->visual_filter=true; p->paused=view==GD_EXPLORER_MDA || view==GD_EXPLORER_RESOURCES || view==GD_EXPLORER_EFFECTS;
     p->layout_choice=view==GD_EXPLORER_NOUNS ? GD_NOUN_LAYOUT_GRID:view<=GD_EXPLORER_RELATIONSHIPS || query_view(view) ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE; p->fit=view==GD_EXPLORER_NOUNS ? GD_EXPLORER_FIT_GRID_READABLE:1; p->focus.root=-1;
     p->paths.declared=view==GD_EXPLORER_CHALLENGES;
 }
+static float pane_aspect(const GD_ExplorerContext *c) {
+    if(isfinite(c->viewport.width) && isfinite(c->viewport.height) && c->viewport.width>0 && c->viewport.height>0){float aspect=c->viewport.width/c->viewport.height;if(isfinite(aspect) && aspect>0)return aspect;}
+    return 1;
+}
+static int pane_workspace(GD_ExplorerContext *c,int enabled) {
+    GD_ExplorerPane *p=c->pane;
+    if(query_view(p->view))return p->query_state && p->query_state->scene && gd_query_scene_workspace(p->query_state->scene,enabled,pane_aspect(c));
+    return gd_layout_workspace(p->layout,enabled,pane_aspect(c));
+}
 static int pane_seed(GD_ExplorerContext *c) {
-    GD_ExplorerPane *p=c->pane; float aspect=1;
-    if(!p->initial_arrangement || !free_graph(p)) return 1;
-    if(isfinite(c->viewport.width) && isfinite(c->viewport.height) && c->viewport.width>0 && c->viewport.height>0) {
-        float measured=c->viewport.width/c->viewport.height; if(isfinite(measured) && measured>0) aspect=measured;
-    }
-    return gd_layout_seed_neighborhood(p->layout,c->project->allocator,aspect);
+    GD_ExplorerPane *p=c->pane;
+    if(p->initial_arrangement && free_graph(p) && !gd_layout_seed_neighborhood(p->layout,c->project->allocator,pane_aspect(c)))return 0;
+    return pane_workspace(c,p->workspace_bounds && free_graph(p) && !grid_view(p));
 }
 static int pane_prepare(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int i,record=-1;
@@ -132,8 +149,8 @@ static int selected_record(GD_ExplorerContext *c) {
     if (p->view==GD_EXPLORER_MDA) return p->mda.record;
     return p->selection.linked>=0 ? p->selection.linked:gd_explorer_resource_record(c->project->resources,p->selection.node);
 }
-static Vector2 position(const GD_ExplorerPane *p, int node) {
-    const GD_LayoutNode *item=&p->layout->nodes[node];
+static Vector2 position(const GD_ExplorerContext *c, int node) {
+    const GD_ExplorerPane *p=c->pane;const GD_LayoutNode *item=&gd_explorer_display_layout(c)->nodes[node];
     float scale=p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1;
     return (Vector2){item->x*scale,item->y*scale};
 }
@@ -243,7 +260,7 @@ static void fit_view(GD_ExplorerContext *c, int only_matches) {
     }
     for (i=0;i<p->layout->node_count;++i) if (visible(c,i) && (!only_matches || (only_matches==1 ? p->match_nodes[i]:only_matches==3 ? p->resource_routes && p->resource_routes->marked_nodes[i]:
         p->distance_focus && p->distance_focus->active && p->distance_focus->distance[i]>=0 && p->distance_focus->distance[i]<=1))) {
-        Vector2 point=position(p,i); float half=p->view==GD_EXPLORER_MDA ? 125:p->view==GD_EXPLORER_RESOURCES ? 110:
+        Vector2 point=position(c,i); float half=p->view==GD_EXPLORER_MDA ? 125:p->view==GD_EXPLORER_RESOURCES ? 110:
             fmaxf(110,(float)MeasureText(p->layout->nodes[i].label,18)/2+25);
         if (query_view(p->view)) half=p->layout->nodes[i].width/2;
         if (!found || point.x-half<left) left=point.x-half;
@@ -253,12 +270,13 @@ static void fit_view(GD_ExplorerContext *c, int only_matches) {
         found=1;
     }
     if (!only_matches && p->view!=GD_EXPLORER_MDA && p->view!=GD_EXPLORER_RESOURCES) for (i=0;i<p->layout->edge_count;++i) {
-        GD_LayoutRoute route; int j; gd_layout_route(p->layout,i,&route);
+        GD_LayoutRoute route; int j; gd_layout_route(gd_explorer_display_layout(c),i,&route);
         for (j=0;j<route.count;++j) {
             left=fminf(left,route.points[j].x); right=fmaxf(right,route.points[j].x);
             top=fminf(top,route.points[j].y); bottom=fmaxf(bottom,route.points[j].y);
         }
     }
+    if(!only_matches && p->layout->workspace.enabled){const GD_LayoutBounds *b=&p->layout->workspace.bounds;float scale=p->view==GD_EXPLORER_MDA ? 3:1;if(!found){left=b->left*scale;right=b->right*scale;top=b->top*scale;bottom=b->bottom*scale;found=1;}else{left=fminf(left,b->left*scale);right=fmaxf(right,b->right*scale);top=fminf(top,b->top*scale);bottom=fmaxf(bottom,b->bottom*scale);}}
     if (!found) return;
     p->camera.target=(Vector2){(left+right)/2,(top+bottom)/2};
     p->camera.zoom=fminf(c->viewport.width/(right-left+60),c->viewport.height/(bottom-top+60));
@@ -269,10 +287,10 @@ static void draw_matches(GD_ExplorerContext *c) {
     if (grid_view(p)) return; /* Grid draws matching headers/cells, not graph routes. */
     BeginScissorMode((int)c->viewport.x,(int)c->viewport.y,(int)c->viewport.width,(int)c->viewport.height); BeginMode2D(p->camera);
     for (i=0;i<p->layout->edge_count;++i) if (p->match_edges[i]) {
-        GD_LayoutRoute route; gd_layout_route(p->layout,i,&route); gd_graph_route_line(&route,5,gold,0);
+        GD_LayoutRoute route; gd_layout_route(gd_explorer_display_layout(c),i,&route); gd_graph_route_line(&route,5,gold,0);
     }
     for (i=0;i<p->layout->node_count;++i) if (p->match_nodes[i]) {
-        Vector2 point=position(p,i);
+        Vector2 point=position(c,i);
         if (is_graph(p->view)) DrawCircleLines((int)point.x,(int)point.y,47,gold);
         else {
             float half=p->view==GD_EXPLORER_MDA ? 130:115;
@@ -383,7 +401,7 @@ static void resource_input(GD_ExplorerContext *c) {
             Vector2 delta=GetMouseDelta(); p->camera.target.x-=delta.x/p->camera.zoom; p->camera.target.y-=delta.y/p->camera.zoom;
         }
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) for (i=p->layout->node_count-1;i>=0;--i) if (visible(c,i)) {
-            Vector2 point=position(p,i);
+            Vector2 point=position(c,i);
             if (CheckCollisionPointRec(world,(Rectangle){point.x-90,point.y-24,180,48})) { p->selection.node=p->selection.held=i; p->selection.linked=-1; gd_layout_pickup_node(p->layout,i,world.x,world.y); break; }
         }
         if (p->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_drag_node(p->layout,p->selection.held,world.x,world.y);
@@ -470,6 +488,8 @@ static int layout_controls(GD_ExplorerContext *c) {
         if(free_graph(p) && p->query_state->scene->ghosts==GD_QUERY_STACKED_VARIANTS) igTextDisabled("Stacked variant cards move together.");
     }
     if (p->view==GD_EXPLORER_SKILLS && free_graph(p)) igTextWrapped("Node band labels retain %s; positions are not locked to bands.",p->rank ? "authored rank constraints":"prerequisite depth");
+    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool workspace=p->workspace_bounds;if(igCheckbox("Workspace bounds (trial)",&workspace))gd_explorer_presentation_set(c,"workspace_bounds",workspace ? "true":"false",p->query_message,sizeof(p->query_message));if(p->workspace_bounds){igTextDisabled("Fixed bounds; F fits workspace. Drag outside; release returns inside.");igTextDisabled("Bounds can crowd edges; internal motion may remain.");}}
+    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool filtered=p->visual_filter;if(igCheckbox("Visual position filter (One Euro)",&filtered))gd_explorer_presentation_set(c,"visual_filter",filtered ? "true":"false",p->query_message,sizeof(p->query_message));if(filtered)igTextDisabled("Rendering only; solver positions and velocities remain raw.");}
     if (!layout_settles(p))
         igTextWrapped("Stable layout; settling applies only to movable graph layouts.");
     else { igCheckbox("Pause settling",&p->paused); igSameLine(0,-1); }
@@ -720,7 +740,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
                      int initial_view, int matrix_layout, int frames, const char *screenshot, const char *output_path) {
     GD_Allocator allocator=diagnostic->allocator;
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
-    GD_ExplorerPane *panes=NULL;
+    GD_ExplorerPane *panes=NULL;GD_RenderPose *render=NULL;
     GD_ExplorerContext c={0};
     ExplorerViewer viewer={0}; char ipc_error[256]="";
     int active=0,v,frame=0,result=0,stale=0,close_seen=0,timed_seen=0,close_next=0;
@@ -736,7 +756,8 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     if (panes) memset(panes,0,GD_EXPLORER_VIEWS*sizeof(*panes));
     c.analysis=allocator.allocate(allocator.context,sizeof(*c.analysis));
     c.query=allocator.allocate(allocator.context,sizeof(*c.query));
-    if (!panes || !c.analysis || !c.query) { gd_error(diagnostic,"explorer.memory","Cannot allocate bounded explorer view state",NULL,0); result=2; goto cleanup; }
+    render=allocator.allocate(allocator.context,sizeof(*render));if(render)memset(render,0,sizeof(*render));
+    if (!panes || !c.analysis || !c.query || !render) { gd_error(diagnostic,"explorer.memory","Cannot allocate bounded explorer view state",NULL,0); result=2; goto cleanup; }
     memset(c.analysis,0,sizeof(*c.analysis));
     for (v=0;v<GD_EXPLORER_VIEWS;++v) pane_defaults(&panes[v],(GD_ExplorerView)v);
     if (matrix_layout>=0 && initial_view==GD_EXPLORER_NOUNS) {
@@ -920,7 +941,9 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         /* Reserve fixed-screen status/legend band outside grid pan/zoom and hit area. */
         if ((grid_view(p) || p->view==GD_EXPLORER_NOUNS) && !gd_explorer_similarity_active(&c)) { c.viewport.y+=GD_COUNT_GRID_HEADER; c.viewport.height-=GD_COUNT_GRID_HEADER; }
         p->camera.offset=(Vector2){c.viewport.x+c.viewport.width/2,c.viewport.y+c.viewport.height/2};
+        c.display_layout=NULL;if(p->fit)render->valid=0;
         if (!gd_explorer_similarity_active(&c) && p->fit) { fit_view(&c,p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+        if(render_active(&c)){if(gd_render_pose_matches(render,p->layout,render_identity(&c)))c.display_layout=&render->layout;else render_update(&c,render,0,1);}else render->valid=0;
         if (gd_explorer_similarity_active(&c)) gd_explorer_similarity_input(&c);
         else if (grid_view(p)) grid_input(&c);
         else if (p->view==GD_EXPLORER_NOUNS) noun_graph_input(&c);
@@ -928,6 +951,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_input(&c);
         else if (query_view(p->view)) gd_explorer_query_input(&c);
         else resource_input(&c);
+        c.display_layout=NULL;
         if (!p->distance_focus_enabled && p->distance_focus && p->distance_focus->animating &&
             (p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held)>=0)
             p->distance_focus->animating=p->distance_focus->returning=0;
@@ -939,6 +963,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (!gd_explorer_similarity_active(&c) && !grid_view(p) && p->distance_focus && p->distance_focus->animating)
             gd_layout_focus_advance(p->distance_focus,p->layout,GetFrameTime(),p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
         if (!gd_explorer_similarity_active(&c) && p->fit==3) { fit_view(&c,2); p->fit=0; }
+        if(render_active(&c))render_update(&c,render,GetFrameTime(),0);
         {
             GD_ExplorerEvidence e=evidence(&c,selected); viewer_record_layers(&viewer,&c);
             if (gd_explorer_similarity_active(&c)) gd_explorer_similarity_draw(&c);
@@ -949,9 +974,15 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             else if (query_view(p->view)) gd_explorer_query_draw(&c);
             else gd_explorer_resource_draw(&c,&e);
         }
+        if(!gd_explorer_similarity_active(&c) && free_graph(p) && p->layout->workspace.enabled){
+            const GD_LayoutBounds *b=&p->layout->workspace.bounds;float scale=p->view==GD_EXPLORER_MDA ? 3:1;
+            BeginScissorMode((int)c.viewport.x,(int)c.viewport.y,(int)c.viewport.width,(int)c.viewport.height);BeginMode2D(p->camera);
+            DrawRectangleLinesEx((Rectangle){b->left*scale,b->top*scale,(b->right-b->left)*scale,(b->bottom-b->top)*scale},1.5f/p->camera.zoom,(Color){104,142,181,160});EndMode2D();EndScissorMode();
+        }
         if (!gd_explorer_similarity_active(&c)) { draw_matches(&c); if (p->view!=GD_EXPLORER_NOUNS && !grid_view(p) && !query_view(p->view)) gd_graph_overview_draw(c.analysis,&p->overview,c.viewport,!igGetIO_Nil()->WantCaptureMouse); }
         DrawText(gd_explorer_similarity_active(&c) ? "Similarity: Click inspect | Shift-click compare | Wheel zoom | Right/middle pan | F fit | F5 refresh":grid_view(p) ? "Grid: Arrows select | PageUp/Down cases | Wheel zoom | Right/middle drag pan | F fit | F5 refresh":p->distance_focus_enabled ? "Distance focus: click node to refocus | Off: restore pose/drag | Pan/zoom unchanged | F: fit all":"Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
         DrawText(gd_explorer_similarity_active(&c) ? "Selected typed-feature distance approximation only; missing entries remain unplaced. No importance or execution proof.":incidence(p->view) ? "Shown incidence only; not flow, causality or equivalence.":"Authored declarations only; not learning, causality or physical reachability.",20,height-18,13,muted);
+        c.display_layout=NULL;
         rlImGuiEnd(); EndDrawing(); ++frame;
         if (screenshot && frame==frames && !gd_save_screenshot(screenshot)) { gd_error(diagnostic,"view.screenshot","Explorer screenshot export failed",screenshot,0); result=2; break; }
         if (reset || requested>=0 || find_view>=0 || relationship_root>=0) {
@@ -995,6 +1026,7 @@ cleanup:
         }
         allocator.release(allocator.context,panes);
     }
+    if(render)allocator.release(allocator.context,render);
     if (c.query) allocator.release(allocator.context,c.query);
     if (c.analysis) allocator.release(allocator.context,c.analysis);
     gd_explorer_destroy(project); return result;

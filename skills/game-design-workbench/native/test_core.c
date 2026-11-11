@@ -2473,6 +2473,8 @@ TEST(rules_allocation_failure,
 #include "test_layout_focus.h"
 #include "test_layout_interaction.h"
 #include "test_layout_collision.h"
+#include "test_layout_workspace.h"
+#include "test_render_pose.h"
 #include "test_layout_seed.h"
 #include "test_matrix_grid.h"
 #include "test_rule_targets.h"
@@ -2546,13 +2548,13 @@ int main(int argc, char **argv) {
     failed += test_explorer_loading(); failed += test_explorer_allocation_failures();
     failed += test_graph_shapes_oracle(); failed += test_graph_shapes_limits();
     failed += test_typed_reachability_controls();
-    failed += test_layout_footprints(); failed += test_layout_rectangle_separation(); failed += test_layout_collision_components(); failed += test_layout_collision_constraints(); failed += test_layout_collision_budget();
+    failed += test_layout_footprints(); failed += test_layout_rectangle_separation(); failed += test_layout_collision_components(); failed += test_layout_collision_constraints(); failed += test_layout_collision_budget(); failed += test_layout_workspace(); failed += test_render_pose();
     failed += test_layout_neighborhood_seed(); failed += test_layout_neighborhood_aspect_capacity(); failed += test_layout_neighborhood_failure();
     failed += test_layout_settling(); failed += test_layout_distance_focus(); failed += test_layout_interaction(); failed += test_directed_drawing_order(); failed += test_directed_drawing_routes();
     failed += test_graph_closure_oracle(); failed += test_graph_closure_limits(); failed += test_graph_foundations_adapter();
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/142 passed\n", 142-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/144 passed\n", 144-failed);
     return failed ? 1 : 0;
 }

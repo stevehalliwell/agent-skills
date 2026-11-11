@@ -272,7 +272,7 @@ static void detail(const GD_ResourceGraph *graph, int selected, int x, int width
     }
     EndScissorMode();
 }
-static void draw_resource_graph(const GD_ResourceGraph *graph, GD_Layout *layout, GD_GraphAnalysis *analysis,
+static void draw_resource_graph(const GD_ResourceGraph *graph,GD_Layout *raw, GD_Layout *layout, GD_GraphAnalysis *analysis,
     Camera2D camera, Rectangle viewport, int selected, int shared, int pair, const GD_GraphComparison *comparison,
     const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability,
     const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
@@ -295,35 +295,35 @@ static void draw_resource_graph(const GD_ResourceGraph *graph, GD_Layout *layout
         DrawLineEx((Vector2){a->x,a->y},(Vector2){b->x,b->y},1.5f,color);
     }
     for (i=0;i<layout->node_count;++i) {
-        GD_LayoutNode *n=&layout->nodes[i]; const GD_ResourceNode *item=&graph->nodes[n->key];
+        GD_LayoutNode *n=&layout->nodes[i],*physical=&raw->nodes[i]; const GD_ResourceNode *item=&graph->nodes[n->key];
         Color color=item->kind==GD_RESOURCE_CASE ? case_color:item->kind==GD_RESOURCE_ROLE ? role_color:facet_color;
         if (!analysis->shown[i]) continue;
-        gd_layout_set_footprint(n,-106,-43,106,45);
+        gd_layout_set_footprint(physical,-106,-43,106,45);
         DrawRectangleRounded((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,(Color){28,38,50,255});
         DrawRectangleRoundedLinesEx((Rectangle){n->x-90,n->y-24,180,48},0.15f,5,selected==n->key ? 3:1.5f,selected==n->key ? selected_color:color);
-        gd_graph_node_text(n,item->kind==GD_RESOURCE_CASE ? "case":item->kind==GD_RESOURCE_ROLE ? "resource role":"facet",(int)n->x-83,(int)n->y-19,11,color,1);
-        gd_graph_node_text(n,TextFormat("%.23s",node_label(graph,n->key)),(int)n->x-83,(int)n->y-3,14,foreground,1);
-        if (shared) gd_graph_node_text(n,TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)n->x-83,(int)n->y+28,13,role_color,1);
+        gd_graph_node_text_at(physical,n,item->kind==GD_RESOURCE_CASE ? "case":item->kind==GD_RESOURCE_ROLE ? "resource role":"facet",(int)n->x-83,(int)n->y-19,11,color,1);
+        gd_graph_node_text_at(physical,n,TextFormat("%.23s",node_label(graph,n->key)),(int)n->x-83,(int)n->y-3,14,foreground,1);
+        if (shared) gd_graph_node_text_at(physical,n,TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)n->x-83,(int)n->y+28,13,role_color,1);
         if (comparison) {
             unsigned category=comparison->nodes[i];
             if (category) {
                 Color branch_color=gd_graph_branch_color(category);
                 DrawRectangle((int)n->x+86,(int)n->y-18,2,36,branch_color);
-                gd_graph_footprint_rect(n,gd_graph_branch_badge(category,(int)n->x-35,(int)n->y+28,background),1);
+                gd_graph_footprint_rect_at(physical,n,gd_graph_branch_badge(category,(int)n->x-35,(int)n->y+28,background),1);
             }
-            if (i==comparison->a || i==comparison->b) gd_graph_node_text(n,i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground,1);
+            if (i==comparison->a || i==comparison->b) gd_graph_node_text_at(physical,n,i==comparison->a ? "A":"B",(int)n->x+70,(int)n->y+28,13,foreground,1);
         }
         if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-106,n->y-40,212,80},2,selected_color);
         if (shapes) {
-            gd_graph_footprint_rect(n,gd_graph_shape_badge(shapes,i,(int)n->x-83,(int)n->y+45,background),1);
+            gd_graph_footprint_rect_at(physical,n,gd_graph_shape_badge(shapes,i,(int)n->x-83,(int)n->y+45,background),1);
             if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){n->x-102,n->y-36,204,72},2,(Color){220,205,148,255});
         }
         if (reachability) {
-            gd_graph_footprint_rect(n,gd_graph_reachability_badge(reachability,i,(int)n->x-83,(int)n->y-43,background),1);
+            gd_graph_footprint_rect_at(physical,n,gd_graph_reachability_badge(reachability,i,(int)n->x-83,(int)n->y-43,background),1);
             if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){n->x-98,n->y-32,196,64},2,gd_graph_branch_color(reach_pair->nodes[i]));
         }
         if (paths) {
-            gd_graph_footprint_rect(n,gd_graph_path_badge(paths,path_selection,bypass,i,(int)n->x,(int)n->y-20,background),1);
+            gd_graph_footprint_rect_at(physical,n,gd_graph_path_badge(paths,path_selection,bypass,i,(int)n->x,(int)n->y-20,background),1);
             if (paths->roots[i]) gd_graph_path_start_marker((int)n->x+76,(int)n->y-15);
         }
     }
@@ -452,7 +452,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         DrawText("Resource graph preview",18,14,26,foreground);
         DrawText("Direct and instantiated declarations; not final outcomes. Incidence lines are not proof of flow.",18,49,16,selected_color);
         DrawText(TextFormat("%d nodes | %d relations | %d unresolved facets | %d unexamined calls%s",graph->node_count,graph->relation_count,graph->unresolved_facets,graph->composition_unexamined,graph->limited ? " | GRAPH LIMIT REACHED":""),18,74,15,muted);
-        draw_resource_graph(graph,layout,analysis,camera,viewport,selected,shared,pair,comparison,
+        draw_resource_graph(graph,layout,layout,analysis,camera,viewport,selected,shared,pair,comparison,
                             paths,bypass,reachability,reach_pair,shapes,overview);
         gd_graph_overview_draw(analysis,&overview_controls,viewport,1);
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
@@ -501,7 +501,7 @@ int gd_explorer_resource_prepare(GD_ExplorerContext *context) {
     return 1;
 }
 void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *e) {
-    GD_ExplorerPane *p=context->pane;
+    GD_ExplorerPane *p=context->pane;const GD_Layout *shown=gd_explorer_display_layout(context);
     int pair=p->shared ? gd_graph_match(context->analysis,p->selection.node,p->peer):-1;
     const GD_GraphComparison *comparison=p->branches && pair>=0 ? gd_graph_compare(context->analysis,p->selection.node,p->peer):NULL;
     if (p->resource_routes && p->resource_routes->graph==context->project->resources) {
@@ -510,14 +510,14 @@ void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvi
         for (i=0;i<p->layout->edge_count;++i) if (query->marked_relations[i] || query->side_relations[i]) {
             const GD_LayoutEdge *edge=&p->layout->edges[i];
             if (context->analysis->shown[edge->a] && context->analysis->shown[edge->b])
-                DrawLineEx((Vector2){p->layout->nodes[edge->a].x,p->layout->nodes[edge->a].y},(Vector2){p->layout->nodes[edge->b].x,p->layout->nodes[edge->b].y},
+                DrawLineEx((Vector2){shown->nodes[edge->a].x,shown->nodes[edge->a].y},(Vector2){shown->nodes[edge->b].x,shown->nodes[edge->b].y},
                     (query->marked_relations[i] ? 9:5)/p->camera.zoom,query->marked_relations[i] ? (Color){45,214,199,150}:(Color){243,186,87,115});
         }
         if (p->resource_witness>=0 && p->resource_witness<query->witness_count) {
             const GD_ResourceWitness *w=&query->witnesses[p->resource_witness];
             for (i=0;i<w->count;++i) {
                 const GD_ResourceArc *arc=&query->arcs[w->arcs[i]];
-                const GD_LayoutNode *a=&p->layout->nodes[arc->from],*b=&p->layout->nodes[arc->to];
+                const GD_LayoutNode *a=&shown->nodes[arc->from],*b=&shown->nodes[arc->to];
                 float dx=b->x-a->x,dy=b->y-a->y,length=hypotf(dx,dy),size=8/p->camera.zoom;
                 if (!context->analysis->shown[arc->from] || !context->analysis->shown[arc->to] || length<2*size) continue;
                 dx/=length; dy/=length;
@@ -527,14 +527,14 @@ void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvi
         }
         EndMode2D(); EndScissorMode();
     }
-    draw_resource_graph(context->project->resources,p->layout,context->analysis,p->camera,context->viewport,p->selection.node,
+    draw_resource_graph(context->project->resources,p->layout,gd_explorer_display_layout(context),context->analysis,p->camera,context->viewport,p->selection.node,
                         p->shared,pair,comparison,e->paths,e->bypass,e->reachability,e->reach_pair,e->shapes,e->overview);
     /* Separate provenance overlay: canonical declarations only, never a claim
        that each mapped placement applies to the independent rule scenario. */
     if (p->rule_state && (p->rule_state->result || p->rule_state->bindings)) {
         int i; BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); BeginMode2D(p->camera);
         for (i=0;i<p->layout->node_count;++i) {
-            const GD_LayoutNode *node=&p->layout->nodes[i]; const GD_ResourceNode *source=&context->project->resources->nodes[node->key];
+            const GD_LayoutNode *node=&shown->nodes[i]; const GD_ResourceNode *source=&context->project->resources->nodes[node->key];
             if (context->analysis->shown[i] && source->kind==GD_RESOURCE_CASE && !source->instance && gd_explorer_rules_marked(context,source->case_index))
                 DrawRectangleLinesEx((Rectangle){node->x-97,node->y-31,194,62},3/p->camera.zoom,(Color){198,133,245,255});
         }

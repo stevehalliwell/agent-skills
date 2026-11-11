@@ -23,6 +23,8 @@ static const PresentationField presentation_fields[]={
  PF(sort,"Sort / initial order",GD_CONTROL_INT,"Name\0Degree\0","name\0degree\0",15,sort,0),
  PF(direction,"Layout direction",GD_CONTROL_INT,"Top to bottom\0Left to right\0","vertical\0horizontal\0",3,horizontal,0),
  PF(paused,"Pause settling",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,paused,0),
+ PF(workspace_bounds,"Workspace bounds (trial)",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,workspace_bounds,0),
+ PF(visual_filter,"Visual position filter (One Euro)",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,visual_filter,0),
  PF(overlay,"Overlay inactive matrix pairs",GD_CONTROL_BOOL,NULL,NULL,1u<<GD_EXPLORER_MATRIX,overlay,0),
  VF(distance_focus,"Focus by shown-link distance",GD_CONTROL_BOOL,PV_GRAPH),
  PF(focus_auto_fit,"Auto-fit focus changes",GD_CONTROL_BOOL,NULL,NULL,PV_GRAPH,focus_auto_fit,0),
@@ -120,7 +122,7 @@ int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *na
     if(query_view(p->view) && p->query_state && p->query_state->scene && p->query_state->scene->overview && !strcmp(name,"layout")) return 0;
     if(!strcmp(name,"layout") && gd_explorer_similarity_active(c)) return 0;
     if(query_view(p->view) && (!strcmp(name,"layout") || !strcmp(name,"initial_arrangement")) && (!p->query_state || !p->query_state->scene)) return 0;
-    if(!strcmp(name,"initial_arrangement")) return free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c);
+    if(!strcmp(name,"initial_arrangement") || !strcmp(name,"workspace_bounds") || !strcmp(name,"visual_filter")) return free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c);
     if(!strncmp(name,"similarity_",11)) return p->structure_state && p->structure_state->result && p->structure_state->result->similarity;
     if(!strcmp(name,"known")) { int record=selected_record((GD_ExplorerContext *)c); return record>=0 && gd_explorer_model(c->project,p->view)->records[record].role==GD_SKILL; }
     if(!strcmp(name,"resource_witness")) return p->resource_routes!=NULL;
@@ -293,6 +295,7 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
         if(!presentation_rearrange(c,&next,!strcmp(name,"initial_arrangement"))) goto failed;
         if(!strcmp(name,"initial_arrangement") || (!strcmp(name,"layout") && free_graph(p))) p->paused=false;
     }
+    else if(!strcmp(name,"workspace_bounds")){if(!pane_workspace(c,next.workspace_bounds))goto failed;p->workspace_bounds=next.workspace_bounds;p->fit=1;}
     else if(!strcmp(name,"noun_row") || !strcmp(name,"noun_column")) noun_grid_choose(c,next.noun_row,next.noun_column);
     else if(!strcmp(name,"noun_case_page")) {if(next.noun_case_page>=(c->project->rules->case_count+63)/64 && next.noun_case_page!=0)goto failed;p->noun_case_page=next.noun_case_page;}
     else if(!strcmp(name,"actor_overview")) {if(!gd_explorer_query_overview(c,next.actor_overview)) goto failed;}

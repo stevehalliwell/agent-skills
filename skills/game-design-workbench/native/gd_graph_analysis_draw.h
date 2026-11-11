@@ -33,9 +33,15 @@ static inline void gd_graph_footprint_rect(GD_LayoutNode *node,Rectangle rectang
     float right=left+rectangle.width/scale,bottom=top+rectangle.height/scale;
     gd_layout_set_footprint(node,fminf(bounds->left,left),fminf(bounds->top,top),fmaxf(bounds->right,right),fmaxf(bounds->bottom,bottom));
 }
-static inline void gd_graph_node_text(GD_LayoutNode *node,const char *text,int x,int y,int size,Color color,float scale) {
+/* Measure at raw integer anchors, not filtered positions. Otherwise sub-pixel
+   text rounding would feed presentation smoothing back into collision bounds. */
+static inline void gd_graph_footprint_rect_at(GD_LayoutNode *raw,const GD_LayoutNode *shown,Rectangle rectangle,float scale) {
+    rectangle.x+=(int)(raw->x*scale)-(int)(shown->x*scale);rectangle.y+=(int)(raw->y*scale)-(int)(shown->y*scale);
+    gd_graph_footprint_rect(raw,rectangle,scale);
+}
+static inline void gd_graph_node_text_at(GD_LayoutNode *raw,const GD_LayoutNode *shown,const char *text,int x,int y,int size,Color color,float scale) {
     DrawText(text,x,y,size,color);
-    gd_graph_footprint_rect(node,(Rectangle){(float)x,(float)y,(float)MeasureText(text,size),(float)size},scale);
+    gd_graph_footprint_rect_at(raw,shown,(Rectangle){(float)x,(float)y,(float)MeasureText(text,size),(float)size},scale);
 }
 static inline Rectangle gd_graph_badge(const char *label,int x,int y,int size,Color background,Color foreground) {
     Rectangle rectangle={(float)x-2,(float)y-1,(float)MeasureText(label,size)+4,(float)size+2};

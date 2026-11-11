@@ -15,7 +15,7 @@ static void query_free_scatter(GD_QueryScene *scene) {
         node->y=unit->y+(scene->native_points[i].y-scene->native_points[anchor].y);node->vx=unit->vx;node->vy=unit->vy;
     }
     if(scene->layout.group_count) {GD_LayoutGroup *group=&scene->layout.groups[0];const GD_LayoutGroup *spatial=&free->layout.groups[0];group->x=spatial->x;group->y=spatial->y;group->width=spatial->width;group->height=spatial->height;}
-    scene->layout.width=free->layout.width;scene->layout.height=free->layout.height;scene->layout.tick=free->layout.tick;
+    scene->layout.width=free->layout.width;scene->layout.height=free->layout.height;scene->layout.tick=free->layout.tick;scene->layout.workspace=free->layout.workspace;
     scene->layout.collision_checks=free->layout.collision_checks;scene->layout.collision_moves=free->layout.collision_moves;scene->layout.collision_limited=free->layout.collision_limited;
 }
 static unsigned query_free_slot(uint64_t key) {
@@ -34,7 +34,7 @@ int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhoo
     if(mode==GD_LAYOUT_DIRECTED) {
         for(i=0;i<scene->layout.node_count;++i) {scene->layout.nodes[i].x=scene->native_points[i].x;scene->layout.nodes[i].y=scene->native_points[i].y;scene->layout.nodes[i].vx=scene->layout.nodes[i].vy=0;}
         scene->layout.groups[0]=scene->native_group;scene->layout.width=scene->native_width;scene->layout.height=scene->native_height;scene->layout.mode=mode;
-        scene->layout.tick=scene->layout.collision_cursor=scene->layout.collision_checks=scene->layout.collision_moves=0;scene->layout.collision_limited=0;
+        scene->layout.tick=scene->layout.collision_cursor=scene->layout.collision_checks=scene->layout.collision_moves=0;scene->layout.collision_limited=0;memset(&scene->layout.workspace,0,sizeof(scene->layout.workspace));
         if(scene->free_geometry) allocator.release(allocator.context,scene->free_geometry);scene->free_geometry=NULL;return 1;
     }
     fresh=allocator.allocate(allocator.context,sizeof(*fresh));if(!fresh) return 0;memset(fresh,0,sizeof(*fresh));
@@ -82,10 +82,21 @@ int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhoo
         if(fresh->layout.node_count) {GD_LayoutGroup *group=&fresh->layout.groups[0];group->x=left-16;group->y=top-16;group->width=right-left+32;group->height=bottom-top+32;fresh->layout.width=group->width;fresh->layout.height=group->height;}
     }
     if(neighborhood && !gd_layout_seed_neighborhood(&fresh->layout,allocator,aspect)) goto failed;
+    if(scene->layout.workspace.enabled && !gd_layout_workspace(&fresh->layout,1,aspect))goto failed;
     if(scene->free_geometry) allocator.release(allocator.context,scene->free_geometry);
     scene->free_geometry=fresh;scene->layout.mode=GD_LAYOUT_FORCE;query_free_scatter(scene);return 1;
 failed:
     if(hash) allocator.release(allocator.context,hash);allocator.release(allocator.context,fresh);return 0;
+}
+int gd_query_scene_anchor(const GD_QueryScene *scene,int node) {
+    if(!scene || node<0 || node>=scene->layout.node_count)return -1;
+    return scene->free_geometry ? scene->free_geometry->layout.nodes[scene->free_geometry->unit[node]].key:node;
+}
+int gd_query_scene_workspace(GD_QueryScene *scene,int enabled,float aspect) {
+    if(!scene)return 0;
+    if(!scene->free_geometry)return enabled ? 0:gd_layout_workspace(&scene->layout,0,aspect);
+    if(!gd_layout_workspace(&scene->free_geometry->layout,enabled,aspect))return 0;
+    query_free_scatter(scene);return 1;
 }
 void gd_query_scene_step(GD_QueryScene *scene,int held_node) {
     if(!scene || !scene->free_geometry) return;
