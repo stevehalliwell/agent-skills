@@ -1,4 +1,5 @@
-/* Headless test executable only; not a new public CLI command. */
+/* Feedback fixture producer for retained API/CLI subprocess integration.
+   Direct source, failure-recovery and datetime tests live in tests/core/c/. */
 #include "../../src/native-api.c"
 int main(int argc, char **argv) {
     attendant_session *session = attendant_open();
@@ -7,7 +8,6 @@ int main(int argc, char **argv) {
     LPWSTR *arguments;
     char *owned[16] = {0};
 #endif
-    const char *target;
     int i, code;
     jsonb output;
     char *json;
@@ -22,20 +22,10 @@ int main(int argc, char **argv) {
     }
     LocalFree(arguments); argv = owned;
 #endif
-    if (argc == 3 && !strcmp(argv[1], "datetime")) {
-        source_time stamp;
-        request_begin(session)->recovery = NULL;
-        int valid = parse_datetime(argv[2], &stamp);
-        if (valid) printf("{\"ok\":true,\"ticks\":\"%llu\",\"value\":\"%s\"}\n", (unsigned long long)stamp, iso_time(&session->state, stamp));
-        else puts("{\"ok\":false}");
-        code = valid ? 0 : 1; goto cleanup;
-    }
-    if (argc == 3 && !strcmp(argv[1], "read")) { target = argv[2]; result = attendant_read_document(session, target); }
-    else if (argc == 5 && !strcmp(argv[1], "save")) { target = argv[2]; result = attendant_save_document(session, target, argv[3], argv[4]); }
-    else if (argc == 10 && (!strcmp(argv[1], "send") || !strcmp(argv[1], "send-context"))) {
+    if (argc == 10 && (!strcmp(argv[1], "send") || !strcmp(argv[1], "send-context"))) {
         attendant_feedback input;
         memset(&input, 0, sizeof(input));
-        input.project = argv[2]; input.target_path = target = argv[3]; input.target_hash = argv[4];
+        input.project = argv[2]; input.target_path = argv[3]; input.target_hash = argv[4];
 #if defined(_WIN32)
         input.range_start = _strtoui64(argv[5], NULL, 10); input.range_end = _strtoui64(argv[6], NULL, 10);
 #else
@@ -60,13 +50,7 @@ int main(int argc, char **argv) {
     for (i = 0; i < result.written_count; i++) json_check(jsonb_string(&output, json, OUTPUT_CAPACITY, result.written[i], strlen(result.written[i])));
     json_check(jsonb_array_pop(&output, json, OUTPUT_CAPACITY));
     printf("%.*s", (int)output.pos, json);
-    /* Prove an operational failure does not poison next request in same process. */
-    if (!result.ok) {
-        attendant_result next = attendant_read_document(session, target);
-        printf(",\"recovered\":%s", next.ok ? "true" : "false");
-    }
     puts("}");
-cleanup:
     attendant_close(session);
 #if defined(_WIN32)
     for (i = 0; i < argc; i++) HeapFree(GetProcessHeap(), 0, owned[i]);

@@ -17,7 +17,8 @@ Resolve `<skill-dir>` from `SKILL.md`; native root is `<skill-dir>/native`. Run 
 - Windows x64 or macOS arm64. GUI needs local desktop; macOS builds need installed Apple command-line tools/SDK.
 - CLI: installed CJIT or Zig. Paths are independent; Zig does not require CJIT.
 - GUI library: installed Zig, Git, Bash and Node.js; macOS also needs make. GUI C99 app can then build with CJIT or Zig.
-- Node.js 24.10.0+ for development checks/tools only. No Node runtime in native CLI/GUI.
+- Native core/source tests: Bash and selected compiler only; no Node.js.
+- Node.js 24.10.0+ for external-process/GUI integration checks and GUI build tools only. No Node runtime in native CLI/GUI.
 
 No script installs compilers/packages. `CJIT` and `ZIG` override compilation executables. cimgui generator still invokes `zig cc` through PATH, even with `ZIG` override. Build caches live under native `build/`, never remove user's global cache.
 
@@ -63,6 +64,17 @@ Never overwrite mapped application/DLL or restart a manual viewer to make build 
 
 ## Focused development checks
 
+Direct C tests use locally extended `test.h` with shared `base.h` filesystem operations. No Node.js, GUI, downloads or prebuilt CLI needed:
+
+```sh
+bash test.sh cjit
+bash test.sh zig
+```
+
+Each command runs 35 C cases under UTC and Pacific/Auckland plus 17 isolated framework scenarios. Stdout is retained run directory; TSV, diagnostics, generated runners and build logs stay in `build/native-tests/run-*/`. Assertions stay active at `-O3`/`NDEBUG`. Case failures exit 1; suite/infrastructure or main generation/build failures exit 2. Hooks clean successful owned case folders and retain/report failures; Attendant session/content setup stays test-local. See [test interfaces, memory/path limits and lifecycle contract](../native/tests/README.md).
+
+External-process/GUI checks remain separate:
+
 ```sh
 bash tools/build-api-check.sh cjit
 bash tools/build-api-check.sh zig
@@ -79,7 +91,7 @@ node tests/gui/bridge-check.mjs
 node tools/benchmark.mjs 5
 ```
 
-CLI and production GUI builds above are prerequisites. GUI check builds also produce headless model executables. Checks use unique owned fixture copies under `build/`, not live projects. Both compiler builds are required for combined check scripts. Generated evidence is not imported historical evidence. `workflow-check.mjs` exercises current init-project templates and task/decision flows with both native CLIs; run from repository checkout containing sibling `skills/init-project/templates/`. That test-only dependency is not needed to build or use Attendant. `install-check.mjs` copies skill without builds into owned temporary installation with spaces/Unicode, proves missing-executable failure, builds each CLI and returns to original owned workspace. It needs both compilers/Bash, acquires nothing and leaves logs plus installation path in `build/install-check-results.json`.
+Matching CLI/API-probe builds are prerequisites for external core integration; production/test GUI builds for GUI checks. `api-check.mjs` now has 16 API/CLI interoperability groups. Direct source/date/fault assertions moved to C suite; historical API totals below describe pre-migration suite. GUI check builds also produce headless model executables. Checks use unique owned fixture copies under `build/`, not live projects. Both compiler builds are required for combined check scripts. Generated evidence is not imported historical evidence. `workflow-check.mjs` exercises current init-project templates and task/decision flows with both native CLIs; run from repository checkout containing sibling `skills/init-project/templates/`. That test-only dependency is not needed to build or use Attendant. `install-check.mjs` copies skill without builds into owned temporary installation with spaces/Unicode, proves missing-executable failure, builds each CLI and returns to original owned workspace. It needs both compilers/Bash, acquires nothing and leaves logs plus installation path in `build/install-check-results.json`.
 
 ### Windows footprint sanity probe
 
@@ -95,11 +107,13 @@ Opens one owned viewer at a time for each compiler. Copies test collections and 
 
 ## macOS bring-up checkpoint
 
-Native CLI/API and interactive GLFW/OpenGL3 workspace build/run with Zig and CJIT. Combined acceptance passes 20 CLI groups, 94 API cases, 20 GUI/model groups (194 macOS model assertions per compiler) and 16 local-control groups on owned Unicode-path workspaces. API checks include timezone-independent UTC timestamps from 1601 through 9999, epoch boundaries and invalid-calendar rejection. Post-port Windows x64 qualification also passes: fresh CJIT/Zig CLI/API/production/test GUI/model builds, rebuilt Win32/D3D11 dependency DLL, 20 CLI groups, 94 API cases and 20 GUI/model groups with 193 model assertions per compiler. Pinned dependencies verified offline; checks use owned fixtures and fresh `ATTENDANT_GUI_VARIANT=windows-regression`.
+Historical checkpoint before `test.h` migration: native CLI/API and interactive GLFW/OpenGL3 workspace build/run with Zig and CJIT. Combined acceptance passed 20 CLI groups, 94 API cases, 20 GUI/model groups (194 macOS model assertions per compiler) and 16 local-control groups on owned Unicode-path workspaces. API checks include timezone-independent UTC timestamps from 1601 through 9999, epoch boundaries and invalid-calendar rejection. Post-port Windows x64 qualification also passes: fresh CJIT/Zig CLI/API/production/test GUI/model builds, rebuilt Win32/D3D11 dependency DLL, 20 CLI groups, 94 API cases and 20 GUI/model groups with 193 model assertions per compiler. Pinned dependencies verified offline; checks use owned fixtures and fresh `ATTENDANT_GUI_VARIANT=windows-regression`.
 
 ```sh
 bash build.sh zig
 bash build.sh cjit
+bash test.sh zig
+bash test.sh cjit
 bash tools/build-api-check.sh zig
 bash tools/build-api-check.sh cjit
 node tests/core/cli-check.mjs

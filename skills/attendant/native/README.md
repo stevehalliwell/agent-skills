@@ -4,7 +4,7 @@ C99 CLI and Markdown workspace GUI over shared core. Markdown is authoritative; 
 
 Status: active Attendant implementation for Windows x64 and macOS arm64. Skill invokes native CLI directly; GUI is separate. No JS runtime or fallback. Build on demand with installed compiler; see build reference. Use owned workspace copies for checks/evaluation.
 
-macOS arm64: Zig/CJIT CLI, source/feedback API and interactive GLFW/OpenGL3 workspace run. Combined checks pass 20 CLI groups, 94 API cases, 20 GUI/model groups (194 macOS model assertions per compiler) and 16 control groups. Bridge checks cover Markdown/images, Retina screenshots and terminal render cleanup. Windows x64 keeps Win32/D3D11; post-port CJIT/Zig rebuilds and runtime checks pass 20 CLI groups, 94 API cases and 20 GUI/model groups (193 model assertions per compiler). See [macOS build checkpoint](../references/build.md#macos-bring-up-checkpoint).
+Platform qualification before native test migration: macOS arm64 Zig/CJIT CLI, source/feedback API and interactive GLFW/OpenGL3 workspace run. Combined checks passed 20 CLI groups, 94 API cases, 20 GUI/model groups (194 macOS model assertions per compiler) and 16 control groups. Bridge checks cover Markdown/images, Retina screenshots and terminal render cleanup. Windows x64 keeps Win32/D3D11; post-port CJIT/Zig rebuilds and runtime checks passed 20 CLI groups, 94 API cases and 20 GUI/model groups (193 model assertions per compiler). See [macOS build checkpoint](../references/build.md#macos-bring-up-checkpoint). Current test organization is below; migrated C suite has Windows runtime proof, not a fresh macOS run.
 
 ## Build and run
 
@@ -26,7 +26,7 @@ Commands: `doctor`, `validate`, `sync`, `schema`, `query`, `search`, `add-table`
 
 - `apps/cli/`: CLI entry point and handlers.
 - `apps/gui/`: GUI entry point, document workspace and reveal/inspection IPC. [GUI contract](apps/gui/README.md).
-- `src/`: shared core, native source API and C support header. App-specific C99 unity builds; no CLI entry point in shared core.
+- `src/`: shared core, native source API, C support and locally extended `test.h`. App-specific C99 unity builds; no CLI entry point in shared core.
 - `vendor/`: pinned C dependencies and maintained GUI bridge. [Dependency pins, licenses and patches](vendor/README.md).
 - `tests/`: focused direct native contracts, feedback fault checks, GUI model/input checks and owned fixtures. No JS equivalence oracle.
 - `tools/`: explicit GUI acquisition/generation, build support and repeatable performance probe.
@@ -60,6 +60,10 @@ Bounds: 128 MiB caller arena plus 12 MiB JSON workspace; parser/SQLite allocate 
 From this directory, after builds described in build reference:
 
 ```sh
+# Pure C core/source suite; no Node runtime or GUI needed:
+bash test.sh cjit
+bash test.sh zig
+# Retained external-process/GUI integration:
 node tests/core/cli-check.mjs
 node tests/core/api-check.mjs
 node tests/core/workflow-check.mjs
@@ -70,6 +74,10 @@ node tests/gui/control-macos-check.mjs
 node tests/gui/bridge-check.mjs
 node tools/benchmark.mjs 5
 ```
+
+Native `test.sh` runs 35 C cases under UTC and Pacific/Auckland plus 17 isolated framework scenarios per compiler. Covers source/API failure/recovery, core parsers/hashing, generic file/tree operations, lifecycle and assertion failures. Shared `base.h` owns filesystem operations; local `test.h` adds suite/case hooks and file assertions. Successful owned case folders are removed; failed fixtures, generated C, logs and TSV stay under `build/native-tests/run-*/`. See [test interfaces/limits](tests/README.md) and [migration/progress](../../../TODO.md#native-test-migration).
+
+`api-check.mjs` now retains 16 API/CLI feedback interoperability groups; direct API/date/fault assertions moved into C, not duplicated. CLI, template workflow, install and real-GUI harnesses retain subprocess deadlines/exit/output checks. Existing GUI model already uses direct C assertions.
 
 Checks create owned copies under `build/`; never target live projects. Latest local results: `build/cli-check-results.json`, `build/api-check-results.json`, `build/gui-check-results.json`; each run replaces its report. Skill/template integration and clean-install recovery reports: `build/workflow-check-results.json` and `build/install-check-results.json`. macOS adds `build/control-check-results.json` and `build/bridge-check-results.json`. GUI manifests bind actual inputs/binaries to checks. macOS model checks include maximum 4 MiB selection plus 4 MiB context, delayed-reader backpressure and frozen-reply independence from later selection changes. Model assertions remain active even if compiler defines `NDEBUG`.
 
