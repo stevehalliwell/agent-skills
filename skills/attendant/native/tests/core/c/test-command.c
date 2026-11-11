@@ -200,31 +200,3 @@ TEST(command_launch_errors_exit_signal_timeout_and_validation,
     TEST_ASSERT(test_command_run(&workspace, &command, &result) == test_command_capacity);
     TEST_ASSERT(arena_pos(workspace.scratch) == 0);
 )
-
-TEST(command_owned_descendants_stop_after_root_exit,
-    test_command_workspace workspace; char helper[NATIVE_PATH_SIZE], heartbeat[NATIVE_PATH_SIZE];
-    TEST_ASSERT(command_test_prepare(&workspace, helper));
-    for (int closed = 0; closed < 2; ++closed) {
-        TEST_ASSERT_FILE_OK(file_tree_join(heartbeat, source_test_case_root, closed ? "closed café.bin" : "heartbeat café.bin"));
-        const char *arguments[] = {helper, closed ? "spawn-heartbeat-closed" : "spawn-heartbeat", heartbeat};
-        test_command command = {.arguments = arguments, .argument_count = 3, .timeout_ms = 30000};
-        test_command_result result; u64 start, end; TEST_ASSERT(test_command_clock(&start));
-        TEST_ASSERT_COMMAND_OK(test_command_run(&workspace, &command, &result)); TEST_ASSERT_COMMAND_EXIT(&result, 0);
-        TEST_ASSERT_COMMAND_OUTPUT_TEXT(&result, "spawned\n"); TEST_ASSERT(test_command_clock(&end) && end - start < 5000);
-#if defined(_WIN32)
-        char identity[256]; usize size = 0;
-        TEST_ASSERT_FILE_OK(file_read_into((cstring){heartbeat}, identity, sizeof(identity) - 1, &size)); identity[size] = 0;
-        char *end_identity; unsigned long process = strtoul(identity, &end_identity, 10);
-        TEST_ASSERT(process && *end_identity == '\n');
-        HANDLE descendant = OpenProcess(SYNCHRONIZE, FALSE, (DWORD)process);
-        int stopped = descendant ? WaitForSingleObject(descendant, 0) == WAIT_OBJECT_0 : GetLastError() == ERROR_INVALID_PARAMETER;
-        int closed_handle = !descendant || CloseHandle(descendant);
-        TEST_ASSERT(stopped && closed_handle);
-#else
-        test_command_sleep(50); /* POSIX group signals do not reap grandchildren. */
-#endif
-        file_stat_result first = file_stat((cstring){heartbeat}); TEST_ASSERT_FILE_OK(first.error);
-        test_command_sleep(100); file_stat_result second = file_stat((cstring){heartbeat}); TEST_ASSERT_FILE_OK(second.error);
-        TEST_ASSERT(first.size > 0 && first.size == second.size);
-    }
-)

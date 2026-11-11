@@ -71,7 +71,7 @@ bash test.sh cjit
 bash test.sh zig
 ```
 
-Each command runs 44 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios and five subprocess integration cases with 23 contract groups. Wrapper builds matching CLI/API probe. Integration retains actual subprocess interoperability, stdin/output/deadlines, schema/query/update checks, current task/decision template workflows and cold build from isolated skill copy. Four migrated core JS harnesses are removed. Template checkout is test-only, not a product build dependency.
+Each command runs 47 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios and five subprocess integration cases with 23 contract groups. Wrapper builds matching CLI/API probe. Integration retains actual subprocess interoperability, stdin/output/deadlines, schema/query/update checks, current task/decision template workflows and cold build from isolated skill copy. Four migrated core JS harnesses are removed. Template checkout is test-only, not a product build dependency.
 
 Stdout is retained run directory; TSV, diagnostics, generated runners, command captures and build logs stay in `build/native-tests/run-*/`. Assertions stay active at `-O3`/`NDEBUG`. Case failures exit 1; suite/infrastructure or generation/build failures exit 2. Hooks clean successful owned fixtures and retain/report failures. Install case also owns OS temp directory, excludes all prior builds/caches and builds copied source with 180000 ms deadline. See [test interfaces, memory/path limits and lifecycle contract](../native/tests/README.md).
 
@@ -87,7 +87,7 @@ node tests/gui/bridge-check.mjs
 node tools/benchmark.mjs 5
 ```
 
-GUI checks need matching production/test GUI and CLI builds for both compilers, installed compilers and Bash. Check builds also produce headless model executables. `node tests/gui/check.mjs` verifies manifests, builds fresh C runners through `tools/build-gui-tests.sh`, runs eight finite groups per compiler, then retains two live-preview groups per compiler in JS. Total stays 20 groups. C runner artifacts/build logs stay under `build/gui-tests/run-*/`; GUI report links per-compiler TSV/diagnostics and preserved production screenshot under its owned run folder. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
+GUI checks need matching production/test GUI and CLI builds for both compilers, installed compilers and Bash. Check builds also produce headless model executables. `node tests/gui/check.mjs` verifies manifests, builds fresh C runners through `tools/build-gui-tests.sh`, runs all ten groups per compiler in C, including two caller-polled live previews with opposite-compiler inspection. JS retains provenance/build/result coordination only. Total stays 20 groups. C runner artifacts/build logs stay under `build/gui-tests/run-*/`; GUI report links per-compiler TSV/diagnostics and preserved production screenshot under its owned run folder. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
 
 ### Windows footprint sanity probe
 

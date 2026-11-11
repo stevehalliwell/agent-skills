@@ -1,7 +1,8 @@
 /* Focused parser/P6 rejection checks. Run in fresh owned build directory;
    never starts GUI, opens project or changes reusable header policy. */
 #include "test.h"
-#include "tests/gui/synchronous/support.h"
+#include "tests/gui/integration/support.h"
+#include "tests/gui/integration/preview.c"
 int main(void) {
     const struct { const char *json; int accepted; } counts[] = {
         {"-1", 0}, {"0", 0}, {"0.5", 0}, {"1e99", 0}, {"2147483648", 0},
@@ -26,6 +27,19 @@ int main(void) {
     const char valid[] = "P6\n1 1\n255\nabc";
     TEST_ASSERT_FILE_OK(file_write_bytes((cstring){"image.ppm"}, valid, sizeof(valid) - 1));
     TEST_ASSERT(gui_screenshot("image.ppm") == 0);
-    puts("GUI validators: 12 count cases and 6 P6 cases passed");
+    const char *bytes; usize size;
+    TEST_ASSERT(gui_slice("aΩ😀z", 1, 3, &bytes, &size) && size == strlen("Ω😀") && !memcmp(bytes, "Ω😀", size));
+    TEST_ASSERT(gui_slice("aΩ😀z", 4, 4, &bytes, &size) && size == 0);
+    TEST_ASSERT(!gui_slice("aΩ😀z", 0, 5, &bytes, &size));
+    TEST_ASSERT(!gui_slice("aΩ😀z", 3, 2, &bytes, &size));
+    TEST_ASSERT(!gui_slice("\xff", 0, 1, &bytes, &size));
+    test_command_live live = {0}; usize offset = 0; int ready = 0;
+    const char event[] = "{\"event\":\"selection-ready\"}\n";
+    live.result.output = string_view_from_raw((u8 *)event, sizeof(event) - 2);
+    TEST_ASSERT(gui_selection_ready(&live, &offset, &ready) == 0 && !ready && offset == 0);
+    live.result.output.len = sizeof(event) - 1;
+    TEST_ASSERT(gui_selection_ready(&live, &offset, &ready) == 0 && ready && offset == sizeof(event) - 1);
+    TEST_ASSERT(gui_selection_ready(&live, &offset, &ready) == 0 && ready);
+    puts("GUI validators: 12 count, 6 P6, 5 Unicode slice and 3 readiness cases passed");
     return 0;
 }

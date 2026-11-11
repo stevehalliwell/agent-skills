@@ -55,6 +55,14 @@ int main(int argc, char **argv) {
         if (!getcwd(path, sizeof(path))) return 94;
 #endif
         fputs(path, stdout);
+    } else if (!strcmp(argv[1], "live") && argc == 3) {
+        fputs("rea", stdout); fflush(stdout); child_sleep(25);
+        fputs("dy\n", stdout); fflush(stdout);
+        fputs("live-errors\n", stderr); fflush(stderr);
+        unsigned attempt;
+        for (attempt = 0; attempt < 10000 && file_stat((cstring){argv[2]}).error != file_error_ok; ++attempt) child_sleep(1);
+        if (attempt == 10000) return 101;
+        fputs("done\n", stdout);
     } else if (!strcmp(argv[1], "sleep")) child_sleep(10000);
 #if !defined(_WIN32)
     else if (!strcmp(argv[1], "join-group") && argc == 3) {
@@ -97,7 +105,8 @@ int main(int argc, char **argv) {
             file_create_text((cstring){ready}, "ready") != file_error_ok) { fclose(file); return 97; }
         for (unsigned i = 0; i < 1500; ++i) { fputc('x', file); fflush(file); child_sleep(20); }
         if (fclose(file)) return 97;
-    } else if ((!strcmp(argv[1], "spawn-heartbeat") || !strcmp(argv[1], "spawn-heartbeat-closed")) && argc == 3) {
+    } else if ((!strcmp(argv[1], "spawn-heartbeat") || !strcmp(argv[1], "spawn-heartbeat-closed")) &&
+               (argc == 3 || (argc == 4 && !strcmp(argv[3], "hold")))) {
         int closed = !strcmp(argv[1], "spawn-heartbeat-closed");
 #if defined(_WIN32)
         wchar_t self[NATIVE_PATH_SIZE], target[NATIVE_PATH_SIZE], line[NATIVE_PATH_SIZE * 2 + 32];
@@ -118,7 +127,14 @@ int main(int argc, char **argv) {
         if (snprintf(ready, sizeof(ready), "%s.ready", argv[2]) >= (int)sizeof(ready)) return 98;
         for (unsigned i = 0; i < 1000 && file_stat((cstring){ready}).error != file_error_ok; ++i) child_sleep(1);
         if (file_stat((cstring){ready}).error != file_error_ok) return 98;
-        fputs("spawned\n", stdout);
+        fputs("spawned\n", stdout); fflush(stdout);
+        if (argc == 4) {
+            char release[NATIVE_PATH_SIZE];
+            if (snprintf(release, sizeof(release), "%s.release", argv[2]) >= (int)sizeof(release)) return 98;
+            unsigned attempt;
+            for (attempt = 0; attempt < 10000 && file_stat((cstring){release}).error != file_error_ok; ++attempt) child_sleep(1);
+            if (attempt == 10000) return 102;
+        }
     } else return 99;
     return ferror(stdout) || ferror(stderr) ? 100 : 0;
 }

@@ -162,11 +162,15 @@ static int test_run_case(const test_case *test, int (*body)(void),
 #define TEST(name, ...)
 #endif
 
-/* Synchronous test-owned commands, not a general application process API.
-   No shell. Borrow arguments/input until return; captures borrow caller buffers
-   until reuse. Capacities include NUL; byte lengths do not. No silent truncation.
-   Parent environment/cwd/signal policy stays unchanged. Windows owns a job;
-   POSIX owns a process group (detached descendants are outside contract).
+/* Test-owned commands, not a general application process API.
+   No shell. Start borrows arguments/input/scratch until return; live state and
+   captures stay at stable, exclusive addresses until completion. Do not copy live
+   state. Caller must poll all active children; no background deadline watchdog.
+   Capacities include NUL; byte lengths do not. No silent truncation.
+   Parent environment/cwd/signal policy stays unchanged. Windows owns a job,
+   waits direct child and verifies job active count zero; descendant process
+   objects may signal later. POSIX owns a process group (detached descendants
+   are outside contract).
    POSIX requires default SIGCHLD, no competing reaper, and modern libc's spawn
    chdir action. Caller coordinates concurrent environment/cwd/signal changes. */
 typedef struct test_command_environment { const char *name, *value; } test_command_environment;
@@ -193,6 +197,7 @@ typedef enum test_command_error {
     test_command_timeout,
     test_command_capacity,
     test_command_cleanup_failed,
+    test_command_cancelled,
 } test_command_error;
 typedef struct test_command_result {
     test_command_error error;
@@ -200,6 +205,23 @@ typedef struct test_command_result {
     int exited, signal_number, cleanup_failed;
     string_view output, error_output;
 } test_command_result;
+/* Zero-initialize before first start. Completed state may be reused. Finish is
+   idempotent; always call it on paths that leave a child active. A poll performs
+   at most one 16 KiB read per stream, plus bounded terminal cleanup. */
+typedef struct test_command_live {
+    test_command_workspace workspace;
+    test_command_result result;
+    u64 start;
+    u32 timeout_ms;
+    int active, complete, observed, output_done, error_done;
+#if defined(_WIN32)
+    HANDLE process, job, output_read, error_read;
+    int assigned;
+#else
+    pid_t process;
+    int output_read, error_read;
+#endif
+} test_command_live;
 enum { TEST_COMMAND_MAX_ENVIRONMENT = 4096, TEST_COMMAND_CLEANUP_MS = 1000 };
 
 static const char *test_command_error_message(test_command_error error) {
@@ -211,6 +233,7 @@ static const char *test_command_error_message(test_command_error error) {
     case test_command_timeout: return "command deadline exceeded";
     case test_command_capacity: return "command/capture capacity exhausted";
     case test_command_cleanup_failed: return "command cleanup failed";
+    case test_command_cancelled: return "command cancelled";
     }
     return "unknown command failure";
 }
@@ -476,8 +499,40 @@ static int test_command_windows_read(HANDLE pipe, char *output, usize capacity, 
     if ((usize)available > room) test_command_fail(result, test_command_capacity, 0);
     return read != 0;
 }
-static void test_command_windows(test_command_workspace *workspace, const test_command *command,
-                                  test_command_result *result, u64 start) {
+static void test_command_windows_finish(test_command_live *live) {
+    test_command_result *result = &live->result;
+    if (live->process) {
+        if (live->assigned) { if (!TerminateJobObject(live->job, 1)) test_command_fail(result, test_command_cleanup_failed, GetLastError()); }
+        else if (!TerminateProcess(live->process, 1)) test_command_fail(result, test_command_cleanup_failed, GetLastError());
+        if (WaitForSingleObject(live->process, TEST_COMMAND_CLEANUP_MS) != WAIT_OBJECT_0)
+            test_command_fail(result, test_command_cleanup_failed, GetLastError());
+        else if (!result->exited) {
+            DWORD code;
+            if (!GetExitCodeProcess(live->process, &code)) test_command_fail(result, test_command_cleanup_failed, GetLastError());
+            else { result->exited = 1; result->exit_code = code; }
+        }
+        if (live->assigned) {
+            int empty = 0;
+            for (unsigned attempt = 0; attempt <= TEST_COMMAND_CLEANUP_MS; ++attempt) {
+                JOBOBJECT_BASIC_ACCOUNTING_INFORMATION information = {0};
+                if (!QueryInformationJobObject(live->job, JobObjectBasicAccountingInformation, &information, sizeof(information), NULL)) {
+                    test_command_fail(result, test_command_cleanup_failed, GetLastError()); break;
+                }
+                if (!information.ActiveProcesses) { empty = 1; break; }
+                test_command_sleep(1);
+            }
+            if (!empty) test_command_fail(result, test_command_cleanup_failed, WAIT_TIMEOUT);
+        }
+    }
+    HANDLE owned[] = {live->process, live->job, live->output_read, live->error_read};
+    for (usize i = 0; i < sizeof(owned) / sizeof(owned[0]); ++i)
+        if (owned[i] && !CloseHandle(owned[i])) test_command_fail(result, test_command_cleanup_failed, GetLastError());
+    live->process = live->job = live->output_read = live->error_read = NULL;
+}
+static void test_command_windows_start(test_command_live *live, const test_command *command) {
+    test_command_workspace *workspace = &live->workspace;
+    test_command_result *result = &live->result;
+    u64 start = live->start;
     HANDLE input = INVALID_HANDLE_VALUE, output_read = NULL, output_write = NULL, error_read = NULL, error_write = NULL;
     HANDLE job = NULL; PROCESS_INFORMATION child = {0};
     SECURITY_ATTRIBUTES security = {sizeof(security), NULL, TRUE};
@@ -486,7 +541,7 @@ static void test_command_windows(test_command_workspace *workspace, const test_c
     typedef VOID (WINAPI *test_attribute_delete)(void *);
     test_attribute_delete delete_attributes = NULL;
     struct { STARTUPINFOW startup; void *attributes; } startup = {0};
-    int attributes_ready = 0, assigned = 0, observed = 0, output_done = 0, error_done = 0;
+    int attributes_ready = 0, assigned = 0;
     wchar_t cwd_wide[NATIVE_PATH_SIZE], cwd_input[NATIVE_PATH_SIZE]; char cwd[NATIVE_PATH_SIZE], executable[NATIVE_PATH_SIZE];
     if (command->working_directory) {
         if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, command->working_directory, -1, cwd_input, NATIVE_PATH_SIZE)) {
@@ -588,52 +643,31 @@ static void test_command_windows(test_command_workspace *workspace, const test_c
     if (!CloseHandle(input)) test_command_fail(result, test_command_cleanup_failed, GetLastError()); input = INVALID_HANDLE_VALUE;
     if (!CloseHandle(output_write)) test_command_fail(result, test_command_cleanup_failed, GetLastError()); output_write = NULL;
     if (!CloseHandle(error_write)) test_command_fail(result, test_command_cleanup_failed, GetLastError()); error_write = NULL;
-    while (result->error == test_command_ok && !(observed && output_done && error_done)) {
-        if (!observed) {
-            DWORD wait = WaitForSingleObject(child.hProcess, 0);
-            if (wait == WAIT_OBJECT_0) {
-                DWORD code;
-                if (!GetExitCodeProcess(child.hProcess, &code)) { test_command_fail(result, test_command_io_failed, GetLastError()); break; }
-                result->exited = 1; result->exit_code = code; observed = 1;
-                if (!TerminateJobObject(job, 1)) test_command_fail(result, test_command_cleanup_failed, GetLastError());
-            } else if (wait != WAIT_TIMEOUT) test_command_fail(result, test_command_io_failed, GetLastError());
-        }
-        int progress = 0;
-        if (!output_done && result->error == test_command_ok)
-            progress |= test_command_windows_read(output_read, workspace->output, workspace->output_capacity, &result->output, result, &output_done);
-        if (!error_done && result->error == test_command_ok)
-            progress |= test_command_windows_read(error_read, workspace->error_output, workspace->error_capacity, &result->error_output, result, &error_done);
-        (void)test_command_deadline(result, start, command->timeout_ms);
-        if (!progress && result->error == test_command_ok && !(observed && output_done && error_done)) test_command_sleep(1);
-    }
 cleanup:
-    if (child.hProcess) {
-        if (assigned) { if (!TerminateJobObject(job, 1)) test_command_fail(result, test_command_cleanup_failed, GetLastError()); }
-        else if (!TerminateProcess(child.hProcess, 1)) test_command_fail(result, test_command_cleanup_failed, GetLastError());
-        if (WaitForSingleObject(child.hProcess, TEST_COMMAND_CLEANUP_MS) != WAIT_OBJECT_0)
-            test_command_fail(result, test_command_cleanup_failed, GetLastError());
-        else if (!result->exited) {
-            DWORD code;
-            if (!GetExitCodeProcess(child.hProcess, &code)) test_command_fail(result, test_command_cleanup_failed, GetLastError());
-            else { result->exited = 1; result->exit_code = code; }
-        }
-        if (assigned) {
-            int empty = 0;
-            for (unsigned attempt = 0; attempt <= TEST_COMMAND_CLEANUP_MS; ++attempt) {
-                JOBOBJECT_BASIC_ACCOUNTING_INFORMATION information = {0};
-                if (!QueryInformationJobObject(job, JobObjectBasicAccountingInformation, &information, sizeof(information), NULL)) {
-                    test_command_fail(result, test_command_cleanup_failed, GetLastError()); break;
-                }
-                if (!information.ActiveProcesses) { empty = 1; break; }
-                test_command_sleep(1);
-            }
-            if (!empty) test_command_fail(result, test_command_cleanup_failed, WAIT_TIMEOUT);
-        }
-    }
     if (attributes_ready) delete_attributes(startup.attributes);
-    HANDLE owned[] = {child.hThread, child.hProcess, job, output_read, output_write, error_read, error_write, input};
-    for (usize i = 0; i < sizeof(owned) / sizeof(owned[0]); ++i)
-        if (owned[i] && owned[i] != INVALID_HANDLE_VALUE && !CloseHandle(owned[i])) test_command_fail(result, test_command_cleanup_failed, GetLastError());
+    HANDLE temporary[] = {child.hThread, output_write, error_write, input};
+    for (usize i = 0; i < sizeof(temporary) / sizeof(temporary[0]); ++i)
+        if (temporary[i] && temporary[i] != INVALID_HANDLE_VALUE && !CloseHandle(temporary[i])) test_command_fail(result, test_command_cleanup_failed, GetLastError());
+    live->process = child.hProcess; live->job = job; live->assigned = assigned;
+    live->output_read = output_read; live->error_read = error_read;
+    if (result->error != test_command_ok) test_command_windows_finish(live);
+}
+static void test_command_windows_poll(test_command_live *live) {
+    test_command_workspace *workspace = &live->workspace;
+    test_command_result *result = &live->result;
+    if (!live->observed) {
+        DWORD wait = WaitForSingleObject(live->process, 0);
+        if (wait == WAIT_OBJECT_0) {
+            DWORD code;
+            if (!GetExitCodeProcess(live->process, &code)) test_command_fail(result, test_command_io_failed, GetLastError());
+            else { result->exited = 1; result->exit_code = code; live->observed = 1; }
+            if (!TerminateJobObject(live->job, 1)) test_command_fail(result, test_command_cleanup_failed, GetLastError());
+        } else if (wait != WAIT_TIMEOUT) test_command_fail(result, test_command_io_failed, GetLastError());
+    }
+    if (!live->output_done && result->error == test_command_ok)
+        test_command_windows_read(live->output_read, workspace->output, workspace->output_capacity, &result->output, result, &live->output_done);
+    if (!live->error_done && result->error == test_command_ok)
+        test_command_windows_read(live->error_read, workspace->error_output, workspace->error_capacity, &result->error_output, result, &live->error_done);
 }
 #else
 #include <signal.h>
@@ -662,11 +696,35 @@ static int test_command_posix_read(int descriptor, char *output, usize capacity,
     else { view->len += (usize)count; output[view->len] = 0; }
     return 1;
 }
-static void test_command_posix(test_command_workspace *workspace, const test_command *command,
-                                test_command_result *result, u64 start) {
+static void test_command_posix_finish(test_command_live *live) {
+    test_command_result *result = &live->result;
+    pid_t child = live->process;
+    if (child) {
+        /* Keep child unreaped through cancellation: its group ID cannot be reused. */
+        if (kill(-child, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
+        if (kill(child, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
+        int status = 0, reaped = 0;
+        for (unsigned attempt = 0; attempt <= TEST_COMMAND_CLEANUP_MS; ++attempt) {
+            pid_t waited = waitpid(child, &status, WNOHANG);
+            if (waited == child) { reaped = 1; break; }
+            if (waited < 0 && errno != EINTR) break;
+            test_command_sleep(1);
+        }
+        if (!reaped) test_command_fail(result, test_command_cleanup_failed, errno);
+        else if (WIFEXITED(status)) { result->exited = 1; result->exit_code = WEXITSTATUS(status); }
+        else if (WIFSIGNALED(status)) result->signal_number = WTERMSIG(status);
+    }
+    if (live->output_read >= 0 && close(live->output_read)) test_command_fail(result, test_command_cleanup_failed, errno);
+    if (live->error_read >= 0 && close(live->error_read)) test_command_fail(result, test_command_cleanup_failed, errno);
+    live->process = 0; live->output_read = live->error_read = -1;
+}
+static void test_command_posix_start(test_command_live *live, const test_command *command) {
+    test_command_workspace *workspace = &live->workspace;
+    test_command_result *result = &live->result;
+    u64 start = live->start;
     extern char **environ;
     int descriptors[5] = {-1, -1, -1, -1, -1}; /* stdin, stdout read/write, stderr read/write */
-    int actions_ready = 0, attributes_ready = 0, observed = 0, output_done = 0, error_done = 0;
+    int actions_ready = 0, attributes_ready = 0;
     pid_t child = 0;
     posix_spawn_file_actions_t actions; posix_spawnattr_t attributes;
     char cwd[NATIVE_PATH_SIZE], resolved[PATH_MAX], executable[NATIVE_PATH_SIZE];
@@ -752,45 +810,30 @@ static void test_command_posix(test_command_workspace *workspace, const test_com
         if (close(descriptors[i])) test_command_fail(result, test_command_cleanup_failed, errno);
         descriptors[i] = -1;
     }
-    while (result->error == test_command_ok && !(observed && output_done && error_done)) {
-        if (!observed) {
-            siginfo_t info = {0};
-            if (waitid(P_PID, (id_t)child, &info, WEXITED | WNOHANG | WNOWAIT)) {
-                if (errno == ECHILD) { test_command_fail(result, test_command_cleanup_failed, errno); child = 0; }
-                else if (errno != EINTR) test_command_fail(result, test_command_io_failed, errno);
-            } else if (info.si_pid) {
-                observed = 1;
-                if (kill(-child, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
-            }
-        }
-        int progress = 0;
-        if (!output_done && result->error == test_command_ok)
-            progress |= test_command_posix_read(descriptors[1], workspace->output, workspace->output_capacity, &result->output, result, &output_done);
-        if (!error_done && result->error == test_command_ok)
-            progress |= test_command_posix_read(descriptors[3], workspace->error_output, workspace->error_capacity, &result->error_output, result, &error_done);
-        (void)test_command_deadline(result, start, command->timeout_ms);
-        if (!progress && result->error == test_command_ok && !(observed && output_done && error_done)) test_command_sleep(1);
-    }
 cleanup:
-    if (child) {
-        /* Keep child unreaped until group cancellation, so its ID cannot be
-           reused for an unrelated process group before kill. */
-        if (kill(-child, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
-        if (kill(child, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
-        int status = 0, reaped = 0;
-        for (unsigned attempt = 0; attempt <= TEST_COMMAND_CLEANUP_MS; ++attempt) {
-            pid_t waited = waitpid(child, &status, WNOHANG);
-            if (waited == child) { reaped = 1; break; }
-            if (waited < 0 && errno != EINTR) break;
-            test_command_sleep(1);
-        }
-        if (!reaped) test_command_fail(result, test_command_cleanup_failed, errno);
-        else if (WIFEXITED(status)) { result->exited = 1; result->exit_code = WEXITSTATUS(status); }
-        else if (WIFSIGNALED(status)) result->signal_number = WTERMSIG(status);
-    }
     if (attributes_ready) { int error = posix_spawnattr_destroy(&attributes); if (error) test_command_fail(result, test_command_cleanup_failed, error); }
     if (actions_ready) { int error = posix_spawn_file_actions_destroy(&actions); if (error) test_command_fail(result, test_command_cleanup_failed, error); }
-    for (int i = 0; i < 5; ++i) if (descriptors[i] >= 0 && close(descriptors[i])) test_command_fail(result, test_command_cleanup_failed, errno);
+    for (int i = 0; i < 5; i += 2) if (descriptors[i] >= 0 && close(descriptors[i])) test_command_fail(result, test_command_cleanup_failed, errno);
+    live->process = child; live->output_read = descriptors[1]; live->error_read = descriptors[3];
+    if (result->error != test_command_ok) test_command_posix_finish(live);
+}
+static void test_command_posix_poll(test_command_live *live) {
+    test_command_workspace *workspace = &live->workspace;
+    test_command_result *result = &live->result;
+    if (!live->observed) {
+        siginfo_t info = {0};
+        if (waitid(P_PID, (id_t)live->process, &info, WEXITED | WNOHANG | WNOWAIT)) {
+            if (errno == ECHILD) { test_command_fail(result, test_command_cleanup_failed, errno); live->process = 0; }
+            else if (errno != EINTR) test_command_fail(result, test_command_io_failed, errno);
+        } else if (info.si_pid) {
+            live->observed = 1;
+            if (kill(-live->process, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
+        }
+    }
+    if (!live->output_done && result->error == test_command_ok)
+        test_command_posix_read(live->output_read, workspace->output, workspace->output_capacity, &result->output, result, &live->output_done);
+    if (!live->error_done && result->error == test_command_ok)
+        test_command_posix_read(live->error_read, workspace->error_output, workspace->error_capacity, &result->error_output, result, &live->error_done);
 }
 #endif
 
@@ -798,10 +841,11 @@ static int test_command_overlap(const void *first, usize first_size, const void 
     uptr a = (uptr)first, b = (uptr)second;
     return first_size && second_size && (a <= b ? b - a < first_size : a - b < second_size);
 }
-static test_command_error test_command_run(test_command_workspace *workspace, const test_command *command,
-                                            test_command_result *result) {
-    if (!result) return test_command_invalid;
-    memset(result, 0, sizeof(*result)); result->error = test_command_invalid;
+static test_command_error test_command_start(test_command_live *live, test_command_workspace *workspace,
+                                              const test_command *command) {
+    if (!live || live->active) return test_command_invalid;
+    memset(live, 0, sizeof(*live)); live->complete = 1;
+    test_command_result *result = &live->result; result->error = test_command_invalid;
     if (!workspace || !workspace->scratch || !workspace->output || !workspace->error_output ||
         !workspace->output_capacity || !workspace->error_capacity || !command || !command->arguments ||
         !command->argument_count || command->argument_count > PROCESS_MAX_ARGUMENTS || !command->timeout_ms ||
@@ -828,16 +872,65 @@ static test_command_error test_command_run(test_command_workspace *workspace, co
     result->error_output = string_view_from_cstr(workspace->error_output);
     result->error = test_command_ok;
     arena_position_marker mark = arena_position_mark(workspace->scratch);
-    u64 start;
-    if (!test_command_clock(&start)) test_command_fail(result, test_command_io_failed, 0);
+    live->workspace = *workspace; live->timeout_ms = command->timeout_ms;
+    if (!test_command_clock(&live->start)) test_command_fail(result, test_command_io_failed, 0);
     else {
 #if defined(_WIN32)
-        test_command_windows(workspace, command, result, start);
+        test_command_windows_start(live, command);
 #else
-        test_command_posix(workspace, command, result, start);
+        test_command_posix_start(live, command);
 #endif
     }
+    live->active = result->error == test_command_ok;
+    live->complete = !live->active;
     (void)arena_pop_to_marker(mark);
+    return result->error;
+}
+static void test_command_release(test_command_live *live) {
+#if defined(_WIN32)
+    test_command_windows_finish(live);
+#else
+    test_command_posix_finish(live);
+#endif
+    live->active = 0; live->complete = 1;
+}
+static test_command_error test_command_poll(test_command_live *live) {
+    if (!live || (!live->active && !live->complete)) return test_command_invalid;
+    if (!live->active) return live->result.error;
+    if (test_command_deadline(&live->result, live->start, live->timeout_ms)) {
+#if defined(_WIN32)
+        test_command_windows_poll(live);
+#else
+        test_command_posix_poll(live);
+#endif
+        (void)test_command_deadline(&live->result, live->start, live->timeout_ms);
+    }
+    if (live->result.error != test_command_ok || (live->observed && live->output_done && live->error_done))
+        test_command_release(live);
+    return live->result.error;
+}
+static test_command_error test_command_finish(test_command_live *live) {
+    if (!live) return test_command_invalid;
+    if (live->active) {
+        (void)test_command_poll(live);
+        if (live->active) {
+            test_command_fail(&live->result, test_command_cancelled, 0);
+            test_command_release(live);
+        }
+    }
+    return live->result.error;
+}
+static test_command_error test_command_run(test_command_workspace *workspace, const test_command *command,
+                                            test_command_result *result) {
+    if (!result) return test_command_invalid;
+    test_command_live live = {0};
+    (void)test_command_start(&live, workspace, command);
+    while (!live.complete) {
+        usize output = live.result.output.len, errors = live.result.error_output.len;
+        (void)test_command_poll(&live);
+        if (!live.complete && output == live.result.output.len && errors == live.result.error_output.len) test_command_sleep(1);
+    }
+    *result = live.result;
     return result->error;
 }
 static int test_assert_command_operation(test_command_error error, const char *operation, const char *source, int line) {
