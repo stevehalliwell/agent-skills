@@ -1,0 +1,80 @@
+#include "test.h"
+
+TEST(cli_contracts,
+    char project[NATIVE_PATH_SIZE], original_tree[NATIVE_PATH_SIZE], before[NATIVE_PATH_SIZE], first[NATIVE_PATH_SIZE], cache[NATIVE_PATH_SIZE];
+    TEST_ASSERT(integration_project(project) == 0);
+    TEST_ASSERT_FILE_OK(file_tree_join(first, project, "records/tasks/first.md"));
+    TEST_ASSERT_FILE_OK(file_tree_join(cache, project, ".attendant"));
+    TEST_ASSERT(integration_snapshot(project, 0, original_tree) == 0);
+    INTEGRATION_CLI(project, 0, "validate", "--strict"); TEST_ASSERT(integration_count("diagnostics") == 0);
+    TEST_ASSERT(integration_unchanged(project, original_tree, 0) == 0 && integration_missing(cache));
+    integration_check("strict validation does not write source or prepare projection");
+    INTEGRATION_CLI(project, 0, "sync"); TEST_ASSERT(integration_text_is("state", "rebuilt"));
+    INTEGRATION_CLI(project, 0, "sync"); TEST_ASSERT(integration_text_is("state", "reused"));
+    TEST_ASSERT(integration_unchanged(project, original_tree, 0) == 0);
+    TEST_ASSERT(integration_snapshot(project, 1, before) == 0);
+    INTEGRATION_CLI(project, 0, "doctor"); TEST_ASSERT(integration_json_get(0, "ok") && integration_json_get(0, "ok")->type == PDJSON_TRUE);
+    TEST_ASSERT(integration_unchanged(project, before, 1) == 0);
+    integration_check("cold build, unchanged reuse and read-only doctor");
+    INTEGRATION_CLI(project, 0, "schema");
+    TEST_ASSERT(integration_count("collections") == 2 && integration_text_is("collections.0.name", "decisions") && integration_text_is("collections.1.name", "tasks"));
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT name,status FROM tasks ORDER BY name");
+    TEST_ASSERT(integration_json_matches("rows", "[{\"name\":\"first\",\"status\":\"active\"},{\"name\":\"second\",\"status\":\"todo\"}]", NULL));
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT name FROM tasks WHERE status=:status", "-P", "{\"status\":\"active\"}"); TEST_ASSERT(integration_text_is("rows.0.name", "first"));
+    INTEGRATION_CLI(project, 0, "search", "-q", "projection"); TEST_ASSERT(integration_text_is("rows.0.name", "first"));
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT name FROM tasks WHERE name='absent'"); TEST_ASSERT(integration_number_is("returned", 0));
+    integration_check("schema, parameterized SQL, hidden filtering, empty result and first search");
+    TEST_ASSERT(integration_snapshot(project, 0, before) == 0);
+    INTEGRATION_CLI(project, 1, "query", "-s", "DELETE FROM tasks"); TEST_ASSERT(integration_text_is("error.code", "sql-denied"));
+    TEST_ASSERT(integration_unchanged(project, before, 0) == 0); integration_check("query authorizer rejects writes");
+    char original[16384], expected[16384]; TEST_ASSERT(integration_read(first, original, sizeof(original)) == 0 && strlen(original) >= 4);
+    const char *status = strstr(original, "status: active"), *body = strstr(original + 4, "\n---"); TEST_ASSERT(status && body);
+    int count = snprintf(expected, sizeof(expected), "%.*sstatus: \"done\"%s", (int)(status - original), original, status + strlen("status: active"));
+    TEST_ASSERT(count >= 0 && count < (int)sizeof(expected));
+    INTEGRATION_CLI(project, 0, "update", "-c", "tasks", "-i", "[{\"name\":\"first\",\"fields\":{\"status\":\"done\"}}]");
+    TEST_ASSERT_FILE_TEXT(((cstring){first}), expected); TEST_ASSERT_FILE_ENDS_WITH_TEXT(((cstring){first}), body);
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT status FROM tasks WHERE name='first'"); TEST_ASSERT(integration_text_is("rows.0.status", "done"));
+    integration_check("metadata update preserves body and unrelated formatting; projection follows");
+    TEST_ASSERT(integration_snapshot(project, 0, before) == 0);
+    INTEGRATION_CLI(project, 1, "update", "-c", "tasks", "-i", "[{\"name\":\"first\",\"fields\":{\"status\":\"todo\"}},{\"name\":\"second\",\"fields\":{\"status\":\"not-an-enum-value\"}}]");
+    TEST_ASSERT(integration_unchanged(project, before, 0) == 0); integration_check("invalid batch makes no partial source changes");
+    char input[NATIVE_PATH_SIZE], at_file[NATIVE_PATH_SIZE + 2]; TEST_ASSERT_FILE_OK(file_tree_join(input, project, "items.json"));
+    TEST_ASSERT_FILE_OK(file_create_text((cstring){input}, "[{\"name\":\"created\",\"fields\":{\"summary\":\"native café Ω 😀\",\"labels\":[\"native\"],\"status\":\"todo\"}}]"));
+    snprintf(at_file, sizeof(at_file), "@%s", input);
+    INTEGRATION_CLI(project, 0, "create", "-c", "tasks", "-i", at_file); TEST_ASSERT_FILE_OK(file_remove((cstring){input}));
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT enabled,priority,summary FROM tasks WHERE name='created'"); TEST_ASSERT(integration_number_is("rows.0.priority", 1));
+    INTEGRATION_STDIN(project, "[{\"name\":\"created\",\"fields\":{\"summary\":\"stdin value\"}}]", "update", "-c", "tasks", "-i", "-");
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT summary FROM tasks WHERE name='created'"); TEST_ASSERT(integration_text_is("rows.0.summary", "stdin value"));
+    integration_check("create applies defaults/template; @file and stdin inputs work");
+    INTEGRATION_CLI(project, 0, "create", "-c", "tasks", "-i", "[{\"name\":\"exact-max\",\"fields\":{\"priority\":9223372036854775807,\"misc\":[18446744073709551615,0]}}]");
+    INTEGRATION_CLI(project, 0, "create", "-c", "tasks", "-i", "[{\"name\":\"exact-min\",\"fields\":{\"priority\":-9223372036854775808}}]");
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT CAST(priority AS TEXT) AS value FROM tasks WHERE name='exact-max'"); TEST_ASSERT(integration_text_is("rows.0.value", "9223372036854775807"));
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT CAST(priority AS TEXT) AS value FROM tasks WHERE name='exact-min'"); TEST_ASSERT(integration_text_is("rows.0.value", "-9223372036854775808"));
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT misc FROM tasks WHERE name='exact-max'");
+    const char *misc = integration_text("rows.0.misc"); TEST_ASSERT(misc && strstr(misc, "18446744073709551615"));
+    TEST_ASSERT(integration_snapshot(project, 0, before) == 0);
+    const char *invalid[] = {"{\"priority\":18446744073709551615}", "{\"due\":\"2026-02-29\"}", "{\"priority\":1e999}", "{\"depends_on\":[\"missing\"]}"};
+    for (usize i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i) {
+        char payload[512]; snprintf(payload, sizeof(payload), "[{\"name\":\"rejected\",\"fields\":%s}]", invalid[i]);
+        INTEGRATION_CLI(project, 1, "create", "-c", "tasks", "-i", payload);
+    }
+    TEST_ASSERT(integration_unchanged(project, before, 0) == 0);
+    integration_check("exact integer bounds and u64 arrays; reject unsupported scalar, invalid date, nonfinite and missing reference");
+    INTEGRATION_CLI(project, 0, "update", "-c", "tasks", "-i", "[{\"name\":\"created\",\"fields\":{\"summary\":\"NEL\xc2\x85LS\xe2\x80\xa8PS\xe2\x80\xa9\",\"due\":\"2028-02-29\",\"observed_at\":\"2026-10-31T12:00:00.000Z\"}}]");
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT summary FROM tasks WHERE name='created'"); TEST_ASSERT(integration_text_is("rows.0.summary", "NEL\xc2\x85LS\xe2\x80\xa8PS\xe2\x80\xa9"));
+    TEST_ASSERT(integration_read(first, original, sizeof(original)) == 0);
+    count = snprintf(expected, sizeof(expected), "%s\nuniquesearchtoken\n", original); TEST_ASSERT(count >= 0 && count < (int)sizeof(expected));
+    TEST_ASSERT_FILE_OK(file_write_bytes((cstring){first}, expected, strlen(expected)));
+    INTEGRATION_CLI(project, 0, "sync"); TEST_ASSERT(integration_text_is("state", "updated"));
+    INTEGRATION_CLI(project, 0, "search", "-q", "uniquesearchtoken"); TEST_ASSERT(integration_text_is("rows.0.name", "first"));
+    TEST_ASSERT_FILE_OK(file_tree_join(input, project, "records/tasks/created.md")); TEST_ASSERT_FILE_OK(file_remove((cstring){input}));
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT name FROM tasks WHERE name='created'"); TEST_ASSERT(integration_number_is("returned", 0));
+    TEST_ASSERT_FILE_OK(file_directory_remove_tree(&source_test_files, (cstring){cache}));
+    INTEGRATION_CLI(project, 0, "query", "-s", "SELECT name FROM tasks WHERE name='first'"); TEST_ASSERT(integration_number_is("returned", 1));
+    integration_check("Unicode separators, canonical dates, changed-body search, deletion reconciliation and disposable-cache rebuild");
+    INTEGRATION_CLI(project, 0, "add-table", "-d", "records/notes", "-a", "notes");
+    TEST_ASSERT(integration_text_is("name", "notes")); const char *schema_path = integration_text("schemaPath"); TEST_ASSERT(schema_path && file_is_regular(schema_path, 0));
+    INTEGRATION_CLI(project, 0, "schema"); int found = 0;
+    for (int i = 0; i < integration_count("collections"); ++i) { char path[64]; snprintf(path, sizeof(path), "collections.%d.name", i); if (integration_text_is(path, "notes")) found = 1; }
+    TEST_ASSERT(found); integration_check("add-table publishes collection seeds and registration");
+)

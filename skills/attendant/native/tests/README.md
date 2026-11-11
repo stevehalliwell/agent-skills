@@ -7,9 +7,13 @@ bash test.sh cjit
 bash test.sh zig
 ```
 
-Each command generates/builds runner, runs 35 cases under UTC and Pacific/Auckland, then checks 17 isolated framework scenarios. Requires installed compiler and Bash; no Node, GUI or downloads. Stdout contains retained run-directory path. TSV, generated C, build logs and diagnostics stay under `build/native-tests/run-*/`.
+Each command runs 44 cases under UTC and Pacific/Auckland, 26 isolated framework scenarios, then five integration cases with 23 contract groups. Builds selected compiler's CLI/API probe automatically. Requires installed compiler/Bash and repository checkout with sibling `skills/init-project/templates/`; no Node, GUI or downloads. Stdout contains retained run-directory path. TSV, generated C, build logs and diagnostics stay under `build/native-tests/run-*/`.
 
-Source/API/core tests live in `core/c/`. `core/generate.c` uses shared `src/include/test.h` generator with Attendant fixture preamble. External CLI/API/workflow/install/GUI harnesses remain separate; they preserve subprocess deadlines, stdin/output and desktop behavior.
+Source/API/core tests live in `core/c/`, subprocess contracts in `core/integration/`. Separate generators share `src/include/test.h` with project-local preambles. Four core JS harnesses were removed after migration; real CLI/API interoperability, stdin/output, deadlines, workflows and isolated cold builds remain tested. GUI/IPC orchestration stays external.
+
+## Header boundary
+
+Both headers are reusable C99 project support, not Attendant infrastructure. `base.h` owns ordinary application operations. `test.h` owns assertions, lifecycle and test-owned resources. Attendant sessions, input data, fault names and viewer protocols stay project-local. Neither header contains Attendant paths or environment variables. Do not add test-only process supervision to `base.h` merely to replace JS harnesses.
 
 ## Lifecycle
 
@@ -53,12 +57,17 @@ file_create_text(path, text);
 file_equal_bytes(path, expected, size, &equal);
 file_equal_text(path, expected, &equal);
 file_equal(left, right, &equal);
+file_ends_with_bytes(path, suffix, size, &equal);
+file_ends_with_text(path, suffix, &equal);
+file_set_read_only(path, read_only);
 file_remove(path);
 ```
 
 Creation is exclusive. Existing regular file/directory returns `file_error_exists`; refused links return `file_error_unsupported`. No parent creation or overwrite. Text excludes terminating NUL; byte operations support embedded NULs. Empty byte span permits NULL data. Text pointer must not be NULL. Partial new file may remain after write/close failure. Existing `file_write_bytes`/`file_write_all` retain overwrite semantics.
 
-New creation/comparison uses native streams; file comparison uses fixed 16 KiB stack scratch. Windows native streams, existing stdio read/write helpers and `file_stat` accept UTF-8 paths. Existing stdio helpers retain ordinary buffering/size limits; new operations do not make writes atomic or crash-durable.
+Suffix comparison seeks to tail and reads chunks with fixed 8 KiB scratch; empty suffix matches any regular file. No 32 KiB whole-file ceiling. Read-only setting refuses directories/links. Windows preserves other attribute flags; POSIX clears all write bits for read-only and adds owner write for writable, preserving other mode bits. It does not restore previously removed group/other write bits.
+
+New creation/comparison uses native streams; full-file comparison uses fixed 16 KiB stack scratch. Windows native streams, existing stdio read/write helpers and `file_stat` accept UTF-8 paths. Existing stdio helpers retain ordinary buffering/size limits; new operations do not make writes atomic or crash-durable.
 
 Tree operations use explicit scratch/limits:
 
@@ -86,6 +95,17 @@ file_directory_remove_tree(&files, owned_directory);
 
 `file_directory_list_tree(&files, root, &tree)` exposes bounded root-relative entries/kinds/depths. Result remains in caller arena until caller rewinds it. Errors rewind temporary storage and leave result unchanged. Copy/compare/removal rewind their own temporary allocations on return.
 
+## Environment operations in `base.h`
+
+```c
+environment_set(scratch, name, value); /* NULL unsets; "" stays present. */
+environment_get(scratch, name, output, capacity, &size);
+```
+
+Return `environment_error_ok`, `invalid`, `not_found`, `capacity` or `native` (each with `environment_error_` prefix). Caller supplies non-NULL scratch arena; operations rewind it before return. Get capacity includes NUL; size excludes NUL. Errors leave output/size unchanged. Missing and present-empty variables are distinct. Names must be nonempty and cannot contain `=`.
+
+Windows uses validated UTF-8/UTF-16 conversion and OS environment APIs. Scratch exhaustion fails explicitly; no fixed giant stack buffers. POSIX uses byte strings and ordinary libc environment storage. Writes affect current process only. Do not mutate environment concurrently with other readers/writers. Windows CRT `getenv` may cache prior values; pair setter with `environment_get`, not CRT `getenv`.
+
 ## Assertions in `test.h`
 
 Arguments evaluate once. Assertions stay active under `NDEBUG` and return `1` from current case/hook on failure. Isolated framework runners compile with `-DNDEBUG` to verify this contract.
@@ -94,20 +114,82 @@ Arguments evaluate once. Assertions stay active under `NDEBUG` and return `1` fr
 TEST_ASSERT_FILE_OK(file_create_text(path, "Hello caf\xc3\xa9.\r\n"));
 TEST_ASSERT_FILE_TEXT(path, "Hello caf\xc3\xa9.\r\n");
 TEST_ASSERT_FILE_BYTES(path, expected_bytes, expected_size);
+TEST_ASSERT_FILE_ENDS_WITH_TEXT(path, expected_suffix);
+TEST_ASSERT_FILE_ENDS_WITH_BYTES(path, suffix_bytes, suffix_size);
 TEST_ASSERT_FILES_EQUAL(actual_file, expected_file);
 TEST_ASSERT_DIRECTORIES_EQUAL(&files, actual_directory, expected_directory);
 ```
 
 Operation assertion reports source location, operation expression and error. Comparisons report source location, paths/expected-data category, and difference or I/O error. Content/layout differences, missing files and capacity failures remain distinct. Diagnostics do not dump complete contents or report first differing byte/entry. Mutations remain explicit `base.h` calls.
 
+## Synchronous commands in `test.h`
+
+Opt-in test supervision; existing application `base.h` `process_run` is unchanged:
+
+```c
+u8 scratch_memory[262144];
+char output[65536], error_output[65536];
+test_command_workspace commands = {
+    .scratch = arena_from_buffer(scratch_memory, sizeof(scratch_memory)),
+    .output = output, .output_capacity = sizeof(output),
+    .error_output = error_output, .error_capacity = sizeof(error_output)
+};
+const char *arguments[] = {"my-tool", "--check"};
+test_command command = {
+    .arguments = arguments, .argument_count = 2,
+    .timeout_ms = 30000
+};
+test_command_result result;
+TEST_ASSERT_COMMAND_OK(test_command_run(&commands, &command, &result));
+TEST_ASSERT_COMMAND_EXIT(&result, 0);
+TEST_ASSERT_COMMAND_OUTPUT_TEXT(&result, "ok\n");
+TEST_ASSERT_COMMAND_ERROR_TEXT(&result, "");
+```
+
+- Supply positive timeout and valid NUL-terminated argv; count includes executable, at most 192. No implicit shell. Launch Bash explicitly when testing build script. Bare executable searches effective child `PATH`; relative paths/components use child cwd. First regular candidate wins; loader/permission failure does not retry later candidates. This is not shell/`execvp` fallback policy. Windows tries exact name, `.exe`, `.com` when name lacks extension; rejects drive-relative and device/extended namespace forms. Supports normal drive-rooted and UNC path resolution. Paths use 1024-byte bound; Windows quoted command uses 32768-byte bound. OS limits still apply.
+- Optional `.working_directory` inherits when NULL. Optional `.environment` contains `test_command_environment {name, value}` overrides; NULL value unsets, empty value stays present. Duplicate names fail (case-insensitive ordinal comparison on Windows). At most 4096 inherited-plus-override entries before filtering. Parent cwd/environment/signal policy stays unchanged. Coordinate concurrent changes externally.
+- Optional `.input`/`.input_size` supplies raw finite bytes. Empty input gives EOF. Input is spooled to private OS temporary file, not interactive pipe; supplied stdin is seekable. OS/libc handles use ordinary internal storage. No new application heap allocator.
+- Captures stay separate and byte-exact, including embedded NUL. Capacity includes convenience terminator; result `.output`/`.error_output` lengths exclude it. Captures borrow workspace buffers until reuse. Input/capture buffers must not overlap; overlapping spans return `test_command_invalid`. Keep command/workspace/result objects and argv/cwd/environment strings outside capture buffers. Scratch allocations rewind to entry mark; pre-existing allocations survive.
+- Return `test_command_ok` for completed child, including nonzero exit or POSIX signal. Check exit separately. Windows preserves raw unsigned native exit/exception status in `.exit_code`; POSIX reports ordinary exit through `.exited`/`.exit_code` or termination through `.signal_number`. Timeout is not a fabricated expected exit.
+- Invalid configuration, launch, I/O, timeout, capacity and cleanup errors have distinct enum values/messages. Result records error/native OS code, partial captures and `.cleanup_failed`. Capture overflow cancels child; it never silently truncates into success. Exit/output assertions require operation success, so timeout followed by exit zero cannot pass. Text assertions compare byte lengths, not NUL-prefix alone.
+- Windows starts suspended with only three standard handles inherited, assigns owned kill-on-close job, then resumes. Completion/cancellation terminates remaining members and verifies job active count reaches zero. POSIX creates owned group, cancels original group and direct PID before reaping; `WNOWAIT` preserves PID ownership until cancellation. Detached POSIX descendants remain outside contract; grandchildren can become init-owned zombies. This is not a process sandbox.
+- POSIX requires default `SIGCHLD`, no competing reaper, monotonic clock and modern libc's spawn chdir action. Enable platform feature macros before system headers (for example, `-D_GNU_SOURCE` on Linux with strict C99). Darwin closes unrelated inherited descriptors; other POSIX callers must use close-on-exec discipline. Windows needs modern job/extended-startup APIs. Linux is compile-checked only, not a product runtime target.
+- Deadline covers preparation/launch/capture. Cleanup adds bounded waits: up to 1000 ms for direct child, plus Windows job accounting wait up to 1000 ms. OS calls/scheduling are not hard real-time guarantees. Cleanup errors fail rather than report success; uninterruptible OS work can outlive cancellation. Parent crash/forced termination can bypass cleanup; Windows kill-on-close helps after assignment. No parent crash isolation, asynchronous lifetime manager or parallel scheduler.
+
+Additional assertions: `TEST_ASSERT_COMMAND_OUTPUT_BYTES`, `TEST_ASSERT_COMMAND_ERROR_BYTES`, `TEST_ASSERT_COMMAND_ERROR_TEXT`. Arguments evaluate once; all stay active under `NDEBUG`. JSON decoding/reporting and application readiness protocols stay project-local.
+
+## Owned directories in `test.h`
+
+Opt-in helper; no implicit paths, environment variables, allocation or registry:
+
+```c
+test_directory fixture = {0};
+TEST_ASSERT_FILE_OK(test_directory_create(&fixture, path));
+char baseline[NATIVE_PATH_SIZE];
+TEST_ASSERT_FILE_OK(test_directory_next(&fixture, "baseline", baseline));
+TEST_ASSERT_FILE_OK(file_directory_copy(&files, actual_directory, (cstring){baseline}));
+/* In teardown, including after partial setup or assertion return: */
+TEST_ASSERT_FILE_OK(test_directory_finish(&fixture, &files, failed));
+```
+
+- Create requires a missing directory path with existing, non-link ancestors. Ownership begins only after exclusive creation. Existing files/directories/links are never adopted or removed.
+- Zero-initialize descriptor. Do not copy ownership or change its path while owned. Caller owns memory/lifetime and invokes finish from hooks.
+- Next reserves numbered child path, not file/directory. Label is one nonempty component, not `.`/`..` and without slash/backslash/colon. Numbering starts at 1. No collision retries. Output must not overlap descriptor. Counter/path exhaustion fails explicitly. Create/copy reserved destination exclusively.
+- Keep copied tree outside its own baseline destination; for example, actual and baseline can be sibling children of fixture.
+- Finish removes successful owned directory or retains/reports failed one. Cleanup failure retains/reports path and returns error; propagate it to fail hook/case.
+- Every finish attempt ends ownership. Later finish is harmless and cannot delete retained evidence. Descriptor can create a different new directory for next case; retained paths remain available for inspection until descriptor reuse. Creating same retained path fails rather than adopting it.
+- Parent cleanup invalidates nested child descriptors; do not finish those afterward. No automatic destructors, retries or crash recovery.
+
 ## Attendant fixture policy
 
-`core/c/support.h` owns one reused API session and exclusively creates suite/case directories below wrapper-supplied run directory. Compact numbered case directories include Unicode; TSV preserves full case names without extending legacy Win32 paths. Baselines are independent directory copies, not hashes produced by implementation under test.
+`core/c/support.h` binds one reused API session, sample data, feedback requests, fault names and scratch workspace. Shared directory helper owns suite/case policy; general helpers handle environment, attributes and suffix checks. Compact numbered case labels include Unicode; TSV preserves full names without extending legacy Win32 paths. Baselines use shared child naming and independent directory copies, not implementation-produced hashes.
 
-Successful cases delete owned directories. Failed cases retain/report paths. Cleanup failure fails case and reports remaining path. Never adopt/remove pre-existing fixture directories. Fault injection clears before/after each case. Session closes in suite teardown. Working inventories use 64 KiB scratch, depth 12 and 128 entries per tree. Local Markdown suffix checks retain 32 KiB read capacity.
+Fault injection clears before/after each case. Session closes in suite teardown. Wrapper supplies owned run directory; local setup validates it below `build/native-tests`. Core inventories use 64 KiB scratch, depth 12 and 128 entries per tree. Integration inventories use 4 MiB, depth 32 and 8192 entries. Commands use 256 KiB scratch and separate 1 MiB captures plus terminators, matching prior Node capture limits. Project-local JSON uses two 2 MiB arenas, 4096 nodes and depth 16; only integration parser build raises JSON stack bound to 16. Product CLI parser bound stays 4.
+
+Integration preserves 10 CLI, eight API/CLI, four workflow and one install contract groups per compiler. Actual CLI/API-probe children remain separate compiled consumers. Independent expected hash covers saved feedback fixture; snapshots compare exact shared directory copies, including empty directories. Cache/build exclusions stay in project-local one-level copy policy, not reusable headers. Each command saves stdout/stderr below owned case folder. Successful folders are removed; failures retain captures/snapshots. Install case owns separate short OS temp path with spaces/Unicode, excludes native builds, unsets inherited Zig cache paths and cold-builds copied source. Teardown removes successful installation or reports retained path; never adopts existing directory.
 
 ## Verification boundaries
 
-Windows CJIT/Zig cover binary/NUL/Unicode/empty/streamed files, exact directory names/kinds/content, copy/create exclusivity, capacity/depth/memory failures, roots/cwd guards, junction/ancestor/broken-link refusal, Unicode case aliases and read-only cleanup failure. `framework/` checks lifecycle order, skipped bodies, continuation after case failure, suite failure exits/incomplete TSV, assertions, partial setup cleanup, failure retention, pre-existing ownership and no-hook/empty defaults.
+Windows CJIT/Zig cover binary/NUL/Unicode/empty/streamed files and suffixes, exact directory names/kinds/content, copy/create exclusivity, capacity/depth/memory failures, roots/cwd guards, junction/ancestor/broken-link refusal, Unicode aliases, read-only cleanup failure, environment empty/unset/UTF-8/capacity behavior and owned-directory reuse/retention. Commands cover Unicode/quotes/backslashes/no shell, binary stdin/EOF, separate saturated pipes, exact/overflow capacities, cwd identity, child environment inheritance/override/unset without parent mutation, missing executable/cwd, nonzero/abrupt termination, timeout and descendants with open/closed standard handles. Controlled readiness follows first flushed heartbeat and handle closure; Windows checks descendant stopped immediately after return.
 
-POSIX branch has symlink and FIFO checks. macOS runtime validation of these extensions remains unrun on Windows host. Process capture/deadlines, crash isolation and parallel suites remain outside scope.
+`framework/` checks lifecycle order, skipped bodies, continuation, suite failure/incomplete TSV, partial setup, retention/ownership and no-hook/empty defaults. Standalone binary-stdin command consumer compiles/runs with only C99/include/platform flags, no Attendant sources/defines/libraries. Negative command assertions include timeout with exit zero and embedded-NUL text mismatch. POSIX branches add symlink/FIFO and moved-group direct-child cancellation checks. Generic framework/helpers cross-compile to Linux; macOS/POSIX runtime validation remains unrun on Windows host. GUI/model checks are not rerun for this test-only slice.

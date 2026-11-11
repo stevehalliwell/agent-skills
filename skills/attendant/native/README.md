@@ -57,17 +57,13 @@ Bounds: 128 MiB caller arena plus 12 MiB JSON workspace; parser/SQLite allocate 
 
 ## Checks
 
-From this directory, after builds described in build reference:
+From repository checkout, native root (GUI checks need builds described in build reference):
 
 ```sh
-# Pure C core/source suite; no Node runtime or GUI needed:
+# C core/source, process contracts and CLI/API/workflow/install integration:
 bash test.sh cjit
 bash test.sh zig
-# Retained external-process/GUI integration:
-node tests/core/cli-check.mjs
-node tests/core/api-check.mjs
-node tests/core/workflow-check.mjs
-node tests/core/install-check.mjs
+# Retained desktop/IPC orchestration:
 node tests/gui/check.mjs
 # macOS transport-specific checks:
 node tests/gui/control-macos-check.mjs
@@ -75,11 +71,11 @@ node tests/gui/bridge-check.mjs
 node tools/benchmark.mjs 5
 ```
 
-Native `test.sh` runs 35 C cases under UTC and Pacific/Auckland plus 17 isolated framework scenarios per compiler. Covers source/API failure/recovery, core parsers/hashing, generic file/tree operations, lifecycle and assertion failures. Shared `base.h` owns filesystem operations; local `test.h` adds suite/case hooks and file assertions. Successful owned case folders are removed; failed fixtures, generated C, logs and TSV stay under `build/native-tests/run-*/`. See [test interfaces/limits](tests/README.md) and [migration/progress](../../../TODO.md#native-test-migration).
+Native `test.sh` needs installed selected compiler/Bash, not Node, GUI, downloads or prebuilt CLI. It runs 44 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios, then five subprocess integration cases with 23 contract groups per compiler. Builds matching CLI/API probe automatically. Integration requires sibling `skills/init-project/templates/` from repository checkout; normal product builds do not.
 
-`api-check.mjs` now retains 16 API/CLI feedback interoperability groups; direct API/date/fault assertions moved into C, not duplicated. CLI, template workflow, install and real-GUI harnesses retain subprocess deadlines/exit/output checks. Existing GUI model already uses direct C assertions.
+Reusable `base.h` owns ordinary file/environment operations. `test.h` owns hooks, assertions, optional fixture-directory policy and bounded synchronous test commands. Existing application `process_run` is unchanged. Neither header depends on Attendant. Actual CLI/API interoperability, stdin/output/deadlines, body preservation, workflows and cold isolated installation checks moved into C; four core `.mjs` harnesses were removed, not duplicated. GUI model already uses direct C assertions; desktop/IPC orchestration stays external. See [test interfaces/limits](tests/README.md) and [migration/progress](../../../TODO.md#native-test-migration).
 
-Checks create owned copies under `build/`; never target live projects. Latest local results: `build/cli-check-results.json`, `build/api-check-results.json`, `build/gui-check-results.json`; each run replaces its report. Skill/template integration and clean-install recovery reports: `build/workflow-check-results.json` and `build/install-check-results.json`. macOS adds `build/control-check-results.json` and `build/bridge-check-results.json`. GUI manifests bind actual inputs/binaries to checks. macOS model checks include maximum 4 MiB selection plus 4 MiB context, delayed-reader backpressure and frozen-reply independence from later selection changes. Model assertions remain active even if compiler defines `NDEBUG`.
+Checks use owned fixtures, never live projects. Core evidence stays under `build/native-tests/run-*/`: timezone/framework/integration TSV, generated runners, diagnostics and build logs. Successful fixture folders are removed; failures retain/report paths. Isolated installation uses owned OS temp directory, also removed on success and retained on failure. Latest GUI report remains `build/gui-check-results.json`; macOS adds `build/control-check-results.json` and `build/bridge-check-results.json`. GUI manifests bind actual inputs/binaries to checks. macOS model checks include maximum 4 MiB selection plus 4 MiB context, delayed-reader backpressure and frozen-reply independence from later selection changes. Assertions remain active under `NDEBUG`.
 
 Benchmark measures warm synthetic fixture launch-to-exit, excluding build/copy/warmup/result checks, rotating serial compiler order. Reports samples and min/median/max. It is not real-project or GUI footprint qualification.
 

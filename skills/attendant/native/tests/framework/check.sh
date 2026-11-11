@@ -22,7 +22,7 @@ check_test_framework() {
      ! compile "$runner" -DNDEBUG "$directory/runner.c" > "$directory/runner-build.log" 2>&1; then
     echo "Framework runner generation/build failed: $directory" >&2; return 2
   fi
-  for scenario in success suite-setup suite-teardown setup assertion teardown cleanup preexisting file-ok file-text file-bytes files directories missing capacity; do
+  for scenario in success suite-setup suite-teardown setup assertion teardown cleanup preexisting file-ok file-text file-bytes suffix-text suffix-bytes files directories missing capacity command-ok command-exit command-failed-exit command-text command-bytes command-error; do
     local evidence="$directory/$scenario"
     mkdir "$evidence"
     if [[ "$scenario" == preexisting ]]; then
@@ -67,9 +67,13 @@ check_test_framework() {
     local message=''
     case "$scenario" in
       file-ok) message='destination already exists' ;;
-      file-text|file-bytes|files|directories) message='contents or layout differ' ;;
+      file-text|file-bytes|suffix-text|suffix-bytes|files|directories) message='contents or layout differ' ;;
       missing) message='file not found' ;;
       capacity|cleanup) message='file operation capacity exhausted' ;;
+      command-ok) message='command deadline exceeded' ;;
+      command-exit|command-failed-exit) message='expected command exit 0' ;;
+      command-text|command-bytes) message='command stdout differs or failed' ;;
+      command-error) message='command stderr differs or failed' ;;
     esac
     if [[ -n "$message" ]] && ! grep -q "$message" "$evidence/diagnostics.log"; then
       echo "Missing assertion diagnostic: $evidence" >&2; return 1
@@ -87,5 +91,18 @@ check_test_framework() {
       echo "Framework default/empty suite check failed: $evidence" >&2; return 1
     fi
   done
-  echo 'Framework: 17 lifecycle/assertion/default scenarios passed' >&2
+  local evidence="$directory/standalone" status=0
+  mkdir "$evidence"
+  # Deliberately omit native flags/sources/libraries: exercise copied header pair.
+  if [[ "$compiler" == cjit ]]; then
+    "${CJIT:-cjit}" -q -C '' ${cjit_platform_flags[@]+"${cjit_platform_flags[@]}"} -DNDEBUG -Isrc/include tests/framework/command-standalone.c -o "$evidence/runner$executable_suffix" > "$evidence/build.log" 2>&1 || status=$?
+  else
+    "${ZIG:-zig}" cc -O3 ${zig_platform_flags[@]+"${zig_platform_flags[@]}"} -std=c99 -DNDEBUG -Isrc/include tests/framework/command-standalone.c -o "$evidence/runner$executable_suffix" > "$evidence/build.log" 2>&1 || status=$?
+  fi
+  if [[ "$status" -eq 0 && $(uname -s) == Darwin ]]; then codesign -s - "$evidence/runner$executable_suffix" >> "$evidence/build.log" 2>&1 || status=$?; fi
+  if [[ "$status" -ne 0 ]]; then echo "Standalone header build failed: $evidence/build.log" >&2; return 2; fi
+  if ! TEST_COMMAND_HELPER="$ATTENDANT_TEST_COMMAND_HELPER" "$evidence/runner$executable_suffix" > "$evidence/stdout.log" 2> "$evidence/diagnostics.log"; then
+    echo "Standalone command check failed: $evidence/diagnostics.log" >&2; return 1
+  fi
+  echo 'Framework: 26 lifecycle/assertion/default/standalone scenarios passed' >&2
 }

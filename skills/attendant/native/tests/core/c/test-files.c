@@ -68,10 +68,10 @@ TEST(directory_copy_compare_layout_and_safe_removal,
     TEST_ASSERT(file_directory_copy(&source_test_files, (cstring){root}, (cstring){copy}) == file_error_exists);
     TEST_ASSERT(file_create_text((cstring){root}, "must not replace directory") == file_error_exists);
     TEST_ASSERT_FILE_OK(file_tree_join(other, copy, "file"));
-    TEST_ASSERT(source_test_readonly(other, 1));
+    TEST_ASSERT_FILE_OK(file_set_read_only((cstring){other}, 1));
     int equal = 0;
     file_error comparison = file_directory_equal(&source_test_files, (cstring){root}, (cstring){copy}, &equal);
-    int restored = source_test_readonly(other, 0);
+    int restored = file_set_read_only((cstring){other}, 0) == file_error_ok;
     TEST_ASSERT(restored && comparison == file_error_ok && equal); /* Permissions ignored. */
     TEST_ASSERT_FILE_OK(file_write_bytes((cstring){other}, "different", 9));
     TEST_ASSERT_FILE_OK(file_directory_equal(&source_test_files, (cstring){root}, (cstring){copy}, &equal)); TEST_ASSERT(!equal);
@@ -187,6 +187,8 @@ TEST(directory_links_refused_including_ancestors_and_broken_links,
     TEST_ASSERT_FILE_OK(file_tree_join(keep, outside, "keep")); TEST_ASSERT_FILE_OK(file_create_text((cstring){keep}, "untouched"));
     TEST_ASSERT_FILE_OK(file_tree_join(link, root, "link")); TEST_ASSERT(filesystem_test_link(link, outside));
     TEST_ASSERT(file_directory_remove_tree(&source_test_files, (cstring){link}) == file_error_unsupported);
+    test_directory linked = {0};
+    TEST_ASSERT(test_directory_create(&linked, (cstring){link}) == file_error_unsupported && !linked.owned);
     int equal = 9;
     TEST_ASSERT(file_directory_equal(&source_test_files, (cstring){root}, (cstring){outside}, &equal) == file_error_unsupported && equal == 9);
     TEST_ASSERT(file_directory_copy(&source_test_files, (cstring){root}, (cstring){copy}) == file_error_unsupported);
@@ -194,6 +196,8 @@ TEST(directory_links_refused_including_ancestors_and_broken_links,
     TEST_ASSERT(!file_is_directory(copy, 1));
     TEST_ASSERT_FILE_OK(file_tree_join(path, link, "keep"));
     TEST_ASSERT(file_equal_text((cstring){path}, "untouched", &equal) == file_error_unsupported);
+    TEST_ASSERT(file_ends_with_text((cstring){path}, "touched", &equal) == file_error_unsupported);
+    TEST_ASSERT(file_set_read_only((cstring){path}, 1) == file_error_unsupported);
     TEST_ASSERT_FILE_OK(file_tree_join(path, link, "new"));
     TEST_ASSERT(file_create_text((cstring){path}, "must not follow") == file_error_unsupported);
     TEST_ASSERT_FILE_TEXT(((cstring){keep}), "untouched");
@@ -237,9 +241,9 @@ TEST(directory_platform_specific_safety,
     char path[NATIVE_PATH_SIZE];
     TEST_ASSERT_FILE_OK(file_tree_join(path, child, "readonly"));
     TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "keep"));
-    TEST_ASSERT(source_test_readonly(path, 1));
+    TEST_ASSERT_FILE_OK(file_set_read_only((cstring){path}, 1));
     file_error removal = file_directory_remove_tree(&source_test_files, (cstring){child});
-    int restored = source_test_readonly(path, 0);
+    int restored = file_set_read_only((cstring){path}, 0) == file_error_ok;
     TEST_ASSERT(restored && removal == file_error_cleanup_failed);
     TEST_ASSERT_FILE_TEXT(((cstring){path}), "keep");
 #else

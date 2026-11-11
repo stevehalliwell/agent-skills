@@ -6,7 +6,7 @@ static char framework_root[NATIVE_PATH_SIZE], framework_file[NATIVE_PATH_SIZE], 
 static char framework_left[NATIVE_PATH_SIZE], framework_right[NATIVE_PATH_SIZE];
 static u8 framework_memory[16384];
 static file_tree_workspace framework_files;
-static int framework_owned;
+static test_directory framework_directory;
 static int framework_is(const char *name) { return !strcmp(framework_scenario, name); }
 static int framework_suite_setup(void) {
     framework_scenario = getenv("TEST_H_SCENARIO");
@@ -21,15 +21,14 @@ static int framework_suite_setup(void) {
 }
 static int framework_suite_teardown(int failed) {
     fprintf(stderr, "event:suite-teardown:%d\n", failed != 0);
+    TEST_ASSERT_FILE_OK(test_directory_finish(&framework_directory, &framework_files, failed));
     return framework_is("suite-teardown");
 }
 static int framework_setup(const test_case *test) {
     fprintf(stderr, "event:setup:%s\n", test->name);
     TEST_ASSERT(!strcmp(test->source, "tests/framework/lifecycle.h"));
-    framework_owned = 0;
     if (strcmp(test->name, "first")) return 0;
-    if (!file_directory_create(framework_root, 1)) return 1;
-    framework_owned = 1;
+    TEST_ASSERT_FILE_OK(test_directory_create(&framework_directory, (cstring){framework_root}));
     TEST_ASSERT_FILE_OK(file_tree_join(framework_file, framework_root, "actual"));
     TEST_ASSERT_FILE_OK(file_tree_join(framework_other, framework_root, "expected"));
     TEST_ASSERT_FILE_OK(file_create_text((cstring){framework_file}, "actual"));
@@ -44,10 +43,10 @@ static int framework_setup(const test_case *test) {
 }
 static int framework_teardown(const test_case *test, int failed) {
     fprintf(stderr, "event:teardown:%s:%d\n", test->name, failed != 0);
-    if (strcmp(test->name, "first") || !framework_owned || failed) return 0;
+    if (strcmp(test->name, "first")) return 0;
     if (framework_is("teardown")) return 1;
     if (framework_is("cleanup")) framework_files.max_entries = 1;
-    TEST_ASSERT_FILE_OK(file_directory_remove_tree(&framework_files, (cstring){framework_root}));
+    TEST_ASSERT_FILE_OK(test_directory_finish(&framework_directory, &framework_files, failed));
     return 0;
 }
 #define TEST_SUITE_SETUP framework_suite_setup
@@ -60,6 +59,8 @@ TEST(first,
     if (framework_is("assertion")) TEST_ASSERT(0);
     if (framework_is("file-ok")) TEST_ASSERT_FILE_OK(file_create_text((cstring){framework_file}, "no overwrite"));
     if (framework_is("file-text")) TEST_ASSERT_FILE_TEXT(((cstring){framework_file}), "wrong");
+    if (framework_is("suffix-text")) TEST_ASSERT_FILE_ENDS_WITH_TEXT(((cstring){framework_file}), "wrong");
+    if (framework_is("suffix-bytes")) TEST_ASSERT_FILE_ENDS_WITH_BYTES(((cstring){framework_file}), "actual\0", 7);
     if (framework_is("file-bytes")) TEST_ASSERT_FILE_BYTES(((cstring){framework_file}), "actual\0", 7);
     if (framework_is("files")) TEST_ASSERT_FILES_EQUAL(((cstring){framework_file}), ((cstring){framework_other}));
     if (framework_is("directories")) TEST_ASSERT_DIRECTORIES_EQUAL(&framework_files, ((cstring){framework_left}), ((cstring){framework_right}));
@@ -68,6 +69,17 @@ TEST(first,
         TEST_ASSERT_FILE_OK(file_tree_join(missing, framework_root, "absent"));
         TEST_ASSERT_FILE_TEXT(((cstring){missing}), "absent");
     }
+    if (framework_is("command-ok")) TEST_ASSERT_COMMAND_OK(test_command_timeout);
+    test_command_result command = {0}; command.exited = 1; command.exit_code = 7;
+    if (framework_is("command-exit")) TEST_ASSERT_COMMAND_EXIT(&command, 0);
+    command.exit_code = 0; command.error = test_command_timeout;
+    if (framework_is("command-failed-exit")) TEST_ASSERT_COMMAND_EXIT(&command, 0);
+    command.error = test_command_ok;
+    command.output = string_view_from_raw((u8 *)"actual\0tail", 11);
+    command.error_output = string_view_from_cstr("error");
+    if (framework_is("command-text")) TEST_ASSERT_COMMAND_OUTPUT_TEXT(&command, "actual");
+    if (framework_is("command-bytes")) TEST_ASSERT_COMMAND_OUTPUT_BYTES(&command, "actual\0fail", 11);
+    if (framework_is("command-error")) TEST_ASSERT_COMMAND_ERROR_BYTES(&command, "wrong", 5);
     if (framework_is("capacity")) {
         framework_files.max_entries = 1;
         TEST_ASSERT_DIRECTORIES_EQUAL(&framework_files, ((cstring){framework_root}), ((cstring){framework_root}));

@@ -17,6 +17,7 @@ Contents:
 - file: whole-file and caller-buffer read/write/stat helpers, exclusive creation,
   exact file/tree comparison, bounded tree copy/removal, Windows mutable mapping
   with explicit flush/unmap
+- environment: process-local set/get with caller scratch and UTF-8 Windows text
 - memory_region: dedicated page-isolated OS backing with read-only/read-write protection
 - file_watcher: allocator-backed multiple-file watching and caller-owned change bitset
 - collections: fixed views, dynamic arrays, and hash maps with shared operations
@@ -76,6 +77,10 @@ REFERENCES
 #define NOGDI
 #define NOUSER
 #include <windows.h>
+/* CJIT's older Windows headers omit this Vista+ UTF-16 validation flag. */
+#ifndef WC_ERR_INVALID_CHARS
+#define WC_ERR_INVALID_CHARS 0x00000080
+#endif
 #elif defined(__APPLE__) || defined(__linux__) || defined(__unix__)
 #include <dirent.h>
 #include <fcntl.h>
@@ -4615,6 +4620,66 @@ static file_error file_equal(cstring left, cstring right, int *equal) {
     return right.data ? file_compare_contents(left, right, NULL, 0, equal) : file_error_invalid;
 }
 
+/* Byte-exact suffix comparison. Empty suffix matches any regular file. Fixed
+   8 KiB stack scratch; no whole-file size limit or newline/text normalization. */
+static file_error file_ends_with_bytes(cstring path, const void *suffix, usize size, int *equal) {
+    if (!equal || (size && !suffix)) return file_error_invalid;
+    char absolute[NATIVE_PATH_SIZE];
+    file_entry_kind kind;
+    file_error error = file_tree_path(path, absolute, 0);
+    if (error == file_error_ok) error = file_native_kind(absolute, &kind);
+    if (error != file_error_ok) return error;
+    if (kind != file_entry_regular) return file_error_invalid;
+    void *stream = file_stream_open(absolute, 0);
+    if (!stream) return file_error_open_failed;
+    u64 length = 0;
+    int match = 0;
+    if (!file_stream_size(stream, &length)) error = file_error_read_failed;
+    else if (length >= size) {
+        match = 1;
+        if (!file_stream_seek(stream, length - size)) error = file_error_read_failed;
+    }
+    u8 buffer[8192];
+    for (usize offset = 0; error == file_error_ok && match && offset < size;) {
+        usize count = size - offset > sizeof(buffer) ? sizeof(buffer) : size - offset;
+        if (!file_stream_transfer(stream, buffer, count, 0)) { error = file_error_read_failed; break; }
+        match = !memcmp(buffer, (const u8 *)suffix + offset, count);
+        offset += count;
+    }
+    if (!file_stream_close(stream) && error == file_error_ok) error = file_error_cleanup_failed;
+    if (error == file_error_ok) *equal = match;
+    return error;
+}
+static file_error file_ends_with_text(cstring path, const char *suffix, int *equal) {
+    return suffix ? file_ends_with_bytes(path, suffix, strlen(suffix), equal) : file_error_invalid;
+}
+
+/* Regular-file attribute operation, not a fixture policy. Refuse links.
+   POSIX: read-only clears all write bits; writable adds owner write only.
+   Other mode bits survive; this is not a saved-permissions restore operation. */
+static file_error file_set_read_only(cstring path, int read_only) {
+    char absolute[NATIVE_PATH_SIZE];
+    file_entry_kind kind;
+    file_error error = file_tree_path(path, absolute, 0);
+    if (error == file_error_ok) error = file_native_kind(absolute, &kind);
+    if (error != file_error_ok) return error;
+    if (kind != file_entry_regular) return file_error_invalid;
+#if defined(_WIN32)
+    wchar_t wide[NATIVE_PATH_SIZE];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, absolute, -1, wide, NATIVE_PATH_SIZE))
+        return file_error_invalid;
+    DWORD attributes = GetFileAttributesW(wide);
+    if (attributes == INVALID_FILE_ATTRIBUTES) return file_error_read_failed;
+    attributes = read_only ? attributes | FILE_ATTRIBUTE_READONLY : attributes & ~FILE_ATTRIBUTE_READONLY;
+    return SetFileAttributesW(wide, attributes) ? file_error_ok : file_error_write_failed;
+#else
+    struct stat status;
+    if (lstat(absolute, &status)) return file_error_read_failed;
+    mode_t mode = read_only ? status.st_mode & ~(S_IWUSR | S_IWGRP | S_IWOTH) : status.st_mode | S_IWUSR;
+    return chmod(absolute, mode) == 0 ? file_error_ok : file_error_write_failed;
+#endif
+}
+
 static file_error file_tree_join(char output[NATIVE_PATH_SIZE], const char *root, const char *relative) {
     if (!output || !root || !root[0] || !relative) return file_error_invalid;
     int size = snprintf(output, NATIVE_PATH_SIZE, "%s%s%s", root,
@@ -4849,6 +4914,96 @@ static file_error file_directory_remove_tree(file_tree_workspace *workspace, cst
     if (error == file_error_ok) error = file_native_remove(root, 1);
     (void)arena_pop_to_marker(mark);
     return error;
+}
+
+/* Process-local environment access for ordinary applications/tools. UTF-8 on
+   Windows, byte strings on POSIX. NULL value unsets; empty value stays present.
+   Caller scratch is rewound. Get outputs unchanged on failure; size excludes NUL.
+   OS/libc owns environment storage. Do not mutate concurrently with other
+   environment readers/writers. Windows CRT getenv may cache old values: pair
+   this setter with environment_get, not CRT getenv. */
+typedef enum environment_error {
+    environment_error_ok,
+    environment_error_invalid,
+    environment_error_not_found,
+    environment_error_capacity,
+    environment_error_native,
+} environment_error;
+
+#if defined(_WIN32)
+static environment_error environment_wide(arena *scratch, const char *text, wchar_t **out) {
+    int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, -1, NULL, 0);
+    if (!count) return environment_error_invalid;
+    arena_result allocation = arena_alloc(scratch, (usize)count * sizeof(wchar_t), _Alignof(wchar_t));
+    if (allocation.error != arena_error_ok) return environment_error_capacity;
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, -1, allocation.ptr, count))
+        return environment_error_invalid;
+    *out = allocation.ptr;
+    return environment_error_ok;
+}
+#endif
+
+static environment_error environment_set(arena *scratch, const char *name, const char *value) {
+    if (!scratch || !name || !name[0] || strchr(name, '=')) return environment_error_invalid;
+#if defined(_WIN32)
+    arena_position_marker mark = arena_position_mark(scratch);
+    wchar_t *wide_name = NULL, *wide_value = NULL;
+    environment_error error = environment_wide(scratch, name, &wide_name);
+    if (error == environment_error_ok && value) error = environment_wide(scratch, value, &wide_value);
+    if (error == environment_error_ok && !SetEnvironmentVariableW(wide_name, wide_value) &&
+        (value || GetLastError() != ERROR_ENVVAR_NOT_FOUND)) error = environment_error_native;
+    (void)arena_pop_to_marker(mark);
+    return error;
+#else
+    return (value ? setenv(name, value, 1) : unsetenv(name)) == 0 ? environment_error_ok : environment_error_native;
+#endif
+}
+
+static environment_error environment_get(arena *scratch, const char *name, char *output, usize capacity, usize *size) {
+    if (!scratch || !name || !name[0] || strchr(name, '=') || !size || (capacity && !output))
+        return environment_error_invalid;
+#if defined(_WIN32)
+    arena_position_marker mark = arena_position_mark(scratch);
+    wchar_t *wide_name = NULL;
+    environment_error error = environment_wide(scratch, name, &wide_name);
+    if (error != environment_error_ok) { (void)arena_pop_to_marker(mark); return error; }
+    SetLastError(ERROR_SUCCESS);
+    DWORD count = GetEnvironmentVariableW(wide_name, NULL, 0);
+    if (!count) {
+        DWORD native = GetLastError();
+        if (native == ERROR_ENVVAR_NOT_FOUND) error = environment_error_not_found;
+        else if (native != ERROR_SUCCESS) error = environment_error_native;
+        else if (!capacity) error = environment_error_capacity;
+        else { output[0] = 0; *size = 0; }
+    } else if (count > INT_MAX) error = environment_error_capacity;
+    else {
+        arena_result allocation = arena_alloc(scratch, (usize)count * sizeof(wchar_t), _Alignof(wchar_t));
+        if (allocation.error != arena_error_ok) error = environment_error_capacity;
+        else {
+            SetLastError(ERROR_SUCCESS);
+            DWORD read = GetEnvironmentVariableW(wide_name, allocation.ptr, count);
+            if ((!read && GetLastError() != ERROR_SUCCESS) || read >= count) error = environment_error_native;
+            else {
+                int bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, allocation.ptr, -1, NULL, 0, NULL, NULL);
+                if (!bytes) error = environment_error_invalid;
+                else if ((usize)bytes > capacity) error = environment_error_capacity;
+                else if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, allocation.ptr, -1, output, bytes, NULL, NULL))
+                    error = environment_error_native;
+                else *size = (usize)bytes - 1;
+            }
+        }
+    }
+    (void)arena_pop_to_marker(mark);
+    return error;
+#else
+    const char *value = getenv(name);
+    if (!value) return environment_error_not_found;
+    usize length = strlen(value);
+    if (length >= capacity) return environment_error_capacity;
+    memmove(output, value, length + 1);
+    *size = length;
+    return environment_error_ok;
+#endif
 }
 
 typedef struct process_workspace {

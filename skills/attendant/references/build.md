@@ -64,26 +64,22 @@ Never overwrite mapped application/DLL or restart a manual viewer to make build 
 
 ## Focused development checks
 
-Direct C tests use locally extended `test.h` with shared `base.h` filesystem operations. No Node.js, GUI, downloads or prebuilt CLI needed:
+C suites use reusable `base.h` ordinary operations and `test.h` lifecycle/assertions/test-command support. Run from repository checkout with sibling `skills/init-project/templates/`. No Node.js, GUI, downloads or prebuilt CLI needed:
 
 ```sh
 bash test.sh cjit
 bash test.sh zig
 ```
 
-Each command runs 35 C cases under UTC and Pacific/Auckland plus 17 isolated framework scenarios. Stdout is retained run directory; TSV, diagnostics, generated runners and build logs stay in `build/native-tests/run-*/`. Assertions stay active at `-O3`/`NDEBUG`. Case failures exit 1; suite/infrastructure or main generation/build failures exit 2. Hooks clean successful owned case folders and retain/report failures; Attendant session/content setup stays test-local. See [test interfaces, memory/path limits and lifecycle contract](../native/tests/README.md).
+Each command runs 44 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios and five subprocess integration cases with 23 contract groups. Wrapper builds matching CLI/API probe. Integration retains actual subprocess interoperability, stdin/output/deadlines, schema/query/update checks, current task/decision template workflows and cold build from isolated skill copy. Four migrated core JS harnesses are removed. Template checkout is test-only, not a product build dependency.
 
-External-process/GUI checks remain separate:
+Stdout is retained run directory; TSV, diagnostics, generated runners, command captures and build logs stay in `build/native-tests/run-*/`. Assertions stay active at `-O3`/`NDEBUG`. Case failures exit 1; suite/infrastructure or generation/build failures exit 2. Hooks clean successful owned fixtures and retain/report failures. Install case also owns OS temp directory, excludes all prior builds/caches and builds copied source with 180000 ms deadline. See [test interfaces, memory/path limits and lifecycle contract](../native/tests/README.md).
+
+Desktop/IPC orchestration remains separate:
 
 ```sh
-bash tools/build-api-check.sh cjit
-bash tools/build-api-check.sh zig
 bash build-gui.sh cjit --check
 bash build-gui.sh zig --check
-node tests/core/cli-check.mjs
-node tests/core/api-check.mjs
-node tests/core/workflow-check.mjs
-node tests/core/install-check.mjs
 node tests/gui/check.mjs
 # macOS only:
 node tests/gui/control-macos-check.mjs
@@ -91,7 +87,7 @@ node tests/gui/bridge-check.mjs
 node tools/benchmark.mjs 5
 ```
 
-Matching CLI/API-probe builds are prerequisites for external core integration; production/test GUI builds for GUI checks. `api-check.mjs` now has 16 API/CLI interoperability groups. Direct source/date/fault assertions moved to C suite; historical API totals below describe pre-migration suite. GUI check builds also produce headless model executables. Checks use unique owned fixture copies under `build/`, not live projects. Both compiler builds are required for combined check scripts. Generated evidence is not imported historical evidence. `workflow-check.mjs` exercises current init-project templates and task/decision flows with both native CLIs; run from repository checkout containing sibling `skills/init-project/templates/`. That test-only dependency is not needed to build or use Attendant. `install-check.mjs` copies skill without builds into owned temporary installation with spaces/Unicode, proves missing-executable failure, builds each CLI and returns to original owned workspace. It needs both compilers/Bash, acquires nothing and leaves logs plus installation path in `build/install-check-results.json`.
+GUI checks need matching production/test GUI builds for both compilers. Check builds also produce headless model executables. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
 
 ### Windows footprint sanity probe
 
@@ -114,10 +110,6 @@ bash build.sh zig
 bash build.sh cjit
 bash test.sh zig
 bash test.sh cjit
-bash tools/build-api-check.sh zig
-bash tools/build-api-check.sh cjit
-node tests/core/cli-check.mjs
-node tests/core/api-check.mjs
 build/attendant-zig --help
 ```
 

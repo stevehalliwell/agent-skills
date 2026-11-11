@@ -1,11 +1,10 @@
-/* Attendant fixtures only. Shared filesystem work lives in base.h; test.h
-   calls lifecycle hooks even after assertion return or partial setup failure.
-   Each case exclusively owns its directory. Retain failures; delete successes. */
+/* Attendant session/data/fault bindings only. test.h owns fixture-directory
+   lifecycle; base.h owns ordinary filesystem/environment operations. */
 #include "src/native-api.c"
 
 static attendant_session *source_test_session;
-static char source_test_root[SOURCE_PATH_CAPACITY], source_test_case_root[SOURCE_PATH_CAPACITY];
-static int source_test_root_owned, source_test_case_owned, source_test_baselines, source_test_case_count;
+static test_directory source_test_suite_directory, source_test_case_directory;
+static char *source_test_case_root = source_test_case_directory.path;
 static u8 source_test_file_memory[65536];
 static file_tree_workspace source_test_files;
 static const char source_test_original[] = "---\r\nname: file\r\n---\r\nHello caf\xc3\xa9 \xf0\x9f\x98\x80\r\nNext line.\r\n";
@@ -14,81 +13,64 @@ static const char source_test_selected[] = "caf\xc3\xa9 \xf0\x9f\x98\x80\r\nNext
 static const char source_test_comment[] = "Please check **this passage**.\r\n\r\nKeep the rest unchanged.\n";
 static const char source_test_external[] = "\n# Concurrent external edit\n";
 static const char source_test_context[] = "Context note: caf\xc3\xa9 \xf0\x9f\x98\x80.\r\n\nRendered context lives in note body.\n";
+/* Bind shared scratch/error convention at existing Attendant fault call sites. */
 static int source_test_environment(const char *name, const char *value) {
-#if defined(_WIN32)
-    return SetEnvironmentVariableA(name, value) != 0;
-#else
-    return (value ? setenv(name, value, 1) : unsetenv(name)) == 0;
-#endif
+    return environment_set(source_test_files.memory, name, value) == environment_error_ok;
 }
 static int source_test_suite_setup(void) {
-    char parent[SOURCE_PATH_CAPACITY], supplied[SOURCE_PATH_CAPACITY];
+    char parent[SOURCE_PATH_CAPACITY], supplied[SOURCE_PATH_CAPACITY], path[NATIVE_PATH_SIZE];
     const char *directory = getenv("ATTENDANT_TEST_DIRECTORY");
     source_test_files = (file_tree_workspace){ arena_from_buffer(source_test_file_memory, sizeof(source_test_file_memory)), 12, 128 };
     if (!directory || !source_full_path("build/native-tests", parent) || !source_full_path(directory, supplied)) return 1;
     size_t prefix = strlen(parent);
     if (strncmp(parent, supplied, prefix) || (supplied[prefix] != '/' && supplied[prefix] != '\\') ||
         source_stat(supplied).kind != SOURCE_DIRECTORY) return 1;
-    if (snprintf(source_test_root, sizeof(source_test_root), "%s/fixtures", supplied) >= (int)sizeof(source_test_root) ||
-        !file_directory_create(source_test_root, 1)) return 1;
-    source_test_root_owned = 1;
+    TEST_ASSERT_FILE_OK(file_tree_join(path, supplied, "fixtures"));
+    TEST_ASSERT_FILE_OK(test_directory_create(&source_test_suite_directory, (cstring){path}));
     source_test_session = attendant_open();
     return source_test_session ? 0 : 1;
 }
 static int source_test_suite_teardown(int failed) {
     if (source_test_session) attendant_close(source_test_session);
     source_test_session = NULL;
-    if (!source_test_root_owned) return 0;
-    if (failed) { fprintf(stderr, "Retained failed fixtures: %s\n", source_test_root); return 0; }
     arena_reset(source_test_files.memory);
-    return test_assert_file_operation(file_directory_remove_tree(&source_test_files, (cstring){source_test_root}),
-                                      source_test_root, __FILE__, __LINE__);
+    TEST_ASSERT_FILE_OK(test_directory_finish(&source_test_suite_directory, &source_test_files, failed));
+    return 0;
 }
 static int source_test_case_setup(const test_case *test) {
-    source_test_case_owned = 0;
-    source_test_baselines = 0;
-    arena_reset(source_test_files.memory);
     (void)test;
-    /* Keep paths below legacy Win32 limits; TSV preserves full case names. */
-    if (snprintf(source_test_case_root, sizeof(source_test_case_root), "%s/case-%03d caf\xc3\xa9 \xce\xa9", source_test_root, ++source_test_case_count) >= (int)sizeof(source_test_case_root) ||
-        !file_directory_create(source_test_case_root, 1)) return 1;
-    source_test_case_owned = 1;
+    char path[NATIVE_PATH_SIZE];
+    arena_reset(source_test_files.memory);
+    TEST_ASSERT_FILE_OK(test_directory_next(&source_test_suite_directory, "case caf\xc3\xa9 \xce\xa9", path));
+    TEST_ASSERT_FILE_OK(test_directory_create(&source_test_case_directory, (cstring){path}));
     return source_test_environment("ATTENDANT_FEEDBACK_FAULT", NULL) ? 0 : 1;
 }
 static int source_test_case_teardown(const test_case *test, int failed) {
-    int cleared = source_test_environment("ATTENDANT_FEEDBACK_FAULT", NULL);
-    if (!source_test_case_owned) return cleared ? 0 : 1;
-    if (failed || !cleared) { fprintf(stderr, "Retained failed case %s: %s\n", test->name, source_test_case_root); return cleared ? 0 : 1; }
+    (void)test;
     arena_reset(source_test_files.memory);
-    file_error error = file_directory_remove_tree(&source_test_files, (cstring){source_test_case_root});
-    if (error != file_error_ok) fprintf(stderr, "Cleanup failed; retained case: %s: %s\n", source_test_case_root, file_error_message(error));
-    return error != file_error_ok;
+    int cleared = source_test_environment("ATTENDANT_FEEDBACK_FAULT", NULL);
+    TEST_ASSERT_FILE_OK(test_directory_finish(&source_test_case_directory, &source_test_files, failed || !cleared));
+    return cleared ? 0 : 1;
 }
 #define TEST_SUITE_SETUP source_test_suite_setup
 #define TEST_SUITE_TEARDOWN source_test_suite_teardown
 #define TEST_SETUP source_test_case_setup
 #define TEST_TEARDOWN source_test_case_teardown
 
-/* Owned baseline naming is fixture policy; copying/comparing trees is generic. */
 typedef struct source_test_baseline { char path[SOURCE_PATH_CAPACITY]; } source_test_baseline;
 static int source_test_baseline_create(source_test_baseline *baseline, const char *path) {
-    if (snprintf(baseline->path, sizeof(baseline->path), "%s/baseline-%d", source_test_case_root, ++source_test_baselines) >= (int)sizeof(baseline->path)) return 0;
+    /* This helper returns a predicate, unlike hook/assertion status functions. */
+    if (test_assert_file_operation(test_directory_next(&source_test_case_directory, "baseline", baseline->path),
+                                   "baseline path", __FILE__, __LINE__)) return 0;
     return !test_assert_file_operation(file_directory_copy(&source_test_files, (cstring){(char *)path}, (cstring){baseline->path}),
                                        path, __FILE__, __LINE__);
-}
-/* Markdown suffix assertion remains local; body has variable generated metadata. */
-static int source_test_ends_with(const char *path, const char *suffix) {
-    char text[32768];
-    usize size = 0, end = strlen(suffix);
-    return file_read_into((cstring){(char *)path}, text, sizeof(text), &size) == file_error_ok &&
-           size >= end && !memcmp(text + size - end, suffix, end);
 }
 typedef struct source_test_fixture {
     char root[SOURCE_PATH_CAPACITY], target[SOURCE_PATH_CAPACITY], hash[65];
     attendant_feedback input;
 } source_test_fixture;
 static int source_test_fixture_open(source_test_fixture *fixture, const char *name, attendant_feedback_mode mode) {
-    if (!source_test_session || !source_test_case_owned || !source_test_environment("ATTENDANT_FEEDBACK_FAULT", NULL)) return 0;
+    if (!source_test_session || !source_test_case_directory.owned || !source_test_environment("ATTENDANT_FEEDBACK_FAULT", NULL)) return 0;
     memset(fixture, 0, sizeof(*fixture));
     if (snprintf(fixture->root, sizeof(fixture->root), "%s/%s", source_test_case_root, name) >= (int)sizeof(fixture->root) ||
         !file_directory_create(fixture->root, 1) || snprintf(fixture->target, sizeof(fixture->target), "%s/document.md", fixture->root) >= (int)sizeof(fixture->target)) return 0;
@@ -106,15 +88,4 @@ static int source_test_fixture_open(source_test_fixture *fixture, const char *na
 }
 static int source_test_recovered(const source_test_fixture *fixture) {
     return attendant_read_document(source_test_session, fixture->target).ok;
-}
-static int source_test_readonly(const char *path, int readonly) {
-#if defined(_WIN32)
-    wchar_t wide[SOURCE_PATH_CAPACITY];
-    if (!source_wide(path, wide)) return 0;
-    DWORD flags = GetFileAttributesW(wide);
-    if (flags == INVALID_FILE_ATTRIBUTES) return 0;
-    return SetFileAttributesW(wide, readonly ? flags | FILE_ATTRIBUTE_READONLY : flags & ~FILE_ATTRIBUTE_READONLY) != 0;
-#else
-    return chmod(path, readonly ? 0444 : 0644) == 0;
-#endif
 }
