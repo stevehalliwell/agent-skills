@@ -12,7 +12,7 @@ typedef struct {
     uint64_t hint_generation,pending_hint_generation;
     unsigned hint_revision,pending_hint_revision;
     const GD_Collection *collections; int collection_count;
-    char toast[128]; double toast_until; int human_go;
+    char toast[128]; double toast_started,toast_until; float toast_from; int human_go;
     char layer_token[64],knowledge_token[64]; int layer_view;
 } ExplorerViewer;
 static int viewer_hint_current(const ExplorerViewer *viewer) {
@@ -197,11 +197,20 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
 static int viewer_projection(const char *name) {
     int v; for (v=0;v<GD_EXPLORER_VIEWS;++v) if (!strcmp(name,viewer_projections[v])) return v; return -1;
 }
+static const double viewer_toast_seconds=6.0,viewer_toast_fade_in=0.2,viewer_toast_fade_out=0.3;
+static float viewer_toast_alpha(const ExplorerViewer *viewer,double now) {
+    double elapsed=now-viewer->toast_started,remaining=viewer->toast_until-now;float alpha;
+    if(!*viewer->toast || !isfinite(now) || elapsed<0 || remaining<=0)return 0;
+    alpha=elapsed<viewer_toast_fade_in ? viewer->toast_from+(1-viewer->toast_from)*(float)(elapsed/viewer_toast_fade_in):1;
+    if(remaining<viewer_toast_fade_out)alpha=fminf(alpha,(float)(remaining/viewer_toast_fade_out));
+    return fmaxf(0,fminf(1,alpha));
+}
 static void viewer_toast(ExplorerViewer *viewer, const char *message, const char *subject) {
+    double now=igGetTime();float alpha=viewer_toast_alpha(viewer,now);int written;
     if (viewer->human_go) { *viewer->toast=0; return; }
-    int written=subject ? snprintf(viewer->toast,sizeof(viewer->toast),"%s %s",message,subject):snprintf(viewer->toast,sizeof(viewer->toast),"%s",message);
+    written=subject ? snprintf(viewer->toast,sizeof(viewer->toast),"%s %s",message,subject):snprintf(viewer->toast,sizeof(viewer->toast),"%s",message);
     if (written<0 || (size_t)written>=sizeof(viewer->toast)) snprintf(viewer->toast,sizeof(viewer->toast),"CLI activity");
-    viewer->toast_until=igGetTime()+2.5;
+    viewer->toast_started=now;viewer->toast_until=now+viewer_toast_seconds;viewer->toast_from=alpha;
 }
 static void viewer_feedback(ExplorerViewer *viewer) {
     if (viewer->has_hint) {
@@ -220,11 +229,16 @@ static void viewer_feedback(ExplorerViewer *viewer) {
         igEnd();
         if (!open) { viewer->has_hint=0; viewer->hint_pending=0; }
     }
-    if (*viewer->toast && igGetTime()<viewer->toast_until) {
-        igSetNextWindowPos((ImVec2_c){20,20},ImGuiCond_Always,(ImVec2_c){0,0}); igSetNextWindowBgAlpha(0.85f);
-        if (igBegin("CLI feedback",NULL,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoInputs))
-            igTextUnformatted(viewer->toast,NULL);
-        igEnd();
+    {
+        float alpha=viewer_toast_alpha(viewer,igGetTime());
+        if(alpha>0){
+            float opacity=igGetStyle()->Alpha*alpha;
+            igPushStyleVar_Float(ImGuiStyleVar_Alpha,opacity);
+            igSetNextWindowPos((ImVec2_c){20,20},ImGuiCond_Always,(ImVec2_c){0,0});igSetNextWindowBgAlpha(0.85f*opacity);
+            if (igBegin("CLI feedback",NULL,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoInputs))
+                igTextUnformatted(viewer->toast,NULL);
+            igEnd();igPopStyleVar(1);
+        }
     }
 }
 static void viewer_actions(GD_ExplorerContext *c, GD_ViewerWriter *w) {

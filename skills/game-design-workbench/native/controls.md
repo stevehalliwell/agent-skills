@@ -1,6 +1,6 @@
 # Shared investigation controls
 
-Status: joint interactive Mario IPC tour completed; user requested checkpoint and three UX follow-ups in root `todo.md` Step 2. Analytical forms, presentation controls, retained result readers and typed evidence selection implemented and CJIT-verified. Tour demonstrated shared selection/hints, configure/Run/evidence loops and retained independent pane context. User reports Grid-to-Free-graph selection not visibly following, toast too brief and missing consistent readable selection framing. These remain open; CPU checks do not override observations. Step 1, full live safety/usefulness acceptance and final every-view walkthrough remain open. Separate review viewer launched at user request; no existing explorer replaced.
+Status: joint interactive Mario IPC tour completed. Analytical forms, presentation controls, retained result readers and typed evidence selection implemented and CJIT-verified. Matrix selection continuity and readable Focus selection accepted in reviewed Mario presentations. Longer/fading CLI toast accepted in separate Mario review. Step 1, full live safety/usefulness acceptance and final every-view walkthrough remain open. CPU checks do not establish unperformed visual/pointer acceptance. Separate review viewers opened with authorization; none replaced.
 
 ## Shared application boundary
 
@@ -108,7 +108,8 @@ Refresh blocks active input, pending rank text, modified draft, retained Undo hi
 ## Feedback
 
 - Independent human-owned hint window, default 360 × 160. No appearance focus. Go uses guarded navigation; Dismiss/close clears hint only. Stale exact hint disables Go.
-- Passive latest-wins 2.5-second CLI toast. No input capture or OS focus. Reads, failures and human Go do not produce toast.
+- Passive latest-wins CLI toast,6 seconds total:200 ms fade-in,300 ms fade-out, no sliding. New activity refreshes duration from current opacity without entrance flicker. Background/text fade together; no input capture or appearance/OS focus. Reads, failures and human Go do not produce toast.
+- Toast update: warning-free CJIT CLI/explorer/graph builds; focused integration6/6, both examples/source hashes unchanged. CPU feedback checks25 per example cover fade endpoints, refreshed deadlines/opacity, draw-vertex alpha, style restoration, expiry, passive flags and retained human focus/hint ownership. User accepted separate Mario animation review; no every-view acceptance inferred. Evidence: `native/build/toast-feedback-work/`. [Contract and limits](../../../reports/graph-query-research/cli-toast-feedback.md).
 
 ## Verification and remaining work
 
