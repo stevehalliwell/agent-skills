@@ -3,7 +3,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 const executable=process.env.GD_NATIVE_EXE && resolve(process.env.GD_NATIVE_EXE);
 function failure(args) {
   const result=spawnSync(executable,['view','explorer',...args,'--json'],{encoding:'utf8',timeout:30000,windowsHide:true});
@@ -23,6 +24,16 @@ test('unified explorer validates options without prompting or opening a window',
     ['--related','context=.','--mode','matrix','--layout','table'],
     ['--related','context=.','--mode','noun-interactions','--layout','columns']]) {
     assert.equal(failure(args).errors[0].code,'cli.arguments',JSON.stringify(args));
+  }
+});
+test('standalone graph layouts accept Free mode without changing native defaults', {skip:!executable},()=>{
+  const root=fileURLToPath(new URL('../examples/crate-puzzle/game-design/',import.meta.url));
+  const inputs=['--skill-atoms',`skill-atoms=${join(root,'skill-atoms')}`,'--challenges',`challenges=${join(root,'challenges')}`];
+  for(const mode of ['skills','challenges','relationships'])for(const layout of [null,'prerequisites','rank','graph','table','columns']){
+    const args=['view','skill-atoms',...inputs,'--mode',mode,'--json'];if(layout)args.push('--layout',layout);
+    const result=spawnSync(executable,args,{encoding:'utf8',timeout:30000,windowsHide:true});
+    assert.equal(result.status,2,result.stderr);const output=JSON.parse(result.stdout);
+    assert.equal(output.errors[0].code,['table','columns'].includes(layout)?'cli.arguments':'view.unavailable',`${mode}/${layout}: ${result.stdout}`);
   }
 });
 test('unified entry reports absent graph build or unavailable projection structurally', {skip:!executable},()=>{

@@ -104,7 +104,7 @@ static void help(void) {
          "                         controls import: changes,derived,items (flags/errors retained)\n"
          "                         MDA view: columns (default) or graph; source read-only\n"
          "  --layout table|graph|columns  View layout; graph settles dynamically\n"
-         "  --layout prerequisites|rank  Skill view; prerequisite ordering is default\n"
+         "  --layout prerequisites|rank|graph  Skill view; prerequisites default, graph frees nodes\n"
          "  --direction down|right Skill view axis; down is default\n"
          "  --output FILE.json     Skill view change report instead of stdout; new file only\n"
          "                         Finish/close returns proposed edits; never writes Markdown\n"
@@ -554,7 +554,7 @@ static int application(int argc, char **argv) {
     if (!error && fields && (!json || view_command || (command==15 ? !(structural_actor ? gd_structure_question_fields(question,fields):gd_query_fields(query_request.kind,fields)):!fields_valid(fields, command==14 ? 8 : rule_command ? 7 : command == 10 ? 6 : control_command ? 5 : mda_command ? 4 : route_command ? 3 : skill_command ? 2 : command == 1)))) error = "--fields needs JSON and supported top-level data keys";
     if (!error && !view_command && (frames || screenshot || layout_supplied || other_pairs || (direction_supplied && !mda_command && !structural_actor))) error = "Layout/direction/frame/capture options apply only to views";
     if (!error && command == 2 && layout > GD_VIEW_COLUMNS) error = "Matrix view requires table, graph, or columns layout";
-    if (!error && command == 4 && (layout < GD_VIEW_PREREQUISITES || other_pairs)) error = "Skill view requires prerequisites or rank layout; no matrix-pair overlay";
+    if (!error && command == 4 && ((layout < GD_VIEW_PREREQUISITES && layout!=GD_VIEW_GRAPH) || other_pairs)) error = "Skill view requires prerequisites, rank, or graph layout; no matrix-pair overlay";
     if (!error && direction_supplied && command != 4 && !mda_command && !structural_actor) error = "--direction applies only to MDA or view skill-atoms";
     if (!error && command==14 && (from || resource_accepted) && !resource_to) error="Resource --from/--accepted-only requires --to";
     if (!error && from && !mda_command && !control_command && command!=3 && command!=4 && command!=14 && !structural_actor) error = "--from applies only to MDA, controls, or skill exploration";

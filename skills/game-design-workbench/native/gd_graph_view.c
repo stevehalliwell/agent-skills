@@ -32,10 +32,15 @@ static int measure_directed(GD_Layout *layout) {
     return gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,layout->sort);
 }
 static int prepare_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort, int rank_mode, int horizontal, int challenges, GD_Focus *focus) {
-    if (focus) return gd_focus_layout(model,focus,layout,sort);
-    if (challenges) return gd_route_layout(model,layout,horizontal,sort) && measure_directed(layout);
-    if (model->skill_mode) return gd_skill_layout(model, layout, rank_mode, horizontal, sort) && measure_directed(layout);
-    return gd_matrix_layout(model,layout,mode,sort);
+    int okay;
+    if (focus) okay=gd_focus_layout(model,focus,layout,sort);
+    else if (challenges) okay=gd_route_layout(model,layout,horizontal,sort) && measure_directed(layout);
+    else if (model->skill_mode) okay=gd_skill_layout(model,layout,rank_mode,horizontal,sort) && measure_directed(layout);
+    else return gd_matrix_layout(model,layout,mode,sort);
+    /* Keep native semantic seed and annotations; Free removes axis locks only.
+       Used by standalone and unified viewers, with one shared solver. */
+    if(okay && mode==GD_LAYOUT_FORCE)layout->mode=GD_LAYOUT_FORCE;
+    return okay;
 }
 static Vector2 node_point(const GD_LayoutNode *node) { return (Vector2){node->x, node->y}; }
 static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle viewport) {
@@ -582,7 +587,11 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context, sizeof(*layout));
     GraphSelection selection = {-1, -1, 0, -1, -1};
     Camera2D camera = {{0,0},{0,0},0,1};
-    int frame = 0, result = 0, mode = initial_layout == GD_VIEW_COLUMNS ? GD_LAYOUT_COLUMNS : GD_LAYOUT_FORCE, sort = GD_SORT_NAME;
+    int frame=0,result=0,sort=GD_SORT_NAME;
+    int mode=initial_layout==GD_VIEW_COLUMNS ? GD_LAYOUT_COLUMNS:GD_LAYOUT_FORCE;
+    if(model->skill_mode || focused || challenges)mode=initial_layout==GD_VIEW_GRAPH ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;
+    /* Keep each standalone projection's choice; depth/rank basis is separate. */
+    int layout_modes[3]={model->skill_mode ? GD_LAYOUT_DIRECTED:mode,GD_LAYOUT_DIRECTED,GD_LAYOUT_DIRECTED};
     int rank_mode = initial_layout == GD_VIEW_RANK;
     bool paused = false, overlay = other_pairs != 0;
     double next_check = 0;
@@ -596,7 +605,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         gd_error(initial,"view.root","--from must identify a unique loaded record",NULL,0); return 2;
     }
     if (focused && root<0 && model->record_count) { root=0; for (int i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL) { root=i; break; } }
-    gd_focus_reset(model,&focus,root);
+    gd_focus_reset(model,&focus,root);layout_modes[focused ? GD_EXPLORE_RELATIONSHIPS:challenges]=mode;
     if ((initial->skill_mode && !draft) || (model->route_mode && (!routes || model->error_count || model->errors_omitted)) || !layout || !prepare_layout(model, layout, (GD_LayoutMode)mode, GD_SORT_NAME, rank_mode, horizontal, challenges, focused ? &focus:NULL)) {
         if (layout) initial->allocator.release(initial->allocator.context, layout);
         gd_routes_destroy(routes); gd_draft_destroy(draft);
@@ -668,12 +677,20 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
                 int option=focused ? 1:0;
                 if (igCombo_Str("Explore",&option,"Skills\0Relationships\0",-1)) requested_mode=option ? GD_EXPLORE_RELATIONSHIPS:GD_EXPLORE_SKILLS;
             }
-            if (!focused) {
-                if (!challenges) rearrange = igCombo_Str("Layout", &rank_mode, "Prerequisite depth\0Authored rank constraints\0", -1);
-                if (igCombo_Str("Direction", &horizontal, "Top to bottom\0Left to right\0", -1)) rearrange = 1;
-                igTextWrapped(challenges ? "Read-only routes. Bands show shortest entry-hop distance; cycles/backlinks remain. Not physical reachability or teaching order." : "Chain axis is locked during dragging and settling. Rank bands compress numeric gaps; same-rank prerequisites still precede dependents.");
+            {
+                int choice=mode==GD_LAYOUT_FORCE ? (focused || challenges ? 1:2):focused || challenges ? 0:rank_mode;
+                if(igCombo_Str("Layout",&choice,focused ? "Stable neighborhood\0Free graph\0":challenges ? "Declared route bands\0Free graph\0":"Prerequisite depth\0Authored rank constraints\0Free graph\0",-1)) {
+                    if(!focused && !challenges && choice<2)rank_mode=choice;
+                    mode=choice==(focused || challenges ? 1:2) ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;rearrange=1;
+                }
+                if(!focused && igCombo_Str("Direction",&horizontal,"Top to bottom\0Left to right\0",-1))rearrange=1;
+                igTextWrapped(mode==GD_LAYOUT_FORCE ? "Free graph: all nodes may move. Band/root labels retain source meaning; positions are not execution order.":focused ? "Stable neighborhood; drag for transient placement.":challenges ? "Read-only routes. Bands show shortest entry-hop distance; cycles/backlinks remain. Not physical reachability or teaching order.":"Chain axis is locked during dragging and settling. Rank bands compress numeric gaps; same-rank prerequisites still precede dependents.");
             }
-        } else if (focused) { if (igButton("Return to matrix graph",(ImVec2_c){0,0})) requested_mode=GD_EXPLORE_SKILLS; }
+        } else if (focused) {
+            int choice=mode==GD_LAYOUT_FORCE;
+            if(igCombo_Str("Layout",&choice,"Stable neighborhood\0Free graph\0",-1)){mode=choice ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;rearrange=1;}
+            if (igButton("Return to matrix graph",(ImVec2_c){0,0})) requested_mode=GD_EXPLORE_SKILLS;
+        }
         else rearrange = igCombo_Str("Layout", &mode, "Force-directed\0Noun / verb columns\0", -1);
         if (focused) {
             igTextWrapped("Already-consumed declarations only; not every project relationship. Both incoming/outgoing links; authored arrow direction. No inferred impact, causality or learning.");
@@ -684,7 +701,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (rearrange) {
             prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; accumulator = 0; fit = 1;
         }
-        if (!focused && !challenges) { igCheckbox("Pause settling", &paused); igSameLine(0, -1); }
+        if ((!focused && !challenges) || mode==GD_LAYOUT_FORCE) { igCheckbox("Pause settling", &paused); igSameLine(0, -1); }
         else igTextUnformatted(focused ? "Stable neighborhood; drag for transient placement." : "Stable bands; drag for transient lateral placement.",NULL);
         if (igButton("Fit", (ImVec2_c){0,0})) fit = 1;
         igSameLine(0, -1);
@@ -776,7 +793,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             /* Prerequisite edits can remove/reorder selected edge. Recover via
                editor/node identity, never dereference the old edge index. */
             int selected=draft_changed ? (editor.record>=0 ? editor.record : selection.node>=0 ? layout->nodes[selection.node].key : selected_before) : selected_record(model,layout,&selection,challenges,focused);
-            if (requested_mode!=current_mode) { remembered[current_mode]=selected; selected=remembered[requested_mode]; }
+            if (requested_mode!=current_mode) { remembered[current_mode]=selected; selected=remembered[requested_mode];layout_modes[current_mode]=mode;mode=layout_modes[requested_mode]; }
             if (navigate>=0) selected=navigate;
             focused=requested_mode==GD_EXPLORE_RELATIONSHIPS;
             challenges=requested_mode==GD_EXPLORE_CHALLENGES;
@@ -794,9 +811,10 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         }
         if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F)) fit = 1;
         if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F5)) refresh = 1;
+        if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_SPACE) && ((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && layout->mode!=GD_LAYOUT_COLUMNS) paused=!paused;
         if (fit) { fit_camera(&camera, layout, viewport); fit = 0; }
         graph_input(layout,layout, &selection, &camera, viewport, overlay,gd_graph_overview_hit(&overview_controls,viewport,GetMousePosition()));
-        if (!focused && !challenges && !paused && layout->mode != GD_LAYOUT_COLUMNS) {
+        if (((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && !paused && layout->mode != GD_LAYOUT_COLUMNS) {
             accumulator += fminf(GetFrameTime(), 0.05f);
             while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
         } else accumulator = 0;
@@ -904,9 +922,6 @@ int gd_explorer_graph_prepare(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
     int okay=prepare_layout(model,p->layout,p->view==GD_EXPLORER_MATRIX && p->layout_choice==GD_MATRIX_GRID_CHOICE ? GD_LAYOUT_COLUMNS:(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
                           p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS ? &p->focus:NULL);
-    /* Native seed keeps directed/ego coordinates; only Free removes axis locks.
-       Topology, band labels, root markers and revealed scope stay adapter-owned. */
-    if(okay && p->view<=GD_EXPLORER_RELATIONSHIPS && p->layout_choice==GD_LAYOUT_FORCE) p->layout->mode=GD_LAYOUT_FORCE;
     return okay;
 }
 void gd_explorer_graph_input(GD_ExplorerContext *context) {

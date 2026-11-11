@@ -197,6 +197,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             GD_ExplorerQueryOptions *saved=a.allocate(a.context,2*sizeof(*saved));int allocation;
             PRESENT_CHECK(saved!=NULL);saved[0]=panes[v].query_options;saved[1]=state->applied;
             PRESENT_CHECK(scene->overview && free_graph(&panes[v]) && layout_settles(&panes[v]));
+            {GD_ExplorerPresentation values;gd_explorer_presentation_read(&target,&values);PRESENT_CHECK(values.layout==1 && !gd_explorer_presentation_editable(&target,"layout"));}
             PRESENT_CHECK(viewer_retained_smoke(&viewer,(GD_ExplorerView)v,"actor-overview","\"mode\":\"interactions\"",reply));
             snprintf(panes[v].query_options.contexts,sizeof(panes[v].query_options.contexts),"pending overview test");
             PRESENT_STAGE(v,"layout","native");PRESENT_CHECK(strstr(reply,"viewer.control") && state->scene==scene);
@@ -204,6 +205,24 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             PRESENT_STAGE(v,"actor_overview","usage");PRESENT_CHECK(strstr(reply,"\"configured\":true") && state->scene!=scene && state->query==query && !free_graph(&panes[v]) && !layout_settles(&panes[v]));
             PRESENT_CHECK(!strcmp(panes[v].query_options.contexts,"pending overview test") && !memcmp(&saved[1],&state->applied,sizeof(saved[1])));
             PRESENT_CHECK(viewer_retained_smoke(&viewer,(GD_ExplorerView)v,"actor-overview","\"mode\":\"usage\"",reply));
+            {
+                GD_Layout *native=a.allocate(a.context,sizeof(*native));int node;GD_ExplorerSelection selection;
+                PRESENT_CHECK(native);scene=state->scene;memcpy(native,&scene->layout,sizeof(*native));
+                if(scene->layout.node_count)panes[v].selection.node=0;selection=panes[v].selection;
+                PRESENT_CHECK(gd_explorer_presentation_editable(&target,"layout") && !gd_explorer_presentation_editable(&target,"initial_arrangement"));
+                for(allocation=1;allocation<=1+(scene->layout.edge_count>0);++allocation){*fail_at=*calls+allocation;PRESENT_STAGE(v,"layout","free");*fail_at=-1;PRESENT_CHECK(strstr(reply,"viewer.control") && state->scene==scene && !scene->free_geometry && !memcmp(native,&scene->layout,sizeof(*native)));}
+                PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]) && layout_settles(&panes[v]) && state->scene==scene && state->query==query && !memcmp(&selection,&panes[v].selection,sizeof(selection)));
+                PRESENT_STAGE(v,"initial_arrangement","neighborhood");PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].initial_arrangement==1);
+                PRESENT_STAGE(v,"workspace_bounds","true");PRESENT_CHECK(strstr(reply,"\"configured\":true") && scene->layout.workspace.enabled==(scene->layout.node_count>0));
+                PRESENT_STAGE(v,"visual_filter","false");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !render_active(&target));
+                PRESENT_STAGE(v,"visual_filter","true");PRESENT_CHECK(strstr(reply,"\"configured\":true") && render_active(&target));
+                for(node=0;node<120;++node)gd_query_scene_step(scene,-1);
+                PRESENT_CHECK(!strcmp(panes[v].query_options.contexts,"pending overview test") && !memcmp(&saved[1],&state->applied,sizeof(saved[1])) && viewer_retained_smoke(&viewer,(GD_ExplorerView)v,"actor-overview","\"mode\":\"usage\"",reply));
+                PRESENT_STAGE(v,"layout","native");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !free_graph(&panes[v]) && !layout_settles(&panes[v]) && !scene->free_geometry && !scene->layout.workspace.enabled && !render_active(&target) && !memcmp(&selection,&panes[v].selection,sizeof(selection)));
+                for(node=0;node<scene->layout.node_count;++node)PRESENT_CHECK(scene->layout.nodes[node].x==native->nodes[node].x && scene->layout.nodes[node].y==native->nodes[node].y && scene->layout.nodes[node].vx==0 && scene->layout.nodes[node].vy==0);
+                PRESENT_STAGE(v,"initial_arrangement","native");PRESENT_CHECK(strstr(reply,"viewer.control"));
+                PRESENT_CHECK(state->scene==scene && state->query==query && !memcmp(&saved[1],&state->applied,sizeof(saved[1])));a.release(a.context,native);
+            }
             PRESENT_STAGE(v,"actor_overview","interactions");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]));
             panes[v].query_options=saved[0];a.release(a.context,saved);
         }

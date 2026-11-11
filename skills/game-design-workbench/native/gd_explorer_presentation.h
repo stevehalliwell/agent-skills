@@ -98,7 +98,7 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
         if(field->source==(size_t)-1) continue; source=(const char *)p+field->source;
         if(field->integer_bool) *(bool *)value=*(const int *)source!=0; else memcpy(value,source,field->control.capacity);
     }
-    out->layout=p->view==GD_EXPLORER_SKILLS ? p->layout_choice==GD_LAYOUT_FORCE ? 2:p->rank:
+    out->layout=p->view==GD_EXPLORER_ACTORS && p->query_state && gd_query_scene_overview_mode(p->query_state->scene)==GD_ACTOR_INTERACTIONS ? 1:p->view==GD_EXPLORER_SKILLS ? p->layout_choice==GD_LAYOUT_FORCE ? 2:p->rank:
         p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS || query_view(p->view) ? p->layout_choice==GD_LAYOUT_FORCE:p->layout_choice;
     out->distance_focus=p->distance_focus_enabled; out->focus_root=p->focus.root;
     out->mda_root=c->project->mda ? c->project->mda->root:-1; out->mda_direction=c->project->mda ? c->project->mda->direction:0;
@@ -119,7 +119,7 @@ int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *na
     if(!p->prepared) return 0;
     if(!strcmp(name,"noun_case_page")) return c->project->noun_grid && p->selection.cell>=0 && p->selection.cell<c->project->noun_grid->pair_count;
     if(!strcmp(name,"actor_overview")) return p->query_state && !gd_explorer_similarity_active(c);
-    if(query_view(p->view) && p->query_state && p->query_state->scene && p->query_state->scene->overview && !strcmp(name,"layout")) return 0;
+    if(query_view(p->view) && p->query_state && gd_query_scene_overview_mode(p->query_state->scene)==GD_ACTOR_INTERACTIONS && !strcmp(name,"layout")) return 0;
     if(!strcmp(name,"layout") && gd_explorer_similarity_active(c)) return 0;
     if(query_view(p->view) && (!strcmp(name,"layout") || !strcmp(name,"initial_arrangement")) && (!p->query_state || !p->query_state->scene)) return 0;
     if(!strcmp(name,"initial_arrangement") || !strcmp(name,"workspace_bounds") || !strcmp(name,"visual_filter")) return free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c);

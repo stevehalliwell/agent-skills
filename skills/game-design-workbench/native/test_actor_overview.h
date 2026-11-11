@@ -48,7 +48,29 @@ TEST(actor_overview_pairs_cloud_and_evidence,
     i=overview_find_node(cloud,"actions/Life");TEST_ASSERT(i>=0 && cloud->nodes[i].incoming==2 && cloud->nodes[i].kind==GD_QUERY_NODE_AXIS);
     TEST_ASSERT(overview_find_edge(cloud,hero,walker)==-1 && overview_find_edge(cloud,lives,unknown)==-1);
     TEST_ASSERT(gd_query_scene_overview_count(cloud,overview_find_edge(cloud,hero,lives))==1);
-    {float x=cloud->layout.nodes[hero].x,y=cloud->layout.nodes[hero].y;TEST_ASSERT(gd_query_scene_place(cloud,GD_LAYOUT_FORCE,0,1));gd_query_scene_step(cloud,-1);gd_query_scene_drag(cloud,hero,x+100,y+100);TEST_ASSERT(cloud->layout.mode==GD_LAYOUT_DIRECTED && cloud->layout.nodes[hero].x==x && cloud->layout.nodes[hero].y==y);}
+    {
+        GD_Allocator allocator=cloud->allocator;GD_Layout *native=allocator.allocate(allocator.context,sizeof(*native)),*before=allocator.allocate(allocator.context,sizeof(*before));
+        GD_QuerySceneNode metadata[6];GD_QuerySceneEdge edges[6];int counts[6],seed,stage,step;
+        TEST_ASSERT(native && before);memcpy(native,&cloud->layout,sizeof(*native));memcpy(metadata,cloud->nodes,sizeof(metadata));memcpy(edges,cloud->edges,sizeof(edges));
+        for(i=0;i<6;++i)counts[i]=gd_query_scene_overview_count(cloud,i);
+        TEST_ASSERT(gd_query_scene_place(cloud,GD_LAYOUT_DIRECTED,0,1));gd_query_scene_step(cloud,-1);gd_query_scene_drag(cloud,hero,native->nodes[hero].x+100,native->nodes[hero].y+100);
+        TEST_ASSERT(cloud->layout.nodes[hero].x==native->nodes[hero].x && cloud->layout.nodes[hero].y==native->nodes[hero].y);
+        for(seed=0;seed<2;++seed){
+            TEST_ASSERT(gd_query_scene_place(cloud,GD_LAYOUT_FORCE,seed,1.4f) && cloud->free_geometry && cloud->layout.mode==GD_LAYOUT_FORCE);
+            TEST_ASSERT(gd_query_scene_workspace(cloud,1,1.4f));
+            for(i=0;i<6;++i){float x=cloud->layout.nodes[i].x,y=cloud->layout.nodes[i].y;gd_layout_pickup_node(&cloud->layout,i,x,y);gd_query_scene_drag(cloud,i,x+50,y+20);TEST_ASSERT(fabsf(cloud->layout.nodes[i].x-x-50)<0.001f && fabsf(cloud->layout.nodes[i].y-y-20)<0.001f);}
+            for(step=0;step<600;++step)gd_query_scene_step(cloud,-1);
+            TEST_ASSERT(cloud->layout.workspace.enabled && cloud->layout.collision_checks<=GD_LAYOUT_COLLISION_WORK);
+            for(i=0;i<6;++i){const GD_LayoutNode *node=&cloud->layout.nodes[i];TEST_ASSERT(isfinite(node->x) && isfinite(node->y) && node->x+node->footprint.left>=cloud->layout.workspace.bounds.left-0.01f && node->x+node->footprint.right<=cloud->layout.workspace.bounds.right+0.01f && node->y+node->footprint.top>=cloud->layout.workspace.bounds.top-0.01f && node->y+node->footprint.bottom<=cloud->layout.workspace.bounds.bottom+0.01f);}
+            memcpy(before,&cloud->layout,sizeof(*before));
+            for(stage=0;stage<3;++stage){RouteFailure failure={allocator,stage};GD_QueryFree *prior=cloud->free_geometry;cloud->allocator=(GD_Allocator){&failure,route_allocate,route_release};TEST_ASSERT(!gd_query_scene_place(cloud,GD_LAYOUT_FORCE,1,1.4f));cloud->allocator=allocator;TEST_ASSERT(cloud->free_geometry==prior && !memcmp(before,&cloud->layout,sizeof(*before)));}
+            TEST_ASSERT(!gd_query_scene_place(cloud,GD_LAYOUT_FORCE,2,1) && !gd_query_scene_place(cloud,GD_LAYOUT_FORCE,0,NAN));
+            TEST_ASSERT(gd_query_scene_place(cloud,GD_LAYOUT_DIRECTED,seed,1.4f) && !cloud->free_geometry && !cloud->layout.workspace.enabled);
+            for(i=0;i<6;++i)TEST_ASSERT(cloud->layout.nodes[i].x==native->nodes[i].x && cloud->layout.nodes[i].y==native->nodes[i].y && cloud->layout.nodes[i].vx==0 && cloud->layout.nodes[i].vy==0 && gd_query_scene_overview_count(cloud,i)==counts[i]);
+            TEST_ASSERT(!memcmp(metadata,cloud->nodes,sizeof(metadata)) && !memcmp(edges,cloud->edges,sizeof(edges)) && !memcmp(native->edges,cloud->layout.edges,6*sizeof(native->edges[0])) && cloud->query==query);
+        }
+        allocator.release(allocator.context,before);allocator.release(allocator.context,native);
+    }
     {char path[GD_MAX_PATH];FILE *file;snprintf(path,sizeof(path),"%s/actor-overview.json",root);file=fopen(path,"wb");TEST_ASSERT(file && gd_query_scene_overview_write(file,cloud));TEST_ASSERT(!fclose(file));}
     TEST_ASSERT(!gd_sources_changed(model));
     gd_query_scene_destroy(cloud);gd_query_scene_destroy(map);gd_query_destroy(query);gd_rule_analysis_destroy(analysis);gd_rules_destroy(rules);gd_destroy(model);
