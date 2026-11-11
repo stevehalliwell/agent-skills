@@ -32,7 +32,7 @@ Use for Attendant operations or managed records. Skip ordinary Markdown and non-
    <attendant> schema -p /path/to/project
    ```
 
-   CLI supports Windows x64 and macOS arm64. GUI is separate and not required for CLI work. Node.js is used only by development/build tools, not record operations.
+   CLI supports Windows x64 and macOS arm64. GUI is separate and not required for CLI work. Runtime, build and check tools need no Node.js; build prerequisites live in build reference.
    - Done: executable and target project are unambiguous; missing build is resolved or exact blocker reported.
 3. Follow selected workflow, including inspection and user-confirmation gates. Commands emit one JSON value on stdout; failures also explain on stderr. Check exit status and diagnostics, not stdout presence alone. Before retrying mutation, inspect actual source and reported `written`/`failed` paths; completed writes may remain. Correct only supported in-scope defects and rerun failed action. Report unresolved blockers, source paths and remaining diagnostics; include raw JSON only when requested.
    - Done: source changes are within approved scope and result is understood.

@@ -7,9 +7,9 @@ zig="${ZIG:-zig}"
 mkdir -p build/bin
 root="$(pwd)"
 if [[ ! -f build/deps/luajit/src/ljamalg.c ]]; then
-  echo 'Missing sources: run node tools/prepare-gui.mjs first.' >&2; exit 1
+  echo 'Missing sources: run bash tools/native-tool.sh prepare first.' >&2; exit 1
 fi
-node tools/prepare-gui.mjs --verify
+ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-zig}" bash tools/native-tool.sh prepare --verify
 if [[ $(uname -s) == Darwin ]]; then
   exec bash tools/build-gui-stack-macos.sh
 fi
@@ -34,7 +34,7 @@ fi
   cd build/deps/cimgui/generator
   "$root/build/bin/luajit.exe" generator.lua 'zig cc' 'internal' > "$root/build/generator.log" 2>&1
 )
-node tools/fix-generated.mjs
+ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-zig}" bash tools/native-tool.sh fix-generated
 echo 'Generated matching cimgui wrappers.'
 cimgui=build/deps/cimgui
 imgui="$cimgui/imgui"
@@ -51,5 +51,5 @@ sources=(vendor/gui/richmd_c.cpp "$cimgui/cimgui.cpp"
   -I"$imgui" -I"$richmd" -I"$richmd/external/md4c/src" \
   "${sources[@]}" build/md4c.obj -o build/bin/cimgui_richmd.dll \
   -ld3d11 -ldxgi -ld3dcompiler_47 -ldwmapi -lgdi32 -limm32 -lole32 -luuid
-node tools/gui-stack-manifest.mjs
+ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-zig}" bash tools/native-tool.sh stack-manifest
 echo 'Built cimgui_richmd.dll.'

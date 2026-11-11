@@ -219,16 +219,45 @@ Integration preserves 10 CLI, eight API/CLI, four workflow and one install contr
 After both compiler CLI/production GUI/check GUI builds:
 
 ```bash
-node tests/gui/check.mjs
+bash tools/check-gui.sh
 ```
 
 Coordinator verifies both compilers' build/stack/binary manifests before launching tests. It compiles fresh per-compiler runner with `tools/build-gui-tests.sh`; generated C lives in `build/gui-tests/run-*/`. `tests/gui/integration/` owns separate hooks and exactly ten groups, not core integration's 23-group policy. Shared bounded JSON lives in project-local `tests/support/integration-json.h`, included in GUI manifest inputs. Parser stack 16 applies only to test runners, not product builds.
 
-Eight finite groups: production render/P6, existing C model, terminal renderer failure, partial discovery, navigation/tab reuse, undo isolation, edit/feedback resolution and saved-not-queued preservation. Existing model assertions run in separate executable, not duplicated in parent. Two live-preview groups/compiler now run in C: complete JSON-line `selection-ready`, opposite-compiler inspection while viewer stays live, scalar UTF-8 context/range checks, dirty state, saved bytes/independent expected hash, prior-file preservation, Save & Send and explicit resolution/body preservation. Poll viewer and inspector together. JS retains provenance/build/result coordination only. Total stays 20 groups across both compilers. macOS socket/control/bridge suites remain separate.
+Eight finite groups: production render/P6, existing C model, terminal renderer failure, partial discovery, navigation/tab reuse, undo isolation, edit/feedback resolution and saved-not-queued preservation. Existing model assertions run in separate executable, not duplicated in parent. Two live-preview groups/compiler now run in C: complete JSON-line `selection-ready`, opposite-compiler inspection while viewer stays live, scalar UTF-8 context/range checks, dirty state, saved bytes/independent expected hash, prior-file preservation, Save & Send and explicit resolution/body preservation. Poll viewer and inspector together. Native `tests/gui/coordinator.c` owns provenance/build/result validation. Total stays 20 groups across both compilers. Separate native macOS socket/control/bridge coordinators replace their old JS harnesses; macOS compilation/runtime qualification remains pending.
 
 Use `ATTENDANT_GUI_VARIANT` for fresh isolated GUI builds; never overwrite existing viewers' binaries. Coordinator builds C runners automatically and preserves compiler/model counts. It requires exact ten source/name pairs and successful complete TSV, not process exit/count alone; model count must appear exactly once and stay in positive `int` range. Each runner build executes focused validator checks under `NDEBUG`: 12 count cases (including negative/fractional/overflow/missing values), six P6 cases (including invalid magic, truncation, extra bytes and dimensions), five scalar UTF-8 slice cases and three fragmented/readiness cursor cases. Expected rejection diagnostics stay in isolated `validation/` build logs. Compiler timeout is 180000 ms; runner outer timeout 900000 ms. Each normal GUI/model/CLI/inspection child has 60000 ms deadline; terminal-render failure and live preview viewer use 30000 ms. Command scratch/captures and file/JSON budgets match core integration. Each live child has separate 1 MiB stdout/stderr buffers; starts share reusable 256 KiB scratch.
 
 Each compiler gets owned Unicode workspace fixtures under `build/gui-check/run-*/native-<compiler>/fixtures/`. Independent tree copies compare names, empty directories and bytes; saved-not-queued baseline changes only known expected README bytes. Successful fixtures disappear; failures retain command stdout/stderr and snapshots. TSV/diagnostics and `production.ppm` stay in compiler report folder. Screenshot stays outside Unicode fixture path, matching old harness: existing renderer screenshot writer has narrow-path limitation. Live previews now use same owned-case cleanup: teardown finishes both children before writing retained failure captures or removing successful fixtures.
+
+## Native tooling
+
+All nine remaining Attendant JS tools/tests are replaced. Entry points run from native root:
+
+```bash
+bash tools/native-tool.sh --help
+bash tools/native-tool.sh prepare --verify
+bash tools/check-native-tools.sh
+ATTENDANT_TOOL_COMPILER=zig bash tools/check-native-tools.sh
+bash tools/benchmark.sh 5
+# macOS only; new C replacements need user validation:
+bash tools/check-control-macos.sh
+bash tools/check-bridge.sh
+```
+
+`native-build.sh` compiles a fresh helper in exclusively created `build/native-tools/run-*/`. Direct entry points default to CJIT; `ATTENDANT_TOOL_COMPILER=zig` selects installed Zig. Stack builds default their helper to required Zig; application/bridge builds default to selected application compiler. Explicit helper override wins. `CJIT`/`ZIG` select executable paths. No download, cache reuse or Node bootstrap.
+
+`tools/native/` is project-local, not reusable framework. Ordinary preparation/patch/manifest commands use unchanged `base.h` `process_run` and explicit Bash capture. Bootstrap records exact Bash path so Windows cannot select WSL's `bash.exe` ahead of Git Bash. Bash opens separate owned stdout/stderr files; after wait, C appends stderr bytes to argv log. This avoids MSYS writes through Win32 append-only handles without changing shared process API. Ordinary build/Git commands block like prior tools, without test deadlines. Capture/text caps apply after command exits; retained files are not disk-size bounded.
+
+Bounds: three 8 MiB text buffers, 8 MiB file-tree scratch, depth 32, 8192 entries/tree, 1200 provenance files, 1024-byte paths, 64 KiB compiler identity buffer, 256 KiB preview-method include. JSON keeps shared two 2 MiB arenas/4096 nodes/depth 16. SHA-256 streams binary bytes through BCrypt/CommonCrypto; never reuse text-only core digest. Inventories are sorted, content hashed, platform/compiler/mode checked, and actual stack/copied library/binaries verified before GUI tests.
+
+Preparation retains exact pins and explicit acquisition boundary. `prepare --verify` never acquires missing checkouts; successful verification still writes `build/dependencies.json`, matching prior behavior. Strict ordered patch data reconstructs expected files from pinned Git inputs, reads authoritative preview include and refuses unknown edits, NUL tails, malformed UTF-8 or changed anchors. Generated fixes require exactly two named typedefs and three exact union anchors; regenerate before rerunning, rather than accepting already-fixed/changed input.
+
+Maintained tooling checks cover ten groups: binary SHA-256 vectors/chunking, quoted Unicode argv/separate stderr/nonzero exit, strict replacement/count/capacity refusal, generated C99 fixes/drift, owned Git source patches/idempotence/offline verification/unknown-edit refusal, exact GUI identities/completion/model markers, bridge exact ABI/lifetime receipts (including embedded-NUL tail rejection) and P6 dimensions/aspect/colors/exact top/bottom markers, provenance tamper/path/list refusal, CLI/missing-offline-input errors, and cold pinned acquisition followed by offline verification. Acquisition test rewrites upstream URLs to local checkouts only and sets `GIT_ALLOW_PROTOCOL=file`; no network fallback. Fixture Git commits stay inside exclusively owned temporary repository, never project history. Success cleanup relaxes Git object read-only flags only in owned fixture; failures retain evidence.
+
+Test/benchmark coordinators use `test.h` command supervision, not ordinary process API. Benchmark requires 1..1000 runs, warms sync/query/search on separate fixture copies, rotates serial compiler order, validates replies outside measured interval and records samples/min/median/max. Child deadline is 30000 ms. `build/bench/run-*/results.json` is synthetic process evidence, not representative performance.
+
+macOS control suite polls all live viewers/clients together, keeps finite raw socket bounds, preserves 16 groups and independent source checks, and closes owned sockets/children before fixture cleanup. Bridge suite runs both real C consumers, validates exact lifetime/ABI JSON and P6 orientation/content, and hashes signed executable/screenshot/input identities into report. Windows executes shared validators, not macOS transports/rendering. User macOS follow-up remains in project TODO.
 
 ## Verification boundaries
 

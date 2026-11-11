@@ -6,9 +6,11 @@
 
 - **Breaking:** Attendant skill now invokes native CLI on Windows x64/macOS arm64. Build with installed CJIT or Zig when missing; no JS fallback or Node.js runtime for record operations. Native GUI supports source editing, human feedback and reveal/inspection controls.
 - Attendant command/setup guidance and `init-project` now match native behavior, including reported mechanical corrections during schema/query/search and partial-write handling.
+- Replaced remaining Attendant JS preparation/patch/manifest, GUI/control/bridge and benchmark tools with C/Bash entry points. Windows CJIT/Zig checks pass; new macOS replacements need user compilation/runtime validation. See Attendant build reference for commands and helper-compiler selection.
 
 ### Removed
 
+- Removed all nine remaining maintained Attendant `.mjs` tools/tests and their Node invocations; no Attendant runtime/build/test/benchmark Node dependency.
 - Retired Attendant JS runtime, vendored JS YAML parser, transition tests and migration-only guidance. Native has no migration/import command; existing record folders remain untouched. Former JS version remains linked in native README through Git history.
 
 ## [0.3.0]

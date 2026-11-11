@@ -16,9 +16,10 @@ Resolve `<skill-dir>` from `SKILL.md`; native root is `<skill-dir>/native`. Run 
 
 - Windows x64 or macOS arm64. GUI needs local desktop; macOS builds need installed Apple command-line tools/SDK.
 - CLI: installed CJIT or Zig. Paths are independent; Zig does not require CJIT.
-- GUI library: installed Zig, Git, Bash and Node.js; macOS also needs make. GUI C99 app can then build with CJIT or Zig.
-- Native core/source tests: Bash and selected compiler only; no Node.js.
-- Node.js 24.10.0+ for external-process/GUI integration checks and GUI build tools only. No Node runtime in native CLI/GUI.
+- GUI library: installed Zig, Git and Bash; macOS also needs make. GUI C99 app can then build with CJIT or Zig.
+- Native core/source tests: Bash and selected compiler only.
+- Native build/check helpers: installed CJIT by default, or `ATTENDANT_TOOL_COMPILER=zig`. Helpers build fresh in owned `build/native-tools/run-*/`; use `CJIT`/`ZIG` to select executable.
+- No Attendant runtime/build/test/benchmark command needs Node. LuaJIT remains pinned binding generator.
 
 No script installs compilers/packages. `CJIT` and `ZIG` override compilation executables. cimgui generator still invokes `zig cc` through PATH, even with `ZIG` override. Build caches live under native `build/`, never remove user's global cache.
 
@@ -39,10 +40,10 @@ Choose compiler actually installed; both commands are needed only for dual-compi
 One explicit acquisition step requires network. Do not run it implicitly during ordinary record operations:
 
 ```sh
-node tools/prepare-gui.mjs
+bash tools/native-tool.sh prepare
 ```
 
-For offline setup, supply already acquired pinned `build/deps/` checkouts, including Git metadata. `node tools/prepare-gui.mjs --verify` checks pins/patches offline; no network fallback. Sources/assets remain under native root.
+For offline setup, supply already acquired pinned `build/deps/` checkouts, including Git metadata. `bash tools/native-tool.sh prepare --verify` checks pins/patches offline; no network fallback. Sources/assets remain under native root.
 
 ```sh
 bash tools/build-gui-stack.sh
@@ -75,19 +76,21 @@ Each command runs 47 C cases under UTC and Pacific/Auckland, 26 isolated framewo
 
 Stdout is retained run directory; TSV, diagnostics, generated runners, command captures and build logs stay in `build/native-tests/run-*/`. Assertions stay active at `-O3`/`NDEBUG`. Case failures exit 1; suite/infrastructure or generation/build failures exit 2. Hooks clean successful owned fixtures and retain/report failures. Install case also owns OS temp directory, excludes all prior builds/caches and builds copied source with 180000 ms deadline. See [test interfaces, memory/path limits and lifecycle contract](../native/tests/README.md).
 
-Desktop/IPC orchestration remains separate:
+Desktop/IPC orchestration uses native C coordinators:
 
 ```sh
+bash tools/check-native-tools.sh
+ATTENDANT_TOOL_COMPILER=zig bash tools/check-native-tools.sh
 bash build-gui.sh cjit --check
 bash build-gui.sh zig --check
-node tests/gui/check.mjs
-# macOS only:
-node tests/gui/control-macos-check.mjs
-node tests/gui/bridge-check.mjs
-node tools/benchmark.mjs 5
+bash tools/check-gui.sh
+bash tools/benchmark.sh 5
+# macOS only; user qualification of new C replacements remains pending:
+bash tools/check-control-macos.sh
+bash tools/check-bridge.sh
 ```
 
-GUI checks need matching production/test GUI and CLI builds for both compilers, installed compilers and Bash. Check builds also produce headless model executables. `node tests/gui/check.mjs` verifies manifests, builds fresh C runners through `tools/build-gui-tests.sh`, runs all ten groups per compiler in C, including two caller-polled live previews with opposite-compiler inspection. JS retains provenance/build/result coordination only. Total stays 20 groups. C runner artifacts/build logs stay under `build/gui-tests/run-*/`; GUI report links per-compiler TSV/diagnostics and preserved production screenshot under its owned run folder. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
+GUI checks need matching production/test GUI and CLI builds for both compilers, installed compilers and Bash. Check builds also produce headless model executables. `bash tools/check-gui.sh` verifies manifests in C, builds fresh C runners through `tools/build-gui-tests.sh`, runs all ten groups per compiler in C, including two caller-polled live previews with opposite-compiler inspection. No JS coordinator remains. Total stays 20 groups. C runner artifacts/build logs stay under `build/gui-tests/run-*/`; GUI report links per-compiler TSV/diagnostics and preserved production screenshot under its owned run folder. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
 
 ### Windows footprint sanity probe
 
@@ -115,14 +118,15 @@ build/attendant-zig --help
 
 Source publication uses staged flushes and atomic rename/create-exclusive publication. On macOS, failed collection/feedback bootstrap retains already-published files and reports written paths; no check-and-unlink rollback or custom recovery system. Staging files and empty owned directories are cleaned. Inspect reported files before retrying. Windows keeps handle-based rollback. API failure checks cover retained seed/comment files, external edits, config conflicts and retry without overwrite.
 
-GUI: native arm64 dependency library, C99 application and bridge consumers with GLFW 3.4/OpenGL3, matching pinned upstream RichMd examples. Windows retains Win32/D3D11. Requires installed Zig, make, Apple command-line tools/SDK, Node and CJIT for dual-compiler bridge checks. No script installs tools.
+GUI: native arm64 dependency library, C99 application and bridge consumers with GLFW 3.4/OpenGL3, matching pinned upstream RichMd examples. Windows retains Win32/D3D11. Requires installed Zig, make, Apple command-line tools/SDK and CJIT for dual-compiler bridge checks. New C/Bash replacement compilation/runtime remains unvalidated on macOS; user follow-up is tracked in project TODO. No script installs tools.
 
 Explicit acquisition and checks:
 
 ```sh
-node tools/prepare-gui.mjs
+bash tools/native-tool.sh prepare
+bash tools/native-tool.sh prepare --verify
 bash tools/build-gui-stack.sh
-node tests/gui/bridge-check.mjs
+bash tools/check-bridge.sh
 ```
 
 Acquisition includes pinned GLFW only on macOS. Native LuaJIT recipe builds generation tool; no Windows x64 generator reuse. `SDKROOT` overrides Apple SDK; `MACOSX_DEPLOYMENT_TARGET` defaults to 11.0 for arm64 bring-up. This default is not tested minimum-OS support. SDK frameworks compile as system headers; Zig framework-link flags apply only at link time. No project diagnostic downgrade. MD4C alone uses upstream's `OFF_MAX` macro-warning compatibility flag.

@@ -50,5 +50,5 @@ fi
 if ! cmp -s build/bin/libcimgui_richmd.dylib "$output/libcimgui_richmd.dylib"; then
   cp build/bin/libcimgui_richmd.dylib "$output/"
 fi
-node tools/gui-build-manifest.mjs "$compiler" ${2:+"$2"}
+ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-$compiler}" bash tools/native-tool.sh gui-manifest "$compiler" ${2:+"$2"} >&2
 printf '%s\n' "$PWD/$executable"

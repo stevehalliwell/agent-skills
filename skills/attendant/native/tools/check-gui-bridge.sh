@@ -10,7 +10,7 @@ fi
 if [[ $(uname -s) != Darwin || ! -f build/bin/libcimgui_richmd.dylib ]]; then
   echo 'Requires macOS and built GUI stack: bash tools/build-gui-stack.sh' >&2; exit 1
 fi
-node --input-type=module -e "import { stackManifest } from './tools/gui-build-manifest.mjs'; stackManifest();"
+ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-$compiler}" bash tools/native-tool.sh verify-stack >&2
 root=$(pwd)
 sdk=${SDKROOT:-$(xcrun --show-sdk-path)}
 mkdir -p build/bridge-check
