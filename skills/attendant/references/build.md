@@ -87,7 +87,7 @@ node tests/gui/bridge-check.mjs
 node tools/benchmark.mjs 5
 ```
 
-GUI checks need matching production/test GUI builds for both compilers. Check builds also produce headless model executables. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
+GUI checks need matching production/test GUI and CLI builds for both compilers, installed compilers and Bash. Check builds also produce headless model executables. `node tests/gui/check.mjs` verifies manifests, builds fresh C runners through `tools/build-gui-tests.sh`, runs eight finite groups per compiler, then retains two live-preview groups per compiler in JS. Total stays 20 groups. C runner artifacts/build logs stay under `build/gui-tests/run-*/`; GUI report links per-compiler TSV/diagnostics and preserved production screenshot under its owned run folder. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
 
 ### Windows footprint sanity probe
 
