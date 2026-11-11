@@ -267,7 +267,8 @@ static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresent
     p->initial_arrangement=next->initial_arrangement;
     p->layout=next->layout; p->distance_focus=next->distance_focus; p->distance_focus_revision=UINT64_MAX;
     p->rank=next->rank; p->layout_choice=next->layout_choice; p->sort=next->sort; p->horizontal=next->horizontal; p->grid=next->grid; p->selection=next->selection; p->focus=next->focus;
-    p->prepared=next->prepared; p->revision=next->revision; p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1;
+    p->prepared=next->prepared; p->revision=next->revision;
+    {int nodes[2];p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:pair_selection_nodes(c,nodes) ? GD_EXPLORER_FIT_SELECTION:1;}
     if(!same_topology) c->analysis->initialized=0;
     allocator.release(allocator.context,next);return 1;
 failed:
@@ -327,7 +328,7 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     }
     if(!strcmp(name,"view.find.clear")) {*p->find_reference=0;matches(c);return 1;}
     if(!strcmp(name,"view.witness.fit")) {if(p->view!=GD_EXPLORER_RESOURCES || !p->resource_routes || !p->resource_routes->witness_count)return 0;p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;return 1;}
-    if(!strcmp(name,"view.cell.fit")) {if((p->view!=GD_EXPLORER_MATRIX && p->view!=GD_EXPLORER_NOUNS) || !grid_view(p) || p->grid.noun<0 || p->grid.verb<0)return 0;grid_frame_selection(c);return 1;}
+    if(!strcmp(name,"view.cell.fit")) {int nodes[2];if(gd_explorer_similarity_active(c) || p->selection.node>=0 || !pair_selection_nodes(c,nodes))return 0;if(grid_view(p))grid_frame_selection(c);else p->fit=GD_EXPLORER_FIT_SELECTION;return 1;}
     if(!strcmp(name,"view.fit")) { if(gd_explorer_similarity_active(c)) p->structure_state->similarity_fit=true; else p->fit=1; return 1; }
     if(!strcmp(name,"view.rearrange")) { gd_explorer_presentation_read(c,&values); return presentation_rearrange(c,&values,1); }
     if(!strcmp(name,"view.start.clear")) { p->paths.count=p->paths.lost=0; return 1; }

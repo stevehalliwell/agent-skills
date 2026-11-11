@@ -460,7 +460,7 @@ static const GD_ExplorerActionInfo actions[]={
     {"view.reset","Reset view",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.find.clear","Clear Find",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.witness.fit","Frame Resource witness",1u<<GD_EXPLORER_RESOURCES,GD_FORM_PRESENTATION},
-    {"view.cell.fit","Frame selected grid cell",(1u<<GD_EXPLORER_MATRIX)|(1u<<GD_EXPLORER_NOUNS),GD_FORM_PRESENTATION}
+    {"view.cell.fit","Frame selected pair",(1u<<GD_EXPLORER_MATRIX)|(1u<<GD_EXPLORER_NOUNS),GD_FORM_PRESENTATION}
 };
 const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action) {
     return action>=0 && action<GD_ACTION_COUNT ? &actions[action]:NULL;
@@ -475,7 +475,7 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
         if(action==GD_ACTION_VIEW_REARRANGE && p->view==GD_EXPLORER_NOUNS)return p->prepared;
         if(action==GD_ACTION_VIEW_REARRANGE && p->view>=GD_EXPLORER_ACTORS) return p->query_state && p->query_state->scene && !(p->structure_state && p->structure_state->similarity_canvas);
         if(action==GD_ACTION_VIEW_WITNESS_FIT)return p->resource_routes && p->resource_routes->witness_count>0;
-        if(action==GD_ACTION_VIEW_CELL_FIT)return (p->view==GD_EXPLORER_NOUNS || p->layout_choice==2) && p->grid.noun>=0 && p->grid.verb>=0;
+        if(action==GD_ACTION_VIEW_CELL_FIT)return !gd_explorer_similarity_active(context) && p->selection.node<0 && (p->selection.cell>=0 || (p->grid.noun>=0 && p->grid.verb>=0));
         if(action==GD_ACTION_VIEW_ANALYZE)return p->view<GD_EXPLORER_ACTORS && !(p->view==GD_EXPLORER_MATRIX && p->layout_choice==2) && !(p->structure_state && p->structure_state->similarity_canvas);
         if(action==GD_ACTION_VIEW_START_ADD)return p->paths.enabled && p->selection.node>=0;
         if(action==GD_ACTION_VIEW_EXPAND)return p->selection.node>=0;

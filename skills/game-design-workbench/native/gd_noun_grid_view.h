@@ -29,7 +29,7 @@ static int noun_grid_record(GD_ExplorerContext *c) {
 }
 static void noun_grid_fit(GD_ExplorerContext *c,int matches) {
     GD_ExplorerPane *p=c->pane;Rectangle area={-GD_MATRIX_NOUN_WIDTH,-GD_MATRIX_HEADER_HEIGHT,p->layout->width,p->layout->height};int i;
-    if(matches<0){p->camera.zoom=1;p->camera.target=(Vector2){c->viewport.width/2-GD_MATRIX_NOUN_WIDTH,c->viewport.height/2-GD_MATRIX_HEADER_HEIGHT};return;}
+    if(matches<0){p->camera.zoom=1;p->camera.target=(Vector2){c->viewport.width/2-GD_MATRIX_NOUN_WIDTH,c->viewport.height/2-GD_MATRIX_HEADER_HEIGHT};if(p->selection.node>=0 && p->selection.node<p->layout->node_count)area=noun_grid_bounds(p,p->layout->nodes[p->selection.node].key,-1);else if(p->grid.noun>=0 && p->grid.verb>=0)area=noun_grid_bounds(p,p->grid.noun,p->grid.verb);else return;p->camera.target=(Vector2){area.x+area.width/2,area.y+area.height/2};return;}
     if(matches){for(i=0;i<p->layout->node_count;++i)if(p->match_nodes[i]){area=noun_grid_bounds(p,p->layout->nodes[i].key,-1);break;}if(i==p->layout->node_count)return;}
     p->camera.target=(Vector2){area.x+area.width/2,area.y+area.height/2};p->camera.zoom=fmaxf(0.0001f,fminf(1.2f,fminf(c->viewport.width/(area.width+40),c->viewport.height/(area.height+40))));
 }

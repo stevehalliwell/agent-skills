@@ -25,10 +25,8 @@ static void grid_fit(GD_ExplorerContext *c, int only_matches) {
            F still fits the full grid; camera never changes source scope. */
         p->camera.zoom=1;
         p->camera.target=(Vector2){c->viewport.width/2-GD_MATRIX_NOUN_WIDTH,c->viewport.height/2-GD_MATRIX_HEADER_HEIGHT};
-        if (p->selection.cell>=0) {
-            const GD_Cell *cell=&model->cells[p->selection.cell]; Rectangle area=grid_bounds(&p->grid,cell->noun,cell->verb);
-            p->camera.target=(Vector2){area.x+area.width/2,area.y+area.height/2};
-        }
+        if(p->selection.node>=0 && p->selection.node<p->layout->node_count){int key=p->layout->nodes[p->selection.node].key;Rectangle area=grid_bounds(&p->grid,model->records[key].role==GD_NOUN ? key:-1,model->records[key].role==GD_VERB ? key:-1);p->camera.target=(Vector2){area.x+area.width/2,area.y+area.height/2};}
+        else if(p->grid.noun>=0 && p->grid.verb>=0){Rectangle area=grid_bounds(&p->grid,p->grid.noun,p->grid.verb);p->camera.target=(Vector2){area.x+area.width/2,area.y+area.height/2};}
         return;
     }
     if (only_matches) {
@@ -142,7 +140,7 @@ static void grid_draw(GD_ExplorerContext *c) {
     for (i=0;i<p->layout->edge_count;++i) if (p->match_edges[i]) {
         const GD_Cell *cell=&model->cells[p->layout->edges[i].key]; DrawRectangleLinesEx(grid_bounds(&p->grid,cell->noun,cell->verb),thickness,gold);
     }
-    if (p->selection.node<0 && p->selection.linked<0 && p->grid.noun>=0 && p->grid.verb>=0)
+    if (p->selection.node<0 && (p->selection.cell>=0 || p->selection.linked<0) && p->grid.noun>=0 && p->grid.verb>=0)
         DrawRectangleLinesEx(grid_bounds(&p->grid,p->grid.noun,p->grid.verb),3/p->camera.zoom,(Color){100,178,245,255});
     EndMode2D(); EndScissorMode();
     DrawText("* accepted + defined case | Other cases visible | Blank is not a defect",(int)c->viewport.x+6,(int)c->viewport.y-GD_COUNT_GRID_HEADER+5,14,muted);

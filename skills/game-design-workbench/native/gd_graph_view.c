@@ -184,7 +184,7 @@ static void draw_graph(const GD_Model *model,GD_Layout *raw, GD_Layout *layout, 
         }
         if (challenges && witness_edge(routes,witness,layout->nodes[edge->a].key,layout->nodes[edge->b].key)) color=graph_selected;
         if (conflict && selection->cell != edge->key) color = (Color){238, 114, 120, 255};
-        gd_graph_route_line(&route,edge->active && !conflict ? 2.5f:1.5f,color,!edge->active || conflict);
+        gd_graph_route_line(&route,selection->cell==edge->key ? 4/camera.zoom:edge->active && !conflict ? 2.5f:1.5f,color,!edge->active || conflict);
         if (focused || model->skill_mode) {
             gd_graph_route_arrow(&route,color);
             if (focused && selection->cell==edge->key) {

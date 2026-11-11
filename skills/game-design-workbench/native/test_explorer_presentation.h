@@ -381,6 +381,43 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
     }
     PRESENT_ACTION(GD_EXPLORER_MATRIX,"view.find.clear");PRESENT_CHECK(strstr(reply,"\"executed\":true")!=NULL);
     PRESENT_ACTION(GD_EXPLORER_RESOURCES,"view.reset");PRESENT_CHECK(strstr(reply,"\"executed\":true") && panes[GD_EXPLORER_RESOURCES].prepared && active==GD_EXPLORER_MATRIX);
+    /* Stored selection alone did not establish visible continuity. Check the
+       same endpoint mask and bounds consumed by drawing and camera code. */
+    for(v=GD_EXPLORER_MATRIX;v<=GD_EXPLORER_NOUNS;++v)if(v==GD_EXPLORER_MATRIX || v==GD_EXPLORER_NOUNS){
+        GD_ExplorerPane *p=&panes[v];const GD_Model *model=gd_explorer_model(c.project,(GD_ExplorerView)v);GD_Layout *raw=a.allocate(a.context,sizeof(*raw));
+        GD_ExplorerSelection saved;int nodes[2],cell=0,noun,verb,mode,case_page=p->noun_case_page;
+        PRESENT_CHECK(raw);PRESENT_STAGE(v,"layout","grid");PRESENT_CHECK(strstr(reply,"\"configured\":true"));
+        if(v==GD_EXPLORER_MATRIX){for(cell=0;cell<model->cell_count && !model->cells[cell].pair_count;++cell){}PRESENT_CHECK(cell<model->cell_count);noun=model->cells[cell].noun;verb=model->cells[cell].verb;grid_choose(&target,p->grid.slot[noun],p->grid.slot[verb]);p->selection.interaction=model->cells[cell].pair_count-1;}
+        else{noun=c.project->noun_grid->pairs[cell].a;verb=c.project->noun_grid->pairs[cell].b;noun_grid_choose(&target,noun,verb);}
+        p->selection.linked=selected_record(&target);saved=p->selection;case_page=p->noun_case_page;
+        for(mode=0;mode<4;++mode){const char *layout=mode==1 ? "grid":mode==2 && v==GD_EXPLORER_MATRIX ? "columns":"free";Rectangle bounds={0};
+            PRESENT_STAGE(v,"layout",layout);PRESENT_CHECK(strstr(reply,"\"configured\":true") && !memcmp(&saved,&p->selection,sizeof(saved)) && p->noun_case_page==case_page && p->grid.noun==noun && p->grid.verb==verb);
+            PRESENT_CHECK(pair_selection_nodes(&target,nodes)==(noun==verb ? 1:2));memcpy(raw,p->layout,sizeof(*raw));
+            if(grid_view(p)){Rectangle area=v==GD_EXPLORER_NOUNS ? noun_grid_bounds(p,noun,verb):grid_bounds(&p->grid,noun,verb);grid_fit(&target,-1);PRESENT_CHECK(p->camera.zoom==1 && fabsf(p->camera.target.x-area.x-area.width/2)<0.01f && fabsf(p->camera.target.y-area.y-area.height/2)<0.01f);}
+            else{PRESENT_CHECK(p->fit==GD_EXPLORER_FIT_SELECTION && pair_selection_bounds(&target,&bounds));fit_view(&target,GD_EXPLORER_FIT_SELECTION);PRESENT_CHECK(p->camera.zoom>0 && p->camera.zoom<=1.2f && bounds.width*p->camera.zoom<target.viewport.width && bounds.height*p->camera.zoom<target.viewport.height && fabsf(p->camera.target.x-bounds.x-bounds.width/2)<0.01f && fabsf(p->camera.target.y-bounds.y-bounds.height/2)<0.01f);PRESENT_ACTION(v,"view.cell.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true") && p->fit==GD_EXPLORER_FIT_SELECTION);}
+            PRESENT_CHECK(!memcmp(raw,p->layout,sizeof(*raw)) && !memcmp(&saved,&p->selection,sizeof(saved)));
+        }
+        /* Header/node selection maps by record key, never old layout offset. */
+        p->selection=(GD_ExplorerSelection){-1,nodes[0],0,-1,-1};noun=p->layout->nodes[nodes[0]].key;
+        PRESENT_STAGE(v,"layout","grid");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->layout->nodes[p->selection.node].key==noun);
+        grid_fit(&target,-1);PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->layout->nodes[p->selection.node].key==noun && pair_selection_nodes(&target,nodes)==1);
+        PRESENT_CHECK(!gd_explorer_action_available(&target,GD_ACTION_VIEW_CELL_FIT));a.release(a.context,raw);
+    }
+    {
+        GD_ExplorerPane *p=&panes[GD_EXPLORER_MATRIX];const GD_Model *model=gd_explorer_model(c.project,GD_EXPLORER_MATRIX);int row,column,blank=0,nodes[2];bool overlay=p->overlay;
+        PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","grid");
+        for(row=0;row<p->grid.nouns && row<64 && !blank;++row)for(column=0;column<p->grid.verbs && column<64;++column)if(gd_matrix_grid_cell(model,p->grid.order[row],p->grid.order[p->grid.nouns+column])<0){grid_choose(&target,row,column);blank=1;break;}
+        if(blank){int noun=p->grid.noun,verb=p->grid.verb;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell<0 && p->selection.node<0 && pair_selection_nodes(&target,nodes)==2 && p->grid.noun==noun && p->grid.verb==verb && p->overlay==overlay && p->layout->edge_count==model->cell_count);PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","grid");grid_fit(&target,-1);PRESENT_CHECK(p->selection.cell<0 && p->grid.noun==noun && p->grid.verb==verb);}
+        for(i=0;i<model->cell_count;++i)if(!model->cells[i].active){int edge;grid_choose(&target,p->grid.slot[model->cells[i].noun],p->grid.slot[model->cells[i].verb]);p->overlay=false;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell==i && pair_selection_nodes(&target,nodes)==2 && !p->overlay);for(edge=0;edge<p->layout->edge_count && p->layout->edges[edge].key!=i;++edge){}PRESENT_CHECK(edge<p->layout->edge_count && !p->layout->edges[edge].active);p->overlay=overlay;break;}
+    }
+    {
+        GD_ExplorerPane *source=&panes[GD_EXPLORER_MATRIX],*destination=&panes[GD_EXPLORER_NOUNS],*prior=c.pane;GD_ExplorerSelection first=source->selection,second=destination->selection;Camera2D camera=source->camera,other=destination->camera;
+        const GD_Model *model=gd_explorer_model(c.project,GD_EXPLORER_MATRIX);const char *reference=model->records[source->grid.noun].reference;
+        c.pane=source;enter_view(&c,panes,GD_EXPLORER_NOUNS,NULL);PRESENT_CHECK(!memcmp(&second,&destination->selection,sizeof(second)) && !memcmp(&other,&destination->camera,sizeof(other)));
+        enter_view(&c,panes,GD_EXPLORER_MATRIX,NULL);PRESENT_CHECK(!memcmp(&first,&source->selection,sizeof(first)) && !memcmp(&camera,&source->camera,sizeof(camera)));
+        enter_view(&c,panes,GD_EXPLORER_NOUNS,reference);matches(&c);PRESENT_CHECK(destination->visible_matches>0 && !strcmp(destination->find_reference,reference) && !memcmp(&second,&destination->selection,sizeof(second)) && !memcmp(&other,&destination->camera,sizeof(other)));
+        enter_view(&c,panes,GD_EXPLORER_MATRIX,NULL);PRESENT_CHECK(!memcmp(&first,&source->selection,sizeof(first)));c.pane=prior;
+    }
     PRESENT_ACTION(GD_EXPLORER_MDA,"view.analyze");PRESENT_CHECK(strstr(reply,"\"executed\":true")!=NULL);
     PRESENT_CHECK(viewer_result_reassemble(&viewer,GD_EXPLORER_MDA,"layers",NULL,reply));
     result=checks;

@@ -13,7 +13,7 @@
 #include "raylib.h"
 
 typedef struct { int cell, node, interaction, linked, held; } GD_ExplorerSelection;
-enum { GD_EXPLORER_FIT_GRID_READABLE=4, GD_EXPLORER_FIT_RESOURCE_WITNESS=5, GD_EXPLORER_FIT_QUERY_READABLE=6 };
+enum { GD_EXPLORER_FIT_GRID_READABLE=4, GD_EXPLORER_FIT_RESOURCE_WITNESS=5, GD_EXPLORER_FIT_QUERY_READABLE=6, GD_EXPLORER_FIT_SELECTION=7 };
 typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } GD_ExplorerSkillEditor;
 typedef struct {
     int record, link, held;

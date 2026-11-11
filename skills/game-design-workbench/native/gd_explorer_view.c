@@ -248,9 +248,11 @@ static void matches(GD_ExplorerContext *c) {
        absent. Other projection kinds need not represent this record at all. */
     if (!represented && p->view==GD_EXPLORER_RELATIONSHIPS) ++p->hidden_matches;
 }
+#include "gd_explorer_pair_selection.h"
 static void fit_view(GD_ExplorerContext *c, int only_matches) {
     GD_ExplorerPane *p=c->pane; int i,found=0; float left=0,right=1,top=0,bottom=1;
     if (grid_view(p)) { grid_fit(c,only_matches); return; }
+    if(only_matches==GD_EXPLORER_FIT_SELECTION){Rectangle bounds={0};if(!pair_selection_bounds(c,&bounds))return;p->camera.target=(Vector2){bounds.x+bounds.width/2,bounds.y+bounds.height/2};p->camera.zoom=fmaxf(0.002f,fminf(1.2f,fminf(c->viewport.width/(bounds.width+60),c->viewport.height/(bounds.height+60))));return;}
     if (only_matches==4 && query_view(p->view)) {
         const GD_ExplorerQueryState *state=p->query_state; fit_view(c,0);
         if (p->camera.zoom<0.8f) p->camera.zoom=0.8f;
@@ -495,6 +497,7 @@ static int layout_controls(GD_ExplorerContext *c) {
     else { igCheckbox("Pause settling",&p->paused); igSameLine(0,-1); }
     if (igButton("Fit (F)",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.fit");
     if (!query_view(p->view) || (p->query_state && p->query_state->scene)) { igSameLine(0,-1); if (igButton("Rearrange",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.rearrange"); }
+    if(p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_NOUNS){igSameLine(0,-1);igBeginDisabled(!gd_explorer_action_available(c,GD_ACTION_VIEW_CELL_FIT));gd_explorer_action_button(c,GD_ACTION_VIEW_CELL_FIT);igEndDisabled();}
     if (p->layout->mode==GD_LAYOUT_FORCE && p->layout->collision_limited)
         igTextWrapped("Footprint separation reached bounded work/movement limit; overlaps may remain. Resume settling to continue. Camera does not establish clearance.");
     if (p->view==GD_EXPLORER_MATRIX && !grid_view(p)) igCheckbox("Overlay other pairs (does not merge groups)",&p->overlay);
@@ -942,7 +945,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if ((grid_view(p) || p->view==GD_EXPLORER_NOUNS) && !gd_explorer_similarity_active(&c)) { c.viewport.y+=GD_COUNT_GRID_HEADER; c.viewport.height-=GD_COUNT_GRID_HEADER; }
         p->camera.offset=(Vector2){c.viewport.x+c.viewport.width/2,c.viewport.y+c.viewport.height/2};
         c.display_layout=NULL;if(p->fit)render->valid=0;
-        if (!gd_explorer_similarity_active(&c) && p->fit) { fit_view(&c,p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+        if (!gd_explorer_similarity_active(&c) && p->fit) { fit_view(&c,p->fit==GD_EXPLORER_FIT_SELECTION ? GD_EXPLORER_FIT_SELECTION:p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
         if(render_active(&c)){if(gd_render_pose_matches(render,p->layout,render_identity(&c)))c.display_layout=&render->layout;else render_update(&c,render,0,1);}else render->valid=0;
         if (gd_explorer_similarity_active(&c)) gd_explorer_similarity_input(&c);
         else if (grid_view(p)) grid_input(&c);
@@ -974,6 +977,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             else if (query_view(p->view)) gd_explorer_query_draw(&c);
             else gd_explorer_resource_draw(&c,&e);
         }
+        pair_selection_draw(&c);
         if(!gd_explorer_similarity_active(&c) && free_graph(p) && p->layout->workspace.enabled){
             const GD_LayoutBounds *b=&p->layout->workspace.bounds;float scale=p->view==GD_EXPLORER_MDA ? 3:1;
             BeginScissorMode((int)c.viewport.x,(int)c.viewport.y,(int)c.viewport.width,(int)c.viewport.height);BeginMode2D(p->camera);
