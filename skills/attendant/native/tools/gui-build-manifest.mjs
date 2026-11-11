@@ -29,7 +29,7 @@ function inputFiles() {
       if (entry.isDirectory()) walk(path); else if (/\.(c|h|inc)$/.test(path)) paths.push(path);
     }
   }
-  for (const folder of ['src', 'apps/gui', 'tests/gui', 'tests/core', 'vendor']) walk(folder);
+  for (const folder of ['src', 'apps/gui', 'tests/gui', 'tests/core', 'tests/support', 'vendor']) walk(folder);
   return paths.sort().map(path => ({ path: path.replaceAll('\\', '/'), sha256: sha256(join(root, path)) }));
 }
 export function verifyBuild(compiler, testing = false) {

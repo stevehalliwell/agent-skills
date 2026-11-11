@@ -35,8 +35,35 @@ function fixture(name, text = '# Workspace\r\n\r\nPlain Markdown café Ω 😀.\
   writeFileSync(join(project, 'README.md'), text);
   return project;
 }
-function window(compiler, project, args, testing = true, file = 'README.md') {
-  return child(gui(compiler, testing), ['--project', project, '--assets', assets, '--file', file, '--frames', '70', ...args]);
+function synchronous(compiler) {
+  const built = spawnSync('bash', ['tools/build-gui-tests.sh', compiler], { cwd: root, env: guiEnvironment, encoding: 'utf8', timeout: 180000 });
+  assert.equal(built.status, 0, `${built.error || ''}\n${built.stderr}\n${built.stdout}`);
+  const runner = built.stdout.trim(), directory = join(report.run, `native-${compiler}`);
+  mkdirSync(directory);
+  const result = spawnSync(runner, ['-tsv'], { cwd: root, encoding: 'utf8', timeout: 900000,
+    env: { ...guiEnvironment, ATTENDANT_TEST_DIRECTORY: directory, ATTENDANT_TEST_COMPILER: compiler } });
+  writeFileSync(join(directory, 'results.tsv'), result.stdout || '');
+  writeFileSync(join(directory, 'diagnostics.log'), result.stderr || '');
+  report.native ??= [];
+  report.native.push({ compiler, runner, directory, status: result.status });
+  assert.equal(result.status, 0, `${result.error || ''}\n${result.stderr}\n${result.stdout}`);
+  const rows = result.stdout.trimEnd().split('\n').map(line => line.replace(/\r$/, '').split('\t'));
+  assert.deepEqual(rows[0], ['kind', 'status', 'source', 'name']);
+  assert.deepEqual(rows[1], ['suite', '8', '', '']);
+  assert.deepEqual(rows.at(-1), ['complete', '0', '8', '8']);
+  assert.equal(rows.length, 11);
+  const cases = rows.slice(2, -1);
+  assert(cases.every(row => row.length === 4 && row[0] === 'test' && row[1] === 'ok'));
+  const expected = ['production_render_abi_screenshot_without_workspace_writes', 'existing_c_document_selection_ipc_model',
+    'terminal_render_failure_preserves_source', 'partial_discovery_diagnostics_preserve_source',
+    'reference_navigation_and_tab_reuse_without_writes', 'literal_path_undo_isolation_and_redo',
+    'real_edit_feedback_and_explicit_resolution', 'failed_queue_keeps_save_and_other_files'];
+  assert.deepEqual(cases.map(row => row.slice(2)).sort(), expected.map(name => ['tests/gui/synchronous/checks.c', name]).sort());
+  const models = [...result.stderr.matchAll(/^model-checks:(\d+)\r?$/gm)];
+  assert.equal(models.length, 1);
+  const checks = Number(models[0][1]); assert(Number.isInteger(checks) && checks > 0 && checks <= 2147483647);
+  for (const row of cases) report.cases.push({ compiler, name: row[3], source: row[2],
+    ...(row[3] === 'existing_c_document_selection_ipc_model' ? { result: { ok: true, checks } } : {}) });
 }
 const sql = 'SELECT name,status,target_hash,range_start,range_end,selected_text,source_path FROM _meta_comments';
 const query = (compiler, project) => child(cli(compiler), ['query', '-p', project, '-s', sql]);
@@ -88,53 +115,7 @@ async function previewSelection(compiler, mode, text, status) {
 try {
   for (const compiler of ['cjit', 'zig']) {
     verifyBuild(compiler); verifyBuild(compiler, true);
-    const smoke = fixture(`${compiler} café Ω`), before = inventory(smoke), shot = join(report.run, `${compiler}.ppm`);
-    const rendered = window(compiler, smoke, ['--shot', shot], false, 'records/tasks/first.md');
-    assert(rendered.vertices > 1000 && rendered.tabs === 1);
-    const pixels = readFileSync(shot), header = /^P6\n(\d+) (\d+)\n255\n/.exec(pixels.subarray(0, 80).toString('ascii'));
-    assert(header); assert.equal(pixels.length - header[0].length, Number(header[1]) * Number(header[2]) * 3);
-    assert.deepEqual(inventory(smoke), before);
-    report.cases.push({ compiler, name: 'production render/ABI smoke without workspace writes' });
-    const model = fixture(`${compiler} model`), first = join(model, 'records/tasks/first.md');
-    writeFileSync(first, readFileSync(first, 'utf8').replace('depends_on: [second]', 'depends_on: [second, missing]'));
-    writeFileSync(join(model, 'records/tasks/unreadable.md'), Buffer.from([0xff, 0xfe, 0]));
-    const modeled = child(join(root, guiDirectory, `model-check-${compiler}${suffix}`), [model]);
-    report.cases.push({ compiler, name: 'document/selection/IPC model, source conflicts and safe feedback', result: modeled });
-    const terminal = fixture(`${compiler} terminal renderer failure`), terminalBefore = inventory(terminal);
-    const failedRender = spawnSync(gui(compiler, true), ['--project', terminal, '--assets', assets, '--file', 'README.md', '--frames', '70', '--exercise-selection', 'render-failure'], {
-      encoding: 'utf8', timeout: 30000, env: guiEnvironment,
-    });
-    assert.equal(failedRender.status, 1, `${failedRender.error || ''}\n${failedRender.stderr}`);
-    assert.match(failedRender.stderr, /Render failure: frame abandoned without normal teardown/);
-    assert.deepEqual(inventory(terminal), terminalBefore);
-    report.cases.push({ compiler, name: 'terminal render failure abandons frame, releases host and preserves source' });
-    const diagnostics = fixture(`${compiler} diagnostics`);
-    writeFileSync(join(diagnostics, 'records/unavailable'), 'Not a directory.\n');
-    const tables = join(diagnostics, '.pi/attendant.tables'); writeFileSync(tables, readFileSync(tables, 'utf8') + '\nrecords/unavailable as unavailable\n');
-    const diagnosticBefore = inventory(diagnostics), warned = window(compiler, diagnostics, [], true, 'records/tasks/first.md');
-    assert(warned.issues_shown > 0 && warned.tabs === 1); assert.deepEqual(inventory(diagnostics), diagnosticBefore);
-    report.cases.push({ compiler, name: 'partial discovery warning preserves healthy navigation and source' });
-    const navigation = window(compiler, smoke, ['--exercise'], true, 'records/tasks/first.md');
-    assert.equal(navigation.tabs, 2); assert.deepEqual(inventory(smoke), before);
-    report.cases.push({ compiler, name: 'reference clicks and tab reuse do not write workspace' });
-    const undo = fixture(`${compiler} undo`);
-    writeFileSync(join(undo, 'undo-a###same.md'), 'undo original'); writeFileSync(join(undo, 'undo-b###same.md'), 'undo shared');
-    window(compiler, undo, ['--exercise-selection', 'undo'], true, 'undo-a###same.md');
-    for (const name of ['undo-a###same.md', 'undo-b###same.md']) assert.equal(readFileSync(join(undo, name), 'utf8'), 'undo shared');
-    report.cases.push({ compiler, name: 'same-slot literal-path undo isolation and within-file undo/redo' });
-    const editing = fixture(`${compiler} editing`), original = readFileSync(join(editing, 'README.md'), 'utf8');
-    window(compiler, editing, ['--exercise-edit']);
-    assert.equal(readFileSync(join(editing, 'README.md'), 'utf8'), original + ' GUI edit');
-    const pending = query(compiler, editing); assert.equal(pending.meta_comments.pending, 1);
-    assert.deepEqual(query(compiler, editing).rows, pending.rows); resolveComment(compiler, editing, pending.rows[0]);
-    report.cases.push({ compiler, name: 'real edit, undo, dirty-close Cancel, source feedback and explicit resolution' });
-    const failed = fixture(`${compiler} saved-not-queued`), conflict = join(failed, 'records/_meta_comments');
-    mkdirSync(conflict); writeFileSync(join(conflict, 'user.md'), 'User-owned file.\n');
-    const failedBefore = inventory(failed); window(compiler, failed, ['--exercise-save-fail']);
-    assert.equal(readFileSync(join(failed, 'README.md'), 'utf8'), original + ' GUI edit');
-    const failedAfter = inventory(failed); delete failedBefore[join(failed, 'README.md')]; delete failedAfter[join(failed, 'README.md')];
-    assert.deepEqual(failedAfter, failedBefore);
-    report.cases.push({ compiler, name: 'failed queue leaves successful save intact and user-owned files unchanged' });
+    synchronous(compiler);
     await previewSelection(compiler, 'multi', 'plain **bold**\n\nsecond *emphasis* and [link](https://example.invalid)\n\n```c\ncode\n```', 'mapped');
     await previewSelection(compiler, 'context', 'plain  \nnext', 'context');
   }
