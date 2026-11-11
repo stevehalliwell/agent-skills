@@ -55,6 +55,7 @@ view gd_resource_view.c
 graph gd_graph_view.c
 graph gd_mda_view.c
 graph gd_explorer_view.c
+graph gd_sidebar.c
 graph gd_explorer_controls.c
 graph gd_explorer_query_view.c
 graph gd_explorer_structure_view.c

@@ -105,6 +105,18 @@ Source changes remain disk-first authorized edits, followed by explicit guarded 
 
 Refresh blocks active input, pending rank text, modified draft, retained Undo history, pending analytical inputs and remap conflicts. Zero-net-diff Undo still blocks. Cold configured forms preflight before replacement allocation. Cold applied analysis rebuilds even without base canvas. First Actor/Effect canvas uses default applied scope while retaining staged inputs. Failed replacement preserves previous project/results; success advances generation and invalidates exact-ID hints.
 
+## Sidebar sections
+
+Unified views share ordered collapsible sections: View & layout; Find selected in another view; Display & filters; Analysis; Browse shown nodes; Selection & evidence; Sources & changes; Diagnostics. Unsupported sections are omitted. Native domain subfolds remain inside relevant sections.
+
+- Matching sections share open/closed state across views and restarts. Reset/reload does not clear fold preferences. Pane selections, cameras, filters, results and pending inputs stay independent.
+- Projection switch, stale/errors, hidden-selection notices and unsaved-draft status stay visible. Folding does not Run/clear analysis, change CLI availability or stop owner-loop preparation/analysis.
+- Defaults open: View & layout, Display & filters, Analysis, Selection & evidence. Other common sections start closed.
+- Only eight common flags saved in per-user `game-design-workbench/sidebar-folds.ini`: `%LOCALAPPDATA%` on Windows, `~/Library/Application Support` on macOS, `$XDG_CONFIG_HOME` or `~/.config` on Linux. Path appears under Sources & changes. General ImGui INI persistence remains disabled; no analytical or record-specific inspection state saved.
+- Settings read at launch; actual toggles save atomically. Missing file uses defaults; read/save failure reports warning and preserves session state. Running viewers do not live-sync; last save wins. No project/source settings writes.
+
+[Contract and review boundary](../../../reports/graph-query-research/sidebar-sections.md).
+
 ## Feedback
 
 - Independent human-owned hint window, default 360 × 160. No appearance focus. Go uses guarded navigation; Dismiss/close clears hint only. Stale exact hint disables Go.

@@ -1,6 +1,6 @@
 /* App-local checks, not OS input automation. Run native/test-explorer.ps1.
    Only private explorer-checks-* copies may be used for reload-failure probes.
-   --ipc-helpers GAME-DESIGN-DIRECTORY runs read-only CPU checks; no window or writes. */
+   --ipc-helpers GAME-DESIGN-DIRECTORY runs source-read-only CPU checks; private build-directory preferences fixture, no window or user-settings writes. */
 #include "gd_explorer.h"
 #include <stdlib.h>
 #include <string.h>

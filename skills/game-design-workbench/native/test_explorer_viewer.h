@@ -1,16 +1,17 @@
-/* CPU-only adapter checks: no InitWindow, BeginDrawing, OS input or writes. */
+/* CPU-only adapter checks: no InitWindow, BeginDrawing, OS input or source/user-settings writes. */
 #ifndef TEST_EXPLORER_VIEWER_H
 #define TEST_EXPLORER_VIEWER_H
 #include "test_explorer_viewer_nodes.h"
 #include "test_explorer_controls.h"
 #include "test_explorer_viewer_feedback.h"
+#include "test_sidebar.h"
 #include "test_explorer_presentation.h"
 #include "test_explorer_configuration.h"
 int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, int count, int *fail_at, int *calls) {
     GD_ExplorerProject *project=gd_explorer_load(a,collections,count);
     GD_ExplorerPane *panes=NULL,*before=NULL; GD_GraphAnalysis *analysis=NULL; char *reply=NULL,*configuration_json=NULL,*presentation_json=NULL;
     GD_ExplorerContext c={0}; ExplorerViewer viewer={0}; GD_ViewerRequest request={0};
-    GD_ViewerWriter w; int active=GD_EXPLORER_MATRIX,stale=0,result=2,v,skill=-1,checks=0,control_checks=0,feedback_checks=0,configuration_checks=0,presentation_checks=0;
+    GD_ViewerWriter w; int active=GD_EXPLORER_MATRIX,stale=0,result=2,v,skill=-1,checks=0,control_checks=0,feedback_checks=0,sidebar_checks=0,configuration_checks=0,presentation_checks=0;
     ImGuiContext *imgui=NULL;
 #define CHECK(value) do { ++checks; if (!(value)) { fprintf(stderr,"Viewer adapter check failed: %s (line %d)\n",#value,__LINE__); goto cleanup; } } while (0)
 #define DISPATCH(command_,projection_,reference_) do { memset(&request,0,sizeof(request)); snprintf(request.command,sizeof(request.command),"%s",command_); snprintf(request.projection,sizeof(request.projection),"%s",projection_); snprintf(request.reference,sizeof(request.reference),"%s",reference_); w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_dispatch(&viewer,&request,&w); } while (0)
@@ -158,6 +159,7 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
     configuration_checks=viewer_configuration_checks(&viewer,fail_at,calls,configuration_json); CHECK(configuration_checks>0);
     presentation_checks=viewer_presentation_checks(&viewer,fail_at,calls,presentation_json); CHECK(presentation_checks>0);
     feedback_checks=viewer_feedback_checks(&viewer); CHECK(feedback_checks>0);
+    sidebar_checks=viewer_sidebar_checks(); CHECK(sidebar_checks>0);
     CHECK(!memcmp(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS) && active==GD_EXPLORER_MATRIX && !project->draft->modified_count);
     DISPATCH("inspect","",""); CHECK(!w.failed && !strstr(reply,"\"body\":"));
     /* Outer Node test parses complete serialized production payloads. */
@@ -168,7 +170,7 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
     printf(",\"source_context\":%s",reply);
     DISPATCH("controls","resources",""); CHECK(!w.failed); printf(",\"resource_controls\":%s",reply);
     DISPATCH("actions","resources",""); CHECK(!w.failed); printf(",\"resource_actions\":%s",reply);
-    printf(",\"checks\":%d,\"control_checks\":%d,\"feedback_checks\":%d,\"configuration_checks\":%d,\"presentation_checks\":%d}\n",checks,control_checks,feedback_checks,configuration_checks,presentation_checks); result=0;
+    printf(",\"checks\":%d,\"control_checks\":%d,\"feedback_checks\":%d,\"sidebar_checks\":%d,\"configuration_checks\":%d,\"presentation_checks\":%d}\n",checks,control_checks,feedback_checks,sidebar_checks,configuration_checks,presentation_checks); result=0;
 cleanup:
     if (imgui) igDestroyContext(imgui);
     if (panes) for (v=0;v<GD_EXPLORER_VIEWS;++v) {

@@ -276,7 +276,7 @@ static void coverage_summary(const GD_Query *query) {
     igTextWrapped("Cards separate deduplicated case counts from local-binding counts. Unfinished cases may overlap known memberships. Unknown guards remain candidates. No retained candidate is nullable checked absence, not a defect or universal gameplay proof. Numeric values are finite samples, not a range.");
 }
 void gd_explorer_query_controls(GD_ExplorerContext *context) {
-    GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryOptions *options=&pane->query_options; const GD_Rules *rules=context->project->rules; GD_Model *model=gd_explorer_model(context->project,pane->view); int i,display=0;
+    GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryOptions *options=&pane->query_options; const GD_Rules *rules=context->project->rules; GD_Model *model=gd_explorer_model(context->project,pane->view); int i;
     igTextWrapped("Native query scope, not camera bounds. Local binding identities stay distinct. Whole guards/side effects remain source-backed; no executable recipe or final-outcome proof.");
     if (pane->view==GD_EXPLORER_ACTORS) {
         int inventory=pane->query_state && pane->query_state->query && pane->query_state->query->request.kind==GD_QUERY_BINDINGS;
@@ -356,9 +356,13 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
     gd_explorer_form_widget(GD_FORM_QUERY,options,"accepted",pane->view==GD_EXPLORER_ACTORS ? (options->coverage ? "Accepted root cases only":"Accepted root only (dependencies stay labelled)"):"Accepted sources at every placement ancestor");
     gd_explorer_action_button(context,GD_ACTION_QUERY_RUN);
     if (pane->query_state && !gd_explorer_form_equal(GD_FORM_QUERY,options,&pane->query_state->applied)) igTextWrapped("Pending query inputs differ from drawn result. Apply before refresh; last good result remains visible.");
+    if(pane->query_state && pane->query_state->query && pane->query_state->query->state_coverage)coverage_summary(pane->query_state->query);
+    if (*pane->query_message) igTextWrapped("%s",pane->query_message);
+}
+void gd_explorer_query_display_controls(GD_ExplorerContext *context) {
+    GD_ExplorerPane *pane=context->pane;GD_ExplorerQueryOptions *options=&pane->query_options;GD_Model *model=gd_explorer_model(context->project,pane->view);int i,display=0;
     if (pane->query_state && pane->query_state->query) {
         GD_Query *query=pane->query_state->query;
-        if (query->state_coverage) coverage_summary(query);
         if (query->variants) {
             display|=gd_explorer_form_widget(GD_FORM_QUERY,options,"ghosts",NULL);
             if (query->variants->variant_count && gd_explorer_picker_begin(context,"Primary state",options->primary>=0 && options->primary<query->variants->variant_count ? query->variants->variants[options->primary].value:NULL)) { for (i=0;i<query->variants->variant_count;++i) if (gd_explorer_picker_item(context,query->variants->variants[i].value,i==options->primary,0)) { options->primary=i; display=1; } gd_explorer_picker_end(); }
@@ -386,7 +390,6 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
         if (!query->variants && query->request.kind==GD_QUERY_ACTOR_STATES) igTextWrapped("Root excluded by status scope; no variant facts evaluated. Change filter and apply to inspect.");
         if (igSmallButton(gd_explorer_action_info(GD_ACTION_QUERY_DISPLAY)->label)) display=1;
         if (display) gd_explorer_action_run(context,GD_ACTION_QUERY_DISPLAY);
-        if (pane->query_state->scene->limited) igTextWrapped("DRAWING LIMITED: up to %d unexamined items. Native evidence remains separate; missing drawing is not absence.",pane->query_state->scene->unexamined_items_upper_bound);
     }
     if (*pane->query_message) igTextWrapped("%s",pane->query_message);
 }

@@ -186,6 +186,7 @@ int gd_explorer_query_compare(GD_ExplorerContext *context);
 void gd_explorer_query_destroy(GD_ExplorerQueryState *state);
 int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProject *old, const GD_ExplorerPane *prior);
 void gd_explorer_query_controls(GD_ExplorerContext *context);
+void gd_explorer_query_display_controls(GD_ExplorerContext *context);
 void gd_explorer_query_draw(GD_ExplorerContext *context);
 void gd_explorer_query_input(GD_ExplorerContext *context);
 void gd_explorer_query_details(GD_ExplorerContext *context);

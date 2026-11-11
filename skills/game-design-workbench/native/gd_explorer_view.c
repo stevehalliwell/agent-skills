@@ -1,5 +1,6 @@
 #include "gd_explorer_controls.h"
 #include "gd_render_pose.h"
+#include "gd_sidebar.h"
 #include "gd_graph_analysis_draw.h"
 #include "gd_graph_overview_draw.h"
 #include "rlImGui.h"
@@ -14,6 +15,15 @@
 static const Color background={18,24,34,255}, foreground={225,233,241,255}, muted={150,169,190,255}, gold={255,217,125,255};
 static void explorer_log(int level, const char *text, va_list arguments) {
     (void)level; vfprintf(stderr,text,arguments); fputc('\n',stderr);
+}
+static int sidebar_section(GD_Sidebar *sidebar,GD_SidebarSection section) {
+    unsigned bit=1u<<section;int before=(sidebar->open&bit)!=0,open;
+    /* Skipped/minimized windows return false without changing their tree state. */
+    if(igGetCurrentWindow()->SkipItems)return 0;
+    igSetNextItemOpen(before,ImGuiCond_Always);
+    open=igCollapsingHeader_TreeNodeFlags(gd_sidebar_labels[section],0);
+    if(igIsItemToggledOpen() && open!=before){if(open)sidebar->open|=bit;else sidebar->open&=~bit;gd_sidebar_save(sidebar);}
+    return open;
 }
 static int open_window(const char *title) {
     SetTraceLogCallback(explorer_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);
@@ -501,10 +511,13 @@ static int layout_controls(GD_ExplorerContext *c) {
     if(p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_NOUNS){igSameLine(0,-1);igBeginDisabled(!gd_explorer_action_available(c,GD_ACTION_VIEW_CELL_FIT));gd_explorer_action_button(c,GD_ACTION_VIEW_CELL_FIT);igEndDisabled();}
     if (p->layout->mode==GD_LAYOUT_FORCE && p->layout->collision_limited)
         igTextWrapped("Footprint separation reached bounded work/movement limit; overlaps may remain. Resume settling to continue. Camera does not establish clearance.");
-    if (p->view==GD_EXPLORER_MATRIX && !grid_view(p)) igCheckbox("Overlay other pairs (does not merge groups)",&p->overlay);
     if (p->view==GD_EXPLORER_MATRIX && grid_view(p)) igTextWrapped("Grid shows every loaded noun, verb and declared cell, including inactive pairs. Wheel zooms cells/labels; right/middle drag pans. Arrows select (held repeat); PageUp/Down changes case. Blank is not a defect. Graph analysis/focus layers unavailable in Grid; settings retained for graph layouts.");
+    return rearrange;
+}
+static void scope_controls(GD_ExplorerContext *c) {
+    GD_ExplorerPane *p=c->pane;GD_Model *model=gd_explorer_model(c->project,p->view);
     if (p->view==GD_EXPLORER_MDA) {
-        int direction=c->project->mda->direction,i;
+        int direction=c->project->mda->direction;
         if (igCombo_Str("Traversal",&direction,"Both / associations\0Forward / toward aesthetics\0Backward / authored basis\0",-1)) {
             const char *keys[]={"both","forward","backward"}; gd_explorer_presentation_set(c,"mda_direction",keys[direction],p->query_message,sizeof(p->query_message));
         }
@@ -512,17 +525,25 @@ static int layout_controls(GD_ExplorerContext *c) {
         if (p->mda.record>=0 && gd_mda_role(model->records[p->mda.record].role) && igButton("Use selected as query root",(ImVec2_c){0,0}))
             gd_explorer_presentation_set(c,"mda_root",model->records[p->mda.record].reference,p->query_message,sizeof(p->query_message));
         if (igButton("Show all query nodes",(ImVec2_c){0,0})) gd_explorer_presentation_set(c,"mda_root","",p->query_message,sizeof(p->query_message));
+    }
+}
+static int has_display_filters(const GD_ExplorerPane *p) {return query_view(p->view) || p->view==GD_EXPLORER_MDA || p->view==GD_EXPLORER_RESOURCES || (p->view==GD_EXPLORER_MATRIX && !grid_view(p));}
+static void display_filter_controls(GD_ExplorerContext *c) {
+    GD_ExplorerPane *p=c->pane;
+    igTextWrapped("Canvas display, not analytical scope. Native Display may rebuild presentation; it does not Run pending analytical inputs.");
+    if(query_view(p->view))gd_explorer_query_display_controls(c);
+    if(p->view==GD_EXPLORER_MATRIX)igCheckbox("Overlay other pairs (does not merge groups)",&p->overlay);
+    if(p->view==GD_EXPLORER_MDA){int i;
         igCheckbox("Only query nodes (display only)",&p->mda.only_scope);
         igCheckbox("Only selected witness (display only)",&p->mda.only_path);
         for (i=0;i<4;++i) igCheckbox(gd_mda_role_name((GD_Role)(GD_MDA_MECHANIC+i)),&p->mda.roles[i]);
-        igInputText("Reference filter",p->mda.filter,sizeof(p->mda.filter),0,NULL,NULL);
+        igInputText("Reference filter (canvas)",p->mda.filter,sizeof(p->mda.filter),0,NULL,NULL);
     } else if (p->view==GD_EXPLORER_RESOURCES) {
         igCheckbox("Rule cases",&p->mda.roles[GD_RESOURCE_CASE]); igSameLine(0,-1);
         igCheckbox("Actor facets",&p->mda.roles[GD_RESOURCE_FACET]);
         igCheckbox("Resource roles",&p->mda.roles[GD_RESOURCE_ROLE]);
-        igInputText("Name / source filter",p->filter,sizeof(p->filter),0,NULL,NULL);
+        igInputText("Name / source filter (canvas)",p->filter,sizeof(p->filter),0,NULL,NULL);
     }
-    return rearrange;
 }
 static int reset_view(GD_ExplorerContext *c);
 static void grid_frame_selection(GD_ExplorerContext *c);
@@ -748,6 +769,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     GD_ExplorerContext c={0};
     ExplorerViewer viewer={0}; char ipc_error[256]="";
     int active=0,v,frame=0,result=0,stale=0,close_seen=0,timed_seen=0,close_next=0;
+    GD_Sidebar sidebar;
     double next_check=0; char failure[GD_MAX_PATH+512]="",report_path[GD_MAX_PATH]="";
     const GD_Error *error=gd_explorer_error(project);
     if (!project || !project->available || error || (initial_view>=0 && (initial_view>=GD_EXPLORER_VIEWS || !(project->available&(1u<<initial_view))))) {
@@ -776,6 +798,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     if (output_path) snprintf(report_path,sizeof(report_path),"%s",output_path);
     c.project=project; c.pane=&panes[active];
     if (!open_window("Game Design Workbench - Explorer")) { gd_error(diagnostic,"view.window","Cannot initialize explorer window",NULL,0); result=2; goto cleanup; }
+    gd_sidebar_init(&sidebar);
     viewer.context=&c; viewer.panes=panes; viewer.active=&active; viewer.stale=&stale; viewer.reload_generation=1;
     viewer.collections=collections; viewer.collection_count=count;
     viewer.server=gd_viewer_server_open(allocator,ipc_error,sizeof(ipc_error));
@@ -809,26 +832,22 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         igSetNextWindowPos((ImVec2_c){(float)split,12},ImGuiCond_Always,(ImVec2_c){0,0});
         igSetNextWindowSize((ImVec2_c){(float)(width-split-12),(float)(height-24)},ImGuiCond_Always);
         igBegin("Explorer controls and source",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
-        if (viewer.server) igText("IPC session: %s",gd_viewer_session(viewer.server));
         if (*ipc_error) igTextWrapped("%s",ipc_error);
         if (gd_viewer_server_error(viewer.server)) igTextWrapped("%s",gd_viewer_server_error(viewer.server));
         requested=choose_view(project,"Data / projection",active,1);
-        if (igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34})) reset=1;
-        igTextWrapped("Reset affects this view only. Draft/source data and other views stay intact.");
+        if(stale)igTextWrapped("STALE: source changed or could not be checked. Last good snapshot retained.");
+        if(*failure)igTextWrapped("%s",failure);
+        if(*sidebar.message)igTextWrapped("%s",sidebar.message);
+        if(query_view(p->view) && p->query_state && p->query_state->scene && p->query_state->scene->limited)igTextWrapped("DRAWING LIMITED: up to %d unexamined items. Native evidence remains separate; missing drawing is not absence.",p->query_state->scene->unexamined_items_upper_bound);
         selected=selected_record(&c);
-        if (selected>=0) {
-            find_view=choose_view(project,"Find selected in",active,0);
-            if (find_view>=0) snprintf(find_reference,sizeof(find_reference),"%s",model->records[selected].reference);
-        } else igTextWrapped(p->view==GD_EXPLORER_RESOURCES && p->selection.node>=0 ?
-            "Selected derived item has no unique loaded source. Inspect incident declarations; Find is unavailable.":
-            "Select source to enable Find selected in another view.");
+        if(sidebar_section(&sidebar,GD_SIDEBAR_VIEW)){
+            if (igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34})) reset=1;
+            igTextWrapped("Reset affects this view only. Draft/source data, fold preferences and other views stay intact.");
+            if (!gd_explorer_similarity_active(&c) && layout_controls(&c)) { p->prepared=0; pane_prepare(&c); p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1; }
+            if(gd_explorer_similarity_active(&c))gd_explorer_action_button(&c,GD_ACTION_VIEW_FIT);
         igBeginDisabled(!gd_explorer_action_available(&c,GD_ACTION_VIEW_SELECTION_FOCUS));gd_explorer_action_button(&c,GD_ACTION_VIEW_SELECTION_FOCUS);igEndDisabled();
         if(igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))igSetTooltip("Camera only; select a canvas item/source. Keep readable text; distant context may stay off-screen. No layout/filter/query change.");
         if(p->focus_result.status!=GD_FOCUS_NONE)igTextWrapped("Last focus: %s | %d selected, %d hidden, %d direct context | %s%s",focus_status_name(p->focus_result.status),p->focus_result.selected,p->focus_result.hidden,p->focus_result.context,p->focus_result.clipped ? "some context off-screen":"no framing clip",p->focus_result.hidden_link ? " | selected link remains hidden":"");
-        if(p->focus_result.status==GD_FOCUS_HIDDEN)igTextWrapped("Selection hidden by current filters/scope; camera unchanged. No data revealed.");
-        if(p->focus_result.status==GD_FOCUS_UNREPRESENTED || p->focus_result.status==GD_FOCUS_UNPLACED)igTextWrapped("No placed selection representation here; source may still be loaded. No query or filter changed.");
-        match_details(&c);
-        if (!gd_explorer_similarity_active(&c) && layout_controls(&c)) { p->prepared=0; pane_prepare(&c); p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1; }
         if (p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view)) {
             bool enabled=p->distance_focus_enabled;
             if (igCheckbox("Focus layout by shown-link distance",&enabled) && !distance_focus_toggle(&c,enabled))
@@ -836,25 +855,32 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             igCheckbox("Auto-fit camera on focus changes",&p->focus_auto_fit);
             if (p->distance_focus_enabled) igTextWrapped("Shown-link distance is layout only, not flow. Animated 220 ms transitions retain constrained bands/roots; Free graphs do not pin data roots. Click again to interrupt. Auto-fit off keeps camera unchanged on focus selection/off. Off returns to regular pose, then resumes drag/settling. F and Find still frame explicitly.");
         }
-        selected=analyze(&c);
+        }
+        if(p->focus_result.status==GD_FOCUS_HIDDEN)igTextWrapped("Selection hidden by current filters/scope; camera unchanged. No data revealed.");
+        if(p->focus_result.status==GD_FOCUS_UNREPRESENTED || p->focus_result.status==GD_FOCUS_UNPLACED)igTextWrapped("No placed selection representation here; source may still be loaded. No query or filter changed.");
+        if(sidebar_section(&sidebar,GD_SIDEBAR_FIND)){
+        if (selected>=0) {
+            find_view=choose_view(project,"Find selected in",active,0);
+            if (find_view>=0) snprintf(find_reference,sizeof(find_reference),"%s",model->records[selected].reference);
+        } else igTextWrapped(p->view==GD_EXPLORER_RESOURCES && p->selection.node>=0 ?
+            "Selected derived item has no unique loaded source. Inspect incident declarations; Find is unavailable.":
+            "Select source to enable Find selected in another view.");
+        match_details(&c);
+        }
+        if(!gd_explorer_similarity_active(&c) && has_display_filters(p) && sidebar_section(&sidebar,GD_SIDEBAR_FILTERS))display_filter_controls(&c);
+        selected=analyze(&c); /* Required independently of sidebar visibility. */
+        if(sidebar_section(&sidebar,GD_SIDEBAR_ANALYSIS)){
+        if(!gd_explorer_similarity_active(&c))scope_controls(&c);
         if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(&c); gd_explorer_rules_controls(&c); }
         if (query_view(p->view)) gd_explorer_query_controls(&c);
         if (!gd_explorer_similarity_active(&c) && !grid_view(p) && p->distance_focus_enabled && distance_focus_node(p,selected)<0)
             igTextWrapped("No distance focus applied: select a visible node. Source-only or edge inspection has no focus anchor.");
         gd_explorer_structure_controls(&c);
         if (p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view) && igCollapsingHeader_TreeNodeFlags("Analysis layers",0)) analysis_controls(&c,selected);
-        refresh=igButton("Refresh sources (F5)",(ImVec2_c){0,0});
-        if (stale) igTextWrapped("STALE: source changed or could not be checked. Last good snapshot retained.");
-        if (*failure) igTextWrapped("%s",failure);
-        if (project->draft) {
-            igText("%d modified records | %d undo steps",project->draft->modified_count,project->draft->history_count);
-            if (igButton("Undo last edit (Ctrl+Z)",(ImVec2_c){0,0})) undo=1;
-            igTextUnformatted("Report path (empty: stdout; new .json file only)",NULL); igSetNextItemWidth(-1);
-            igInputText("##explorer-report-path",report_path,sizeof(report_path),0,NULL,NULL);
-            if (igButton("Finish and report changes",(ImVec2_c){0,0})) close_next=1;
-            if (*project->draft->message) igTextWrapped("%s",project->draft->message);
+        if (p->view==GD_EXPLORER_SKILLS && igCollapsingHeader_TreeNodeFlags("Skill opportunities / knowledge",0)) { gd_explorer_graph_unlocks(&c); viewer_control_token(&viewer,&c,GD_FORM_PRESENTATION,viewer.knowledge_token,sizeof(viewer.knowledge_token)); }
         }
-        if (igTreeNode_Str("Browse shown nodes")) {
+        if(!(sidebar.open&(1u<<GD_SIDEBAR_ANALYSIS))){if(*p->query_message)igTextWrapped("%s",p->query_message);if(*p->rule_message)igTextWrapped("%s",p->rule_message);}
+        if(sidebar_section(&sidebar,GD_SIDEBAR_BROWSE)){
             int i;
             if (is_graph(p->view)) igInputText("Browse filter (list only)",p->filter,sizeof(p->filter),0,NULL,NULL);
             igBeginChild_Str("Explorer records",(ImVec2_c){0,120},0,0);
@@ -870,10 +896,30 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
                 }
                 igPopID();
             }
-            igEndChild(); igTreePop();
+            igEndChild();
         }
-        if (p->view==GD_EXPLORER_SKILLS && igCollapsingHeader_TreeNodeFlags("Skill opportunities / knowledge",0)) { gd_explorer_graph_unlocks(&c); viewer_control_token(&viewer,&c,GD_FORM_PRESENTATION,viewer.knowledge_token,sizeof(viewer.knowledge_token)); }
-        {
+        if(sidebar_section(&sidebar,GD_SIDEBAR_SELECTION)){
+            if(p->view==GD_EXPLORER_NOUNS) noun_grid_details(&c);
+            else if (is_graph(p->view)) { if (!(grid_view(p) && grid_blank_details(&c)) && gd_explorer_graph_details(&c)) gd_explorer_edited(project); }
+            else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_details(&c);
+            else if (query_view(p->view)) gd_explorer_query_details(&c);
+            else gd_explorer_resource_details(&c);
+        }
+        if(sidebar_section(&sidebar,GD_SIDEBAR_SOURCES)){
+        if (viewer.server) igText("IPC session: %s",gd_viewer_session(viewer.server));
+        igTextWrapped("UI fold preferences: %s",*sidebar.path ? sidebar.path:"session only");
+        refresh=igButton("Refresh sources (F5)",(ImVec2_c){0,0});
+        if (project->draft) {
+            igText("%d modified records | %d undo steps",project->draft->modified_count,project->draft->history_count);
+            if (igButton("Undo last edit (Ctrl+Z)",(ImVec2_c){0,0})) undo=1;
+            igTextUnformatted("Report path (empty: stdout; new .json file only)",NULL); igSetNextItemWidth(-1);
+            igInputText("##explorer-report-path",report_path,sizeof(report_path),0,NULL,NULL);
+            if (igButton("Finish and report changes",(ImVec2_c){0,0})) close_next=1;
+            if (*project->draft->message) igTextWrapped("%s",project->draft->message);
+        }
+        }
+        if(project->draft && !(sidebar.open&(1u<<GD_SIDEBAR_SOURCES)) && *project->draft->message)igTextWrapped("%s",project->draft->message);
+        if(sidebar_section(&sidebar,GD_SIDEBAR_DIAGNOSTICS)){
             const GD_Finding *findings=p->view==GD_EXPLORER_MDA ? project->mda->findings:project->rules && (p->view==GD_EXPLORER_RESOURCES || query_view(p->view)) ? project->rules->findings:model->findings;
             int count_findings=p->view==GD_EXPLORER_MDA ? project->mda->finding_count:(p->view==GD_EXPLORER_RESOURCES || query_view(p->view)) ? project->rules->finding_count:model->finding_count;
             int omitted=p->view==GD_EXPLORER_MDA ? project->mda->findings_omitted:(p->view==GD_EXPLORER_RESOURCES || query_view(p->view)) ? project->rules->findings_omitted:model->findings_omitted;
@@ -884,12 +930,6 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
                 else { p->selection=(GD_ExplorerSelection){-1,-1,0,target,-1}; }
             }
         }
-        igSeparator();
-        if(p->view==GD_EXPLORER_NOUNS) noun_grid_details(&c);
-        else if (is_graph(p->view)) { if (!(grid_view(p) && grid_blank_details(&c)) && gd_explorer_graph_details(&c)) gd_explorer_edited(project); }
-        else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_details(&c);
-        else if (query_view(p->view)) gd_explorer_query_details(&c);
-        else gd_explorer_resource_details(&c);
         igEnd();
         viewer_feedback(&viewer);
         {

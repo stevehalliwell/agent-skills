@@ -80,7 +80,7 @@ test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:
     // Dense Mario plus matched 4096-step diagnostics exceeds former 30s budget.
     const result=spawnSync(adapter,['--ipc-helpers',root],{encoding:'utf8',windowsHide:true,timeout:90000,maxBuffer:2*1024*1024});
     assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
-    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.checks>=180);assert.ok(value.control_checks>=500);assert.ok(value.feedback_checks>=10);assert.ok(value.configuration_checks>=50);
+    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.checks>=180);assert.ok(value.control_checks>=500);assert.ok(value.feedback_checks>=10);assert.ok(value.sidebar_checks>=34);assert.ok(value.configuration_checks>=50);
     assert.ok(value.presentation_checks>=150);
     const references=result.stderr.split(/\r?\n/).filter(line=>line.startsWith('layout-reference ')).map(line=>JSON.parse(line.slice('layout-reference '.length)));
     const topologies=references.filter(row=>row.kind==='topology');assert.equal(topologies.length,19);
