@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build finite GUI integration runner; does not launch windows or acquire tools.
+# Build shared GUI integration runner; does not launch windows or acquire tools.
 # Usage: bash tools/build-gui-tests.sh [cjit|zig]. Stdout: executable absolute path.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -20,7 +20,7 @@ compile() {
     "${ZIG:-zig}" cc -O3 ${zig_platform_flags[@]+"${zig_platform_flags[@]}"} "${flags[@]}" -Isrc/include "$@" -o "$output" ${native_libraries[@]+"${native_libraries[@]}"} || return $?
   fi
 }
-if ! compile "$run/generator$executable_suffix" tests/gui/generate-synchronous.c > "$run/generator-build.log" 2>&1 ||
+if ! compile "$run/generator$executable_suffix" tests/gui/generate-integration.c > "$run/generator-build.log" 2>&1 ||
    ! "$run/generator$executable_suffix" > "$run/runner.c" 2> "$run/generator.log" ||
    ! compile "$run/runner$executable_suffix" -DNDEBUG -ULIBPDJSON5_STACK_MAX -DLIBPDJSON5_STACK_MAX=16 "$run/runner.c" "${sources[@]:1}" > "$run/runner-build.log" 2>&1 ||
    ! compile "$run/validator$executable_suffix" -DNDEBUG -ULIBPDJSON5_STACK_MAX -DLIBPDJSON5_STACK_MAX=16 tests/gui/validation-check.c "${sources[@]:1}" > "$run/validator-build.log" 2>&1; then

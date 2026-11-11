@@ -7,9 +7,11 @@ static char gui_output[1048577], gui_errors[1048577];
 static file_tree_workspace gui_files;
 static test_command_workspace gui_commands;
 static test_command_result gui_result;
+static test_command_live gui_live[2];
+static char gui_live_output[2][1048577], gui_live_errors[2][1048577];
 static test_directory gui_suite, gui_case;
 static char gui_root[NATIVE_PATH_SIZE], gui_evidence[NATIVE_PATH_SIZE], gui_assets[NATIVE_PATH_SIZE];
-static char gui_production[NATIVE_PATH_SIZE], gui_testing[NATIVE_PATH_SIZE], gui_model[NATIVE_PATH_SIZE], gui_cli[NATIVE_PATH_SIZE];
+static char gui_production[NATIVE_PATH_SIZE], gui_testing[NATIVE_PATH_SIZE], gui_other[NATIVE_PATH_SIZE], gui_model[NATIVE_PATH_SIZE], gui_cli[NATIVE_PATH_SIZE];
 static char gui_compiler[16];
 static unsigned gui_groups;
 static const char gui_original[] = "# Workspace\r\n\r\nPlain Markdown café Ω 😀.\r\n";
@@ -39,32 +41,48 @@ static int gui_suite_setup(void) {
     TEST_ASSERT_FILE_OK(file_tree_join(gui_production, gui_root, relative));
     TEST_ASSERT(snprintf(relative, sizeof(relative), "build/gui%s%s/attendant-gui-%s-check%s", *variant ? "-" : "", variant, gui_compiler, suffix) < (int)sizeof(relative));
     TEST_ASSERT_FILE_OK(file_tree_join(gui_testing, gui_root, relative));
+    TEST_ASSERT(snprintf(relative, sizeof(relative), "build/gui%s%s/attendant-gui-%s%s", *variant ? "-" : "", variant, !strcmp(gui_compiler, "cjit") ? "zig" : "cjit", suffix) < (int)sizeof(relative));
+    TEST_ASSERT_FILE_OK(file_tree_join(gui_other, gui_root, relative));
     TEST_ASSERT(snprintf(relative, sizeof(relative), "build/gui%s%s/model-check-%s%s", *variant ? "-" : "", variant, gui_compiler, suffix) < (int)sizeof(relative));
     TEST_ASSERT_FILE_OK(file_tree_join(gui_model, gui_root, relative));
     TEST_ASSERT(snprintf(relative, sizeof(relative), "build/attendant-%s%s", gui_compiler, suffix) < (int)sizeof(relative));
     TEST_ASSERT_FILE_OK(file_tree_join(gui_cli, gui_root, relative));
     TEST_ASSERT_FILE_OK(file_tree_join(gui_assets, gui_root, "build/deps/richmd/assets"));
-    TEST_ASSERT(file_is_regular(gui_production, 0) && file_is_regular(gui_testing, 0) && file_is_regular(gui_model, 0) && file_is_regular(gui_cli, 0));
+    TEST_ASSERT(file_is_regular(gui_production, 0) && file_is_regular(gui_testing, 0) && file_is_regular(gui_other, 0) && file_is_regular(gui_model, 0) && file_is_regular(gui_cli, 0));
     TEST_ASSERT(file_is_directory(gui_assets, 0));
     TEST_ASSERT_FILE_OK(file_tree_join(relative, gui_evidence, "fixtures"));
     TEST_ASSERT_FILE_OK(test_directory_create(&gui_suite, (cstring){relative}));
     return 0;
 }
 static int gui_suite_teardown(int failed) {
-    int missing = !failed && gui_groups != 8;
-    fprintf(stderr, "gui-synchronous-groups:%u\n", gui_groups);
+    int missing = !failed && gui_groups != 10;
+    fprintf(stderr, "gui-integration-groups:%u\n", gui_groups);
     arena_reset(gui_files.memory);
     TEST_ASSERT_FILE_OK(test_directory_finish(&gui_suite, &gui_files, failed || missing));
     return missing;
 }
 static int gui_case_setup(const test_case *test) {
     (void)test; char path[NATIVE_PATH_SIZE]; arena_reset(gui_files.memory);
+    memset(gui_live, 0, sizeof(gui_live));
     TEST_ASSERT_FILE_OK(test_directory_next(&gui_suite, "case café Ω", path));
     TEST_ASSERT_FILE_OK(test_directory_create(&gui_case, (cstring){path})); return 0;
 }
 static int gui_case_teardown(const test_case *test, int failed) {
-    (void)test; arena_reset(gui_files.memory);
-    TEST_ASSERT_FILE_OK(test_directory_finish(&gui_case, &gui_files, failed)); return 0;
+    (void)test; int cleanup_failed = 0;
+    /* Finish both before any assertion can return or any fixture can be removed. */
+    for (unsigned i = 0; i < 2; ++i) {
+        test_command_error error = test_command_finish(&gui_live[i]);
+        if (gui_live[i].result.cleanup_failed || (!failed && error != test_command_ok)) cleanup_failed = 1;
+    }
+    for (unsigned i = 0; i < 2 && gui_case.owned; ++i) if (gui_live[i].complete) {
+        char path[NATIVE_PATH_SIZE];
+        int count = snprintf(path, sizeof(path), "%s/live-%u.stdout", gui_case.path, i);
+        if (count < 0 || count >= (int)sizeof(path) || file_create_bytes((cstring){path}, gui_live[i].result.output.data, gui_live[i].result.output.len) != file_error_ok) cleanup_failed = 1;
+        count = snprintf(path, sizeof(path), "%s/live-%u.stderr", gui_case.path, i);
+        if (count < 0 || count >= (int)sizeof(path) || file_create_bytes((cstring){path}, gui_live[i].result.error_output.data, gui_live[i].result.error_output.len) != file_error_ok) cleanup_failed = 1;
+    }
+    arena_reset(gui_files.memory);
+    TEST_ASSERT_FILE_OK(test_directory_finish(&gui_case, &gui_files, failed || cleanup_failed)); return cleanup_failed;
 }
 #define TEST_SUITE_SETUP gui_suite_setup
 #define TEST_SUITE_TEARDOWN gui_suite_teardown
