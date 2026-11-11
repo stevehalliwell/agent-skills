@@ -4,7 +4,7 @@
 #ifndef GD_LAYOUT_COLLISION_H
 #define GD_LAYOUT_COLLISION_H
 #include <float.h>
-#define GD_LAYOUT_CLEARANCE 8.0
+static const double GD_LAYOUT_CLEARANCE=8.0;
 #define GD_LAYOUT_COLLISION_PASSES 16
 #define GD_LAYOUT_SEPARATION_SHIFT 20.0f
 #define GD_LAYOUT_CONTACT_EPSILON 0.0001
@@ -121,7 +121,6 @@ static void collision_separate(GD_Layout *layout,int held) {
     }
     if (pass==GD_LAYOUT_COLLISION_PASSES) layout->collision_limited=1;
 }
-#undef GD_LAYOUT_CLEARANCE
 #undef GD_LAYOUT_COLLISION_PASSES
 #undef GD_LAYOUT_SEPARATION_SHIFT
 #undef GD_LAYOUT_CONTACT_EPSILON

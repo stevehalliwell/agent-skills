@@ -17,6 +17,7 @@ static int compare_order(const void *a, const void *b) {
 }
 #include "gd_layout_directed.h"
 #include "gd_layout_collision.h"
+#include "gd_layout_springs.h"
 #include "gd_layout_workspace.h"
 #include "gd_layout_seed.h"
 int gd_matrix_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort) {
@@ -149,6 +150,7 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
 void gd_layout_step_weighted(GD_Layout *layout, int held_node,const int *counts) {
     int i;
     if (layout->mode != GD_LAYOUT_FORCE && layout->mode != GD_LAYOUT_DIRECTED) return;
+    if(layout->mode==GD_LAYOUT_FORCE)spring_neighbors_prepare(layout);
     for (i = 0; i < layout->node_count; ++i) {
         GD_LayoutNode *node = &layout->nodes[i];
         GD_LayoutGroup *group = &layout->groups[node->group];
@@ -186,7 +188,7 @@ void gd_layout_step_weighted(GD_Layout *layout, int held_node,const int *counts)
         a = &layout->nodes[edge->a]; b = &layout->nodes[edge->b];
         dx = b->x-a->x; dy = b->y-a->y; distance = sqrtf(dx*dx+dy*dy);
         if (distance < 1) continue;
-        force = (distance-collision_spring_length(layout,a,b,dx,dy,distance))*0.015f/distance;
+        force = (distance-spring_target(layout,edge->a,edge->b,GD_LAYOUT_CLEARANCE,collision_spring_length(layout,a,b,dx,dy,distance)))*0.015f/distance;
         if (counts && counts[i]>1) force*=1+fminf(3,log2f((float)counts[i]));
         a->vx += dx*force; a->vy += dy*force; b->vx -= dx*force; b->vy -= dy*force;
     }

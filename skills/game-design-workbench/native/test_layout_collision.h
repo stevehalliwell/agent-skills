@@ -51,7 +51,12 @@ TEST(layout_rectangle_separation,
             layout->nodes[0].y=layout->groups[0].y+layout->groups[0].height/2-50;layout->nodes[1].y=layout->nodes[0].y+100;
             gd_layout_step(layout,-1);
             if(!variant)short_span=layout->nodes[1].y-layout->nodes[0].y;
-            else TEST_ASSERT(layout->nodes[1].y-layout->nodes[0].y>short_span+4);
+            else {
+                /* Default target now covers both circumcircles. Custom gap
+                   still raises directional target to 48+282, not by old 220. */
+                float expected=(330-(hypotf(240,48)+8))*0.015f*0.85f*2;
+                TEST_ASSERT(fabsf((layout->nodes[1].y-layout->nodes[0].y-short_span)-expected)<0.001f);
+            }
             for(step=0;step<1024;++step)gd_layout_step(layout,-1);
             if(variant)TEST_ASSERT(layout->nodes[1].y-layout->nodes[0].y>=300);
             TEST_ASSERT(layout->edge_count==1 && layout->edges[0].a==0 && layout->edges[0].b==1 && !collision_overlaps(&layout->nodes[0],&layout->nodes[1]));

@@ -48,6 +48,7 @@ typedef struct {
     GD_LayoutWorkspace workspace; /* Optional fixed containment; never follows moving nodes. */
     GD_LayoutCollisionItem collision_order[GD_MAX_RECORDS];
     float collision_remaining[GD_MAX_RECORDS];
+    int spring_neighbors[GD_MAX_RECORDS]; /* Derived active distinct-neighbor counts; not authored degree. */
     unsigned collision_cursor,collision_checks,collision_moves;
     int collision_limited;
 } GD_Layout;
