@@ -2,6 +2,7 @@
 #ifndef TEST_EXPLORER_PRESENTATION_H
 #define TEST_EXPLORER_PRESENTATION_H
 #include <float.h>
+#include "test_explorer_focus_selection.h"
 static int presentation_decode(const char *reply,char *out,size_t capacity) {
     const char *p=strstr(reply,"\"data\":\"");unsigned value=0;int bits=0;size_t count=0;
     if(!p)return -1;p+=8;
@@ -395,6 +396,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             PRESENT_CHECK(pair_selection_nodes(&target,nodes)==(noun==verb ? 1:2));memcpy(raw,p->layout,sizeof(*raw));
             if(grid_view(p)){Rectangle area=v==GD_EXPLORER_NOUNS ? noun_grid_bounds(p,noun,verb):grid_bounds(&p->grid,noun,verb);grid_fit(&target,-1);PRESENT_CHECK(p->camera.zoom==1 && fabsf(p->camera.target.x-area.x-area.width/2)<0.01f && fabsf(p->camera.target.y-area.y-area.height/2)<0.01f);}
             else{PRESENT_CHECK(p->fit==GD_EXPLORER_FIT_SELECTION && pair_selection_bounds(&target,&bounds));fit_view(&target,GD_EXPLORER_FIT_SELECTION);PRESENT_CHECK(p->camera.zoom>0 && p->camera.zoom<=1.2f && bounds.width*p->camera.zoom<target.viewport.width && bounds.height*p->camera.zoom<target.viewport.height && fabsf(p->camera.target.x-bounds.x-bounds.width/2)<0.01f && fabsf(p->camera.target.y-bounds.y-bounds.height/2)<0.01f);PRESENT_ACTION(v,"view.cell.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true") && p->fit==GD_EXPLORER_FIT_SELECTION);}
+            PRESENT_ACTION(v,"view.selection.focus");PRESENT_CHECK(strstr(reply,"\"framing\":{") && p->focus_result.selected==(grid_view(p) ? 1:noun==verb ? 1:2) && p->camera.zoom>=1);
             PRESENT_CHECK(!memcmp(raw,p->layout,sizeof(*raw)) && !memcmp(&saved,&p->selection,sizeof(saved)));
         }
         /* Header/node selection maps by record key, never old layout offset. */
@@ -408,7 +410,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","grid");
         for(row=0;row<p->grid.nouns && row<64 && !blank;++row)for(column=0;column<p->grid.verbs && column<64;++column)if(gd_matrix_grid_cell(model,p->grid.order[row],p->grid.order[p->grid.nouns+column])<0){grid_choose(&target,row,column);blank=1;break;}
         if(blank){int noun=p->grid.noun,verb=p->grid.verb;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell<0 && p->selection.node<0 && pair_selection_nodes(&target,nodes)==2 && p->grid.noun==noun && p->grid.verb==verb && p->overlay==overlay && p->layout->edge_count==model->cell_count);PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","grid");grid_fit(&target,-1);PRESENT_CHECK(p->selection.cell<0 && p->grid.noun==noun && p->grid.verb==verb);}
-        for(i=0;i<model->cell_count;++i)if(!model->cells[i].active){int edge;grid_choose(&target,p->grid.slot[model->cells[i].noun],p->grid.slot[model->cells[i].verb]);p->overlay=false;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell==i && pair_selection_nodes(&target,nodes)==2 && !p->overlay);for(edge=0;edge<p->layout->edge_count && p->layout->edges[edge].key!=i;++edge){}PRESENT_CHECK(edge<p->layout->edge_count && !p->layout->edges[edge].active);p->overlay=overlay;break;}
+        for(i=0;i<model->cell_count;++i)if(!model->cells[i].active){int edge;grid_choose(&target,p->grid.slot[model->cells[i].noun],p->grid.slot[model->cells[i].verb]);p->overlay=false;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell==i && pair_selection_nodes(&target,nodes)==2 && !p->overlay);for(edge=0;edge<p->layout->edge_count && p->layout->edges[edge].key!=i;++edge){}PRESENT_CHECK(edge<p->layout->edge_count && !p->layout->edges[edge].active);PRESENT_ACTION(GD_EXPLORER_MATRIX,"view.selection.focus");PRESENT_CHECK(strstr(reply,"\"executed\":true") && p->focus_result.hidden_link && !p->overlay);p->overlay=overlay;break;}
     }
     {
         GD_ExplorerPane *source=&panes[GD_EXPLORER_MATRIX],*destination=&panes[GD_EXPLORER_NOUNS],*prior=c.pane;GD_ExplorerSelection first=source->selection,second=destination->selection;Camera2D camera=source->camera,other=destination->camera;
@@ -417,6 +419,16 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         enter_view(&c,panes,GD_EXPLORER_MATRIX,NULL);PRESENT_CHECK(!memcmp(&first,&source->selection,sizeof(first)) && !memcmp(&camera,&source->camera,sizeof(camera)));
         enter_view(&c,panes,GD_EXPLORER_NOUNS,reference);matches(&c);PRESENT_CHECK(destination->visible_matches>0 && !strcmp(destination->find_reference,reference) && !memcmp(&second,&destination->selection,sizeof(second)) && !memcmp(&other,&destination->camera,sizeof(other)));
         enter_view(&c,panes,GD_EXPLORER_MATRIX,NULL);PRESENT_CHECK(!memcmp(&first,&source->selection,sizeof(first)));c.pane=prior;
+    }
+    {int focused=focus_selection_checks(&c,panes,calls,fail_at);PRESENT_CHECK(focused>30);checks+=focused;}
+    {
+        GD_ExplorerPane *p=&panes[GD_EXPLORER_MDA];int record=p->mda.record,link=p->mda.link;GD_ExplorerFocusResult previous=p->focus_result;
+        p->mda.record=p->layout->nodes[0].key;p->mda.link=-1;target=c;target.pane=p;
+        viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,token,sizeof(token));
+        PRESENT_REQUEST("action",GD_EXPLORER_MDA);strcpy(request.action,"view.selection.focus");strcpy(request.expect,token);PRESENT_SEND();
+        PRESENT_CHECK(strstr(reply,"\"executed\":true") && strstr(reply,"\"framing\":{") && strstr(reply,"\"context_nodes\":") && p->focus_result.status!=GD_FOCUS_NONE);
+        viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,key,sizeof(key));PRESENT_CHECK(!strcmp(token,key));
+        p->mda.record=record;p->mda.link=link;p->focus_result=previous;
     }
     PRESENT_ACTION(GD_EXPLORER_MDA,"view.analyze");PRESENT_CHECK(strstr(reply,"\"executed\":true")!=NULL);
     PRESENT_CHECK(viewer_result_reassemble(&viewer,GD_EXPLORER_MDA,"layers",NULL,reply));

@@ -132,7 +132,14 @@ static int explorer_viewer_nodes_checks(ExplorerViewer *viewer, GD_ExplorerPane 
         viewer_identities(c,&ids); NODE_CHECK(viewer_canvas_id(c,0,&ids,identity,sizeof(identity)));
         REQUEST("navigate","mda",identity); NODE_CHECK(!strncmp(reply,"{\"ok\":true",10) && state->similarity_row==0);
         NODE_CHECK(!memcmp(&camera,&pane->camera,sizeof(camera)) && state->similarity_camera_ready && !state->similarity_fit);
+        {
+            const GD_Similarity *map=state->result->similarity->map;uint64_t hash=viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map));
+            if(map->input.entry_count>1)state->similarity_peer=1;
+            NODE_CHECK(gd_explorer_action_run(c,GD_ACTION_VIEW_SELECTION_FOCUS) && pane->focus_result.selected>=1 && pane->focus_result.context==0 && state->similarity_camera.zoom>=1);
+            NODE_CHECK(viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map))==hash && !memcmp(&camera,&pane->camera,sizeof(camera)) && state->similarity_row==0);
+        }
         state->result->similarity->map->placed[0]=0;
+        {Camera2D placed=state->similarity_camera;NODE_CHECK(gd_explorer_action_run(c,GD_ACTION_VIEW_SELECTION_FOCUS) && pane->focus_result.status==GD_FOCUS_UNPLACED && !memcmp(&placed,&state->similarity_camera,sizeof(placed)));}
         REQUEST("navigate","mda",identity); NODE_CHECK(strstr(reply,"viewer.node_hidden")!=NULL); state->result->similarity->map->placed[0]=1;
         state->similarity_canvas=false;
     }

@@ -460,7 +460,8 @@ static const GD_ExplorerActionInfo actions[]={
     {"view.reset","Reset view",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.find.clear","Clear Find",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.witness.fit","Frame Resource witness",1u<<GD_EXPLORER_RESOURCES,GD_FORM_PRESENTATION},
-    {"view.cell.fit","Frame selected pair",(1u<<GD_EXPLORER_MATRIX)|(1u<<GD_EXPLORER_NOUNS),GD_FORM_PRESENTATION}
+    {"view.cell.fit","Frame selected pair",(1u<<GD_EXPLORER_MATRIX)|(1u<<GD_EXPLORER_NOUNS),GD_FORM_PRESENTATION},
+    {"view.selection.focus","Focus selection",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION}
 };
 const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action) {
     return action>=0 && action<GD_ACTION_COUNT ? &actions[action]:NULL;
@@ -471,6 +472,7 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
     if (info->form==GD_FORM_PRESENTATION) {
         const GD_ExplorerPane *p=context->pane;
         if(!p->prepared)return 0;
+        if(action==GD_ACTION_VIEW_SELECTION_FOCUS)return gd_explorer_focus_available(context);
         if(action==GD_ACTION_VIEW_RESET && context->project->draft && (context->project->draft->modified_count || context->project->draft->history_count))return 0;
         if(action==GD_ACTION_VIEW_REARRANGE && p->view==GD_EXPLORER_NOUNS)return p->prepared;
         if(action==GD_ACTION_VIEW_REARRANGE && p->view>=GD_EXPLORER_ACTORS) return p->query_state && p->query_state->scene && !(p->structure_state && p->structure_state->similarity_canvas);

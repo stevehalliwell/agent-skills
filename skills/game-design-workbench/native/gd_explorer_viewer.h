@@ -65,6 +65,11 @@ static void viewer_selection(GD_ViewerWriter *w, GD_ExplorerContext *c) {
     if(p->view==GD_EXPLORER_NOUNS){gd_viewer_write(w,",\"noun_cell\":");if(p->grid.noun>=0 && p->grid.verb>=0){gd_viewer_write(w,"{");viewer_member(w,"row",model->records[p->grid.noun].reference);gd_viewer_write(w,",");viewer_member(w,"column",model->records[p->grid.verb].reference);gd_viewer_write(w,",\"case_count\":%d,\"metric\":\"distinct declared cases\"}",p->selection.cell<0 ? 0:c->project->noun_grid->pairs[p->selection.cell].count);}else gd_viewer_write(w,"null");}
     gd_viewer_write(w,",\"snapshot_local\":{\"node\":%d,\"cell\":%d,\"case_offset\":%d,\"mda_link\":%d},\"identity_available\":%s,\"identity_limited\":%s}",node,p->selection.cell,p->selection.interaction,p->mda.link,available?"true":"false",ids.limited?"true":"false");
 }
+static void viewer_focus_result(GD_ViewerWriter *w,const GD_ExplorerFocusResult *result) {
+    if(result->status==GD_FOCUS_NONE){gd_viewer_write(w,"null");return;}
+    gd_viewer_write(w,"{\"status\":");gd_viewer_quote(w,focus_status_name(result->status));
+    gd_viewer_write(w,",\"selected_items\":%d,\"hidden_items\":%d,\"context_nodes\":%d,\"clipped\":%s,\"hidden_link\":%s,\"zoom\":%.9g}",result->selected,result->hidden,result->context,result->clipped ? "true":"false",result->hidden_link ? "true":"false",(double)result->zoom);
+}
 static void viewer_resource_id(GD_ViewerWriter *w, const GD_ResourceGraph *graph, int node) {
     char id[GD_MAX_PATH]="";
     int available=graph && node>=0 && gd_resource_node_id(graph,node,-1,id,sizeof(id));
@@ -145,6 +150,7 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
         gd_viewer_write(w,"{"); viewer_member(w,"projection",viewer_projections[v]);
         gd_viewer_write(w,",\"available\":%s,\"prepared\":%s,\"layout\":%d,\"sort\":%d,\"horizontal\":%d,\"paused\":%s,\"camera\":{\"x\":%.9g,\"y\":%.9g,\"zoom\":%.9g},\"focus_layout\":%s,\"focus_auto_fit\":%s,",
             c->project->available&(1u<<v)?"true":"false",p->prepared?"true":"false",p->layout_choice,p->sort,p->horizontal,p->paused?"true":"false",(double)p->camera.target.x,(double)p->camera.target.y,(double)p->camera.zoom,p->distance_focus_enabled?"true":"false",p->focus_auto_fit?"true":"false");
+        gd_viewer_write(w,"\"focus_selection\":");viewer_focus_result(w,&p->focus_result);gd_viewer_write(w,",");
         viewer_member(w,"filter",p->filter); gd_viewer_write(w,","); viewer_member(w,"find_reference",*p->find_reference?p->find_reference:NULL);
         gd_viewer_write(w,",\"visible_matches\":%d,\"hidden_matches\":%d,\"selection\":",p->visible_matches,p->hidden_matches);
         item.pane=p;
@@ -298,7 +304,9 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
         viewer_toast(viewer,"CLI action in",gd_explorer_view_names[v]);
         gd_viewer_write(w,"{\"ok\":true,\"executed\":true,"); viewer_member(w,"action",request->action);
         gd_viewer_write(w,","); viewer_member(w,"projection",viewer_projections[v]); gd_viewer_write(w,","); viewer_member(w,"active_projection",viewer_projections[c->pane->view]);
-        gd_viewer_write(w,",\"focus_changed\":false,\"source_draft_changed\":false}"); return;
+        gd_viewer_write(w,",\"focus_changed\":false,\"source_draft_changed\":false");
+        if(action==GD_ACTION_VIEW_SELECTION_FOCUS){gd_viewer_write(w,",\"framing\":");viewer_focus_result(w,&target.pane->focus_result);}
+        gd_viewer_write(w,"}");return;
     }
     if (*request->reference && gd_explorer_record(gd_explorer_model(c->project,(GD_ExplorerView)v),request->reference)<0) {
         gd_viewer_error(w,"viewer.reference","Exact qualified source reference is absent or ambiguous; no approximate match"); return;

@@ -13,6 +13,13 @@
 #include "raylib.h"
 
 typedef struct { int cell, node, interaction, linked, held; } GD_ExplorerSelection;
+typedef enum { GD_FOCUS_NONE, GD_FOCUS_FRAMED, GD_FOCUS_PARTIAL, GD_FOCUS_HIDDEN, GD_FOCUS_UNREPRESENTED, GD_FOCUS_UNPLACED } GD_ExplorerFocusStatus;
+typedef struct {
+    GD_ExplorerFocusStatus status;
+    int selected,hidden,context;
+    bool clipped,hidden_link;
+    float zoom;
+} GD_ExplorerFocusResult;
 enum { GD_EXPLORER_FIT_GRID_READABLE=4, GD_EXPLORER_FIT_RESOURCE_WITNESS=5, GD_EXPLORER_FIT_QUERY_READABLE=6, GD_EXPLORER_FIT_SELECTION=7 };
 typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } GD_ExplorerSkillEditor;
 typedef struct {
@@ -85,6 +92,8 @@ typedef struct {
     GD_ExplorerView view;
     GD_Layout *layout;
     Camera2D camera,regular_camera;
+    GD_ExplorerFocusResult focus_result; /* Last camera action, not analytical input. */
+    bool focus_camera_override; /* Explicit framing wins next automatic distance-layout fit. */
     GD_LayoutFocus *distance_focus;
     bool distance_focus_enabled,focus_auto_fit;
     uint64_t distance_focus_revision;
@@ -139,8 +148,15 @@ typedef struct {
     Rectangle viewport;
     uint64_t scope_revision;
     GD_Layout *display_layout; /* Borrowed render-only pose; never a solver target. */
+    const struct GD_RenderPose *render_pose; /* Optional viewer-owned pose for camera actions only; IPC positions remain raw. */
 } GD_ExplorerContext;
 static inline GD_Layout *gd_explorer_display_layout(const GD_ExplorerContext *context) {return context->display_layout ? context->display_layout:context->pane->layout;}
+
+/* Camera only. Context viewport is drawable canvas; no allocation/evaluation. */
+int gd_explorer_focus_available(const GD_ExplorerContext *context);
+int gd_explorer_focus_selection(GD_ExplorerContext *context);
+void gd_explorer_focus_camera(Camera2D *camera,Rectangle viewport,Rectangle selected,Rectangle context,Vector2 primary,GD_ExplorerFocusResult *result);
+int gd_explorer_similarity_focus(GD_ExplorerContext *context);
 
 int gd_explorer_graph_prepare(GD_ExplorerContext *context);
 void gd_explorer_graph_input(GD_ExplorerContext *context);

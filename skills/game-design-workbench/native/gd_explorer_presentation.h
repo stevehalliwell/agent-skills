@@ -329,6 +329,7 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     if(!strcmp(name,"view.find.clear")) {*p->find_reference=0;matches(c);return 1;}
     if(!strcmp(name,"view.witness.fit")) {if(p->view!=GD_EXPLORER_RESOURCES || !p->resource_routes || !p->resource_routes->witness_count)return 0;p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;return 1;}
     if(!strcmp(name,"view.cell.fit")) {int nodes[2];if(gd_explorer_similarity_active(c) || p->selection.node>=0 || !pair_selection_nodes(c,nodes))return 0;if(grid_view(p))grid_frame_selection(c);else p->fit=GD_EXPLORER_FIT_SELECTION;return 1;}
+    if(!strcmp(name,"view.selection.focus")) {GD_ExplorerContext canvas=*c;if(!gd_explorer_similarity_active(c) && (grid_view(p) || p->view==GD_EXPLORER_NOUNS)){canvas.viewport.y+=GD_COUNT_GRID_HEADER;canvas.viewport.height-=GD_COUNT_GRID_HEADER;}return gd_explorer_focus_selection(&canvas);}
     if(!strcmp(name,"view.fit")) { if(gd_explorer_similarity_active(c)) p->structure_state->similarity_fit=true; else p->fit=1; return 1; }
     if(!strcmp(name,"view.rearrange")) { gd_explorer_presentation_read(c,&values); return presentation_rearrange(c,&values,1); }
     if(!strcmp(name,"view.start.clear")) { p->paths.count=p->paths.lost=0; return 1; }

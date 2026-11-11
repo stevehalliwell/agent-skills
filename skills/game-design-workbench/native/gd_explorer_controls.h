@@ -68,7 +68,7 @@ int gd_explorer_rule_mode(GD_ExplorerRuleForm *form, int mode);
 /* Application actions, shared by buttons and control callers; no transport or OS input. */
 typedef enum { GD_ACTION_QUERY_RUN, GD_ACTION_QUERY_DISPLAY, GD_ACTION_STRUCTURE_RUN,
     GD_ACTION_STRUCTURE_CLEAR, GD_ACTION_RULES_RUN, GD_ACTION_RULES_CLEAR, GD_ACTION_RESOURCE_RUN, GD_ACTION_RESOURCE_CLEAR, GD_ACTION_VIEW_FIT, GD_ACTION_VIEW_REARRANGE, GD_ACTION_VIEW_EXPAND,
-    GD_ACTION_VIEW_START_ADD, GD_ACTION_VIEW_START_CLEAR, GD_ACTION_VIEW_ANALYZE, GD_ACTION_VIEW_COMPARE, GD_ACTION_VIEW_RESET, GD_ACTION_VIEW_FIND_CLEAR, GD_ACTION_VIEW_WITNESS_FIT, GD_ACTION_VIEW_CELL_FIT, GD_ACTION_COUNT } GD_ExplorerAction;
+    GD_ACTION_VIEW_START_ADD, GD_ACTION_VIEW_START_CLEAR, GD_ACTION_VIEW_ANALYZE, GD_ACTION_VIEW_COMPARE, GD_ACTION_VIEW_RESET, GD_ACTION_VIEW_FIND_CLEAR, GD_ACTION_VIEW_WITNESS_FIT, GD_ACTION_VIEW_CELL_FIT, GD_ACTION_VIEW_SELECTION_FOCUS, GD_ACTION_COUNT } GD_ExplorerAction;
 typedef struct { const char *name,*label; unsigned views; GD_ExplorerForm form; } GD_ExplorerActionInfo;
 const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action);
 int gd_explorer_action_available(const GD_ExplorerContext *context, GD_ExplorerAction action);

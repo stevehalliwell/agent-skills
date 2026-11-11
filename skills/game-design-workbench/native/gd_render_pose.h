@@ -8,7 +8,7 @@
 #include <string.h>
 #include "gd_layout.h"
 typedef struct { double raw_x,raw_y,x,y,dx,dy; } GD_RenderSample;
-typedef struct {
+typedef struct GD_RenderPose {
     GD_Layout layout;
     GD_RenderSample samples[GD_MAX_RECORDS];
     int anchors[GD_MAX_RECORDS];

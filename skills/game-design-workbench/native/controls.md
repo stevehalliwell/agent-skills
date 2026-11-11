@@ -38,9 +38,15 @@ Actors/Effects add presentation `layout: native | free`; Native remains default.
 - `resource.run`, `resource.clear`.
 - `view.fit`, `view.rearrange`, `view.expand`.
 - `view.start.add`, `view.start.clear`, `view.analyze`, `view.compare`.
-- `view.reset`, `view.find.clear`, `view.witness.fit`, `view.cell.fit`.
+- `view.reset`, `view.find.clear`, `view.witness.fit`, `view.cell.fit`, `view.selection.focus`.
 
 `view.cell.fit` / **Frame selected pair** frames retained endpoints in Verb usage and Noun interactions Grid/columns/Free. Blank cells keep endpoints without inferred links; inactive links remain hidden unless existing overlay is enabled. Layout changes frame retained selection; Grid return centres selected cell/header at readable zoom. Case/source inspection stays retained. `view.fit` / `F` still fits whole canvas. Ordinary projection switches keep independent selections; explicit **Find selected in…** follows source association without replacing destination selection or filters. [Selection contract and checks](../../../reports/graph-query-research/selection-continuity.md).
+
+`view.selection.focus` / **Focus selection** is camera-only across unified views/modes. Include visible direct neighbors when readable; floor1.0 zoom, fallback to selected items or primary endpoint for oversized context. Hidden/unrepresented selections leave camera unchanged. Grid focuses cell/header; similarity focuses placed entry/selected peer, with no topology changes. No selection disables action. Existing busy/token guards apply; no Run, filter change, node move or sampler reset. Action returns `framing` (`status`, `selected_items`, `hidden_items`, `context_nodes`, `clipped`, `hidden_link`, `zoom`); `inspect --fields panes` includes last `focus_selection` report. `focus_changed:false` still means no projection/OS-focus switch, not no camera change. [Framing policy and checks](../../../reports/graph-query-research/focus-selection.md).
+
+```sh
+gd viewer action --target SESSION --projection mda --action view.selection.focus --expect PRESENTATION_TOKEN --json
+```
 
 Discover current availability with `viewer actions`. `view.analyze` explicitly prepares shown-canvas layer/knowledge evidence; Query, Grid and similarity canvases do not masquerade as ordinary graph-layer caches. `view.compare` explicitly computes retained Actor/similarity pair evidence. Reads never run either action. Reset rejects dirty drafts or retained Undo and builds replacement before releasing previous pane state.
 
