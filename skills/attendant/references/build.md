@@ -85,7 +85,7 @@ bash build-gui.sh cjit --check
 bash build-gui.sh zig --check
 bash tools/check-gui.sh
 bash tools/benchmark.sh 5
-# macOS only; user qualification of new C replacements remains pending:
+# macOS only:
 bash tools/check-control-macos.sh
 bash tools/check-bridge.sh
 ```
@@ -118,7 +118,7 @@ build/attendant-zig --help
 
 Source publication uses staged flushes and atomic rename/create-exclusive publication. On macOS, failed collection/feedback bootstrap retains already-published files and reports written paths; no check-and-unlink rollback or custom recovery system. Staging files and empty owned directories are cleaned. Inspect reported files before retrying. Windows keeps handle-based rollback. API failure checks cover retained seed/comment files, external edits, config conflicts and retry without overwrite.
 
-GUI: native arm64 dependency library, C99 application and bridge consumers with GLFW 3.4/OpenGL3, matching pinned upstream RichMd examples. Windows retains Win32/D3D11. Requires installed Zig, make, Apple command-line tools/SDK and CJIT for dual-compiler bridge checks. New C/Bash replacement compilation/runtime remains unvalidated on macOS; user follow-up is tracked in project TODO. No script installs tools.
+GUI: native arm64 dependency library, C99 application and bridge consumers with GLFW 3.4/OpenGL3, matching pinned upstream RichMd examples. Windows retains Win32/D3D11. Requires installed Zig, make, Apple command-line tools/SDK and CJIT for dual-compiler bridge checks. C/Bash replacements pass fresh macOS 14.5 arm64 compilation/runtime validation with CJIT/Zig; [project checks](../../../TODO.md#checks) retain evidence and scoped test fixes. No script installs tools.
 
 Explicit acquisition and checks:
 

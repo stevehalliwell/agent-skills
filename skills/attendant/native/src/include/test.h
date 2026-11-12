@@ -696,12 +696,37 @@ static int test_command_posix_read(int descriptor, char *output, usize capacity,
     else { view->len += (usize)count; output[view->len] = 0; }
     return 1;
 }
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#include <sys/proc.h>
+#endif
+static int test_command_posix_kill_group(pid_t child) {
+    if (!kill(-child, SIGKILL) || errno == ESRCH) return 0;
+#if defined(__APPLE__)
+    if (errno == EPERM) {
+        /* Darwin skips exiting processes/zombies when signaling groups and may
+           return EPERM. Never hide a live member's permission failure.
+           Refuse inventories beyond this bound rather than assume cleanup. */
+        struct kinfo_proc members[64];
+        size_t size = sizeof(members);
+        int query[] = {CTL_KERN, KERN_PROC, KERN_PROC_PGRP, child};
+        if (!sysctl(query, 4, members, &size, NULL, 0) && size % sizeof(members[0]) == 0) {
+            int exiting_only = 1;
+            for (size_t i = 0; i < size / sizeof(members[0]); ++i)
+                if (members[i].kp_proc.p_stat != SZOMB && !(members[i].kp_proc.p_flag & P_WEXIT)) exiting_only = 0;
+            if (exiting_only) return 0;
+        }
+        errno = EPERM;
+    }
+#endif
+    return -1;
+}
 static void test_command_posix_finish(test_command_live *live) {
     test_command_result *result = &live->result;
     pid_t child = live->process;
     if (child) {
         /* Keep child unreaped through cancellation: its group ID cannot be reused. */
-        if (kill(-child, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
+        if (test_command_posix_kill_group(child)) test_command_fail(result, test_command_cleanup_failed, errno);
         if (kill(child, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
         int status = 0, reaped = 0;
         for (unsigned attempt = 0; attempt <= TEST_COMMAND_CLEANUP_MS; ++attempt) {
@@ -827,7 +852,7 @@ static void test_command_posix_poll(test_command_live *live) {
             else if (errno != EINTR) test_command_fail(result, test_command_io_failed, errno);
         } else if (info.si_pid) {
             live->observed = 1;
-            if (kill(-live->process, SIGKILL) && errno != ESRCH) test_command_fail(result, test_command_cleanup_failed, errno);
+            if (test_command_posix_kill_group(live->process)) test_command_fail(result, test_command_cleanup_failed, errno);
         }
     }
     if (!live->output_done && result->error == test_command_ok)
