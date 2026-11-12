@@ -32,12 +32,19 @@ static int model_delayed_inspection(gui_workspace *workspace) {
             pipe_wait(&connection, 1000, &bytes) == pipe_error_ok && bytes == sizeof(request) &&
             pipe_begin(&connection, pipe_operation_read, &reply, sizeof(reply)) == pipe_error_pending &&
             pipe_wait(&connection, 1000, &bytes) == pipe_error_ok && bytes == sizeof(reply) && reply == GUI_INSPECT_RESULT;
+        if (!received) fprintf(stderr, "Delayed inspection: request/reply failed (reply %u, bytes %zu)\n", reply, bytes);
         system_sleep(100);
-        if (received) received = pipe_begin(&connection, pipe_operation_read, snapshot, sizeof(*snapshot)) == pipe_error_pending &&
-            pipe_wait(&connection, 1500, &bytes) == pipe_error_ok &&
-            gui_inspection_accept(snapshot, workspace->root, snapshot, bytes) &&
-            snapshot->header.length == GUI_TEXT && snapshot->header.context_length == GUI_TEXT &&
-            !memcmp(snapshot->text, input, capacity);
+        if (received) {
+            pipe_error begin = pipe_begin(&connection, pipe_operation_read, snapshot, sizeof(*snapshot));
+            /* Server enforces its own 2000 ms connection deadline. Do not
+               impose a shorter client deadline on maximum-size backpressure. */
+            pipe_error waited = begin == pipe_error_pending ? pipe_wait(&connection, 2000, &bytes) : begin;
+            received = waited == pipe_error_ok &&
+                gui_inspection_accept(snapshot, workspace->root, snapshot, bytes) &&
+                snapshot->header.length == GUI_TEXT && snapshot->header.context_length == GUI_TEXT &&
+                !memcmp(snapshot->text, input, capacity);
+            if (!received) fprintf(stderr, "Delayed inspection: snapshot failed (begin %d, wait %d, bytes %zu, used %zu/%u)\n", begin, waited, bytes, connection.used, connection.message_size);
+        }
         pipe_close(&connection, 0); _exit(received ? 0 : 1);
     }
     uint32_t started = system_milliseconds();

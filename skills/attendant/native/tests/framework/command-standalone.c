@@ -21,8 +21,48 @@ static int standalone_clock(clockid_t clock, struct timespec *now) {
 }
 #define clock_gettime standalone_clock
 #endif
+#if defined(__APPLE__)
+#include <signal.h>
+#include <sys/sysctl.h>
+#include <sys/proc.h>
+static int standalone_group_mode;
+static int standalone_kill(pid_t process, int signal_number) {
+    if (!standalone_group_mode) return kill(process, signal_number);
+    errno = standalone_group_mode == 5 ? ESRCH : EPERM;
+    return -1;
+}
+static int standalone_sysctl(int *query, u_int count, void *output, size_t *size, void *input, size_t input_size) {
+    if (!standalone_group_mode) return sysctl(query, count, output, size, input, input_size);
+    if (standalone_group_mode == 3 || standalone_group_mode == 4) {
+        errno = standalone_group_mode == 3 ? EACCES : ENOMEM;
+        return -1;
+    }
+    struct kinfo_proc *member = output;
+    memset(member, 0, sizeof(*member));
+    member->kp_proc.p_stat = standalone_group_mode == 2 ? SZOMB : SRUN;
+    if (standalone_group_mode == 6) member->kp_proc.p_flag = P_WEXIT;
+    *size = sizeof(*member);
+    return 0;
+}
+#define kill standalone_kill
+#define sysctl standalone_sysctl
+#endif
 #include "test.h"
+#if defined(__APPLE__)
+#undef kill
+#undef sysctl
+#endif
 int main(void) {
+#if defined(__APPLE__)
+    /* Darwin exiting-only EPERM is benign; live/unknown members must fail. */
+    for (int mode = 1; mode <= 6; ++mode) {
+        standalone_group_mode = mode;
+        errno = 0;
+        int error = test_command_posix_kill_group(123);
+        TEST_ASSERT(mode == 2 || mode == 5 || mode == 6 ? error == 0 : error == -1 && errno == EPERM);
+    }
+    standalone_group_mode = 0;
+#endif
     static u8 memory[262144]; char output[128], errors[128], helper[NATIVE_PATH_SIZE];
     test_command_workspace workspace = {arena_from_buffer(memory, sizeof(memory)), output, errors, sizeof(output), sizeof(errors)};
     usize size;
