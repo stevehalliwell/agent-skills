@@ -59,8 +59,14 @@ Preserve typed identities, independent pane state, atomic last-good failures, ex
 - Warning-free CJIT adapter and production viewer builds: `native/build/shared-ux-reset-work/`. Implementation checkpoint authorized after interactive review.
 - Focused Node10/10 pass with unchanged hashes for both examples: shared UX, Find, flags and normal IPC. Extended deep checks/research deliberately not rerun for this follow-up. Current shared-UX checks: Crate344 / Mario360, including global reset, failure rollback, drag guard, draft byte identity, working preserved Undo/Redo, missing-token rejection and successful guarded IPC reset.
 - User authorized closing prior viewer and launching new build. Verified prior viewer had no draft edits/history/pending rank text; closed PID11940 through normal window-close request, without forced termination. Opened Mario MDA PID3884 / session `3884-c734fb8b8e31108d` from `shared-ux-reset-work/`.
-- User reports Reset all worked and authorizes checkpoint commit. Back/Forward also reviewed as working. Acceptance covers these reviewed interactions, not unperformed draft-edit/refresh, every-view or platform checks.
+- User reports Reset all worked and authorizes checkpoint commit. Back/Forward also reviewed as working. Acceptance at checkpoint covers these reviewed interactions, not unperformed every-view or platform checks.
+
+## Draft interaction review
+
+- Same Mario viewer PID3884. User completed Skills rank edit, Undo/Redo and Reset all draft-preservation walkthrough. Follow-up IPC inspection confirmed one modified record, one Undo step, zero Redo steps and no pending rank input.
+- User reports refresh-safety sequence works: dirty draft blocks F5; Undo to baseline leaves Redo; F5 prompts for discard; Cancel retains Redo; confirmed discard permits refresh and clears draft history.
+- Record reviewed rank/history/refresh paths as working. Prerequisite editing, failed reload/output retention, full handoff, every-view and platform checks remain separate. No source edits or new commit authorized by review feedback.
 
 ## Status
 
-Contract checkpoint `e0458db` committed before implementation, not pushed. Implementation complete for reviewed contract and subsequent clarifications. User authorized implementation checkpoint after Back/Forward and Reset all review. Broader presentation, draft-edit/refresh and every-view acceptance remain open.
+Contract checkpoint `e0458db` committed before implementation, not pushed. Implementation complete for reviewed contract and subsequent clarifications. User authorized implementation checkpoint after Back/Forward and Reset all review. Rank Undo/Redo, Reset all draft preservation and refresh/discard paths reviewed as working. Broader presentation, prerequisite-edit, failure-retention and every-view acceptance remain open.
