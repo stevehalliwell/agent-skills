@@ -14,7 +14,7 @@ static int presentation_token(const char *reply,const char *name,char *out,size_
 }
 static int viewer_result_reassemble(ExplorerViewer *viewer,GD_ExplorerView view,const char *form,const char *fields,char *reply) {
     GD_Allocator a=viewer->context->project->allocator;char *assembled=a.allocate(a.context,GD_VIEWER_REPLY_LIMIT),chunk[65537];GD_ViewerRequest request={0};GD_ViewerWriter w;size_t used=0;int okay=0;
-    if(!assembled)return 0;strcpy(request.command,"result");strcpy(request.projection,viewer_projections[view]);snprintf(request.form,sizeof(request.form),"%s",form);snprintf(request.fields,sizeof(request.fields),"%s",fields ? fields:"");request.limit=1;
+    if(!assembled)return 0;strcpy(request.command,"result");strcpy(request.projection,viewer_projections[view]);snprintf(request.form,sizeof(request.form),"%s",form);snprintf(request.fields,sizeof(request.fields),"%s",fields ? fields:"");request.limit=64; /* KiB: inspect complete payload with fewer serializations. */
     for(;;){int count;const char *next;unsigned long offset;char *end;
         w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);if(w.failed || (count=presentation_decode(reply,chunk,sizeof(chunk)))<0 || used+(size_t)count>=GD_VIEWER_REPLY_LIMIT)goto done;
         memcpy(assembled+used,chunk,(size_t)count);used+=(size_t)count;
@@ -41,7 +41,7 @@ static unsigned long presentation_footprint_overlaps(const GD_Layout *layout) {
     return count;
 }
 #include "test_layout_reference.h"
-static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int *calls,char *reply) {
+static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int *calls,char *reply,int run_layout_research) {
     GD_Allocator a=original->context->project->allocator;GD_ExplorerContext c=*original->context,target;GD_ExplorerPane *panes=NULL;ExplorerViewer viewer={0};GD_ViewerRequest request={0};GD_ViewerWriter w;
     int checks=0,result=0,active=GD_EXPLORER_MATRIX,stale=0,v,before,i;char decoded[65537],token[64],key[GD_MAX_PATH];
     GD_GraphAnalysis *analysis=NULL;GD_SkillUnlocks *knowledge=NULL;
@@ -80,7 +80,9 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(c.project->available&(1u<<v)) {
         PRESENT_REQUEST("controls",v);strcpy(request.form,"presentation");before=*calls;PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"\"presentation\"") && *calls==before && !panes[v].prepared);
         target=c;target.pane=&panes[v];PRESENT_CHECK(pane_prepare(&target));
-        if(v==GD_EXPLORER_MATRIX || v==GD_EXPLORER_RESOURCES || v==GD_EXPLORER_EFFECTS || v==GD_EXPLORER_NOUNS)PRESENT_CHECK(presentation_layout_reference(&target));
+        /* Comparative traces require research opt-in. Resource/noun gates
+           below remain mandatory within deep mode; thresholds/steps unchanged. */
+        if(run_layout_research && (v==GD_EXPLORER_MATRIX || v==GD_EXPLORER_RESOURCES || v==GD_EXPLORER_EFFECTS || v==GD_EXPLORER_NOUNS))PRESENT_CHECK(presentation_layout_reference(&target));
         if(free_graph(&panes[v]) && !grid_view(&panes[v])){
             GD_LayoutNode node=panes[v].layout->nodes[0];bool paused=panes[v].paused;GD_ExplorerSelection selection=panes[v].selection;
             PRESENT_STAGE(v,"workspace_bounds","true");PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].workspace_bounds && panes[v].layout->workspace.enabled==(panes[v].layout->node_count>0));

@@ -83,52 +83,68 @@ test('current-view Find adapter: both examples unchanged',{skip:!adapter},async 
     assert.deepEqual(await sourceHashes(root),before);
   });
 });
-test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:!nativeTransport||!adapter},async t=>{
+test('diagnostic flag parsing rejects implicit or malformed modes',{skip:!adapter},()=>{
+  const root=join(examples,'crate-puzzle','game-design');
+  for(const args of [['--layout-research',root],['--deep-checks',root],['--ipc-helpers',root,'--layout-reseach'],['--ipc-helpers',root,'--deep-check'],['--find-helpers',root,'--layout-research'],['--find-helpers',root,'--deep-checks'],['--ipc-helpers',root,'--layout-research','--layout-research'],['--ipc-helpers',root,'--deep-checks','--deep-checks']]){
+    const result=spawnSync(adapter,args,{encoding:'utf8',windowsHide:true,timeout:30000});
+    assert.equal(result.status,2,result.stderr);assert.equal(result.stdout,'');assert.match(result.stderr,/--ipc-helpers GAME-DESIGN-DIRECTORY \[--deep-checks\] \[--layout-research\]/);
+  }
+});
+for(const [runDeepChecks,runLayoutResearch] of [[false,false],[true,false],[true,true]])test(runLayoutResearch ? 'layout research: explicit opt-in, both examples unchanged':runDeepChecks ? 'deep explorer checks: explicit opt-in, both examples unchanged':'production explorer IPC adapter: CPU-only, both examples unchanged',{
+  skip:!nativeTransport||!adapter||(runLayoutResearch ? process.env.GD_LAYOUT_RESEARCH!=='1':runDeepChecks && process.env.GD_DEEP_CHECKS!=='1')
+},async t=>{
   for(const name of ['crate-puzzle','little-plumber-guy-nes'])await t.test(name,async()=>{
     const root=join(examples,name,'game-design'),before=await sourceHashes(root);
-    // Dense Mario plus matched 4096-step diagnostics exceeds former 30s budget.
-    const result=spawnSync(adapter,['--ipc-helpers',root],{encoding:'utf8',windowsHide:true,timeout:90000,maxBuffer:2*1024*1024});
+    const args=['--ipc-helpers',root];if(runLayoutResearch)args.push('--layout-research');else if(runDeepChecks)args.push('--deep-checks');
+    const result=spawnSync(adapter,args,{encoding:'utf8',windowsHide:true,timeout:90000,maxBuffer:2*1024*1024});
     assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
     const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.checks>=180);assert.ok(value.control_checks>=500);assert.ok(value.feedback_checks>=10);assert.ok(value.sidebar_checks>=34);assert.ok(value.configuration_checks>=50);
-    assert.ok(value.presentation_checks>=150);
-    const references=result.stderr.split(/\r?\n/).filter(line=>line.startsWith('layout-reference ')).map(line=>JSON.parse(line.slice('layout-reference '.length)));
-    const topologies=references.filter(row=>row.kind==='topology');assert.equal(topologies.length,19);
-    for(const topology of topologies){
-      assert.equal(topology.aspect,1.4);assert.equal(topology.footprints,'adapter-only');assert.equal(topology.world_scale,1);
-      assert.equal(topology.workspace_enabled,topology.profile==='bounded-workspace');
-      if(topology.workspace_enabled){assert.ok(topology.workspace_right>topology.workspace_left);assert.ok(topology.workspace_bottom>topology.workspace_top);}
-      assert.ok(topology.components>=1 && topology.components<=topology.nodes);
-      assert.ok(topology.unique_neighbor_pairs>=topology.nodes-topology.components);
-      assert.ok(topology.active_nonself_springs>=topology.unique_neighbor_pairs);
-      assert.ok(topology.degree_median<=topology.degree_p90 && topology.degree_p90<=topology.degree_max);
-      assert.ok(Math.abs(topology.degree_mean-2*topology.unique_neighbor_pairs/topology.nodes)<=0.000001);
-      const samples=references.filter(row=>row.kind==='motion' && row.view===topology.view && row.seed===topology.seed && row.profile===topology.profile && row.startup_steps===topology.startup_steps);
-      assert.deepEqual(samples.map(row=>row.step),[0,120,600,4096]);
-      assert.deepEqual(samples.map(row=>row.window),[0,120,256,256]);
-      for(const sample of samples){
-        for(const key of ['rms','max_step','visual_rms','visual_max_step','centroid_drift','extent_width','extent_height'])assert.ok(Number.isFinite(sample[key]) && sample[key]>=0,key);
-        assert.ok(sample.rms<=sample.max_step+0.000001);
-        assert.ok(sample.visual_rms<=sample.visual_max_step+0.000001);
-        assert.ok(sample.limited_steps<=sample.window && sample.max_collision_checks<=65536);
-        assert.ok(sample.overlaps>=0 && sample.overlaps<=topology.nodes*(topology.nodes-1)/2);
-        assert.ok(sample.outside_nodes>=0 && sample.outside_nodes<=topology.nodes && Number.isFinite(sample.max_overflow) && sample.max_overflow>=0);
-        assert.ok(sample.boundary_nodes>=0 && sample.boundary_nodes<=topology.nodes);
-        if(topology.workspace_enabled)assert.ok(sample.outside_nodes===0 && sample.max_overflow<=0.01);
+    assert.equal(value.deep_checks,runDeepChecks);assert.equal(value.layout_research,runLayoutResearch);
+    if(runDeepChecks)assert.ok(value.presentation_checks>=150);else assert.equal(value.presentation_checks,0);
+    if(runLayoutResearch){
+      const references=result.stderr.split(/\r?\n/).filter(line=>line.startsWith('layout-reference ')).map(line=>JSON.parse(line.slice('layout-reference '.length)));
+      const topologies=references.filter(row=>row.kind==='topology');assert.equal(topologies.length,19);
+      for(const topology of topologies){
+        assert.equal(topology.aspect,1.4);assert.equal(topology.footprints,'adapter-only');assert.equal(topology.world_scale,1);
+        assert.equal(topology.workspace_enabled,topology.profile==='bounded-workspace');
+        if(topology.workspace_enabled){assert.ok(topology.workspace_right>topology.workspace_left);assert.ok(topology.workspace_bottom>topology.workspace_top);}
+        assert.ok(topology.components>=1 && topology.components<=topology.nodes);
+        assert.ok(topology.unique_neighbor_pairs>=topology.nodes-topology.components);
+        assert.ok(topology.active_nonself_springs>=topology.unique_neighbor_pairs);
+        assert.ok(topology.degree_median<=topology.degree_p90 && topology.degree_p90<=topology.degree_max);
+        assert.ok(Math.abs(topology.degree_mean-2*topology.unique_neighbor_pairs/topology.nodes)<=0.000001);
+        const samples=references.filter(row=>row.kind==='motion' && row.view===topology.view && row.seed===topology.seed && row.profile===topology.profile && row.startup_steps===topology.startup_steps);
+        assert.deepEqual(samples.map(row=>row.step),[0,120,600,4096]);
+        assert.deepEqual(samples.map(row=>row.window),[0,120,256,256]);
+        for(const sample of samples){
+          for(const key of ['rms','max_step','visual_rms','visual_max_step','centroid_drift','extent_width','extent_height'])assert.ok(Number.isFinite(sample[key]) && sample[key]>=0,key);
+          assert.ok(sample.rms<=sample.max_step+0.000001);
+          assert.ok(sample.visual_rms<=sample.visual_max_step+0.000001);
+          assert.ok(sample.limited_steps<=sample.window && sample.max_collision_checks<=65536);
+          assert.ok(sample.overlaps>=0 && sample.overlaps<=topology.nodes*(topology.nodes-1)/2);
+          assert.ok(sample.outside_nodes>=0 && sample.outside_nodes<=topology.nodes && Number.isFinite(sample.max_overflow) && sample.max_overflow>=0);
+          assert.ok(sample.boundary_nodes>=0 && sample.boundary_nodes<=topology.nodes);
+          if(topology.workspace_enabled)assert.ok(sample.outside_nodes===0 && sample.max_overflow<=0.01);
+        }
       }
-    }
-    // Independent existing noun probe checks generic ring-window aggregation.
-    for(const seed of ['native','neighborhood']){
-      const legacy=result.stderr.match(new RegExp(`Noun force probe \\(${seed}\\).*tail RMS ([0-9.]+) max ([0-9.]+) / centroid drift ([0-9.]+)`));assert.ok(legacy);
-      const measured=references.find(row=>row.kind==='motion' && row.view==='noun-interactions' && row.seed===seed && row.step===4096);
-      assert.deepEqual([measured.rms,measured.max_step,measured.centroid_drift],legacy.slice(1).map(Number));
-    }
-    const raw120=references.find(row=>row.kind==='motion' && row.view==='resources' && row.seed==='native' && row.startup_steps===0 && row.step===120);
-    const warm0=references.find(row=>row.kind==='motion' && row.view==='resources' && row.seed==='native' && row.startup_steps===120 && row.step===0);
-    assert.deepEqual([raw120.extent_width,raw120.extent_height,raw120.overlaps],[warm0.extent_width,warm0.extent_height,warm0.overlaps]);
-    const layers=value.layer_result;assert.equal(layers.ok,true);assert.match(layers.scope,/shown-canvas/);
-    assert.equal(layers.nodes.length,layers.shown_nodes);assert.ok(layers.nodes.every(node=>typeof node.id==='string'));
-    assert.ok(layers.links.every(link=>link.from>=0 && link.from<layers.nodes.length && link.to>=0 && link.to<layers.nodes.length));
-    assert.equal(layers.foundations,null);assert.ok(layers.shapes?.valid);assert.ok(layers.overview?.valid);
+      // Independent existing noun probe checks generic ring-window aggregation.
+      for(const seed of ['native','neighborhood']){
+        const legacy=result.stderr.match(new RegExp(`Noun force probe \\(${seed}\\).*tail RMS ([0-9.]+) max ([0-9.]+) / centroid drift ([0-9.]+)`));assert.ok(legacy);
+        const measured=references.find(row=>row.kind==='motion' && row.view==='noun-interactions' && row.seed===seed && row.step===4096);
+        assert.deepEqual([measured.rms,measured.max_step,measured.centroid_drift],legacy.slice(1).map(Number));
+      }
+      const raw120=references.find(row=>row.kind==='motion' && row.view==='resources' && row.seed==='native' && row.startup_steps===0 && row.step===120);
+      const warm0=references.find(row=>row.kind==='motion' && row.view==='resources' && row.seed==='native' && row.startup_steps===120 && row.step===0);
+      assert.deepEqual([raw120.extent_width,raw120.extent_height,raw120.overlaps],[warm0.extent_width,warm0.extent_height,warm0.overlaps]);
+    }else assert.doesNotMatch(result.stderr,/^layout-reference /m);
+    if(runDeepChecks){
+      assert.match(result.stderr,/Resource footprint probe:/);
+      for(const seed of ['native','neighborhood'])assert.ok(result.stderr.includes(`Noun force probe (${seed})`));
+      const layers=value.layer_result;assert.equal(layers.ok,true);assert.match(layers.scope,/shown-canvas/);
+      assert.equal(layers.nodes.length,layers.shown_nodes);assert.ok(layers.nodes.every(node=>typeof node.id==='string'));
+      assert.ok(layers.links.every(link=>link.from>=0 && link.from<layers.nodes.length && link.to>=0 && link.to<layers.nodes.length));
+      assert.equal(layers.foundations,null);assert.ok(layers.shapes?.valid);assert.ok(layers.overview?.valid);
+    }else{assert.equal(value.layer_result,null);assert.doesNotMatch(result.stderr,/Resource footprint probe:|Noun force probe/);}
     const catalogue=value.control_catalogue;assert.equal(catalogue.ok,true);assert.equal(catalogue.projection,'actors');
     const form=catalogue.forms.find(form=>form.name==='query');assert.match(form.control_token,/^[a-f0-9]{16}$/);
     assert.equal(form.fields.length,16);assert.ok(form.applied);assert.equal(form.fields.find(field=>field.name==='coverage').value,'false');
@@ -154,7 +170,7 @@ test('production explorer IPC adapter: CPU-only, both examples unchanged',{skip:
     assert.ok(snapshot.snapshots.every(family=>family.collections.every(collection=>collection.alias&&collection.directory)));
     assert.equal(snapshot.limits.source_writes,false);assert.equal(snapshot.limits.derived_navigation,true);assert.equal(snapshot.limits.application_controls,false);assert.equal(snapshot.limits.application_actions,true);assert.equal(snapshot.limits.source_refresh,true);assert.equal(snapshot.limits.form_controls,true);
     assert.equal('source' in snapshot,false);
-    assert.equal(snapshot.agent_hint.stale,true);assert.equal(snapshot.reload_generation,'2');assert.equal(typeof snapshot.agent_hint.id,'string');
+    assert.equal(snapshot.agent_hint.stale,runDeepChecks);assert.equal(snapshot.reload_generation,runDeepChecks ? '2':'1');assert.equal(typeof snapshot.agent_hint.id,'string');
     const page=value.node_page;assert.equal(page.projection,'matrix');assert.equal(page.prepared,true);
     assert.equal(page.canvas,'ordinary');assert.equal(page.nodes.length,2);assert.equal(page.offset,0);assert.equal(page.next_offset,2);assert.ok(page.total>2);
     for(const node of page.nodes) {

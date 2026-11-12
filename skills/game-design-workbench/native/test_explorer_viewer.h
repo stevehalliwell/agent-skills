@@ -7,7 +7,7 @@
 #include "test_sidebar.h"
 #include "test_explorer_presentation.h"
 #include "test_explorer_configuration.h"
-int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, int count, int *fail_at, int *calls) {
+int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, int count, int *fail_at, int *calls,int run_deep_checks,int run_layout_research) {
     GD_ExplorerProject *project=gd_explorer_load(a,collections,count);
     GD_ExplorerPane *panes=NULL,*before=NULL; GD_GraphAnalysis *analysis=NULL; char *reply=NULL,*configuration_json=NULL,*presentation_json=NULL;
     GD_ExplorerContext c={0}; ExplorerViewer viewer={0}; GD_ViewerRequest request={0};
@@ -17,6 +17,7 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
 #define DISPATCH(command_,projection_,reference_) do { memset(&request,0,sizeof(request)); snprintf(request.command,sizeof(request.command),"%s",command_); snprintf(request.projection,sizeof(request.projection),"%s",projection_); snprintf(request.reference,sizeof(request.reference),"%s",reference_); w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_dispatch(&viewer,&request,&w); } while (0)
 #define ACTION(projection_,action_) do { memset(&request,0,sizeof(request)); strcpy(request.command,"action"); snprintf(request.projection,sizeof(request.projection),"%s",projection_); snprintf(request.action,sizeof(request.action),"%s",action_); w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_dispatch(&viewer,&request,&w); } while (0)
     CHECK(project && !gd_explorer_error(project) && (project->available&(1u<<active)));
+    CHECK(!run_layout_research || run_deep_checks);
     panes=a.allocate(a.context,sizeof(*panes)*GD_EXPLORER_VIEWS);
     if (panes) memset(panes,0,sizeof(*panes)*GD_EXPLORER_VIEWS);
     before=a.allocate(a.context,sizeof(*panes)*GD_EXPLORER_VIEWS);
@@ -130,7 +131,7 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
         ACTION("resources","rules.run"); CHECK(!strncmp(reply,"{\"ok\":true",10) && panes[GD_EXPLORER_RESOURCES].rule_state->bindings);
         CHECK(!project->draft->modified_count && !project->draft->history_count);
     }
-    {
+    if(run_deep_checks){
         GD_ExplorerProject *last=c.project; uint64_t generation=viewer.reload_generation;char noun_a[260],noun_b[260];int noun_cases;
         {GD_ExplorerContext target=c;const GD_NounPair *pair=&c.project->noun_grid->pairs[0];target.pane=&panes[GD_EXPLORER_NOUNS];noun_grid_choose(&target,pair->a,pair->b);CHECK(gd_explorer_presentation_set(&target,"layout","free",target.pane->query_message,sizeof(target.pane->query_message)));noun_cases=pair->count;snprintf(noun_a,sizeof(noun_a),"%s",c.project->rules->model->records[pair->a].reference);snprintf(noun_b,sizeof(noun_b),"%s",c.project->rules->model->records[pair->b].reference);}
         GD_ExplorerQueryOptions actor_options=panes[GD_EXPLORER_ACTORS].query_options,effect_options=panes[GD_EXPLORER_EFFECTS].query_options;
@@ -157,13 +158,13 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
     }
     memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);
     configuration_checks=viewer_configuration_checks(&viewer,fail_at,calls,configuration_json); CHECK(configuration_checks>0);
-    presentation_checks=viewer_presentation_checks(&viewer,fail_at,calls,presentation_json); CHECK(presentation_checks>0);
+    if(run_deep_checks){presentation_checks=viewer_presentation_checks(&viewer,fail_at,calls,presentation_json,run_layout_research);CHECK(presentation_checks>0);}
     feedback_checks=viewer_feedback_checks(&viewer); CHECK(feedback_checks>0);
     sidebar_checks=viewer_sidebar_checks(); CHECK(sidebar_checks>0);
     CHECK(!memcmp(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS) && active==GD_EXPLORER_MATRIX && !project->draft->modified_count);
     DISPATCH("inspect","",""); CHECK(!w.failed && !strstr(reply,"\"body\":"));
     /* Outer Node test parses complete serialized production payloads. */
-    printf("{\"ok\":true,\"control_catalogue\":%s,\"snapshot\":%s,\"layer_result\":%s",configuration_json,reply,presentation_json);
+    printf("{\"ok\":true,\"deep_checks\":%s,\"layout_research\":%s,\"control_catalogue\":%s,\"snapshot\":%s,\"layer_result\":%s",run_deep_checks ? "true":"false",run_layout_research ? "true":"false",configuration_json,reply,run_deep_checks ? presentation_json:"null");
     DISPATCH("nodes","matrix",""); request.limit=2; w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_dispatch(&viewer,&request,&w);
     CHECK(!w.failed); printf(",\"node_page\":%s",reply);
     w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_inspect(&viewer,&w,"selection,source"); CHECK(!w.failed);

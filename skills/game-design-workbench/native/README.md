@@ -193,6 +193,32 @@ node --test skills/game-design-workbench/test/native-viewer.test.mjs
 
 Transport checks use owned headless fixtures, actual named pipes/DACL and CLI subprocesses. CPU-only `test-explorer-view.exe --ipc-helpers EXAMPLE/game-design` exercises production adapter without window/renderer initialization. Both example source trees are hashed before/after. IPC checkpoint checks: native core 128/128; 48 protocol cases plus 3 writer checks; targeted Node 18 passed/0 skipped; 215 CPU-only adapter checks per example. Latest shared-control/action/refresh and CPU ImGui-frame results: [checks and evidence](controls.md#checks). Cover non-consuming inspection/source/catalogue/hints, exact ordinary/Resource/finite-Actor/Effect/similarity navigation, unavailable coverage IDs, hidden/missing/ambiguous/stale rejection, guarded Find, independent pending controls, draft/Undo/diagnostic retention, every contributor-context allocation failure, exact targeting/Unicode/string bounds, oversized source replies, delayed reader and timeout outcome. Evidence: ignored `native/build/ipc-work/{core-next.log,protocol-next.json,node-next.log,adapter-next.json,adapter-next-plumber.json,build-*-next.log}`. Prepared DLL loading is not a GUI launch or rendered acceptance.
 
+### Diagnostic modes
+
+Normal `--ipc-helpers` runs basic adapter/control/query/configuration/serialization, feedback and sidebar checks. Complete-result tests use 64 KiB pages; full payload assertions remain. JSON reports `"deep_checks":false`, `"layout_research":false`, `"presentation_checks":0`, `"layer_result":null`.
+
+Optional suites are explicit:
+
+```powershell
+& "$out/test-explorer-view.exe" --ipc-helpers $game --deep-checks
+& "$out/test-explorer-view.exe" --ipc-helpers $game --layout-research
+```
+
+`--deep-checks` adds extended presentation/layout/selection, refresh/remap and small-page boundary checks. Includes unchanged Resource 600-step non-overlap and noun 4096-step convergence regression gates. `--layout-research` implies deep checks and adds 19 configurations ×4096 steps and 95 `layout-reference` JSON records on stderr. Both flags may be supplied in either order. Failed checks remain nonzero; no source writes or GUI launch.
+
+Node optional cases also need explicit environment opt-in:
+
+```powershell
+$env:GD_DEEP_CHECKS = '1'
+node --test --test-name-pattern='deep explorer checks' skills/game-design-workbench/test/native-viewer.test.mjs
+Remove-Item Env:GD_DEEP_CHECKS
+$env:GD_LAYOUT_RESEARCH = '1'
+node --test --test-name-pattern='layout research: explicit' skills/game-design-workbench/test/native-viewer.test.mjs
+Remove-Item Env:GD_LAYOUT_RESEARCH
+```
+
+Uses existing `GD_NATIVE_EXE` / `GD_VIEWER_ADAPTER_EXE` setup above. Normal test discovery runs neither optional suite. Default success does not imply deep/research success. [Coverage and measured runtime](../../../reports/graph-query-research/diagnostics-runtime.md).
+
 ## Resource declaration report
 
 `gd resources` exposes shared C99 declarations and bounded **conditional structural witnesses** without display, raylib or agent runtime. This is not an executable conversion plan or composed-outcome solver.

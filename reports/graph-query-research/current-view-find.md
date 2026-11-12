@@ -54,4 +54,4 @@
 - Supplied review checklist covers Ctrl+F focus/no Fit, live matching, Enter/Shift+Enter/result selection, empty/no matches, Escape retention, off-screen/filtered items, Grid headers, paused Free geometry and typing guards.
 - User reports reviewed presentation looks good and authorizes checkpoint. Reviewed Find presentation accepted; individual checklist steps and unperformed modes are not inferred.
 - No every-mode, restart, macOS/Linux or final compiler-matrix acceptance claimed.
-- Sidebar checkpoint `3294ee8` committed, not pushed. Find included in requested next checkpoint. Full diagnostics runtime reduction remains separate; default90-second integration timing gate remains open.
+- Sidebar checkpoint `3294ee8` and Find checkpoint `b222c43` committed, not pushed. At Find checkpoint, default90-second integration timing gate remained open. [Current diagnostics runtime work](diagnostics-runtime.md) tracks subsequent research split and under1-second target.
