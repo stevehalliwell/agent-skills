@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
-const char *const gd_sidebar_labels[GD_SIDEBAR_COUNT]={"View & layout","Find selected in another view","Display & filters","Analysis","Browse shown nodes","Selection & evidence","Sources & changes","Diagnostics"};
+const char *const gd_sidebar_labels[GD_SIDEBAR_COUNT]={"View & layout","Find selected in another view","Canvas Display","Analysis","Browse shown nodes","Selection & evidence","Sources & changes","Diagnostics"};
 enum { GD_SIDEBAR_FILE_LIMIT=512 };
 static const char *const keys[GD_SIDEBAR_COUNT]={"view","find","filters","analysis","browse","selection","sources","diagnostics"};
 void gd_sidebar_defaults(GD_Sidebar *s){memset(s,0,sizeof(*s));s->open=(1u<<GD_SIDEBAR_VIEW)|(1u<<GD_SIDEBAR_FILTERS)|(1u<<GD_SIDEBAR_ANALYSIS)|(1u<<GD_SIDEBAR_SELECTION);}

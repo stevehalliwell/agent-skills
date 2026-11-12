@@ -46,7 +46,7 @@ static void viewer_control_token(ExplorerViewer *viewer,GD_ExplorerContext *c,GD
           }
         }
         if(c->pane->rule_state) {hash=viewer_control_hash(hash,&c->pane->rule_state->row,sizeof(int));hash=viewer_control_hash(hash,&c->pane->rule_state->peer_write,sizeof(int));hash=viewer_control_hash(hash,&c->pane->rule_state->axis_page,sizeof(int));}
-        for(dependent=0;dependent<GD_FORM_PRESENTATION;++dependent) hash=viewer_form_hash(hash,(GD_ExplorerForm)dependent,gd_explorer_form_applied(c,(GD_ExplorerForm)dependent));
+        for(dependent=0;dependent<GD_FORM_PRESENTATION;++dependent){hash=viewer_form_hash(hash,(GD_ExplorerForm)dependent,gd_explorer_form_applied(c,(GD_ExplorerForm)dependent));hash=viewer_form_hash(hash,(GD_ExplorerForm)dependent,gd_explorer_form_pending(c,(GD_ExplorerForm)dependent,0));}
     } else { hash=viewer_form_hash(hash,form,gd_explorer_form_pending(c,form,0)); hash=viewer_form_hash(hash,form,gd_explorer_form_applied(c,form)); }
     /* Actor canonical pickers/questions may consume last applied hypotheses. */
     if (form==GD_FORM_STRUCTURE && c->pane->view==GD_EXPLORER_ACTORS) hash=viewer_form_hash(hash,GD_FORM_QUERY,gd_explorer_form_applied(c,GD_FORM_QUERY));
@@ -75,6 +75,7 @@ static void viewer_controls(ExplorerViewer *viewer,const GD_ViewerRequest *reque
         gd_viewer_write(w,",\"initialized\":%s,\"pending\":",pending ? "true":"false");
         if (!pending) { gd_explorer_form_defaults(kind,&defaults); pending=&defaults; }
         viewer_form(w,kind,pending); gd_viewer_write(w,",\"applied\":"); viewer_form(w,kind,applied);
+        if(kind!=GD_FORM_PRESENTATION)gd_viewer_write(w,",\"input_status\":\"%s\"",!applied ? "not-run":gd_explorer_form_equal(kind,pending,applied) ? "applied":"pending-changes");
         if (kind==GD_FORM_PRESENTATION) gd_viewer_write(w,",\"apply_policy\":\"immediate; same native operation as GUI\"");
         if (kind==GD_FORM_RULES && !((const GD_ExplorerRuleForm *)pending)->bindings && ((const GD_ExplorerRuleForm *)pending)->kind==GD_NAMED_CONSISTENCY) gd_viewer_write(w,",\"fixed_work_limit\":%d",GD_RULE_ANALYSIS_WORK_LIMIT);
         if (kind==GD_FORM_STRUCTURE) { gd_viewer_write(w,",\"canonical_choices_ready\":%s,\"choice_discovery_question\":",gd_explorer_structure_choices(c) ? "true":"false"); gd_viewer_quote(w,gd_structure_question_name(GD_STRUCTURE_COUNT)); }

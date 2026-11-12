@@ -322,7 +322,7 @@ static int edit_skill(GD_Draft *draft, int record, SkillEditor *editor) {
     for (i = 0; i < draft->model->record_count; ++i) {
         const GD_Record *target = &draft->model->records[i];
         bool enabled;
-        if (target->role != GD_SKILL || (*editor->filter && !strstr(target->reference, editor->filter))) continue;
+        if (target->role != GD_SKILL || (*editor->filter && !gd_text_contains(target->reference, editor->filter))) continue;
         enabled = has_prerequisite(draft->model, record, target->reference) != 0;
         if (igCheckbox(target->reference, &enabled)) { if (gd_draft_prerequisite(draft, record, target->reference, enabled) > 0) changed = 1; break; }
     }

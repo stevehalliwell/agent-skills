@@ -167,7 +167,7 @@ int gd_explorer_query_remap(GD_ExplorerContext *context, const GD_ExplorerProjec
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryOptions options=prior->query_options; const char *value=NULL,*comparison=NULL;
     const GD_Model *before=gd_explorer_model(old,prior->view); const GD_Model *fresh=gd_explorer_model(context->project,pane->view);
     int i,root=-1,participant=-1;
-    if (prior->query_state && !gd_explorer_form_equal(GD_FORM_QUERY,&prior->query_options,&prior->query_state->applied)) { snprintf(pane->query_message,sizeof(pane->query_message),"Apply or reset pending query inputs before refreshing."); return 0; }
+    if (prior->query_state && !gd_explorer_form_equal(GD_FORM_QUERY,&prior->query_options,&prior->query_state->applied)) { snprintf(pane->query_message,sizeof(pane->query_message),"Run pending query inputs before refreshing; last applied result retained."); return 0; }
     if (options.root_case>=0) {
         const GD_RuleCase *source=&old->rules->cases[options.root_case]; int record=old->rules->sources[source->source].record,mapped=remap_record(before,fresh,record);
         if (mapped<0) return 0;
@@ -304,7 +304,7 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
             gd_explorer_query_overview(context,pane->actor_overview); return;
         }
         if (gd_explorer_form_widget(GD_FORM_QUERY,options,"coverage",NULL)) gd_explorer_query_question(options,options->coverage);
-        igTextWrapped("Changing question clears pending selectors/values/facts, not drawn result. Apply to replace result.");
+        igTextWrapped("Changing question resets pending selectors/values/facts, not drawn result. Run to replace result.");
         const GD_RuleCase *root=options->root_case>=0 ? &rules->cases[options->root_case]:NULL;
         if (options->coverage) {
             igTextWrapped("Each binding independently receives each finite value. Other bindings/context stay unknown; no same-noun simultaneous assignment or default A.");
@@ -351,11 +351,11 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
         gd_explorer_picker_lines(context,"Selected finite samples (blank: declared values)",options->values,sizeof(options->values));
         if (igTreeNode_Str("Advanced: raw finite samples")) { gd_explorer_form_widget(GD_FORM_QUERY,options,"literal_values",NULL); gd_explorer_form_widget(GD_FORM_QUERY,options,"values",NULL); igTreePop(); }
         if (!options->coverage) gd_explorer_picker_assumptions(context,options->root_case,options->facts,sizeof(options->facts),options->contexts,sizeof(options->contexts),&options->literal_assumptions);
-        else if (*options->facts || *options->contexts) { igTextWrapped("Fixed assumptions are incompatible with independent coverage. Clear them explicitly before Apply."); gd_explorer_picker_lines(context,"Fixed state assumptions",options->facts,sizeof(options->facts)); gd_explorer_picker_lines(context,"Fixed context assumptions",options->contexts,sizeof(options->contexts)); }
+        else if (*options->facts || *options->contexts) { igTextWrapped("Fixed assumptions are incompatible with independent coverage. Clear them explicitly before Run."); gd_explorer_picker_lines(context,"Fixed state assumptions",options->facts,sizeof(options->facts)); gd_explorer_picker_lines(context,"Fixed context assumptions",options->contexts,sizeof(options->contexts)); }
     }
     gd_explorer_form_widget(GD_FORM_QUERY,options,"accepted",pane->view==GD_EXPLORER_ACTORS ? (options->coverage ? "Accepted root cases only":"Accepted root only (dependencies stay labelled)"):"Accepted sources at every placement ancestor");
     gd_explorer_action_button(context,GD_ACTION_QUERY_RUN);
-    if (pane->query_state && !gd_explorer_form_equal(GD_FORM_QUERY,options,&pane->query_state->applied)) igTextWrapped("Pending query inputs differ from drawn result. Apply before refresh; last good result remains visible.");
+    if (pane->query_state && !gd_explorer_form_equal(GD_FORM_QUERY,options,&pane->query_state->applied)) igTextWrapped("Pending inputs differ from applied result. Run before refresh; last good result remains visible.");
     if(pane->query_state && pane->query_state->query && pane->query_state->query->state_coverage)coverage_summary(pane->query_state->query);
     if (*pane->query_message) igTextWrapped("%s",pane->query_message);
 }
@@ -387,7 +387,7 @@ void gd_explorer_query_display_controls(GD_ExplorerContext *context) {
             igTextWrapped("Counts: direct target-labelled declarations only; calls/context copies/ghosts excluded. Dotted calls are mapped instantiation, not temporal steps.");
             igText("%d contributors | source incomplete %s | query limit %s",query->contributors->count,query->contributors->source_incomplete ? "yes":"no",query->contributors->limited ? "yes":"no");
         }
-        if (!query->variants && query->request.kind==GD_QUERY_ACTOR_STATES) igTextWrapped("Root excluded by status scope; no variant facts evaluated. Change filter and apply to inspect.");
+        if (!query->variants && query->request.kind==GD_QUERY_ACTOR_STATES) igTextWrapped("Root excluded by status scope; no variant facts evaluated. Change inputs and Run to inspect.");
         if (igSmallButton(gd_explorer_action_info(GD_ACTION_QUERY_DISPLAY)->label)) display=1;
         if (display) gd_explorer_action_run(context,GD_ACTION_QUERY_DISPLAY);
     }

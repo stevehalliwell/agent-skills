@@ -60,7 +60,7 @@ int gd_explorer_rules_run(GD_ExplorerContext *context) {
 int gd_explorer_rules_remap(GD_ExplorerContext *context,const GD_ExplorerProject *old,const GD_ExplorerPane *prior) {
     const GD_ExplorerRuleState *before=prior->rule_state; GD_ExplorerRuleState *fresh; const GD_Model *a,*b; int i;
     if (!before) return 1;
-    if (!gd_explorer_form_equal(GD_FORM_RULES,&before->pending,&before->applied)) { snprintf(context->pane->rule_message,sizeof(context->pane->rule_message),"Apply or clear pending rule inputs before refresh."); return 0; }
+    if (!gd_explorer_form_equal(GD_FORM_RULES,&before->pending,&before->applied)) { snprintf(context->pane->rule_message,sizeof(context->pane->rule_message),"Run pending rule inputs before refresh; last applied result retained."); return 0; }
     a=old->models[GD_EXPLORER_RULE_DATA]; b=context->project->models[GD_EXPLORER_RULE_DATA];
     /* Conservative unchanged-reader guard, not a durable actor ID. No persisted
        native array offsets: every result is rebuilt from exact request strings. */
@@ -183,7 +183,6 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
     } else igTextWrapped("Fixed native comparison ceiling %d; at most %d pairs / %d branches. Unexamined scope stays explicit.",GD_RULE_ANALYSIS_WORK_LIMIT,GD_MAX_RULE_COMPARISONS,GD_MAX_RULE_BRANCHES);
     if (*pane->query_message) snprintf(pane->rule_message,sizeof(pane->rule_message),"%s",pane->query_message); memcpy(pane->query_message,saved_query_message,sizeof(saved_query_message)); }
     if (gd_explorer_action_button(context,GD_ACTION_RULES_RUN)) { state=pane->rule_state; form=&state->pending; }
-    igSameLine(0,8); if (gd_explorer_action_button(context,GD_ACTION_RULES_CLEAR)) return;
     if (*pane->rule_message) igTextWrapped("%s",pane->rule_message);
     if (!gd_explorer_form_equal(GD_FORM_RULES,&state->pending,&state->applied)) igTextWrapped("Pending inputs differ; evidence and declaration outlines remain last applied result.");
     if (state->bindings) { binding_details(context,state); return; }

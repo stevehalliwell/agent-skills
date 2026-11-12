@@ -37,7 +37,7 @@ static int visible(const GD_Model *model, const GD_Mda *mda, const MdaDisplay *d
     const GD_Record *item = &model->records[record];
     return gd_mda_role(item->role) && display->roles[item->role-GD_MDA_MECHANIC] &&
         (!display->only_scope || mda->selected[record]) && (!display->only_path || display->path_nodes[record]) &&
-        (!display->filter[0] || strstr(item->reference,display->filter));
+        (!display->filter[0] || gd_text_contains(item->reference,display->filter));
 }
 /* Shared solver uses point-sized nodes. Render free-graph distances at 3x
    so its 110-unit resting edges leave room for 210-unit source cards. */

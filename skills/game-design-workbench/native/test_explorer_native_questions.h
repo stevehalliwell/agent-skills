@@ -4,7 +4,7 @@ static int explorer_test_native_questions(GD_ExplorerContext *c,GD_ExplorerPane 
     char path[GD_MAX_PATH],failure[512]; int v,i,ok=0; GD_ExplorerPane *pane;
     for (v=0;v<=GD_EXPLORER_VIEWS;++v) {
         GD_ExplorerStructureState *state; GD_LayoutNode ordinary; Camera2D camera;
-        c->pane=&panes[v==GD_EXPLORER_VIEWS ? GD_EXPLORER_ACTORS:v]; NATIVE_QUESTION_CHECK(reset_view(c) && pane_prepare(c)); pane=c->pane;
+        c->pane=&panes[v==GD_EXPLORER_VIEWS ? GD_EXPLORER_ACTORS:v]; NATIVE_QUESTION_CHECK(explorer_test_fresh_pane(c) && pane_prepare(c)); pane=c->pane;
         if (v==GD_EXPLORER_VIEWS) {
             const GD_Rules *rules=c->project->rules; int root,edge,found=0;
             for (root=0;root<rules->case_count && !found;++root) {
@@ -33,7 +33,7 @@ static int explorer_test_native_questions(GD_ExplorerContext *c,GD_ExplorerPane 
         snprintf(state->pending.features,sizeof(state->pending.features),"missing-feature"); NATIVE_QUESTION_CHECK(!gd_explorer_structure_run(c) && pane->structure_state==state); state->pending=state->applied;
     }
     NATIVE_QUESTION_CHECK(reload_project(c,panes,collections,count,failure,sizeof(failure)));
-    for (v=0;v<GD_EXPLORER_VIEWS;++v) { c->pane=&panes[v]; NATIVE_QUESTION_CHECK(gd_explorer_similarity_active(c) && reset_view(c) && !c->pane->structure_state); }
+    for (v=0;v<GD_EXPLORER_VIEWS;++v) { c->pane=&panes[v]; NATIVE_QUESTION_CHECK(gd_explorer_similarity_active(c) && explorer_test_fresh_pane(c) && !c->pane->structure_state); }
     c->pane=&panes[GD_EXPLORER_RESOURCES]; pane=c->pane; NATIVE_QUESTION_CHECK(pane_prepare(c)); explorer_test_render(c);
     NATIVE_QUESTION_CHECK(pane->rule_state); pane->rule_state->pending.kind=GD_NAMED_CONSISTENCY; pane->rule_state->pending.work_limit=-1;
     NATIVE_QUESTION_CHECK(gd_explorer_rules_run(c) && pane->rule_state->result && !pane->rule_state->bindings);
@@ -56,7 +56,7 @@ static int explorer_test_native_questions(GD_ExplorerContext *c,GD_ExplorerPane 
         *fail_at=*calls+1; NATIVE_QUESTION_CHECK(!gd_explorer_rules_run(c) && pane->rule_state==state); *fail_at=0;
     }
     NATIVE_QUESTION_CHECK(reload_project(c,panes,collections,count,failure,sizeof(failure))); c->pane=&panes[GD_EXPLORER_RESOURCES];
-    NATIVE_QUESTION_CHECK(c->pane->rule_state && c->pane->rule_state->bindings && reset_view(c) && !c->pane->rule_state);
+    NATIVE_QUESTION_CHECK(c->pane->rule_state && c->pane->rule_state->bindings && explorer_test_fresh_pane(c) && !c->pane->rule_state);
     fprintf(stderr,"Native question window checks: nine MDS scopes, rule outcomes/consistency, binding inventory, rollback/reload/reset passed; no OS input.\n"); ok=1;
 cleanup:
     *fail_at=0; return ok;

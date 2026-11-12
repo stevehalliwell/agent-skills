@@ -1,6 +1,7 @@
 #ifndef GD_EXPLORER_UI_H
 #define GD_EXPLORER_UI_H
 #include "gd_explorer.h"
+#include "gd_text_match.h"
 #include "gd_graph_analysis_ui.h"
 #include "gd_layout_focus.h"
 #include "gd_matrix_grid.h"
@@ -86,7 +87,7 @@ typedef struct {
     bool paused,workspace_bounds,visual_filter,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
     bool paths_enabled,paths_declared,paths_compare,reach_enabled,reach_reverse,overview_enabled;
     bool only_scope,only_path,role0,role1,role2,role3,only_witness,similarity_canvas,known;
-    char filter[129],mda_filter[129];
+    char filter[129],mda_filter[129],list_search[129];
 } GD_ExplorerPresentation;
 typedef struct {
     GD_ExplorerView view;
@@ -129,7 +130,7 @@ typedef struct {
     int peer, foundation_peer, layout_choice, initial_arrangement, actor_overview, sort, horizontal, rank, witness;
     int prepared, fit, navigate, focus_root, focus_expand, inspected_record;
     unsigned revision;
-    char filter[129], find_reference[260];
+    char filter[129], list_search[129], find_reference[260];
     unsigned char known[GD_MAX_RECORDS];
     unsigned char match_nodes[GD_MAX_RECORDS], match_edges[GD_MAX_EDGES];
     int visible_matches, hidden_matches;
@@ -151,7 +152,16 @@ typedef struct {
     uint64_t scope_revision;
     GD_Layout *display_layout; /* Borrowed render-only pose; never a solver target. */
     const struct GD_RenderPose *render_pose; /* Optional viewer-owned pose for camera actions only; IPC positions remain raw. */
+    GD_ExplorerPane *panes; /* Optional shell-owned panes, never a snapshot. */
+    int *active_view;
+    struct GD_SelectionHistory *history;
+    struct GD_ExplorerFind *finds; /* Optional shell-owned transient Find state. */
+    struct GD_Sidebar *sidebar; /* Optional shell-owned shared fold preferences. */
 } GD_ExplorerContext;
+int gd_explorer_reset_all(GD_ExplorerContext *context);
+int gd_explorer_history_available(const GD_ExplorerContext *context,int direction);
+int gd_explorer_history_move(GD_ExplorerContext *context,int direction);
+int gd_explorer_draft_history(GD_ExplorerContext *context,int redo);
 static inline GD_Layout *gd_explorer_display_layout(const GD_ExplorerContext *context) {return context->display_layout ? context->display_layout:context->pane->layout;}
 
 /* Camera only. Context viewport is drawable canvas; no allocation/evaluation. */

@@ -2,23 +2,10 @@
 #ifndef GD_EXPLORER_FIND_H
 #define GD_EXPLORER_FIND_H
 #include <assert.h>
-enum { GD_FIND_TEXT=129,GD_FIND_PREVIEW=6 };
+enum { GD_FIND_PREVIEW=6 };
 enum { GD_FIND_NONE,GD_FIND_OPEN,GD_FIND_FIT };
-typedef struct {char text[GD_FIND_TEXT];bool open,focus;} GD_ExplorerFind;
+typedef struct GD_ExplorerFind {char text[GD_FIND_TEXT];bool open,focus;} GD_ExplorerFind;
 typedef struct {int nodes[GD_MAX_RECORDS],count,current;} GD_FindMatches;
-typedef struct {unsigned char text[GD_FIND_TEXT];int prefix[GD_FIND_TEXT],length;} GD_FindPattern;
-static unsigned char find_lower(unsigned char value){return value>='A' && value<='Z' ? (unsigned char)(value+'a'-'A'):value;}
-static void find_pattern(GD_FindPattern *pattern,const char *text){
-    int i,j=0;memset(pattern,0,sizeof(*pattern));
-    for(i=0;text[i] && i<GD_FIND_TEXT-1;++i)pattern->text[i]=find_lower((unsigned char)text[i]);pattern->length=i;
-    for(i=1;i<pattern->length;++i){while(j && pattern->text[i]!=pattern->text[j])j=pattern->prefix[j-1];if(pattern->text[i]==pattern->text[j])++j;pattern->prefix[i]=j;}
-}
-/* Literal ASCII-case-insensitive substring, UTF-8 otherwise exact. Linear scan;
-   picker subsequence matching would find unrelated non-contiguous labels. */
-static int find_contains(const GD_FindPattern *pattern,const char *text){
-    int j=0;if(!text || !pattern->length)return 0;
-    while(*text){unsigned char value=find_lower((unsigned char)*text++);while(j && value!=pattern->text[j])j=pattern->prefix[j-1];if(value==pattern->text[j])++j;if(j==pattern->length)return 1;}return 0;
-}
 static const char *find_label(const GD_ExplorerContext *c,int node){
     if(gd_explorer_similarity_active(c))return c->pane->structure_state->result->similarity->ids[node];
     return query_view(c->pane->view) ? gd_explorer_query_node_label(c,node):c->pane->layout->nodes[node].label;

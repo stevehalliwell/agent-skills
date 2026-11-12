@@ -460,7 +460,7 @@ typedef struct {
 typedef struct {
     const GD_Model *baseline; /* Borrowed; must outlive draft and its model. */
     GD_Model *model;         /* Owned analysis, records/edges borrow baseline text. */
-    int modified_count, history_count;
+    int modified_count, history_count, redo_count;
     unsigned char rank_changed[GD_MAX_RECORDS], prerequisites_changed[GD_MAX_RECORDS];
     GD_DraftEdit history[GD_MAX_DRAFT_EDITS];
     const char *scratch_a[GD_MAX_EDGES], *scratch_b[GD_MAX_EDGES];
@@ -472,6 +472,7 @@ void gd_draft_destroy(GD_Draft *draft);
 int gd_draft_rank(GD_Draft *draft, int record, const char *text);
 int gd_draft_prerequisite(GD_Draft *draft, int record, const char *reference, int enabled);
 int gd_draft_undo(GD_Draft *draft);
+int gd_draft_redo(GD_Draft *draft);
 /* Current disk is separately loaded. Writer adds explicit identity errors there. */
 int gd_write_draft_result(FILE *output, const GD_Draft *draft, GD_Model *current);
 /* Finish: 0 complete, 2 partial with errors, -1 output failed (retain draft).

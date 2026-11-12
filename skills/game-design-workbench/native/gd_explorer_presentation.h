@@ -24,7 +24,7 @@ static const PresentationField presentation_fields[]={
  PF(direction,"Layout direction",GD_CONTROL_INT,"Top to bottom\0Left to right\0","vertical\0horizontal\0",3,horizontal,0),
  PF(paused,"Pause settling",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,paused,0),
  PF(workspace_bounds,"Workspace bounds (trial)",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,workspace_bounds,0),
- PF(visual_filter,"Visual position filter (One Euro)",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,visual_filter,0),
+ PF(visual_filter,"Smooth displayed motion",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,visual_filter,0),
  PF(overlay,"Overlay inactive matrix pairs",GD_CONTROL_BOOL,NULL,NULL,1u<<GD_EXPLORER_MATRIX,overlay,0),
  VF(distance_focus,"Focus by shown-link distance",GD_CONTROL_BOOL,PV_GRAPH),
  PF(focus_auto_fit,"Auto-fit focus changes",GD_CONTROL_BOOL,NULL,NULL,PV_GRAPH,focus_auto_fit,0),
@@ -55,7 +55,8 @@ static const PresentationField presentation_fields[]={
  PF(role1,"Systems / Resource facets",GD_CONTROL_BOOL,NULL,NULL,PV_MDA|PV_RESOURCE,mda.roles[1],0),
  PF(role2,"Dynamics / Resource roles",GD_CONTROL_BOOL,NULL,NULL,PV_MDA|PV_RESOURCE,mda.roles[2],0),
  PF(role3,"Aesthetics",GD_CONTROL_BOOL,NULL,NULL,PV_MDA,mda.roles[3],0),
- PF(filter,"Browse / Resource filter",GD_CONTROL_TEXT,NULL,NULL,PV_ALL&~(1u<<GD_EXPLORER_NOUNS),filter,0),
+ PF(filter,"Legacy list search / Resource canvas filter",GD_CONTROL_TEXT,NULL,NULL,PV_ALL&~(1u<<GD_EXPLORER_NOUNS),filter,0),
+ PF(list_search,"Search shown-node list",GD_CONTROL_TEXT,NULL,NULL,PV_ALL,list_search,0),
  PF(mda_filter,"MDA reference filter",GD_CONTROL_TEXT,NULL,NULL,PV_MDA,mda.filter,0),
  PF(only_witness,"Only Resource witness",GD_CONTROL_BOOL,NULL,NULL,PV_RESOURCE,resource_only_witness,0),
  VF(resource_witness,"Resource witness",GD_CONTROL_INT,PV_RESOURCE),
@@ -100,6 +101,7 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
     }
     out->layout=p->view==GD_EXPLORER_ACTORS && p->query_state && gd_query_scene_overview_mode(p->query_state->scene)==GD_ACTOR_INTERACTIONS ? 1:p->view==GD_EXPLORER_SKILLS ? p->layout_choice==GD_LAYOUT_FORCE ? 2:p->rank:
         p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS || query_view(p->view) ? p->layout_choice==GD_LAYOUT_FORCE:p->layout_choice;
+    if(p->view!=GD_EXPLORER_RESOURCES)memcpy(out->filter,p->list_search,sizeof(out->filter));
     out->distance_focus=p->distance_focus_enabled; out->focus_root=p->focus.root;
     out->mda_root=c->project->mda ? c->project->mda->root:-1; out->mda_direction=c->project->mda ? c->project->mda->direction:0;
     out->resource_witness=p->resource_witness; out->similarity_row=out->similarity_peer=-1;
@@ -115,7 +117,7 @@ int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *na
     const PresentationField *field=presentation_field(name); const GD_ExplorerPane *p=c->pane;
     if(!field || !(field->views&(1u<<p->view))) return 0;
     if(p->view==GD_EXPLORER_NOUNS && !strcmp(name,"paused"))return p->prepared && !grid_view(p);
-    if(!strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
+    if(!strcmp(name,"list_search") || !strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
     if(!p->prepared) return 0;
     if(!strcmp(name,"noun_case_page")) return c->project->noun_grid && p->selection.cell>=0 && p->selection.cell<c->project->noun_grid->pair_count;
     if(!strcmp(name,"actor_overview")) return p->query_state && !gd_explorer_similarity_active(c);
@@ -238,7 +240,7 @@ static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresent
     } else if(p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS)
         next->layout_choice=values->layout ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;
     else next->layout_choice=values->layout;
-    next->sort=values->sort; next->horizontal=values->direction;
+    next->sort=values->sort; next->horizontal=values->direction;next->workspace_bounds=values->workspace_bounds;
     next->initial_arrangement=0; /* Prepare native topology once; seed after footprint remap. */
     if(is_graph(p->view)) next->selection=(GD_ExplorerSelection){-1,-1,0,selected_record(c),-1};
     candidate.pane=next;
@@ -307,6 +309,7 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
     else if(!strcmp(name,"similarity_canvas")) p->structure_state->similarity_canvas=next.similarity_canvas;
     else if(!strcmp(name,"similarity_row")) p->structure_state->similarity_row=next.similarity_row;
     else if(!strcmp(name,"similarity_peer")) p->structure_state->similarity_peer=next.similarity_peer;
+    else if(!strcmp(name,"filter") && p->view!=GD_EXPLORER_RESOURCES)memcpy(p->list_search,next.filter,sizeof(p->list_search));
     else if(!strcmp(name,"known")) p->known[selected_record(c)]=next.known;
     else if(!strcmp(name,"coverage_page")) p->query_state->coverage_page=next.coverage_page;
     else if(!strcmp(name,"structure_page")) p->structure_state->page=next.structure_page;
@@ -322,10 +325,7 @@ failed: snprintf(message,capacity,"%s",error); return 0;
 int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     GD_ExplorerPane *p=c->pane; GD_ExplorerPresentation values;
     if(!p->prepared) return 0;
-    if(!strcmp(name,"view.reset")) {
-        if(c->project->draft && (c->project->draft->modified_count || c->project->draft->history_count)) return 0;
-        return reset_view(c);
-    }
+    if(!strcmp(name,"view.reset")) return reset_view(c);
     if(!strcmp(name,"view.find.clear")) {*p->find_reference=0;matches(c);return 1;}
     if(!strcmp(name,"view.witness.fit")) {if(p->view!=GD_EXPLORER_RESOURCES || !p->resource_routes || !p->resource_routes->witness_count)return 0;p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;return 1;}
     if(!strcmp(name,"view.cell.fit")) {int nodes[2];if(gd_explorer_similarity_active(c) || p->selection.node>=0 || !pair_selection_nodes(c,nodes))return 0;if(grid_view(p))grid_frame_selection(c);else p->fit=GD_EXPLORER_FIT_SELECTION;return 1;}

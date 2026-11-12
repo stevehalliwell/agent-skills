@@ -442,7 +442,7 @@ failed:
     snprintf(message,capacity,"%s",error); return 0;
 }
 static const GD_ExplorerActionInfo actions[]={
-    {"query.run","Apply native query",(1u<<GD_EXPLORER_ACTORS)|(1u<<GD_EXPLORER_EFFECTS),GD_FORM_QUERY},
+    {"query.run","Run native query",(1u<<GD_EXPLORER_ACTORS)|(1u<<GD_EXPLORER_EFFECTS),GD_FORM_QUERY},
     {"query.display","Rearrange query drawing",(1u<<GD_EXPLORER_ACTORS)|(1u<<GD_EXPLORER_EFFECTS),GD_FORM_QUERY},
     {"structure.run","Run named question",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_STRUCTURE},
     {"structure.clear","Clear question",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_STRUCTURE},
@@ -461,7 +461,14 @@ static const GD_ExplorerActionInfo actions[]={
     {"view.find.clear","Clear Find",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.witness.fit","Frame Resource witness",1u<<GD_EXPLORER_RESOURCES,GD_FORM_PRESENTATION},
     {"view.cell.fit","Frame selected pair",(1u<<GD_EXPLORER_MATRIX)|(1u<<GD_EXPLORER_NOUNS),GD_FORM_PRESENTATION},
-    {"view.selection.focus","Focus selection",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION}
+    {"view.selection.focus","Focus selection",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"view.inputs.reset","Reset to defaults",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"view.back","Back",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"view.forward","Forward",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"draft.undo","Undo",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"draft.redo","Redo",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"draft.redo.discard","Discard Redo history",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"view.reset.all","Reset all",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION}
 };
 const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action) {
     return action>=0 && action<GD_ACTION_COUNT ? &actions[action]:NULL;
@@ -469,11 +476,18 @@ const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action) {
 int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAction action) {
     const GD_ExplorerActionInfo *info=gd_explorer_action_info(action);
     if (!info || !context || !context->project || !context->pane || !(info->views&(1u<<context->pane->view)) || !(context->project->available&(1u<<context->pane->view))) return 0;
+    if(context->panes && gd_explorer_rank_pending(context->project,context->panes))return 0;
+    if((action==GD_ACTION_BACK || action==GD_ACTION_FORWARD || action==GD_ACTION_UNDO || action==GD_ACTION_REDO || action==GD_ACTION_DISCARD_REDO || action==GD_ACTION_VIEW_RESET) && (context->pane->selection.held>=0 || context->pane->mda.held>=0))return 0;
+    if(action==GD_ACTION_RESET_ALL){int v;if(!context->panes || !context->active_view || context->pane->view!=*context->active_view)return 0;for(v=0;v<GD_EXPLORER_VIEWS;++v)if(context->panes[v].selection.held>=0 || context->panes[v].mda.held>=0)return 0;return 1;}
+    if(action==GD_ACTION_BACK || action==GD_ACTION_FORWARD)return gd_explorer_history_available(context,action==GD_ACTION_BACK ? -1:1);
+    if(action==GD_ACTION_UNDO || action==GD_ACTION_REDO || action==GD_ACTION_DISCARD_REDO){
+        if(!context->project->draft)return 0;
+        return action==GD_ACTION_UNDO ? context->project->draft->history_count>0:context->project->draft->redo_count>0;
+    }
     if (info->form==GD_FORM_PRESENTATION) {
         const GD_ExplorerPane *p=context->pane;
         if(!p->prepared)return 0;
         if(action==GD_ACTION_VIEW_SELECTION_FOCUS)return gd_explorer_focus_available(context);
-        if(action==GD_ACTION_VIEW_RESET && context->project->draft && (context->project->draft->modified_count || context->project->draft->history_count))return 0;
         if(action==GD_ACTION_VIEW_REARRANGE && p->view==GD_EXPLORER_NOUNS)return p->prepared;
         if(action==GD_ACTION_VIEW_REARRANGE && p->view>=GD_EXPLORER_ACTORS) return p->query_state && p->query_state->scene && !(p->structure_state && p->structure_state->similarity_canvas);
         if(action==GD_ACTION_VIEW_WITNESS_FIT)return p->resource_routes && p->resource_routes->witness_count>0;
@@ -487,10 +501,47 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
     if (action==GD_ACTION_QUERY_DISPLAY) return context->pane->query_state && context->pane->query_state->query;
     return 1;
 }
+const char *gd_explorer_action_reason(const GD_ExplorerContext *context,GD_ExplorerAction action) {
+    const GD_ExplorerActionInfo *info=gd_explorer_action_info(action);
+    if(gd_explorer_action_available(context,action))return NULL;
+    if(!info || !context || !context->pane || !context->project || !(info->views&(1u<<context->pane->view)))return "Action does not apply to this view";
+    if(context->panes && gd_explorer_rank_pending(context->project,context->panes))return "Finish pending rank edit before using application actions";
+    if(context->pane->selection.held>=0 || context->pane->mda.held>=0)return "Finish active canvas drag before changing view/history";
+    if((action==GD_ACTION_BACK || action==GD_ACTION_FORWARD) && context->active_view && context->pane->view!=*context->active_view)return "Navigation history belongs to the active view";
+    if(action==GD_ACTION_RESET_ALL)return "Reset all requires active shell view with no canvas drag";
+    if(action==GD_ACTION_BACK || action==GD_ACTION_FORWARD)return "No selection in this history direction";
+    if(action==GD_ACTION_UNDO || action==GD_ACTION_REDO || action==GD_ACTION_DISCARD_REDO)return "No draft steps in this history direction";
+    if(!context->pane->prepared)return "Open and prepare this view first";
+    if(action==GD_ACTION_VIEW_SELECTION_FOCUS)return "Select an item represented in this view";
+    if(action==GD_ACTION_VIEW_COMPARE)return "Choose two retained entries to compare";
+    if(action==GD_ACTION_VIEW_CELL_FIT)return "Select a represented noun/verb pair";
+    if(action==GD_ACTION_VIEW_WITNESS_FIT)return "Run Resource analysis to retain a witness";
+    if(action==GD_ACTION_VIEW_START_ADD)return "Enable paths and select a shown analysis start";
+    if(action==GD_ACTION_VIEW_EXPAND)return "Select a relationship node to expand";
+    if(action==GD_ACTION_VIEW_ANALYZE)return "Shown-graph analysis requires an ordinary graph canvas";
+    if(action==GD_ACTION_QUERY_DISPLAY || action==GD_ACTION_VIEW_REARRANGE)return "No retained drawing available to rearrange";
+    return "Required view data is unavailable";
+}
 int gd_explorer_action_run(GD_ExplorerContext *context,GD_ExplorerAction action) {
     if (!gd_explorer_action_available(context,action)) return 0;
-    if (gd_explorer_action_info(action)->form==GD_FORM_PRESENTATION) return gd_explorer_presentation_action(context,gd_explorer_action_info(action)->name);
+    if(action==GD_ACTION_BACK || action==GD_ACTION_FORWARD)return gd_explorer_history_move(context,action==GD_ACTION_BACK ? -1:1);
+    if(action==GD_ACTION_UNDO || action==GD_ACTION_REDO)return gd_explorer_draft_history(context,action==GD_ACTION_REDO);
+    if(action==GD_ACTION_DISCARD_REDO){context->project->draft->redo_count=0;return 1;}
+    if(action==GD_ACTION_RESET_ALL)return gd_explorer_reset_all(context);
+    if (action!=GD_ACTION_INPUTS_RESET && gd_explorer_action_info(action)->form==GD_FORM_PRESENTATION) return gd_explorer_presentation_action(context,gd_explorer_action_info(action)->name);
     switch (action) {
+        case GD_ACTION_INPUTS_RESET: {
+            void *pending[GD_FORM_PRESENTATION]={0};int form;
+            for(form=0;form<GD_FORM_PRESENTATION;++form)if(gd_explorer_form_available(context,(GD_ExplorerForm)form)){
+                pending[form]=gd_explorer_form_pending(context,(GD_ExplorerForm)form,1);
+                if(!pending[form]){snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Cannot prepare default inputs; pending inputs and result retained.");return 0;}
+            }
+            for(form=0;form<GD_FORM_PRESENTATION;++form)if(pending[form]){
+                if(form==GD_FORM_QUERY){GD_ExplorerQueryOptions prior=*(GD_ExplorerQueryOptions *)pending[form],*next=pending[form];gd_explorer_form_defaults(GD_FORM_QUERY,next);next->ghosts=prior.ghosts;next->primary=prior.primary;next->compare=prior.compare;next->weighted=prior.weighted;next->include_excluded=prior.include_excluded;}
+                else gd_explorer_form_defaults((GD_ExplorerForm)form,pending[form]);
+            }
+            snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Default inputs staged. Run to replace retained results.");return 1;
+        }
         case GD_ACTION_QUERY_RUN: return gd_explorer_query_run(context);
         case GD_ACTION_QUERY_DISPLAY: return gd_explorer_query_display(context);
         case GD_ACTION_STRUCTURE_RUN: return gd_explorer_structure_run(context);
@@ -505,8 +556,17 @@ int gd_explorer_action_run(GD_ExplorerContext *context,GD_ExplorerAction action)
         default: return 0;
     }
 }
+int gd_explorer_action_request(GD_ExplorerContext *context,GD_ExplorerAction action) {
+    const GD_ExplorerActionInfo *info=gd_explorer_action_info(action);const char *reason=gd_explorer_action_reason(context,action);int pressed;assert(info);
+    igBeginDisabled(reason!=NULL);pressed=igButton(info->label,(ImVec2_c){0,0});igEndDisabled();
+    if(reason && igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))igSetTooltip("%s",reason);return pressed;
+}
 int gd_explorer_action_button(GD_ExplorerContext *context,GD_ExplorerAction action) {
-    const GD_ExplorerActionInfo *info=gd_explorer_action_info(action); assert(info);
-    if (!igButton(info->label,(ImVec2_c){0,0})) return 0;
-    gd_explorer_action_run(context,action); return 1;
+    const GD_ExplorerActionInfo *info=gd_explorer_action_info(action);int pressed=gd_explorer_action_request(context,action);
+    if(pressed)gd_explorer_action_run(context,action);
+    if(action==GD_ACTION_QUERY_RUN || action==GD_ACTION_STRUCTURE_RUN || action==GD_ACTION_RULES_RUN || action==GD_ACTION_RESOURCE_RUN){
+        const void *pending=gd_explorer_form_pending(context,info->form,0),*applied=gd_explorer_form_applied(context,info->form);
+        igSameLine(0,8);igTextWrapped("%s",!applied ? "Inputs not run":!gd_explorer_form_equal(info->form,pending,applied) ? "Inputs changed; showing last applied result":"Showing applied inputs");
+    }
+    return pressed;
 }

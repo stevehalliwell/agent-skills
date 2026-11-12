@@ -425,7 +425,7 @@ void gd_explorer_structure_controls(GD_ExplorerContext *context) {
     if (!form) { igTextWrapped("Cannot allocate question inputs; other pane state retained."); return; }
     if (pane->view==GD_EXPLORER_ACTORS) {
         gd_explorer_form_widget(GD_FORM_STRUCTURE,form,"actor_scope",NULL);
-        if (form->actor_scope) igTextWrapped("Uses last applied native actor-states query, including fixed facts/context. Apply variants first; coverage is not a finite topology. Display ghosts/primary/compare/excluded controls do not filter this scope. Replace old-scope selectors before Run.");
+        if (form->actor_scope) igTextWrapped("Uses last applied native actor-states query, including fixed facts/context. Run variants first; coverage is not a finite topology. Display ghosts/primary/compare/excluded controls do not filter this scope. Replace old-scope selectors before Run.");
         else igTextWrapped("Declaration scope includes unused noun/axis definitions, distinct local bindings and authored calls. Does not evaluate guards or merge same-noun participants.");
     }
     if (pane->view==GD_EXPLORER_EFFECTS) igTextWrapped("Scope: whole loaded Effect declarations plus question filters; independent of selected result/contributor context, weighting and camera. Concepts are associations; direct counts are not runtime frequency.");
@@ -466,7 +466,6 @@ void gd_explorer_structure_controls(GD_ExplorerContext *context) {
     }
     }
     gd_explorer_action_button(context,GD_ACTION_STRUCTURE_RUN);
-    igSameLine(0,-1); gd_explorer_action_button(context,GD_ACTION_STRUCTURE_CLEAR);
     if (*pane->query_message) igTextWrapped("%s",pane->query_message);
     if (gd_explorer_structure_pending(pane)) igTextWrapped("Inputs pending; displayed result still uses applied parameters. Run or clear before refresh.");
     if (pane->structure_state->result) {

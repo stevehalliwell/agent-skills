@@ -14,7 +14,7 @@ static int explorer_test_structure(GD_ExplorerContext *c, GD_ExplorerPane *panes
             *fail_at=*calls+i; STRUCTURE_CHECK(!gd_explorer_structure_run(c)); *fail_at=0;
             STRUCTURE_CHECK(c->pane->structure_state==state && state->result && gd_explorer_model(c->project,(GD_ExplorerView)v)->error_count==errors);
         }
-        for (i=1;i<=2;++i) { *fail_at=*calls+i; STRUCTURE_CHECK(!reset_view(c)); *fail_at=0; STRUCTURE_CHECK(c->pane->structure_state==state && state->result); }
+        for (i=1;i<=2;++i) { *fail_at=*calls+i; STRUCTURE_CHECK(!explorer_test_fresh_pane(c)); *fail_at=0; STRUCTURE_CHECK(c->pane->structure_state==state && state->result); }
         state->pending.kind=GD_STRUCTURE_DECLARATIONS; STRUCTURE_CHECK(gd_explorer_structure_run(c)); state=c->pane->structure_state;
         STRUCTURE_CHECK(state->result->gaps && state->result->gaps->rows==gd_explorer_model(c->project,(GD_ExplorerView)v)->edge_count);
         *fail_at=*calls+stages+1; STRUCTURE_CHECK(!gd_explorer_structure_run(c)); *fail_at=0; STRUCTURE_CHECK(c->pane->structure_state==state && state->result->gaps && gd_explorer_model(c->project,(GD_ExplorerView)v)->error_count==errors);
@@ -87,7 +87,7 @@ static int explorer_test_structure(GD_ExplorerContext *c, GD_ExplorerPane *panes
     }
     for (v=GD_EXPLORER_SKILLS;v<=GD_EXPLORER_ACTORS;++v) {
         c->pane=&panes[v]; STRUCTURE_CHECK(c->pane->structure_state && c->pane->structure_state->result && c->pane->structure_state->result->project==c->project);
-        STRUCTURE_CHECK(reset_view(c) && !c->pane->structure_state);
+        STRUCTURE_CHECK(explorer_test_fresh_pane(c) && !c->pane->structure_state);
     }
     /* Finite scope borrows applied query, not its primary/ghost drawing. */
     c->pane=&panes[GD_EXPLORER_ACTORS];
@@ -134,7 +134,7 @@ static int explorer_test_structure(GD_ExplorerContext *c, GD_ExplorerPane *panes
         { GD_Query *native=candidate->query_state->query; int record=native->rules->sources[native->rules->cases[native->variants->case_index].source].record; fresh->models[GD_EXPLORER_RULE_DATA]->records[record].body="synthetic changed body; not a source write"; }
         STRUCTURE_CHECK(!gd_explorer_structure_remap(&replacement,c->project,pane) && !candidate->structure_state && pane->structure_state->result);
         pane_release_layout(allocator,candidate); allocator.release(allocator.context,candidate); candidate=NULL; gd_explorer_destroy(fresh); fresh=NULL;
-        STRUCTURE_CHECK(reset_view(c) && !c->pane->structure_state);
+        STRUCTURE_CHECK(explorer_test_fresh_pane(c) && !c->pane->structure_state);
     }
     fprintf(stderr,"Structural question input state: %llu bytes per activated pane; all checks passed\n",(unsigned long long)sizeof(GD_ExplorerStructureState));
     ok=1;

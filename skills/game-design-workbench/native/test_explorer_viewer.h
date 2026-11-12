@@ -131,6 +131,14 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
         ACTION("resources","rules.run"); CHECK(!strncmp(reply,"{\"ok\":true",10) && panes[GD_EXPLORER_RESOURCES].rule_state->bindings);
         CHECK(!project->draft->modified_count && !project->draft->history_count);
     }
+    /* Earlier probes intentionally undo their private edits. Consent to drop
+       those Redo steps before testing independent source-refresh behavior. */
+    if(project->draft && project->draft->redo_count){GD_ExplorerContext target=c;target.pane=&panes[GD_EXPLORER_MATRIX];
+        ACTION("matrix","draft.redo.discard");CHECK(strstr(reply,"viewer.stale_controls") && project->draft->redo_count>0);
+        viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(&viewer,&request,&w);
+        CHECK(strstr(reply,"\"executed\":true") && !project->draft->redo_count);
+    }
+    ACTION("matrix","view.reset.all");CHECK(strstr(reply,"viewer.stale_controls") && active==GD_EXPLORER_MATRIX && panes[GD_EXPLORER_MATRIX].prepared);
     if(run_deep_checks){
         GD_ExplorerProject *last=c.project; uint64_t generation=viewer.reload_generation;char noun_a[260],noun_b[260];int noun_cases;
         {GD_ExplorerContext target=c;const GD_NounPair *pair=&c.project->noun_grid->pairs[0];target.pane=&panes[GD_EXPLORER_NOUNS];noun_grid_choose(&target,pair->a,pair->b);CHECK(gd_explorer_presentation_set(&target,"layout","free",target.pane->query_message,sizeof(target.pane->query_message)));noun_cases=pair->count;snprintf(noun_a,sizeof(noun_a),"%s",c.project->rules->model->records[pair->a].reference);snprintf(noun_b,sizeof(noun_b),"%s",c.project->rules->model->records[pair->b].reference);}

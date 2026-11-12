@@ -1,6 +1,7 @@
 /* Included only by -ExplorerTest. Exercise the shell's actual state helpers and
    renderers in one owned window. Does not claim real-pointer/UI acceptance. */
 #include "test_explorer_picker_view.h"
+#include "test_explorer_fresh_pane.h"
 int gd_explorer_structure_picker_checks(GD_ExplorerContext *context);
 #define EXPLORER_CHECK(expression) do { if (!(expression)) { fprintf(stderr,"Explorer check failed at line %d: %s\n",__LINE__,#expression); goto cleanup; } } while (0)
 static void explorer_test_render(GD_ExplorerContext *c) {
@@ -12,7 +13,7 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     igSetNextWindowSize((ImVec2_c){588,916},ImGuiCond_Always);
     igBegin("Explorer test controls",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings);
     choose_view(c->project,"Data / projection",p->view,1);
-    igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34});
+    gd_explorer_action_button(c,GD_ACTION_VIEW_RESET);
     match_details(c); if (!gd_explorer_similarity_active(c)) layout_controls(c); selected=analyze(c);
     if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(c); igSetNextItemOpen(true,ImGuiCond_Always); gd_explorer_rules_controls(c); }
     if (query_view(p->view)) { gd_explorer_query_controls(c); gd_explorer_query_details(c); }
@@ -131,7 +132,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             EXPLORER_CHECK(p->query_state && p->query_state->scene && p->layout==&p->query_state->scene->layout);
             last=p->query_state; layout=p->layout; camera=p->camera;
             { GD_ExplorerSelection selection=p->selection; int stage; for (stage=1;stage<=(v==GD_EXPLORER_ACTORS ? 3:8);++stage) {
-                *fail_at=*calls+stage; EXPLORER_CHECK(!reset_view(&c)); *fail_at=-1;
+                *fail_at=*calls+stage; EXPLORER_CHECK(!explorer_test_fresh_pane(&c)); *fail_at=-1;
                 EXPLORER_CHECK(p->query_state==last && p->layout==layout && !memcmp(&camera,&p->camera,sizeof(camera)) && !memcmp(&selection,&p->selection,sizeof(selection)) && gd_explorer_model(project,(GD_ExplorerView)v)->error_count==errors);
             } }
             *fail_at=*calls+1; EXPLORER_CHECK(!gd_explorer_query_run(&c)); *fail_at=-1;
@@ -242,7 +243,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         *saved=*p;
         EXPLORER_CHECK(change_view(&c,panes,GD_EXPLORER_SKILLS,NULL) && change_view(&c,panes,GD_EXPLORER_MATRIX,NULL));
         EXPLORER_CHECK(!memcmp(saved,p,sizeof(*saved)));
-        EXPLORER_CHECK(reset_view(&c) && p->layout_choice==0 && p->grid.noun==-1 && p->grid.verb==-1);
+        EXPLORER_CHECK(explorer_test_fresh_pane(&c) && p->layout_choice==0 && p->grid.noun==-1 && p->grid.verb==-1);
         p->layout_choice=GD_MATRIX_GRID_CHOICE; p->prepared=0; EXPLORER_CHECK(pane_prepare(&c));
         grid_choose(&c,0,0);
     }
@@ -282,7 +283,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         EXPLORER_CHECK(p->match_nodes[1]); choice=(GD_ExplorerSelection){-1,1,0,-1,-1};
         EXPLORER_CHECK(!gd_explorer_graph_select(&c,&choice) && p->selection.node==0 && p->editor.record==first);
         EXPLORER_CHECK(!strcmp(p->editor.rank_text,"invalid-rank") && !project->draft->modified_count);
-        EXPLORER_CHECK(!change_view(&c,panes,GD_EXPLORER_MDA,NULL) && !reset_view(&c));
+        EXPLORER_CHECK(!change_view(&c,panes,GD_EXPLORER_MDA,NULL) && !explorer_test_fresh_pane(&c));
         snprintf(p->editor.rank_text,sizeof(p->editor.rank_text),"37");
         EXPLORER_CHECK(gd_explorer_graph_select(&c,&choice) && p->selection.node==1 && p->inspected_record==second);
         EXPLORER_CHECK(model->records[first].has_rank && model->records[first].rank==37);
@@ -314,7 +315,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         EXPLORER_CHECK(p->inspected_record==owner && undo_draft(&c,panes));
         EXPLORER_CHECK(p->inspected_record==owner && pane_prepare(&c));
         EXPLORER_CHECK(p->selection.cell==-1 && gd_explorer_graph_record(&c)==owner);
-        EXPLORER_CHECK(reset_view(&c) && pane_prepare(&c));
+        EXPLORER_CHECK(explorer_test_fresh_pane(&c) && pane_prepare(&c));
     }
     /* Ordinary switches preserve independent canvas, settings and selection. */
     c.pane=&panes[GD_EXPLORER_MDA]; panes[GD_EXPLORER_MDA].camera.target=(Vector2){321,123};
@@ -355,7 +356,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL) { skill=i; break; }
         EXPLORER_CHECK(skill>=0 && gd_draft_rank(project->draft,skill,"37")>0 && gd_explorer_edited(project));
         *saved=panes[GD_EXPLORER_MDA];
-        EXPLORER_CHECK(reset_view(&c) && !c.pane->filter[0] && !c.pane->find_reference[0] && c.pane->selection.node==-1);
+        EXPLORER_CHECK(explorer_test_fresh_pane(&c) && !c.pane->filter[0] && !c.pane->find_reference[0] && c.pane->selection.node==-1);
         EXPLORER_CHECK(!memcmp(saved,&panes[GD_EXPLORER_MDA],sizeof(*saved)) && project->draft->modified_count==1);
         EXPLORER_CHECK(gd_draft_undo(project->draft) && gd_explorer_edited(project));
     }

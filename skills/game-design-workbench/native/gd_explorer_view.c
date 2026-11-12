@@ -173,8 +173,8 @@ static int visible(GD_ExplorerContext *c, int node) {
         if (p->resource_only_witness && p->resource_routes && p->resource_routes->witness_count && !p->resource_routes->marked_nodes[record]) return 0;
         int source=gd_explorer_resource_record(c->project->resources,record);
         const GD_Model *model=gd_explorer_model(c->project,p->view);
-        return p->mda.roles[item->kind] && (!*p->filter || strstr(p->layout->nodes[node].label,p->filter) ||
-            (source>=0 && strstr(model->records[source].reference,p->filter)));
+        return p->mda.roles[item->kind] && (!*p->filter || gd_text_contains(p->layout->nodes[node].label,p->filter) ||
+            (source>=0 && gd_text_contains(model->records[source].reference,p->filter)));
     }
     return 1;
 }
@@ -503,7 +503,7 @@ static int layout_controls(GD_ExplorerContext *c) {
     }
     if (p->view==GD_EXPLORER_SKILLS && free_graph(p)) igTextWrapped("Node band labels retain %s; positions are not locked to bands.",p->rank ? "authored rank constraints":"prerequisite depth");
     if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool workspace=p->workspace_bounds;if(igCheckbox("Workspace bounds (trial)",&workspace))gd_explorer_presentation_set(c,"workspace_bounds",workspace ? "true":"false",p->query_message,sizeof(p->query_message));if(p->workspace_bounds){igTextDisabled("Fixed bounds; F fits workspace. Drag outside; release returns inside.");igTextDisabled("Bounds can crowd edges; internal motion may remain.");}}
-    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool filtered=p->visual_filter;if(igCheckbox("Visual position filter (One Euro)",&filtered))gd_explorer_presentation_set(c,"visual_filter",filtered ? "true":"false",p->query_message,sizeof(p->query_message));if(filtered)igTextDisabled("Rendering only; solver positions and velocities remain raw.");}
+    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool filtered=p->visual_filter;if(igCheckbox("Smooth displayed motion",&filtered))gd_explorer_presentation_set(c,"visual_filter",filtered ? "true":"false",p->query_message,sizeof(p->query_message));if(filtered)igTextDisabled("Rendering only; solver positions and velocities remain raw.");}
     if (!layout_settles(p))
         igTextWrapped("Stable layout; settling applies only to movable graph layouts.");
     else { igCheckbox("Pause settling",&p->paused); igSameLine(0,-1); }
@@ -531,7 +531,7 @@ static void scope_controls(GD_ExplorerContext *c) {
 static int has_display_filters(const GD_ExplorerPane *p) {return query_view(p->view) || p->view==GD_EXPLORER_MDA || p->view==GD_EXPLORER_RESOURCES || (p->view==GD_EXPLORER_MATRIX && !grid_view(p));}
 static void display_filter_controls(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane;
-    igTextWrapped("Canvas display, not analytical scope. Native Display may rebuild presentation; it does not Run pending analytical inputs.");
+    igTextWrapped("Visibility does not Run analytical inputs. Graph analysis uses shown nodes/links; retained query results keep applied inputs.");
     if(query_view(p->view))gd_explorer_query_display_controls(c);
     if(p->view==GD_EXPLORER_MATRIX)igCheckbox("Overlay other pairs (does not merge groups)",&p->overlay);
     if(p->view==GD_EXPLORER_MDA){int i;
@@ -561,7 +561,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
         applied=gd_explorer_form_applied(&current,(GD_ExplorerForm)form);
         if (!applied) { gd_explorer_form_defaults((GD_ExplorerForm)form,&defaults); applied=&defaults; }
         if (!gd_explorer_form_equal((GD_ExplorerForm)form,pending,applied)) {
-            snprintf(failure,failure_size,"Apply or reset pending %s inputs in %s before refresh; prior state retained.",gd_explorer_form_name((GD_ExplorerForm)form),gd_explorer_view_names[pane]); return 0;
+            snprintf(failure,failure_size,"Run pending %s inputs in %s before refresh; prior state retained.",gd_explorer_form_name((GD_ExplorerForm)form),gd_explorer_view_names[pane]); return 0;
         }
     }
     GD_ExplorerProject *old=c->project,*fresh=gd_explorer_load(old->allocator,collections,count);
@@ -654,7 +654,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
             if (ready && !gd_explorer_structure_remap(&candidate,old,prior)) { ready=0; question_failure=p->query_message; }
             if (ready && !gd_explorer_rules_remap(&candidate,old,prior)) { ready=0; question_failure=p->rule_message; }
             if (ready && v==GD_EXPLORER_RESOURCES && prior->resource_routes) {
-                if (!gd_explorer_form_equal(GD_FORM_RESOURCE,&prior->resource_pending,&prior->resource_applied)) { snprintf(p->resource_message,sizeof(p->resource_message),"Apply pending Resource inputs before refresh; prior witnesses retained."); ready=0; question_failure=p->resource_message; }
+                if (!gd_explorer_form_equal(GD_FORM_RESOURCE,&prior->resource_pending,&prior->resource_applied)) { snprintf(p->resource_message,sizeof(p->resource_message),"Run pending Resource inputs before refresh; prior witnesses retained."); ready=0; question_failure=p->resource_message; }
                 else if (!gd_explorer_resource_run(&candidate)) { ready=0; question_failure=p->resource_message; }
             }
         }
@@ -687,8 +687,8 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
 /* 1 loaded, 0 reload failed, -1 blocked. Never commits or discards editor input. */
 static int refresh_sources(GD_ExplorerContext *c, GD_ExplorerPane *panes, const GD_Collection *collections, int count, char *failure, size_t capacity) {
     int active=c->pane->view,updated;
-    if (gd_explorer_rank_pending(c->project,panes) || (c->project->draft && (c->project->draft->modified_count || c->project->draft->history_count))) {
-        snprintf(failure,capacity,"Refresh blocked: pending editor, draft changes or Undo history; no user buffers discarded."); return -1;
+    if (gd_explorer_rank_pending(c->project,panes) || (c->project->draft && (c->project->draft->modified_count || c->project->draft->history_count || c->project->draft->redo_count))) {
+        snprintf(failure,capacity,"Refresh blocked: pending editor, draft changes or Undo/Redo history; explicitly discard Redo-only history before refresh. No user buffers discarded."); return -1;
     }
     updated=reload_project(c,panes,collections,count,failure,capacity); c->pane=&panes[active]; return updated;
 }
@@ -717,27 +717,31 @@ static int center_relationships(GD_ExplorerContext *c, GD_ExplorerPane *panes, i
     return 1;
 }
 static int reset_view(GD_ExplorerContext *c) {
-    GD_ExplorerPane *p=c->pane; GD_ExplorerView view=p->view;
-    if (is_graph(view) && gd_explorer_graph_commit(c)<0) return 0;
-    {
-        GD_Allocator allocator=c->project->allocator; GD_ExplorerContext context=*c;
-        GD_ExplorerPane *candidate=allocator.allocate(allocator.context,sizeof(*candidate));
-        if (!candidate) { snprintf(p->query_message,sizeof(p->query_message),"Cannot allocate reset candidate; last good query retained."); return 0; }
-        memset(candidate,0,sizeof(*candidate)); pane_defaults(candidate,view); context.pane=candidate;
-        if (!pane_prepare(&context)) {
-            pane_release_layout(allocator,candidate); gd_diagnostics_clear(&candidate->diagnostics); allocator.release(allocator.context,candidate);
-            snprintf(p->query_message,sizeof(p->query_message),"Cannot prepare reset candidate; last good query retained."); return 0;
-        }
-        if (view==GD_EXPLORER_MDA) gd_mda_query(gd_explorer_model(c->project,view),c->project->mda,-1,GD_MDA_BOTH);
-        pane_release_layout(allocator,p); gd_diagnostics_clear(&p->diagnostics); gd_layout_focus_destroy(p->distance_focus); gd_resource_routes_destroy(p->resource_routes);
-        *p=*candidate; allocator.release(allocator.context,candidate); c->analysis->initialized=0; return 1;
+    GD_ExplorerPane *p=c->pane;GD_ExplorerPresentation values;bool bounds=p->workspace_bounds;
+    gd_explorer_presentation_read(c,&values);values.initial_arrangement=values.sort=values.direction=0;values.workspace_bounds=false;
+    values.layout=p->view==GD_EXPLORER_NOUNS ? GD_NOUN_LAYOUT_GRID:p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_MDA || p->view==GD_EXPLORER_RESOURCES ? GD_LAYOUT_FORCE:0;
+    if(p->view==GD_EXPLORER_ACTORS && p->query_state && gd_query_scene_overview_mode(p->query_state->scene)==GD_ACTOR_INTERACTIONS)values.layout=1;
+    p->workspace_bounds=false;
+    if(!gd_explorer_similarity_active(c) && !presentation_rearrange(c,&values,0)){
+        p->workspace_bounds=bounds;snprintf(p->query_message,sizeof(p->query_message),"Cannot reset presentation; last good view retained.");return 0;
     }
+    distance_focus_toggle(c,0);pane_workspace(c,0);p->visual_filter=true;p->overlay=false;
+    p->mda.only_scope=p->mda.only_path=p->resource_only_witness=false;
+    p->mda.roles[0]=p->mda.roles[1]=p->mda.roles[2]=p->mda.roles[3]=true;
+    *p->filter=*p->mda.filter=0;p->focus_auto_fit=true;p->find_hold_node=-1;p->find_hold_layout=NULL;
+    p->paused=p->view==GD_EXPLORER_MDA || p->view==GD_EXPLORER_RESOURCES || p->view==GD_EXPLORER_EFFECTS;
+    p->camera=(Camera2D){.zoom=1};p->focus_result=(GD_ExplorerFocusResult){0};
+    if(gd_explorer_similarity_active(c))p->structure_state->similarity_fit=true;else p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1;
+    c->analysis->initialized=0;return 1;
 }
-static int undo_draft(GD_ExplorerContext *c, GD_ExplorerPane *panes) {
-    if (!c->project->draft || !gd_draft_undo(c->project->draft)) return 0;
-    panes[GD_EXPLORER_SKILLS].editor.record=-1;
-    gd_explorer_edited(c->project); return 1;
+int gd_explorer_draft_history(GD_ExplorerContext *c,int redo) {
+    if(!c->project->draft || c->pane->selection.held>=0 || c->pane->mda.held>=0 || (c->panes && gd_explorer_rank_pending(c->project,c->panes)))return 0;
+    if(!(redo ? gd_draft_redo(c->project->draft):gd_draft_undo(c->project->draft)))return 0;
+    if(c->panes){int v;for(v=0;v<=GD_EXPLORER_RELATIONSHIPS;++v)c->panes[v].editor.record=-1;}
+    else c->pane->editor.record=-1;
+    gd_explorer_edited(c->project);return 1;
 }
+static int undo_draft(GD_ExplorerContext *c,GD_ExplorerPane *panes){GD_ExplorerContext current=*c;current.panes=panes;return gd_explorer_draft_history(&current,0);}
 static int finish(GD_ExplorerContext *c, const char *output) {
     int applied=0;
     if (c->project->draft) {
@@ -763,11 +767,41 @@ static void copy_error(GD_Model *diagnostic, const GD_Error *error) {
 }
 #include "gd_explorer_viewer.h"
 #include "gd_explorer_find.h"
+#include "gd_explorer_history.h"
+int gd_explorer_reset_all(GD_ExplorerContext *c){
+    GD_Allocator a=c->project->allocator;GD_ExplorerPane *fresh;GD_ExplorerContext target=*c;int v,active;
+    if(!gd_explorer_action_available(c,GD_ACTION_RESET_ALL))return 0;
+    active=*c->active_view;fresh=a.allocate(a.context,GD_EXPLORER_VIEWS*sizeof(*fresh));
+    if(!fresh)goto failed;
+    memset(fresh,0,GD_EXPLORER_VIEWS*sizeof(*fresh));
+    for(v=0;v<GD_EXPLORER_VIEWS;++v)pane_defaults(&fresh[v],(GD_ExplorerView)v);
+    target.pane=&fresh[active];target.panes=fresh;target.display_layout=NULL;
+    if(!pane_prepare(&target)){
+        for(v=0;v<GD_EXPLORER_VIEWS;++v){pane_release_layout(a,&fresh[v]);gd_diagnostics_clear(&fresh[v].diagnostics);gd_layout_focus_destroy(fresh[v].distance_focus);gd_resource_routes_destroy(fresh[v].resource_routes);}
+        a.release(a.context,fresh);goto failed;
+    }
+    /* Prepare replacement before releasing any last-good pane or result. */
+    fresh[active].selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};fresh[active].inspected_record=fresh[active].editor.record=-1;
+    for(v=0;v<GD_EXPLORER_VIEWS;++v){
+        pane_release_layout(a,&c->panes[v]);gd_diagnostics_clear(&c->panes[v].diagnostics);gd_layout_focus_destroy(c->panes[v].distance_focus);gd_resource_routes_destroy(c->panes[v].resource_routes);
+        c->panes[v]=fresh[v];
+    }
+    a.release(a.context,fresh);c->pane=&c->panes[active];c->display_layout=NULL;
+    if(c->project->mda)gd_mda_query(gd_explorer_model(c->project,GD_EXPLORER_MDA),c->project->mda,-1,GD_MDA_BOTH);
+    if(c->analysis)c->analysis->initialized=0;
+    if(c->query)memset(c->query,0,sizeof(*c->query));
+    if(c->finds)memset(c->finds,0,GD_EXPLORER_VIEWS*sizeof(*c->finds));
+    if(c->sidebar){GD_Sidebar defaults;gd_sidebar_defaults(&defaults);c->sidebar->open=defaults.open;gd_sidebar_save(c->sidebar);}
+    if(c->history){memset(c->history,0,sizeof(*c->history));snprintf(c->history->message,sizeof(c->history->message),"All exploration reset. Draft edits and Undo/Redo preserved; source files unchanged.");}
+    return 1;
+failed:
+    snprintf(c->pane->query_message,sizeof(c->pane->query_message),"Cannot prepare Reset all; all panes, results and drafts retained.");return 0;
+}
 int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int count,
                      int initial_view, int matrix_layout, int frames, const char *screenshot, const char *output_path) {
     GD_Allocator allocator=diagnostic->allocator;
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
-    GD_ExplorerPane *panes=NULL;GD_RenderPose *render=NULL;
+    GD_ExplorerPane *panes=NULL;GD_RenderPose *render=NULL;GD_SelectionHistory *history=NULL;
     GD_ExplorerContext c={0};
     ExplorerViewer viewer={0}; char ipc_error[256]="";
     int active=0,v,frame=0,result=0,stale=0,close_seen=0,timed_seen=0,close_next=0;
@@ -785,7 +819,8 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     c.analysis=allocator.allocate(allocator.context,sizeof(*c.analysis));
     c.query=allocator.allocate(allocator.context,sizeof(*c.query));
     render=allocator.allocate(allocator.context,sizeof(*render));if(render)memset(render,0,sizeof(*render));
-    if (!panes || !c.analysis || !c.query || !render) { gd_error(diagnostic,"explorer.memory","Cannot allocate bounded explorer view state",NULL,0); result=2; goto cleanup; }
+    history=allocator.allocate(allocator.context,sizeof(*history));if(history)memset(history,0,sizeof(*history));
+    if (!panes || !c.analysis || !c.query || !render || !history) { gd_error(diagnostic,"explorer.memory","Cannot allocate bounded explorer view state",NULL,0); result=2; goto cleanup; }
     memset(c.analysis,0,sizeof(*c.analysis));
     for (v=0;v<GD_EXPLORER_VIEWS;++v) pane_defaults(&panes[v],(GD_ExplorerView)v);
     if (matrix_layout>=0 && initial_view==GD_EXPLORER_NOUNS) {
@@ -798,7 +833,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     if (initial_view>=0) active=initial_view;
     else while (!(project->available&(1u<<active))) ++active;
     if (output_path) snprintf(report_path,sizeof(report_path),"%s",output_path);
-    c.project=project; c.pane=&panes[active];
+    c.project=project; c.pane=&panes[active];c.panes=panes;c.active_view=&active;c.history=history;c.finds=finds;c.sidebar=&sidebar;
     if (!open_window("Game Design Workbench - Explorer")) { gd_error(diagnostic,"view.window","Cannot initialize explorer window",NULL,0); result=2; goto cleanup; }
     gd_sidebar_init(&sidebar);
     viewer.context=&c; viewer.panes=panes; viewer.active=&active; viewer.stale=&stale; viewer.reload_generation=1;
@@ -806,7 +841,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     viewer.server=gd_viewer_server_open(allocator,ipc_error,sizeof(ipc_error));
     for (;;) {
         int closing=WindowShouldClose(),width=GetScreenWidth(),height=GetScreenHeight(),split=width*60/100;
-        int requested=-1,find_view=-1,reset=0,refresh=0,selected,relationship_root=-1,undo=0;
+        int requested=-1,find_view=-1,refresh=0,selected,relationship_root=-1,undo=0,redo=0,navigation=0,reset_all=0;
         char find_reference[260]="";int find_shortcut;
         GD_ExplorerPane *p=&panes[active]; GD_Model *model=gd_explorer_model(project,p->view);
         c.pane=p;c.render_pose=render; c.viewport=(Rectangle){14,112,(float)split-28,(float)height-157};
@@ -830,7 +865,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         DrawText("Game Design Workbench",20,14,26,foreground);
         if (gd_explorer_similarity_active(&c)) DrawText(TextFormat("%s | SIMILARITY | %d selected entries | separate native distance approximation",p->structure_state->result->options.projection,p->structure_state->result->similarity->entry_count),20,49,16,muted);
         else DrawText(TextFormat("%s | %d projected identities | %d projected links | positions transient",gd_explorer_view_names[active],p->layout->node_count,p->layout->edge_count),20,49,16,muted);
-        DrawText(project->draft && project->draft->modified_count ? TextFormat("DRAFT: %d records modified in memory | source files unchanged",project->draft->modified_count):"Source-backed projections | Filters define shown analysis | No source writes",20,77,15,project->draft && project->draft->modified_count ? gold:muted);
+        DrawText(project->draft && project->draft->modified_count ? TextFormat("DRAFT: %d records modified in memory | source files unchanged",project->draft->modified_count):"Source-backed projections | Graph analysis uses shown graph | No source writes",20,77,15,project->draft && project->draft->modified_count ? gold:muted);
         igSetNextWindowPos((ImVec2_c){(float)split,12},ImGuiCond_Always,(ImVec2_c){0,0});
         igSetNextWindowSize((ImVec2_c){(float)(width-split-12),(float)(height-24)},ImGuiCond_Always);
         igBegin("Explorer controls and source",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
@@ -841,6 +876,14 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             if(gd_explorer_rank_pending(project,panes) || IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel))snprintf(failure,sizeof(failure),"Finish active rank edit, drag or dialog before Find; no input discarded.");
             else{finds[active].open=true;finds[active].focus=true;}
         }
+        if(!igGetIO_Nil()->WantTextInput)history_observe(&c);
+        if(gd_explorer_action_request(&c,GD_ACTION_BACK))navigation=-1;igSameLine(0,8);
+        if(gd_explorer_action_request(&c,GD_ACTION_FORWARD))navigation=1;igSameLine(0,8);
+        if(gd_explorer_action_request(&c,GD_ACTION_UNDO))undo=1;igSameLine(0,8);
+        if(gd_explorer_action_request(&c,GD_ACTION_REDO))redo=1;igSameLine(0,12);
+        if(gd_explorer_action_request(&c,GD_ACTION_RESET_ALL))reset_all=1;
+        if(igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))igSetTooltip("Reset all panes: clear selections, analyses, inputs, filters, Find, cameras and navigation history. Restore default folds. Keep draft edits and Undo/Redo. No source writes.");
+        if(*history->message)igTextWrapped("%s",history->message);
         requested=choose_view(project,"Data / projection",active,1);
         if(finds[active].open){analyze(&c);find_controls(&c,panes,&finds[active]);}
         if(stale)igTextWrapped("STALE: source changed or could not be checked. Last good snapshot retained.");
@@ -849,8 +892,8 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if(query_view(p->view) && p->query_state && p->query_state->scene && p->query_state->scene->limited)igTextWrapped("DRAWING LIMITED: up to %d unexamined items. Native evidence remains separate; missing drawing is not absence.",p->query_state->scene->unexamined_items_upper_bound);
         selected=selected_record(&c);
         if(sidebar_section(&sidebar,GD_SIDEBAR_VIEW)){
-            if (igButton("RESET CURRENT VIEW TO DEFAULTS",(ImVec2_c){-1,34})) reset=1;
-            igTextWrapped("Reset affects this view only. Draft/source data, fold preferences and other views stay intact.");
+            gd_explorer_action_button(&c,GD_ACTION_VIEW_RESET);
+            igTextWrapped("Reset view: camera/layout/display only. Selection, analysis and drafts stay intact.");
             if (!gd_explorer_similarity_active(&c) && layout_controls(&c)) { p->prepared=0; pane_prepare(&c); p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1; }
             if(gd_explorer_similarity_active(&c))gd_explorer_action_button(&c,GD_ACTION_VIEW_FIT);
         igBeginDisabled(!gd_explorer_action_available(&c,GD_ACTION_VIEW_SELECTION_FOCUS));gd_explorer_action_button(&c,GD_ACTION_VIEW_SELECTION_FOCUS);igEndDisabled();
@@ -878,6 +921,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if(!gd_explorer_similarity_active(&c) && has_display_filters(p) && sidebar_section(&sidebar,GD_SIDEBAR_FILTERS))display_filter_controls(&c);
         selected=analyze(&c); /* Required independently of sidebar visibility. */
         if(sidebar_section(&sidebar,GD_SIDEBAR_ANALYSIS)){
+        gd_explorer_action_button(&c,GD_ACTION_INPUTS_RESET);
         if(!gd_explorer_similarity_active(&c))scope_controls(&c);
         if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(&c); gd_explorer_rules_controls(&c); }
         if (query_view(p->view)) gd_explorer_query_controls(&c);
@@ -890,15 +934,16 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if(!(sidebar.open&(1u<<GD_SIDEBAR_ANALYSIS))){if(*p->query_message)igTextWrapped("%s",p->query_message);if(*p->rule_message)igTextWrapped("%s",p->rule_message);}
         if(sidebar_section(&sidebar,GD_SIDEBAR_BROWSE)){
             int i;
-            if (is_graph(p->view)) igInputText("Browse filter (list only)",p->filter,sizeof(p->filter),0,NULL,NULL);
+            igInputText("Search shown-node list",p->list_search,sizeof(p->list_search),0,NULL,NULL);
             igBeginChild_Str("Explorer records",(ImVec2_c){0,120},0,0);
-            for (i=0;i<p->layout->node_count;++i) if (visible(&c,i)) {
-                int record=query_view(p->view) ? gd_query_scene_record(p->query_state->scene,i):p->view==GD_EXPLORER_RESOURCES ? gd_explorer_resource_record(project->resources,p->layout->nodes[i].key):p->layout->nodes[i].key;
+            for (i=0;i<viewer_canvas_count(&c);++i) if (viewer_canvas_visible(&c,i)) {
+                int record=viewer_canvas_record(&c,i);const char *label=find_label(&c,i);
                 const char *reference=record>=0 ? model->records[record].reference:"no unique loaded source";
-                if (is_graph(p->view) && *p->filter && !strstr(p->layout->nodes[i].label,p->filter) && !strstr(reference,p->filter)) continue;
+                if (!gd_text_contains(label,p->list_search) && !gd_text_contains(reference,p->list_search) && !(record>=0 && gd_text_contains(model->records[record].display_name,p->list_search))) continue;
                 igPushID_Int(i);
-                if (igSmallButton(TextFormat("#%d %s | %s",i,p->layout->nodes[i].label,reference))) {
-                    if (p->view==GD_EXPLORER_MDA) { p->mda.record=record; p->mda.link=-1; }
+                if (igSmallButton(TextFormat("#%d %s | %s",i,label,reference))) {
+                    if(gd_explorer_similarity_active(&c))gd_explorer_similarity_select(&c,i);
+                    else if (p->view==GD_EXPLORER_MDA) { p->mda.record=record; p->mda.link=-1; }
                     else if (p->view==GD_EXPLORER_RESOURCES || p->view==GD_EXPLORER_NOUNS || query_view(p->view)) p->selection=(GD_ExplorerSelection){-1,i,0,-1,-1};
                     else p->navigate=record;
                 }
@@ -918,8 +963,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         igTextWrapped("UI fold preferences: %s",*sidebar.path ? sidebar.path:"session only");
         refresh=igButton("Refresh sources (F5)",(ImVec2_c){0,0});
         if (project->draft) {
-            igText("%d modified records | %d undo steps",project->draft->modified_count,project->draft->history_count);
-            if (igButton("Undo last edit (Ctrl+Z)",(ImVec2_c){0,0})) undo=1;
+            igText("%d modified records | %d undo / %d redo steps",project->draft->modified_count,project->draft->history_count,project->draft->redo_count);
             igTextUnformatted("Report path (empty: stdout; new .json file only)",NULL); igSetNextItemWidth(-1);
             igInputText("##explorer-report-path",report_path,sizeof(report_path),0,NULL,NULL);
             if (igButton("Finish and report changes",(ImVec2_c){0,0})) close_next=1;
@@ -973,10 +1017,20 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             if (IsKeyPressed(KEY_F5)) refresh=1;
             if (!gd_explorer_similarity_active(&c) && IsKeyPressed(KEY_SPACE) && layout_settles(p)) p->paused=!p->paused;
         }
-        if (!igGetIO_Nil()->WantTextInput && !igIsAnyItemActive() && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_Z)) undo=1;
+        if (!igGetIO_Nil()->WantTextInput && !igIsAnyItemActive() && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL))){
+            if(IsKeyPressed(KEY_Z)){if(IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT))redo=1;else undo=1;}
+            if(IsKeyPressed(KEY_Y))redo=1;
+        }
+        if(refresh && project->draft && project->draft->redo_count && !project->draft->modified_count && !project->draft->history_count){refresh=0;igOpenPopup_Str("Discard Redo before refresh?",0);}
+        if(igBeginPopupModal("Discard Redo before refresh?",NULL,ImGuiWindowFlags_AlwaysAutoResize)){
+            igTextWrapped("Refreshing replaces the draft baseline. Discard available Redo steps? Source files stay unchanged.");
+            if(igButton("Discard Redo and refresh",(ImVec2_c){0,0})){gd_explorer_action_run(&c,GD_ACTION_DISCARD_REDO);refresh=1;igCloseCurrentPopup();}
+            igSameLine(0,8);if(igButton("Cancel",(ImVec2_c){0,0}))igCloseCurrentPopup();igEndPopup();
+        }
         /* Both Undo inputs run after inspector readers. Repair revision before
            another selection reader can reinterpret compacted edge offsets. */
         if (undo) undo_draft(&c,panes);
+        if (redo) gd_explorer_action_run(&c,GD_ACTION_REDO);
         if (p->navigate>=0 && is_graph(p->view) && gd_explorer_graph_commit(&c)<0) p->navigate=-1;
         if (p->navigate>=0) {
             int i;
@@ -1044,8 +1098,12 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         c.display_layout=NULL;p->focus_camera_override=false;
         rlImGuiEnd(); EndDrawing(); ++frame;
         if (screenshot && frame==frames && !gd_save_screenshot(screenshot)) { gd_error(diagnostic,"view.screenshot","Explorer screenshot export failed",screenshot,0); result=2; break; }
-        if (reset || requested>=0 || find_view>=0 || relationship_root>=0) {
-            int changed=reset ? reset_view(&c):relationship_root>=0 ? center_relationships(&c,panes,relationship_root):
+        if(!igGetIO_Nil()->WantTextInput && !igIsAnyItemActive() && !igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel)){
+            if(IsMouseButtonPressed(MOUSE_BUTTON_BACK))navigation=-1;if(IsMouseButtonPressed(MOUSE_BUTTON_FORWARD))navigation=1;
+        }
+        if(navigation)gd_explorer_history_move(&c,navigation);
+        if (requested>=0 || find_view>=0 || relationship_root>=0) {
+            int changed=relationship_root>=0 ? center_relationships(&c,panes,relationship_root):
                 find_view>=0 ? change_view(&c,panes,find_view,find_reference):change_view(&c,panes,requested,NULL);
             if (!changed) snprintf(failure,sizeof(failure),"Cannot leave/reset view: %s",project->draft ? project->draft->message:"unavailable view");
             active=c.pane->view;
@@ -1070,9 +1128,11 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             else snprintf(failure,sizeof(failure),"Agent hint not opened: %s",reply);
             snprintf(viewer.hint.command,sizeof(viewer.hint.command),"hint");
         }
+        if(reset_all && gd_explorer_action_run(&c,GD_ACTION_RESET_ALL)){render->valid=0;viewer.has_hint=viewer.hint_pending=0;*viewer.layer_token=*viewer.knowledge_token=0;*failure=0;}
         gd_viewer_server_poll(viewer.server,viewer_dispatch,&viewer);
         project=c.project; /* IPC refresh can replace snapshot owner after rendering. */
         viewer_apply_hint(&viewer);
+        if(!igGetIO_Nil()->WantTextInput)history_observe(&c);
     }
     rlImGuiShutdown(); CloseWindow();
 cleanup:
@@ -1085,6 +1145,7 @@ cleanup:
         }
         allocator.release(allocator.context,panes);
     }
+    if(history)allocator.release(allocator.context,history);
     if(render)allocator.release(allocator.context,render);
     if (c.query) allocator.release(allocator.context,c.query);
     if (c.analysis) allocator.release(allocator.context,c.analysis);
@@ -1093,5 +1154,6 @@ cleanup:
 #ifdef GD_EXPLORER_TEST
 #include "test_explorer_viewer.h"
 #include "test_explorer_find.h"
+#include "test_explorer_shared_ux.h"
 #include "test_explorer_view.h"
 #endif

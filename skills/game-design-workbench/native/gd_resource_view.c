@@ -579,7 +579,7 @@ void gd_explorer_resource_controls(GD_ExplorerContext *context) {
         igTextWrapped("Applied from: %s | to: %s | accepted-only: %s | work ceiling: %d",applied->from>=0 ? node_label(graph,applied->from):"any upstream declaration",node_label(graph,applied->to),applied->accepted ? "yes":"no",applied->work_limit);
         if (!gd_explorer_form_equal(GD_FORM_RESOURCE,&p->resource_pending,applied)) igTextWrapped("Inputs pending. Witnesses and highlights retain applied scope until a successful Run.");
     }
-    gd_explorer_action_button(context,GD_ACTION_RESOURCE_RUN); igSameLine(0,8); gd_explorer_action_button(context,GD_ACTION_RESOURCE_CLEAR);
+    gd_explorer_action_button(context,GD_ACTION_RESOURCE_RUN);
     if (*p->resource_message) igTextWrapped("Last Run: %s",p->resource_message);
     if (p->resource_routes) {
         GD_ResourceRoutes *query=p->resource_routes;

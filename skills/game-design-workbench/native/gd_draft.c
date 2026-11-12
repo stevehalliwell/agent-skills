@@ -95,6 +95,7 @@ int gd_draft_rank(GD_Draft *draft, int record, const char *text) {
     edited = &draft->model->records[record];
     if (edited->has_rank == has_rank && (!has_rank || edited->rank == value)) return 0;
     if (!history_available(draft)) return -1;
+    draft->redo_count=0;
     action = &draft->history[draft->history_count++]; memset(action, 0, sizeof(*action));
     action->record = record; action->has_rank = edited->has_rank; action->rank = edited->rank;
     edited->has_rank = has_rank; edited->rank = value; changed(draft, record); return 1;
@@ -146,23 +147,35 @@ int gd_draft_prerequisite(GD_Draft *draft, int record, const char *reference, in
         if (edge->source == record && edge->field == GD_PREREQUISITES && !strcmp(edge->reference, reference)) { stored = edge->reference; break; }
     }
     assert(stored);
+    draft->redo_count=0;
     action = &draft->history[draft->history_count++]; memset(action, 0, sizeof(*action));
     action->record = record; action->prerequisite_edit = 1; action->reference = stored; action->count = count;
     replace_connection(model, record, stored, target, enabled ? 1 : 0);
     changed(draft, record); return 1;
 }
-int gd_draft_undo(GD_Draft *draft) {
-    GD_DraftEdit action;
-    if (!draft->history_count) return 0;
-    action = draft->history[--draft->history_count]; draft->message[0] = 0;
-    if (action.prerequisite_edit) replace_connection(draft->model, action.record, action.reference, target_record(draft->model, action.reference), action.count);
-    else { draft->model->records[action.record].has_rank = action.has_rank; draft->model->records[action.record].rank = action.rank; }
-    /* Restore raw duplicate declarations and ordering exactly at disk sync point. */
-    if (!draft->history_count) {
-        draft->model->edge_count = draft->baseline->edge_count;
-        memcpy(draft->model->edges, draft->baseline->edges, draft->baseline->edge_count*sizeof(draft->model->edges[0]));
+/* Swap stored inverse with current value. Undo and Redo share bounded storage. */
+static int history_swap(GD_Draft *draft,GD_DraftEdit *stored) {
+    GD_DraftEdit action=*stored;GD_Model *model=draft->model;
+    if(action.prerequisite_edit){
+        int count=reference_count(model,action.record,action.reference);
+        if(model->edge_count-count+action.count>GD_MAX_EDGES){snprintf(draft->message,sizeof(draft->message),"Relationship limit reached; history retained.");return 0;}
+        replace_connection(model,action.record,action.reference,target_record(model,action.reference),action.count);stored->count=count;
+    }else{
+        stored->has_rank=model->records[action.record].has_rank;stored->rank=model->records[action.record].rank;
+        model->records[action.record].has_rank=action.has_rank;model->records[action.record].rank=action.rank;
     }
-    changed(draft, action.record); return 1;
+    draft->message[0]=0;changed(draft,action.record);return 1;
+}
+int gd_draft_undo(GD_Draft *draft) {
+    if(!draft->history_count || !history_swap(draft,&draft->history[draft->history_count-1]))return 0;
+    --draft->history_count;++draft->redo_count;
+    /* Restore raw duplicate declarations and ordering exactly at disk sync point. */
+    if(!draft->history_count){draft->model->edge_count=draft->baseline->edge_count;memcpy(draft->model->edges,draft->baseline->edges,draft->baseline->edge_count*sizeof(*draft->model->edges));gd_recompute_skills(draft->model);}
+    return 1;
+}
+int gd_draft_redo(GD_Draft *draft) {
+    if(!draft->redo_count || !history_swap(draft,&draft->history[draft->history_count]))return 0;
+    ++draft->history_count;--draft->redo_count;return 1;
 }
 static FILE *create_report(const char *path) {
     int descriptor;

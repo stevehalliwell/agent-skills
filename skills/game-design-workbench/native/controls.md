@@ -26,7 +26,7 @@ Presentation `initial_arrangement: native | neighborhood` applies immediately to
 
 Prepared Free graphs add opt-in presentation `workspace_bounds: true | false` (**Workspace bounds (trial)**), default false. Fixed area/spring-density/aspect-sized rectangle also fits prepared pose. Toggle changes no node geometry, pause, selection or query inputs; requests Fit. Post-contact containment exempts held nodes; release returns them inside during active settling. Compounds stay together. `F` fits workspace; selection, pan, zoom and viewport resize do not resize it. Re-enable/reseed or replacement geometry recomputes bounds. Unsupported in Native constrained layouts, Grid/columns, fixed Usage cloud and similarity canvases. Keep preference while inactive. Bounds can crowd edges and increase motion; no convergence/default-policy claim. [Trial contract and measurements](../../../reports/graph-query-research/shared-force-layout-workspace.md).
 
-Explorer Free graphs add presentation `visual_filter: true | false` (**Visual position filter (One Euro)**), default true. Rendering/picking use separate filtered pose; raw solver positions/velocities and IPC node positions remain unchanged. Links, labels and selection overlays follow displayed nodes; compound stacks share translation, held nodes bypass lag. Raw-anchor text/badge measurement avoids feedback through collision footprints. Pause stops solver while filter catches up. Unsupported canvases keep existing geometry. Workspace axes now include 20% extra room after review. [Filter contract, measurements and review boundary](../../../reports/graph-query-research/shared-force-layout-visual-filter.md).
+Explorer Free graphs add presentation `visual_filter: true | false` (**Smooth displayed motion**, One Euro), default true. Rendering/picking use separate filtered pose; raw solver positions/velocities and IPC node positions remain unchanged. Links, labels and selection overlays follow displayed nodes; compound stacks share translation, held nodes bypass lag. Raw-anchor text/badge measurement avoids feedback through collision footprints. Pause stops solver while filter catches up. Unsupported canvases keep existing geometry. Workspace axes now include 20% extra room after review. [Filter contract, measurements and review boundary](../../../reports/graph-query-research/shared-force-layout-visual-filter.md).
 
 Actors/Effects add presentation `layout: native | free`; Native remains default. Geometry changes retain applied query, pending inputs, exact typed selection and contributor context without Run/Display. Native restores scene's built pose, including wrapped Effects rows. Free uses shared solver; stacked variant cards move as one spatial unit, with separate exposed-strip selection. Other ghost-styled cards remain independent. Pause/Space stops settling, not dragging. Explicit Run/Display/retarget prepares selected geometry before scene replacement; allocation failure retains last-good display. No query/ghost analytical layers or similarity-distance replacement added. [Implementation and review gate](../../../reports/graph-query-research/shared-force-layout-query.md).
 
@@ -38,7 +38,10 @@ Actors/Effects add presentation `layout: native | free`; Native remains default.
 - `resource.run`, `resource.clear`.
 - `view.fit`, `view.rearrange`, `view.expand`.
 - `view.start.add`, `view.start.clear`, `view.analyze`, `view.compare`.
-- `view.reset`, `view.find.clear`, `view.witness.fit`, `view.cell.fit`, `view.selection.focus`.
+- `view.reset`, `view.inputs.reset`, `view.reset.all`, `view.find.clear`, `view.witness.fit`, `view.cell.fit`, `view.selection.focus`.
+- `view.back`, `view.forward`, `draft.undo`, `draft.redo`, `draft.redo.discard`.
+
+**Reset all** sits beside **Redo**. Clears selections/inspection, retained analyses, pending analytical inputs, canvas/list filters, Find, cameras/layouts, navigation history and shared folds in all panes. Keep active projection, loaded sources, draft edits and Undo/Redo. Restore default canvas, not old pending queries. No source reload/write. Pending rank text or drag blocks reset; failure to prepare replacement retains all panes. IPC `view.reset.all` requires current presentation `--expect` token. Scoped `view.reset` still preserves current selection/analysis; `view.inputs.reset` only stages analytical defaults.
 
 `view.cell.fit` / **Frame selected pair** frames retained endpoints in Verb usage and Noun interactions Grid/columns/Free. Blank cells keep endpoints without inferred links; inactive links remain hidden unless existing overlay is enabled. Layout changes frame retained selection; Grid return centres selected cell/header at readable zoom. Case/source inspection stays retained. `view.fit` / `F` still fits whole canvas. Ordinary projection switches keep independent selections; explicit **Find selected in…** follows source association without replacing destination selection or filters. [Selection contract and checks](../../../reports/graph-query-research/selection-continuity.md).
 
@@ -50,7 +53,7 @@ Actors/Effects add presentation `layout: native | free`; Native remains default.
 gd viewer action --target SESSION --projection mda --action view.selection.focus --expect PRESENTATION_TOKEN --json
 ```
 
-Discover current availability with `viewer actions`. `view.analyze` explicitly prepares shown-canvas layer/knowledge evidence; Query, Grid and similarity canvases do not masquerade as ordinary graph-layer caches. `view.compare` explicitly computes retained Actor/similarity pair evidence. Reads never run either action. Reset rejects dirty drafts or retained Undo and builds replacement before releasing previous pane state.
+Discover current availability with `viewer actions`. `view.analyze` explicitly prepares shown-canvas layer/knowledge evidence; Query, Grid and similarity canvases do not masquerade as ordinary graph-layer caches. `view.compare` explicitly computes retained Actor/similarity pair evidence. Reads never run either action. Reset actions preserve drafts and Undo/Redo. Build replacements before releasing previous pane state; preparation failure retains last-good state.
 
 ## IPC use
 
@@ -105,19 +108,29 @@ Stage all four Resource inputs while retaining last-good witnesses, applied endp
 
 Source changes remain disk-first authorized edits, followed by explicit guarded refresh. No IPC draft mutation or implicit export/discard.
 
-Refresh blocks active input, pending rank text, modified draft, retained Undo history, pending analytical inputs and remap conflicts. Zero-net-diff Undo still blocks. Cold configured forms preflight before replacement allocation. Cold applied analysis rebuilds even without base canvas. First Actor/Effect canvas uses default applied scope while retaining staged inputs. Failed replacement preserves previous project/results; success advances generation and invalidates exact-ID hints.
+Refresh blocks active input, pending rank text, modified draft, retained Undo/Redo history, pending analytical inputs and remap conflicts. Zero-net-diff Undo still blocks. Cold configured forms preflight before replacement allocation. Cold applied analysis rebuilds even without base canvas. First Actor/Effect canvas uses default applied scope while retaining staged inputs. Failed replacement preserves previous project/results; success advances generation and invalidates exact-ID hints.
 
 ## Sidebar sections
 
-Unified views share ordered collapsible sections: View & layout; Find selected in another view; Display & filters; Analysis; Browse shown nodes; Selection & evidence; Sources & changes; Diagnostics. Unsupported sections are omitted. Native domain subfolds remain inside relevant sections.
+Unified views share ordered collapsible sections: View & layout; Find selected in another view; Canvas Display; Analysis; Browse shown nodes; Selection & evidence; Sources & changes; Diagnostics. Unsupported sections are omitted. Native domain subfolds remain inside relevant sections.
 
 - Matching sections share open/closed state across views and restarts. Reset/reload does not clear fold preferences. Pane selections, cameras, filters, results and pending inputs stay independent.
 - Projection switch, stale/errors, hidden-selection notices and unsaved-draft status stay visible. Folding does not Run/clear analysis, change CLI availability or stop owner-loop preparation/analysis.
-- Defaults open: View & layout, Display & filters, Analysis, Selection & evidence. Other common sections start closed.
+- Defaults open: View & layout, Canvas Display, Analysis, Selection & evidence. Other common sections start closed.
 - Only eight common flags saved in per-user `game-design-workbench/sidebar-folds.ini`: `%LOCALAPPDATA%` on Windows, `~/Library/Application Support` on macOS, `$XDG_CONFIG_HOME` or `~/.config` on Linux. Path appears under Sources & changes. General ImGui INI persistence remains disabled; no analytical or record-specific inspection state saved.
 - Settings read at launch; actual toggles save atomically. Missing file uses defaults; read/save failure reports warning and preserves session state. Running viewers do not live-sync; last save wins. No project/source settings writes.
 
 [Contract and review boundary](../../../reports/graph-query-research/sidebar-sections.md).
+
+## Shared control semantics
+
+- List search (`list_search`) and canvas visibility have independent state. Literal ASCII-case-insensitive substring matching; other UTF-8 bytes exact. Legacy `filter` remains Resource canvas filtering and aliases list search elsewhere; MDA `mda_filter` stays canvas-only.
+- Run labels and adjacent input status distinguish not-run, applied and pending-changes. IPC forms expose `input_status`; actions expose nullable `disabled_reason`. Disabled GUI buttons show same reason on hover. Immediate MDA/neighborhood exploration remains immediate.
+- `view.reset`: camera/layout/general display only. Preserve selection, typed context, inputs/results, list search, drafts/history and other panes. `view.inputs.reset`: analytical defaults staged without Run; preserve current display/context and last-good results.
+- `view.back` / `view.forward`: active-view cross-view selection history, also toolbar/mouse Back/Forward. 128 entries; new navigation replaces forward branch. Text edits coalesce until release; unavailable/ambiguous targets report no substitution or Run. Hidden selections stay hidden. History is not persisted.
+- `draft.undo` / `draft.redo`: draft edits only; toolbar and Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y. Inspector readers finish before mutation. Invalid/no-op edits preserve Redo; new successful edit clears forward edit branch. Pending rank text/drag blocks history actions.
+- Refresh with Redo-only history requires explicit GUI discard confirmation. IPC rejects refresh until `draft.redo.discard` with current presentation `control_token` supplied as `--expect`. Missing/stale token cannot discard. Modified drafts/Undo history still block refresh. IPC reports `redo_steps`; only Undo/Redo report source-draft mutation, never source file writes.
+- Focused no-window checks: `test-explorer-view.exe --ux-helpers ROOT`. [Contract and current checks](../../../reports/graph-query-research/shared-ux-controls.md).
 
 ## Feedback
 
@@ -133,7 +146,7 @@ Current coverage includes analytical discovery/Run/Display/Clear, Resource last-
 
 Completed review hardening: full known/start/focus/diagnostic/contributor token scope; shared-cache ownership across inactive analysis and active similarity; MDA slot/key/source mapping; recursive retained similarity source; ordinary selection precedence; typed Matrix selection preservation; invalid outer-cache nulls; native return contracts; diagnostic omission/capture metadata; fail-fast expensive serializer loops. Independent source review found no remaining blocker within these classes. No latency guarantee inferred.
 
-Regression checks reassemble full JSON from 1 KiB pages and parse it in Node. Finite-Actor similarity source regression verifies no all-pair comparison section is evaluated/exported. Private diamond graph verifies exact bypass nomination through production dispatch.
+Regression checks reassemble full JSON from 64 KiB pages and parse it in Node. Explicit 1 KiB boundary/stale-result tests remain in opt-in deep suite. Finite-Actor similarity source regression verifies no all-pair comparison section is evaluated/exported. Private diamond graph verifies exact bypass nomination through production dispatch.
 
 Review boundaries:
 

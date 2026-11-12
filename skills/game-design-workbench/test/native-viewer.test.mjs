@@ -83,9 +83,18 @@ test('current-view Find adapter: both examples unchanged',{skip:!adapter},async 
     assert.deepEqual(await sourceHashes(root),before);
   });
 });
+test('shared UX adapter: both examples unchanged',{skip:!adapter},async t=>{
+  for(const name of ['crate-puzzle','little-plumber-guy-nes'])await t.test(name,async()=>{
+    const root=join(examples,name,'game-design'),before=await sourceHashes(root);
+    const result=spawnSync(adapter,['--ux-helpers',root],{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:1024*1024});
+    assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
+    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);assert.ok(value.shared_ux_checks>=200);
+    assert.deepEqual(await sourceHashes(root),before);
+  });
+});
 test('diagnostic flag parsing rejects implicit or malformed modes',{skip:!adapter},()=>{
   const root=join(examples,'crate-puzzle','game-design');
-  for(const args of [['--layout-research',root],['--deep-checks',root],['--ipc-helpers',root,'--layout-reseach'],['--ipc-helpers',root,'--deep-check'],['--find-helpers',root,'--layout-research'],['--find-helpers',root,'--deep-checks'],['--ipc-helpers',root,'--layout-research','--layout-research'],['--ipc-helpers',root,'--deep-checks','--deep-checks']]){
+  for(const args of [['--layout-research',root],['--deep-checks',root],['--ipc-helpers',root,'--layout-reseach'],['--ipc-helpers',root,'--deep-check'],['--find-helpers',root,'--layout-research'],['--find-helpers',root,'--deep-checks'],['--ux-helpers',root,'--deep-checks'],['--ipc-helpers',root,'--layout-research','--layout-research'],['--ipc-helpers',root,'--deep-checks','--deep-checks']]){
     const result=spawnSync(adapter,args,{encoding:'utf8',windowsHide:true,timeout:30000});
     assert.equal(result.status,2,result.stderr);assert.equal(result.stdout,'');assert.match(result.stderr,/--ipc-helpers GAME-DESIGN-DIRECTORY \[--deep-checks\] \[--layout-research\]/);
   }
@@ -147,7 +156,7 @@ for(const [runDeepChecks,runLayoutResearch] of [[false,false],[true,false],[true
     }else{assert.equal(value.layer_result,null);assert.doesNotMatch(result.stderr,/Resource footprint probe:|Noun force probe/);}
     const catalogue=value.control_catalogue;assert.equal(catalogue.ok,true);assert.equal(catalogue.projection,'actors');
     const form=catalogue.forms.find(form=>form.name==='query');assert.match(form.control_token,/^[a-f0-9]{16}$/);
-    assert.equal(form.fields.length,16);assert.ok(form.applied);assert.equal(form.fields.find(field=>field.name==='coverage').value,'false');
+    assert.equal(form.fields.length,16);assert.ok(form.applied);assert.equal(form.input_status,'pending-changes');assert.equal(form.fields.find(field=>field.name==='coverage').value,'false');
     assert.match(form.fields.find(field=>field.name==='root_case').value,/#/);
     assert.equal(form.fields.find(field=>field.name==='values').choices_closed,false);
     assert.ok(form.fields.find(field=>field.name==='values').choice_slots>=2);
@@ -159,7 +168,9 @@ for(const [runDeepChecks,runLayoutResearch] of [[false,false],[true,false],[true
     assert.equal(resourceForm.fields.find(field=>field.name==='from').value,'');
     assert.equal(resourceForm.fields.find(field=>field.name==='work_limit').maximum,16777216);
     assert.deepEqual(value.resource_actions.actions.filter(action=>action.form==='resource').map(action=>action.name),['resource.run','resource.clear']);
-    const snapshot=value.snapshot;assert.equal(snapshot.ok,true);assert.equal(snapshot.projection,'matrix');
+    assert.ok(value.resource_actions.actions.every(action=>action.available ? action.disabled_reason===null:typeof action.disabled_reason==='string' && action.disabled_reason.length>0));
+    assert.equal(value.resource_actions.source_draft_edits,true);
+    const snapshot=value.snapshot;assert.equal(snapshot.draft.redo_steps,0);assert.equal(snapshot.ok,true);assert.equal(snapshot.projection,'matrix');
     assert.equal(snapshot.panes.length,9);
     assert.equal(snapshot.panes.find(pane=>pane.projection==='noun-interactions').available,true);assert.equal(snapshot.draft.modified_records,0);assert.equal(snapshot.draft.undo_steps,0);
     assert.equal(snapshot.panes.find(pane=>pane.projection==='actors').query.pending.values,'unapplied Ω');

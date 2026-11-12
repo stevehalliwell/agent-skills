@@ -308,9 +308,9 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         }
         if(v==GD_EXPLORER_NOUNS){PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(!strstr(reply,"\"configured\":true") && !*panes[v].filter && !gd_explorer_presentation_editable(&target,"paused"));}
         else {
-            PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !strcmp(panes[v].filter,"test source") && active==GD_EXPLORER_MATRIX);
+            PRESENT_STAGE(v,"filter","test source");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !strcmp(v==GD_EXPLORER_RESOURCES ? panes[v].filter:panes[v].list_search,"test source") && active==GD_EXPLORER_MATRIX);
             PRESENT_SEND();PRESENT_CHECK(strstr(reply,"viewer.stale_controls")!=NULL);
-            PRESENT_STAGE(v,"filter","");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !*panes[v].filter);
+            PRESENT_STAGE(v,"filter","");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !*(v==GD_EXPLORER_RESOURCES ? panes[v].filter:panes[v].list_search));
         }
         PRESENT_ACTION(v,"view.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true")!=NULL);
         PRESENT_REQUEST("evidence",v);strcpy(request.form,"links");before=*calls;PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"total_slots") && *calls==before);

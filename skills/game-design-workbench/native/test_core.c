@@ -1162,6 +1162,11 @@ TEST(draft_ranks,
     while (draft->history_count) TEST_ASSERT(gd_draft_undo(draft) == 1);
     TEST_ASSERT(!draft->modified_count && draft->model->records[parent].rank == 1 && !gd_draft_undo(draft));
     TEST_ASSERT(draft->model->finding_count == base->finding_count && !gd_sources_changed(base));
+    TEST_ASSERT(draft->redo_count==5 && gd_draft_rank(draft,parent,"bad")==-1 && draft->redo_count==5);
+    TEST_ASSERT(gd_draft_rank(draft,parent,"1")==0 && draft->redo_count==5);
+    while(draft->redo_count)TEST_ASSERT(gd_draft_redo(draft));
+    TEST_ASSERT(draft->history_count==5 && draft->model->records[parent].rank==INT64_C(9007199254740991) && !gd_draft_redo(draft));
+    TEST_ASSERT(gd_draft_undo(draft) && gd_draft_rank(draft,parent,"7")==1 && !draft->redo_count && !gd_draft_redo(draft));
     gd_draft_destroy(draft); gd_destroy(base);
 )
 TEST(draft_connections,
@@ -1179,6 +1184,9 @@ TEST(draft_connections,
     TEST_ASSERT(gd_draft_prerequisite(draft,child,"atoms/root",1) == 1 && !draft->modified_count);
     TEST_ASSERT(gd_draft_undo(draft) && gd_draft_undo(draft));
     TEST_ASSERT(!memcmp(draft->model->edges,base->edges,base->edge_count*sizeof(base->edges[0])));
+    TEST_ASSERT(draft->redo_count==2 && gd_draft_redo(draft) && !draft->model->skills[child].prerequisite_count);
+    TEST_ASSERT(gd_draft_redo(draft) && !draft->modified_count && !gd_draft_redo(draft));
+    TEST_ASSERT(gd_draft_undo(draft) && gd_draft_undo(draft) && !memcmp(draft->model->edges,base->edges,base->edge_count*sizeof(*base->edges)));
     TEST_ASSERT(gd_draft_prerequisite(draft,child,"atoms/unknown",1) == -1 && !draft->modified_count);
     count = base->edge_count; TEST_ASSERT(!gd_sources_changed(base));
     TEST_ASSERT(draft->model->edge_count == count && base->skills[child].declared_prerequisites == 2);
@@ -1194,6 +1202,9 @@ TEST(draft_limits,
     TEST_ASSERT(gd_draft_rank(draft,parent,"4") == -1 && draft->model->records[parent].rank == 1);
     for (i = 0; i < GD_MAX_DRAFT_EDITS; ++i) TEST_ASSERT(gd_draft_undo(draft) == 1);
     TEST_ASSERT(!draft->modified_count && !draft->history_count && !gd_sources_changed(base));
+    TEST_ASSERT(draft->redo_count==GD_MAX_DRAFT_EDITS);
+    for(i=0;i<GD_MAX_DRAFT_EDITS;++i)TEST_ASSERT(gd_draft_redo(draft));
+    TEST_ASSERT(!draft->redo_count && draft->history_count==GD_MAX_DRAFT_EDITS && !draft->modified_count);
     gd_draft_destroy(draft);
     base->edge_count = GD_MAX_EDGES;
     for (i = 0; i < GD_MAX_EDGES; ++i) base->edges[i] = (GD_Edge){child,parent,GD_PREREQUISITES,base->records[parent].reference,0};
