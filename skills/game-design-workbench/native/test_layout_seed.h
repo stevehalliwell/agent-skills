@@ -58,6 +58,10 @@ TEST(layout_neighborhood_failure,
     TEST_ASSERT(gd_layout_arrange(layout,GD_LAYOUT_FORCE,GD_SORT_NAME));memcpy(before,layout,sizeof(*before));
     failing.context=&failure;failing.allocate=route_allocate;failing.release=route_release;
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,failing,1) && !memcmp(layout,before,sizeof(*layout)));
+    failure.remaining=0;TEST_ASSERT(!gd_layout_prepare_free(layout,failing,1,1) && !memcmp(layout,before,sizeof(*layout)));
+    TEST_ASSERT(!gd_layout_prepare_free(layout,allocator,1,2) && !memcmp(layout,before,sizeof(*layout)));
+    TEST_ASSERT(gd_layout_prepare_free(layout,allocator,1.4f,1) && layout->workspace.enabled);
+    TEST_ASSERT(gd_layout_prepare_free(layout,allocator,1.4f,0) && !layout->workspace.enabled);memcpy(before,layout,sizeof(*before));
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,NAN) && !memcmp(layout,before,sizeof(*layout)));
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,0) && !memcmp(layout,before,sizeof(*layout)));
     {float gaps[]={-1,NAN,1048577};int i;for(i=0;i<3;++i){layout->spring_gap=gaps[i];memcpy(before,layout,sizeof(*before));TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,1) && !memcmp(layout,before,sizeof(*layout)));}layout->spring_gap=0;}
@@ -65,5 +69,6 @@ TEST(layout_neighborhood_failure,
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,1) && !memcmp(layout,before,sizeof(*layout)));
     layout->edge_count=0;layout->mode=GD_LAYOUT_DIRECTED;memcpy(before,layout,sizeof(*before));
     TEST_ASSERT(!gd_layout_seed_neighborhood(layout,allocator,1) && !memcmp(layout,before,sizeof(*layout)));
+    TEST_ASSERT(gd_layout_prepare_free(layout,allocator,1.4f,1) && !layout->workspace.enabled && !memcmp(layout,before,sizeof(*layout)));
     release(storage,before);release(storage,layout);
 )

@@ -52,12 +52,12 @@ static int presentation_layout_reference(const GD_ExplorerContext *context) {
     const GD_QueryScene *original=pane->view==GD_EXPLORER_EFFECTS ? pane->query_state->scene:NULL;
     LayoutReferenceWork *work=NULL;GD_Layout *ordinary=NULL;GD_QueryScene *scene=NULL;GD_RenderPose *visual=NULL;
     const char *view=viewer_projections[pane->view];uint64_t before=reference_bytes(pane->layout,sizeof(*pane->layout)),typed=original ? reference_bytes(original,sizeof(*original)):0;
-    int variant,node,step,valid=0,base_variants=original ? 4:pane->view==GD_EXPLORER_RESOURCES ? 3:2,variants=base_variants+2;
+    int variant,node,step,valid=0,base_variants=original ? 2:pane->view==GD_EXPLORER_RESOURCES ? 3:2,variants=base_variants+2;
     work=a.allocate(a.context,sizeof(*work));visual=a.allocate(a.context,sizeof(*visual));if(!work || !visual)goto cleanup;memset(visual,0,sizeof(*visual));
     for(variant=0;variant<variants;++variant){
-        GD_Layout *layout;GD_LayoutWorkspace workspace;int bounded=variant>=base_variants,unweighted=original && !bounded && variant>=2;
-        int neighborhood=bounded ? variant==base_variants+1:variant==1 || (original && variant==3),startup=!bounded && !original && variant==2 ? 120:0;
-        const char *seed=neighborhood ? "neighborhood":"native",*profile=bounded ? "bounded-workspace":unweighted ? "unweighted-effects":"adapter";
+        GD_Layout *layout;GD_LayoutWorkspace workspace;int bounded=variant>=base_variants,unweighted=original && variant%2;
+        int neighborhood=original || (bounded ? variant==base_variants+1:variant==1),startup=!bounded && !original && variant==2 ? 120:0;
+        const char *seed=neighborhood ? "neighborhood":"native",*profile=bounded ? unweighted ? "bounded-unweighted-effects":"bounded-workspace":unweighted ? "unweighted-effects":"adapter";
         memset(work,0,sizeof(*work));
         if(original){
             if(original->overview || original->free_geometry)goto cleanup;
@@ -69,7 +69,7 @@ static int presentation_layout_reference(const GD_ExplorerContext *context) {
                 scene=a.allocate(a.context,sizeof(*scene));if(!scene)goto cleanup;memcpy(scene,original,sizeof(*scene));
                 for(node=0;node<scene->layout.node_count;++node)scene->layout.nodes[node].label=scene->labels[node];
             }
-            if(!gd_query_scene_place(scene,GD_LAYOUT_FORCE,neighborhood,1.4f))goto cleanup;
+            if(!gd_query_scene_place(scene,GD_LAYOUT_FORCE,bounded,1.4f))goto cleanup;
             layout=&scene->layout;
         }else{
             ordinary=a.allocate(a.context,sizeof(*ordinary));if(!ordinary)goto cleanup;

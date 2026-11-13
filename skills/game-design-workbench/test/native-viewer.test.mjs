@@ -112,10 +112,10 @@ for(const [runDeepChecks,runLayoutResearch] of [[false,false],[true,false],[true
     if(runDeepChecks)assert.ok(value.presentation_checks>=150);else assert.equal(value.presentation_checks,0);
     if(runLayoutResearch){
       const references=result.stderr.split(/\r?\n/).filter(line=>line.startsWith('layout-reference ')).map(line=>JSON.parse(line.slice('layout-reference '.length)));
-      const topologies=references.filter(row=>row.kind==='topology');assert.equal(topologies.length,19);
+      const topologies=references.filter(row=>row.kind==='topology');assert.equal(topologies.length,17);
       for(const topology of topologies){
         assert.equal(topology.aspect,1.4);assert.equal(topology.footprints,'adapter-only');assert.equal(topology.world_scale,1);
-        assert.equal(topology.workspace_enabled,topology.profile==='bounded-workspace');
+        assert.equal(topology.workspace_enabled,topology.profile.startsWith('bounded-'));
         if(topology.workspace_enabled){assert.ok(topology.workspace_right>topology.workspace_left);assert.ok(topology.workspace_bottom>topology.workspace_top);}
         assert.ok(topology.components>=1 && topology.components<=topology.nodes);
         assert.ok(topology.unique_neighbor_pairs>=topology.nodes-topology.components);

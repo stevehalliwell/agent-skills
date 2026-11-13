@@ -4,6 +4,37 @@
 #include "raylib.h"
 #include <stdio.h>
 #include <math.h>
+/* Same raw workspace outline in unified and standalone Free viewers. */
+static inline void gd_graph_workspace_draw(const GD_Layout *layout,Camera2D camera,Rectangle viewport,float scale){
+    const GD_LayoutBounds *b=&layout->workspace.bounds;
+    if(layout->mode!=GD_LAYOUT_FORCE || !layout->workspace.enabled)return;
+    BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height);BeginMode2D(camera);
+    DrawRectangleLinesEx((Rectangle){b->left*scale,b->top*scale,(b->right-b->left)*scale,(b->bottom-b->top)*scale},1.5f/camera.zoom,(Color){104,142,181,160});
+    EndMode2D();EndScissorMode();
+}
+/* Display-only unions; raw component membership never depends on filtering or
+   smoothing. 64 KiB bounded stack scratch, no allocation or solver writes. */
+static inline int gd_graph_island_bounds(const GD_Layout *raw,const GD_Layout *display,const unsigned char *shown,GD_LayoutBounds *bounds){
+    int i,count=0;
+    if(!raw->islands.enabled || raw->mode!=GD_LAYOUT_FORCE || display->node_count!=raw->node_count)return 0;
+    for(i=0;i<raw->node_count;++i)bounds[i]=(GD_LayoutBounds){INFINITY,INFINITY,-INFINITY,-INFINITY};
+    for(i=0;i<raw->node_count;++i){
+        const GD_LayoutNode *n=&display->nodes[i],*physical=&raw->nodes[i];int root=raw->islands.component[i];GD_LayoutBounds *b;
+        if((shown && !shown[i]) || root<0 || root>=raw->node_count)continue;b=&bounds[root];
+        b->left=fminf(b->left,n->x+physical->footprint.left-GD_LAYOUT_ISLAND_PADDING);b->right=fmaxf(b->right,n->x+physical->footprint.right+GD_LAYOUT_ISLAND_PADDING);
+        b->top=fminf(b->top,n->y+physical->footprint.top-GD_LAYOUT_ISLAND_PADDING);b->bottom=fmaxf(b->bottom,n->y+physical->footprint.bottom+GD_LAYOUT_ISLAND_PADDING);
+    }
+    for(i=0;i<raw->node_count;++i)if(isfinite(bounds[i].left))++count;return count;
+}
+static inline void gd_graph_islands_draw(const GD_Layout *raw,const GD_Layout *display,const unsigned char *shown,Camera2D camera,Rectangle viewport,float scale){
+    GD_LayoutBounds bounds[GD_MAX_RECORDS];int i;
+    if(!gd_graph_island_bounds(raw,display,shown,bounds))return;
+    BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height);BeginMode2D(camera);
+    for(i=0;i<raw->node_count;++i)if(isfinite(bounds[i].left)){
+        const GD_LayoutBounds *b=&bounds[i];DrawRectangleLinesEx((Rectangle){b->left*scale,b->top*scale,(b->right-b->left)*scale,(b->bottom-b->top)*scale},1.25f/camera.zoom,(Color){107,184,156,190});
+    }
+    EndMode2D();EndScissorMode();
+}
 /* Shared palette for all graph adapters; source colors/arrowheads stay above
    these underlays. Mixed link classes remain explicit rather than choosing
    one endpoint's classification. Node classes are never mixed. */

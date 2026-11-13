@@ -26,7 +26,7 @@ test-explorer-view.exe --ipc-helpers GAME-DESIGN-DIRECTORY --layout-research
 - Both flags may be supplied in either order. Unknown, misplaced and duplicate flags fail with status 2 before execution. Success is JSON stdout; usage errors go to stderr.
 - Node deep case requires `GD_DEEP_CHECKS=1`; research case requires `GD_LAYOUT_RESEARCH=1`. Test discovery alone runs neither optional case.
 - Deep suite retains Resource 600-step finite/work-budget/non-overlap assertions and noun 4096-step two-seed convergence regression. Noun gates unchanged: linked centres≥128, tail RMS≤0.05, max step≤0.2, centroid drift≤1, no overlaps.
-- Research retains 19 configurations ×4096 steps, samples 0/120/600/4096, 256-step motion window, both seed modes, weighted/unweighted Effects, workspace and render-filter measurements.
+- Current research fixture has17 configurations ×4096 steps, samples0/120/600/4096,256-step motion window, weighted/unweighted Effects, workspace and render-filter measurements. Generic layout fixtures retain private legacy/Neighborhood comparisons; Effects now uses Neighborhood only, with weighted/unweighted × workspace off/on. Previous19-configuration/95-record measurements below predate removal of public Native seeding; current85-record research not rerun. [Shared-default change](resource-readability.md).
 - Shared fixture loading and basic adapter setup remain necessary in default path. No production CLI/GUI/solver changes, threshold relaxation or timeout widening. Existing 90000 ms test timeout unchanged.
 
 ## Serialization change

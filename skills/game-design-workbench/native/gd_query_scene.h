@@ -51,11 +51,12 @@ GD_QueryScene *gd_query_scene_effect_context(const GD_Query *query, const GD_Eff
 /* Color membership only; no source topology, semantic facts or counts change. */
 int gd_query_scene_compare(GD_QueryScene *scene, int first, int second);
 /* Geometry only: retain typed scene/query/metadata. Native restores build pose.
-   Free uses shared solver with compound stacked-variant footprints. Candidate
+   Free uses shared Neighborhood preparation and solver with compound stacked-variant footprints. Candidate
    allocation/work failure leaves prior geometry intact; no per-frame allocation. */
-int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhood,float aspect);
+int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int workspace,float aspect);
 /* Optional shared workspace over spatial units, including compound stacks. */
 int gd_query_scene_workspace(GD_QueryScene *scene,int enabled,float aspect);
+int gd_query_scene_islands(GD_QueryScene *scene,int enabled);
 void gd_query_scene_step(GD_QueryScene *scene,int held_node);
 void gd_query_scene_drag(GD_QueryScene *scene,int node,float x,float y);
 void gd_query_scene_destroy(GD_QueryScene *scene);

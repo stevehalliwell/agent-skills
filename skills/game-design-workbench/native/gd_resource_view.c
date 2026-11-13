@@ -34,6 +34,7 @@ static void fit(Camera2D *camera, const GD_Layout *layout, Rectangle viewport) {
         if (!i || x-110<left) left=x-110; if (!i || x+110>right) right=x+110;
         if (!i || y-45<top) top=y-45; if (!i || y+45>bottom) bottom=y+45;
     }
+    if(layout->workspace.enabled){const GD_LayoutBounds *b=&layout->workspace.bounds;left=fminf(left,b->left);right=fmaxf(right,b->right);top=fminf(top,b->top);bottom=fmaxf(bottom,b->bottom);}
     camera->target=(Vector2){(left+right)/2,(top+bottom)/2};
     camera->offset=(Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
     camera->zoom=fminf(viewport.width/(right-left+50),viewport.height/(bottom-top+50));
@@ -338,7 +339,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
     GD_PathControls path_controls={0}; int path_tab=0;
     GD_ReachControls reach_controls={0,-1,0,-1,-1}; int shape_enabled=0;
     GD_OverviewControls overview_controls={0,-1,-1};
-    if (!layout || !analysis || !resource_layout(graph,layout)) {
+    if (!layout || !analysis || !resource_layout(graph,layout) || !gd_layout_prepare_free(layout,model->allocator,1.4f,1)) {
         if (analysis) model->allocator.release(model->allocator.context,analysis);
         if (layout) model->allocator.release(model->allocator.context,layout);
         gd_error(model,"resources.layout","Cannot allocate or arrange resource preview",NULL,0); return 2;
@@ -355,6 +356,9 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         if (GetTime()>=next_check) { if (gd_sources_changed(model)) stale=1; next_check=GetTime()+1; }
         if (IsKeyPressed(KEY_F)) fit(&camera,layout,viewport);
         if (IsKeyPressed(KEY_SPACE)) paused=!paused;
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,12,340,28})){
+            gd_layout_islands_set(layout,!layout->islands.preferred);if(layout->islands.enabled)paused=0;
+        }
         if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) held=-1;
         if (gd_graph_overview_hit(&overview_controls,viewport,mouse)) held=-1;
         if (CheckCollisionPointRec(mouse,viewport) && !gd_graph_overview_hit(&overview_controls,viewport,mouse)) {
@@ -450,10 +454,14 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,1);
         BeginDrawing(); ClearBackground(background);
         DrawText("Resource graph preview",18,14,26,foreground);
+        DrawRectangleLines(split+14,12,340,28,muted);
+        DrawText(layout->islands.enabled ? "[x] Separate connected islands":"[ ] Separate connected islands",split+22,18,16,foreground);
         DrawText("Direct and instantiated declarations; not final outcomes. Incidence lines are not proof of flow.",18,49,16,selected_color);
         DrawText(TextFormat("%d nodes | %d relations | %d unresolved facets | %d unexamined calls%s",graph->node_count,graph->relation_count,graph->unresolved_facets,graph->composition_unexamined,graph->limited ? " | GRAPH LIMIT REACHED":""),18,74,15,muted);
         draw_resource_graph(graph,layout,layout,analysis,camera,viewport,selected,shared,pair,comparison,
                             paths,bypass,reachability,reach_pair,shapes,overview);
+        gd_graph_workspace_draw(layout,camera,viewport,1);
+        gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,1);
         gd_graph_overview_draw(analysis,&overview_controls,viewport,1);
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
         DrawText(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
@@ -495,10 +503,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
 int gd_explorer_resource_prepare(GD_ExplorerContext *context) {
-    int i;
-    if (!resource_layout(context->project->resources,context->pane->layout)) return 0;
-    for (i=0;i<120;++i) gd_layout_step(context->pane->layout,-1);
-    return 1;
+    return resource_layout(context->project->resources,context->pane->layout);
 }
 void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *e) {
     GD_ExplorerPane *p=context->pane;const GD_Layout *shown=gd_explorer_display_layout(context);

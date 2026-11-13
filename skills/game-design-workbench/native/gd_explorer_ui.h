@@ -81,10 +81,10 @@ typedef struct {
 } GD_ExplorerResourceForm;
 /* Value snapshot only; pane/domain state remains authoritative. */
 typedef struct {
-    int layout,initial_arrangement,actor_overview,noun_row,noun_column,noun_case_page,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
+    int layout,actor_overview,noun_row,noun_column,noun_case_page,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
     int focus_root,mda_root,mda_direction,resource_witness,route_witness,similarity_row,similarity_peer;
     int overview_row,overview_column,coverage_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
-    bool paused,workspace_bounds,visual_filter,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
+    bool paused,workspace_bounds,island_separation,visual_filter,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
     bool paths_enabled,paths_declared,paths_compare,reach_enabled,reach_reverse,overview_enabled;
     bool only_scope,only_path,role0,role1,role2,role3,only_witness,similarity_canvas,known;
     char filter[129],mda_filter[129],list_search[129];
@@ -126,8 +126,9 @@ typedef struct {
     GD_ReachControls reach;
     GD_OverviewControls overview;
     GD_GraphLens lens;
-    bool shared, branches, foundations, shapes, paused, workspace_bounds, visual_filter, overlay;
-    int peer, foundation_peer, layout_choice, initial_arrangement, actor_overview, sort, horizontal, rank, witness;
+    bool shared, branches, foundations, shapes, paused, workspace_bounds, island_separation, visual_filter, overlay;
+    bool defer_free_prepare; /* Candidate rearrangement remaps measured footprints before seeding. */
+    int peer, foundation_peer, layout_choice, actor_overview, sort, horizontal, rank, witness;
     int prepared, fit, navigate, focus_root, focus_expand, inspected_record;
     unsigned revision;
     char filter[129], list_search[129], find_reference[260];
@@ -191,7 +192,7 @@ void gd_explorer_mda_source(GD_ExplorerContext *context, int edge);
 int gd_explorer_query_prepare(GD_ExplorerContext *context);
 int gd_explorer_query_run(GD_ExplorerContext *context);
 int gd_explorer_query_display(GD_ExplorerContext *context);
-int gd_explorer_query_arrange(GD_ExplorerContext *context,GD_LayoutMode mode,int neighborhood);
+int gd_explorer_query_arrange(GD_ExplorerContext *context,GD_LayoutMode mode);
 int gd_explorer_query_overview(GD_ExplorerContext *context,int mode);
 int gd_explorer_query_select_result(GD_ExplorerContext *context, int target);
 int gd_explorer_query_compare(GD_ExplorerContext *context);

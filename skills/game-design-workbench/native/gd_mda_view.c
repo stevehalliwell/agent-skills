@@ -56,6 +56,13 @@ static float segment_square(Vector2 p, Vector2 a, Vector2 b) {
     if (t < 0) t = 0; if (t > 1) t = 1;
     x = p.x-a.x-t*x; y = p.y-a.y-t*y; return x*x+y*y;
 }
+static int mda_layout(const GD_Model *model,const GD_Mda *mda,GD_Layout *layout,int bands){
+    GD_Allocator allocator=model->allocator;GD_Layout *candidate=allocator.allocate(allocator.context,sizeof(*candidate));int okay;float aspect=1.4f;
+    if(!candidate)return 0;memset(candidate,0,sizeof(*candidate));
+    if(IsWindowReady() && GetScreenHeight()>200)aspect=(GetScreenWidth()-512.0f)/(GetScreenHeight()-200);
+    okay=gd_mda_layout(model,mda,candidate,bands) && gd_layout_prepare_free(candidate,allocator,aspect,1) && gd_layout_islands_set(candidate,layout->islands.preferred);
+    if(okay)memcpy(layout,candidate,sizeof(*layout));allocator.release(allocator.context,candidate);return okay;
+}
 static void fit(Camera2D *camera, const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Rectangle viewport) {
     int i, found = 0; float left = 0, right = 1, top = 0, bottom = 1;
     for (i = 0; i < layout->node_count; ++i) if (visible(model,mda,display,layout->nodes[i].key)) {
@@ -66,6 +73,7 @@ static void fit(Camera2D *camera, const GD_Model *model, const GD_Mda *mda, cons
         if (!found || position.y+55 > bottom) bottom = position.y+55;
         found = 1;
     }
+    if(layout->workspace.enabled){const GD_LayoutBounds *b=&layout->workspace.bounds;float scale=layout->mode==GD_LAYOUT_FORCE ? 3:1;left=fminf(left,b->left*scale);right=fmaxf(right,b->right*scale);top=fminf(top,b->top*scale);bottom=fmaxf(bottom,b->bottom*scale);}
     camera->target = (Vector2){(left+right)/2,(top+bottom)/2};
     camera->zoom = fminf(viewport.width/(right-left+60),viewport.height/(bottom-top+70));
     if (camera->zoom > 1.2f) camera->zoom = 1.2f;
@@ -259,7 +267,8 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     Camera2D camera = {{0,0},{0,0},0,1};
     int frame = 0, result = 0, fit_next = 1, stale = 0, layout_choice = bands ? 0:1;
     double next_check = 0; char failure[GD_MAX_PATH+512] = "";
-    if (!mda || !layout || !gd_mda_layout(model,mda,layout,bands)) {
+    if(layout)memset(layout,0,sizeof(*layout));
+    if (!mda || !layout || !mda_layout(model,mda,layout,bands)) {
         if (layout) initial->allocator.release(initial->allocator.context,layout);
         gd_error(initial,"view.memory","Cannot prepare bounded MDA presentation",NULL,0); return 2;
     }
@@ -297,7 +306,8 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
             igSameLine(0,-1);
         }
         if (igButton("Show all",(ImVec2_c){0,0})) { gd_mda_query(model,mda,-1,mda->direction); fit_next = 1; }
-        if (igCombo_Str("Layout",&layout_choice,"Role bands\0Free graph\0",-1)) { gd_mda_layout(model,mda,layout,!layout_choice); fit_next = 1; display.held = -1; }
+        if (igCombo_Str("Layout",&layout_choice,"Role bands\0Free graph\0",-1)) { if(!mda_layout(model,mda,layout,!layout_choice)){layout_choice=layout->mode==GD_LAYOUT_FORCE;snprintf(failure,sizeof(failure),"Cannot prepare layout; last good geometry retained.");}else fit_next=1;display.held=-1; }
+        if(layout->mode==GD_LAYOUT_FORCE){bool islands=layout->islands.preferred!=0;if(igCheckbox("Separate connected islands",&islands)){gd_layout_islands_set(layout,islands);if(islands)display.paused=false;}}
         igCheckbox("Pause settling",&display.paused); igSameLine(0,-1);
         if (igButton("Fit",(ImVec2_c){0,0})) fit_next = 1;
         igSameLine(0,-1); refresh = igButton("Refresh (F5)",(ImVec2_c){0,0});
@@ -371,6 +381,8 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
         const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,0);
         draw(model,mda,layout,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair,shapes,overview);
+        gd_graph_workspace_draw(layout,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
+        gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
         gd_graph_overview_draw(analysis,&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
         if (paths) DrawText(TextFormat("D: dominated targets | J: incoming neighbors | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,155,12,gd_path_color);
         if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
@@ -389,7 +401,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
                 ready = replacement && gd_mda_query(fresh,replacement,root[0] ? gd_mda_find(fresh,root):-1,mda->direction);
                 if (replacement && !ready && !fresh->error_count) gd_error(fresh,"mda.root","Query root no longer exists; clear root before reload to accept removal",NULL,0);
             }
-            if (ready) { fresh_layout = initial->allocator.allocate(initial->allocator.context,sizeof(*fresh_layout)); ready = fresh_layout && gd_mda_layout(fresh,replacement,fresh_layout,!layout_choice); }
+            if (ready) { fresh_layout = initial->allocator.allocate(initial->allocator.context,sizeof(*fresh_layout)); if(fresh_layout){memset(fresh_layout,0,sizeof(*fresh_layout));fresh_layout->islands.preferred=layout->islands.preferred;}ready = fresh_layout && mda_layout(fresh,replacement,fresh_layout,!layout_choice); }
             if (ready) {
                 gd_graph_paths_remap(&path_controls,model,fresh);
                 if (model != initial) { gd_mda_destroy(mda); gd_destroy(model); }

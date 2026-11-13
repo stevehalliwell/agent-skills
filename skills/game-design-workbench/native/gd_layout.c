@@ -19,6 +19,7 @@ static int compare_order(const void *a, const void *b) {
 #include "gd_layout_collision.h"
 #include "gd_layout_springs.h"
 #include "gd_layout_workspace.h"
+#include "gd_layout_islands.h"
 #include "gd_layout_seed.h"
 int gd_matrix_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort) {
     int record_node[GD_MAX_RECORDS],i;
@@ -100,6 +101,7 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
         if (!i || order[i-1].group != order[i].group) layout->groups[order[i].group].first = i;
     }
     layout->width = layout->height = 0;
+    {int preferred=layout->islands.preferred==1;memset(&layout->islands,0,sizeof(layout->islands));layout->islands.preferred=preferred;}
     if (mode == GD_LAYOUT_DIRECTED) return directed_arrange(layout,order,sort);
     /* Linked groups first, singleton groups below. Every singleton retains its
        own component; sharing a visual shelf never merges topology. */
@@ -145,18 +147,20 @@ int gd_layout_arrange(GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort)
     }
     layout->height = y > 0 ? y-24 : 0;
     layout->mode = mode; layout->sort = sort; layout->tick = 0;
+    gd_layout_islands_set(layout,layout->islands.preferred);
     return 1;
 }
 void gd_layout_step_weighted(GD_Layout *layout, int held_node,const int *counts) {
     int i;
     if (layout->mode != GD_LAYOUT_FORCE && layout->mode != GD_LAYOUT_DIRECTED) return;
-    if(layout->mode==GD_LAYOUT_FORCE)spring_neighbors_prepare(layout);
+    if(layout->mode==GD_LAYOUT_FORCE){spring_neighbors_prepare(layout);if(layout->islands.enabled)islands_refresh(layout);}
     for (i = 0; i < layout->node_count; ++i) {
         GD_LayoutNode *node = &layout->nodes[i];
         GD_LayoutGroup *group = &layout->groups[node->group];
         int local, sample, samples = group->count-1;
         float target_x = layout->mode == GD_LAYOUT_DIRECTED ? (layout->horizontal ? node->axis : node->anchor) : group->x+group->width/2;
         float target_y = layout->mode == GD_LAYOUT_DIRECTED ? (layout->horizontal ? node->anchor : node->axis) : group->y+group->height/2;
+        if(layout->islands.enabled && layout->islands.count>1){const GD_LayoutPoint *offset=&layout->islands.offset[layout->islands.component[i]];target_x+=offset->x;target_y+=offset->y;}
         node->vx += (target_x-node->x)*0.0015f;
         node->vy += (target_y-node->y)*0.0015f;
         if (samples > GD_REPULSION_SAMPLES) samples = GD_REPULSION_SAMPLES;
@@ -205,7 +209,7 @@ void gd_layout_step_weighted(GD_Layout *layout, int held_node,const int *counts)
         if (speed > 5) { node->vx *= 5/speed; node->vy *= 5/speed; }
         node->x += node->vx; node->y += node->vy;
     }
-    if (layout->mode==GD_LAYOUT_FORCE) {collision_separate(layout,held_node);workspace_contain(layout,held_node);}
+    if (layout->mode==GD_LAYOUT_FORCE) {collision_separate(layout,held_node);workspace_contain(layout,held_node);if(layout->islands.enabled)islands_step(layout,held_node);}
     ++layout->tick;
 }
 void gd_layout_step(GD_Layout *layout,int held_node) { gd_layout_step_weighted(layout,held_node,NULL); }

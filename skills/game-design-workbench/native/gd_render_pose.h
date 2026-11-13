@@ -39,6 +39,8 @@ static void render_copy(GD_Layout *out,const GD_Layout *source) {
     memcpy(&out->pickup_x,&source->pickup_x,offsetof(GD_Layout,order)-offsetof(GD_Layout,pickup_x));
     memcpy(out->order,source->order,nodes*sizeof(out->order[0]));memcpy(out->position,source->position,nodes*sizeof(out->position[0]));
     memcpy(&out->node_count,&source->node_count,offsetof(GD_Layout,collision_order)-offsetof(GD_Layout,node_count));
+    out->islands.enabled=source->islands.enabled;out->islands.count=source->islands.count;
+    if(source->islands.enabled)memcpy(out->islands.component,source->islands.component,nodes*sizeof(*out->islands.component));
     out->collision_cursor=source->collision_cursor;out->collision_checks=source->collision_checks;out->collision_moves=source->collision_moves;out->collision_limited=source->collision_limited;
 }
 static int gd_render_pose_update(GD_RenderPose *pose,const GD_Layout *source,const void *identity,int held,double seconds,int reset) {

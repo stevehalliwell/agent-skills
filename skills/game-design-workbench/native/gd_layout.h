@@ -7,7 +7,7 @@
 typedef enum { GD_LAYOUT_FORCE, GD_LAYOUT_COLUMNS, GD_LAYOUT_DIRECTED } GD_LayoutMode;
 typedef enum { GD_SORT_NAME, GD_SORT_PARTNERS } GD_LayoutSort;
 typedef struct { float left,top,right,bottom; } GD_LayoutBounds;
-enum { GD_LAYOUT_COLLISION_WORK=65536 };
+enum { GD_LAYOUT_COLLISION_WORK=65536,GD_LAYOUT_ISLAND_WORK=65536,GD_LAYOUT_ISLAND_PADDING=16,GD_LAYOUT_ISLAND_CLEARANCE=8 };
 /* Owner-held scratch; snapshot intervals keep broad-phase sorting valid while
    narrow-phase corrections change live positions. */
 typedef struct { double minimum,maximum; int node; } GD_LayoutCollisionItem;
@@ -28,6 +28,13 @@ typedef struct { int a,b,edge,ordinal,count; } GD_LayoutLane;
 typedef struct { float x,y; } GD_LayoutPoint;
 typedef struct { GD_LayoutBounds bounds; int enabled; } GD_LayoutWorkspace;
 typedef struct { GD_LayoutPoint points[8]; int count; } GD_LayoutRoute;
+/* Bounded optional higher-level island layer. IDs are transient root slots. */
+typedef struct {
+    int preferred,enabled,count,limited;unsigned checks,overlaps;
+    int component[GD_MAX_RECORDS],parent[GD_MAX_RECORDS],size[GD_MAX_RECORDS];
+    GD_LayoutBounds bounds[GD_MAX_RECORDS];
+    GD_LayoutPoint velocity[GD_MAX_RECORDS],offset[GD_MAX_RECORDS],force[GD_MAX_RECORDS];
+} GD_LayoutIslands;
 typedef struct {
     GD_LayoutNode nodes[GD_MAX_RECORDS];
     GD_LayoutEdge edges[GD_MAX_PAIRS];
@@ -51,6 +58,7 @@ typedef struct {
     int spring_neighbors[GD_MAX_RECORDS]; /* Derived active distinct-neighbor counts; not authored degree. */
     unsigned collision_cursor,collision_checks,collision_moves;
     int collision_limited;
+    GD_LayoutIslands islands;
 } GD_Layout;
 
 /* Call after filling nodes/edges/counts; labels/topology must outlive layout.
@@ -73,6 +81,12 @@ int gd_layout_workspace(GD_Layout *layout,int enabled,float aspect);
    no persistent or per-frame allocation. Positive finite canvas width/height ratio.
    Failure retains complete prior layout. Shelf aspect is a target, not optimum. */
 int gd_layout_seed_neighborhood(GD_Layout *layout,GD_Allocator allocator,float aspect);
+/* Prepare a caller-owned candidate once: shared Neighborhood seed and optional
+   workspace. Fixed layouts retain geometry and have no workspace. */
+int gd_layout_prepare_free(GD_Layout *layout,GD_Allocator allocator,float aspect,int workspace);
+/* Optional component-level overlap force, off by default. No allocation or
+   immediate movement. Fixed modes remember preference without applying layer. */
+int gd_layout_islands_set(GD_Layout *layout,int enabled);
 /* Called by arrange after topology validation. Per-pair lanes retain source
    index/direction; no allocation or authored-edge changes. */
 void gd_layout_route_prepare(GD_Layout *layout);

@@ -115,4 +115,9 @@ int gd_layout_seed_neighborhood(GD_Layout *layout,GD_Allocator allocator,float a
 done:
     allocator.release(allocator.context,work); return okay;
 }
+int gd_layout_prepare_free(GD_Layout *layout,GD_Allocator allocator,float aspect,int workspace){
+    if(!layout || (workspace!=0 && workspace!=1))return 0;
+    if(layout->mode!=GD_LAYOUT_FORCE)return gd_layout_workspace(layout,0,aspect);
+    return gd_layout_seed_neighborhood(layout,allocator,aspect) && gd_layout_workspace(layout,workspace,aspect);
+}
 #endif

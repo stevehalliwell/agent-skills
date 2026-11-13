@@ -15,7 +15,32 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
     UX_CHECK(gd_text_contains("Walker Ω","waLK") && gd_text_contains("Walker Ω","Ω") && !gd_text_contains("Walker Ω","ω") && !gd_text_contains("Walker","wlkr") && gd_text_contains("Walker",""));
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(project->available&(1u<<v)){
         GD_ExplorerPane *p=&panes[v];GD_Query *query;GD_StructureResult *structure;GD_ExplorerQueryOptions pending;
-        c.pane=p;active=v;UX_CHECK(pane_prepare(&c));if(!viewer_canvas_count(&c))continue;UX_CHECK(find_select(&c,panes,0));
+        c.pane=p;active=v;UX_CHECK(pane_prepare(&c));
+        UX_CHECK(p->workspace_bounds && !gd_explorer_presentation_editable(&c,"initial_arrangement"));
+        if(free_graph(p) && !grid_view(p)){
+            UX_CHECK(p->layout->workspace.enabled==(p->layout->node_count>0));
+            if(!query_view(v)){
+                int node;memcpy(saved,p->layout,sizeof(*saved));UX_CHECK(gd_layout_prepare_free(saved,allocator,pane_aspect(&c),1));
+                if(v==GD_EXPLORER_RESOURCES){int step;for(step=0;step<120;++step)gd_layout_step(saved,-1);}
+                for(node=0;node<p->layout->node_count;++node)UX_CHECK(saved->nodes[node].x==p->layout->nodes[node].x && saved->nodes[node].y==p->layout->nodes[node].y);
+            }
+        }else UX_CHECK(!p->layout->workspace.enabled);
+        UX_CHECK(!p->island_separation && !p->layout->islands.enabled);
+        if(!free_graph(p) || grid_view(p)){
+            UX_CHECK(!gd_explorer_presentation_editable(&c,"island_separation"));
+            if(gd_explorer_presentation_editable(&c,"layout"))UX_CHECK(gd_explorer_presentation_set(&c,"layout","free",p->query_message,sizeof(p->query_message)));
+        }
+        if(free_graph(p) && !grid_view(p)){
+            Camera2D camera=p->camera;GD_ExplorerSelection selection=p->selection;GD_ExplorerQueryOptions options=p->query_options;GD_ExplorerQueryState *state=p->query_state;int node;
+            memcpy(saved,p->layout,sizeof(*saved));UX_CHECK(gd_explorer_presentation_editable(&c,"island_separation"));
+            UX_CHECK(gd_explorer_presentation_set(&c,"island_separation","true",p->query_message,sizeof(p->query_message)) && p->island_separation && !p->paused && p->layout->islands.enabled);
+            UX_CHECK(!memcmp(&camera,&p->camera,sizeof(camera)) && !memcmp(&selection,&p->selection,sizeof(selection)) && !memcmp(&options,&p->query_options,sizeof(options)) && state==p->query_state);
+            for(node=0;node<p->layout->node_count;++node)UX_CHECK(!memcmp(&saved->nodes[node],&p->layout->nodes[node],sizeof(GD_LayoutNode)));
+            UX_CHECK(gd_explorer_presentation_set(&c,"island_separation","false",p->query_message,sizeof(p->query_message)) && !p->island_separation && !p->layout->islands.enabled);
+            UX_CHECK(gd_explorer_presentation_set(&c,"island_separation","true",p->query_message,sizeof(p->query_message)));
+            UX_CHECK(reset_view(&c) && !p->island_separation && !p->layout->islands.enabled);
+        }
+        if(!viewer_canvas_count(&c))continue;UX_CHECK(find_select(&c,panes,0));
         viewer_identities(&c,&ids);UX_CHECK(viewer_canvas_id(&c,viewer_selected_node(&c),&ids,id,sizeof(id)));
         if(p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_ACTORS)UX_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));
         if(query_view(p->view))snprintf(p->query_options.values,sizeof(p->query_options.values),"Unapplied reset input Ω");
@@ -103,7 +128,7 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
         UX_CHECK(!project->mda || (project->mda->root<0 && project->mda->direction==GD_MDA_BOTH));
         for(v=0;v<GD_EXPLORER_VIEWS;++v){GD_ExplorerPane *p=&panes[v];
             UX_CHECK(!*p->filter && !*p->list_search && p->selection.node<0 && p->selection.cell<0 && p->selection.linked<0 && p->mda.record<0 && p->mda.link<0);
-            UX_CHECK(!p->structure_state && !p->rule_state && !p->query_state && !p->resource_routes && !p->distance_focus && !p->workspace_bounds);
+            UX_CHECK(!p->structure_state && !p->rule_state && !p->query_state && !p->resource_routes && !p->distance_focus && p->workspace_bounds && !p->island_separation);
             UX_CHECK(p->camera.zoom==1 && !p->camera.target.x && !p->camera.target.y && !p->distance_focus_enabled && !p->resource_only_witness);
             if(v!=active)UX_CHECK(!p->prepared && !p->layout);
         }

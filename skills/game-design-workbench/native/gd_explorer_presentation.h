@@ -19,11 +19,11 @@ static const PresentationField presentation_fields[]={
  PF(noun_column,"Column noun",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,grid.verb,0),
  PF(noun_case_page,"Case evidence page",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,noun_case_page,0),
  PF(actor_overview,"Actor overview",GD_CONTROL_INT,"Interaction map\0Usage cloud\0","interactions\0usage\0",1u<<GD_EXPLORER_ACTORS,actor_overview,0),
- PF(initial_arrangement,"Initial arrangement",GD_CONTROL_INT,"Native\0Neighborhood\0","native\0neighborhood\0",PV_ALL,initial_arrangement,0),
  PF(sort,"Sort / initial order",GD_CONTROL_INT,"Name\0Degree\0","name\0degree\0",15,sort,0),
  PF(direction,"Layout direction",GD_CONTROL_INT,"Top to bottom\0Left to right\0","vertical\0horizontal\0",3,horizontal,0),
  PF(paused,"Pause settling",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,paused,0),
- PF(workspace_bounds,"Workspace bounds (trial)",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,workspace_bounds,0),
+ PF(workspace_bounds,"Workspace bounds",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,workspace_bounds,0),
+ PF(island_separation,"Separate connected islands",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,island_separation,0),
  PF(visual_filter,"Smooth displayed motion",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,visual_filter,0),
  PF(overlay,"Overlay inactive matrix pairs",GD_CONTROL_BOOL,NULL,NULL,1u<<GD_EXPLORER_MATRIX,overlay,0),
  VF(distance_focus,"Focus by shown-link distance",GD_CONTROL_BOOL,PV_GRAPH),
@@ -123,8 +123,8 @@ int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *na
     if(!strcmp(name,"actor_overview")) return p->query_state && !gd_explorer_similarity_active(c);
     if(query_view(p->view) && p->query_state && gd_query_scene_overview_mode(p->query_state->scene)==GD_ACTOR_INTERACTIONS && !strcmp(name,"layout")) return 0;
     if(!strcmp(name,"layout") && gd_explorer_similarity_active(c)) return 0;
-    if(query_view(p->view) && (!strcmp(name,"layout") || !strcmp(name,"initial_arrangement")) && (!p->query_state || !p->query_state->scene)) return 0;
-    if(!strcmp(name,"initial_arrangement") || !strcmp(name,"workspace_bounds") || !strcmp(name,"visual_filter")) return free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c);
+    if(query_view(p->view) && !strcmp(name,"layout") && (!p->query_state || !p->query_state->scene)) return 0;
+    if(!strcmp(name,"workspace_bounds") || !strcmp(name,"island_separation") || !strcmp(name,"visual_filter")) return free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c);
     if(!strncmp(name,"similarity_",11)) return p->structure_state && p->structure_state->result && p->structure_state->result->similarity;
     if(!strcmp(name,"known")) { int record=selected_record((GD_ExplorerContext *)c); return record>=0 && gd_explorer_model(c->project,p->view)->records[record].role==GD_SKILL; }
     if(!strcmp(name,"resource_witness")) return p->resource_routes!=NULL;
@@ -229,7 +229,7 @@ static int presentation_same_topology(const GD_Layout *a,const GD_Layout *b) {
 }
 static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresentation *values,int geometry_only) {
     GD_ExplorerPane *next,*p=c->pane; GD_ExplorerContext candidate=*c; GD_Allocator allocator=c->project->allocator; int same_topology;
-    if(query_view(p->view)) return gd_explorer_query_arrange(c,values->layout ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED,values->initial_arrangement);
+    if(query_view(p->view)) return gd_explorer_query_arrange(c,values->layout ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED);
     /* Keep large candidate pane snapshot off bounded Windows call stack. */
     next=allocator.allocate(allocator.context,sizeof(*next)); if(!next) return 0;
     memcpy(next,p,sizeof(*next));
@@ -240,8 +240,8 @@ static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresent
     } else if(p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS)
         next->layout_choice=values->layout ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;
     else next->layout_choice=values->layout;
-    next->sort=values->sort; next->horizontal=values->direction;next->workspace_bounds=values->workspace_bounds;
-    next->initial_arrangement=0; /* Prepare native topology once; seed after footprint remap. */
+    next->sort=values->sort; next->horizontal=values->direction;next->workspace_bounds=values->workspace_bounds;next->island_separation=values->island_separation;
+    next->defer_free_prepare=true; /* Seed after measured footprint remap. */
     if(is_graph(p->view)) next->selection=(GD_ExplorerSelection){-1,-1,0,selected_record(c),-1};
     candidate.pane=next;
     /* Geometry commands keep revealed membership. Only explicit expansion/reset
@@ -258,18 +258,17 @@ static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresent
     }
     same_topology=presentation_same_topology(p->layout,next->layout);
     if(geometry_only && !same_topology) goto failed;
-    next->initial_arrangement=values->initial_arrangement;
-    if(next->initial_arrangement && free_graph(next) && free_graph(p)) {
+    next->defer_free_prepare=false;
+    if(free_graph(next) && free_graph(p)) {
         int i; for(i=0;i<next->layout->node_count && i<p->layout->node_count;++i)
             if(next->layout->nodes[i].key==p->layout->nodes[i].key) next->layout->nodes[i].footprint=p->layout->nodes[i].footprint;
     }
     if(!pane_seed(&candidate)) goto failed;
     if(next->distance_focus) gd_layout_focus_capture(next->distance_focus,next->layout);
     if(p->layout) allocator.release(allocator.context,p->layout); gd_layout_focus_destroy(p->distance_focus);
-    p->initial_arrangement=next->initial_arrangement;
     p->layout=next->layout; p->distance_focus=next->distance_focus; p->distance_focus_revision=UINT64_MAX;
     p->rank=next->rank; p->layout_choice=next->layout_choice; p->sort=next->sort; p->horizontal=next->horizontal; p->grid=next->grid; p->selection=next->selection; p->focus=next->focus;
-    p->prepared=next->prepared; p->revision=next->revision;
+    p->prepared=next->prepared; p->revision=next->revision;p->island_separation=next->island_separation;
     {int nodes[2];p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:pair_selection_nodes(c,nodes) ? GD_EXPLORER_FIT_SELECTION:1;}
     if(!same_topology) c->analysis->initialized=0;
     allocator.release(allocator.context,next);return 1;
@@ -294,10 +293,11 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
         *(int *)slot=(int)number;
     }
     error="Cannot apply presentation candidate; last good state retained";
-    if(!strcmp(name,"layout") || !strcmp(name,"sort") || !strcmp(name,"direction") || !strcmp(name,"initial_arrangement")) {
-        if(!presentation_rearrange(c,&next,!strcmp(name,"initial_arrangement"))) goto failed;
-        if(!strcmp(name,"initial_arrangement") || (!strcmp(name,"layout") && free_graph(p))) p->paused=false;
+    if(!strcmp(name,"layout") || !strcmp(name,"sort") || !strcmp(name,"direction")) {
+        if(!presentation_rearrange(c,&next,0)) goto failed;
+        if(!strcmp(name,"layout") && free_graph(p)) p->paused=false;
     }
+    else if(!strcmp(name,"island_separation")){if(!pane_islands(c,next.island_separation))goto failed;p->island_separation=next.island_separation;if(next.island_separation)p->paused=false;}
     else if(!strcmp(name,"workspace_bounds")){if(!pane_workspace(c,next.workspace_bounds))goto failed;p->workspace_bounds=next.workspace_bounds;p->fit=1;}
     else if(!strcmp(name,"noun_row") || !strcmp(name,"noun_column")) noun_grid_choose(c,next.noun_row,next.noun_column);
     else if(!strcmp(name,"noun_case_page")) {if(next.noun_case_page>=(c->project->rules->case_count+63)/64 && next.noun_case_page!=0)goto failed;p->noun_case_page=next.noun_case_page;}

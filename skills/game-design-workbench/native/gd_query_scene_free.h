@@ -16,16 +16,19 @@ static void query_free_scatter(GD_QueryScene *scene) {
     }
     if(scene->layout.group_count) {GD_LayoutGroup *group=&scene->layout.groups[0];const GD_LayoutGroup *spatial=&free->layout.groups[0];group->x=spatial->x;group->y=spatial->y;group->width=spatial->width;group->height=spatial->height;}
     scene->layout.width=free->layout.width;scene->layout.height=free->layout.height;scene->layout.tick=free->layout.tick;scene->layout.workspace=free->layout.workspace;
+    scene->layout.islands.preferred=free->layout.islands.preferred;scene->layout.islands.enabled=free->layout.islands.enabled;
+    scene->layout.islands.count=free->layout.islands.count;scene->layout.islands.limited=free->layout.islands.limited;scene->layout.islands.checks=free->layout.islands.checks;scene->layout.islands.overlaps=free->layout.islands.overlaps;
+    if(free->layout.islands.enabled)for(i=0;i<scene->layout.node_count;++i)scene->layout.islands.component[i]=free->layout.islands.component[free->unit[i]];
     scene->layout.collision_checks=free->layout.collision_checks;scene->layout.collision_moves=free->layout.collision_moves;scene->layout.collision_limited=free->layout.collision_limited;
 }
 static unsigned query_free_slot(uint64_t key) {
     key^=key>>33;key*=UINT64_C(0xff51afd7ed558ccd);key^=key>>33;key*=UINT64_C(0xc4ceb9fe1a85ec53);key^=key>>33;
     return (unsigned)key&(QUERY_FREE_HASH_SLOTS-1);
 }
-int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhood,float aspect) {
+int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int workspace,float aspect) {
     GD_QueryFree *fresh;QueryFreeHash *hash=NULL;GD_Allocator allocator;int i,primary=-1;unsigned work=0;
     if(scene && scene->overview && scene->overview->mode==GD_ACTOR_INTERACTIONS) mode=GD_LAYOUT_FORCE;
-    if(!scene || (mode!=GD_LAYOUT_FORCE && mode!=GD_LAYOUT_DIRECTED) || (neighborhood!=0 && neighborhood!=1) || !isfinite(aspect) || aspect<=0) return 0;
+    if(!scene || (mode!=GD_LAYOUT_FORCE && mode!=GD_LAYOUT_DIRECTED) || (workspace!=0 && workspace!=1) || !isfinite(aspect) || aspect<=0) return 0;
     if(scene->layout.node_count<0 || scene->layout.node_count>GD_MAX_RECORDS || scene->layout.edge_count<0 || scene->layout.edge_count>GD_MAX_PAIRS || scene->layout.group_count!=(scene->layout.node_count ? 1:0)) return 0;
     for(i=0;i<scene->layout.node_count;++i) if(scene->layout.nodes[i].key!=i || !isfinite(scene->native_points[i].x) || !isfinite(scene->native_points[i].y)) return 0;
     for(i=0;i<scene->layout.edge_count;++i) if(scene->layout.edges[i].a<0 || scene->layout.edges[i].a>=scene->layout.node_count || scene->layout.edges[i].b<0 || scene->layout.edges[i].b>=scene->layout.node_count) return 0;
@@ -34,7 +37,7 @@ int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhoo
     if(mode==GD_LAYOUT_DIRECTED) {
         for(i=0;i<scene->layout.node_count;++i) {scene->layout.nodes[i].x=scene->native_points[i].x;scene->layout.nodes[i].y=scene->native_points[i].y;scene->layout.nodes[i].vx=scene->layout.nodes[i].vy=0;}
         scene->layout.groups[0]=scene->native_group;scene->layout.width=scene->native_width;scene->layout.height=scene->native_height;scene->layout.mode=mode;
-        scene->layout.tick=scene->layout.collision_cursor=scene->layout.collision_checks=scene->layout.collision_moves=0;scene->layout.collision_limited=0;memset(&scene->layout.workspace,0,sizeof(scene->layout.workspace));
+        scene->layout.tick=scene->layout.collision_cursor=scene->layout.collision_checks=scene->layout.collision_moves=0;scene->layout.collision_limited=0;memset(&scene->layout.workspace,0,sizeof(scene->layout.workspace));gd_layout_islands_set(&scene->layout,0);
         if(scene->free_geometry) allocator.release(allocator.context,scene->free_geometry);scene->free_geometry=NULL;return 1;
     }
     fresh=allocator.allocate(allocator.context,sizeof(*fresh));if(!fresh) return 0;memset(fresh,0,sizeof(*fresh));
@@ -81,8 +84,7 @@ int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int neighborhoo
         }
         if(fresh->layout.node_count) {GD_LayoutGroup *group=&fresh->layout.groups[0];group->x=left-16;group->y=top-16;group->width=right-left+32;group->height=bottom-top+32;fresh->layout.width=group->width;fresh->layout.height=group->height;}
     }
-    if(neighborhood && !gd_layout_seed_neighborhood(&fresh->layout,allocator,aspect)) goto failed;
-    if(scene->layout.workspace.enabled && !gd_layout_workspace(&fresh->layout,1,aspect))goto failed;
+    if(!gd_layout_prepare_free(&fresh->layout,allocator,aspect,workspace))goto failed;
     if(scene->free_geometry) allocator.release(allocator.context,scene->free_geometry);
     scene->free_geometry=fresh;scene->layout.mode=GD_LAYOUT_FORCE;query_free_scatter(scene);return 1;
 failed:
@@ -91,6 +93,11 @@ failed:
 int gd_query_scene_anchor(const GD_QueryScene *scene,int node) {
     if(!scene || node<0 || node>=scene->layout.node_count)return -1;
     return scene->free_geometry ? scene->free_geometry->layout.nodes[scene->free_geometry->unit[node]].key:node;
+}
+int gd_query_scene_islands(GD_QueryScene *scene,int enabled){
+    if(!scene || !scene->free_geometry)return 0;
+    if(!gd_layout_islands_set(&scene->free_geometry->layout,enabled))return 0;
+    query_free_scatter(scene);return 1;
 }
 int gd_query_scene_workspace(GD_QueryScene *scene,int enabled,float aspect) {
     if(!scene)return 0;

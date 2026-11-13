@@ -31,7 +31,7 @@ static int measure_directed(GD_Layout *layout) {
     }
     return gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,layout->sort);
 }
-static int prepare_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort, int rank_mode, int horizontal, int challenges, GD_Focus *focus) {
+static int prepare_native_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort, int rank_mode, int horizontal, int challenges, GD_Focus *focus) {
     int okay;
     if (focus) okay=gd_focus_layout(model,focus,layout,sort);
     else if (challenges) okay=gd_route_layout(model,layout,horizontal,sort) && measure_directed(layout);
@@ -41,6 +41,13 @@ static int prepare_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMod
        Used by standalone and unified viewers, with one shared solver. */
     if(okay && mode==GD_LAYOUT_FORCE)layout->mode=GD_LAYOUT_FORCE;
     return okay;
+}
+static int prepare_layout(const GD_Model *model,GD_Layout *layout,GD_LayoutMode mode,GD_LayoutSort sort,int rank_mode,int horizontal,int challenges,GD_Focus *focus){
+    GD_Allocator allocator=model->allocator;GD_Layout *candidate=allocator.allocate(allocator.context,sizeof(*candidate));int okay;float aspect=1.4f;
+    if(!candidate)return 0;memset(candidate,0,sizeof(*candidate));
+    if(IsWindowReady() && GetScreenHeight()>190)aspect=(GetScreenWidth()*0.6f-24)/(GetScreenHeight()-190);
+    okay=prepare_native_layout(model,candidate,mode,sort,rank_mode,horizontal,challenges,focus) && gd_layout_prepare_free(candidate,allocator,aspect,1) && gd_layout_islands_set(candidate,layout->islands.preferred);
+    if(okay)memcpy(layout,candidate,sizeof(*layout));allocator.release(allocator.context,candidate);return okay;
 }
 static Vector2 node_point(const GD_LayoutNode *node) { return (Vector2){node->x, node->y}; }
 static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle viewport) {
@@ -61,6 +68,7 @@ static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle view
             min_y=fminf(min_y,route.points[j].y); max_y=fmaxf(max_y,route.points[j].y);
         }
     }
+    if(layout->workspace.enabled){const GD_LayoutBounds *b=&layout->workspace.bounds;min_x=fminf(min_x,b->left);min_y=fminf(min_y,b->top);max_x=fmaxf(max_x,b->right);max_y=fmaxf(max_y,b->bottom);}
     camera->target = (Vector2){(min_x+max_x)/2, (min_y+max_y)/2};
     camera->offset = (Vector2){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
     camera->zoom = fminf(viewport.width/(max_x-min_x+130), viewport.height/(max_y-min_y+70));
@@ -606,6 +614,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     }
     if (focused && root<0 && model->record_count) { root=0; for (int i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL) { root=i; break; } }
     gd_focus_reset(model,&focus,root);layout_modes[focused ? GD_EXPLORE_RELATIONSHIPS:challenges]=mode;
+    if(layout)memset(layout,0,sizeof(*layout));
     if ((initial->skill_mode && !draft) || (model->route_mode && (!routes || model->error_count || model->errors_omitted)) || !layout || !prepare_layout(model, layout, (GD_LayoutMode)mode, GD_SORT_NAME, rank_mode, horizontal, challenges, focused ? &focus:NULL)) {
         if (layout) initial->allocator.release(initial->allocator.context, layout);
         gd_routes_destroy(routes); gd_draft_destroy(draft);
@@ -705,6 +714,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         else igTextUnformatted(focused ? "Stable neighborhood; drag for transient placement." : "Stable bands; drag for transient lateral placement.",NULL);
         if (igButton("Fit", (ImVec2_c){0,0})) fit = 1;
         igSameLine(0, -1);
+        if(layout->mode==GD_LAYOUT_FORCE){bool islands=layout->islands.preferred!=0;if(igCheckbox("Separate connected islands",&islands)){gd_layout_islands_set(layout,islands);if(islands)paused=false;}}
         if (igButton("Rearrange", (ImVec2_c){0,0})) { prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; fit = 1; }
         if (!focused && !model->skill_mode) igCheckbox("Overlay other pairs (does not merge groups)", &overlay);
         if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=foundation_peer=-1;
@@ -829,6 +839,8 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
         const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,!focused && !model->skill_mode);
         draw_graph(model,layout, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair,reachability,reach_pair,shapes,overview);
+        gd_graph_workspace_draw(layout,camera,viewport,1);
+        gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,1);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
             for (i=0;i<layout->node_count;++i) {
@@ -920,7 +932,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
    input lifetime and per-view settings belong to the shell, not these helpers. */
 int gd_explorer_graph_prepare(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
-    int okay=prepare_layout(model,p->layout,p->view==GD_EXPLORER_MATRIX && p->layout_choice==GD_MATRIX_GRID_CHOICE ? GD_LAYOUT_COLUMNS:(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
+    int okay=prepare_native_layout(model,p->layout,p->view==GD_EXPLORER_MATRIX && p->layout_choice==GD_MATRIX_GRID_CHOICE ? GD_LAYOUT_COLUMNS:(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
                           p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS ? &p->focus:NULL);
     return okay;
 }
