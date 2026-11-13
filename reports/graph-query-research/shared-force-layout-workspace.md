@@ -8,7 +8,7 @@ Status: opt-in shared containment implemented and CPU-checked; default remains o
 - Shared GUI/IPC presentation boolean: `workspace_bounds`. Checkbox: **Workspace bounds (trial)**. Available on prepared Free graphs, including Actor interaction overview; unavailable in Native constrained layouts, Grid/columns, fixed Usage cloud and similarity canvases.
 - Toggle changes workspace metadata and requests Fit. It does not move nodes immediately, unpause, apply pending inputs, Run a query, change evidence or change selection.
 - Keep preference when changing layout; apply only in Free mode. Explicit reseed, geometry replacement or re-enable recomputes workspace. Selection, pan, zoom and viewport resize do not.
-- Draw fixed workspace border. `F` fits graph plus workspace; selected/matched fits retain their existing scope.
+- Draw fixed workspace border. Updated framing policy: `F` fits selections, otherwise shown node footprints; workspace remains solver container and is excluded. [Selection framing follow-up](selection-framing.md).
 - All nodes remain movable. Pointer owns held node, even outside workspace. Release returns it inside on next active solver step; paused settling defers correction. A compound variant stack moves and clips as one spatial unit.
 
 ## Workspace sizing

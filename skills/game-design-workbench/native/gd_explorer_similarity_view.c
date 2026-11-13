@@ -32,7 +32,7 @@ int gd_explorer_similarity_select(GD_ExplorerContext *context,int row) {
     state->similarity_camera.offset=(Vector2){context->viewport.x+context->viewport.width/2,context->viewport.y+context->viewport.height/2};
     state->similarity_camera.zoom=1; state->similarity_camera_ready=true; state->similarity_fit=false; return 1;
 }
-int gd_explorer_similarity_focus(GD_ExplorerContext *context) {
+static int similarity_focus(GD_ExplorerContext *context,int frame) {
     GD_ExplorerPane *pane=context->pane;GD_ExplorerStructureState *state=pane->structure_state;GD_ExplorerFocusResult result={0};
     const GD_Similarity *map;Rectangle selected,bounds;Vector2 primary;int row,peer;
     if(!gd_explorer_similarity_active(context) || !(context->viewport.width>0) || !(context->viewport.height>0))return 0;
@@ -40,10 +40,14 @@ int gd_explorer_similarity_focus(GD_ExplorerContext *context) {
     if(!map || !map->available || row<0 || row>=map->input.entry_count || !map->placed[row]){result.status=GD_FOCUS_UNPLACED;pane->focus_result=result;return 1;}
     primary=point(map,row);selected=(Rectangle){primary.x-16,primary.y-16,32,32};result.selected=1;
     if(peer>=0 && peer<map->input.entry_count && peer!=row){if(map->placed[peer]){Vector2 other=point(map,peer);float left=fminf(selected.x,other.x-16),top=fminf(selected.y,other.y-16);selected.width=fmaxf(selected.x+selected.width,other.x+16)-left;selected.height=fmaxf(selected.y+selected.height,other.y+16)-top;selected.x=left;selected.y=top;++result.selected;}else ++result.hidden;}
-    bounds=selected;gd_explorer_focus_camera(&state->similarity_camera,context->viewport,selected,bounds,primary,&result);
+    bounds=selected;
+    if(frame){state->similarity_camera.target=(Vector2){selected.x+selected.width/2,selected.y+selected.height/2};state->similarity_camera.offset=(Vector2){context->viewport.x+context->viewport.width/2,context->viewport.y+context->viewport.height/2};state->similarity_camera.zoom=fmaxf(0.00001f,fminf(1.2f,fminf(context->viewport.width/(selected.width+60),context->viewport.height/(selected.height+60))));result.zoom=state->similarity_camera.zoom;}
+    else gd_explorer_focus_camera(&state->similarity_camera,context->viewport,selected,bounds,primary,&result);
     result.status=result.clipped || result.hidden ? GD_FOCUS_PARTIAL:GD_FOCUS_FRAMED;pane->focus_result=result;
     state->similarity_camera_ready=true;state->similarity_fit=false;return 1;
 }
+int gd_explorer_similarity_focus(GD_ExplorerContext *context){return similarity_focus(context,0);}
+int gd_explorer_similarity_frame(GD_ExplorerContext *context){return similarity_focus(context,1);}
 static void fit(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_Similarity *map=state->result->similarity->map;
     int row,found=0; float left=0,right=0,top=0,bottom=0;

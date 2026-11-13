@@ -71,6 +71,22 @@ static inline void gd_graph_footprint_rect_at(GD_LayoutNode *raw,const GD_Layout
     rectangle.x+=(int)(raw->x*scale)-(int)(shown->x*scale);rectangle.y+=(int)(raw->y*scale)-(int)(shown->y*scale);
     gd_graph_footprint_rect(raw,rectangle,scale);
 }
+/* Explicit F framing: union selected node footprints, never workspace bounds.
+   Return true for an empty/hidden brush too, so it does not frame unrelated nodes. */
+static inline int gd_graph_frame_selection(Camera2D *camera,const GD_Layout *layout,GD_GraphAnalysis *analysis,GD_OverviewControls *controls,int node,int edge,Rectangle viewport,float scale){
+    unsigned char marked[GD_MAX_RECORDS]={0};float left=0,right=0,top=0,bottom=0;int i,found=0,selected=node>=0 || edge>=0 || (controls->row>=0 && controls->column>=0);
+    if(!selected)return 0;
+    if(node>=0 && node<layout->node_count)marked[node]=1;
+    if(edge>=0 && edge<layout->edge_count){marked[layout->edges[edge].a]=marked[layout->edges[edge].b]=1;}
+    if(controls->row>=0 && controls->column>=0){const GD_GraphOverview *overview=gd_graph_overview(analysis,controls,analysis->overview.undirected);if(overview)for(i=0;i<layout->node_count;++i)marked[i]|=overview->selected_nodes[i];}
+    for(i=0;i<layout->node_count;++i)if(marked[i] && analysis->shown[i]){
+        const GD_LayoutNode *item=&layout->nodes[i];const GD_LayoutBounds *bounds=&item->footprint;
+        float x=item->x*scale,y=item->y*scale,l=x+fminf(-110,bounds->left*scale),r=x+fmaxf(110,bounds->right*scale),t=y+fminf(-48,bounds->top*scale),b=y+fmaxf(48,bounds->bottom*scale);
+        if(!found){left=l;right=r;top=t;bottom=b;}else{left=fminf(left,l);right=fmaxf(right,r);top=fminf(top,t);bottom=fmaxf(bottom,b);}found=1;
+    }
+    if(found){camera->target=(Vector2){(left+right)/2,(top+bottom)/2};camera->offset=(Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};camera->zoom=fmaxf(0.002f,fminf(1.2f,fminf(viewport.width/(right-left+60),viewport.height/(bottom-top+60))));}
+    return 1;
+}
 static inline void gd_graph_record_text_at(GD_LayoutNode *raw,const GD_LayoutNode *shown,const GD_Record *record,const char *text,int x,int y,int size,Color color,float scale){
     Rectangle bounds=gd_noun_draw_text(record,text,(Vector2){(float)x,(float)y},size,(float)(size/10),color);gd_graph_footprint_rect_at(raw,shown,bounds,scale);
 }

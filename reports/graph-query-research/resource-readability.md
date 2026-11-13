@@ -29,7 +29,7 @@
 - Remove public `initial_arrangement` field/selector, internal pane seed choice and Actor/Effect seed-choice parameter. Query scene placement now accepts workspace preference instead; Free always seeds Neighborhood. No migration alias.
 - Unified pane preparation and query spatial units share preparation. Rearrangement defers seeding until existing measured footprints are remapped; preserve compound stacks and typed scene metadata. Candidate allocation failure retains previous layout/result.
 - Standalone Skills/Challenges/Relationships/Verb usage and MDA prepare candidate geometry before swap. Resource startup seeds before its existing120 solver steps; unified Resources uses same order. No startup/iteration budget increase.
-- Shared bounds renderer covers unified and standalone Free graphs; standalone Fit includes workspace. Workspace defaults true in pane creation, Reset view and Reset all. Unsupported fixed/Grid/similarity views keep preference but do not draw/enforce workspace. Existing bounds toggle remains for explicit override.
+- Shared bounds renderer covers unified and standalone Free graphs; Fit now frames selections or shown node footprints, excluding workspace container; [selection framing follow-up](selection-framing.md). Workspace defaults true in pane creation, Reset view and Reset all. Unsupported fixed/Grid/similarity views keep preference but do not draw/enforce workspace. Existing bounds toggle remains for explicit override.
 - Workspace width/height still include20% extra room. No smoothing feedback, per-frame reseed, automatic camera/resize/filter reseed or analytical Run.
 
 ## Checks

@@ -29,6 +29,17 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
         /* Cell fills remain dark for white labels; link brightness is separate. */
         {Color fill=gd_count_color(range,4);UX_CHECK(fill.r==24 && fill.g==112 && fill.b==96);}
     }
+    {GD_OverviewControls controls={1,-1,-1};Rectangle viewport={0,0,800,600},expanded=gd_graph_overview_visible_bounds(&controls,viewport),collapsed;Vector2 body={expanded.x+10,expanded.y+60};
+        UX_CHECK(expanded.height>GD_OVERVIEW_HEADER_HEIGHT && gd_graph_overview_hit(&controls,viewport,body));
+        UX_CHECK(!gd_graph_overview_toggle(&controls,viewport,body) && controls.enabled);
+        UX_CHECK(gd_graph_overview_toggle(&controls,viewport,(Vector2){expanded.x+10,expanded.y+10}) && !controls.enabled);
+        collapsed=gd_graph_overview_visible_bounds(&controls,viewport);
+        UX_CHECK(collapsed.height==GD_OVERVIEW_HEADER_HEIGHT && collapsed.x+collapsed.width==expanded.x+expanded.width && collapsed.y==expanded.y && !gd_graph_overview_hit(&controls,viewport,body));
+        UX_CHECK(gd_graph_overview_hit(&controls,viewport,(Vector2){collapsed.x+10,collapsed.y+10}));
+        UX_CHECK(gd_graph_overview_toggle(&controls,viewport,(Vector2){collapsed.x+10,collapsed.y+10}) && controls.enabled);
+        UX_CHECK(gd_graph_overview_visible_bounds(&controls,(Rectangle){0,0,800,120}).height==GD_OVERVIEW_HEADER_HEIGHT && controls.enabled);
+        UX_CHECK(!gd_graph_overview_hit(&controls,(Rectangle){0,0,20,20},(Vector2){10,10}) && !gd_graph_overview_toggle(&controls,(Rectangle){0,0,20,20},(Vector2){10,10}) && controls.enabled);
+    }
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(project->available&(1u<<v)){
         GD_ExplorerPane *p=&panes[v];GD_Query *query;GD_StructureResult *structure;GD_ExplorerQueryOptions pending;
         c.pane=p;active=v;UX_CHECK(pane_prepare(&c));
@@ -41,7 +52,7 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
                 for(node=0;node<p->layout->node_count;++node)UX_CHECK(saved->nodes[node].x==p->layout->nodes[node].x && saved->nodes[node].y==p->layout->nodes[node].y);
             }
         }else UX_CHECK(!p->layout->workspace.enabled);
-        UX_CHECK(!p->island_separation && !p->layout->islands.enabled);
+        UX_CHECK(!p->island_separation && !p->layout->islands.enabled && p->overview.enabled);
         if(!free_graph(p) || grid_view(p)){
             UX_CHECK(!gd_explorer_presentation_editable(&c,"island_separation"));
             if(gd_explorer_presentation_editable(&c,"layout"))UX_CHECK(gd_explorer_presentation_set(&c,"layout","free",p->query_message,sizeof(p->query_message)));
@@ -55,6 +66,19 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
             UX_CHECK(gd_explorer_presentation_set(&c,"island_separation","false",p->query_message,sizeof(p->query_message)) && !p->island_separation && !p->layout->islands.enabled);
             UX_CHECK(gd_explorer_presentation_set(&c,"island_separation","true",p->query_message,sizeof(p->query_message)));
             UX_CHECK(reset_view(&c) && !p->island_separation && !p->layout->islands.enabled);
+        }
+        if(gd_explorer_presentation_editable(&c,"overview_enabled")){
+            Camera2D camera=p->camera;GD_ExplorerSelection selection=p->selection;GD_ExplorerQueryOptions options=p->query_options;int fit=p->fit;
+            memcpy(saved,p->layout,sizeof(*saved));
+            UX_CHECK(gd_explorer_presentation_set(&c,"overview_enabled","false",p->query_message,sizeof(p->query_message)) && !p->overview.enabled);
+            UX_CHECK(pane_prepare(&c) && !p->overview.enabled && panes[(v+1)%GD_EXPLORER_VIEWS].overview.enabled);
+            UX_CHECK(!memcmp(saved,p->layout,sizeof(*saved)) && !memcmp(&camera,&p->camera,sizeof(camera)) && !memcmp(&selection,&p->selection,sizeof(selection)) && !memcmp(&options,&p->query_options,sizeof(options)) && p->fit==fit);
+            if(viewer_canvas_count(&c))UX_CHECK(find_select(&c,panes,0) && !p->overview.enabled);
+            if(v==GD_EXPLORER_MATRIX){
+                UX_CHECK(gd_explorer_presentation_set(&c,"layout","grid",p->query_message,sizeof(p->query_message)) && !p->overview.enabled && !gd_explorer_presentation_editable(&c,"overview_enabled"));
+                UX_CHECK(gd_explorer_presentation_set(&c,"layout","free",p->query_message,sizeof(p->query_message)) && !p->overview.enabled && gd_explorer_presentation_editable(&c,"overview_enabled"));
+            }
+            UX_CHECK(reset_view(&c) && p->overview.enabled);
         }
         if(!viewer_canvas_count(&c))continue;UX_CHECK(find_select(&c,panes,0));
         viewer_identities(&c,&ids);UX_CHECK(viewer_canvas_id(&c,viewer_selected_node(&c),&ids,id,sizeof(id)));
@@ -105,7 +129,34 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
         c.pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};c.pane->grid.noun=c.pane->grid.verb=-1;history_observe(&c);
         UX_CHECK(history->entries[history->cursor].kind==GD_HISTORY_EMPTY && gd_explorer_history_move(&c,-1) && viewer_selected_node(&c)==1 && gd_explorer_history_move(&c,1) && viewer_selected_node(&c)<0);
         for(i=0;i<GD_SELECTION_HISTORY+5;++i){UX_CHECK(find_select(&c,panes,i%2));history_observe(&c);}UX_CHECK(history->count==GD_SELECTION_HISTORY && history->cursor==GD_SELECTION_HISTORY-1);
-        memcpy(saved,c.pane->layout,sizeof(*saved));{Camera2D camera=c.pane->camera;*fail_at=*calls+1;UX_CHECK(!reset_view(&c));*fail_at=0;UX_CHECK(!memcmp(saved,c.pane->layout,sizeof(*saved)) && !memcmp(&camera,&c.pane->camera,sizeof(camera)));}
+        memcpy(saved,c.pane->layout,sizeof(*saved));{Camera2D camera=c.pane->camera;c.pane->overview.enabled=0;*fail_at=*calls+1;UX_CHECK(!reset_view(&c));*fail_at=0;UX_CHECK(!c.pane->overview.enabled && !memcmp(saved,c.pane->layout,sizeof(*saved)) && !memcmp(&camera,&c.pane->camera,sizeof(camera)));}
+    }
+    if(project->available&(1u<<GD_EXPLORER_RESOURCES)){
+        GD_ExplorerPane *p=&panes[GD_EXPLORER_RESOURCES];const GD_GraphOverview *overview;Rectangle bounds={0};int found=0,cell,node,marked=0,extra=-1,previous_active=active;Camera2D camera,standalone;GD_ExplorerQueryOptions options;
+        active=GD_EXPLORER_RESOURCES;c.pane=p;UX_CHECK(gd_explorer_action_run(&c,GD_ACTION_SELECTION_CLEAR));analyze(&c);
+        p->overview.enabled=1;overview=gd_graph_overview(c.analysis,&p->overview,1);
+        for(cell=0;cell<overview->bins*overview->bins && !overview->counts[cell];++cell){}
+        UX_CHECK(cell<overview->bins*overview->bins);p->overview.row=cell/overview->bins;p->overview.column=cell%overview->bins;
+        overview=gd_graph_overview(c.analysis,&p->overview,1);p->overview.enabled=0;
+        UX_CHECK(evidence(&c,-1).overview==overview && overview->selected_count>0);
+        for(node=0;node<p->layout->node_count;++node)if(visible(&c,node)){if(overview->selected_nodes[node]){grid_union(&bounds,focus_node_bounds(&c,p->layout,node),&found);++marked;}else if(extra<0)extra=node;}
+        if(extra>=0){p->selection.node=extra;grid_union(&bounds,focus_node_bounds(&c,p->layout,extra),&found);++marked;}
+        memcpy(saved,p->layout,sizeof(*saved));options=p->query_options;standalone=p->camera;
+        UX_CHECK(gd_explorer_action_run(&c,GD_ACTION_VIEW_FIT) && p->focus_result.selected==marked && !p->overview.enabled);
+        UX_CHECK(fabsf(p->camera.target.x-bounds.x-bounds.width/2)<0.01f && fabsf(p->camera.target.y-bounds.y-bounds.height/2)<0.01f);
+        UX_CHECK(fabsf(p->camera.zoom-fmaxf(0.002f,fminf(1.2f,focus_fit(c.viewport,bounds))))<0.00001f && !memcmp(saved,p->layout,sizeof(*saved)));
+        UX_CHECK(gd_graph_frame_selection(&standalone,p->layout,c.analysis,&p->overview,extra,-1,c.viewport,1) && fabsf(standalone.zoom-p->camera.zoom)<0.00001f && fabsf(standalone.target.x-p->camera.target.x)<0.01f && fabsf(standalone.target.y-p->camera.target.y)<0.01f);
+        camera=p->camera;UX_CHECK(gd_explorer_action_run(&c,GD_ACTION_SELECTION_CLEAR));
+        UX_CHECK(p->selection.node<0 && p->overview.row<0 && p->overview.column<0 && !p->overview.enabled && !memcmp(&camera,&p->camera,sizeof(camera)) && !memcmp(&options,&p->query_options,sizeof(options)) && !memcmp(saved,p->layout,sizeof(*saved)));
+        analyze(&c);UX_CHECK(!evidence(&c,-1).overview && !gd_explorer_focus_available(&c));
+        if(!p->distance_focus)p->distance_focus=gd_layout_focus_create(project->allocator);UX_CHECK(p->distance_focus!=NULL);
+        p->distance_focus_enabled=true;distance_focus_update(&c,-1);p->distance_focus_enabled=false;
+        UX_CHECK(!memcmp(&camera,&p->camera,sizeof(camera)) && !memcmp(saved,p->layout,sizeof(*saved)));
+        bounds=(Rectangle){0};found=0;for(node=0;node<p->layout->node_count;++node)if(visible(&c,node))grid_union(&bounds,focus_node_bounds(&c,p->layout,node),&found);
+        p->layout->workspace.enabled=1;p->layout->workspace.bounds=(GD_LayoutBounds){-100000000,-100000000,100000000,100000000};
+        UX_CHECK(gd_explorer_action_run(&c,GD_ACTION_VIEW_FIT) && p->fit==1);fit_view(&c,0);p->fit=0;
+        UX_CHECK(fabsf(p->camera.zoom-fmaxf(0.002f,fminf(1.2f,focus_fit(c.viewport,bounds))))<0.00001f && fabsf(p->camera.target.x-bounds.x-bounds.width/2)<0.01f);
+        memcpy(p->layout,saved,sizeof(*saved));active=previous_active;c.pane=&panes[active];c.analysis->initialized=0;
     }
     if(project->draft){
         GD_Model *model=project->draft->model;int skill;GD_ExplorerQueryState *query=panes[GD_EXPLORER_ACTORS].query_state;
@@ -143,7 +194,7 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
         UX_CHECK(active==GD_EXPLORER_MDA && c.pane==&panes[active] && c.pane->prepared && c.pane->mda.record<0 && c.pane->mda.link<0 && !c.display_layout && !history->count && sidebar.open==defaults.open && !finds[active].open && !*finds[active].text);
         UX_CHECK(!project->mda || (project->mda->root<0 && project->mda->direction==GD_MDA_BOTH));
         for(v=0;v<GD_EXPLORER_VIEWS;++v){GD_ExplorerPane *p=&panes[v];
-            UX_CHECK(!*p->filter && !*p->list_search && p->selection.node<0 && p->selection.cell<0 && p->selection.linked<0 && p->mda.record<0 && p->mda.link<0);
+            UX_CHECK(p->overview.enabled && !*p->filter && !*p->list_search && p->selection.node<0 && p->selection.cell<0 && p->selection.linked<0 && p->mda.record<0 && p->mda.link<0);
             UX_CHECK(!p->structure_state && !p->rule_state && !p->query_state && !p->resource_routes && !p->distance_focus && p->workspace_bounds && !p->island_separation);
             UX_CHECK(p->camera.zoom==1 && !p->camera.target.x && !p->camera.target.y && !p->distance_focus_enabled && !p->resource_only_witness);
             if(v!=active)UX_CHECK(!p->prepared && !p->layout);
@@ -160,6 +211,9 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
             viewer_control_token(&viewer,&c,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));writer=(GD_ViewerWriter){reply,0,sizeof(reply),0};viewer_dispatch(&viewer,&request,&writer);
             UX_CHECK(strstr(reply,"\"executed\":true") && strstr(reply,"\"source_draft_changed\":false") && !viewer.has_hint && !viewer.hint_pending && !*viewer.layer_token && c.pane->layout!=layout);
             UX_CHECK(!draft || draft_hash==viewer_control_hash(UINT64_C(14695981039346656037),draft,sizeof(*draft)));
+            c.pane->mda.record=c.pane->layout->node_count ? c.pane->layout->nodes[0].key:-1;c.pane->overview.row=c.pane->overview.column=0;
+            snprintf(request.action,sizeof(request.action),"view.selection.clear");viewer_control_token(&viewer,&c,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));writer=(GD_ViewerWriter){reply,0,sizeof(reply),0};viewer_dispatch(&viewer,&request,&writer);
+            UX_CHECK(strstr(reply,"\"executed\":true") && c.pane->mda.record<0 && c.pane->overview.row<0 && c.pane->overview.column<0);
         }
         c.finds=NULL;c.sidebar=NULL;
     }

@@ -99,7 +99,7 @@ typedef struct {
     bool distance_focus_enabled,focus_auto_fit;
     uint64_t distance_focus_revision;
     const GD_Layout *find_hold_layout;
-    int find_hold_node; /* Camera-only Find must not implicitly refocus layout. */
+    int find_hold_node; /* >=0: Find anchor; -2: cleared selection holds focus pose; -1: no hold. */
     Vector2 right_origin;
     int right_started;
     GD_ExplorerSelection selection;
@@ -170,6 +170,7 @@ int gd_explorer_focus_available(const GD_ExplorerContext *context);
 int gd_explorer_focus_selection(GD_ExplorerContext *context);
 void gd_explorer_focus_camera(Camera2D *camera,Rectangle viewport,Rectangle selected,Rectangle context,Vector2 primary,GD_ExplorerFocusResult *result);
 int gd_explorer_similarity_focus(GD_ExplorerContext *context);
+int gd_explorer_similarity_frame(GD_ExplorerContext *context);
 
 int gd_explorer_graph_prepare(GD_ExplorerContext *context);
 void gd_explorer_graph_input(GD_ExplorerContext *context);

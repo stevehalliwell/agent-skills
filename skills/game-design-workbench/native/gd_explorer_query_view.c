@@ -377,7 +377,7 @@ void gd_explorer_query_display_controls(GD_ExplorerContext *context) {
                 for (i=0;i<query->effects->node_count;++i) if (query->effects->nodes[i].kind!=GD_EFFECT_ACTIVATION) { const GD_EffectNode *node=&query->effects->nodes[i]; igPushID_Int(i); if (gd_explorer_picker_item(context,TextFormat("%s %s%s%s | %d direct | #%d",node->axis>=0 ? model->records[node->axis].reference:"unresolved",gd_effect_kind_name(node->kind),node->value ? ": ":"",node->value ? node->value:"",query->contributors->incoming[i],i),i==selected,0)) gd_explorer_query_select_result(context,i); igPopID(); } gd_explorer_picker_end();
             }
             if (igSmallButton("Frame selected result / readable")) pane->fit=GD_EXPLORER_FIT_QUERY_READABLE;
-            igTextWrapped("Initial framing keeps labels readable; pan/zoom for full context. F fits all, possibly hiding small labels. Camera never changes query scope.");
+            igTextWrapped("Initial framing keeps labels readable; pan/zoom for full context. F frames selection, otherwise all shown nodes, possibly hiding small labels. Camera never changes query scope.");
             if (pane->query_state->selected) igTextWrapped("%d direct target contributors. Drawing includes exact ancestors and all their direct side effects. Initial result uses largest retained direct count, not a quality ranking; choose any result above. Wrapped rows are display only, not time.",pane->query_state->selected->count);
             display|=gd_explorer_form_widget(GD_FORM_QUERY,options,"weighted",NULL);
             igTextWrapped("Counts: direct target-labelled declarations only; calls/context copies/ghosts excluded. Dotted calls are mapped instantiation, not temporal steps.");

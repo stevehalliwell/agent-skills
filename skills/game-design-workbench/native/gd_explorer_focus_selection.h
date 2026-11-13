@@ -21,6 +21,7 @@ int gd_explorer_focus_available(const GD_ExplorerContext *c) {
     const GD_ExplorerPane *p=c->pane;
     if(!p->prepared || !p->layout)return 0;
     if(gd_explorer_similarity_active(c))return p->structure_state->similarity_row>=0;
+    if(p->view<GD_EXPLORER_ACTORS && !grid_view(p) && p->overview.row>=0 && p->overview.column>=0)return 1;
     if(p->view==GD_EXPLORER_MDA)return p->mda.record>=0 || p->mda.link>=0;
     if(p->selection.node>=0 || p->selection.cell>=0 || p->selection.linked>=0)return 1;
     return (p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_NOUNS) && p->grid.noun>=0 && p->grid.verb>=0;
@@ -44,11 +45,16 @@ static int focus_edge_shown(GD_ExplorerContext *c,int index) {
     const GD_LayoutEdge *edge=&c->pane->layout->edges[index];
     return visible(c,edge->a) && visible(c,edge->b) && (c->pane->view!=GD_EXPLORER_MATRIX || edge->active || c->pane->overlay);
 }
-int gd_explorer_focus_selection(GD_ExplorerContext *c) {
+static void frame_camera(Camera2D *camera,Rectangle viewport,Rectangle bounds){
+    camera->target=(Vector2){bounds.x+bounds.width/2,bounds.y+bounds.height/2};
+    camera->offset=(Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
+    camera->zoom=fmaxf(0.002f,fminf(1.2f,focus_fit(viewport,bounds)));
+}
+static int focus_selection(GD_ExplorerContext *c,int frame) {
     GD_ExplorerPane *p=c->pane;const GD_Layout *shown;GD_ExplorerFocusResult result={0};
     unsigned char marked[GD_MAX_RECORDS]={0};Rectangle selected={0},context={0},primary_bounds={0};int found=0,primary=-1,edge=-1,i,count=0,nodes[2];
     if(!gd_explorer_focus_available(c) || !(c->viewport.width>0) || !(c->viewport.height>0) || !isfinite(c->viewport.width) || !isfinite(c->viewport.height))return 0;
-    if(gd_explorer_similarity_active(c))return gd_explorer_similarity_focus(c);
+    if(gd_explorer_similarity_active(c))return frame ? gd_explorer_similarity_frame(c):gd_explorer_similarity_focus(c);
     /* Borrow matching active pose only inside this operation. Never expose
        filtered positions through node IPC, reset sampler or borrow other pane. */
     shown=gd_explorer_display_layout(c);
@@ -56,7 +62,7 @@ int gd_explorer_focus_selection(GD_ExplorerContext *c) {
     result.zoom=p->camera.zoom;
     if(grid_view(p) && p->selection.node<0 && (p->selection.cell>=0 || p->selection.linked<0) && p->grid.noun>=0 && p->grid.verb>=0){
         selected=p->view==GD_EXPLORER_NOUNS ? noun_grid_bounds(p,p->grid.noun,p->grid.verb):grid_bounds(&p->grid,p->grid.noun,p->grid.verb);result.selected=1;
-        gd_explorer_focus_camera(&p->camera,c->viewport,selected,selected,(Vector2){selected.x+selected.width/2,selected.y+selected.height/2},&result);goto framed;
+        if(frame)frame_camera(&p->camera,c->viewport,selected);else gd_explorer_focus_camera(&p->camera,c->viewport,selected,selected,(Vector2){selected.x+selected.width/2,selected.y+selected.height/2},&result);goto framed;
     }
     if(p->view==GD_EXPLORER_MDA){
         if(p->mda.link>=0){for(i=0;i<p->layout->edge_count;++i)if(p->layout->edges[i].key==p->mda.link){edge=i;break;}}
@@ -76,17 +82,22 @@ int gd_explorer_focus_selection(GD_ExplorerContext *c) {
                 if(grid_view(p)){Rectangle area=grid_bounds(&p->grid,cell->noun,cell->verb);if(!found)primary_bounds=area;grid_union(&selected,area,&found);++result.selected;}
                 else{records[cell->noun]=records[cell->verb]=1;if(!cell->active && !p->overlay)result.hidden_link=true;}
             }
-            if(grid_view(p) && found){gd_explorer_focus_camera(&p->camera,c->viewport,selected,selected,(Vector2){primary_bounds.x+primary_bounds.width/2,primary_bounds.y+primary_bounds.height/2},&result);goto framed;}
+            if(grid_view(p) && found){if(frame)frame_camera(&p->camera,c->viewport,selected);else gd_explorer_focus_camera(&p->camera,c->viewport,selected,selected,(Vector2){primary_bounds.x+primary_bounds.width/2,primary_bounds.y+primary_bounds.height/2},&result);goto framed;}
             for(i=0;i<p->layout->node_count;++i)if(records[p->layout->nodes[i].key]){marked[i]=1;if(primary<0)primary=i;}
         }
     }
     if(edge>=0){const GD_LayoutEdge *e=&p->layout->edges[edge];marked[e->a]=marked[e->b]=1;if(primary<0)primary=e->a;result.hidden_link=!focus_edge_shown(c,edge);}
+    if(p->view<GD_EXPLORER_ACTORS && !grid_view(p) && p->overview.row>=0 && p->overview.column>=0){
+        const GD_GraphOverview *overview;analyze(c);overview=gd_graph_overview(c->analysis,&p->overview,incidence(p->view));
+        if(overview)for(i=0;i<p->layout->node_count;++i)if(overview->selected_nodes[i])marked[i]=1;
+    }
     for(i=0;i<p->layout->node_count;++i)if(marked[i]){
         if(!visible(c,i)){++result.hidden;marked[i]=0;continue;}
         primary_bounds=focus_node_bounds(c,shown,i);grid_union(&selected,primary_bounds,&found);++result.selected;
     }
     if(!found){result.status=result.hidden ? GD_FOCUS_HIDDEN:GD_FOCUS_UNREPRESENTED;p->focus_result=result;return 1;}
     if(primary<0 || !marked[primary])for(i=0;i<p->layout->node_count;++i)if(marked[i]){primary=i;break;}
+    if(frame){frame_camera(&p->camera,c->viewport,selected);result.zoom=p->camera.zoom;goto framed;}
     primary_bounds=focus_node_bounds(c,shown,primary);context=selected;
     if(!grid_view(p))for(i=0;i<p->layout->edge_count;++i){
         const GD_LayoutEdge *e=&p->layout->edges[i];if(!(marked[e->a]&1) && !(marked[e->b]&1))continue;
@@ -99,6 +110,8 @@ int gd_explorer_focus_selection(GD_ExplorerContext *c) {
     for(i=0;i<p->layout->node_count;++i)if(marked[i]==2){grid_union(&context,focus_node_bounds(c,shown,i),&found);++result.context;}
     gd_explorer_focus_camera(&p->camera,c->viewport,selected,context,(Vector2){primary_bounds.x+primary_bounds.width/2,primary_bounds.y+primary_bounds.height/2},&result);
 framed:
-    result.status=result.hidden || result.hidden_link || result.clipped ? GD_FOCUS_PARTIAL:GD_FOCUS_FRAMED;p->focus_result=result;p->fit=0;p->focus_camera_override=true;return 1;
+    result.zoom=p->camera.zoom;result.status=result.hidden || result.hidden_link || result.clipped ? GD_FOCUS_PARTIAL:GD_FOCUS_FRAMED;p->focus_result=result;p->fit=0;p->focus_camera_override=true;return 1;
 }
+int gd_explorer_focus_selection(GD_ExplorerContext *c){return focus_selection(c,0);}
+static int frame_selection(GD_ExplorerContext *c){return focus_selection(c,1);}
 #endif

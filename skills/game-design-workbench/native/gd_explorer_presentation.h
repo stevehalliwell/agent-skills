@@ -43,7 +43,7 @@ static const PresentationField presentation_fields[]={
  PF(reach_peer,"Reachability peer",GD_CONTROL_INT,NULL,NULL,PV_GRAPH,reach.peer,0),
  PF(reach_target,"Reachability witness target",GD_CONTROL_INT,NULL,NULL,PV_GRAPH,reach.target,0),
  PF(shapes,"Structural shape families",GD_CONTROL_BOOL,NULL,NULL,PV_GRAPH,shapes,0),
- PF(overview_enabled,"Adjacency / incidence overview",GD_CONTROL_BOOL,NULL,NULL,PV_GRAPH,overview.enabled,1),
+ PF(overview_enabled,"Expand adjacency / incidence overview",GD_CONTROL_BOOL,NULL,NULL,PV_GRAPH,overview.enabled,1),
  PF(overview_row,"Overview row bin",GD_CONTROL_INT,NULL,NULL,PV_GRAPH,overview.row,0),
  PF(overview_column,"Overview column bin",GD_CONTROL_INT,NULL,NULL,PV_GRAPH,overview.column,0),
  VF(focus_root,"Relationship root",GD_CONTROL_INT,1u<<GD_EXPLORER_RELATIONSHIPS),
@@ -330,7 +330,18 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     if(!strcmp(name,"view.witness.fit")) {if(p->view!=GD_EXPLORER_RESOURCES || !p->resource_routes || !p->resource_routes->witness_count)return 0;p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;return 1;}
     if(!strcmp(name,"view.cell.fit")) {int nodes[2];if(gd_explorer_similarity_active(c) || p->selection.node>=0 || !pair_selection_nodes(c,nodes))return 0;if(grid_view(p))grid_frame_selection(c);else p->fit=GD_EXPLORER_FIT_SELECTION;return 1;}
     if(!strcmp(name,"view.selection.focus")) {GD_ExplorerContext canvas=*c;if(!gd_explorer_similarity_active(c) && (grid_view(p) || p->view==GD_EXPLORER_NOUNS)){canvas.viewport.y+=GD_COUNT_GRID_HEADER;canvas.viewport.height-=GD_COUNT_GRID_HEADER;}return gd_explorer_focus_selection(&canvas);}
-    if(!strcmp(name,"view.fit")) { if(gd_explorer_similarity_active(c)) p->structure_state->similarity_fit=true; else p->fit=1; return 1; }
+    if(!strcmp(name,"view.selection.clear")){
+        p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};p->grid.noun=p->grid.verb=-1;p->mda.record=p->mda.link=p->mda.held=-1;p->inspected_record=p->editor.record=p->navigate=-1;
+        p->overview.row=p->overview.column=-1;p->find_hold_node=-2;p->find_hold_layout=p->layout;*p->find_reference=0;p->focus_result=(GD_ExplorerFocusResult){0};
+        memset(p->mda.path_nodes,0,sizeof(p->mda.path_nodes));memset(p->mda.path_links,0,sizeof(p->mda.path_links));
+        if(p->structure_state){p->structure_state->similarity_row=p->structure_state->similarity_peer=-1;}
+        if(c->analysis)c->analysis->initialized=0;return 1;
+    }
+    if(!strcmp(name,"view.fit")) {
+        GD_ExplorerContext canvas=*c;if(!gd_explorer_similarity_active(c) && (grid_view(p) || p->view==GD_EXPLORER_NOUNS)){canvas.viewport.y+=GD_COUNT_GRID_HEADER;canvas.viewport.height-=GD_COUNT_GRID_HEADER;}
+        if(gd_explorer_focus_available(&canvas))return frame_selection(&canvas);
+        if(gd_explorer_similarity_active(c))p->structure_state->similarity_fit=true;else p->fit=1;return 1;
+    }
     if(!strcmp(name,"view.rearrange")) { gd_explorer_presentation_read(c,&values); return presentation_rearrange(c,&values,1); }
     if(!strcmp(name,"view.start.clear")) { p->paths.count=p->paths.lost=0; return 1; }
     if(!strcmp(name,"view.start.add")) { int node=analyze(c); return node>=0 && gd_graph_path_start(&p->paths,p->layout->nodes[node].key)>=0; }

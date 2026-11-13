@@ -58,6 +58,9 @@ TEST(graph_overview_limits,
     TEST_ASSERT(overview->bins==3 && overview->counts[1]==2 && !overview->counts[3] && overview->counts[0]==1 && overview->link_count==3);
     controls.row=0; controls.column=1; overview=gd_graph_overview(analysis,&controls,0);
     TEST_ASSERT(overview->selected_count==2 && overview->selected_edges[0] && overview->selected_edges[1] && !overview->selected_edges[2] && !overview->selected_nodes[2]);
+    controls.enabled=0;overview=gd_graph_overview(analysis,&controls,0);
+    TEST_ASSERT(overview && overview->selected_count==2 && overview->selected_edges[0] && overview->selected_edges[1] && controls.row==0 && controls.column==1);
+    controls.enabled=1;
     overview=gd_graph_overview(analysis,&controls,1); TEST_ASSERT(controls.row==-1 && controls.column==-1 && overview->counts[1]==2 && overview->counts[3]==2 && overview->counts[0]==1);
     for (i=0;i<9;++i) total+=overview->counts[i]; TEST_ASSERT(total==5 && overview->link_count==3);
     gd_graph_overview_select(analysis,-1,0); TEST_ASSERT(!overview->selected_count);

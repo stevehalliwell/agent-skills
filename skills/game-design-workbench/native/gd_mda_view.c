@@ -73,7 +73,6 @@ static void fit(Camera2D *camera, const GD_Model *model, const GD_Mda *mda, cons
         if (!found || position.y+55 > bottom) bottom = position.y+55;
         found = 1;
     }
-    if(layout->workspace.enabled){const GD_LayoutBounds *b=&layout->workspace.bounds;float scale=layout->mode==GD_LAYOUT_FORCE ? 3:1;left=fminf(left,b->left*scale);right=fmaxf(right,b->right*scale);top=fminf(top,b->top*scale);bottom=fmaxf(bottom,b->bottom*scale);}
     camera->target = (Vector2){(left+right)/2,(top+bottom)/2};
     camera->zoom = fminf(viewport.width/(right-left+60),viewport.height/(bottom-top+70));
     if (camera->zoom > 1.2f) camera->zoom = 1.2f;
@@ -261,7 +260,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls={0}; bool foundation_enabled=false,shape_enabled=false; int foundation_peer=-1;
     GD_ReachControls reach_controls={0,-1,0,-1,-1};
-    GD_OverviewControls overview_controls={0,-1,-1};
+    GD_OverviewControls overview_controls={1,-1,-1};
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context,sizeof(*layout));
     MdaDisplay display = {.record = -1,.link = -1,.held = -1,.roles = {true,true,true,true},.paused = true};
     Camera2D camera = {{0,0},{0,0},0,1};
@@ -277,7 +276,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     mark_path(mda,&display);
     if (display.record < 0) { int i; for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_MDA_AESTHETIC) { display.record = i; break; } }
     SetTraceLogCallback(mda_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);
-    InitWindow(1500,940,"Game Design Workbench - MDA explorer");
+    InitWindow(1500,940,"Game Design Workbench - MDA explorer");SetExitKey(KEY_NULL);
     if (!IsWindowReady()) { initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.window","Cannot initialize MDA window",NULL,0); return 2; }
     analysis=initial->allocator.allocate(initial->allocator.context,sizeof(*analysis));
     if (!analysis) { CloseWindow(); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
@@ -367,7 +366,14 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         igText("%d scoped records with questions | %d findings",mda->gap_count,mda->finding_count);
         igSeparator(); igBeginChild_Str("MDA source",(ImVec2_c){0,0},0,0); source_details(model,mda,&display); igEndChild(); igEnd();
         if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F5)) refresh = 1;
-        if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F)) fit_next = 1;
+        if(!igGetIO_Nil()->WantCaptureKeyboard && !igIsAnyItemActive() && !igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel)){
+            if(IsKeyPressed(KEY_ESCAPE)){display.record=display.link=display.held=-1;overview_controls.row=overview_controls.column=-1;analysis->initialized=0;}
+            if(IsKeyPressed(KEY_F)){int node=-1,edge=-1,i;analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
+                for(i=0;i<layout->node_count;++i)if(layout->nodes[i].key==display.record){node=i;break;}
+                for(i=0;i<layout->edge_count;++i)if(layout->edges[i].key==display.link && display.link>=0){edge=i;break;}
+                if(!gd_graph_frame_selection(&camera,layout,analysis,&overview_controls,node,edge,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1))fit_next=1;
+            }
+        }
         mark_path(mda,&display);
         camera.offset = (Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
         if (fit_next) { fit(&camera,model,mda,layout,&display,viewport); fit_next = 0; }

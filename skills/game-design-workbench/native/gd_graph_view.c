@@ -62,14 +62,6 @@ static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle view
         if (!i || node->y-85 < min_y) min_y = node->y-85;
         if (!i || node->y+50 > max_y) max_y = node->y+50;
     }
-    for (i=0;i<layout->edge_count;++i) {
-        GD_LayoutRoute route; int j; gd_layout_route(layout,i,&route);
-        for (j=0;j<route.count;++j) {
-            min_x=fminf(min_x,route.points[j].x); max_x=fmaxf(max_x,route.points[j].x);
-            min_y=fminf(min_y,route.points[j].y); max_y=fmaxf(max_y,route.points[j].y);
-        }
-    }
-    if(layout->workspace.enabled){const GD_LayoutBounds *b=&layout->workspace.bounds;min_x=fminf(min_x,b->left);min_y=fminf(min_y,b->top);max_x=fmaxf(max_x,b->right);max_y=fmaxf(max_y,b->bottom);}
     camera->target = (Vector2){(min_x+max_x)/2, (min_y+max_y)/2};
     camera->offset = (Vector2){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
     camera->zoom = fminf(viewport.width/(max_x-min_x+130), viewport.height/(max_y-min_y+70));
@@ -585,7 +577,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false,foundation_enabled=false,shape_enabled=false; int shared_peer=-1,foundation_peer=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls[3]={{0}};
-    GD_OverviewControls overview_controls={0,-1,-1};
+    GD_OverviewControls overview_controls={1,-1,-1};
     GD_ReachControls reach_controls[3]={{0,-1,0,-1,-1},{0,-1,0,-1,-1},{0,-1,0,-1,-1}};
     GD_DiagnosticBrowser diagnostics={0};
     int root=focus_from ? focus_find(model,focus_from):-1;
@@ -641,7 +633,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     analysis=initial->allocator.allocate(initial->allocator.context,sizeof(*analysis));
     if (!analysis) { CloseWindow(); if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
     memset(analysis,0,sizeof(*analysis));
-    if (draft) SetExitKey(KEY_NULL);
+    SetExitKey(KEY_NULL);
     measure_directed(layout);
     SetWindowMinSize(1000, 650); SetTargetFPS(60); rlImGuiSetup(true);
     igGetIO_Nil()->IniFilename = NULL; igGetIO_Nil()->LogFilename = NULL;
@@ -820,7 +812,14 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             select_record(layout,&selection,selected); editor.record=-1;
             accumulator=0; fit=1;
         }
-        if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F)) fit = 1;
+        if (!igGetIO_Nil()->WantCaptureKeyboard && !igIsAnyItemActive() && !igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel)){
+            if(IsKeyPressed(KEY_ESCAPE)){selection=(GraphSelection){-1,-1,0,-1,-1};overview_controls.row=overview_controls.column=-1;analysis->initialized=0;}
+            if(IsKeyPressed(KEY_F)){int node=selection.node,edge=-1,i;gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis);
+                for(i=0;i<layout->edge_count;++i)if(layout->edges[i].key==selection.cell && selection.cell>=0){edge=i;break;}
+                if(node<0 && selection.linked>=0)for(i=0;i<layout->node_count;++i)if(layout->nodes[i].key==selection.linked){node=i;break;}
+                if(!gd_graph_frame_selection(&camera,layout,analysis,&overview_controls,node,edge,viewport,1))fit=1;
+            }
+        }
         if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F5)) refresh = 1;
         if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_SPACE) && ((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && layout->mode!=GD_LAYOUT_COLUMNS) paused=!paused;
         if (fit) { fit_camera(&camera, layout, viewport); fit = 0; }

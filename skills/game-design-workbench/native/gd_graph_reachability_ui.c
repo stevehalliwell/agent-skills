@@ -105,11 +105,11 @@ int gd_graph_shapes_panel(const GD_Model *model, const GD_Layout *layout, GD_Gra
 int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
                             GD_OverviewControls *controls, int undirected) {
     const GD_GraphOverview *overview; bool enabled=controls->enabled!=0; int i,side;
-    igSeparator(); igCheckbox("Adjacency / incidence overview",&enabled); controls->enabled=enabled;
+    igSeparator(); igCheckbox("Expand adjacency / incidence overview",&enabled); controls->enabled=enabled;
     if (!enabled) return 0;
     overview=gd_graph_overview(analysis,controls,undirected);
     igTextWrapped(undirected ? "Symmetric incidence bins, NOT flow. Mirrored cells do not double total input rows.":"Rows -> columns follow shown arrows, not inferred traffic or causality.");
-    igTextWrapped("All shown identities, contiguous projection-index bins; not semantic clusters. Brightness uses log bands of projected link-row count, NOT strength, quantity or flow. Within-bin diagonal entries need not be self-links.");
+    igTextWrapped("All shown identities, contiguous projection-index bins; not semantic clusters. Brightness uses linear full-projection link-row count, NOT strength, quantity or flow. Within-bin diagonal entries need not be self-links.");
     igText("%d identities / %d bins / %d input link rows / peak %d",overview->node_count,overview->bins,overview->link_count,overview->peak);
     igTextWrapped("Select inset cell or use bin controls. Gold graph marks are actual contributing endpoints/links, not every member of bin. Missing/filtered declarations stay outside scope.");
     if (!overview->bins) return 0;

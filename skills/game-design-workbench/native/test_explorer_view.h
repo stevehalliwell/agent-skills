@@ -36,7 +36,7 @@ static void explorer_test_render(GD_ExplorerContext *c) {
         else if (query_view(p->view)) gd_explorer_query_draw(c);
         else gd_explorer_resource_draw(c,&e);
     }
-    if (!gd_explorer_similarity_active(c)) { draw_matches(c); if (!grid_view(p) && !query_view(p->view)) gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,0); }
+    if (!gd_explorer_similarity_active(c)) { draw_matches(c); if (p->view!=GD_EXPLORER_NOUNS && !grid_view(p) && !query_view(p->view)) gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,0); }
     rlImGuiEnd(); EndDrawing();
 }
 static int explorer_test_grid_capacity(GD_ExplorerContext *c, const char *output) {

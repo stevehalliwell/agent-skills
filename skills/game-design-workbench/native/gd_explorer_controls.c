@@ -450,7 +450,7 @@ static const GD_ExplorerActionInfo actions[]={
     {"rules.clear","Clear rule/binding inspection",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RULES},
     {"resource.run","Run conditional witnesses",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RESOURCE},
     {"resource.clear","Clear Resource query/witnesses",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RESOURCE},
-    {"view.fit","Fit",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"view.fit","Frame selection / all (F)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.rearrange","Rearrange",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.expand","Expand selected relationship",1u<<GD_EXPLORER_RELATIONSHIPS,GD_FORM_PRESENTATION},
     {"view.start.add","Add selected analysis start",(1u<<GD_EXPLORER_ACTORS)-1,GD_FORM_PRESENTATION},
@@ -468,7 +468,8 @@ static const GD_ExplorerActionInfo actions[]={
     {"draft.undo","Undo",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"draft.redo","Redo",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"draft.redo.discard","Discard Redo history",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
-    {"view.reset.all","Reset all",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION}
+    {"view.reset.all","Reset all",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"view.selection.clear","Clear selection (Esc)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION}
 };
 const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action) {
     return action>=0 && action<GD_ACTION_COUNT ? &actions[action]:NULL;

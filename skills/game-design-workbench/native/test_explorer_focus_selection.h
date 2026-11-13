@@ -9,7 +9,7 @@ static int focus_selection_checks(GD_ExplorerContext *base,GD_ExplorerPane *pane
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(base->project->available&(1u<<v)){
         GD_ExplorerSelection selection;Camera2D camera;GD_ExplorerPresentation inputs,after;int allocation_count=*calls;
         p=&panes[v];memcpy(saved,p,sizeof(*saved));saving=1;c.pane=p;c.display_layout=NULL;
-        p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};p->mda.record=p->mda.link=-1;p->grid.noun=p->grid.verb=-1;
+        p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};p->mda.record=p->mda.link=-1;p->grid.noun=p->grid.verb=-1;p->overview.row=p->overview.column=-1;
         FOCUS_CHECK(!gd_explorer_focus_available(&c));camera=p->camera;FOCUS_CHECK(!gd_explorer_focus_selection(&c) && !memcmp(&camera,&p->camera,sizeof(camera)));
         if(p->layout->node_count){
             p->selection.node=0;if(v==GD_EXPLORER_MDA){p->mda.record=p->layout->nodes[0].key;for(i=0;i<4;++i)p->mda.roles[i]=true;p->mda.only_scope=p->mda.only_path=false;*p->mda.filter=0;}

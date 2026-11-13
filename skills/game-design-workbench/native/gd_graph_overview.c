@@ -29,7 +29,8 @@ void gd_graph_overview_select(GD_GraphAnalysis *analysis, int row, int column) {
 }
 const GD_GraphOverview *gd_graph_overview(GD_GraphAnalysis *analysis, GD_OverviewControls *controls, int undirected) {
     GD_GraphOverview *overview=&analysis->overview; int i,count=0;
-    if (!controls->enabled) return NULL;
+    /* Expansion is presentation only; retained brush remains active. */
+    if (!controls->enabled && (controls->row<0 || controls->column<0)) return NULL;
     assert(analysis->initialized); undirected=undirected!=0;
     if (!overview->valid || overview->undirected!=undirected) {
         overview->valid=1; overview->undirected=undirected; overview->node_count=analysis->shown_nodes;

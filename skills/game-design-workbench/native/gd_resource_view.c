@@ -34,7 +34,6 @@ static void fit(Camera2D *camera, const GD_Layout *layout, Rectangle viewport) {
         if (!i || x-110<left) left=x-110; if (!i || x+110>right) right=x+110;
         if (!i || y-45<top) top=y-45; if (!i || y+45>bottom) bottom=y+45;
     }
-    if(layout->workspace.enabled){const GD_LayoutBounds *b=&layout->workspace.bounds;left=fminf(left,b->left);right=fmaxf(right,b->right);top=fminf(top,b->top);bottom=fmaxf(bottom,b->bottom);}
     camera->target=(Vector2){(left+right)/2,(top+bottom)/2};
     camera->offset=(Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
     camera->zoom=fminf(viewport.width/(right-left+50),viewport.height/(bottom-top+50));
@@ -338,14 +337,14 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls={0}; int path_tab=0;
     GD_ReachControls reach_controls={0,-1,0,-1,-1}; int shape_enabled=0;
-    GD_OverviewControls overview_controls={0,-1,-1};
+    GD_OverviewControls overview_controls={1,-1,-1};
     if (!layout || !analysis || !resource_layout(graph,layout) || !gd_layout_prepare_free(layout,model->allocator,1.4f,1)) {
         if (analysis) model->allocator.release(model->allocator.context,analysis);
         if (layout) model->allocator.release(model->allocator.context,layout);
         gd_error(model,"resources.layout","Cannot allocate or arrange resource preview",NULL,0); return 2;
     }
     memset(analysis,0,sizeof(*analysis)); gd_graph_analyze(layout,NULL,1,shared_lens,analysis);
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT); InitWindow(1440,900,"Resource graph preview"); SetTargetFPS(60);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT); InitWindow(1440,900,"Resource graph preview"); SetExitKey(KEY_NULL);SetTargetFPS(60);
     for (i=0;i<120;++i) gd_layout_step(layout,-1);
     fit(&camera,layout,(Rectangle){0,100,1060,755});
     while (!WindowShouldClose() && (!frames || frame<frames)) {
@@ -354,7 +353,8 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         Vector2 mouse=GetMousePosition();
         camera.offset=(Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
         if (GetTime()>=next_check) { if (gd_sources_changed(model)) stale=1; next_check=GetTime()+1; }
-        if (IsKeyPressed(KEY_F)) fit(&camera,layout,viewport);
+        if(IsKeyPressed(KEY_ESCAPE)){selected=held=-1;overview_controls.row=overview_controls.column=-1;analysis->initialized=0;}
+        if(IsKeyPressed(KEY_F)){gd_graph_analyze(layout,NULL,1,shared_lens,analysis);if(!gd_graph_frame_selection(&camera,layout,analysis,&overview_controls,selected,-1,viewport,1))fit(&camera,layout,viewport);}
         if (IsKeyPressed(KEY_SPACE)) paused=!paused;
         if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,12,340,28})){
             gd_layout_islands_set(layout,!layout->islands.preferred);if(layout->islands.enabled)paused=0;

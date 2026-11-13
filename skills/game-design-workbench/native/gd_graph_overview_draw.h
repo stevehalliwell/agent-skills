@@ -5,22 +5,45 @@
 #include "raylib.h"
 #include <math.h>
 
+enum { GD_OVERVIEW_HEADER_HEIGHT=24 };
 static inline Rectangle gd_graph_overview_bounds(Rectangle viewport) {
-    float size=fminf(288,fminf(viewport.width-40,viewport.height-108));
+    float size=fminf(288,fminf(viewport.width-40,viewport.height-108-GD_OVERVIEW_HEADER_HEIGHT));
     if (size<64) return (Rectangle){0,0,0,0};
-    return (Rectangle){viewport.x+viewport.width-size-32,viewport.y+12,size+16,size+82};
+    return (Rectangle){viewport.x+viewport.width-size-32,viewport.y+12,size+16,size+82+GD_OVERVIEW_HEADER_HEIGHT};
+}
+static inline Rectangle gd_graph_overview_visible_bounds(const GD_OverviewControls *controls,Rectangle viewport) {
+    Rectangle bounds=gd_graph_overview_bounds(viewport);float width;
+    if(controls->enabled && bounds.width>0)return bounds;
+    width=fminf(160,viewport.width-32);
+    if(width<64 || viewport.height<GD_OVERVIEW_HEADER_HEIGHT+24)return (Rectangle){0};
+    return (Rectangle){viewport.x+viewport.width-width-16,viewport.y+12,width,GD_OVERVIEW_HEADER_HEIGHT};
 }
 static inline int gd_graph_overview_hit(const GD_OverviewControls *controls, Rectangle viewport, Vector2 mouse) {
-    Rectangle bounds=gd_graph_overview_bounds(viewport);
-    return controls->enabled && bounds.width>0 && CheckCollisionPointRec(mouse,bounds);
+    Rectangle bounds=gd_graph_overview_visible_bounds(controls,viewport);
+    return bounds.width>0 && CheckCollisionPointRec(mouse,bounds);
+}
+/* Same header geometry for drawing, input consumption and headless checks. */
+static inline int gd_graph_overview_toggle(GD_OverviewControls *controls,Rectangle viewport,Vector2 mouse) {
+    Rectangle header=gd_graph_overview_visible_bounds(controls,viewport);header.height=GD_OVERVIEW_HEADER_HEIGHT;
+    if(!header.width || !CheckCollisionPointRec(mouse,header))return 0;
+    controls->enabled=!controls->enabled;return 1;
 }
 /* Fixed-screen inset, not a second source projection or a camera-dependent
    subset. Pointer events are consumed here; callers suppress graph dragging. */
 static inline void gd_graph_overview_draw(GD_GraphAnalysis *analysis, GD_OverviewControls *controls, Rectangle viewport, int allow_input) {
-    const GD_GraphOverview *overview=&analysis->overview; Rectangle box=gd_graph_overview_bounds(viewport);
-    int row,column; GD_CountRange range={0}; float size=box.width-16,cell;
+    const GD_GraphOverview *overview=&analysis->overview; Rectangle box,header;
+    int row,column; GD_CountRange range={0}; float size,cell;
     Vector2 mouse=GetMousePosition(); Color text={225,233,241,255};
-    if (!controls->enabled || !overview->valid || !box.width) return;
+    if(allow_input && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))gd_graph_overview_toggle(controls,viewport,mouse);
+    box=gd_graph_overview_visible_bounds(controls,viewport);if(!box.width)return;
+    header=box;header.height=GD_OVERVIEW_HEADER_HEIGHT;
+    DrawRectangleRec(header,allow_input && CheckCollisionPointRec(mouse,header) ? (Color){45,60,78,255}:(Color){29,38,51,250});
+    DrawRectangleLinesEx(header,1,(Color){150,169,190,255});
+    if(controls->row>=0 && controls->column>=0)DrawCircle((int)header.x+10,(int)header.y+12,3,(Color){255,217,125,255});
+    if(header.width>=112)DrawText("Overview",(int)header.x+(controls->row>=0 && controls->column>=0 ? 20:8),(int)header.y+5,14,text);
+    DrawText(controls->enabled ? "[-]":"[+]",(int)(header.x+header.width)-30,(int)header.y+5,14,text);
+    if(!controls->enabled || !overview->valid || box.height<=GD_OVERVIEW_HEADER_HEIGHT)return;
+    box.y+=GD_OVERVIEW_HEADER_HEIGHT;box.height-=GD_OVERVIEW_HEADER_HEIGHT;size=box.width-16;
     DrawRectangleRec(box,(Color){18,24,34,250}); DrawRectangleLinesEx(box,1,(Color){150,169,190,255});
     DrawText(TextFormat("%d bins / %d identities / %d link rows",overview->bins,overview->node_count,overview->link_count),(int)box.x+8,(int)box.y+6,12,text);
     DrawText(overview->undirected ? "Symmetric incidence; NOT flow":"Rows -> columns: shown arrows",(int)box.x+8,(int)box.y+22,12,text);
