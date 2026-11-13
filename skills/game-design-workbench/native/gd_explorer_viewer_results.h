@@ -41,7 +41,7 @@ static int viewer_result_emit(FILE *out,void *data) {
     if(!strcmp(r->form,"query")) return p->query_state && p->query_state->query && (!fields || gd_query_fields(p->query_state->query->request.kind,fields)) && gd_write_query_selection(out,model,p->query_state->query,p->query_state->selected,1,fields);
     if(!strcmp(r->form,"structure")) return p->structure_state && p->structure_state->result && gd_write_structure_retained(out,p->structure_state->result,1,fields);
     if(!strcmp(r->form,"rules")) return p->rule_state && p->rule_state->result && (!fields || gd_named_fields(p->rule_state->result->request.kind,fields)) && gd_write_named_result(out,p->rule_state->result,1,fields);
-    if(!strcmp(r->form,"bindings")) return p->rule_state && p->rule_state->bindings && (!fields || gd_query_fields(GD_QUERY_BINDINGS,fields)) && gd_write_query_retained(out,model,p->rule_state->bindings,1,fields);
+    if(!strcmp(r->form,"bindings")) return p->rule_state && p->rule_state->bindings && (!fields || gd_query_fields(GD_QUERY_BINDINGS,fields)) && gd_write_query_retained(out,p->rule_state->bindings->model,p->rule_state->bindings,1,fields);
     if(!strcmp(r->form,"resource")) return p->view==GD_EXPLORER_RESOURCES && p->resource_routes && gd_write_resource_query(out,model,c->project->resources,p->resource_routes,1,fields);
     if(!strcmp(r->form,"mda")) return p->view==GD_EXPLORER_MDA && gd_write_mda_result(out,model,c->project->mda,1,fields);
     if(!strcmp(r->form,"challenges")) return p->view==GD_EXPLORER_CHALLENGES && gd_write_routes_result(out,model,c->project->routes,1,fields);

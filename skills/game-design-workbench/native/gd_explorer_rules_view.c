@@ -55,6 +55,7 @@ int gd_explorer_rules_run(GD_ExplorerContext *context) {
     GD_ExplorerRuleState *fresh;
     if (!context || !context->pane || !context->pane->rule_state || !context->project || !context->project->models[GD_EXPLORER_RULE_DATA]) return 0;
     *context->pane->rule_message=0; fresh=build(context,&context->pane->rule_state->pending); if (!fresh) return 0;
+    fresh->context_open=context->pane->rule_state->context_open;fresh->context_outcomes=context->pane->rule_state->context_outcomes;
     gd_explorer_rules_destroy(context->pane->rule_state); context->pane->rule_state=fresh; return 1;
 }
 int gd_explorer_rules_remap(GD_ExplorerContext *context,const GD_ExplorerProject *old,const GD_ExplorerPane *prior) {
@@ -70,6 +71,7 @@ int gd_explorer_rules_remap(GD_ExplorerContext *context,const GD_ExplorerProject
     }
     fresh=before->result || before->bindings ? build(context,&before->applied):empty_state(context->project->allocator,&before->applied);
     if (!fresh) { if (!*context->pane->rule_message) snprintf(context->pane->rule_message,sizeof(context->pane->rule_message),"Cannot allocate refreshed rule state; prior snapshot retained."); return 0; }
+    fresh->context_open=before->context_open;fresh->context_outcomes=before->context_outcomes;
     context->pane->rule_state=fresh; return 1;
 changed:
     snprintf(context->pane->rule_message,sizeof(context->pane->rule_message),"Rule reader context changed. Clear rule inspection before accepting new source context; last good snapshot retained."); return 0;
@@ -92,9 +94,23 @@ void gd_explorer_rules_choose(GD_ExplorerRuleState *state,int row,int peer) {
         if (peer>=0 && peer<analysis->scenario.write_count) mark_write(state,&analysis->scenario.writes[peer]);
     } else if (row>=0 && row<analysis->comparison_count) { const GD_RuleComparisonResult *pair=&analysis->comparisons[row]; state->marked_cases[pair->first_case]=state->marked_cases[pair->second_case]=1; if (pair->conflict_first>=0 && pair->conflict_second>=0) { mark_write(state,&pair->conflict_a); mark_write(state,&pair->conflict_b); } }
 }
+static int source_record(GD_ExplorerContext *context,int case_index) {
+    const GD_Rules *rules=context->project->rules;const GD_Model *model=gd_explorer_model(context->project,context->pane->view);const GD_Record *record;int mapped;
+    if(case_index<0 || case_index>=rules->case_count)return -1;
+    record=&rules->model->records[rules->sources[rules->cases[case_index].source].record];mapped=gd_explorer_record(model,record->reference);
+    if(mapped<0 || strcmp(record->source_path,model->records[mapped].source_path) || (!!record->id!=!!model->records[mapped].id) || (record->id && strcmp(record->id,model->records[mapped].id)))return -1;
+    return mapped;
+}
 static void source(GD_ExplorerContext *context,int case_index) {
     GD_ExplorerPane *pane=context->pane; const GD_ResourceGraph *graph=context->project->resources; const GD_Rules *rules=context->project->rules; int i;
-    if (case_index<0 || case_index>=rules->case_count) return;
+    int record=source_record(context,case_index);
+    if(record<0)return;
+    if(pane->view!=GD_EXPLORER_RESOURCES){
+        pane->selection=(GD_ExplorerSelection){-1,-1,0,record,-1};
+        if(pane->view==GD_EXPLORER_MDA){pane->mda.record=record;pane->mda.link=-1;}
+        if(pane->structure_state)pane->structure_state->similarity_canvas=false;
+        return;
+    }
     pane->selection=(GD_ExplorerSelection){.cell=-1,.node=-1,.interaction=0,.linked=rules->sources[rules->cases[case_index].source].record,.held=-1};
     for (i=0;i<graph->node_count;++i) if (graph->nodes[i].kind==GD_RESOURCE_CASE && !graph->nodes[i].instance && graph->nodes[i].case_index==case_index) { pane->selection.node=i; pane->selection.linked=-1; break; }
     if (pane->structure_state) pane->structure_state->similarity_canvas=false;
@@ -108,7 +124,9 @@ static void case_details(GD_ExplorerContext *context,int case_index) {
     for (i=item->first_participant;i<item->first_participant+item->participant_count && i<item->first_participant+64;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s: noun %s | requires %s | excludes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->becomes ? actor->becomes:"unspecified",actor->preserve ? actor->preserve:"unspecified",actor->causes ? actor->causes:"none"); }
     if (item->participant_count>64) igTextWrapped("%d further local participant rows omitted from compact card; full native source remains below.",item->participant_count-64);
     if (igCollapsingHeader_TreeNodeFlags("Full source Markdown body (all cases in record)",0)) igTextWrapped("%s",record->body ? record->body:"no body");
+    igBeginDisabled(source_record(context,case_index)<0);
     if (igButton("Inspect source declaration (ordinary canvas)",(ImVec2_c){0,0})) source(context,case_index);
+    igEndDisabled();if(source_record(context,case_index)<0)igTextWrapped("Source not loaded in this canvas family; full declaration remains in this tool.");
     igTextWrapped("%s",record->source_path); igPopID();
 }
 static void proposal_details(GD_ExplorerContext *context,const GD_RuleWrite *write) {
@@ -124,7 +142,7 @@ static void binding_details(GD_ExplorerContext *context,GD_ExplorerRuleState *st
     const GD_Query *query=state->bindings; const GD_Rules *rules=query->rules; const GD_Model *model=query->model; int i,start,count=query->binding_count;
     igTextWrapped("Applied object-bindings: object %s | case %s | local %s | axis %s | statuses %s",*state->applied.object ? state->applied.object:"all",*state->applied.case_name ? state->applied.case_name:"all",*state->applied.participant ? state->applied.participant:"all",*state->applied.axis ? state->applied.axis:"all",*state->applied.statuses ? state->applied.statuses:"all");
     igTextWrapped("%d explicit local bindings | unexamined %d | excluded roots %d | work %d/%d | limited %s | native source findings %d (+%d omitted). Declarations, not applicability or merged runtime actors.",count,query->unexamined_bindings,query->excluded_roots,query->work,query->request.work_limit,query->limited ? "yes":"no",rules->finding_count,rules->findings_omitted);
-    igTextWrapped("Purple source-case outlines follow selected row on ordinary Resource canvas. Facets/call placements retain Resource meaning; case outline is not an applicability claim.");
+    igTextWrapped(context->pane->view==GD_EXPLORER_RESOURCES ? "Purple source-case outlines follow selected row on ordinary Resource canvas. Facets/call placements retain Resource meaning; case outline is not an applicability claim.":"Tool row selection inspects evidence only. Canvas selection/camera stay unchanged; ordinary source navigation is explicit.");
     if (gd_explorer_similarity_active(context)) igTextWrapped("Source inspection returns to ordinary canvas; similarity geometry remains unchanged.");
     if (count>64) igSliderInt("Binding page",&state->page,0,(count-1)/64,"%d",0); if (state->page<0 || state->page*64>=count) state->page=0; start=state->page*64;
     for (i=start;i<count && i<start+64;++i) { const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleCase *item=&rules->cases[binding->case_index]; const GD_RuleParticipant *actor=&rules->participants[binding->participant];
@@ -155,15 +173,53 @@ int gd_explorer_rules_inputs(GD_ExplorerContext *context) {
     }
     return context->pane->rule_state!=NULL;
 }
+void gd_explorer_rules_selection_controls(GD_ExplorerContext *context) {
+    GD_ExplorerRuleState *state;GD_ExplorerContext current=*context;GD_ExplorerRuleContext selection;
+    int i,slots,reveal=0;char key[GD_MAX_PATH];
+    if(!gd_explorer_form_available(context,GD_FORM_RULES))return;
+    gd_explorer_rule_context_discover(context,&selection);current.rule_context=&selection;context=&current;
+    igPushID_Str("Selection analysis");igPushID_Int(context->pane->view);
+    reveal|=gd_explorer_action_button(context,GD_ACTION_RULES_BINDINGS_OPEN);
+    reveal|=gd_explorer_action_button(context,GD_ACTION_RULES_OUTCOMES_OPEN);
+    state=context->pane->rule_state;
+    if(state && state->context_open){
+        igTextWrapped("Current-pane tool. Choose exact context to stage inputs; Run is separate. Pending edits and retained evidence do not follow canvas selection automatically.");
+        igTextWrapped("Record/cell choices are source-associated declarations, not an applicability claim. No authored A, facts or local selector is inferred.");
+        if(igSmallButton("Hide analysis tool"))state->context_open=0;
+        if(state->context_open){
+            slots=gd_explorer_rule_context_slots(context,state->context_outcomes);
+            {int proposals=0,unavailable=0;char proposed[GD_MAX_PATH]="";
+                for(i=0;i<slots;++i){int available=gd_explorer_rule_context_option(context,state->context_outcomes,i,key,sizeof(key),NULL);
+                    if(available==1){++proposals;snprintf(proposed,sizeof(proposed),"%s",key);}else if(available<0)++unavailable;
+                }
+                if(proposals==1)igTextWrapped("Proposed typed context (not staged): %s",proposed);
+                else igTextWrapped("%d representable contexts. Choose exact source/case/local evidence; no automatic choice.",proposals);
+                if(unavailable)igTextWrapped("%d context identities unavailable: ambiguous or beyond key capacity. No truncated selector is substituted.",unavailable);
+            }
+            if(gd_explorer_picker_begin(context,state->context_outcomes ? "Stage exact case for outcomes":"Stage binding scope",state->pending.selection_context)){
+                for(i=0;i<slots;++i)if(gd_explorer_rule_context_option(context,state->context_outcomes,i,key,sizeof(key),NULL)==1){
+                    igPushID_Int(i);
+                    if(gd_explorer_picker_item(context,key,!strcmp(key,state->pending.selection_context),0))gd_explorer_control_set(context,GD_FORM_RULES,"selection_context",key,context->pane->rule_message,sizeof(context->pane->rule_message));
+                    igPopID();
+                }
+                gd_explorer_picker_end();
+            }
+            gd_explorer_action_button(context,GD_ACTION_RULES_INPUTS_RESET);
+            igSetNextItemOpen(true,reveal ? ImGuiCond_Always:ImGuiCond_Once);gd_explorer_rules_controls(context);
+        }
+    }
+    igPopID();igPopID();
+}
 void gd_explorer_rules_controls(GD_ExplorerContext *context) {
-    GD_ExplorerPane *pane=context->pane; GD_ExplorerRuleState *state; GD_ExplorerRuleForm *form; const GD_Rules *rules=context->project->rules; const GD_Model *model=context->project->models[GD_EXPLORER_RULE_DATA]; int i;
+    GD_ExplorerPane *pane=context->pane; GD_ExplorerRuleState *state; GD_ExplorerRuleForm *form,before; const GD_Rules *rules=context->project->rules; const GD_Model *model=context->project->models[GD_EXPLORER_RULE_DATA]; int i;
     if (!igCollapsingHeader_TreeNodeFlags("Object bindings / rule checks [native]",0)) return;
     form=gd_explorer_form_pending(context,GD_FORM_RULES,1); state=pane->rule_state;
     if (!form) { igTextWrapped("Cannot allocate rule controls."); return; }
+    before=*form;
     igTextWrapped("Whole supplied rules reader, independent of Resource routes, graph filters, camera and finite Actor hypotheses. Native evaluator/comparator only. Proposals are simultaneous, not execution or a conflict winner.");
-    { int mode=form->bindings ? 2:form->kind==GD_NAMED_CONSISTENCY ? 1:0;
-      if (igCombo_Str("Native inspection",&mode,gd_explorer_rule_modes,-1)) { gd_explorer_rule_mode(form,mode); }
-    }
+    if(pane->view==GD_EXPLORER_RESOURCES){int mode=form->bindings ? 2:form->kind==GD_NAMED_CONSISTENCY ? 1:0;
+      if (igCombo_Str("Native inspection",&mode,gd_explorer_rule_modes,-1)) gd_explorer_rule_mode(form,mode);
+    }else{int mode=form->bindings ? 1:0;if(igCombo_Str("Native inspection",&mode,"Conditional outcomes\0Object bindings\0",-1))gd_explorer_rule_mode(form,mode ? 2:0);}
     { char saved_query_message[256]; memcpy(saved_query_message,pane->query_message,sizeof(saved_query_message)); *pane->query_message=0;
     if (form->bindings) {
         int before=gd_explorer_picker_case_index(model,rules,form->case_name),root,local=-1;
@@ -182,6 +238,9 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
         gd_explorer_form_widget(GD_FORM_RULES,form,"work_limit","Scenario work ceiling 0..16777216");
     } else igTextWrapped("Fixed native comparison ceiling %d; at most %d pairs / %d branches. Unexamined scope stays explicit.",GD_RULE_ANALYSIS_WORK_LIMIT,GD_MAX_RULE_COMPARISONS,GD_MAX_RULE_BRANCHES);
     if (*pane->query_message) snprintf(pane->rule_message,sizeof(pane->rule_message),"%s",pane->query_message); memcpy(pane->query_message,saved_query_message,sizeof(saved_query_message)); }
+    if(!gd_explorer_form_equal(GD_FORM_RULES,&before,form))*form->selection_context=0;
+    igTextWrapped("Pending %s | source case %s | object %s | axis %s | local %s",form->bindings ? "bindings":gd_named_name(form->kind),*form->case_name ? form->case_name:"all/unspecified",*form->object ? form->object:"all",*form->axis ? form->axis:"all",*form->participant ? form->participant:"all");
+    if(state->result || state->bindings)igTextWrapped("Retained applied %s | source case %s",state->applied.bindings ? "bindings":gd_named_name(state->applied.kind),*state->applied.case_name ? state->applied.case_name:"all/unspecified");
     if (gd_explorer_action_button(context,GD_ACTION_RULES_RUN)) { state=pane->rule_state; form=&state->pending; }
     if (*pane->rule_message) igTextWrapped("%s",pane->rule_message);
     if (!gd_explorer_form_equal(GD_FORM_RULES,&state->pending,&state->applied)) igTextWrapped("Pending inputs differ; evidence and declaration outlines remain last applied result.");
@@ -190,12 +249,12 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
     { const GD_RuleAnalysis *analysis=state->result->analysis; int count=state->result->request.kind==GD_NAMED_OUTCOMES ? analysis->scenario.write_count:analysis->comparison_count,start;
       igTextWrapped("Applied %s | owned result/workspace %llu bytes + controls %llu bytes; borrowed reader excluded.",gd_named_name(state->result->request.kind),(unsigned long long)state->result->owned_bytes,(unsigned long long)sizeof(*state));
       if (igCollapsingHeader_TreeNodeFlags("Applied rule assumptions (not pending edits)",0)) { igTextWrapped("Facts: %s",*state->applied.facts ? state->applied.facts:"none supplied"); igTextWrapped("Contexts: %s",*state->applied.contexts ? state->applied.contexts:"none supplied"); }
-      { int marked=0,present=0,visible=0; const GD_ResourceGraph *graph=context->project->resources;
+      if(pane->view==GD_EXPLORER_RESOURCES){ int marked=0,present=0,visible=0; const GD_ResourceGraph *graph=context->project->resources;
         for (i=0;i<rules->case_count;++i) if (state->marked_cases[i]) ++marked;
         for (i=0;i<pane->layout->node_count;++i) { const GD_ResourceNode *node=&graph->nodes[pane->layout->nodes[i].key]; if (node->kind==GD_RESOURCE_CASE && !node->instance && gd_explorer_rules_marked(context,node->case_index)) { ++present; if (context->analysis->shown[i]) ++visible; } }
         igTextWrapped("Marked declarations %d | retained in Resource canvas %d | shown %d | Resource construction limited %s. Select proposal/pair for source outlines; display gaps do not erase native result.",marked,present,visible,graph->limited ? "yes":"no");
       }
-      igTextWrapped("Purple outlines mark original case declarations and native proposal source paths, not distinct call placements or Resource flow/applicability. Hidden declarations remain in result. Use source inspector for full exact calls/maps/effects.");
+      igTextWrapped(pane->view==GD_EXPLORER_RESOURCES ? "Purple outlines mark original case declarations and native proposal source paths, not distinct call placements or Resource flow/applicability. Hidden declarations remain in result. Use source inspector for full exact calls/maps/effects.":"Evidence retains exact source declarations and paths. Selecting tool rows does not change canvas selection, geometry or camera.");
       if (gd_explorer_similarity_active(context)) igTextWrapped("Ordinary declaration outlines are not shown on similarity canvas. Source inspection button returns to ordinary canvas without changing either layout.");
       if (state->result->request.kind==GD_NAMED_OUTCOMES) { const GD_RuleEvaluation *value=&analysis->scenario;
           igTextWrapped("Root truth %s | context %s | requirements %s | input %s | constraints %s | values %s",gd_rule_truth_name(value->applicability),gd_rule_truth_name(value->context),gd_rule_truth_name(value->requirements),value->input_valid==1 ? "valid":value->input_valid==0 ? "invalid":"unfinished",value->constraints_complete ? "complete":"incomplete",value->values_complete ? "complete":"incomplete");

@@ -8,13 +8,15 @@ Status: joint interactive Mario IPC tour completed. Analytical forms, presentati
 
 - Query: 16 fields. Actor inventory, finite variants/coverage and Effect contributors.
 - Structure: 15 fields. Canonical structural and similarity questions across eight views.
-- Rules: 10 fields. Conditional outcomes/consistency and object bindings.
+- Rules: 11 fields. Current-pane conditional outcomes and object bindings; whole-reader consistency remains Resources-only. `selection_context` adds exact typed staging.
 - Resource: four fields. FROM, TO, accepted-only and work ceiling.
 - Presentation: 53 fields. View-specific layout, sort/direction, pause/filter, distance focus, graph layers/peers, relationship/MDA roots, roles/witness filters, Resource/Challenge witnesses, similarity entry/peer/canvas/page, hypothetical knowledge, shown support-path bypass nomination, result pages and binding-axis page.
 
 Descriptions define names, types, capacities, choices and editability. Discovery returns stable keys, pending/applied values, bounds and source-slot pages. Native indices remain snapshot-local output, never write selectors. GUI and IPC share domain builders, native selectors and application transitions; no parallel evaluator.
 
 Analytical configuration stages one field plus dependent resets atomically. Only explicit Run/Display consumes pending analysis/display inputs. Presentation configuration applies immediately; discovery reports apply policy. Neither path changes authoritative sources, draft/Undo, active pane or OS focus.
+
+**Selection** offers **Inspect bindings** and **Inspect conditional outcomes** for typed retained context. Opening only shows proposed choices and pending/applied scope. Choose exact `rules.selection_context` key to stage; `rules.run` remains explicit. Nouns/axes use canonical references; local bindings retain exact source/case/local identity. Pairs/maps and shared Effect concepts expose existing contributing cases, never first-case or authored-A guesses. Verb cells expose source-associated declarations, not exact cell/case membership. New contexts start without unrelated facts, local selectors or status filters. Dirty pending inputs block replacement; run them or explicitly use `rules.inputs.reset` to discard pending inputs while retaining applied evidence. Tool rows inspect source evidence without changing canvas selection/camera. Ordinary source navigation stays explicit and maps canonical identity into current pane's model. Each pane owns its workspace; Resources remains independent. Opening, staging, rule Run and row inspection do not Run canvas Query inputs. Context keys are closed choices validated immediately; stale selection/query scope invalidates Rules control tokens. [Contract and checks](../../../reports/graph-query-research/contextual-analysis-entry-points.md).
 
 Presentation layout choices are additive: Skills `depth | rank | free`, Challenges `bands | free`, Relationships `native | free`. Native defaults remain. Skills remembers depth/rank basis across Free; Relationships preserves root/revealed scope without implicit expansion. Existing Matrix/MDA keys unchanged.
 
@@ -40,7 +42,8 @@ Actors/Effects add presentation `layout: native | free`; Native remains default.
 
 - `query.run`, `query.display`.
 - `structure.run`, `structure.clear`.
-- `rules.run`, `rules.clear`.
+- `rules.bindings.open`, `rules.outcomes.open`: open current-pane tool without staging or Run.
+- `rules.run`, `rules.clear`, `rules.inputs.reset`: explicit Run, destroy workspace, or reset pending inputs while keeping applied result.
 - `resource.run`, `resource.clear`.
 - `view.fit`, `view.rearrange`, `view.expand`.
 - `view.start.add`, `view.start.clear`, `view.analyze`, `view.compare`.

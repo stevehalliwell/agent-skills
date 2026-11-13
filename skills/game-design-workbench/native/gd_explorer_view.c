@@ -167,6 +167,7 @@ static int selected_record(GD_ExplorerContext *c) {
     if (p->view==GD_EXPLORER_MDA) return p->mda.record;
     return p->selection.linked>=0 ? p->selection.linked:gd_explorer_resource_record(c->project->resources,p->selection.node);
 }
+#include "gd_explorer_rule_context.h"
 static Vector2 position(const GD_ExplorerContext *c, int node) {
     const GD_ExplorerPane *p=c->pane;const GD_LayoutNode *item=&gd_explorer_display_layout(c)->nodes[node];
     float scale=p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1;
@@ -998,6 +999,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             igEndChild();
         }
         if(sidebar_section(&sidebar,GD_SIDEBAR_SELECTION)){
+            gd_explorer_rules_selection_controls(&c);
             if(p->view==GD_EXPLORER_NOUNS) noun_grid_details(&c);
             else if (is_graph(p->view)) { if (!(grid_view(p) && grid_blank_details(&c)) && gd_explorer_graph_details(&c)) gd_explorer_edited(project); }
             else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_details(&c);

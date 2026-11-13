@@ -61,7 +61,8 @@ static const GD_ExplorerControl rule_fields[]={
     R(object,"Object reference",GD_CONTROL_TEXT,NULL,0),
     R(participant,"Local participant name",GD_CONTROL_TEXT,NULL,0),
     R(axis,"Axis reference",GD_CONTROL_TEXT,NULL,0),
-    R(statuses,"Root statuses",GD_CONTROL_TEXT,NULL,55)
+    R(statuses,"Root statuses",GD_CONTROL_TEXT,NULL,55),
+    R(selection_context,"Stage context from selection",GD_CONTROL_TEXT,NULL,0)
 };
 #undef R
 static const GD_ExplorerControl resource_fields[]={
@@ -131,7 +132,7 @@ void *gd_explorer_form_pending(GD_ExplorerContext *context,GD_ExplorerForm form,
             return pane->structure_state ? &pane->structure_state->pending:NULL;
         case GD_FORM_RESOURCE: return pane->view==GD_EXPLORER_RESOURCES ? &pane->resource_pending:NULL;
         case GD_FORM_RULES:
-            if (pane->view!=GD_EXPLORER_RESOURCES) return NULL;
+            if (!gd_explorer_form_available(context,GD_FORM_RULES)) return NULL;
             if (create && !gd_explorer_rules_inputs(context)) return NULL;
             return pane->rule_state ? &pane->rule_state->pending:NULL;
         default: return NULL;
@@ -219,7 +220,7 @@ const char *gd_explorer_form_name(GD_ExplorerForm form) {
 }
 int gd_explorer_form_available(const GD_ExplorerContext *c,GD_ExplorerForm form) {
     if (!c || !c->project || !c->pane || !(c->project->available&(1u<<c->pane->view))) return 0;
-    return form==GD_FORM_PRESENTATION || (form==GD_FORM_STRUCTURE && c->pane->view!=GD_EXPLORER_NOUNS) || ((form==GD_FORM_RULES || form==GD_FORM_RESOURCE) && c->pane->view==GD_EXPLORER_RESOURCES) ||
+    return form==GD_FORM_PRESENTATION || (form==GD_FORM_STRUCTURE && c->pane->view!=GD_EXPLORER_NOUNS) || (form==GD_FORM_RULES && c->project->rules && c->project->models[GD_EXPLORER_RULE_DATA]) || (form==GD_FORM_RESOURCE && c->pane->view==GD_EXPLORER_RESOURCES) ||
         (form==GD_FORM_QUERY && (c->pane->view==GD_EXPLORER_ACTORS || c->pane->view==GD_EXPLORER_EFFECTS));
 }
 const void *gd_explorer_form_applied(const GD_ExplorerContext *c,GD_ExplorerForm form) {
@@ -260,6 +261,7 @@ int gd_explorer_control_editable(const GD_ExplorerContext *c,GD_ExplorerForm for
         if (!strcmp(name,"weighted")) return 0; /* Effect-only drawing control. */
     } else if (form==GD_FORM_RULES) {
         const GD_ExplorerRuleForm *r=values;
+        if(!strcmp(name,"selection_context"))return c->pane->prepared && !gd_explorer_similarity_active(c);
         if (!strcmp(name,"kind") || !strcmp(name,"bindings")) return 1;
         if (!r->bindings && r->kind==GD_NAMED_CONSISTENCY) return 0;
         if (!strcmp(name,"facts") || !strcmp(name,"contexts")) return !r->bindings;
@@ -308,6 +310,7 @@ static const char *control_list_item(const char *list,int index) {
    slots, not fabricated/deduplicated identities. Duplicate same-key rows stay explicit. */
 int gd_explorer_control_option_count(const GD_ExplorerContext *c,GD_ExplorerForm form,const GD_ExplorerControl *field,const void *values) {
     ControlChoice kind=control_choice(form,field); const GD_Rules *rules=c->project->rules; int count=0;
+    if(form==GD_FORM_RULES && !strcmp(field->name,"selection_context"))return gd_explorer_rule_context_slots(c,c->pane->rule_state ? c->pane->rule_state->context_outcomes:0);
     if (form==GD_FORM_PRESENTATION) return gd_explorer_presentation_options(c,field);
     if (kind==CHOICE_NONE) return -1;
     if (kind==CHOICE_BOOL || kind==CHOICE_RULE) return 2;
@@ -318,7 +321,7 @@ int gd_explorer_control_option_count(const GD_ExplorerContext *c,GD_ExplorerForm
         if (c->pane->query_state && c->pane->query_state->query && c->pane->query_state->query->variants) count=c->pane->query_state->query->variants->variant_count;
         return count+(kind==CHOICE_COMPARE);
     }
-    if (kind==CHOICE_STATUS) return gd_explorer_model(c->project,c->pane->view)->record_count;
+    if (kind==CHOICE_STATUS) return (form==GD_FORM_RULES ? c->project->rules->model:gd_explorer_model(c->project,c->pane->view))->record_count;
     if (kind==CHOICE_NODE || kind==CHOICE_FEATURE || kind==CHOICE_RELATION) {
         const GD_StructureResult *context=gd_explorer_structure_choices(c);
         if (!context) return 0;
@@ -360,12 +363,14 @@ static int control_native_key(const GD_ExplorerContext *c,GD_ExplorerForm form,c
     return value ? control_key(key,capacity,value):0;
 }
 int gd_explorer_control_option(const GD_ExplorerContext *c,GD_ExplorerForm form,const GD_ExplorerControl *field,const void *values,int ordinal,int *native,char *key,size_t capacity) {
+    if(form==GD_FORM_RULES && !strcmp(field->name,"selection_context")){*native=ordinal;return gd_explorer_rule_context_option(c,c->pane->rule_state ? c->pane->rule_state->context_outcomes:0,ordinal,key,capacity,NULL);}
     ControlChoice kind=control_choice(form,field); const GD_Rules *rules=c->project->rules;
     int unset=kind==CHOICE_CASE || kind==CHOICE_LOCAL || kind==CHOICE_AXIS || kind==CHOICE_NOUN || kind==CHOICE_COMPARE || kind==CHOICE_RESOURCE;
     if (form==GD_FORM_PRESENTATION) return gd_explorer_presentation_option(c,field,ordinal,native,key,capacity);
     if (ordinal<0 || ordinal>=gd_explorer_control_option_count(c,form,field,values)) return 0;
     *native=ordinal-unset;
-    if (kind==CHOICE_STATUS) { const char *status=gd_explorer_model(c->project,c->pane->view)->records[ordinal].status; return status && *status ? control_key(key,capacity,status):0; }
+    if(kind==CHOICE_RULE && c->pane->view!=GD_EXPLORER_RESOURCES && *native==GD_NAMED_CONSISTENCY)return 0;
+    if (kind==CHOICE_STATUS) { const char *status=(form==GD_FORM_RULES ? c->project->rules->model:gd_explorer_model(c->project,c->pane->view))->records[ordinal].status; return status && *status ? control_key(key,capacity,status):0; }
     if (kind==CHOICE_NODE || kind==CHOICE_FEATURE || kind==CHOICE_RELATION) {
         const GD_StructureResult *context=gd_explorer_structure_choices(c);
         if (kind==CHOICE_NODE) return gd_structure_result_node_id(context,context->layout->nodes[ordinal].key,key,capacity) ? 1:-1;
@@ -403,6 +408,7 @@ int gd_explorer_control_set(GD_ExplorerContext *c,GD_ExplorerForm form,const cha
     const char *error="Control unknown, inactive or unavailable for this pane/question";
     if (form==GD_FORM_PRESENTATION) return gd_explorer_presentation_set(c,name,value,message,capacity);
     if (!field || !value || !gd_explorer_form_available(c,form)) goto failed;
+    if(form==GD_FORM_RULES && !strcmp(name,"selection_context"))return gd_explorer_rule_context_stage(c,value,message,capacity);
     prior=gd_explorer_form_pending(c,form,0);
     if (prior) memcpy(&next,prior,gd_explorer_form_size(form)); else gd_explorer_form_defaults(form,&next);
     if (!gd_explorer_control_editable(c,form,field,&next)) goto failed;
@@ -425,7 +431,7 @@ int gd_explorer_control_set(GD_ExplorerContext *c,GD_ExplorerForm form,const cha
         else if (form==GD_FORM_QUERY && !strcmp(name,"participant")) { if (!gd_explorer_query_participant(&next.query,c->project->rules,native)) goto failed; }
         else if (form==GD_FORM_QUERY && !strcmp(name,"axis")) gd_explorer_query_axis(&next.query,c->project->rules,native);
         else if (form==GD_FORM_STRUCTURE && !strcmp(name,"kind")) gd_explorer_structure_question(&next.structure,native);
-        else if (form==GD_FORM_RULES && !strcmp(name,"kind")) { if (next.rules.bindings || next.rules.kind!=native) gd_explorer_rule_mode(&next.rules,native); }
+        else if (form==GD_FORM_RULES && !strcmp(name,"kind")) { if(native==GD_NAMED_CONSISTENCY && c->pane->view!=GD_EXPLORER_RESOURCES)goto failed; if (next.rules.bindings || next.rules.kind!=native) gd_explorer_rule_mode(&next.rules,native); }
         else if (form==GD_FORM_RULES && !strcmp(name,"bindings")) { if (next.rules.bindings!=native) gd_explorer_rule_mode(&next.rules,native ? 2:next.rules.kind); }
         else if (field->type==GD_CONTROL_BOOL) *(bool *)slot=native!=0;
         else *(int *)slot=native;
@@ -436,6 +442,7 @@ int gd_explorer_control_set(GD_ExplorerContext *c,GD_ExplorerForm form,const cha
         errno=0; number=strtol(value,&end,10); if (errno || *end || number<0 || number>maximum) goto failed;
         *(int *)slot=(int)number;
     }
+    if(form==GD_FORM_RULES && prior && !gd_explorer_form_equal(form,prior,&next.rules))*next.rules.selection_context=0;
     target=gd_explorer_form_pending(c,form,1); error="Cannot allocate pending inputs; prior state retained"; if (!target) goto failed;
     memcpy(target,&next,gd_explorer_form_size(form)); *message=0; return 1;
 failed:
@@ -446,8 +453,8 @@ static const GD_ExplorerActionInfo actions[]={
     {"query.display","Rearrange query drawing",(1u<<GD_EXPLORER_ACTORS)|(1u<<GD_EXPLORER_EFFECTS),GD_FORM_QUERY},
     {"structure.run","Run named question",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_STRUCTURE},
     {"structure.clear","Clear question",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_STRUCTURE},
-    {"rules.run","Run native reader question",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RULES},
-    {"rules.clear","Clear rule/binding inspection",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RULES},
+    {"rules.run","Run native reader question",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
+    {"rules.clear","Clear rule/binding inspection",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
     {"resource.run","Run conditional witnesses",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RESOURCE},
     {"resource.clear","Clear Resource query/witnesses",1u<<GD_EXPLORER_RESOURCES,GD_FORM_RESOURCE},
     {"view.fit","Frame selection / all (F)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
@@ -469,7 +476,10 @@ static const GD_ExplorerActionInfo actions[]={
     {"draft.redo","Redo",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"draft.redo.discard","Discard Redo history",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.reset.all","Reset all",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
-    {"view.selection.clear","Clear selection (Esc)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION}
+    {"view.selection.clear","Clear selection (Esc)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"rules.bindings.open","Inspect bindings",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
+    {"rules.outcomes.open","Inspect conditional outcomes",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
+    {"rules.inputs.reset","Reset rule inputs (keep result)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES}
 };
 const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action) {
     return action>=0 && action<GD_ACTION_COUNT ? &actions[action]:NULL;
@@ -499,6 +509,15 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
         if(action==GD_ACTION_VIEW_COMPARE)return (p->view==GD_EXPLORER_ACTORS && p->query_state && p->query_state->query && p->query_state->query->variants && p->query_state->applied.primary>=0 && p->query_state->applied.compare>=0) || (p->structure_state && p->structure_state->result && p->structure_state->result->similarity && p->structure_state->similarity_row>=0 && p->structure_state->similarity_peer>=0);
         return 1;
     }
+    if(info->form==GD_FORM_RULES && !gd_explorer_form_available(context,GD_FORM_RULES))return 0;
+    if(action==GD_ACTION_RULES_BINDINGS_OPEN || action==GD_ACTION_RULES_OUTCOMES_OPEN){
+        GD_ExplorerContext current=*context;GD_ExplorerRuleContext selection;
+        int i,outcomes=action==GD_ACTION_RULES_OUTCOMES_OPEN;char key[GD_MAX_PATH];
+        if(!current.rule_context){gd_explorer_rule_context_discover(context,&selection);current.rule_context=&selection;}context=&current;
+        for(i=0;i<gd_explorer_rule_context_slots(context,outcomes);++i)if(gd_explorer_rule_context_option(context,outcomes,i,key,sizeof(key),NULL)==1)return 1;
+        return 0;
+    }
+    if(action==GD_ACTION_RULES_INPUTS_RESET)return context->pane->rule_state!=NULL;
     if (action==GD_ACTION_QUERY_DISPLAY) return context->pane->query_state && context->pane->query_state->query;
     return 1;
 }
@@ -512,6 +531,9 @@ const char *gd_explorer_action_reason(const GD_ExplorerContext *context,GD_Explo
     if(action==GD_ACTION_RESET_ALL)return "Reset all requires active shell view with no canvas drag";
     if(action==GD_ACTION_BACK || action==GD_ACTION_FORWARD)return "No selection in this history direction";
     if(action==GD_ACTION_UNDO || action==GD_ACTION_REDO || action==GD_ACTION_DISCARD_REDO)return "No draft steps in this history direction";
+    if(info->form==GD_FORM_RULES && !gd_explorer_form_available(context,GD_FORM_RULES))return "Rule source roles unavailable";
+    if(action==GD_ACTION_RULES_BINDINGS_OPEN || action==GD_ACTION_RULES_OUTCOMES_OPEN)return "Select supported noun/axis/local-binding or declared-case evidence; missing, ambiguous or oversized identities stay unavailable";
+    if(action==GD_ACTION_RULES_INPUTS_RESET)return "Open a pane-owned rule workspace first";
     if(!context->pane->prepared)return "Open and prepare this view first";
     if(action==GD_ACTION_VIEW_SELECTION_FOCUS)return "Select an item represented in this view";
     if(action==GD_ACTION_VIEW_COMPARE)return "Choose two retained entries to compare";
@@ -547,6 +569,11 @@ int gd_explorer_action_run(GD_ExplorerContext *context,GD_ExplorerAction action)
         case GD_ACTION_QUERY_DISPLAY: return gd_explorer_query_display(context);
         case GD_ACTION_STRUCTURE_RUN: return gd_explorer_structure_run(context);
         case GD_ACTION_STRUCTURE_CLEAR: return gd_explorer_structure_clear(context);
+        case GD_ACTION_RULES_BINDINGS_OPEN: case GD_ACTION_RULES_OUTCOMES_OPEN:
+            if(!gd_explorer_rules_inputs(context))return 0;
+            context->pane->rule_state->context_open=1;context->pane->rule_state->context_outcomes=action==GD_ACTION_RULES_OUTCOMES_OPEN;return 1;
+        case GD_ACTION_RULES_INPUTS_RESET:
+            gd_explorer_form_defaults(GD_FORM_RULES,&context->pane->rule_state->pending);return 1;
         case GD_ACTION_RULES_RUN: return gd_explorer_form_pending(context,GD_FORM_RULES,1) && gd_explorer_rules_run(context);
         case GD_ACTION_RESOURCE_RUN: return gd_explorer_resource_run(context);
         case GD_ACTION_RESOURCE_CLEAR:

@@ -50,6 +50,14 @@ static void viewer_control_token(ExplorerViewer *viewer,GD_ExplorerContext *c,GD
     } else { hash=viewer_form_hash(hash,form,gd_explorer_form_pending(c,form,0)); hash=viewer_form_hash(hash,form,gd_explorer_form_applied(c,form)); }
     /* Actor canonical pickers/questions may consume last applied hypotheses. */
     if (form==GD_FORM_STRUCTURE && c->pane->view==GD_EXPLORER_ACTORS) hash=viewer_form_hash(hash,GD_FORM_QUERY,gd_explorer_form_applied(c,GD_FORM_QUERY));
+    if(form==GD_FORM_RULES){
+        hash=viewer_control_hash(hash,&c->pane->selection,sizeof(c->pane->selection));
+        hash=viewer_control_hash(hash,&c->pane->mda.record,sizeof(int));hash=viewer_control_hash(hash,&c->pane->mda.link,sizeof(int));
+        hash=viewer_form_hash(hash,GD_FORM_QUERY,gd_explorer_form_applied(c,GD_FORM_QUERY));hash=viewer_control_hash(hash,&selected,sizeof(selected));
+        if(c->pane->rule_state){hash=viewer_control_hash(hash,&c->pane->rule_state->context_open,sizeof(int));hash=viewer_control_hash(hash,&c->pane->rule_state->context_outcomes,sizeof(int));}
+        if(c->pane->query_state)hash=viewer_control_hash(hash,&c->pane->query_state->scene,sizeof(c->pane->query_state->scene));
+        if(c->pane->structure_state)hash=viewer_control_hash(hash,&c->pane->structure_state->similarity_canvas,sizeof(bool));
+    }
     if (form==GD_FORM_QUERY) hash=viewer_control_hash(hash,&selected,sizeof(selected));
     snprintf(token,capacity,"%016llx",(unsigned long long)hash);
 }
@@ -59,7 +67,9 @@ static void viewer_control_text(GD_ViewerWriter *w,GD_ExplorerContext *c,GD_Expl
 }
 static void viewer_controls(ExplorerViewer *viewer,const GD_ViewerRequest *request,GD_ExplorerContext *c,GD_ViewerWriter *w,int configured) {
     union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; GD_ExplorerPresentation presentation; } defaults;
+    GD_ExplorerContext current=*c;GD_ExplorerRuleContext selection;
     int form,written=0,want=*request->form ? viewer_form_kind(request->form):-1;
+    gd_explorer_rule_context_discover(c,&selection);current.rule_context=&selection;c=&current;
     if ((*request->form && want<0) || (want>=0 && (!gd_explorer_form_available(c,(GD_ExplorerForm)want) || (*request->control && !gd_explorer_form_field((GD_ExplorerForm)want,request->control))))) {
         gd_viewer_error(w,"viewer.control","Unknown/unavailable form or control; read viewer controls for this projection"); return;
     }
@@ -81,14 +91,14 @@ static void viewer_controls(ExplorerViewer *viewer,const GD_ViewerRequest *reque
         if (kind==GD_FORM_STRUCTURE) { gd_viewer_write(w,",\"canonical_choices_ready\":%s,\"choice_discovery_question\":",gd_explorer_structure_choices(c) ? "true":"false"); gd_viewer_quote(w,gd_structure_question_name(GD_STRUCTURE_COUNT)); }
         gd_viewer_write(w,",\"fields\":["); fields=gd_explorer_form_fields(kind,&count);
         for (i=0;i<count;++i) {
-            const GD_ExplorerControl *field=&fields[i]; int slots=gd_explorer_control_option_count(c,kind,field,pending),editable=gd_explorer_control_editable(c,kind,field,pending);
+            const GD_ExplorerControl *field=&fields[i]; int context_choice=kind==GD_FORM_RULES && !strcmp(field->name,"selection_context"),slots=gd_explorer_control_option_count(c,kind,field,pending),editable=gd_explorer_control_editable(c,kind,field,pending);
             if (*request->control && strcmp(request->control,field->name)) continue;
             if (items++) gd_viewer_write(w,","); gd_viewer_write(w,"{"); viewer_member(w,"name",field->name); gd_viewer_write(w,","); viewer_member(w,"label",field->label);
             gd_viewer_write(w,","); viewer_member(w,"type",field->type==GD_CONTROL_TEXT ? "text":field->type==GD_CONTROL_BOOL ? "boolean":slots>=0 ? "choice":"integer");
             gd_viewer_write(w,",\"editable\":%s,\"value\":",editable ? "true":"false"); viewer_control_text(w,c,kind,field,pending);
             gd_viewer_write(w,",\"applied_value\":"); viewer_control_text(w,c,kind,field,applied);
-            gd_viewer_write(w,",\"choice_slots\":%d,\"choices_closed\":%s",slots,slots>=0 && field->type!=GD_CONTROL_TEXT ? "true":"false");
-            if (field->type==GD_CONTROL_TEXT) gd_viewer_write(w,",\"capacity_bytes\":%u,\"validation\":\"native Run validates literal lists/selectors; choices are suggestions\"",(unsigned)(field->capacity-1));
+            gd_viewer_write(w,",\"choice_slots\":%d,\"choices_closed\":%s",slots,slots>=0 && (field->type!=GD_CONTROL_TEXT || context_choice) ? "true":"false");
+            if (field->type==GD_CONTROL_TEXT){gd_viewer_write(w,",\"capacity_bytes\":%u,\"validation\":",(unsigned)(field->capacity-1));gd_viewer_quote(w,context_choice ? "exact current-selection key required; stages only; dirty pending inputs block replacement":"native Run validates literal lists/selectors; choices are suggestions");}
             if (editable && field->type==GD_CONTROL_INT && slots<0) gd_viewer_write(w,",\"minimum\":0,\"maximum\":%d",kind==GD_FORM_PRESENTATION && (!strcmp(field->name,"overview_row") || !strcmp(field->name,"overview_column")) ? GD_OVERVIEW_BINS-1:gd_explorer_form_work_limit(kind,pending));
             if (!configured && *request->control && slots>=0) {
                 unsigned slot,end=request->offset+request->limit; int options=0;

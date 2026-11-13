@@ -179,7 +179,7 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
         } else gd_viewer_write(w,"null");
         gd_viewer_write(w,",\"rules\":");
         if (p->rule_state) {
-            gd_viewer_write(w,"{\"pending\":"); viewer_form(w,GD_FORM_RULES,&p->rule_state->pending); gd_viewer_write(w,",\"applied\":"); viewer_form(w,GD_FORM_RULES,gd_explorer_form_applied(&item,GD_FORM_RULES)); gd_viewer_write(w,"}");
+            gd_viewer_write(w,"{\"context_open\":%s,\"context_question\":\"%s\",\"pending\":",p->rule_state->context_open ? "true":"false",p->rule_state->context_outcomes ? "conditional-outcomes":"object-bindings"); viewer_form(w,GD_FORM_RULES,&p->rule_state->pending); gd_viewer_write(w,",\"applied\":"); viewer_form(w,GD_FORM_RULES,gd_explorer_form_applied(&item,GD_FORM_RULES)); gd_viewer_write(w,"}");
         } else gd_viewer_write(w,"null");
         gd_viewer_write(w,"}");
     }

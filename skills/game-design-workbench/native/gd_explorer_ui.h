@@ -66,11 +66,12 @@ typedef struct {
     int kind,work_limit; bool bindings;
     char case_name[GD_MAX_PATH],facts[GD_MAX_RULE_LINE+1],contexts[GD_MAX_RULE_LINE+1];
     char object[GD_MAX_PATH],participant[GD_MAX_PATH],axis[GD_MAX_PATH],statuses[GD_MAX_RULE_LINE+1];
+    char selection_context[GD_MAX_PATH];
 } GD_ExplorerRuleForm;
 typedef struct {
     GD_Allocator allocator; GD_ExplorerRuleForm pending,applied; GD_NamedQuery *result; GD_Query *bindings;
     char fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1],status_tokens[GD_MAX_RULE_LINE+1];
-    int page,row,peer_write,axis_page; unsigned char marked_cases[GD_MAX_RULE_CASES];
+    int page,row,peer_write,axis_page,context_open,context_outcomes; unsigned char marked_cases[GD_MAX_RULE_CASES];
 } GD_ExplorerRuleState;
 typedef struct {
     const GD_ExplorerProject *project; int root,participant,axis,value,left,right,context_axis,context_value; bool context_false;
@@ -145,9 +146,14 @@ typedef struct {
     const GD_GraphOverview *overview;
 } GD_ExplorerEvidence;
 typedef struct {
+    int records[2],participant;
+    unsigned char cases[GD_MAX_RULE_CASES];
+} GD_ExplorerRuleContext;
+typedef struct {
     GD_ExplorerProject *project;
     GD_ExplorerPane *pane;
     GD_GraphAnalysis *analysis; /* One active-view scratch; never snapshot storage. */
+    const GD_ExplorerRuleContext *rule_context; /* Optional call-local discovery batch; never retained by a pane. */
     GD_SkillUnlocks *query;
     Rectangle viewport;
     uint64_t scope_revision;
@@ -230,6 +236,11 @@ int gd_explorer_rules_inputs(GD_ExplorerContext *context);
 int gd_explorer_rules_run(GD_ExplorerContext *context);
 int gd_explorer_rules_remap(GD_ExplorerContext *context,const GD_ExplorerProject *old,const GD_ExplorerPane *prior);
 void gd_explorer_rules_controls(GD_ExplorerContext *context);
+void gd_explorer_rules_selection_controls(GD_ExplorerContext *context);
+void gd_explorer_rule_context_discover(const GD_ExplorerContext *context,GD_ExplorerRuleContext *selection);
+int gd_explorer_rule_context_option(const GD_ExplorerContext *context,int outcomes,int slot,char *key,size_t capacity,GD_ExplorerRuleForm *candidate);
+int gd_explorer_rule_context_slots(const GD_ExplorerContext *context,int outcomes);
+int gd_explorer_rule_context_stage(GD_ExplorerContext *context,const char *key,char *message,size_t capacity);
 void gd_explorer_rules_choose(GD_ExplorerRuleState *state,int row,int peer);
 int gd_explorer_rules_marked(const GD_ExplorerContext *context,int case_index);
 

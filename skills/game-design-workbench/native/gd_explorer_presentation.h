@@ -336,6 +336,7 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
         p->overview.row=p->overview.column=-1;p->find_hold_node=-2;p->find_hold_layout=p->layout;*p->find_reference=0;p->focus_result=(GD_ExplorerFocusResult){0};
         memset(p->mda.path_nodes,0,sizeof(p->mda.path_nodes));memset(p->mda.path_links,0,sizeof(p->mda.path_links));
         if(p->structure_state){p->structure_state->similarity_row=p->structure_state->similarity_peer=-1;}
+        if(p->rule_state){p->rule_state->row=p->rule_state->peer_write=-1;memset(p->rule_state->marked_cases,0,sizeof(p->rule_state->marked_cases));}
         if(c->analysis)c->analysis->initialized=0;return 1;
     }
     if(!strcmp(name,"view.fit")) {
