@@ -1,6 +1,7 @@
 #ifndef GD_EXPLORER_PICKER_H
 #define GD_EXPLORER_PICKER_H
 #include "gd_picker.h"
+#include "gd_noun_label_ui.h"
 /* Include after cimgui declarations. One popup at a time per independent pane.
    Search changes presentation only; callers adopt exact native choices. */
 static int gd_explorer_picker_begin(GD_ExplorerContext *context,const char *label,const char *preview) {
@@ -14,6 +15,11 @@ static void gd_explorer_picker_end(void) { igEndCombo(); igPopID(); }
 static int gd_explorer_picker_item(const GD_ExplorerContext *context,const char *label,int selected,int keep_open) {
     if (!gd_explorer_picker_match(context,label)) return 0;
     return igSelectable_Bool(label,selected,keep_open ? ImGuiSelectableFlags_NoAutoClosePopups:0,(ImVec2_c){0,0});
+}
+static int gd_explorer_picker_record_item(const GD_ExplorerContext *context,const GD_Record *record,const char *label,int selected){
+    ImVec2_c position;int clicked;
+    if(!gd_explorer_picker_match(context,label))return 0;
+    position=igGetCursorScreenPos();clicked=igSelectable_Bool(label,selected,0,(ImVec2_c){0,0});gd_noun_ui_decorate(record,label,position);return clicked;
 }
 static void gd_explorer_picker_statuses(GD_ExplorerContext *context,const GD_Model *model,char *text,size_t capacity) {
     const char *statuses[GD_MAX_RECORDS]; int count=0,i,j;

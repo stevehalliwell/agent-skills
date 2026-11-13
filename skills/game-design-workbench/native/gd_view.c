@@ -1,6 +1,7 @@
 #include "gd.h"
 #include "gd_matrix_grid.h"
 #include "gd_count_heatmap.h"
+#include "gd_noun_label_draw.h"
 #include "raylib.h"
 #include <stdio.h>
 #include <string.h>
@@ -51,9 +52,9 @@ static int button(Rectangle area, const char *label) {
     DrawText(label, (int)area.x + 8, (int)area.y + 6, 16, foreground);
     return hover && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 }
-static void clipped_label(const char *text, int x, int y, int width, int size, Color color) {
+static void clipped_label(const GD_Record *record,const char *text, int x, int y, int width, int size, Color color) {
     BeginScissorMode(x, y, width, size + 5);
-    DrawText(text, x, y, size, color);
+    gd_noun_draw_text(record,text,(Vector2){(float)x,(float)y},size,(float)(size/10),color);
     EndScissorMode();
 }
 /* Raw Markdown preview. Wrap UTF-8 codepoints without cutting byte sequences. */
@@ -167,15 +168,15 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
         gd_count_legend(counts,20,104,split-40,"Declared cases");
         if (stale) {
             DrawRectangle(0, height-34, width, 34, (Color){76, 57, 31, 255});
-            clipped_label(reload_message[0] ? TextFormat("STALE — refresh failed: %s", reload_message) : "STALE — source changed. F5 reloads; displayed data is the last loaded snapshot.", 16, height-26, width-32, 16, warning);
+            clipped_label(NULL,reload_message[0] ? TextFormat("STALE — refresh failed: %s", reload_message) : "STALE — source changed. F5 reloads; displayed data is the last loaded snapshot.", 16, height-26, width-32, 16, warning);
         } else DrawText("Active = accepted + defined case. Other cases stay visible. Blank is not a defect.", 20, height-26, 16, muted);
         for (j = first_column; j < verb_count && j < first_column + visible_columns; ++j) {
             int x = grid_left + (j-first_column)*column_width;
-            clipped_label(model->records[verbs[j]].display_name, x+6, grid_top-25, column_width-10, 16, foreground);
+            clipped_label(&model->records[verbs[j]],model->records[verbs[j]].display_name, x+6, grid_top-25, column_width-10, 16, foreground);
         }
         for (i = first_row; i < noun_count && i < first_row + visible_rows; ++i) {
             int y = grid_top + (i-first_row)*row_height;
-            clipped_label(TextFormat("%s (%d)", model->records[nouns[i]].display_name, model->connectivity[nouns[i]].partners), 20, y+10, grid_left-30, 16, foreground);
+            clipped_label(&model->records[nouns[i]],TextFormat("%s (%d)", model->records[nouns[i]].display_name, model->connectivity[nouns[i]].partners), 20, y+10, grid_left-30, 16, foreground);
             for (j = first_column; j < verb_count && j < first_column + visible_columns; ++j) {
                 Rectangle area = {(float)(grid_left+(j-first_column)*column_width), (float)y, column_width-3.0f, row_height-3.0f};
                 int index = gd_matrix_grid_cell(model, nouns[i], verbs[j]);
@@ -202,15 +203,15 @@ int gd_view(GD_Model *initial, int frames, const char *screenshot) {
             if (old_case != case_number) { linked = -1; scroll = 0; }
             case_record = model->pairs[selected->first_pair+case_number].interaction;
             record = &model->records[case_record];
-            clipped_label(TextFormat("%s x %s", model->records[selected->noun].display_name, model->records[selected->verb].display_name), x, 110, detail_width, 20, foreground);
-            clipped_label(TextFormat("Case %d/%d: %s", case_number+1, selected->pair_count, record->display_name), x, 144, detail_width, 17, foreground);
-            clipped_label(TextFormat("status: %s | coverage: %s", record->status ? record->status : "unset", record->coverage ? record->coverage : "unset"), x, 172, detail_width, 16, muted);
+            clipped_label(&model->records[selected->noun],TextFormat("%s x %s", model->records[selected->noun].display_name, model->records[selected->verb].display_name), x, 110, detail_width, 20, foreground);
+            clipped_label(record,TextFormat("Case %d/%d: %s", case_number+1, selected->pair_count, record->display_name), x, 144, detail_width, 17, foreground);
+            clipped_label(NULL,TextFormat("status: %s | coverage: %s", record->status ? record->status : "unset", record->coverage ? record->coverage : "unset"), x, 172, detail_width, 16, muted);
             if (button((Rectangle){x, 201, 120, 30}, "Previous") && selected->pair_count > 1) { --case_number; if (case_number < 0) case_number += selected->pair_count; linked = -1; scroll = 0; }
             if (button((Rectangle){x+128, 201, 120, 30}, "Next") && selected->pair_count > 1) { case_number = (case_number+1)%selected->pair_count; linked = -1; scroll = 0; }
             if (linked >= 0 && button((Rectangle){x+256, 201, 135, 30}, "Back to case")) { linked = -1; scroll = 0; }
             if (linked >= 0) record = &model->records[linked];
-            clipped_label(record->reference, x, 243, detail_width, 17, accent);
-            clipped_label(record->source_path, x, 268, detail_width, 14, muted);
+            clipped_label(NULL,record->reference, x, 243, detail_width, 17, accent);
+            clipped_label(NULL,record->source_path, x, 268, detail_width, 14, muted);
             if (IsKeyPressed(KEY_C)) SetClipboardText(record->source_path);
             BeginScissorMode(x, body_top, detail_width, height-body_top-62);
             {

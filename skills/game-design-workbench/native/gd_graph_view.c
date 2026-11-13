@@ -11,6 +11,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_noun_label_ui.h"
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
@@ -213,7 +214,7 @@ static void draw_graph(const GD_Model *model,GD_Layout *raw, GD_Layout *layout, 
         if (challenges && witness_node(routes,witness,node->key)) color=graph_selected;
         if (node->side) DrawRectangle((int)node->x-12, (int)node->y-12, 24, 24, color);
         else DrawCircleV(node_point(node), 13, color);
-        gd_graph_node_text_at(physical,node,node->label, (int)node->x-MeasureText(node->label, 18)/2, (int)node->y+22, 18, graph_text,1);
+        gd_graph_record_text_at(physical,node,&model->records[node->key],node->label, (int)node->x-MeasureText(node->label, 18)/2, (int)node->y+22, 18, graph_text,1);
         if (draft && (draft->rank_changed[node->key] || draft->prerequisites_changed[node->key])) {
             DrawCircleLines((int)node->x, (int)node->y, 25, graph_selected);
             gd_graph_node_text_at(physical,node,"*", (int)node->x+22, (int)node->y-28, 24, graph_selected,1);
@@ -412,7 +413,7 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
         igText("Coverage: %s", model->records[record_index].coverage ? model->records[record_index].coverage : "unset");
     } else if (selection->node >= 0) {
         record_index = layout->nodes[selection->node].key;
-        igText("%s: %s", focused ? "Record" : challenges ? "Challenge" : model->skill_mode ? "Skill" : model->records[record_index].role == GD_NOUN ? "Noun" : "Verb", model->records[record_index].display_name);
+        gd_noun_ui_text(&model->records[record_index],TextFormat("%s: %s",focused ? "Record":challenges ? "Challenge":model->skill_mode ? "Skill":model->records[record_index].role==GD_NOUN ? "Noun":"Verb",model->records[record_index].display_name));
         if (!focused && !challenges && model->skill_mode) igText("%d loaded prerequisites | %d dependents", model->skills[record_index].prerequisite_count, model->skills[record_index].dependent_count);
         else if (!focused && !challenges) igText("%d active partners | %d total cases", model->connectivity[record_index].partners, model->connectivity[record_index].cases);
     }

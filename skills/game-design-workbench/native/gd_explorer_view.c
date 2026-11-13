@@ -496,7 +496,8 @@ static int presentation_widget(GD_ExplorerContext *c,const char *name,const char
 }
 static int layout_controls(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int rearrange=0;
-    if(p->view==GD_EXPLORER_NOUNS){int side,i;for(side=0;side<2;++side){int selected=side ? p->grid.verb:p->grid.noun;if(gd_explorer_picker_begin(c,side ? "Column noun":"Row noun",selected>=0 ? model->records[selected].display_name:NULL)){for(i=0;i<c->project->noun_grid->noun_count;++i){int record=c->project->noun_grid->nouns[i];if(gd_explorer_picker_item(c,model->records[record].display_name,record==selected,0))gd_explorer_presentation_set(c,side ? "noun_column":"noun_row",model->records[record].reference,p->query_message,sizeof(p->query_message));}gd_explorer_picker_end();}}}
+    if(p->view==GD_EXPLORER_NOUNS || p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_ACTORS || p->view==GD_EXPLORER_RELATIONSHIPS){igTextDisabled("Noun suffix: A actor | N non-actor | U unclassified");if(igIsItemHovered(ImGuiHoveredFlags_None))igSetTooltip("Actor labels are underlined; non-actor labels bold; unclassified labels regular. Plain text retains suffix. Unresolved references are not Unclassified.");}
+    if(p->view==GD_EXPLORER_NOUNS){int side,i;for(side=0;side<2;++side){int selected=side ? p->grid.verb:p->grid.noun;if(gd_explorer_picker_begin(c,side ? "Column noun":"Row noun",selected>=0 ? model->records[selected].display_name:NULL)){for(i=0;i<c->project->noun_grid->noun_count;++i){int record=c->project->noun_grid->nouns[i];if(gd_explorer_picker_record_item(c,&model->records[record],model->records[record].display_name,record==selected))gd_explorer_presentation_set(c,side ? "noun_column":"noun_row",model->records[record].reference,p->query_message,sizeof(p->query_message));}gd_explorer_picker_end();}}}
     if(p->view==GD_EXPLORER_ACTORS) presentation_widget(c,"actor_overview","Actor overview");
     if (p->view==GD_EXPLORER_NOUNS || is_graph(p->view) || p->view==GD_EXPLORER_MDA || (query_view(p->view) && p->query_state && p->query_state->scene && gd_query_scene_overview_mode(p->query_state->scene)!=GD_ACTOR_INTERACTIONS)) presentation_widget(c,"layout","Layout");
     else if (query_view(p->view)) igTextWrapped(p->query_state && p->query_state->scene && p->query_state->scene->overview ? "Overview placement: weighted Free interaction map. Usage cloud also offers fixed-ring and Free layouts. Explicit query layouts remain separate.":"Layout: separate native query bands; incoming weighting never changes declarations. Query/ghost associations are not temporal paths.");
@@ -955,7 +956,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
                 const char *reference=record>=0 ? model->records[record].reference:"no unique loaded source";
                 if (!gd_text_contains(label,p->list_search) && !gd_text_contains(reference,p->list_search) && !(record>=0 && gd_text_contains(model->records[record].display_name,p->list_search))) continue;
                 igPushID_Int(i);
-                if (igSmallButton(TextFormat("#%d %s | %s",i,label,reference))) {
+                if (gd_noun_ui_small_button(record>=0 ? &model->records[record]:NULL,TextFormat("#%d %s | %s",i,label,reference))) {
                     if(gd_explorer_similarity_active(&c))gd_explorer_similarity_select(&c,i);
                     else if (p->view==GD_EXPLORER_MDA) { p->mda.record=record; p->mda.link=-1; }
                     else if (p->view==GD_EXPLORER_RESOURCES || p->view==GD_EXPLORER_NOUNS || query_view(p->view)) p->selection=(GD_ExplorerSelection){-1,i,0,-1,-1};

@@ -14,6 +14,16 @@ User chose **distinct declared cases** as noun-interaction cell count. Actor int
 - Derived bindings refer to canonical noun classification. Unresolved noun references remain unresolved; never label them non-actor.
 - Include all three classifications in noun browsing and existing explicit case/state queries. Do not guess classifications or change example data.
 
+## Compact label polish
+
+- Shared `display_name`: `name - A` for Actor, `name - N` for Non-actor, `name - U` for Unclassified. Canonical `name`, reference, ID and source stay unchanged. All existing consumers, including plain CLI/evidence labels, receive compact suffix.
+- Actor label underlined; Non-actor bold; Unclassified regular. Derive style from explicit canonical metadata and preserved `is_noun`, never suffix parsing or axes. Unresolved references have no resolved noun record and retain unresolved wording, not U.
+- Apply rich style to graph/compound query cards, noun/verb grid headers, plain matrix viewer, noun-picker items, shown-node browse buttons and selected noun headings. Mixed prose, native combo previews and CLI remain plain text with suffix. No inline markup in typed labels/JSON or new font asset. Bold uses one-unit glyph overstrike; underline uses one-unit stroke.
+- Style only known noun span inside composed labels. Bounded prefix copy preserves complete UTF-8; measure sentinel cancels final-glyph spacing. Graph measurement includes decoration at raw anchors, not filtered pose. Retain clipping and existing card/grid geometry policies.
+- Selection, pending/applied inputs, drafts/history, source association and explicit Run unchanged. Existing review viewer untouched. User accepts reviewed Mario Noun interactions label presentation; no every-view/font/platform acceptance inferred.
+- Verification: warning-free CJIT CLI/core/plain-view/graph-view/adapter builds; core148/148, focused Node11/11. Covers A/N/U labels, canonical names/references, style from metadata despite normalized roles, unrelated/unresolved labels, bounded UTF-8 prefix handling, existing query semantics, Find, shared controls and both-example IPC. Both example source hashes unchanged. Deep/research not rerun for label polish.
+- Artifacts: `native/build/noun-labels-work/` build logs, `core.log`, `checks.log`; separate `plain/` executable avoids overwriting graph build. User authorized separate updated Mario Noun interactions viewer, PID30996 / session `30996-550fe44eb69bb308`. No existing viewer closed or modified; only controls/actions inspected after launch. User reports presentation looks good and authorizes checkpoint. Acceptance covers reviewed labels only.
+
 ## Noun interactions
 
 - Both axes show all loaded nouns, including isolates and unclassified nouns. Headers show classification.

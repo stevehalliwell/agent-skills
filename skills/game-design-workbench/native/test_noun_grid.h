@@ -1,4 +1,5 @@
 #include "gd_noun_grid.h"
+#include "gd_noun_label.h"
 TEST(noun_labels_preserve_canonical_identity,
     GD_Model *model;int actor,resource,unknown;
     TEST_ASSERT(setup("noun-labels"));collections[1].role=GD_AXIS;collections[2].role=GD_RULE;
@@ -8,11 +9,19 @@ TEST(noun_labels_preserve_canonical_identity,
     model=model_create();TEST_ASSERT(model && gd_load(model,collections,3));
     actor=find_record(model,"things/hero");resource=find_record(model,"things/lives");unknown=find_record(model,"things/unknown");TEST_ASSERT(actor>=0 && resource>=0 && unknown>=0);
     TEST_ASSERT(!strcmp(model->records[actor].name,"hero") && !strcmp(model->records[actor].reference,"things/hero"));
-    TEST_ASSERT(!strcmp(model->records[actor].display_name,"[Actor] hero") && !strcmp(model->records[resource].display_name,"[Non-actor] lives") && !strcmp(model->records[unknown].display_name,"[Unclassified] unknown"));
+    TEST_ASSERT(!strcmp(model->records[actor].display_name,"hero - A") && !strcmp(model->records[resource].display_name,"lives - N") && !strcmp(model->records[unknown].display_name,"unknown - U"));
+    TEST_ASSERT(gd_noun_label_style(&model->records[actor])==GD_NOUN_LABEL_UNDERLINE && gd_noun_label_style(&model->records[resource])==GD_NOUN_LABEL_BOLD && gd_noun_label_style(&model->records[unknown])==GD_NOUN_LABEL_REGULAR && gd_noun_label_style(NULL)==GD_NOUN_LABEL_REGULAR);
+    {char prefix[64];GD_Record unrelated={.display_name="not-a-noun - A",.is_actor_line=1,.is_actor=1};
+        TEST_ASSERT(gd_noun_label_style(&unrelated)==GD_NOUN_LABEL_REGULAR);
+        TEST_ASSERT(gd_noun_label_prefix(&model->records[actor],"binding Ω\nhero - A\nstate",prefix,sizeof(prefix)) && !strcmp(prefix,"binding Ω\n"));
+        TEST_ASSERT(!gd_noun_label_prefix(&model->records[actor],"[Unresolved noun] things/hero",prefix,sizeof(prefix)) && !*prefix);
+        TEST_ASSERT(!gd_noun_label_prefix(&model->records[actor],"prefix hero - A",prefix,2) && !*prefix);
+        TEST_ASSERT(!gd_noun_label_prefix(NULL,"hero - A",prefix,sizeof(prefix)) && !gd_noun_label_prefix(&model->records[actor],NULL,prefix,sizeof(prefix)));
+    }
     TEST_ASSERT(!gd_sources_changed(model));gd_destroy(model);
     /* Related snapshots still know original noun role; unrelated metadata is not guessed. */
     collections[0].role=GD_RELATED;collections[0].noun_collection=1;model=model_create();TEST_ASSERT(model && gd_load(model,collections,3));actor=find_record(model,"things/hero");
-    TEST_ASSERT(actor>=0 && model->records[actor].role==GD_RELATED && model->records[actor].is_noun && model->records[actor].is_actor && !strcmp(model->records[actor].display_name,"[Actor] hero"));
+    TEST_ASSERT(actor>=0 && model->records[actor].role==GD_RELATED && model->records[actor].is_noun && model->records[actor].is_actor && !strcmp(model->records[actor].display_name,"hero - A") && gd_noun_label_style(&model->records[actor])==GD_NOUN_LABEL_UNDERLINE);
     gd_destroy(model);
 )
 TEST(noun_grid_case_counts_diagonal_limits_and_evidence,

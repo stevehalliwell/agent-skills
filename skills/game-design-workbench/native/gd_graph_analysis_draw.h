@@ -1,6 +1,7 @@
 #ifndef GD_GRAPH_ANALYSIS_DRAW_H
 #define GD_GRAPH_ANALYSIS_DRAW_H
 #include "gd_graph_analysis.h"
+#include "gd_noun_label_draw.h"
 #include "raylib.h"
 #include <stdio.h>
 #include <math.h>
@@ -69,6 +70,9 @@ static inline void gd_graph_footprint_rect(GD_LayoutNode *node,Rectangle rectang
 static inline void gd_graph_footprint_rect_at(GD_LayoutNode *raw,const GD_LayoutNode *shown,Rectangle rectangle,float scale) {
     rectangle.x+=(int)(raw->x*scale)-(int)(shown->x*scale);rectangle.y+=(int)(raw->y*scale)-(int)(shown->y*scale);
     gd_graph_footprint_rect(raw,rectangle,scale);
+}
+static inline void gd_graph_record_text_at(GD_LayoutNode *raw,const GD_LayoutNode *shown,const GD_Record *record,const char *text,int x,int y,int size,Color color,float scale){
+    Rectangle bounds=gd_noun_draw_text(record,text,(Vector2){(float)x,(float)y},size,(float)(size/10),color);gd_graph_footprint_rect_at(raw,shown,bounds,scale);
 }
 static inline void gd_graph_node_text_at(GD_LayoutNode *raw,const GD_LayoutNode *shown,const char *text,int x,int y,int size,Color color,float scale) {
     DrawText(text,x,y,size,color);

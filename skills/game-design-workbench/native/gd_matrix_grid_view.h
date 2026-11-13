@@ -99,13 +99,13 @@ static void grid_input(GD_ExplorerContext *c) {
         }
     }
 }
-static void grid_label(GD_ExplorerContext *c, Rectangle area, const char *label) {
+static void grid_label(GD_ExplorerContext *c, Rectangle area, const char *label,const GD_Record *record) {
     Vector2 first=GetWorldToScreen2D((Vector2){area.x+6,area.y+4},c->pane->camera);
     Vector2 last=GetWorldToScreen2D((Vector2){area.x+area.width-6,area.y+area.height-4},c->pane->camera);
     Rectangle clip=GetCollisionRec(c->viewport,(Rectangle){first.x,first.y,last.x-first.x,last.y-first.y});
     if (clip.width<1 || clip.height<1 || c->pane->camera.zoom*18<8) return;
     BeginScissorMode((int)ceilf(clip.x),(int)ceilf(clip.y),(int)floorf(clip.width),(int)floorf(clip.height));
-    DrawTextEx(GetFontDefault(),label,(Vector2){area.x+8,area.y+(area.height-18)/2},18,1,foreground);
+    gd_noun_draw_text(record,label,(Vector2){area.x+8,area.y+(area.height-18)/2},18,1,foreground);
     EndScissorMode(); BeginScissorMode((int)c->viewport.x,(int)c->viewport.y,(int)c->viewport.width,(int)c->viewport.height);
 }
 static void grid_draw(GD_ExplorerContext *c) {
@@ -125,7 +125,7 @@ static void grid_draw(GD_ExplorerContext *c) {
         if (row<range.first_row || row>=range.end_row || column<range.first_column || column>=range.end_column) continue;
         area=grid_bounds(&p->grid,cell->noun,cell->verb);
         DrawRectangleRec((Rectangle){area.x,area.y,fmaxf(area.width,1/p->camera.zoom),fmaxf(area.height,1/p->camera.zoom)},gd_count_color(counts,cell->pair_count));
-        grid_label(c,area,TextFormat("%d cases%s",cell->pair_count,cell->active ? " *":""));
+        grid_label(c,area,TextFormat("%d cases%s",cell->pair_count,cell->active ? " *":""),NULL);
     }
     if (GD_MATRIX_ROW_HEIGHT*p->camera.zoom>=6) for (i=range.first_row;i<=range.end_row;++i)
         DrawLineEx((Vector2){0,i*GD_MATRIX_ROW_HEIGHT},(Vector2){p->grid.verbs*GD_MATRIX_COLUMN_WIDTH,i*GD_MATRIX_ROW_HEIGHT},1/p->camera.zoom,(Color){65,78,95,255});
@@ -134,7 +134,7 @@ static void grid_draw(GD_ExplorerContext *c) {
     for (i=0;i<p->layout->node_count;++i) {
         int record=p->layout->nodes[i].key; Rectangle area=grid_bounds(&p->grid,model->records[record].role==GD_NOUN ? record:-1,model->records[record].role==GD_VERB ? record:-1);
         if (area.x>last.x || area.y>last.y || area.x+area.width<first.x || area.y+area.height<first.y) continue;
-        DrawRectangleRec(area,(Color){39,51,68,255}); grid_label(c,area,model->records[record].display_name);
+        DrawRectangleRec(area,(Color){39,51,68,255}); grid_label(c,area,model->records[record].display_name,&model->records[record]);
         if (p->selection.node==i || p->match_nodes[i]) DrawRectangleLinesEx(area,thickness,p->match_nodes[i] ? gold:(Color){100,178,245,255});
     }
     for (i=0;i<p->layout->edge_count;++i) if (p->match_edges[i]) {

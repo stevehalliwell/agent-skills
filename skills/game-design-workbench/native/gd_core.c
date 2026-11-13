@@ -502,7 +502,7 @@ static int load_record(GD_Model *model, int collection, const char *path, size_t
     record->display_name=record->name;
     if(record->is_noun) {
         char label[160];
-        snprintf(label,sizeof(label),"[%s] %s",!record->is_actor_line ? "Unclassified":record->is_actor ? "Actor":"Non-actor",record->name);
+        snprintf(label,sizeof(label),"%s - %c",record->name,!record->is_actor_line ? 'U':record->is_actor ? 'A':'N');
         record->display_name=copy_text(model,label,strlen(label));
         if(!record->display_name) {model->edge_count=edge_start;return 0;}
     }

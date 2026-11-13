@@ -3,6 +3,7 @@
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
 #include "gd_explorer_loaded_pickers.h"
+#include "gd_graph_analysis_draw.h"
 #include <math.h>
 #include <string.h>
 
@@ -281,7 +282,7 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
             igTextWrapped("Actor overview: explicit is_actor:true only on perimeter/map. %d unclassified nouns are not actors by default. Scope %s; missing connections are not proof of absence.",gd_query_scene_overview_unclassified(scene),gd_query_scene_overview_incomplete(scene) ? "incomplete":"loaded declarations");
             igTextWrapped(pane->actor_overview==GD_ACTOR_USAGE ? "Used noun concepts and own declared axes. Concept size: distinct connected actors. Unclassified noun concepts labelled separately. Select nodes to highlight usages. Native keeps fixed actor ring; Free lets all actors and concepts move with shared settling and dragging.":"Links count distinct interaction records sharing actor types within a case. Thicker links have stronger bounded attraction. Not direct contact, runtime frequency or applicability proof.");
             if (gd_explorer_picker_begin(context,"Browse object / actor",selected>=0 ? model->records[selected].display_name:NULL)) {
-                for (i=0;i<model->record_count;++i) if(model->records[i].role==GD_NOUN) { if (gd_explorer_picker_item(context,TextFormat("%s | %s",model->records[i].display_name,model->records[i].reference),i==selected,0)) { int n;pane->selection=(GD_ExplorerSelection){-1,-1,0,i,-1};for(n=0;n<scene->layout.node_count;++n) if(scene->nodes[n].source==i) {pane->selection.node=n;pane->selection.linked=-1;break;} } }
+                for (i=0;i<model->record_count;++i) if(model->records[i].role==GD_NOUN) { if (gd_explorer_picker_record_item(context,&model->records[i],TextFormat("%s | %s",model->records[i].display_name,model->records[i].reference),i==selected)) { int n;pane->selection=(GD_ExplorerSelection){-1,-1,0,i,-1};for(n=0;n<scene->layout.node_count;++n) if(scene->nodes[n].source==i) {pane->selection.node=n;pane->selection.linked=-1;break;} } }
                 gd_explorer_picker_end();
             }
             if (selected>=0) {
@@ -305,7 +306,7 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
             igTextWrapped("Each binding independently receives each finite value. Other bindings/context stay unknown; no same-noun simultaneous assignment or default A.");
             if (gd_explorer_picker_begin(context,"Object filter",options->noun>=0 ? model->records[options->noun].display_name:"All explicitly declared nouns")) {
                 if (gd_explorer_picker_item(context,"All explicitly declared nouns",options->noun<0,0)) options->noun=-1;
-                for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_NOUN && gd_explorer_picker_item(context,model->records[i].display_name,i==options->noun,0)) options->noun=i;
+                for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_NOUN && gd_explorer_picker_record_item(context,&model->records[i],model->records[i].display_name,i==options->noun)) options->noun=i;
                 gd_explorer_picker_end();
             }
         }
@@ -442,7 +443,7 @@ void gd_explorer_query_draw(GD_ExplorerContext *context) {
         if(scene->overview) {const GD_Record *record=&scene->query->model->records[metadata->source];color=record->role==GD_AXIS ? (Color){230,180,100,255}:!record->is_actor_line ? (Color){190,140,220,255}:record->is_actor ? (Color){125,171,215,255}:(Color){90,190,170,255};if(pane->selection.node>=0 && !highlighted[i]) color.a=90;}
         if (scene->query->variants && state->applied.compare>=0) { color=metadata->comparison==3 ? (Color){90,220,160,255}:metadata->comparison==1 ? (Color){105,170,245,255}:metadata->comparison==2 ? (Color){235,135,200,255}:(Color){104,112,128,100}; if (metadata->ghost && metadata->variant!=state->applied.compare) color.a=85; }
         DrawRectangleRounded(card,0.14f,5,(Color){27,37,53,metadata->ghost ? 120:245}); DrawRectangleRoundedLinesEx(card,0.14f,5,(i==pane->selection.node ? 3:1.5f)/pane->camera.zoom,i==pane->selection.node ? (Color){255,218,120,255}:color);
-        if (pane->camera.zoom*16>=8) { Vector2 screen=GetWorldToScreen2D((Vector2){card.x+8,card.y+6},pane->camera); Rectangle clip=GetCollisionRec((Rectangle){screen.x,screen.y,(card.width-16)*pane->camera.zoom,(card.height-12)*pane->camera.zoom},context->viewport); if (clip.width<=0 || clip.height<=0) continue; BeginScissorMode((int)clip.x,(int)clip.y,(int)clip.width,(int)clip.height); DrawText(gd_explorer_query_node_label(context,i),(int)card.x+10,(int)(card.y+(metadata->ghost && metadata->kind==GD_QUERY_NODE_VARIANT ? card.height-22:9)),16,color); if(scene->overview && metadata->incoming) DrawText(TextFormat("%d connected actors",metadata->incoming),(int)card.x+10,(int)(card.y+card.height-23),14,color); if (state->query->effects && metadata->kind==GD_QUERY_NODE_EFFECT) DrawText(TextFormat("%d direct declarations%s",metadata->incoming,state->query->contributors->limited ? " (partial)":""),(int)card.x+10,(int)(card.y+card.height-23),14,color); EndScissorMode(); BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); }
+        if (pane->camera.zoom*16>=8) { Vector2 screen=GetWorldToScreen2D((Vector2){card.x+8,card.y+6},pane->camera); Rectangle clip=GetCollisionRec((Rectangle){screen.x,screen.y,(card.width-16)*pane->camera.zoom,(card.height-12)*pane->camera.zoom},context->viewport); if (clip.width<=0 || clip.height<=0) continue; BeginScissorMode((int)clip.x,(int)clip.y,(int)clip.width,(int)clip.height); int record=gd_query_scene_record(scene,i);if(metadata->kind==GD_QUERY_NODE_BINDING || metadata->kind==GD_QUERY_NODE_PARTNER){const GD_RuleParticipant *binding=&scene->query->rules->participants[metadata->source];record=binding->noun_resolution==GD_RULE_RESOLVED ? binding->noun_record:-1;}gd_noun_draw_text(record>=0 ? &scene->query->model->records[record]:NULL,gd_explorer_query_node_label(context,i),(Vector2){card.x+10,card.y+(metadata->ghost && metadata->kind==GD_QUERY_NODE_VARIANT ? card.height-22:9)},16,1,color); if(scene->overview && metadata->incoming) DrawText(TextFormat("%d connected actors",metadata->incoming),(int)card.x+10,(int)(card.y+card.height-23),14,color); if (state->query->effects && metadata->kind==GD_QUERY_NODE_EFFECT) DrawText(TextFormat("%d direct declarations%s",metadata->incoming,state->query->contributors->limited ? " (partial)":""),(int)card.x+10,(int)(card.y+card.height-23),14,color); EndScissorMode(); BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); }
     }
     EndMode2D(); EndScissorMode();
     if (pane->camera.zoom*16<8) DrawText("Labels hidden below 8 screen pixels; zoom to inspect.",(int)context->viewport.x+12,(int)context->viewport.y+12,15,(Color){185,200,219,255});
@@ -546,5 +547,5 @@ void gd_explorer_query_details(GD_ExplorerContext *context) {
         igTreePop();
     }
     if (pane->selection.cell>=0) gd_explorer_query_source(context,pane->selection.cell);
-    if (record>=0) { GD_Model *model=gd_explorer_model(context->project,pane->view); const GD_Record *source=&model->records[record]; igTextWrapped("%s | status %s | %s",TextFormat("%s | %s",source->display_name,source->reference),source->status ? source->status:"unspecified",source->source_path); if (igSmallButton("Copy source path")) SetClipboardText(source->source_path); if (igTreeNode_Str("Full authored source (other effects retained)")) { igPushTextWrapPos(0); igTextUnformatted(source->body,NULL); igPopTextWrapPos(); igTreePop(); } }
+    if (record>=0) { GD_Model *model=gd_explorer_model(context->project,pane->view); const GD_Record *source=&model->records[record]; gd_noun_ui_text(source,source->display_name);igTextWrapped("%s | status %s | %s",source->reference,source->status ? source->status:"unspecified",source->source_path); if (igSmallButton("Copy source path")) SetClipboardText(source->source_path); if (igTreeNode_Str("Full authored source (other effects retained)")) { igPushTextWrapPos(0); igTextUnformatted(source->body,NULL); igPopTextWrapPos(); igTreePop(); } }
 }

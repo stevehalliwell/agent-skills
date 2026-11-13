@@ -65,7 +65,7 @@ Preserve typed identities, independent pane state, atomic last-good failures, ex
 
 - Same Mario viewer PID3884. User completed Skills rank edit, Undo/Redo and Reset all draft-preservation walkthrough. Follow-up IPC inspection confirmed one modified record, one Undo step, zero Redo steps and no pending rank input.
 - User reports refresh-safety sequence works: dirty draft blocks F5; Undo to baseline leaves Redo; F5 prompts for discard; Cancel retains Redo; confirmed discard permits refresh and clears draft history.
-- Record reviewed rank/history/refresh paths as working. Prerequisite editing, failed reload/output retention, full handoff, every-view and platform checks remain separate. No source edits or new commit authorized by review feedback.
+- Record reviewed rank/history/refresh paths as working. User subsequently accepts prerequisite edits with Undo/Redo, failed reload retaining last-good results/pending inputs, and independent-pane state/handoff: all three look fine. Acceptance is user-reported; no new agent-run reproduction inferred. Every-view, restart and platform checks remain separate. Review acceptance authorizes record updates, not new implementation or commit.
 
 ## Status
 
