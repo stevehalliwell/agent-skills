@@ -1,10 +1,21 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0]
 
 ### Added
 
 - `yt-dlp` for video and audio downloads, format and metadata inspection, subtitle retrieval, and FFmpeg processing. Includes an audio-only download helper; speech recognition requires a separate tool.
+- `github-image-attachments` for uploading local images into GitHub PRs, issues, and comments through GitHub CLI.
+- `herdr-open-in-vscode` and `herdr-open-in-fork` for opening local files and repositories in their project context.
+- `herdr-needs-attention` for keeping a pane blocked on an open question while user review, a decision, or external work is pending.
+- Independent developer persona for explicitly delegated implementation in a dedicated branch and worktree, with authorized step commits and an offline decision report.
+
+### Changed
+
+- `persona` supports on-demand agent selection of useful perspectives without requiring user-role selection or a separate session setup. Task workflows and approval gates still apply.
+- Herdr and Herdr-based delegation use labeled tabs for substantial work, work likely to need user help, or later inspection; small transient helpers may use split panes.
+- Default task collection guidance limits active work to one task per working context, not one task across the entire project; independent contexts may work concurrently.
+- `coding`, `implementation`, and `systems-coding` share proportionate verification guidance. Implementation checks acceptance explicitly and updates task records at meaningful checkpoints rather than after every feedback exchange.
 
 ## [0.2.0]
 

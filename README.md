@@ -51,7 +51,7 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`competitor-analysis`](skills/competitor-analysis/) — Compares competitor positioning and offerings with evidence.
 - [`five-whys`](skills/five-whys/) — Leads evidence-aware, non-blaming root-cause analysis.
 - [`question-research`](skills/question-research/) — Builds retained, evidence-linked answers to focused questions.
-- [`persona`](skills/persona/) — Applies on-demand working perspectives through a lightweight role catalog and separate role guidance; preserves task workflows and approval gates.
+- [`persona`](skills/persona/) — Applies on-demand working perspectives, including an independent developer for explicitly delegated implementation and step commits; preserves task workflows and approval gates.
 - [`six-thinking-hats`](skills/six-thinking-hats/) — Separates facts, feelings, benefits, risks, and alternatives before decisions.
 - [`spike-comparison`](skills/spike-comparison/) — Compares candidates through shared tests and Herdr panes/worktrees; delivers offline HTML report with findings, evidence, and recommendations.
 - [`technical-review`](skills/technical-review/) — Examines feasibility, architecture, delivery risk, and technical trade-offs before coding.
