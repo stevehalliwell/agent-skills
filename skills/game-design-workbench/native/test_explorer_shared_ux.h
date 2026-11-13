@@ -13,6 +13,22 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
     UX_CHECK(panes && c.analysis && history && saved);c.project=project;c.panes=panes;c.history=history;c.active_view=&active;c.viewport=(Rectangle){0,0,800,600};
     for(v=0;v<GD_EXPLORER_VIEWS;++v)pane_defaults(&panes[v],(GD_ExplorerView)v);
     UX_CHECK(gd_text_contains("Walker Ω","waLK") && gd_text_contains("Walker Ω","Ω") && !gd_text_contains("Walker Ω","ω") && !gd_text_contains("Walker","wlkr") && gd_text_contains("Walker",""));
+    {GD_CountRange range={1,4};GD_CountLinkStyle previous={0},style;int values[3],value;
+        UX_CHECK(gd_count_link_samples((GD_CountRange){0},values)==0);
+        UX_CHECK(gd_count_link_samples((GD_CountRange){4,4},values)==1 && values[0]==4);
+        UX_CHECK(gd_count_link_samples((GD_CountRange){1,2},values)==2 && values[0]==1 && values[1]==2);
+        UX_CHECK(gd_count_link_samples(range,values)==3 && values[0]==1 && values[1]==2 && values[2]==4);
+        style=gd_count_link_style(range,0);UX_CHECK(!style.width && !style.color.a);
+        style=gd_count_link_style((GD_CountRange){0},1);UX_CHECK(!style.width && !style.color.a);
+        style=gd_count_link_style((GD_CountRange){4,4},4);UX_CHECK(style.width==5 && style.color.r==72 && style.color.g==162 && style.color.b==192 && style.color.a==255);
+        for(value=1;value<=4;++value){style=gd_count_link_style(range,value);UX_CHECK(fabsf(style.width-2*value)<0.001f && style.color.a==255 && style.color.g>previous.color.g);previous=style;}
+        style=gd_count_link_style(range,1);UX_CHECK(style.color.r==64 && style.color.g==100 && style.color.b==176);
+        style=gd_count_link_style(range,4);UX_CHECK(style.color.r==80 && style.color.g==224 && style.color.b==208);
+        style=gd_count_link_style((GD_CountRange){1,2147483647},2147483647);UX_CHECK(style.width==8);
+        UX_CHECK(gd_count_link_samples((GD_CountRange){1,2147483647},values)==3 && values[0]==1 && values[1]==1073741824 && values[2]==2147483647);
+        /* Cell fills remain dark for white labels; link brightness is separate. */
+        {Color fill=gd_count_color(range,4);UX_CHECK(fill.r==24 && fill.g==112 && fill.b==96);}
+    }
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(project->available&(1u<<v)){
         GD_ExplorerPane *p=&panes[v];GD_Query *query;GD_StructureResult *structure;GD_ExplorerQueryOptions pending;
         c.pane=p;active=v;UX_CHECK(pane_prepare(&c));
