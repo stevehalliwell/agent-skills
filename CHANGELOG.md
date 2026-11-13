@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `yt-dlp` for video and audio downloads, format and metadata inspection, subtitle retrieval, and FFmpeg processing. Includes an audio-only download helper; speech recognition requires a separate tool.
+
 ## [0.2.0]
 
 ### Added

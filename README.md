@@ -27,7 +27,8 @@ You can install an individual skill with `npx skills add stevehalliwell/agent-sk
 - [`herdr-parallel-work`](skills/herdr-parallel-work/) — Coordinates parallel implementation from a human-reviewed base, with worktree-isolated workers, dedicated orchestrator, and explicit integration ownership.
 - [`docker-local`](skills/docker-local/) — Guides safe local Docker workflows for skills that depend on Docker.
 - [`docling-local`](skills/docling-local/) — Converts local documents and images to Markdown with Dockerized Docling.
-- [`youtube-transcript-download`](skills/youtube-transcript-download/) — Retrieves YouTube transcripts and captions for later use.
+- [`youtube-transcript-download`](skills/youtube-transcript-download/) — Retrieves YouTube transcripts and captions; first choice for caption-only requests.
+- [`yt-dlp`](skills/yt-dlp/) — Downloads video and audio, inspects formats and metadata, and retrieves subtitles when YouTube caption retrieval fails. Uses FFmpeg for media processing, not speech recognition.
 
 ### Project and task workflow
 
