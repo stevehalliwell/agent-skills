@@ -19,8 +19,10 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     if (query_view(p->view)) { gd_explorer_query_controls(c); gd_explorer_query_details(c); }
     if (p->structure_state) { igSetNextItemOpen(true,ImGuiCond_Always); gd_explorer_structure_controls(c); }
     if (grid_view(p)) {
-        if (!grid_blank_details(c)) gd_explorer_graph_details(c);
-    } else if (!query_view(p->view) && !p->structure_state) analysis_controls(c,selected);
+        if(p->view==GD_EXPLORER_NOUNS)noun_grid_details(c);
+        else if (!grid_blank_details(c)) gd_explorer_graph_details(c);
+    } else if (overview_only(p) && overview_available(c)) overview_controls(c);
+    else if (!overview_only(p) && !p->structure_state) analysis_controls(c,selected);
     if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_details(c);
     igEnd();
     matches(c); if (!gd_explorer_similarity_active(c)) distance_focus_update(c,selected);
@@ -31,12 +33,14 @@ static void explorer_test_render(GD_ExplorerContext *c) {
         GD_ExplorerEvidence e=evidence(c,selected);
         if (gd_explorer_similarity_active(c)) gd_explorer_similarity_draw(c);
         else if (grid_view(p)) grid_draw(c);
+        else if (p->view==GD_EXPLORER_NOUNS) noun_graph_draw(c);
         else if (is_graph(p->view)) gd_explorer_graph_draw(c,&e);
         else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_draw(c,&e);
         else if (query_view(p->view)) gd_explorer_query_draw(c);
         else gd_explorer_resource_draw(c,&e);
     }
-    if (!gd_explorer_similarity_active(c)) { draw_matches(c); if (p->view!=GD_EXPLORER_NOUNS && !grid_view(p) && !query_view(p->view)) gd_graph_overview_draw(c->analysis,&p->overview,c->viewport,p->view==GD_EXPLORER_MDA && p->mda.link>=0 ? -1:selected,0); }
+    overview_marks_draw(c);
+    if (!gd_explorer_similarity_active(c)) { draw_matches(c); if (overview_available(c)) gd_graph_overview_draw_metric(c->analysis,&p->overview,c->viewport,p->view==GD_EXPLORER_MDA && p->mda.link>=0 ? -1:selected,0,overview_metric(p)); }
     rlImGuiEnd(); EndDrawing();
 }
 static int explorer_test_grid_capacity(GD_ExplorerContext *c, const char *output) {

@@ -107,8 +107,9 @@ static void viewer_layers(GD_ViewerWriter *w, GD_ExplorerContext *c) {
     gd_viewer_write(w,"{\"available\":%s,\"shared\":%s,\"lens\":%d,\"branches\":%s,\"foundations\":%s,\"shapes\":%s,\"overlay\":%s,\"peer_node\":%d,\"foundation_peer_node\":%d,\"paths\":{\"enabled\":%s,\"declared\":%s,\"lost\":%d,\"compare\":%d,\"starts\":[",
         p->view!=GD_EXPLORER_NOUNS&&!query_view(p->view)&&!grid_view(p)?"true":"false",p->shared?"true":"false",p->lens,p->branches?"true":"false",p->foundations?"true":"false",p->shapes?"true":"false",p->overlay?"true":"false",p->peer,p->foundation_peer,p->paths.enabled?"true":"false",p->paths.declared?"true":"false",p->paths.lost,p->paths.compare);
     for (i=0;i<p->paths.count;++i) { if (i) gd_viewer_write(w,","); viewer_key(w,c,p->paths.keys[i]); }
-    gd_viewer_write(w,"]},\"reach\":{\"enabled\":%s,\"relation\":%d,\"reverse\":%d,\"peer_node\":%d,\"target_node\":%d},\"overview\":{\"enabled\":%s,\"row\":%d,\"column\":%d},\"relationship_root\":",
-        p->reach.enabled?"true":"false",p->reach.relation,p->reach.reverse,p->reach.peer,p->reach.target,p->overview.enabled?"true":"false",p->overview.row,p->overview.column);
+    gd_viewer_write(w,"]},\"reach\":{\"enabled\":%s,\"relation\":%d,\"reverse\":%d,\"peer_node\":%d,\"target_node\":%d},\"overview\":{\"available\":%s,\"enabled\":%s,\"row\":%d,\"column\":%d,\"metric\":",
+        p->reach.enabled?"true":"false",p->reach.relation,p->reach.reverse,p->reach.peer,p->reach.target,overview_available(c)?"true":"false",p->overview.enabled?"true":"false",p->overview.row,p->overview.column);
+    gd_viewer_quote(w,overview_metric(p));gd_viewer_write(w,"},\"relationship_root\":");
     viewer_key(w,c,p->view==GD_EXPLORER_RELATIONSHIPS?p->focus.root:-1);
     gd_viewer_write(w,",\"expanded_records\":[");
     if (p->view==GD_EXPLORER_RELATIONSHIPS) for (i=0;i<model->record_count;++i) if (p->focus.expanded[i]) { if (emitted++) gd_viewer_write(w,","); gd_viewer_quote(w,model->records[i].reference); }

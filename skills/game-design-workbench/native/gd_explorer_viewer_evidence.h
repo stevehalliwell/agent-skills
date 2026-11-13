@@ -8,12 +8,12 @@ static void viewer_row_key(GD_ExplorerContext *c,const char *kind,int row,char *
     snprintf(out,capacity,"%s:%016llx",kind,(unsigned long long)hash);
 }
 static void viewer_record_layers(ExplorerViewer *viewer,GD_ExplorerContext *c) {
-    if(c->pane->view==GD_EXPLORER_NOUNS || query_view(c->pane->view) || grid_view(c->pane) || gd_explorer_similarity_active(c) || !c->analysis->initialized) return;
+    if(!overview_available(c) || !presentation_cache(c)) return;
     viewer->layer_view=c->pane->view; viewer_control_token(viewer,c,GD_FORM_PRESENTATION,viewer->layer_token,sizeof(viewer->layer_token));
 }
 static int viewer_layers_current(ExplorerViewer *viewer,GD_ExplorerContext *c) {
     char token[64]; viewer_control_token(viewer,c,GD_FORM_PRESENTATION,token,sizeof(token));
-    return c->pane->view!=GD_EXPLORER_NOUNS && !query_view(c->pane->view) && !grid_view(c->pane) && !gd_explorer_similarity_active(c) && *viewer->layer_token && viewer->layer_view==c->pane->view && c->analysis->initialized && !strcmp(token,viewer->layer_token);
+    return overview_available(c) && presentation_cache(c) && *viewer->layer_token && viewer->layer_view==c->pane->view && !strcmp(token,viewer->layer_token);
 }
 static GD_DiagnosticSet viewer_diagnostic_set(GD_ExplorerContext *c) {
     GD_DiagnosticSet set={0}; set.model=gd_explorer_model(c->project,c->pane->view); set.rejected=c->pane->diagnostics.rejected;

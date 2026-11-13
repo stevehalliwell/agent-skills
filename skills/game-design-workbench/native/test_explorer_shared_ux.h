@@ -1,6 +1,7 @@
 /* Source-read-only shared-control checks. No GUI window or OS input. */
 #ifndef TEST_EXPLORER_SHARED_UX_H
 #define TEST_EXPLORER_SHARED_UX_H
+#include "test_explorer_overview_coverage.h"
 int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *collections,int count,int *fail_at,int *calls){
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);GD_ExplorerContext c={0};GD_ExplorerPane *panes=NULL;GD_SelectionHistory *history=NULL;GD_Layout *saved=NULL;
     ImGuiContext *imgui=NULL;
@@ -229,6 +230,7 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
         }
         c.finds=NULL;c.sidebar=NULL;
     }
+    UX_CHECK(explorer_overview_coverage_checks(&c,saved,fail_at,calls));
     result=0;
 cleanup:
     if(imgui)igDestroyContext(imgui);

@@ -76,6 +76,27 @@ static int add_match(GD_GraphAnalysis *analysis, int left, int right) {
     }
     return 0;
 }
+int gd_graph_analyze_overview(const GD_Layout *layout, const unsigned char *shown, GD_GraphAnalysis *analysis) {
+    int i;
+    assert(layout && analysis && layout->node_count>=0 && layout->node_count<=GD_MAX_RECORDS);
+    assert(layout->edge_count>=0 && layout->edge_count<=GD_MAX_PAIRS);
+    if (analysis->overview_only && same_projection(layout,shown,1,GD_GRAPH_ANY,analysis)) return 0;
+    analysis->initialized=analysis->overview_only=analysis->include_inactive=analysis->complete=1;
+    analysis->lens=GD_GRAPH_ANY; analysis->node_count=layout->node_count; analysis->edge_count=layout->edge_count;
+    analysis->shown_nodes=analysis->shown_edges=analysis->feature_count=analysis->pair_count=analysis->work=analysis->work_limit=0;
+    analysis->comparison.valid=analysis->paths.valid=analysis->foundations.valid=analysis->foundations.projection_valid=analysis->reachability.valid=analysis->shapes.valid=analysis->overview.valid=0;
+    for (i=0;i<layout->node_count;++i) {
+        analysis->keys[i]=layout->nodes[i].key; analysis->shown[i]=(unsigned char)(shown ? shown[i]!=0:1);
+        analysis->shown_nodes+=analysis->shown[i]; analysis->matched[i]=analysis->neighbors[i]=analysis->incident[i]=0;
+    }
+    for (i=0;i<layout->edge_count;++i) {
+        const GD_LayoutEdge *edge=&layout->edges[i];
+        assert(edge->a>=0 && edge->a<layout->node_count && edge->b>=0 && edge->b<layout->node_count);
+        analysis->edges[i]=*edge;
+        if (analysis->shown[edge->a] && analysis->shown[edge->b]) ++analysis->shown_edges;
+    }
+    return 1;
+}
 int gd_graph_analyze_bounded(const GD_Layout *layout, const unsigned char *shown,
                      int include_inactive, GD_GraphLens lens, int work_limit, GD_GraphAnalysis *analysis) {
     int i,kept,begin;
@@ -83,9 +104,9 @@ int gd_graph_analyze_bounded(const GD_Layout *layout, const unsigned char *shown
     assert(layout->edge_count>=0 && layout->edge_count<=GD_MAX_PAIRS);
     assert(lens>=GD_GRAPH_ANY && lens<GD_GRAPH_LENS_COUNT && work_limit>=0 && work_limit<=GD_GRAPH_ANALYSIS_WORK);
     include_inactive=include_inactive!=0;
-    if (analysis->work_limit==work_limit && same_projection(layout,shown,include_inactive,lens,analysis)) return 0;
+    if (!analysis->overview_only && analysis->work_limit==work_limit && same_projection(layout,shown,include_inactive,lens,analysis)) return 0;
     analysis->work_limit=work_limit;
-    analysis->initialized=1; analysis->include_inactive=include_inactive; analysis->lens=lens;
+    analysis->initialized=1; analysis->overview_only=0; analysis->include_inactive=include_inactive; analysis->lens=lens;
     analysis->node_count=layout->node_count; analysis->edge_count=layout->edge_count;
     analysis->shown_nodes=analysis->shown_edges=analysis->feature_count=analysis->pair_count=analysis->work=0;
     analysis->complete=1; analysis->comparison.valid=0; analysis->paths.valid=0; analysis->foundations.valid=analysis->foundations.projection_valid=analysis->reachability.valid=analysis->shapes.valid=analysis->overview.valid=0; memset(analysis->slots,0,sizeof(analysis->slots));

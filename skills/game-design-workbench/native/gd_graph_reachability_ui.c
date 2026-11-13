@@ -104,6 +104,10 @@ int gd_graph_shapes_panel(const GD_Model *model, const GD_Layout *layout, GD_Gra
 }
 int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
                             GD_OverviewControls *controls, int undirected) {
+    return gd_graph_overview_panel_metric(model,layout,analysis,controls,undirected,NULL);
+}
+int gd_graph_overview_panel_metric(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                            GD_OverviewControls *controls, int undirected, const char *metric) {
     const GD_GraphOverview *overview; bool enabled=controls->enabled!=0; int i,side;
     igSeparator(); igCheckbox("Expand adjacency / incidence overview",&enabled); controls->enabled=enabled;
     if (!enabled) return 0;
@@ -111,6 +115,7 @@ int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_G
     igTextWrapped(undirected ? "Symmetric incidence bins, NOT flow. Mirrored cells do not double total input rows.":"Rows -> columns follow shown arrows, not inferred traffic or causality.");
     igTextWrapped("All shown identities, contiguous projection-index bins; not semantic clusters. Brightness uses linear full-projection link-row count, NOT strength, quantity or flow. Within-bin diagonal entries need not be self-links.");
     igText("%d identities / %d bins / %d input link rows / peak %d",overview->node_count,overview->bins,overview->link_count,overview->peak);
+    if(metric)igTextWrapped("%s: one shown structural link per input row, regardless of case/record weights. Query associations do not imply execution order or unique cases.",metric);
     igTextWrapped("Blue row/column outlines locate selected node bin, not cell brush. Several identities may share bin.");
     igTextWrapped("Select inset cell or use bin controls. Gold graph marks are actual contributing endpoints/links, not every member of bin. Missing/filtered declarations stay outside scope.");
     if (!overview->bins) return 0;
@@ -121,7 +126,7 @@ int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_G
         changed|=igButton("Inspect bin cell",(ImVec2_c){0,0});
         if (changed) { controls->row=row; controls->column=column; gd_graph_overview_select(analysis,row,column); }
     }
-    if (controls->row<0 || controls->column<0) return 0;
+    if (controls->row<0 || controls->column<0 || controls->row>=overview->bins || controls->column>=overview->bins) return 0;
     igText("Cell %d,%d: %d projected link rows",controls->row,controls->column,overview->selected_count);
     for (side=0;side<2;++side) {
         int bin=side ? controls->column:controls->row,begin=overview->start[bin],end=overview->start[bin+1];
@@ -133,6 +138,7 @@ int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_G
         if (end-begin>4) igText("%d further bin identities",end-begin-4);
     }
     if (!igCollapsingHeader_TreeNodeFlags("Overview cell source evidence",0)) return 0;
+    if(metric)return 1;
     {
         int kinds[64],counts[64]={0},count=0,other=0,j;
         for (i=0;i<analysis->edge_count;++i) if (overview->selected_edges[i]) {

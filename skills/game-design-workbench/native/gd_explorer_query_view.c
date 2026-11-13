@@ -96,6 +96,12 @@ failure:
     else if (!*context->pane->query_message) snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Cannot prepare bounded query/drawing; last good query retained.");
     model->error_count=errors; model->errors_omitted=omitted; gd_explorer_query_destroy(state); return NULL;
 }
+/* Scene slots are transient, even when two results have identical topology. */
+static void query_scene_changed(GD_ExplorerContext *context) {
+    context->pane->overview.row=context->pane->overview.column=-1;
+    if(context->analysis)context->analysis->initialized=0;
+    ++context->scope_revision;
+}
 int gd_explorer_query_overview(GD_ExplorerContext *context,int mode) {
     GD_ExplorerPane *pane=context->pane;GD_ExplorerQueryState *state=pane->query_state,*fresh=NULL;GD_QueryScene *scene;int old=pane->actor_overview,record=gd_explorer_query_record(pane),i;
     if(pane->view!=GD_EXPLORER_ACTORS || mode<GD_ACTOR_INTERACTIONS || mode>GD_ACTOR_USAGE || !state) return 0;
@@ -113,7 +119,7 @@ int gd_explorer_query_overview(GD_ExplorerContext *context,int mode) {
     for(i=0;i<pane->layout->node_count;++i) if(gd_query_scene_record(state->scene,i)==record) pane->selection.node=i;
     if(record>=0 && pane->selection.node<0) pane->selection.linked=record; /* Keep source inspection when definition is absent from new canvas. */
     memset(pane->match_nodes,0,sizeof(pane->match_nodes));memset(pane->match_edges,0,sizeof(pane->match_edges));*pane->find_reference=0;pane->visible_matches=pane->hidden_matches=0;
-    pane->fit=1;pane->paused=false;++pane->revision;
+    pane->fit=1;pane->paused=false;++pane->revision;query_scene_changed(context);
     snprintf(pane->query_message,sizeof(pane->query_message),"Actor overview changed. Pending query inputs retained; no analytical Run or source writes.");return 1;
 }
 /* First canvas uses default applied scope. Staged inputs require explicit Run. */
@@ -145,6 +151,7 @@ int gd_explorer_query_run(GD_ExplorerContext *context) {
     if (fresh->query->request.kind==GD_QUERY_BINDINGS && pane->structure_state && ((pane->structure_state->result && pane->structure_state->result->actor_scene) || (pane->structure_state->picker_context && pane->structure_state->picker_context->actor_scene))) { gd_explorer_structure_destroy(pane->structure_state); pane->structure_state=NULL; }
     gd_explorer_query_destroy(pane->query_state); pane->query_state=fresh; pane->query_options=fresh->applied; pane->layout=&fresh->scene->layout;
     pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; pane->fit=pane->view==GD_EXPLORER_EFFECTS || fresh->applied.coverage ? GD_EXPLORER_FIT_QUERY_READABLE:1; pane->prepared=1; pane->revision=1;
+    query_scene_changed(context);
     snprintf(pane->query_message,sizeof(pane->query_message),"Query applied. Values are assumptions; no source writes or final outcome proof."); return 1;
 }
 static int remap_record(const GD_Model *old, const GD_Model *fresh, int index) {
@@ -252,14 +259,14 @@ int gd_explorer_query_display(GD_ExplorerContext *context) {
     gd_query_scene_destroy(state->scene); state->scene=fresh; pane->layout=&fresh->layout; pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
     for (i=0;i<fresh->layout.node_count;++i) if ((int)fresh->nodes[i].kind==kind && fresh->nodes[i].source==source && fresh->nodes[i].variant==variant) pane->selection.node=i;
     state->applied.ghosts=pane->query_options.ghosts; state->applied.primary=pane->query_options.primary; state->applied.compare=pane->query_options.compare; state->applied.weighted=pane->query_options.weighted; state->applied.include_excluded=pane->query_options.include_excluded;
-    pane->fit=pane->view==GD_EXPLORER_EFFECTS || state->applied.coverage ? GD_EXPLORER_FIT_QUERY_READABLE:1; return 1;
+    pane->fit=pane->view==GD_EXPLORER_EFFECTS || state->applied.coverage ? GD_EXPLORER_FIT_QUERY_READABLE:1; query_scene_changed(context); return 1;
 }
 int gd_explorer_query_select_result(GD_ExplorerContext *context, int target) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; int i;
     if (!state || !state->query || !state->query->effects || target<0 || target>=state->query->effects->node_count || state->query->effects->nodes[target].kind==GD_EFFECT_ACTIVATION || !focus_result(context,state,target)) return 0;
     pane->layout=&state->scene->layout; pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
     for (i=0;i<pane->layout->node_count;++i) if (state->scene->nodes[i].source==target) pane->selection.node=i;
-    pane->fit=GD_EXPLORER_FIT_QUERY_READABLE; return 1;
+    pane->fit=GD_EXPLORER_FIT_QUERY_READABLE; query_scene_changed(context); return 1;
 }
 static void coverage_summary(const GD_Query *query) {
     const GD_StateCoverage *coverage=query->state_coverage; const GD_Record *axis=&query->model->records[query->request.axis];

@@ -43,9 +43,9 @@ static const PresentationField presentation_fields[]={
  PF(reach_peer,"Reachability peer",GD_CONTROL_INT,NULL,NULL,PV_GRAPH,reach.peer,0),
  PF(reach_target,"Reachability witness target",GD_CONTROL_INT,NULL,NULL,PV_GRAPH,reach.target,0),
  PF(shapes,"Structural shape families",GD_CONTROL_BOOL,NULL,NULL,PV_GRAPH,shapes,0),
- PF(overview_enabled,"Expand adjacency / incidence overview",GD_CONTROL_BOOL,NULL,NULL,PV_GRAPH,overview.enabled,1),
- PF(overview_row,"Overview row bin",GD_CONTROL_INT,NULL,NULL,PV_GRAPH,overview.row,0),
- PF(overview_column,"Overview column bin",GD_CONTROL_INT,NULL,NULL,PV_GRAPH,overview.column,0),
+ PF(overview_enabled,"Expand adjacency / incidence overview",GD_CONTROL_BOOL,NULL,NULL,PV_ALL,overview.enabled,1),
+ PF(overview_row,"Overview row bin",GD_CONTROL_INT,NULL,NULL,PV_ALL,overview.row,0),
+ PF(overview_column,"Overview column bin",GD_CONTROL_INT,NULL,NULL,PV_ALL,overview.column,0),
  VF(focus_root,"Relationship root",GD_CONTROL_INT,1u<<GD_EXPLORER_RELATIONSHIPS),
  VF(mda_root,"MDA query root",GD_CONTROL_INT,PV_MDA),
  VF(mda_direction,"MDA traversal",GD_CONTROL_INT,PV_MDA),
@@ -87,7 +87,7 @@ static const PresentationField *presentation_field(const char *name) {
 }
 static int presentation_cache(const GD_ExplorerContext *c) {
     const GD_Layout *layout=c->pane->layout;const GD_GraphAnalysis *a=c->analysis;int i;
-    if(!layout || !a || !a->initialized || a->node_count!=layout->node_count || a->edge_count!=layout->edge_count || a->lens!=c->pane->lens || a->include_inactive!=(c->pane->view==GD_EXPLORER_MATRIX ? c->pane->overlay:1))return 0;
+    if(!layout || !a || !a->initialized || a->node_count!=layout->node_count || a->edge_count!=layout->edge_count || a->overview_only!=overview_only(c->pane) || a->lens!=(overview_only(c->pane) ? GD_GRAPH_ANY:c->pane->lens) || a->include_inactive!=(c->pane->view==GD_EXPLORER_MATRIX ? c->pane->overlay:1))return 0;
     for(i=0;i<a->node_count;++i)if(a->keys[i]!=layout->nodes[i].key || a->shown[i]!=(unsigned char)visible((GD_ExplorerContext *)c,i))return 0;
     for(i=0;i<a->edge_count;++i)if(a->edges[i].a!=layout->edges[i].a || a->edges[i].b!=layout->edges[i].b || a->edges[i].key!=layout->edges[i].key || a->edges[i].relation!=layout->edges[i].relation)return 0;
     return 1;
@@ -116,6 +116,7 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
 int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *name) {
     const PresentationField *field=presentation_field(name); const GD_ExplorerPane *p=c->pane;
     if(!field || !(field->views&(1u<<p->view))) return 0;
+    if(!strncmp(name,"overview_",9))return overview_available(c);
     if(p->view==GD_EXPLORER_NOUNS && !strcmp(name,"paused"))return p->prepared && !grid_view(p);
     if(!strcmp(name,"list_search") || !strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
     if(!p->prepared) return 0;
@@ -346,7 +347,7 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     if(!strcmp(name,"view.start.clear")) { p->paths.count=p->paths.lost=0; return 1; }
     if(!strcmp(name,"view.start.add")) { int node=analyze(c); return node>=0 && gd_graph_path_start(&p->paths,p->layout->nodes[node].key)>=0; }
     if(!strcmp(name,"view.expand")) { int record=selected_record(c); GD_Focus prior=p->focus; if(p->view!=GD_EXPLORER_RELATIONSHIPS || record<0) return 0; gd_focus_expand(gd_explorer_model(c->project,p->view),&p->focus,record); gd_explorer_presentation_read(c,&values); if(presentation_rearrange(c,&values,0)) return 1; p->focus=prior; return 0; }
-    if(!strcmp(name,"view.analyze")) { int selected;if(p->view==GD_EXPLORER_NOUNS || query_view(p->view) || grid_view(p) || gd_explorer_similarity_active(c)) return 0;selected=analyze(c); if(c->pane->view==GD_EXPLORER_SKILLS && (!c->query || !gd_skill_unlocks(gd_explorer_model(c->project,c->pane->view),p->known,selected_record(c),c->query))) return 0; (void)evidence(c,selected); if(p->paths.enabled && selected>=0) gd_graph_path_selection(c->analysis,selected); if(p->shared && selected>=0 && p->peer>=0) gd_graph_compare(c->analysis,selected,p->peer); return 1; }
+    if(!strcmp(name,"view.analyze")) { int selected;if(!overview_available(c)) return 0;selected=analyze(c);if(overview_only(p)){(void)evidence(c,selected);return 1;} if(c->pane->view==GD_EXPLORER_SKILLS && (!c->query || !gd_skill_unlocks(gd_explorer_model(c->project,c->pane->view),p->known,selected_record(c),c->query))) return 0; (void)evidence(c,selected); if(p->paths.enabled && selected>=0) gd_graph_path_selection(c->analysis,selected); if(p->shared && selected>=0 && p->peer>=0) gd_graph_compare(c->analysis,selected,p->peer); return 1; }
     if(!strcmp(name,"view.compare")) return !gd_explorer_similarity_active(c) && c->pane->view==GD_EXPLORER_ACTORS ? gd_explorer_query_compare(c):gd_explorer_similarity_compare(c);
     return 0;
 }

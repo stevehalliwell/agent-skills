@@ -86,7 +86,7 @@ typedef struct {
     int keys[GD_MAX_RECORDS];
     unsigned char shown[GD_MAX_RECORDS];
     GD_LayoutEdge edges[GD_MAX_PAIRS];
-    int initialized, include_inactive, node_count, edge_count;
+    int initialized, overview_only, include_inactive, node_count, edge_count;
     GD_GraphLens lens;
     GD_GraphComparison comparison;
     GD_GraphPaths paths;
@@ -104,6 +104,8 @@ typedef struct {
    Role = projection relation tag + incident endpoint. Same-role requires at
    least one equal role; changed-role requires at least one unequal role.
    Alternatives may satisfy both lenses. Counts still deduplicate neighbors. */
+/* Topology snapshot only: no shared-neighbor, path or closure evaluation. */
+int gd_graph_analyze_overview(const GD_Layout *layout, const unsigned char *shown, GD_GraphAnalysis *analysis);
 int gd_graph_analyze(const GD_Layout *layout, const unsigned char *shown,
                      int include_inactive, GD_GraphLens lens, GD_GraphAnalysis *analysis);
 /* Same fixed bounded incidence construction; limits only global pair discovery.

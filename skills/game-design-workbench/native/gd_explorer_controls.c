@@ -455,7 +455,7 @@ static const GD_ExplorerActionInfo actions[]={
     {"view.expand","Expand selected relationship",1u<<GD_EXPLORER_RELATIONSHIPS,GD_FORM_PRESENTATION},
     {"view.start.add","Add selected analysis start",(1u<<GD_EXPLORER_ACTORS)-1,GD_FORM_PRESENTATION},
     {"view.start.clear","Clear analysis starts",(1u<<GD_EXPLORER_ACTORS)-1,GD_FORM_PRESENTATION},
-    {"view.analyze","Analyze shown layers",(1u<<GD_EXPLORER_ACTORS)-1,GD_FORM_PRESENTATION},
+    {"view.analyze","Analyze shown layers",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.compare","Compare retained entries",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.reset","Reset view",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"view.find.clear","Clear Find",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
@@ -493,7 +493,7 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
         if(action==GD_ACTION_VIEW_REARRANGE && p->view>=GD_EXPLORER_ACTORS) return p->query_state && p->query_state->scene && !(p->structure_state && p->structure_state->similarity_canvas);
         if(action==GD_ACTION_VIEW_WITNESS_FIT)return p->resource_routes && p->resource_routes->witness_count>0;
         if(action==GD_ACTION_VIEW_CELL_FIT)return !gd_explorer_similarity_active(context) && p->selection.node<0 && (p->selection.cell>=0 || (p->grid.noun>=0 && p->grid.verb>=0));
-        if(action==GD_ACTION_VIEW_ANALYZE)return p->view<GD_EXPLORER_ACTORS && !(p->view==GD_EXPLORER_MATRIX && p->layout_choice==2) && !(p->structure_state && p->structure_state->similarity_canvas);
+        if(action==GD_ACTION_VIEW_ANALYZE)return !(p->view==GD_EXPLORER_MATRIX && p->layout_choice==2) && !(p->view==GD_EXPLORER_NOUNS && p->layout_choice==GD_NOUN_LAYOUT_GRID) && (!(p->view==GD_EXPLORER_ACTORS || p->view==GD_EXPLORER_EFFECTS) || (p->query_state && p->query_state->scene)) && !(p->structure_state && p->structure_state->similarity_canvas);
         if(action==GD_ACTION_VIEW_START_ADD)return p->paths.enabled && p->selection.node>=0;
         if(action==GD_ACTION_VIEW_EXPAND)return p->selection.node>=0;
         if(action==GD_ACTION_VIEW_COMPARE)return (p->view==GD_EXPLORER_ACTORS && p->query_state && p->query_state->query && p->query_state->query->variants && p->query_state->applied.primary>=0 && p->query_state->applied.compare>=0) || (p->structure_state && p->structure_state->result && p->structure_state->result->similarity && p->structure_state->similarity_row>=0 && p->structure_state->similarity_peer>=0);

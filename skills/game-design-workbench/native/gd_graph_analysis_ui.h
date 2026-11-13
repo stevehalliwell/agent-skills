@@ -13,6 +13,9 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
    model may be NULL when layout keys identify derived nodes, not records. */
 int gd_graph_overview_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
                             GD_OverviewControls *controls, int undirected);
+/* Non-NULL metric uses caller's typed link evidence, not generic relation names. */
+int gd_graph_overview_panel_metric(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                            GD_OverviewControls *controls, int undirected, const char *metric);
 /* Returns chosen family representative node for ordinary source navigation. */
 int gd_graph_shapes_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
                           int selected, bool *enabled);

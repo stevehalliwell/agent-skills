@@ -186,15 +186,27 @@ static int visible(GD_ExplorerContext *c, int node) {
     }
     return 1;
 }
+static int overview_only(const GD_ExplorerPane *p) { return p->view==GD_EXPLORER_NOUNS || query_view(p->view); }
+static int overview_available(const GD_ExplorerContext *c) {
+    const GD_ExplorerPane *p=c->pane;
+    return p->prepared && p->layout && !grid_view(p) && !gd_explorer_similarity_active(c) &&
+        (!query_view(p->view) || (p->query_state && p->query_state->scene));
+}
+static int overview_incidence(const GD_ExplorerPane *p) { return incidence(p->view) || overview_only(p); }
+static const char *overview_metric(const GD_ExplorerPane *p) {
+    if(p->view==GD_EXPLORER_NOUNS)return "Noun-pair links";
+    if(query_view(p->view))return p->query_state && p->query_state->scene && p->query_state->scene->overview ? "Actor map links":"Query associations";
+    return "Link rows";
+}
 static int analyze(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; unsigned char shown[GD_MAX_RECORDS]; int i,selected=-1;
-    if (p->view==GD_EXPLORER_NOUNS || grid_view(p) || query_view(p->view) || gd_explorer_similarity_active(c)) return p->selection.node; /* No generic layers over Grid or state/ghost associations. */
+    if (!overview_available(c)) return p->selection.node;
     if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_mark(c);
     for (i=0;i<p->layout->node_count;++i) {
         shown[i]=(unsigned char)visible(c,i);
         if (p->view==GD_EXPLORER_MDA ? p->layout->nodes[i].key==p->mda.record : i==p->selection.node) selected=i;
     }
-    if (gd_graph_analyze(p->layout,shown,p->view==GD_EXPLORER_MATRIX ? p->overlay:1,p->lens,c->analysis)) {
+    if (overview_only(p) ? gd_graph_analyze_overview(p->layout,shown,c->analysis) : gd_graph_analyze(p->layout,shown,p->view==GD_EXPLORER_MATRIX ? p->overlay:1,p->lens,c->analysis)) {
         p->peer=p->foundation_peer=-1; ++c->scope_revision;
     }
     return selected>=0 && shown[selected] ? selected:-1;
@@ -313,7 +325,10 @@ static void draw_matches(GD_ExplorerContext *c) {
     EndMode2D(); EndScissorMode();
 }
 static void source(GD_ExplorerContext *c, int edge) {
-    if (is_graph(c->pane->view)) gd_explorer_graph_source(c,edge);
+    if(c->pane->view==GD_EXPLORER_NOUNS) {
+        if(edge>=0 && edge<c->pane->layout->edge_count)noun_grid_details_pair(c,c->pane->layout->edges[edge].key,0);
+    }
+    else if (is_graph(c->pane->view)) gd_explorer_graph_source(c,edge);
     else if (c->pane->view==GD_EXPLORER_MDA) gd_explorer_mda_source(c,edge);
     else if (query_view(c->pane->view)) gd_explorer_query_source(c,edge);
     else gd_explorer_resource_source(c,edge);
@@ -327,7 +342,8 @@ static const unsigned char *entries(GD_ExplorerContext *c, unsigned char *roots)
 static GD_ExplorerEvidence evidence(GD_ExplorerContext *c, int selected) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view);
     GD_ExplorerEvidence e={0}; unsigned char roots[GD_MAX_RECORDS];
-    if (p->view==GD_EXPLORER_NOUNS || grid_view(p) || query_view(p->view) || gd_explorer_similarity_active(c)) return e;
+    if (!overview_available(c)) return e;
+    if (overview_only(p)) { e.overview=gd_graph_overview(c->analysis,&p->overview,1); return e; }
     e.paths=gd_graph_paths_prepare(c->analysis,&p->paths,entries(c,roots),incidence(p->view));
     if (e.paths && p->paths.compare) e.bypass=gd_graph_path_bypass(c->analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK);
     if (p->foundations) e.foundations=gd_graph_foundations(model,c->analysis,p->view==GD_EXPLORER_RELATIONSHIPS);
@@ -346,8 +362,27 @@ static GD_ExplorerEvidence evidence(GD_ExplorerContext *c, int selected) {
 }
 static void sources_for_marks(GD_ExplorerContext *c, const unsigned char *marked) {
     int i,shown=0,total=0;
-    for (i=0;i<c->pane->layout->edge_count;++i) if (marked[i]) { if (shown++<64) source(c,i); ++total; }
+    for (i=0;i<c->pane->layout->edge_count;++i) if (marked[i]) { if (shown++<64) {igPushID_Int(i);source(c,i);igPopID();} ++total; }
     if (total>64) igText("%d further marked declarations; all remain highlighted",total-64);
+}
+static void overview_controls(GD_ExplorerContext *c) {
+    if(gd_graph_overview_panel_metric(NULL,c->pane->layout,c->analysis,&c->pane->overview,1,overview_metric(c->pane)))
+        sources_for_marks(c,c->analysis->overview.selected_edges);
+}
+/* Typed canvases keep their own renderer. Overlay only actual brush contributors. */
+static void overview_marks_draw(GD_ExplorerContext *c) {
+    const GD_GraphOverview *overview;const GD_Layout *shown;int i,j;
+    if(!overview_only(c->pane) || !overview_available(c))return;
+    overview=gd_graph_overview(c->analysis,&c->pane->overview,1);
+    if(!overview || !overview->selected_count)return;
+    shown=gd_explorer_display_layout(c);
+    BeginScissorMode((int)c->viewport.x,(int)c->viewport.y,(int)c->viewport.width,(int)c->viewport.height);BeginMode2D(c->pane->camera);
+    for(i=0;i<shown->edge_count;++i)if(overview->selected_edges[i]) {
+        GD_LayoutRoute route;gd_layout_route(shown,i,&route);
+        for(j=1;j<route.count;++j)DrawLineEx((Vector2){route.points[j-1].x,route.points[j-1].y},(Vector2){route.points[j].x,route.points[j].y},3/c->pane->camera.zoom,gold);
+    }
+    for(i=0;i<shown->node_count;++i)if(overview->selected_nodes[i])DrawRectangleLinesEx(focus_node_bounds(c,shown,i),2/c->pane->camera.zoom,gold);
+    EndMode2D();EndScissorMode();
 }
 static void analysis_controls(GD_ExplorerContext *c, int selected) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view);
@@ -939,6 +974,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             igTextWrapped("No distance focus applied: select a visible node. Source-only or edge inspection has no focus anchor.");
         gd_explorer_structure_controls(&c);
         if (p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view) && igCollapsingHeader_TreeNodeFlags("Analysis layers",0)) analysis_controls(&c,selected);
+        if (overview_only(p) && overview_available(&c) && igCollapsingHeader_TreeNodeFlags("Adjacency / incidence overview",0)) overview_controls(&c);
         if (p->view==GD_EXPLORER_SKILLS && igCollapsingHeader_TreeNodeFlags("Skill opportunities / knowledge",0)) { gd_explorer_graph_unlocks(&c); viewer_control_token(&viewer,&c,GD_FORM_PRESENTATION,viewer.knowledge_token,sizeof(viewer.knowledge_token)); }
         }
         if(!(sidebar.open&(1u<<GD_SIDEBAR_ANALYSIS))){if(*p->query_message)igTextWrapped("%s",p->query_message);if(*p->rule_message)igTextWrapped("%s",p->rule_message);}
@@ -1068,6 +1104,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if(render_active(&c)){if(gd_render_pose_matches(render,p->layout,render_identity(&c)))c.display_layout=&render->layout;else render_update(&c,render,0,1);}else render->valid=0;
         if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !igGetIO_Nil()->WantCaptureMouse && CheckCollisionPointRec(GetMousePosition(),c.viewport))p->find_hold_node=-1;
         if (gd_explorer_similarity_active(&c)) gd_explorer_similarity_input(&c);
+        else if (overview_only(p) && overview_available(&c) && gd_graph_overview_hit(&p->overview,c.viewport,GetMousePosition())) p->selection.held=-1;
         else if (grid_view(p)) grid_input(&c);
         else if (p->view==GD_EXPLORER_NOUNS) noun_graph_input(&c);
         else if (is_graph(p->view)) gd_explorer_graph_input(&c);
@@ -1097,12 +1134,13 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             else if (query_view(p->view)) gd_explorer_query_draw(&c);
             else gd_explorer_resource_draw(&c,&e);
         }
+        overview_marks_draw(&c);
         pair_selection_draw(&c);
         if(!gd_explorer_similarity_active(&c) && free_graph(p)){
             gd_graph_workspace_draw(p->layout,p->camera,c.viewport,p->view==GD_EXPLORER_MDA ? 3:1);
             gd_graph_islands_draw(p->layout,c.display_layout ? c.display_layout:p->layout,query_view(p->view) ? NULL:c.analysis->shown,p->camera,c.viewport,p->view==GD_EXPLORER_MDA ? 3:1);
         }
-        if (!gd_explorer_similarity_active(&c)) { draw_matches(&c); if (p->view!=GD_EXPLORER_NOUNS && !grid_view(p) && !query_view(p->view)) gd_graph_overview_draw(c.analysis,&p->overview,c.viewport,p->view==GD_EXPLORER_MDA && p->mda.link>=0 ? -1:selected,!igGetIO_Nil()->WantCaptureMouse); }
+        if (!gd_explorer_similarity_active(&c)) { draw_matches(&c); if (overview_available(&c)) gd_graph_overview_draw_metric(c.analysis,&p->overview,c.viewport,p->view==GD_EXPLORER_MDA && p->mda.link>=0 ? -1:selected,!igGetIO_Nil()->WantCaptureMouse,overview_metric(p)); }
         DrawText(gd_explorer_similarity_active(&c) ? "Similarity: Click inspect | Shift-click compare | Wheel zoom | Right/middle pan | F fit | F5 refresh":grid_view(p) ? "Grid: Arrows select | PageUp/Down cases | Wheel zoom | Right/middle drag pan | F fit | F5 refresh":p->distance_focus_enabled ? "Distance focus: click node to refocus | Off: restore pose/drag | Pan/zoom unchanged | F: fit all":"Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
         DrawText(gd_explorer_similarity_active(&c) ? "Selected typed-feature distance approximation only; missing entries remain unplaced. No importance or execution proof.":incidence(p->view) ? "Shown incidence only; not flow, causality or equivalence.":"Authored declarations only; not learning, causality or physical reachability.",20,height-18,13,muted);
         c.display_layout=NULL;p->focus_camera_override=false;

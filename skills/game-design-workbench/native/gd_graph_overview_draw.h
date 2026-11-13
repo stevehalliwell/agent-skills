@@ -35,7 +35,7 @@ static inline int gd_graph_overview_node_bin(const GD_GraphAnalysis *analysis,in
 }
 /* Fixed-screen inset, not a second source projection or a camera-dependent
    subset. Pointer events are consumed here; callers suppress graph dragging. */
-static inline void gd_graph_overview_draw(GD_GraphAnalysis *analysis, GD_OverviewControls *controls, Rectangle viewport, int selected_node,int allow_input) {
+static inline void gd_graph_overview_draw_metric(GD_GraphAnalysis *analysis, GD_OverviewControls *controls, Rectangle viewport, int selected_node,int allow_input,const char *metric) {
     const GD_GraphOverview *overview=&analysis->overview; Rectangle box,header;
     int row,column,node_bin; GD_CountRange range={0}; float size,cell;
     Vector2 mouse=GetMousePosition(); Color text={225,233,241,255};
@@ -53,7 +53,7 @@ static inline void gd_graph_overview_draw(GD_GraphAnalysis *analysis, GD_Overvie
     DrawText(TextFormat("%d bins / %d identities / %d link rows",overview->bins,overview->node_count,overview->link_count),(int)box.x+8,(int)box.y+6,12,text);
     DrawText(overview->undirected ? "Symmetric incidence; NOT flow":"Rows -> columns: shown arrows",(int)box.x+8,(int)box.y+22,12,text);
     for (row=0;row<overview->bins*overview->bins;++row) gd_count_range_add(&range,overview->counts[row]);
-    gd_count_legend(range,box.x+8,box.y+38,size,"Link rows");
+    gd_count_legend(range,box.x+8,box.y+38,size,metric);
     if (!overview->bins) return;
     cell=size/overview->bins;
     for (row=0;row<overview->bins;++row) for (column=0;column<overview->bins;++column) {
@@ -77,5 +77,8 @@ static inline void gd_graph_overview_draw(GD_GraphAnalysis *analysis, GD_Overvie
     }
     if (controls->row>=0 && controls->column>=0 && controls->row<overview->bins && controls->column<overview->bins)
         DrawRectangleLinesEx((Rectangle){box.x+8+controls->column*cell,box.y+66+controls->row*cell,cell,cell},2,(Color){255,217,125,255});
+}
+static inline void gd_graph_overview_draw(GD_GraphAnalysis *analysis, GD_OverviewControls *controls, Rectangle viewport, int selected_node,int allow_input) {
+    gd_graph_overview_draw_metric(analysis,controls,viewport,selected_node,allow_input,"Link rows");
 }
 #endif

@@ -21,7 +21,7 @@ int gd_explorer_focus_available(const GD_ExplorerContext *c) {
     const GD_ExplorerPane *p=c->pane;
     if(!p->prepared || !p->layout)return 0;
     if(gd_explorer_similarity_active(c))return p->structure_state->similarity_row>=0;
-    if(p->view<GD_EXPLORER_ACTORS && !grid_view(p) && p->overview.row>=0 && p->overview.column>=0)return 1;
+    if(overview_available(c) && p->overview.row>=0 && p->overview.column>=0)return 1;
     if(p->view==GD_EXPLORER_MDA)return p->mda.record>=0 || p->mda.link>=0;
     if(p->selection.node>=0 || p->selection.cell>=0 || p->selection.linked>=0)return 1;
     return (p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_NOUNS) && p->grid.noun>=0 && p->grid.verb>=0;
@@ -72,7 +72,10 @@ static int focus_selection(GD_ExplorerContext *c,int frame) {
         for(i=0;i<count;++i)if(p->layout->nodes[nodes[i]].key==p->grid.noun)primary=nodes[i];
         if(!grid_view(p) && p->selection.cell>=0)for(i=0;i<p->layout->edge_count;++i)if(p->layout->edges[i].key==p->selection.cell){edge=i;break;}
     }else if(p->selection.node>=0 && p->selection.node<p->layout->node_count){marked[p->selection.node]=1;primary=p->selection.node;}
-    else if(p->selection.cell>=0){for(i=0;i<p->layout->edge_count;++i)if(p->layout->edges[i].key==p->selection.cell){edge=i;break;}}
+    else if(p->selection.cell>=0){
+        if(query_view(p->view)){if(p->selection.cell<p->layout->edge_count)edge=p->selection.cell;}
+        else for(i=0;i<p->layout->edge_count;++i)if(p->layout->edges[i].key==p->selection.cell){edge=i;break;}
+    }
     else if(p->selection.linked>=0){
         for(i=0;i<p->layout->node_count;++i)if(focus_source_record(c,i)==p->selection.linked){marked[i]=1;if(primary<0)primary=i;}
         /* Matrix case sources are represented by declared cells/edges, not
@@ -87,8 +90,8 @@ static int focus_selection(GD_ExplorerContext *c,int frame) {
         }
     }
     if(edge>=0){const GD_LayoutEdge *e=&p->layout->edges[edge];marked[e->a]=marked[e->b]=1;if(primary<0)primary=e->a;result.hidden_link=!focus_edge_shown(c,edge);}
-    if(p->view<GD_EXPLORER_ACTORS && !grid_view(p) && p->overview.row>=0 && p->overview.column>=0){
-        const GD_GraphOverview *overview;analyze(c);overview=gd_graph_overview(c->analysis,&p->overview,incidence(p->view));
+    if(overview_available(c) && p->overview.row>=0 && p->overview.column>=0){
+        const GD_GraphOverview *overview;analyze(c);overview=gd_graph_overview(c->analysis,&p->overview,overview_incidence(p));
         if(overview)for(i=0;i<p->layout->node_count;++i)if(overview->selected_nodes[i])marked[i]=1;
     }
     for(i=0;i<p->layout->node_count;++i)if(marked[i]){

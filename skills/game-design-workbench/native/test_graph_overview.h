@@ -67,6 +67,17 @@ TEST(graph_overview_limits,
     gd_graph_overview_select(analysis,3,0); TEST_ASSERT(!overview->selected_count);
     layout->edges[0].relation=GD_MECHANICS; TEST_ASSERT(gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis) && !overview->valid);
     overview=gd_graph_overview(analysis,&controls,0); TEST_ASSERT(overview->link_count==3);
+    /* Snapshot path counts topology only: duplicate links and self-pairs once,
+       isolates retained; no shared-neighbor/closure evaluation. */
+    TEST_ASSERT(gd_graph_analyze_overview(layout,NULL,analysis) && analysis->overview_only && analysis->complete && !analysis->work && !analysis->feature_count && !analysis->pair_count);
+    overview=gd_graph_overview(analysis,&controls,1);
+    TEST_ASSERT(overview->link_count==3 && overview->counts[1]==2 && overview->counts[3]==2 && overview->counts[0]==1 && overview->node_bin[2]>=0);
+    controls.row=0;controls.column=1;controls.enabled=0;overview=gd_graph_overview(analysis,&controls,1);
+    TEST_ASSERT(overview->selected_count==2 && !overview->selected_nodes[2]);
+    layout->nodes[0].x+=100;
+    TEST_ASSERT(!gd_graph_analyze_overview(layout,NULL,analysis) && gd_graph_overview(analysis,&controls,1)->selected_count==2);
+    {unsigned char shown[3]={1,1,0};TEST_ASSERT(gd_graph_analyze_overview(layout,shown,analysis));overview=gd_graph_overview(analysis,&controls,1);controls.enabled=1;overview=gd_graph_overview(analysis,&controls,1);TEST_ASSERT(overview->node_count==2 && overview->node_bin[2]==-1 && overview->link_count==3);}
+    TEST_ASSERT(gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis) && !analysis->overview_only);
     layout->node_count=GD_MAX_RECORDS; layout->edge_count=GD_MAX_PAIRS;
     for (i=0;i<layout->node_count;++i) layout->nodes[i].key=i;
     for (i=0;i<layout->edge_count;++i) layout->edges[i]=(GD_LayoutEdge){0,1+i%(GD_MAX_RECORDS-1),i,1,i%7};
@@ -76,6 +87,8 @@ TEST(graph_overview_limits,
     for (i=0;i<layout->edge_count;++i) if (overview->selected_edges[i]) TEST_ASSERT(layout->edges[i].a!=layout->edges[i].b); /* Diagonal bin is not self-loop proof. */
     layout->node_count=layout->edge_count=0; gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis); overview=gd_graph_overview(analysis,&controls,0);
     TEST_ASSERT(overview && !overview->bins && !overview->link_count && !overview->selected_count && overview->start[0]==0);
+    TEST_ASSERT(gd_graph_analyze_overview(layout,NULL,analysis));overview=gd_graph_overview(analysis,&controls,1);
+    TEST_ASSERT(overview && !overview->bins && !overview->link_count && !overview->selected_count);
     printf("graph view scratch: %lu bytes; overview: %lu bytes\n",(unsigned long)sizeof(*analysis),(unsigned long)sizeof(*overview));
     release(storage,analysis); release(storage,layout);
 )
