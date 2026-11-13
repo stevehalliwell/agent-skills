@@ -389,7 +389,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         draw(model,mda,layout,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair,shapes,overview);
         gd_graph_workspace_draw(layout,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
         gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
-        gd_graph_overview_draw(analysis,&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
+        gd_graph_overview_draw(analysis,&overview_controls,viewport,display.link>=0 ? -1:shared_selected,!igGetIO_Nil()->WantCaptureMouse);
         if (paths) DrawText(TextFormat("D: dominated targets | J: incoming neighbors | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,155,12,gd_path_color);
         if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
         DrawText("Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload",20,height-40,14,muted);

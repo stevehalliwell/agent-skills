@@ -10,7 +10,7 @@
 - Grid and similarity modes hide overview without overwriting graph expansion preference. Selecting another node never reopens collapsed overview.
 - Header toggle changes only expansion: no camera/viewport changes, reseed, source edits, selection replacement, history edits or Run of pending analytical inputs. Expanded overview passively derives existing shown-projection bins/counts; this is not an analytical query Run.
 - Collapse retains selected-cell graph highlights/evidence and gold header indicator; expansion is not brush enablement. F frames selected endpoints plus primary selection; Escape / Clear selection clears brush explicitly. [Framing and clear contract](selection-framing.md).
-- Preserve exact projected link-row counts, linear cell-fill scale, cell selection and evidence. No new case/record aggregation, reverse highlighting or added view coverage. Overview is topology, not spatial minimap or similarity distance.
+- Preserve exact projected link-row counts, linear cell-fill scale, cell selection and evidence. No new case/record aggregation or added view coverage. [Selected-node bin cue](overview-node-cue.md) is separate render-only follow-up. Overview is topology, not spatial minimap or similarity distance.
 
 ## Checks
 

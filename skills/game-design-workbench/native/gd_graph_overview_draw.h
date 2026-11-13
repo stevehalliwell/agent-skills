@@ -28,11 +28,16 @@ static inline int gd_graph_overview_toggle(GD_OverviewControls *controls,Rectang
     if(!header.width || !CheckCollisionPointRec(mouse,header))return 0;
     controls->enabled=!controls->enabled;return 1;
 }
+/* Projection indices are bounded here; bins may contain several identities. */
+static inline int gd_graph_overview_node_bin(const GD_GraphAnalysis *analysis,int node){
+    int bin;if(!analysis->initialized || !analysis->overview.valid || node<0 || node>=analysis->node_count || !analysis->shown[node])return -1;
+    bin=analysis->overview.node_bin[node];return bin>=0 && bin<analysis->overview.bins ? bin:-1;
+}
 /* Fixed-screen inset, not a second source projection or a camera-dependent
    subset. Pointer events are consumed here; callers suppress graph dragging. */
-static inline void gd_graph_overview_draw(GD_GraphAnalysis *analysis, GD_OverviewControls *controls, Rectangle viewport, int allow_input) {
+static inline void gd_graph_overview_draw(GD_GraphAnalysis *analysis, GD_OverviewControls *controls, Rectangle viewport, int selected_node,int allow_input) {
     const GD_GraphOverview *overview=&analysis->overview; Rectangle box,header;
-    int row,column; GD_CountRange range={0}; float size,cell;
+    int row,column,node_bin; GD_CountRange range={0}; float size,cell;
     Vector2 mouse=GetMousePosition(); Color text={225,233,241,255};
     if(allow_input && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))gd_graph_overview_toggle(controls,viewport,mouse);
     box=gd_graph_overview_visible_bounds(controls,viewport);if(!box.width)return;
@@ -54,6 +59,14 @@ static inline void gd_graph_overview_draw(GD_GraphAnalysis *analysis, GD_Overvie
     for (row=0;row<overview->bins;++row) for (column=0;column<overview->bins;++column) {
         int count=overview->counts[row*overview->bins+column];
         DrawRectangleRec((Rectangle){box.x+8+column*cell,box.y+66+row*cell,cell-0.5f,cell-0.5f},gd_count_color(range,count));
+    }
+    node_bin=gd_graph_overview_node_bin(analysis,selected_node);
+    if(node_bin>=0){
+        Color cue={100,178,245,255};const char *label=TextFormat("Node bin %d (%d identities)",node_bin,overview->start[node_bin+1]-overview->start[node_bin]);
+        DrawRectangleLinesEx((Rectangle){box.x+8,box.y+66+node_bin*cell,size,cell},1.5f,cue);
+        DrawRectangleLinesEx((Rectangle){box.x+8+node_bin*cell,box.y+66,cell,size},1.5f,cue);
+        if(MeasureText(label,12)>size)label=TextFormat("Bin %d",node_bin);
+        DrawText(label,(int)box.x+8,(int)(box.y+68+size),12,cue);
     }
     if (allow_input && mouse.x>=box.x+8 && mouse.x<box.x+8+size && mouse.y>=box.y+66 && mouse.y<box.y+66+size) {
         column=(int)((mouse.x-box.x-8)/cell); row=(int)((mouse.y-box.y-66)/cell);

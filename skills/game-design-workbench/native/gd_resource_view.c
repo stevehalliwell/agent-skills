@@ -462,7 +462,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                             paths,bypass,reachability,reach_pair,shapes,overview);
         gd_graph_workspace_draw(layout,camera,viewport,1);
         gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,1);
-        gd_graph_overview_draw(analysis,&overview_controls,viewport,1);
+        gd_graph_overview_draw(analysis,&overview_controls,viewport,selected,1);
         DrawRectangle(split,100,width-split,height-100,(Color){29,38,51,255});
         DrawText(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
         DrawText(path_tab==1 ? "[Paths]":"Paths",split+124,76,14,foreground);

@@ -850,7 +850,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             }
             EndMode2D(); EndScissorMode();
         }
-        gd_graph_overview_draw(analysis,&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
+        gd_graph_overview_draw(analysis,&overview_controls,viewport,selection.node,!igGetIO_Nil()->WantCaptureMouse);
         if (paths) DrawText(TextFormat("D: dominated targets | !: ancestor | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,height-69,12,gd_path_color);
         if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(Color){193,155,228,255});
         DrawText(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);

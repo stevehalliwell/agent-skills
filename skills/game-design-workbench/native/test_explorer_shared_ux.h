@@ -137,7 +137,19 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
         p->overview.enabled=1;overview=gd_graph_overview(c.analysis,&p->overview,1);
         for(cell=0;cell<overview->bins*overview->bins && !overview->counts[cell];++cell){}
         UX_CHECK(cell<overview->bins*overview->bins);p->overview.row=cell/overview->bins;p->overview.column=cell%overview->bins;
-        overview=gd_graph_overview(c.analysis,&p->overview,1);p->overview.enabled=0;
+        overview=gd_graph_overview(c.analysis,&p->overview,1);
+        {GD_OverviewControls controls=p->overview;int selected=overview->nodes[0],bin=gd_graph_overview_node_bin(c.analysis,selected),begin,end,i,member=0,brush_count=overview->selected_count;Camera2D camera=p->camera;
+            UX_CHECK(bin>=0 && bin<overview->bins && gd_graph_overview_node_bin(c.analysis,-1)==-1 && gd_graph_overview_node_bin(c.analysis,c.analysis->node_count)==-1);
+            begin=overview->start[bin];end=overview->start[bin+1];
+            for(i=begin;i<end;++i)if(overview->nodes[i]==selected)member=1;UX_CHECK(member);
+            c.analysis->shown[selected]=0;UX_CHECK(gd_graph_overview_node_bin(c.analysis,selected)==-1);c.analysis->shown[selected]=1;
+            c.analysis->overview.valid=0;UX_CHECK(gd_graph_overview_node_bin(c.analysis,selected)==-1);c.analysis->overview.valid=1;
+            c.analysis->initialized=0;UX_CHECK(gd_graph_overview_node_bin(c.analysis,selected)==-1);c.analysis->initialized=1;
+            if(end-begin>1)UX_CHECK(gd_graph_overview_node_bin(c.analysis,overview->nodes[begin+1])==bin);
+            p->overview.enabled=0;UX_CHECK(gd_graph_overview_node_bin(c.analysis,selected)==bin && !p->overview.enabled);p->overview.enabled=controls.enabled;
+            UX_CHECK(!memcmp(&controls,&p->overview,sizeof(controls)) && !memcmp(&camera,&p->camera,sizeof(camera)) && overview->selected_count==brush_count);
+        }
+        p->overview.enabled=0;
         UX_CHECK(evidence(&c,-1).overview==overview && overview->selected_count>0);
         for(node=0;node<p->layout->node_count;++node)if(visible(&c,node)){if(overview->selected_nodes[node]){grid_union(&bounds,focus_node_bounds(&c,p->layout,node),&found);++marked;}else if(extra<0)extra=node;}
         if(extra>=0){p->selection.node=extra;grid_union(&bounds,focus_node_bounds(&c,p->layout,extra),&found);++marked;}
