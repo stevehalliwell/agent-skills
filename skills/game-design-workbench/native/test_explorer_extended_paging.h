@@ -55,13 +55,54 @@ static int explorer_extended_paging_checks(GD_ExplorerContext *c,GD_Layout *save
     /* Full retained parent chain, not a fabricated execution trace. */
     {int *arcs=c->panes[GD_EXPLORER_ACTORS].structure_state->witness_arcs,length,work;const GD_GraphClosure *closure;GD_EvidencePage page;
         memset(saved,0,sizeof(*saved));saved->node_count=130;saved->edge_count=129;
-        for(i=0;i<130;++i)saved->nodes[i].key=i;
+        for(i=0;i<130;++i){saved->nodes[i].key=i;saved->nodes[i].label="Synthetic parent node";}
         for(i=0;i<129;++i)saved->edges[i]=(GD_LayoutEdge){i,i+1,i,1,1};
         gd_graph_analyze(saved,NULL,0,GD_GRAPH_ANY,c->analysis);
         closure=gd_graph_closure(c->analysis,NULL,NULL,1,0,0,GD_GRAPH_ANALYSIS_WORK);
         EXT_PAGE_CHECK(closure && closure->complete && gd_graph_closure_compare(c->analysis,0,1));work=c->analysis->work;
         length=gd_graph_closure_path(c->analysis,closure,0,129,arcs,GD_MAX_RECORDS);EXT_PAGE_CHECK(length==129);page=gd_evidence_page(length,64,2);
         EXT_PAGE_CHECK(page.first==128 && page.end==129 && arcs[length-1]/2==0 && arcs[length-1-page.first]/2==128 && c->analysis->work==work);
+        for(j=0;j<3;++j){int slice[GD_EVIDENCE_PAGE_ROWS],offset;page=gd_evidence_page(length,64,j);offset=length-page.end;
+            EXT_PAGE_CHECK(gd_graph_closure_path_slice(c->analysis,closure,0,129,offset,slice,page.end-page.first)==length);
+            for(i=0;i<page.end-page.first;++i)EXT_PAGE_CHECK(slice[i]==arcs[offset+i]);
+        }
+        /* CPU-only real compact panels. Page changes retain exact peer/target and native work. */
+        {GD_GraphEvidencePages pages={0};GD_ReachControls controls={1,1,0,-1,-1},before;
+         const GD_GraphClosure *retained=gd_graph_reachability_prepare(c->analysis,&controls,0);int allocations=*calls,valid;
+         EXT_PAGE_CHECK(retained && retained->complete && gd_graph_closure_choose_into(c->analysis,&c->analysis->reachability,0,&controls.peer));
+         controls.peer=1;controls.target=129;before=controls;
+         work=retained->work;pages.reach_peers=1;pages.reach_targets=2;pages.witness[0]=2;
+         ImGuiIO *io=igGetIO_Nil();io->DisplaySize=(ImVec2_c){1000,900};io->DeltaTime=1.0f/60.0f;io->BackendFlags|=ImGuiBackendFlags_RendererHasTextures;
+         for(j=0;j<2;++j){
+             igNewFrame();igSetNextWindowSize((ImVec2_c){900,850},ImGuiCond_Always);igBegin("Compact paging regression",NULL,0);
+             ImGuiStorage_SetInt(igGetStateStorage(),igGetID_Str("Typed reachability peers"),1);ImGuiStorage_SetInt(igGetStateStorage(),igGetID_Str("Typed reachability evidence"),1);
+             int opened=gd_graph_reachability_panel(saved,c->analysis,0,&controls,0,&pages);igEnd();igEndFrame();
+             valid=opened && pages.reach_targets==(j ? 0:2) && pages.witness[0]==(j ? 0:2) && !memcmp(&before,&controls,sizeof(before)) && retained->work==work && *calls==allocations;
+             if(!valid)fprintf(stderr,"Compact frame %d: target page %d witness page %d peer %d target %d work %d/%d allocations %d/%d\n",j,pages.reach_targets,pages.witness[0],controls.peer,controls.target,retained->work,work,*calls,allocations);
+             EXT_PAGE_CHECK(valid);pages.reach_targets=pages.witness[0]=0;
+         }
+         {GD_PathControls paths={0};paths.enabled=1;paths.count=1;paths.keys[0]=0;GD_PathControls original=paths;
+          EXT_PAGE_CHECK(gd_graph_paths_prepare(c->analysis,&paths,NULL,0) && gd_graph_path_selection(c->analysis,129)->ancestor_count==129);
+          pages.ancestors=2;igNewFrame();igBegin("Compact paging regression",NULL,0);ImGuiStorage_SetInt(igGetStateStorage(),igGetID_Str("Mandatory-path evidence"),1);
+          int opened=gd_graph_paths_panel(saved,c->analysis,&paths,129,NULL,0,&pages);igEnd();igEndFrame();
+          EXT_PAGE_CHECK(opened && pages.ancestors==2 && !memcmp(&original,&paths,sizeof(paths)) && *calls==allocations);
+         }
+         /* Many ordinary representations may refer to one canonical source; no first-alias navigation. */
+         for(i=0;i<130;++i)saved->nodes[i].key=0;c->analysis->initialized=0;gd_graph_analyze(saved,NULL,0,GD_GRAPH_ANY,c->analysis);
+         {bool enabled=true;pages.members=1;igNewFrame();igBegin("Compact paging regression",NULL,0);
+          ImGuiStorage_SetInt(igGetStateStorage(),igGetID_Str("Discovered shape families"),1);ImGuiStorage_SetInt(igGetStateStorage(),igGetID_Str("Shape signature and members"),1);
+          int chosen=gd_graph_shapes_panel(gd_explorer_model(c->project,p->view),saved,c->analysis,65,&enabled,&pages);igEnd();igEndFrame();
+          EXT_PAGE_CHECK(chosen<0 && pages.members==1 && c->analysis->shapes.size[c->analysis->shapes.colors[65]]>=65 && *calls==allocations);
+         }
+         /* Star leaves share one endpoint; page order never substitutes a peer. */
+         for(i=0;i<129;++i)saved->edges[i]=(GD_LayoutEdge){0,i+1,i,1,1};c->analysis->initialized=0;gd_graph_analyze(saved,NULL,0,GD_GRAPH_ANY,c->analysis);
+         {bool enabled=true,branches=false;GD_GraphLens lens=GD_GRAPH_ANY;int peer=2,pair=-1;pages.shared_peers=1;work=c->analysis->work;
+          EXT_PAGE_CHECK(c->analysis->matched[1]==128);
+          igNewFrame();igBegin("Compact paging regression",NULL,0);ImGuiStorage_SetInt(igGetStateStorage(),igGetID_Str("Shared-neighbor evidence"),1);
+          pair=gd_graph_analysis_panel(saved,c->analysis,1,&enabled,&lens,&branches,&peer,&pages);igEnd();igEndFrame();
+          EXT_PAGE_CHECK(pair==gd_graph_match(c->analysis,1,2) && peer==2 && pages.shared_peers==1 && c->analysis->work==work && *calls==allocations);
+         }
+        }
         c->analysis->initialized=0;
     }
     result=1;

@@ -131,6 +131,7 @@ typedef struct {
     GD_ExplorerMdaDisplay mda;
     GD_Focus focus;
     GD_DiagnosticBrowser diagnostics;
+    GD_GraphEvidencePages evidence_pages;
     GD_PathControls paths;
     GD_ReachControls reach;
     GD_OverviewControls overview;

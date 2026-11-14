@@ -157,19 +157,22 @@ const GD_GraphComparison *gd_graph_closure_compare(GD_GraphAnalysis *analysis, i
 const GD_GraphComparison *gd_graph_closure_choose(GD_GraphAnalysis *analysis, int a, int *peer) {
     return gd_graph_closure_choose_into(analysis,&analysis->foundations,a,peer);
 }
-int gd_graph_closure_path(const GD_GraphAnalysis *analysis, const GD_GraphClosure *closure, int side, int target, int *arcs, int capacity) {
+int gd_graph_closure_path_slice(const GD_GraphAnalysis *analysis, const GD_GraphClosure *closure, int side, int target, int offset, int *arcs, int capacity) {
     const GD_GraphComparison *comparison=&closure->comparison; const int *parents; int root,length=0,node=target;
-    assert(capacity>=0 && (arcs || !capacity));
+    assert(offset>=0 && capacity>=0 && (arcs || !capacity));
     if (!closure->valid || !comparison->valid || side<0 || side>1 || target<0 || target>=analysis->node_count) return -1;
     root=side ? comparison->b:comparison->a; parents=side ? comparison->first_b:comparison->first_a;
     if (root<0 || (target!=root && parents[target]<0)) return -1;
     while (node!=root && length<analysis->node_count) {
         int arc=parents[node]; const GD_LayoutEdge *edge;
         if (arc<0) return -1;
-        if (length<capacity) arcs[length]=arc;
+        if (length>=offset && length-offset<capacity) arcs[length-offset]=arc;
         ++length; edge=&analysis->edges[arc/2]; node=arc%2 ? edge->b:edge->a;
     }
     return node==root ? length:-1;
+}
+int gd_graph_closure_path(const GD_GraphAnalysis *analysis,const GD_GraphClosure *closure,int side,int target,int *arcs,int capacity) {
+    return gd_graph_closure_path_slice(analysis,closure,side,target,0,arcs,capacity);
 }
 const char *gd_graph_relation_name(int relation) {
     if (relation<0) return "projection relation";

@@ -2,12 +2,12 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_evidence_page_ui.h"
 #include <stdio.h>
 
 int gd_graph_analysis_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis,
-                            int selected, bool *enabled, GD_GraphLens *lens, bool *branches, int *peer) {
-    enum { DISPLAY_MATCHES=128 };
-    int i,pair,shown=0,evidence;
+                            int selected, bool *enabled, GD_GraphLens *lens, bool *branches, int *peer,GD_GraphEvidencePages *pages) {
+    int i,pair,shown=0,evidence;GD_EvidencePage page;
     igSeparator(); igCheckbox("Shared neighbors layer",enabled);
     if (!*enabled) return -1;
     { int choice=*lens;
@@ -36,17 +36,17 @@ int gd_graph_analysis_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis,
     }
     evidence=igCollapsingHeader_TreeNodeFlags("Shared-neighbor evidence",0);
     if (evidence) {
+    int total=0;for(i=0;i<analysis->pair_count;++i)total+=analysis->pairs[i].a==selected || analysis->pairs[i].b==selected;
+    page=gd_explorer_evidence_pager("Shared-neighbor matches",&pages->shared_peers,total,GD_EVIDENCE_PAGE_ROWS);
     igBeginChild_Str("Shared neighbor matches",(ImVec2_c){0,85},0,0);
     for (i=0;i<analysis->pair_count;++i) {
         const GD_GraphMatch *match=&analysis->pairs[i]; int other; char label[192];
         if (match->a!=selected && match->b!=selected) continue;
+        if(!gd_evidence_page_take(&page,&shown))continue;
         other=match->a==selected ? match->b:match->a;
-        if (*peer<0) *peer=other;
         snprintf(label,sizeof(label),"%.96s | %d%s shared##shared-%d",layout->nodes[other].label,match->shared,analysis->complete ? "":"+",other);
         if (igButton(label,(ImVec2_c){0,0})) *peer=other;
-        if (++shown==DISPLAY_MATCHES) break;
     }
-    if (analysis->matched[selected]>shown) igText("%d more retained matches not listed",analysis->matched[selected]-shown);
     if (!shown) igTextUnformatted(analysis->complete ? "No shared-neighbor match in this projection.":"No retained match; result is partial.",NULL);
     igEndChild();
     }
@@ -68,7 +68,7 @@ int gd_graph_analysis_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis,
     return pair;
 }
 int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD_PathControls *controls,
-                         int selected, const unsigned char *declared, int undirected) {
+                         int selected, const unsigned char *declared, int undirected,GD_GraphEvidencePages *pages) {
     const GD_GraphPaths *paths; const GD_PathSelection *selection; bool enabled=controls->enabled!=0;
     int i,node;
     igSeparator(); igCheckbox("Mandatory paths layer",&enabled); controls->enabled=enabled;
@@ -88,9 +88,8 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
     igTextUnformatted("D-: unreachable | D?: unavailable",NULL);
     igTextWrapped("White triangle: analysis start. Pink: one supporting path. !: mandatory ancestor of selection. These are not traffic or importance scores.");
     igText("Virtual start (analysis-only): %d shown starts",paths->root_count);
-    { int shown=0;
-      for (i=0;i<layout->node_count && shown<8;++i) if (paths->roots[i]) { igTextWrapped("Start: %s",layout->nodes[i].label); ++shown; }
-      if (paths->root_count>shown) igText("%d further shown starts",paths->root_count-shown); }
+    {int ordinal=0;GD_EvidencePage page=gd_explorer_evidence_pager("Shown starts",&pages->roots,paths->root_count,GD_EVIDENCE_PAGE_ROWS);
+      for(i=0;i<layout->node_count;++i)if(paths->roots[i] && gd_evidence_page_take(&page,&ordinal))igTextWrapped("Start: %s",layout->nodes[i].label);}
     if (!paths->root_count) { igTextWrapped("Unavailable: choose shown analysis starts; node inspection does not change starts."); return 0; }
     if (!paths->complete) { igTextWrapped("UNAVAILABLE: path work limit reached. Intermediate dominators are not proofs."); return 0; }
     igText("Reachable: %d / %d shown nodes",paths->reachable_count,analysis->shown_nodes);
@@ -104,11 +103,10 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
         GD_PathSelection *nominated=&analysis->paths.selection;
         if (!selection->candidate_count) igTextWrapped("No nonmandatory node on this support path. This does not rule out alternatives elsewhere.");
         else {
-            const char *labels[64]; int choice=0,count=selection->candidate_count<64 ? selection->candidate_count:64;
+            GD_EvidencePage page=gd_explorer_evidence_pager("Support-path candidates",&pages->candidates,selection->candidate_count,GD_EVIDENCE_PAGE_ROWS);
             const GD_PathBypass *bypass;
-            for (i=0;i<count;++i) { labels[i]=layout->nodes[selection->candidates[i]].label; if (selection->candidate==selection->candidates[i]) choice=i; }
-            if (igCombo_Str_arr("Candidate C",&choice,labels,count,-1)) nominated->candidate=selection->candidates[choice];
-            if (selection->candidate_count>count) igText("%d further support-path candidates not listed",selection->candidate_count-count);
+            if(igBeginCombo("Candidate C",selection->candidate>=0 ? layout->nodes[selection->candidate].label:"Choose candidate",0)){
+                for(i=page.first;i<page.end;++i){int candidate=selection->candidates[i];igPushID_Int(candidate);if(igSelectable_Bool(layout->nodes[candidate].label,candidate==selection->candidate,0,(ImVec2_c){0,0}))nominated->candidate=candidate;igPopID();}igEndCombo();}
             bypass=gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK);
             if (!bypass->complete) igTextWrapped("Bypass witness unavailable: work limit. No partial witness proof.");
             else if (bypass->found) {
@@ -120,11 +118,11 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
     }
     if (!igCollapsingHeader_TreeNodeFlags("Mandatory-path evidence",0)) return 0;
     igTextWrapped("Mandatory ancestors, closest first (derived, not necessarily adjacent source links):");
-    for (i=0,node=paths->dominator[selected];node!=analysis->node_count && i<64;node=paths->dominator[node],++i)
-        igTextUnformatted(layout->nodes[node].label,NULL);
-    if (selection->ancestor_count>i) igText("%d further mandatory ancestors",selection->ancestor_count-i);
+    {GD_EvidencePage page=gd_explorer_evidence_pager("Mandatory ancestors",&pages->ancestors,selection->ancestor_count,GD_EVIDENCE_PAGE_ROWS);
+     for(i=0,node=paths->dominator[selected];node!=analysis->node_count && i<analysis->node_count;node=paths->dominator[node],++i)if(i>=page.first && i<page.end)igTextUnformatted(layout->nodes[node].label,NULL);}
     igTextWrapped("One support path: %d links, last %d retained. Support links are NOT all mandatory.",selection->length,selection->retained);
-    for (i=selection->retained-1;i>=0;--i) {
+    GD_EvidencePage support=gd_explorer_evidence_pager("Retained support arcs",&pages->support,selection->retained,GD_EVIDENCE_PAGE_ROWS);
+    for (i=selection->retained-1-support.first;i>=selection->retained-support.end;--i) {
         int arc=selection->arcs[i]; const GD_LayoutEdge *edge=&analysis->edges[arc/2];
         igTextWrapped("%s %s %s",layout->nodes[arc%2 ? edge->b:edge->a].label,undirected ? "--":"->",layout->nodes[arc%2 ? edge->a:edge->b].label);
     }
@@ -132,7 +130,8 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
         const GD_PathBypass *bypass=gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK);
         if (bypass && bypass->complete && bypass->found) {
             igTextWrapped("Bypass avoids C: %d links, last %d retained.",bypass->length,bypass->retained);
-            for (i=bypass->retained-1;i>=0;--i) {
+            GD_EvidencePage page=gd_explorer_evidence_pager("Retained bypass arcs",&pages->bypass,bypass->retained,GD_EVIDENCE_PAGE_ROWS);
+            for (i=bypass->retained-1-page.first;i>=bypass->retained-page.end;--i) {
                 int arc=bypass->arcs[i]; const GD_LayoutEdge *edge=&analysis->edges[arc/2];
                 igTextWrapped("%s %s %s",layout->nodes[arc%2 ? edge->b:edge->a].label,undirected ? "--":"->",layout->nodes[arc%2 ? edge->a:edge->b].label);
             }
@@ -142,7 +141,7 @@ int gd_graph_paths_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, GD
 }
 
 int gd_graph_foundations_panel(const GD_Model *model, const GD_Layout *layout, GD_GraphAnalysis *analysis,
-                              int selected, int authored_direction, bool *enabled, int *peer) {
+                              int selected, int authored_direction, bool *enabled, int *peer,GD_GraphEvidencePages *pages) {
     const GD_GraphClosure *closure; const GD_GraphComparison *comparison;
     int i,shown=0;
     igSeparator(); igCheckbox("Prerequisite foundations layer",enabled);
@@ -162,13 +161,13 @@ int gd_graph_foundations_panel(const GD_Model *model, const GD_Layout *layout, G
     igText("Selection: %d direct / %d inherited-or-direct prerequisites",closure->direct[selected],closure->count[selected]);
     if (closure->unknown[selected]) igTextWrapped("UNKNOWN BOUNDARY: unresolved, wrong-role or outside-projection prerequisites occur in this closure. Counts cover shown paths only.");
     if (igCollapsingHeader_TreeNodeFlags("Shared-foundation peers",0)) {
+        GD_EvidencePage page=gd_explorer_evidence_pager("Foundation peers",&pages->foundation_peers,closure->peer_count,GD_EVIDENCE_PAGE_ROWS);
         igBeginChild_Str("Foundation peers",(ImVec2_c){0,85},0,0);
-        for (i=0;i<closure->peer_count && shown<128;++i,++shown) {
+        for (i=page.first;i<page.end;++i,++shown) {
             int node=closure->peers[i]; char label[192];
             snprintf(label,sizeof(label),"%.96s | %d shared prerequisites##foundation-%d",layout->nodes[node].label,closure->shared[node],node);
             if (igButton(label,(ImVec2_c){0,0})) *peer=node;
         }
-        if (closure->peer_count>shown) igText("%d further peers not listed",closure->peer_count-shown);
         if (!shown) igTextWrapped(closure->complete ? "No shared prerequisite closure in shown graph.":"No completed shared peer retained; global result is partial.");
         igEndChild();
     }
@@ -178,12 +177,12 @@ int gd_graph_foundations_panel(const GD_Model *model, const GD_Layout *layout, G
         igText("Shared: %d | A-required only: %d | B-required only: %d",comparison->shared,comparison->a_only,comparison->b_only);
     }
     if (!igCollapsingHeader_TreeNodeFlags("Prerequisite-closure evidence",0)) return 0;
-    shown=0;
-    for (i=0;i<layout->node_count && shown<64;++i) if (comparison->nodes[i]) {
+    shown=0;int total=0;for(i=0;i<layout->node_count;++i)total+=comparison->nodes[i]!=0;
+    GD_EvidencePage page=gd_explorer_evidence_pager("Foundation members",&pages->foundation_members,total,GD_EVIDENCE_PAGE_ROWS);
+    for (i=0;i<layout->node_count;++i) if (comparison->nodes[i] && gd_evidence_page_take(&page,&shown)) {
         const char *category=comparison->nodes[i]==GD_GRAPH_SHARED ? "shared":comparison->nodes[i]==GD_GRAPH_A_ONLY ? "A-required only":"B-required only";
-        igTextWrapped("%s: %s%s%s",category,model->records[layout->nodes[i].key].reference,closure->unknown[i] ? " | ? boundary":"",closure->cycle[i] ? " | cycle":""); ++shown;
+        igTextWrapped("%s: %s%s%s",category,model->records[layout->nodes[i].key].reference,closure->unknown[i] ? " | ? boundary":"",closure->cycle[i] ? " | cycle":"");
     }
-    if (comparison->shared+comparison->a_only+comparison->b_only>shown) igText("%d further dependencies not listed",comparison->shared+comparison->a_only+comparison->b_only-shown);
     igTextWrapped("Marked links cover complete shown dependency branches, not just one supporting path. Source examples follow. Existing route-opportunity witnesses remain separate from knowledge.");
     return 1;
 }

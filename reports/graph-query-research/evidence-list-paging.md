@@ -1,6 +1,6 @@
 # Evidence-list paging consistency
 
-First slice checkpoint `6f298e2` accepted by user without further visual review. Follow-up migrates named structural/similarity inspectors and main explorer source groups. Compact graph-layer summaries and broader visual acceptance remain open. No unperformed visual acceptance inferred.
+Checkpoints: first slice `6f298e2`; named-inspector/similarity-navigation follow-up `395a3e7`. Shared compact graph-layer evidence lists now paged; user authorized checkpoint commit. Kind-catalogue bounds, legacy Resource sidebar and broader visual acceptance remain open. No unperformed visual acceptance inferred.
 
 ## Outcome
 
@@ -92,7 +92,7 @@ Artifacts: `skills/game-design-workbench/native/build/evidence-paging-work/`.
 - Rule and Actor/Effect case participant details page independently. Participant cursors live in heap-owned rule/query workspaces, not stack-copied `GD_ExplorerPane`; no stack-limit increase. Each owner adds8,192 bytes. Structural nested cursor arrays add90,112 bytes per activated question owner, plus scalar cursors and16,384-byte heap witness scratch. Expanded support paths do not add16KiB renderer stack frames. New retained result clears cursors; failed candidate preserves previous cursors/result.
 - Shared matching-row admission helper advances only after native membership test. Empty and last-page handling use existing bounded range helper. No new evaluator, solver, allocation per page or authored-data change.
 - IPC rule-row inspection exposed unconditional similarity-mode clearing. `select --form rule` and `rule.check` now retain current canvas, both cameras and ordinary selection. Explicit source/link/cell navigation retains existing mode policy; broader source-navigation direction remains separate.
-- Remaining compact graph-layer caps live in `gd_graph_analysis_ui.c` and `gd_graph_reachability_ui.c`: root/dominator summaries, support-candidate dropdown, foundation/reachability peer/member/witness lists and topology-family summaries. These are not the migrated named-question inspectors. Keep parent paging item open.
+- Named-question inspectors remain separate from shared compact graph layers. Compact-layer migration follows below. Keep parent paging item open for residual bounds and acceptance.
 
 ## Follow-up verification
 
@@ -103,6 +103,31 @@ Artifacts: `skills/game-design-workbench/native/build/evidence-paging-followup/`
 - Synthetic similarity metadata uses129 entries; restore before serialization. Source-group metadata exercises slots70/129 and restores graph before rendering. Synthetic130-node chain retains129 witness arcs and reaches last page without changing native analysis work. No synthetic authored examples or runtime claims.
 - Production adapter reproduces rule-row inspection clearing active MDA similarity mode on both examples before fix. Regression verifies retained mode, row inspection, both cameras, ordinary MDA selection, active pane and allocation count after fix.
 - Existing paging checks remain Crate5,418/Mario6,103. Authored source hashes remain unchanged. CPU checks do not establish pointer/readability/restart/standalone acceptance.
+
+## Compact graph-layer slice
+
+- Reuse same pager in shared cimgui graph layers: retained shared-neighbor matches, starts, mandatory ancestors, support candidates, foundation peers/members, reachability peers/targets, full retained closure-parent witnesses, repeated families, signatures, family members and overview-bin identities.
+- Standalone graph/MDA marked-declaration lists also page matching retained rows. Deduplicated Skills links still expose first retained source declaration per projected link; paging does not recover producer omissions.
+- Keep 80-byte `GD_GraphEvidencePages` separate from analytical controls/cache keys. Own one per unified pane and standalone graph context. Reset view clears these cursors. No heap allocation per page or enlarged witness stack buffer.
+- `gd_graph_closure_path_slice()` reads existing retained parent arcs with bounded64-arc scratch. Offset counts backward from target internally; GUI pages remain root-to-target. Full length, native arc/source identity and cached analysis work stay unchanged. Existing full/prefix reader remains in use.
+- Candidate/target previews retain exact chosen native identity outside visible page. Target picker no longer replaces selection with first row during rendering. Invalid scope clears target to explicit choice, not inferred first target.
+- Native mandatory-support/bypass producers still retain last64 arcs. Labels retain full-length/retained-count distinction; this slice does not enlarge native results or claim complete source semantics.
+
+### Checks
+
+Artifacts: `skills/game-design-workbench/native/build/compact-sidebar-paging/` and `build/compact-sidebar-core/`.
+
+- Warning-free Windows CJIT Graph/ExplorerTest/core builds. Core148/148; focused two-example Find/shared-UX/production-IPC suite9/9. Example source hashes unchanged.
+- Closure oracle checks sliced native arc identities, untouched output guards and beyond-end offsets across existing64 randomized graphs/directions. Native work unchanged.
+- Synthetic130-node chain checks all129 arcs across three pages. CPU ImGui frames exercise reached-target/witness final pages, first-page return and mandatory-ancestor page3; exact peer/target/controls and native work retained, no project allocator calls.
+- Synthetic repeated representations exercise family membership beyond64 without first-alias navigation. Synthetic130-node star exercises128 retained shared-neighbor matches while retaining peer outside visible page. Fixtures never change authored models.
+- No live viewer launched or mutated. No GPU/pointer, restart, standalone launch, deep/research or compiler/platform acceptance inferred.
+
+### Residual bounds
+
+- Shared relation-kind picker and overview kind histogram retain64 distinct tags. Not migrated in this slice.
+- Legacy standalone raylib Resource sidebar retains its own compact member/path/source summaries. Shared cimgui migration does not change that renderer.
+- Parent paging task stays open. Practical pointer review and broader every-view/restart/standalone checks remain unperformed. Similarity readability stays deferred under separate task.
 
 ## Comments
 

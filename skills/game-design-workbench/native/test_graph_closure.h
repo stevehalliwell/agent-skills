@@ -58,6 +58,12 @@ static int test_graph_closure_oracle(void) {
                             TEST_ASSERT((length>=0)==(i==origin || reach[origin][i]));
                             if (length<0) continue;
                             TEST_ASSERT(length<6);
+                            {int full[6],offset;TEST_ASSERT(gd_graph_closure_path(analysis,closure,side,i,full,6)==length);
+                             for(offset=0;offset<=length+1;++offset){int slice[5]={-7,-7,-7,-7,-7},n;
+                                 TEST_ASSERT(gd_graph_closure_path_slice(analysis,closure,side,i,offset,slice+1,3)==length);
+                                 TEST_ASSERT(slice[0]==-7 && slice[4]==-7);
+                                 for(n=0;n<3;++n)TEST_ASSERT(slice[n+1]==(offset+n<length ? full[offset+n]:-7));
+                             }}
                             for (step=0;step<length && step<3;++step) {
                                 const GD_LayoutEdge *edge=&layout->edges[arcs[step]/2]; int reverse=arcs[step]%2;
                                 TEST_ASSERT((reverse ? edge->a:edge->b)==node && edge->relation==1 && (edge->active || mode));

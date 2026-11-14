@@ -11,6 +11,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_evidence_page_ui.h"
 #include "gd_noun_label_ui.h"
 #include <math.h>
 #include <stdarg.h>
@@ -577,6 +578,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false,foundation_enabled=false,shape_enabled=false; int shared_peer=-1,foundation_peer=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
     GD_PathControls path_controls[3]={{0}};
+    GD_GraphEvidencePages evidence_pages[3]={{0}};
     GD_OverviewControls overview_controls={1,-1,-1};
     GD_ReachControls reach_controls[3]={{0,-1,0,-1,-1},{0,-1,0,-1,-1},{0,-1,0,-1,-1}};
     GD_DiagnosticBrowser diagnostics={0};
@@ -711,11 +713,11 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (igButton("Rearrange", (ImVec2_c){0,0})) { prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; fit = 1; }
         if (!focused && !model->skill_mode) igCheckbox("Overlay other pairs (does not merge groups)", &overlay);
         if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=foundation_peer=-1;
-        { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_lens,&branches,&shared_peer);
+        { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_lens,&branches,&shared_peer,&evidence_pages[focused ? 2:challenges ? 1:0]);
           if (pair>=0) shared_source(model,layout,analysis,pair,focused,challenges); }
         {
             unsigned char entries[GD_MAX_RECORDS]; GD_PathControls *control=&path_controls[focused ? 2:challenges ? 1:0];
-            if (gd_graph_paths_panel(layout,analysis,control,selection.node,path_entries(model,layout,challenges,entries),!focused && !model->skill_mode)) {
+            if (gd_graph_paths_panel(layout,analysis,control,selection.node,path_entries(model,layout,challenges,entries),!focused && !model->skill_mode,&evidence_pages[focused ? 2:challenges ? 1:0])) {
                 const GD_PathSelection *support=gd_graph_path_selection(analysis,selection.node); int i;
                 igTextUnformatted("Support source declarations:",NULL);
                 for (i=support->retained-1;i>=0;--i) projected_source(model,layout,support->arcs[i]/2,focused,challenges);
@@ -729,25 +731,25 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             }
             if (control->enabled && model->skill_mode && !focused && !challenges) igTextWrapped("Path domination is NOT AND prerequisite necessity. Every declared prerequisite remains required; one path is not an acquisition plan.");
         }
-        if (gd_graph_foundations_panel(model,layout,analysis,selection.node,focused,&foundation_enabled,&foundation_peer)) {
+        if (gd_graph_foundations_panel(model,layout,analysis,selection.node,focused,&foundation_enabled,&foundation_peer,&evidence_pages[focused ? 2:challenges ? 1:0])) {
             const GD_GraphComparison *comparison=gd_graph_closure_choose(analysis,selection.node,&foundation_peer); int i,shown=0,total=0;
             igTextWrapped("Projected dependency links; first source per deduplicated Skills link, raw rows in Relationships:");
-            if (comparison) for (i=0;i<layout->edge_count;++i) if (comparison->edges[i]) {
-                ++total; if (shown<64) { projected_source(model,layout,i,focused,challenges); ++shown; }
-            }
-            if (total>shown) igText("%d further marked links not listed",total-shown);
+            if(comparison)for(i=0;i<layout->edge_count;++i)total+=comparison->edges[i]!=0;
+            GD_EvidencePage page=gd_explorer_evidence_pager("Foundation declarations",&evidence_pages[focused ? 2:challenges ? 1:0].foundation_sources,total,GD_EVIDENCE_PAGE_ROWS);
+            if(comparison)for(i=0;i<layout->edge_count;++i)if(comparison->edges[i] && gd_evidence_page_take(&page,&shown))projected_source(model,layout,i,focused,challenges);
         }
-        if (gd_graph_reachability_panel(layout,analysis,selection.node,&reach_controls[focused ? 2:challenges ? 1:0],!focused && !model->skill_mode)) {
+        if (gd_graph_reachability_panel(layout,analysis,selection.node,&reach_controls[focused ? 2:challenges ? 1:0],!focused && !model->skill_mode,&evidence_pages[focused ? 2:challenges ? 1:0])) {
             const GD_GraphComparison *comparison=&analysis->reachability.comparison; int i,shown=0,total=0;
             igTextWrapped("Typed traversal source examples (first source per projected Skills link):");
-            for (i=0;i<layout->edge_count;++i) if (comparison->edges[i]) { ++total; if (shown<64) { projected_source(model,layout,i,focused,challenges); ++shown; } }
-            if (total>shown) igText("%d further marked links not listed",total-shown);
+            for(i=0;i<layout->edge_count;++i)total+=comparison->edges[i]!=0;
+            GD_EvidencePage page=gd_explorer_evidence_pager("Traversal declarations",&evidence_pages[focused ? 2:challenges ? 1:0].reach_sources,total,GD_EVIDENCE_PAGE_ROWS);
+            for(i=0;i<layout->edge_count;++i)if(comparison->edges[i] && gd_evidence_page_take(&page,&shown))projected_source(model,layout,i,focused,challenges);
         }
-        { int node=gd_graph_shapes_panel(model,layout,analysis,selection.node,&shape_enabled); if (node>=0) navigate=layout->nodes[node].key; }
-        if (gd_graph_overview_panel(model,layout,analysis,&overview_controls,!focused && !model->skill_mode)) {
+        { int node=gd_graph_shapes_panel(model,layout,analysis,selection.node,&shape_enabled,&evidence_pages[focused ? 2:challenges ? 1:0]); if (node>=0) navigate=layout->nodes[node].key; }
+        if (gd_graph_overview_panel(model,layout,analysis,&overview_controls,!focused && !model->skill_mode,&evidence_pages[focused ? 2:challenges ? 1:0])) {
             int i,shown=0;
-            for (i=0;i<layout->edge_count && shown<64;++i) if (analysis->overview.selected_edges[i]) { projected_source(model,layout,i,focused,challenges); ++shown; }
-            if (analysis->overview.selected_count>shown) igText("%d further contributing links not listed",analysis->overview.selected_count-shown);
+            GD_EvidencePage page=gd_explorer_evidence_pager("Overview declarations",&evidence_pages[focused ? 2:challenges ? 1:0].overview_sources,analysis->overview.selected_count,GD_EVIDENCE_PAGE_ROWS);
+            for(i=0;i<layout->edge_count;++i)if(analysis->overview.selected_edges[i] && gd_evidence_page_take(&page,&shown))projected_source(model,layout,i,focused,challenges);
         }
         refresh = igButton("Refresh sources", (ImVec2_c){0,0});
         if (stale) igTextUnformatted("STALE: disk sources changed or could not be checked.", NULL);

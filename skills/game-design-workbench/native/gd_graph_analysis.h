@@ -160,6 +160,8 @@ const GD_GraphClosure *gd_graph_reachability_prepare(GD_GraphAnalysis *analysis,
    order, at most capacity entries. side 0/1 selects current comparison A/B.
    Source arc = 2*projected link + reversed-endpoint bit. No route semantics. */
 int gd_graph_closure_path(const GD_GraphAnalysis *analysis, const GD_GraphClosure *closure, int side, int target, int *arcs, int capacity);
+/* Read retained parents only. Offset counts arcs backward from target; return full length. */
+int gd_graph_closure_path_slice(const GD_GraphAnalysis *analysis,const GD_GraphClosure *closure,int side,int target,int offset,int *arcs,int capacity);
 const char *gd_graph_relation_name(int relation);
 /* One typed relation, or -1 for all already-selected kinds (mixed-kind paths).
    reverse follows b->a; undirected follows both endpoint

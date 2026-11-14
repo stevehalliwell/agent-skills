@@ -9,6 +9,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_evidence_page_ui.h"
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
@@ -258,6 +259,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     GD_DiagnosticBrowser diagnostics={0};
     GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false; int shared_peer=-1,shared_selected=-1;
     GD_GraphLens shared_lens=GD_GRAPH_ANY;
+    GD_GraphEvidencePages evidence_pages={0};
     GD_PathControls path_controls={0}; bool foundation_enabled=false,shape_enabled=false; int foundation_peer=-1;
     GD_ReachControls reach_controls={0,-1,0,-1,-1};
     GD_OverviewControls overview_controls={1,-1,-1};
@@ -319,13 +321,13 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         igSetNextItemWidth(-1); igInputText("##MDA-reference-filter",display.filter,sizeof(display.filter),0,NULL,NULL);
         igTextUnformatted("Reference filter; presentation only. Clear to show all.",NULL);
         mark_path(mda,&display); shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
-        { int pair=gd_graph_analysis_panel(layout,analysis,shared_selected,&shared,&shared_lens,&branches,&shared_peer);
+        { int pair=gd_graph_analysis_panel(layout,analysis,shared_selected,&shared,&shared_lens,&branches,&shared_peer,&evidence_pages);
           if (pair>=0) for (i=0;i<2;++i) {
               const GD_GraphMatch *match=&analysis->pairs[pair];
               int feature=i ? match->first_b:match->first_a;
               projected_source(model,mda,layout,analysis->features[feature].edge);
           } }
-        if (gd_graph_paths_panel(layout,analysis,&path_controls,shared_selected,NULL,0)) {
+        if (gd_graph_paths_panel(layout,analysis,&path_controls,shared_selected,NULL,0,&evidence_pages)) {
             const GD_PathSelection *support=gd_graph_path_selection(analysis,shared_selected);
             igTextUnformatted("Support source declarations:",NULL);
             for (i=support->retained-1;i>=0;--i) projected_source(model,mda,layout,support->arcs[i]/2);
@@ -337,17 +339,18 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
                 }
             }
         }
-        gd_graph_foundations_panel(model,layout,analysis,shared_selected,1,&foundation_enabled,&foundation_peer);
-        if (gd_graph_reachability_panel(layout,analysis,shared_selected,&reach_controls,0)) {
+        gd_graph_foundations_panel(model,layout,analysis,shared_selected,1,&foundation_enabled,&foundation_peer,&evidence_pages);
+        if (gd_graph_reachability_panel(layout,analysis,shared_selected,&reach_controls,0,&evidence_pages)) {
             int i,count=0; const GD_GraphComparison *comparison=&analysis->reachability.comparison;
-            for (i=0;i<layout->edge_count && count<64;++i) if (comparison->edges[i]) { projected_source(model,mda,layout,i); ++count; }
-            igTextWrapped("Source examples retain first 64 marked projected declarations; graph marks remain complete.");
+            int total=0;for(i=0;i<layout->edge_count;++i)total+=comparison->edges[i]!=0;
+            GD_EvidencePage page=gd_explorer_evidence_pager("Traversal declarations",&evidence_pages.reach_sources,total,GD_EVIDENCE_PAGE_ROWS);
+            for(i=0;i<layout->edge_count;++i)if(comparison->edges[i] && gd_evidence_page_take(&page,&count))projected_source(model,mda,layout,i);
         }
-        { int node=gd_graph_shapes_panel(model,layout,analysis,shared_selected,&shape_enabled); if (node>=0) { display.record=layout->nodes[node].key; display.link=-1; mark_path(mda,&display); } }
-        if (gd_graph_overview_panel(model,layout,analysis,&overview_controls,0)) {
+        { int node=gd_graph_shapes_panel(model,layout,analysis,shared_selected,&shape_enabled,&evidence_pages); if (node>=0) { display.record=layout->nodes[node].key; display.link=-1; mark_path(mda,&display); } }
+        if (gd_graph_overview_panel(model,layout,analysis,&overview_controls,0,&evidence_pages)) {
             int i,shown=0;
-            for (i=0;i<layout->edge_count && shown<64;++i) if (analysis->overview.selected_edges[i]) { projected_source(model,mda,layout,i); ++shown; }
-            if (analysis->overview.selected_count>shown) igText("%d further contributing declarations not listed",analysis->overview.selected_count-shown);
+            GD_EvidencePage page=gd_explorer_evidence_pager("Overview declarations",&evidence_pages.overview_sources,analysis->overview.selected_count,GD_EVIDENCE_PAGE_ROWS);
+            for(i=0;i<layout->edge_count;++i)if(analysis->overview.selected_edges[i] && gd_evidence_page_take(&page,&shown))projected_source(model,mda,layout,i);
         }
         if (path_controls.enabled) igTextWrapped("Path starts are independent of query root/traversal; follow authored arrows, not inferred causality.");
         if (igCollapsingHeader_TreeNodeFlags("Browse supplied MDA records",0)) {

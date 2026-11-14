@@ -1,21 +1,8 @@
 #ifndef GD_EXPLORER_PICKER_H
 #define GD_EXPLORER_PICKER_H
 #include "gd_picker.h"
-#include "gd_evidence_page.h"
+#include "gd_evidence_page_ui.h"
 #include "gd_noun_label_ui.h"
-/* Page state belongs to caller's exact list; page changes inspect no row. */
-static GD_EvidencePage gd_explorer_evidence_pager(const char *label,int *page,int total,int size) {
-    GD_EvidencePage range=gd_evidence_page(total,size,*page);int human;
-    *page=range.page;igPushID_Str(label);
-    igBeginDisabled(!range.page);if(igSmallButton("Previous"))--*page;igEndDisabled();igSameLine(0,-1);
-    igBeginDisabled(!range.pages || range.page+1>=range.pages);if(igSmallButton("Next"))++*page;igEndDisabled();
-    range=gd_evidence_page(total,size,*page);human=range.page+1;
-    if(range.pages>1 && igSliderInt("Page",&human,1,range.pages,"%d",0))range=gd_evidence_page(total,size,human-1);
-    *page=range.page;
-    igText("%s %d-%d of %d retained",label,total ? range.first+1:0,range.end,total);
-    if(range.pages)igText("Page %d of %d",range.page+1,range.pages);else igTextUnformatted("No retained rows in this scope",NULL);
-    igPopID();return range;
-}
 /* Compact snapshot-local cursors; all native retained-list bounds fit 16 bits of pages. */
 _Static_assert(GD_MAX_PAIRS/GD_EVIDENCE_PAGE_ROWS<65536,"Evidence page cursor capacity");
 static GD_EvidencePage gd_explorer_evidence_cursor_pager(const char *label,unsigned short *cursor,int total) {

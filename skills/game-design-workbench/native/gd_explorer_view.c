@@ -381,7 +381,7 @@ static void sources_for_marks(GD_ExplorerContext *c,const unsigned char *marked,
     igPopID();
 }
 static void overview_controls(GD_ExplorerContext *c) {
-    if(gd_graph_overview_panel_metric(NULL,c->pane->layout,c->analysis,&c->pane->overview,1,overview_metric(c->pane)))
+    if(gd_graph_overview_panel_metric(NULL,c->pane->layout,c->analysis,&c->pane->overview,1,overview_metric(c->pane),&c->pane->evidence_pages))
         sources_for_marks(c,c->analysis->overview.selected_edges,&c->pane->overview_source_page);
 }
 /* Typed canvases keep their own renderer. Overlay only actual brush contributors. */
@@ -402,9 +402,9 @@ static void overview_marks_draw(GD_ExplorerContext *c) {
 static void analysis_controls(GD_ExplorerContext *c, int selected) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view);
     unsigned char roots[GD_MAX_RECORDS]; int pair;
-    pair=gd_graph_analysis_panel(p->layout,c->analysis,selected,&p->shared,&p->lens,&p->branches,&p->peer);
+    pair=gd_graph_analysis_panel(p->layout,c->analysis,selected,&p->shared,&p->lens,&p->branches,&p->peer,&p->evidence_pages);
     if (pair>=0) { source(c,c->analysis->features[c->analysis->pairs[pair].first_a].edge); source(c,c->analysis->features[c->analysis->pairs[pair].first_b].edge); }
-    if (gd_graph_paths_panel(p->layout,c->analysis,&p->paths,selected,entries(c,roots),incidence(p->view))) {
+    if (gd_graph_paths_panel(p->layout,c->analysis,&p->paths,selected,entries(c,roots),incidence(p->view),&p->evidence_pages)) {
         const GD_PathSelection *support=gd_graph_path_selection(c->analysis,selected); int i;
         for (i=support->retained-1;i>=0;--i) source(c,support->arcs[i]/2);
         if (p->paths.compare) {
@@ -412,9 +412,9 @@ static void analysis_controls(GD_ExplorerContext *c, int selected) {
             if (bypass && bypass->complete && bypass->found) for (i=bypass->retained-1;i>=0;--i) source(c,bypass->arcs[i]/2);
         }
     }
-    if (gd_graph_foundations_panel(model,p->layout,c->analysis,selected,p->view==GD_EXPLORER_RELATIONSHIPS,&p->foundations,&p->foundation_peer))
+    if (gd_graph_foundations_panel(model,p->layout,c->analysis,selected,p->view==GD_EXPLORER_RELATIONSHIPS,&p->foundations,&p->foundation_peer,&p->evidence_pages))
         sources_for_marks(c,c->analysis->foundations.comparison.edges,&p->foundation_source_page);
-    if (gd_graph_reachability_panel(p->layout,c->analysis,selected,&p->reach,incidence(p->view))) sources_for_marks(c,c->analysis->reachability.comparison.edges,&p->reach_source_page);
+    if (gd_graph_reachability_panel(p->layout,c->analysis,selected,&p->reach,incidence(p->view),&p->evidence_pages)) sources_for_marks(c,c->analysis->reachability.comparison.edges,&p->reach_source_page);
     if (p->view==GD_EXPLORER_RESOURCES) {
         igCheckbox("Structural shapes (two exact rounds)",&p->shapes);
         if (p->shapes) {
@@ -441,10 +441,10 @@ static void analysis_controls(GD_ExplorerContext *c, int selected) {
             }
         }
     } else {
-        int node=gd_graph_shapes_panel(model,p->layout,c->analysis,selected,&p->shapes);
+        int node=gd_graph_shapes_panel(model,p->layout,c->analysis,selected,&p->shapes,&p->evidence_pages);
         if (node>=0) { if (p->view==GD_EXPLORER_MDA) { p->mda.record=p->layout->nodes[node].key; p->mda.link=-1; } else p->navigate=p->layout->nodes[node].key; }
     }
-    if (gd_graph_overview_panel(p->view==GD_EXPLORER_RESOURCES ? NULL:model,p->layout,c->analysis,&p->overview,incidence(p->view))) sources_for_marks(c,c->analysis->overview.selected_edges,&p->overview_source_page);
+    if (gd_graph_overview_panel(p->view==GD_EXPLORER_RESOURCES ? NULL:model,p->layout,c->analysis,&p->overview,incidence(p->view),&p->evidence_pages)) sources_for_marks(c,c->analysis->overview.selected_edges,&p->overview_source_page);
     if (p->view==GD_EXPLORER_SKILLS) igTextWrapped("Paths are not AND prerequisite acquisition plans. Known skills are explicit hypothetical assumptions, not mastery.");
     if (p->view==GD_EXPLORER_RESOURCES) igTextWrapped("Resource incidence is not flow. Routes and composed outcomes remain incomplete.");
 }
@@ -791,6 +791,7 @@ static int reset_view(GD_ExplorerContext *c) {
     p->mda.only_scope=p->mda.only_path=p->resource_only_witness=false;
     p->mda.roles[0]=p->mda.roles[1]=p->mda.roles[2]=p->mda.roles[3]=true;
     *p->filter=*p->mda.filter=0;p->focus_auto_fit=true;p->find_hold_node=-1;p->find_hold_layout=NULL;
+    memset(&p->evidence_pages,0,sizeof(p->evidence_pages));
     p->paused=p->view==GD_EXPLORER_MDA || p->view==GD_EXPLORER_RESOURCES || p->view==GD_EXPLORER_EFFECTS;
     p->camera=(Camera2D){.zoom=1};p->focus_result=(GD_ExplorerFocusResult){0};
     if(gd_explorer_similarity_active(c))p->structure_state->similarity_fit=true;else p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1;
