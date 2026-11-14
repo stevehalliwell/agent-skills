@@ -30,7 +30,7 @@ TEST(clean_install_missing_build_recovery,
     TEST_ASSERT_FILE_OK(file_tree_join(native, copied, "native")); TEST_ASSERT(file_directory_create(native, 1));
     TEST_ASSERT(integration_copy_entries(integration_root, native, "build") == 0);
     TEST_ASSERT(integration_project(project) == 0);
-    const char *retired[] = {"scripts/attendant.mjs", "scripts/yaml.mjs", "test/attendant.test.js", "references/migration.md", "references/native-commands.md"};
+    const char *retired[] = {"scripts", "test", "references/migration.md", "references/native-commands.md"};
     for (usize i = 0; i < sizeof(retired) / sizeof(retired[0]); ++i) {
         char path[NATIVE_PATH_SIZE]; TEST_ASSERT_FILE_OK(file_tree_join(path, copied, retired[i])); TEST_ASSERT(integration_missing(path));
     }

@@ -37,7 +37,7 @@ Use only for new empty collection. Complete setup first if config is missing. No
    <attendant> add-table --directory <directory> [--alias <alias>]
    ```
 
-   Do not write collection files directly, add fields, author usage or create records. Inspect output and any reported partial writes before retry; platform-specific publication cleanup is documented in [source contract](../native/README.md#source-and-data-contract).
+   Do not write collection files directly, add fields, author usage or create records. Inspect output and any reported partial writes before retry; platform-specific publication cleanup is documented in [source contract](data-contract.md#source-and-data-contract).
    - Done: CLI reports declared empty collection and created source paths, or precise partial result/blocker.
 5. Update root `AGENTS.md` Attendant section with new directory/schema/usage paths and read-usage rule. Preserve existing guidance. Report name/path, empty declared fields and created source paths. Do not run manual validation/sync/doctor after success; normal actions prepare projection.
    - Done: guidance matches created collection and diagnostics are reported.

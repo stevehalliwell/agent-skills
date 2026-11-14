@@ -10,6 +10,18 @@ npx skills add stevehalliwell/agent-skills --all
 
 You can install an individual skill with `npx skills add stevehalliwell/agent-skills --skill <skill-name>`, but these skills may reference each other and are intended to be available together.
 
+## Native apps
+
+Some skills bundle native C apps built locally on demand. Attendant supports Windows x64 and macOS arm64:
+
+- **CJIT** compiles C sources into native executables. Use `bash build.sh cjit` for Attendant CLI.
+- **Zig** provides `zig cc` for C and `zig c++` for C++. Use `bash build.sh zig` for Attendant CLI; CJIT is not required for this build.
+- CLI builds need Bash and either installed compiler; C dependencies are vendored. GUI dependency builds require Zig, Git and Bash even when app uses CJIT. macOS also needs Apple command-line tools/SDK and make for GUI dependencies.
+
+Run build commands from `skills/attendant/native/`. Binaries stay in ignored build folders; tools do not install compilers automatically. Attendant runtime, builds and tests need no Node.js. See [Attendant build setup](skills/attendant/references/build.md) for GUI setup, output paths and helper compiler selection.
+
+Former Attendant `.mjs` version: [`044a1eb5fae3f969ff484b4509e77c0110e5e541`](https://github.com/stevehalliwell/agent-skills/tree/044a1eb5fae3f969ff484b4509e77c0110e5e541/skills/attendant), last revision before runtime retirement. Historical source only; current Attendant has no fallback to that version.
+
 ## Skill index
 
 ### Tools and delegation

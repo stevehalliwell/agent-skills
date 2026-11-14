@@ -30,15 +30,14 @@ static int snapshot_count_matches(context *c, const char *statement, int expecte
     sqlite3_finalize(s);
     return matches;
 }
-/* Layout 2 is indexed and remains interoperable with the legacy runner.
-   Layout 3 is intentionally unindexed; legacy consumers must rebuild it. */
+/* Layout 2 has search indexes. Layout 3 is intentionally unindexed. */
 static int snapshot_search_mode(context *c) {
     sqlite3_stmt *s = NULL;
     int status, valid = 0;
     c->fts_enabled = 0;
     if (sqlite3_prepare_v2(c->db, "SELECT value FROM __attendant_metadata WHERE key='fts_enabled'", -1, &s, NULL) == SQLITE_OK) {
         status = sqlite3_step(s);
-        if (status == SQLITE_DONE) { c->fts_enabled = 1; valid = 1; } /* Legacy indexed DB. */
+        if (status == SQLITE_DONE) { c->fts_enabled = 1; valid = 1; } /* Missing flag defaults to indexed layout. */
         else if (status == SQLITE_ROW && sqlite3_column_type(s, 0) == SQLITE_TEXT && sqlite3_column_bytes(s, 0) == 1) {
             const char *value = (const char *)sqlite3_column_text(s, 0);
             if (!strcmp(value, "1")) { c->fts_enabled = 1; valid = 1; }
@@ -63,7 +62,7 @@ static int snapshot_search_matches(context *c, collection *table, int count) {
 }
 /* JSON text can collide for old floats and newly exact integers. SQLite's
    double-to-TEXT conversion can also lose precision in string-first enums.
-   Check actual values; a producer marker would survive JS snapshot rewrites. */
+   Check actual values; a producer marker cannot detect snapshot rewrites. */
 static value *projection_number(record *r, field *f) {
     value *v = lookup(&r->front, f->name);
     if (!v && (!strcmp(f->kind, "default") || !strcmp(f->kind, "enum"))) v = &f->fallback;

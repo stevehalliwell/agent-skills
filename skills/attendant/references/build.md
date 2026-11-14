@@ -8,7 +8,7 @@
 - [macOS bring-up checkpoint](#macos-bring-up-checkpoint)
 - [Missing build or failed setup](#missing-build-or-failed-setup)
 
-Read when native executable is missing, user requests build/evaluation, or GUI dependencies need setup. Native CLI/GUI is active Attendant implementation; no JS fallback. Build with installed tools, then return to original target project and requested operation. Building does not authorize unrelated source edits.
+Read when native executable is missing, user requests build/evaluation, or GUI dependencies need setup. Use native CLI/GUI built from this skill. Build with installed tools, then return to original target project and requested operation. Building does not authorize unrelated source edits.
 
 Resolve `<skill-dir>` from `SKILL.md`; native root is `<skill-dir>/native`. Run commands below from native root. CLI/API/GUI builds support Windows Git Bash and macOS arm64 Bash. Windows commands use `.exe`; omit suffix on macOS. Platform details are below. Paths may contain spaces; quote them.
 
@@ -72,7 +72,7 @@ bash test.sh cjit
 bash test.sh zig
 ```
 
-Each command runs 56 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios and five subprocess integration cases with 23 contract groups. Wrapper builds matching CLI/API probe. Integration retains actual subprocess interoperability, stdin/output/deadlines, schema/query/update checks, current task/decision template workflows and cold build from isolated skill copy. Four migrated core JS harnesses are removed. Template checkout is test-only, not a product build dependency.
+Each command runs 56 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios and five subprocess integration cases with 23 contract groups. Wrapper builds matching CLI/API probe. Integration retains actual subprocess interoperability, stdin/output/deadlines, schema/query/update checks, current task/decision template workflows and cold build from isolated skill copy. Template checkout is test-only, not a product build dependency.
 
 Stdout is retained run directory; TSV, diagnostics, generated runners, command captures and build logs stay in `build/native-tests/run-*/`. Assertions stay active at `-O3`/`NDEBUG`. Case failures exit 1; suite/infrastructure or generation/build failures exit 2. Hooks clean successful owned fixtures and retain/report failures. Install case also owns OS temp directory, excludes all prior builds/caches and builds copied source with 180000 ms deadline. See [test interfaces, memory/path limits and lifecycle contract](../native/tests/README.md).
 
@@ -90,7 +90,7 @@ bash tools/check-control-macos.sh
 bash tools/check-bridge.sh
 ```
 
-GUI checks need matching production/test GUI and CLI builds for both compilers, installed compilers and Bash. Check builds also produce headless model executables. `bash tools/check-gui.sh` verifies manifests in C, builds fresh C runners through `tools/build-gui-tests.sh`, runs all ten groups per compiler in C, including two caller-polled live previews with opposite-compiler inspection. No JS coordinator remains. Total stays 20 groups. C runner artifacts/build logs stay under `build/gui-tests/run-*/`; GUI report links per-compiler TSV/diagnostics and preserved production screenshot under its owned run folder. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
+GUI checks need matching production/test GUI and CLI builds for both compilers, installed compilers and Bash. Check builds also produce headless model executables. `bash tools/check-gui.sh` verifies manifests in C, builds fresh C runners through `tools/build-gui-tests.sh`, runs all ten groups per compiler in C, including two caller-polled live previews with opposite-compiler inspection. Total stays 20 groups. C runner artifacts/build logs stay under `build/gui-tests/run-*/`; GUI report links per-compiler TSV/diagnostics and preserved production screenshot under its owned run folder. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
 
 ### Windows footprint sanity probe
 
@@ -141,5 +141,5 @@ Human workflow and distribution/license review accepted as complete by user. Win
 
 1. Read this reference, build requested target with installed compiler, then run its `--help` or focused check.
 2. Return to original task and original target project; build working directory is not record workspace.
-3. If tool/dependency/build is unavailable, report exact blocker and reference path. Do not auto-install, silently fall back to JS, or substitute old spike binaries.
-4. Continue only original authorized operation; setup does not grant broader editing authority. Known limitations: [native README](../native/README.md#remaining-limits-and-history).
+3. If tool/dependency/build is unavailable, report exact blocker and reference path. Do not auto-install or substitute old spike binaries. Use only native executables built from this skill.
+4. Continue only original authorized operation; setup does not grant broader editing authority. Known limitations: [native README](../native/README.md#data-safety-and-limits).

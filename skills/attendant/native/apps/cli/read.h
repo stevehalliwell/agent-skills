@@ -249,8 +249,8 @@ static void query_parameters(context *c, sqlite3_stmt *statement, const char *te
     }
     if (token != PDJSON_OBJECT_END || pdjson_next(&parser) != PDJSON_DONE) fail(c, "Invalid or trailing JSON in --params");
     pdjson_close(&parser);
-    /* JSON.parse keeps first insertion order and last duplicate value; JS
-       integer-index keys enumerate first. Binding must happen after collapse. */
+    /* Keep first insertion order and last duplicate value; canonical
+       integer-index keys enumerate first. Bind only after duplicate collapse. */
     for (i = 0; i < count; i++) {
         order[i] = i;
         for (j = i; j > 0 && object_index(parameters[order[j]].name) < object_index(parameters[order[j - 1]].name); j--) {
@@ -291,7 +291,7 @@ static void result_columns(context *c, result_rows *rows, sqlite3_stmt *s) {
         const char *name = sqlite3_column_name(s, i);
         for (j = 0; j < rows->column_count; j++) if (!strcmp(rows->columns[j], name)) break;
         if (j == rows->column_count) rows->columns[rows->column_count++] = copy_text(c, name, strlen(name));
-        rows->indexes[j] = i; /* Last duplicate column value wins, like JS row objects. */
+        rows->indexes[j] = i; /* Last duplicate column value wins. */
     }
     for (i = 1; i < rows->column_count; i++) {
         for (j = i; j > 0 && object_index(rows->columns[j]) < object_index(rows->columns[j - 1]); j--) {
@@ -301,8 +301,8 @@ static void result_columns(context *c, result_rows *rows, sqlite3_stmt *s) {
         }
     }
 }
-/* Decode invalid SQLite TEXT like Node's UTF-8 conversion: one U+FFFD per
-   maximal invalid subpart. Embedded NUL remains data. Borrow valid input. */
+/* Decode invalid SQLite TEXT with one U+FFFD per maximal invalid subpart.
+   Embedded NUL remains data. Borrow valid input. */
 static string_view sql_text(context *c, sqlite3_stmt *s, int index) {
     string_view input = {sqlite3_column_text(s, index), (size_t)sqlite3_column_bytes(s, index)}, result;
     size_t i = 0, used = 0;
@@ -569,7 +569,7 @@ static int partial_search(const char *text) {
     return terms > 0;
 }
 typedef struct search_hit { const char *row, *collection, *id; double score; int partial; } search_hit;
-/* Stable result order is required; reproducing Node's locale collation is not. */
+/* Result ordering must be stable, but need not use locale collation. */
 static int compare_hits(const void *left, const void *right) {
     const search_hit *a = left, *b = right;
     int order;

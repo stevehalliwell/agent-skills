@@ -344,7 +344,7 @@ static char *trim(char *text) {
     char *end;
     for (;;) {
         if (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\v' || *text == '\f') text++;
-        else if (!strncmp(text, "\xef\xbb\xbf", 3)) text += 3; /* UTF-8 BOM, like JS trim. */
+        else if (!strncmp(text, "\xef\xbb\xbf", 3)) text += 3; /* Trim UTF-8 BOM. */
         else break;
     }
     end = text + strlen(text);
@@ -470,7 +470,7 @@ static const char *mapping_json_format(context *c, mapping *map, number_format f
     char *buffer = c->json_scratch;
     jsonb b;
     int i, j, order[MAX_PAIRS];
-    /* JS objects enumerate canonical integer-index keys before other keys.
+    /* Enumerate canonical integer-index keys before other keys.
        FTS indexes this JSON text, so ordering affects phrase matches. */
     for (i = 0; i < map->count; i++) {
         order[i] = i;
@@ -773,7 +773,7 @@ static void project_record(context *c, record *r) {
     bind_value(c, s, 2, lookup(&r->front, "name"), NULL);
     bind_text(c, s, 3, validated_datetime(c, lookup(&r->front, "created_at")->text));
     {
-        /* Node's Stats Date accessor rounds fractional milliseconds. */
+        /* Round file timestamps to whole milliseconds. */
         source_time time = (source_time)((i64)floor(r->mtime_ms + 0.5) * 10000LL + (i64)SOURCE_UNIX_EPOCH);
         bind_text(c, s, 4, iso_time(c, time));
     }

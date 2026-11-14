@@ -1,6 +1,6 @@
 #include "test.h"
 
-/* Migrated from api-check.mjs. Wrapper runs under UTC and Pacific/Auckland. */
+/* Wrapper runs under UTC and Pacific/Auckland. */
 TEST(datetime_roundtrip_and_exact_filetime,
     const struct { const char *text; u64 ticks; } cases[] = {
         {"1601-01-01T00:00:00.000Z", 0ULL},

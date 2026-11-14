@@ -21,7 +21,7 @@ Both require `--collection`/`-c` and `--items`/`-i`. Input is nonempty array of 
 
 Only declared fields plus writable `desc` (string) and `tags` (string array) are accepted. Create generates `id`, `name` and `created_at`, applies defaults and body template. Update rejects immutable fields, including `id`, `name` and `created_at`; preserves body and unrelated formatting, but changed values may be reformatted.
 
-Every prospective item/target is validated before source publication. Each file publication is atomic; batch is not cross-file transaction. Completed writes survive later failures, including failed projection refresh. Inspect reported `written`/`failed` and actual source before retry; never assume whole batch rolled back. Collection/feedback bootstrap cleanup differs by platform: [source contract](../native/README.md#source-and-data-contract).
+Every prospective item/target is validated before source publication. Each file publication is atomic; batch is not cross-file transaction. Completed writes survive later failures, including failed projection refresh. Inspect reported `written`/`failed` and actual source before retry; never assume whole batch rolled back. Collection/feedback bootstrap cleanup differs by platform: [source contract](data-contract.md#source-and-data-contract).
 
 Edit saved Markdown body directly when task requires prose changes; metadata CLI does not replace body. Normal actions reconcile projection afterward.
 
@@ -51,7 +51,7 @@ Default validation applies mechanical metadata corrections. `--no-correct` repor
 
 `query` requires `--sql`/`-s`: one authorizer-contained read-only statement. `--params`/`-P` defaults to `{}`; object values must be scalar/null. Projected built-ins are `id`, `name`, `created_at`, `updated_at`, `desc`, `tags`, `hidden`, `source_path` and `source_hash`; collection-specific fields come from schema. Include collection identity as SQL literal; it is not projected column. In Bash, do not backslash-escape JSON already inside single quotes; prefer `-P @params.json` for generated/complex input.
 
-`search` requires `--query`/`-q`; `--collections`/`-c` is comma-separated. Results identify collection and source path. Query/search return `columns`, `rows`, `returned`, `truncated`; empty success has zero rows, not failure. Check `truncated` before claiming complete inventory. `--limit`/`-l` is non-negative integer, defaults to 100 and caps at 10,000; other capacity/output bounds may apply sooner. [Types and limits](../native/README.md#projection-and-limits).
+`search` requires `--query`/`-q`; `--collections`/`-c` is comma-separated. Results identify collection and source path. Query/search return `columns`, `rows`, `returned`, `truncated`; empty success has zero rows, not failure. Check `truncated` before claiming complete inventory. `--limit`/`-l` is non-negative integer, defaults to 100 and caps at 10,000; other capacity/output bounds may apply sooner. [Types and limits](data-contract.md#projection-and-limits).
 
 `doctor` diagnoses source/config/projection health read-only; it does not check Git or repair data. Unhealthy doctor exits 1 with diagnostic result. Do not use as routine follow-up.
 
@@ -73,4 +73,4 @@ Ordinary query/search may include `meta_comments.pending` and concise notice. No
 <attendant> update -c _meta_comments -i '[{"name":"comment-name","fields":{"status":"resolved"}}]'
 ```
 
-GUI source editing and **Save & Send** are separate from CLI metadata writes. [GUI controls](../native/apps/gui/README.md#agent-controls) reveal files, inspect live selections, or explicitly show find results in an existing viewer. Reveal/inspection preserve human selection on receipt. Separate `--find QUERY --view sidebar|source|preview` updates GUI find/selection without source writes or OS focus stealing; optional `--file` opens a document for source/preview search. No control starts a viewer.
+GUI source editing and **Save & Send** are separate from CLI metadata writes. [GUI controls](../SKILL.md#ipc-commands) reveal files, inspect live selections, or explicitly show find results in an existing viewer. Reveal/inspection preserve human selection on receipt. Separate `--find QUERY --view sidebar|source|preview` updates GUI find/selection without source writes or OS focus stealing; optional `--file` opens a document for source/preview search. No control starts a viewer.
