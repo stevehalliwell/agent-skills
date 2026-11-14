@@ -14,4 +14,9 @@ static inline GD_EvidencePage gd_evidence_page(int total,int size,int page) {
     range.first=range.page*size;remaining=total-range.first;
     range.end=range.first+(remaining<size ? remaining:size);return range;
 }
+/* Call only for matching retained rows, never for unfiltered source slots. */
+static inline int gd_evidence_page_take(const GD_EvidencePage *page,int *ordinal) {
+    int row;assert(page && ordinal && *ordinal>=0 && *ordinal<page->total);
+    row=(*ordinal)++;return row>=page->first && row<page->end;
+}
 #endif

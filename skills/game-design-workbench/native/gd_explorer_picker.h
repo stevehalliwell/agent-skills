@@ -16,6 +16,13 @@ static GD_EvidencePage gd_explorer_evidence_pager(const char *label,int *page,in
     if(range.pages)igText("Page %d of %d",range.page+1,range.pages);else igTextUnformatted("No retained rows in this scope",NULL);
     igPopID();return range;
 }
+/* Compact snapshot-local cursors; all native retained-list bounds fit 16 bits of pages. */
+_Static_assert(GD_MAX_PAIRS/GD_EVIDENCE_PAGE_ROWS<65536,"Evidence page cursor capacity");
+static GD_EvidencePage gd_explorer_evidence_cursor_pager(const char *label,unsigned short *cursor,int total) {
+    int page=*cursor;GD_EvidencePage range;igPushID_Ptr(cursor);
+    range=gd_explorer_evidence_pager(label,&page,total,GD_EVIDENCE_PAGE_ROWS);igPopID();
+    assert(page>=0 && page<=65535);*cursor=(unsigned short)page;return range;
+}
 /* Include after cimgui declarations. One popup at a time per independent pane.
    Search changes presentation only; callers adopt exact native choices. */
 static int gd_explorer_picker_begin(GD_ExplorerContext *context,const char *label,const char *preview) {

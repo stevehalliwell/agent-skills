@@ -330,7 +330,8 @@ static int *noun_source_page(GD_ExplorerContext *c,int edge) {
     if(edge<0 || edge>=p->layout->edge_count)return NULL;
     if(p->noun_source_row!=p->overview.row || p->noun_source_column!=p->overview.column){memset(p->noun_source_pages,0,sizeof(p->noun_source_pages));p->noun_source_row=p->overview.row;p->noun_source_column=p->overview.column;}
     for(i=0;i<edge;++i)ordinal+=c->analysis->overview.selected_edges[i]!=0;
-    if(ordinal>=GD_EXPLORER_SOURCE_LISTS)return NULL;
+    ordinal-=p->overview_source_page*GD_EVIDENCE_PAGE_ROWS;
+    if(ordinal<0 || ordinal>=GD_EXPLORER_SOURCE_LISTS)return NULL;
     pair=p->layout->edges[edge].key;
     if(p->noun_source_pairs[ordinal]!=pair){p->noun_source_pairs[ordinal]=pair;p->noun_source_pages[ordinal]=0;}
     return &p->noun_source_pages[ordinal];
@@ -372,14 +373,16 @@ static GD_ExplorerEvidence evidence(GD_ExplorerContext *c, int selected) {
     e.overview=gd_graph_overview(c->analysis,&p->overview,incidence(p->view));
     return e;
 }
-static void sources_for_marks(GD_ExplorerContext *c, const unsigned char *marked) {
-    int i,shown=0,total=0;
-    for (i=0;i<c->pane->layout->edge_count;++i) if (marked[i]) { if (shown++<GD_EXPLORER_SOURCE_LISTS) {igPushID_Int(i);source(c,i);igPopID();} ++total; }
-    if (total>64) igText("%d further marked declarations; all remain highlighted",total-64);
+static void sources_for_marks(GD_ExplorerContext *c,const unsigned char *marked,int *cursor) {
+    int i,ordinal=0,total=0;GD_EvidencePage page;
+    for(i=0;i<c->pane->layout->edge_count;++i)total+=marked[i]!=0;
+    igPushID_Ptr(cursor);page=gd_explorer_evidence_pager("Marked declarations",cursor,total,GD_EVIDENCE_PAGE_ROWS);
+    for(i=0;i<c->pane->layout->edge_count;++i)if(marked[i]){if(!gd_evidence_page_take(&page,&ordinal))continue;igPushID_Int(i);source(c,i);igPopID();}
+    igPopID();
 }
 static void overview_controls(GD_ExplorerContext *c) {
     if(gd_graph_overview_panel_metric(NULL,c->pane->layout,c->analysis,&c->pane->overview,1,overview_metric(c->pane)))
-        sources_for_marks(c,c->analysis->overview.selected_edges);
+        sources_for_marks(c,c->analysis->overview.selected_edges,&c->pane->overview_source_page);
 }
 /* Typed canvases keep their own renderer. Overlay only actual brush contributors. */
 static void overview_marks_draw(GD_ExplorerContext *c) {
@@ -410,8 +413,8 @@ static void analysis_controls(GD_ExplorerContext *c, int selected) {
         }
     }
     if (gd_graph_foundations_panel(model,p->layout,c->analysis,selected,p->view==GD_EXPLORER_RELATIONSHIPS,&p->foundations,&p->foundation_peer))
-        sources_for_marks(c,c->analysis->foundations.comparison.edges);
-    if (gd_graph_reachability_panel(p->layout,c->analysis,selected,&p->reach,incidence(p->view))) sources_for_marks(c,c->analysis->reachability.comparison.edges);
+        sources_for_marks(c,c->analysis->foundations.comparison.edges,&p->foundation_source_page);
+    if (gd_graph_reachability_panel(p->layout,c->analysis,selected,&p->reach,incidence(p->view))) sources_for_marks(c,c->analysis->reachability.comparison.edges,&p->reach_source_page);
     if (p->view==GD_EXPLORER_RESOURCES) {
         igCheckbox("Structural shapes (two exact rounds)",&p->shapes);
         if (p->shapes) {
@@ -441,7 +444,7 @@ static void analysis_controls(GD_ExplorerContext *c, int selected) {
         int node=gd_graph_shapes_panel(model,p->layout,c->analysis,selected,&p->shapes);
         if (node>=0) { if (p->view==GD_EXPLORER_MDA) { p->mda.record=p->layout->nodes[node].key; p->mda.link=-1; } else p->navigate=p->layout->nodes[node].key; }
     }
-    if (gd_graph_overview_panel(p->view==GD_EXPLORER_RESOURCES ? NULL:model,p->layout,c->analysis,&p->overview,incidence(p->view))) sources_for_marks(c,c->analysis->overview.selected_edges);
+    if (gd_graph_overview_panel(p->view==GD_EXPLORER_RESOURCES ? NULL:model,p->layout,c->analysis,&p->overview,incidence(p->view))) sources_for_marks(c,c->analysis->overview.selected_edges,&p->overview_source_page);
     if (p->view==GD_EXPLORER_SKILLS) igTextWrapped("Paths are not AND prerequisite acquisition plans. Known skills are explicit hypothetical assumptions, not mastery.");
     if (p->view==GD_EXPLORER_RESOURCES) igTextWrapped("Resource incidence is not flow. Routes and composed outcomes remain incomplete.");
 }
@@ -497,10 +500,13 @@ static void match_details(GD_ExplorerContext *c) {
     if (p->view==GD_EXPLORER_RESOURCES && c->project->resources->limited) igTextWrapped("Resource projection is partial; counts cover retained representations only.");
     if (igSmallButton("Clear Find highlights")) { p->find_reference[0]=0; matches(c); }
     if (p->visible_matches && igTreeNode_Str("Inspect visible matches")) {
-        GD_Model *model=gd_explorer_model(c->project,p->view);
-        for (i=0;i<p->layout->node_count && listed<64;++i) if (p->match_nodes[i]) {
+        GD_Model *model=gd_explorer_model(c->project,p->view);int total=0;GD_EvidencePage page;
+        for(i=0;i<p->layout->node_count;++i)if(p->match_nodes[i] && (p->view!=GD_EXPLORER_MATRIX || !strcmp(model->records[p->layout->nodes[i].key].reference,p->find_reference)))++total;
+        if(p->view==GD_EXPLORER_MATRIX)for(i=0;i<p->layout->edge_count;++i)total+=p->match_edges[i]!=0;
+        page=gd_explorer_evidence_pager("Visible representations",&p->find_source_page,total,GD_EVIDENCE_PAGE_ROWS);
+        for (i=0;i<p->layout->node_count;++i) if (p->match_nodes[i]) {
             if (p->view==GD_EXPLORER_MATRIX && strcmp(model->records[p->layout->nodes[i].key].reference,p->find_reference)) continue;
-            igPushID_Int(i);
+            if(!gd_evidence_page_take(&page,&listed))continue;igPushID_Int(i);
             if (igSmallButton(p->layout->nodes[i].label)) {
                 if (p->view==GD_EXPLORER_MDA) { p->mda.record=p->layout->nodes[i].key; p->mda.link=-1; }
                 else {
@@ -508,9 +514,10 @@ static void match_details(GD_ExplorerContext *c) {
                     if (is_graph(p->view)) p->navigate=p->layout->nodes[i].key; else p->selection=choice;
                 }
             }
-            igPopID(); ++listed;
+            igPopID();
         }
-        if (p->view==GD_EXPLORER_MATRIX) for (i=0;i<p->layout->edge_count && listed<64;++i) if (p->match_edges[i]) {
+        if (p->view==GD_EXPLORER_MATRIX) for (i=0;i<p->layout->edge_count;++i) if (p->match_edges[i]) {
+            if(!gd_evidence_page_take(&page,&listed))continue;
             int key=p->layout->edges[i].key; const GD_Cell *cell=&model->cells[key];
             igPushID_Int(GD_MAX_RECORDS+i);
             if (igSmallButton(TextFormat("%s x %s (case cell)",model->records[cell->noun].display_name,model->records[cell->verb].display_name))) {
@@ -518,9 +525,8 @@ static void match_details(GD_ExplorerContext *c) {
                 for (j=0;j<cell->pair_count;++j) if (!strcmp(model->records[model->pairs[cell->first_pair+j].interaction].reference,p->find_reference)) choice.interaction=j;
                 gd_explorer_graph_select(c,&choice);
             }
-            igPopID(); ++listed;
+            igPopID();
         }
-        if (listed==64) igTextWrapped("List capped at 64 representations; graph highlights all visible matches.");
         igTreePop();
     }
 }
@@ -822,6 +828,21 @@ static void copy_error(GD_Model *diagnostic, const GD_Error *error) {
     gd_error(diagnostic,owned[0],owned[1],owned[2],error->line);
 }
 #include "gd_explorer_viewer.h"
+/* Explicit definition navigation stays in current pane. Never choose first alias. */
+int gd_explorer_source_open(GD_ExplorerContext *c,int record) {
+    GD_ExplorerPane *p=c->pane;GD_Model *model=gd_explorer_model(c->project,p->view);int i,node=-1,count=0;
+    if(!model || record<0 || record>=model->record_count || !viewer_canvas_current(c) || !p->layout ||
+        (c->panes && gd_explorer_rank_pending(c->project,c->panes)))return 0;
+    if(p->structure_state)p->structure_state->similarity_canvas=false;
+    if(!grid_view(p))for(i=0;i<p->layout->node_count;++i)if(viewer_canvas_record(c,i)==record){node=i;++count;}
+    p->navigate=-1;p->fit=0; /* Do not consume a hidden canvas's queued fit on reveal. */
+    if(p->view==GD_EXPLORER_MDA){p->mda.record=record;p->mda.link=-1;}
+    else p->selection=(GD_ExplorerSelection){-1,count==1 ? node:-1,0,count==1 ? -1:record,-1};
+    if(is_graph(p->view))p->inspected_record=record;
+    snprintf(p->query_message,sizeof(p->query_message),"Source in current %s pane: %s%s",gd_explorer_view_names[p->view],model->records[record].reference,
+        !count ? " (no ordinary canvas representation; linked source only)":count>1 ? " (multiple representations; linked source only)":!visible(c,node) ? " (representation hidden; no camera/filter change)":" (camera unchanged)");
+    return 1;
+}
 #include "gd_explorer_find.h"
 #include "gd_explorer_history.h"
 int gd_explorer_reset_all(GD_ExplorerContext *c){

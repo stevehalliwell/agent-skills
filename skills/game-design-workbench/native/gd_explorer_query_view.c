@@ -482,8 +482,8 @@ static void case_details(GD_ExplorerContext *context, int index) {
     igTextWrapped("%s | status %s | %s",record->reference,record->status ? record->status:"unspecified",record->source_path);
     igTextWrapped("Case %s | line %d | authored A %s | context %s",item->name,item->line,item->primary_target ? item->primary_target:"unspecified",item->context ? item->context:"unspecified");
     if (item->unknown_conditions) igTextWrapped("Unknown conditions: %s",item->unknown_conditions); if (item->unknown_effects) igTextWrapped("Unknown effects: %s",item->unknown_effects);
-    for (i=item->first_participant;i<item->first_participant+item->participant_count && i<item->first_participant+64;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s (%s): requires %s | excludes %s | other axes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->other_axes ? actor->other_axes:"unspecified",actor->becomes ? actor->becomes:"none",actor->preserve ? actor->preserve:"none",actor->causes ? actor->causes:"none"); }
-    if (item->participant_count>64) igText("%d more participants in full source/native CLI; inspection list capped at 64.",item->participant_count-64);
+    GD_EvidencePage participants=gd_explorer_evidence_cursor_pager("Local participants",&context->pane->query_state->case_participant_pages[index],item->participant_count);
+    for (i=item->first_participant+participants.first;i<item->first_participant+participants.end;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s (%s): requires %s | excludes %s | other axes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->other_axes ? actor->other_axes:"unspecified",actor->becomes ? actor->becomes:"none",actor->preserve ? actor->preserve:"none",actor->causes ? actor->causes:"none"); }
 }
 int gd_explorer_query_case_count(const GD_ExplorerContext *context,int edge) {
     const GD_ExplorerQueryState *state=context->pane->query_state;int i,count=0;
@@ -515,15 +515,14 @@ void gd_explorer_query_source(GD_ExplorerContext *context, int edge) {
 }
 static void coverage_details(GD_ExplorerContext *context, int value_index) {
     GD_ExplorerQueryState *state=context->pane->query_state; const GD_Query *query=state->query; const GD_StateCoverage *coverage=query->state_coverage;
-    const GD_StateCoverageValue *value=&coverage->values[value_index]; uint64_t bit=UINT64_C(1)<<value_index; int i,start,end,pages=(query->binding_count+63)/64;
+    const GD_StateCoverageValue *value=&coverage->values[value_index]; uint64_t bit=UINT64_C(1)<<value_index; int i;GD_EvidencePage page;
     igTextWrapped("Finite hypothesis: %s | %s",value->value,value->declared ? "declared vocabulary":"explicit requested sample");
     igTextWrapped("Cases: definite %d | undetermined %d | excluded %d | unfinished %d",value->definite_cases,value->undetermined_cases,value->excluded_cases,value->unfinished_cases);
     igTextWrapped("Bindings: definite %d | undetermined %d | excluded %d | unfinished %d",value->definite_bindings,value->undetermined_bindings,value->excluded_bindings,value->unfinished_bindings);
     igTextWrapped("No retained candidate: %s. Unknown means absence was not checked; false includes retained undetermined guards.",value->no_retained_candidate==GD_RULE_TRUTH_UNKNOWN ? "unknown":value->no_retained_candidate==GD_RULE_TRUTH_TRUE ? "checked absence":"false");
-    if (pages) igSliderInt("Binding evidence page",&state->coverage_page,0,pages-1,"%d",0);
-    start=state->coverage_page*64; end=start+64; if (end>query->binding_count) end=query->binding_count;
-    igText("Local bindings %d..%d of %d; rows are independent hypotheses",start,end,query->binding_count);
-    for (i=start;i<end;++i) {
+    page=gd_explorer_evidence_pager("Local binding hypotheses",&state->coverage_page,query->binding_count,GD_EVIDENCE_PAGE_ROWS);
+    igTextWrapped("Rows are independent hypotheses, not runtime instances.");
+    for (i=page.first;i<page.end;++i) {
         const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleCase *root=&query->rules->cases[binding->case_index]; const GD_RuleParticipant *participant=&query->rules->participants[binding->participant];
         const char *truth=!(coverage->present[i]&bit) ? "unavailable":coverage->definite[i]&bit ? "definite":coverage->undetermined[i]&bit ? "undetermined":"excluded";
         igPushID_Int(i);

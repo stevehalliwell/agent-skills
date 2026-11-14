@@ -282,7 +282,7 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
         viewer_control_token(viewer,&target,GD_FORM_PRESENTATION,token,sizeof(token));
         if(strcmp(token,request->expect)) {gd_viewer_error(w,"viewer.stale_controls","Selection scope changed; read evidence again");return;}
         if(!viewer_select(&target,request,w)) return;
-        if(target.pane->structure_state) target.pane->structure_state->similarity_canvas=false;
+        if(target.pane->structure_state && strcmp(request->form,"rule") && strcmp(request->form,"rule.check")) target.pane->structure_state->similarity_canvas=false;
         viewer_toast(viewer,"CLI selected context in",gd_explorer_view_names[v]); gd_viewer_write(w,"{\"ok\":true,\"selected\":true,\"focus_changed\":false,\"source_draft_changed\":false}"); return;
     }
     if (!strcmp(request->command,"nodes")) { viewer_nodes(viewer,request,&target,w); return; }

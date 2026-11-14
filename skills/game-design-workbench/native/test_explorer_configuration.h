@@ -87,6 +87,28 @@ static int viewer_configuration_checks(ExplorerViewer *original,int *fail_at,int
     {
         GD_Model *mda_model=gd_explorer_model(c.project,GD_EXPLORER_MDA);target=c;target.pane=&panes[GD_EXPLORER_MDA];CONFIG_CHECK(pane_prepare(&target));
         STAGE(GD_EXPLORER_MDA,GD_FORM_PRESENTATION,"similarity_canvas","true");CONFIG_CHECK(strstr(reply,"\"configured\":true") && panes[GD_EXPLORER_MDA].structure_state->similarity_canvas);
+        STAGE(GD_EXPLORER_MDA,GD_FORM_RULES,"bindings","true");CONFIG_CHECK(strstr(reply,"\"configured\":true"));
+        STAGE(GD_EXPLORER_MDA,GD_FORM_RULES,"case_name",case_key);CONFIG_CHECK(strstr(reply,"\"configured\":true"));
+        RUN(GD_EXPLORER_MDA,"rules.run",GD_FORM_RULES);CONFIG_CHECK(strstr(reply,"\"executed\":true") && gd_explorer_rules_row_count(panes[GD_EXPLORER_MDA].rule_state)>0);
+        {GD_ExplorerPane *p=&panes[GD_EXPLORER_MDA];GD_ExplorerStructureState *state=p->structure_state;Camera2D map_camera=state->similarity_camera,source_camera=p->camera;int record=p->mda.record,link=p->mda.link,before=*calls;
+            memset(&request,0,sizeof(request));strcpy(request.command,"select");strcpy(request.projection,"mda");strcpy(request.form,"rule");target=c;target.pane=p;
+            viewer_row_key(&target,"rule",0,request.id,sizeof(request.id));viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));SEND();
+            CONFIG_CHECK(strstr(reply,"\"selected\":true") && p->rule_state->row==0 && state->similarity_canvas && gd_explorer_similarity_active(&target));
+            CONFIG_CHECK(*calls==before && active==GD_EXPLORER_ACTORS && p->mda.record==record && p->mda.link==link && !memcmp(&map_camera,&state->similarity_camera,sizeof(map_camera)) && !memcmp(&source_camera,&p->camera,sizeof(source_camera)));
+        }
+        {GD_ExplorerPane *p=&panes[GD_EXPLORER_MDA];GD_ExplorerStructureState *state=p->structure_state;const GD_SimilarityProjection *projection=state->result->similarity;int record,node,before,selected,peer;
+            Camera2D source_camera=p->camera,map_camera=state->similarity_camera;const GD_StructureResult *retained=state->result;uint64_t pending,applied,rules_pending;
+            STAGE(GD_EXPLORER_MDA,GD_FORM_PRESENTATION,"similarity_row",projection->ids[0]);CONFIG_CHECK(strstr(reply,"\"configured\":true"));
+            STAGE(GD_EXPLORER_MDA,GD_FORM_PRESENTATION,"similarity_peer",projection->ids[projection->entry_count>1 ? 1:0]);CONFIG_CHECK(strstr(reply,"\"configured\":true"));
+            node=projection->nodes[0];record=gd_structure_result_record(projection->context,projection->context->layout->nodes[node].key);CONFIG_CHECK(record>=0);
+            selected=state->similarity_row;peer=state->similarity_peer;pending=viewer_form_hash(1,GD_FORM_STRUCTURE,&state->pending);applied=viewer_form_hash(1,GD_FORM_STRUCTURE,&state->applied);rules_pending=viewer_form_hash(1,GD_FORM_RULES,&p->rule_state->pending);before=*calls;
+            RUN(GD_EXPLORER_MDA,"view.similarity.source",GD_FORM_PRESENTATION);CONFIG_CHECK(strstr(reply,"\"executed\":true") && !state->similarity_canvas && !gd_explorer_action_available(&target,GD_ACTION_VIEW_COMPARE) && p->mda.record==record && p->mda.link<0 && active==GD_EXPLORER_ACTORS && p->navigate<0 && !p->fit);
+            CONFIG_CHECK(*calls==before && state->result==retained && selected==state->similarity_row && peer==state->similarity_peer && !memcmp(&source_camera,&p->camera,sizeof(source_camera)) && !memcmp(&map_camera,&state->similarity_camera,sizeof(map_camera)));
+            RUN(GD_EXPLORER_MDA,"view.similarity.return",GD_FORM_PRESENTATION);CONFIG_CHECK(strstr(reply,"\"executed\":true") && state->similarity_canvas && gd_explorer_action_available(&target,GD_ACTION_VIEW_COMPARE) && selected==state->similarity_row && peer==state->similarity_peer && active==GD_EXPLORER_ACTORS);
+            CONFIG_CHECK(*calls==before && pending==viewer_form_hash(1,GD_FORM_STRUCTURE,&state->pending) && applied==viewer_form_hash(1,GD_FORM_STRUCTURE,&state->applied) && rules_pending==viewer_form_hash(1,GD_FORM_RULES,&p->rule_state->pending) && !memcmp(&map_camera,&state->similarity_camera,sizeof(map_camera)));
+            target=c;target.pane=p;CONFIG_CHECK(!gd_explorer_source_open(&target,-1) && state->similarity_canvas && p->mda.record==record && *calls==before);
+            state->similarity_row=-1;CONFIG_CHECK(!gd_explorer_action_available(&target,GD_ACTION_SIMILARITY_SOURCE) && !gd_explorer_similarity_source(&target) && state->similarity_canvas);state->similarity_row=selected;
+        }
         {
             GD_ExplorerContext resource_context=c;int first,count;resource_context.pane=&panes[GD_EXPLORER_RESOURCES];CONFIG_CHECK(pane_prepare(&resource_context));
             RUN(GD_EXPLORER_RESOURCES,"view.analyze",GD_FORM_PRESENTATION);CONFIG_CHECK(strstr(reply,"\"executed\":true")!=NULL);first=c.analysis->keys[0];count=c.analysis->node_count;
@@ -95,6 +117,18 @@ static int viewer_configuration_checks(ExplorerViewer *original,int *fail_at,int
         }
         memset(&request,0,sizeof(request));strcpy(request.command,"select");strcpy(request.projection,"mda");strcpy(request.form,"source");strcpy(request.id,mda_model->records[mda_model->record_count-1].reference);viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));SEND();
         CONFIG_CHECK(strstr(reply,"\"selected\":true") && !panes[GD_EXPLORER_MDA].structure_state->similarity_canvas && selected_record(&target)==mda_model->record_count-1 && active==GD_EXPLORER_ACTORS);
+    }
+    {
+        GD_ExplorerPane *skill=&panes[GD_EXPLORER_SKILLS];GD_Model *skill_model=gd_explorer_model(c.project,GD_EXPLORER_SKILLS);int challenge=-1,before,valid,count;Camera2D camera;GD_LayoutNode nodes[2];
+        target=c;target.pane=skill;CONFIG_CHECK(pane_prepare(&target) && !gd_explorer_similarity_return(&target));
+        for(i=0;i<skill_model->record_count;++i)if(skill_model->records[i].role==GD_CHALLENGE){challenge=i;break;}CONFIG_CHECK(challenge>=0);
+        camera=skill->camera;before=*calls;CONFIG_CHECK(gd_explorer_source_open(&target,challenge) && selected_record(&target)==challenge && skill->navigate<0 && active==GD_EXPLORER_ACTORS && *calls==before && !memcmp(&camera,&skill->camera,sizeof(camera)));
+        /* Synthetic representation metadata only; restore before rendering. */
+        count=skill->layout->node_count;memcpy(nodes,skill->layout->nodes,sizeof(nodes));skill->layout->node_count=0;
+        valid=gd_explorer_source_open(&target,challenge) && skill->selection.node<0 && skill->selection.linked==challenge && strstr(skill->query_message,"no ordinary canvas representation");
+        skill->layout->node_count=2;skill->layout->nodes[0].key=skill->layout->nodes[1].key=challenge;
+        valid=valid && gd_explorer_source_open(&target,challenge) && skill->selection.node<0 && skill->selection.linked==challenge && strstr(skill->query_message,"multiple representations");
+        skill->layout->node_count=count;memcpy(skill->layout->nodes,nodes,sizeof(nodes));CONFIG_CHECK(valid && *calls==before && active==GD_EXPLORER_ACTORS && !memcmp(&camera,&skill->camera,sizeof(camera)));
     }
     {
         GD_ExplorerPane *resource=&panes[GD_EXPLORER_RESOURCES]; GD_ResourceRoutes *last; int target_node=-1,witness; char key[GD_MAX_PATH]; unsigned char marked[GD_RESOURCE_GRAPH_NODES];

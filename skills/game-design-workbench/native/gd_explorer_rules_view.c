@@ -110,6 +110,7 @@ static void source(GD_ExplorerContext *context,int case_index) {
     GD_ExplorerPane *pane=context->pane; const GD_ResourceGraph *graph=context->project->resources; const GD_Rules *rules=context->project->rules; int i;
     int record=source_record(context,case_index);
     if(record<0)return;
+    if(gd_explorer_similarity_available(context)){gd_explorer_source_open(context,record);return;}
     if(pane->view!=GD_EXPLORER_RESOURCES){
         pane->selection=(GD_ExplorerSelection){-1,-1,0,record,-1};
         if(pane->view==GD_EXPLORER_MDA){pane->mda.record=record;pane->mda.link=-1;}
@@ -126,8 +127,8 @@ static void case_details(GD_ExplorerContext *context,int case_index) {
     igPushID_Int(case_index); igTextWrapped("%s#%s | line %d | status %s | target %s",record->reference,item->name,item->line,record->status ? record->status:"unspecified",item->primary_target ? item->primary_target:"unspecified");
     igTextWrapped("Context: %s | unknown conditions: %s | unknown effects: %s",item->context ? item->context:"unspecified",item->unknown_conditions ? item->unknown_conditions:"none declared",item->unknown_effects ? item->unknown_effects:"none declared");
     igTextWrapped("Case-level becomes %s | preserves %s | calls %s",item->default_effects[0] ? item->default_effects[0]:"unspecified",item->default_effects[1] ? item->default_effects[1]:"unspecified",item->default_effects[2] ? item->default_effects[2]:"none");
-    for (i=item->first_participant;i<item->first_participant+item->participant_count && i<item->first_participant+64;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s: noun %s | requires %s | excludes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->becomes ? actor->becomes:"unspecified",actor->preserve ? actor->preserve:"unspecified",actor->causes ? actor->causes:"none"); }
-    if (item->participant_count>64) igTextWrapped("%d further local participant rows omitted from compact card; full native source remains below.",item->participant_count-64);
+    GD_EvidencePage participants=gd_explorer_evidence_cursor_pager("Local participants",&context->pane->rule_state->case_participant_pages[case_index],item->participant_count);
+    for (i=item->first_participant+participants.first;i<item->first_participant+participants.end;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s: noun %s | requires %s | excludes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->becomes ? actor->becomes:"unspecified",actor->preserve ? actor->preserve:"unspecified",actor->causes ? actor->causes:"none"); }
     if (igCollapsingHeader_TreeNodeFlags("Full source Markdown body (all cases in record)",0)) igTextWrapped("%s",record->body ? record->body:"no body");
     igBeginDisabled(source_record(context,case_index)<0);
     if (igButton("Inspect source declaration (ordinary canvas)",(ImVec2_c){0,0})) source(context,case_index);

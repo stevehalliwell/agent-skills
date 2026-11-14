@@ -479,7 +479,9 @@ static const GD_ExplorerActionInfo actions[]={
     {"view.selection.clear","Clear selection (Esc)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
     {"rules.bindings.open","Inspect bindings",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
     {"rules.outcomes.open","Inspect conditional outcomes",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
-    {"rules.inputs.reset","Reset rule inputs (keep result)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES}
+    {"rules.inputs.reset","Reset rule inputs (keep result)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
+    {"view.similarity.source","Open linked source (current pane)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"view.similarity.return","Return to similarity",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION}
 };
 const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action) {
     return action>=0 && action<GD_ACTION_COUNT ? &actions[action]:NULL;
@@ -498,6 +500,8 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
     if (info->form==GD_FORM_PRESENTATION) {
         const GD_ExplorerPane *p=context->pane;
         if(!p->prepared)return 0;
+        if(action==GD_ACTION_SIMILARITY_SOURCE)return gd_explorer_similarity_source_record(context)>=0;
+        if(action==GD_ACTION_SIMILARITY_RETURN)return gd_explorer_similarity_available(context) && !p->structure_state->similarity_canvas;
         if(action==GD_ACTION_VIEW_SELECTION_FOCUS)return gd_explorer_focus_available(context);
         if(action==GD_ACTION_VIEW_REARRANGE && p->view==GD_EXPLORER_NOUNS)return p->prepared;
         if(action==GD_ACTION_VIEW_REARRANGE && p->view>=GD_EXPLORER_ACTORS) return p->query_state && p->query_state->scene && !(p->structure_state && p->structure_state->similarity_canvas);
@@ -506,7 +510,10 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
         if(action==GD_ACTION_VIEW_ANALYZE)return !(p->view==GD_EXPLORER_MATRIX && p->layout_choice==2) && !(p->view==GD_EXPLORER_NOUNS && p->layout_choice==GD_NOUN_LAYOUT_GRID) && (!(p->view==GD_EXPLORER_ACTORS || p->view==GD_EXPLORER_EFFECTS) || (p->query_state && p->query_state->scene)) && !(p->structure_state && p->structure_state->similarity_canvas);
         if(action==GD_ACTION_VIEW_START_ADD)return p->paths.enabled && p->selection.node>=0;
         if(action==GD_ACTION_VIEW_EXPAND)return p->selection.node>=0;
-        if(action==GD_ACTION_VIEW_COMPARE)return (p->view==GD_EXPLORER_ACTORS && p->query_state && p->query_state->query && p->query_state->query->variants && p->query_state->applied.primary>=0 && p->query_state->applied.compare>=0) || (p->structure_state && p->structure_state->result && p->structure_state->result->similarity && p->structure_state->similarity_row>=0 && p->structure_state->similarity_peer>=0);
+        if(action==GD_ACTION_VIEW_COMPARE){
+            if(gd_explorer_similarity_active(context))return gd_explorer_similarity_available(context) && p->structure_state->similarity_row>=0 && p->structure_state->similarity_peer>=0;
+            return p->view==GD_EXPLORER_ACTORS && p->query_state && p->query_state->query && p->query_state->query->variants && p->query_state->applied.primary>=0 && p->query_state->applied.compare>=0;
+        }
         return 1;
     }
     if(info->form==GD_FORM_RULES && !gd_explorer_form_available(context,GD_FORM_RULES))return 0;
@@ -535,6 +542,8 @@ const char *gd_explorer_action_reason(const GD_ExplorerContext *context,GD_Explo
     if(action==GD_ACTION_RULES_BINDINGS_OPEN || action==GD_ACTION_RULES_OUTCOMES_OPEN)return "Select supported noun/axis/local-binding or declared-case evidence; missing, ambiguous or oversized identities stay unavailable";
     if(action==GD_ACTION_RULES_INPUTS_RESET)return "Open a pane-owned rule workspace first";
     if(!context->pane->prepared)return "Open and prepare this view first";
+    if(action==GD_ACTION_SIMILARITY_SOURCE)return "Select a retained similarity entry with exact linked source";
+    if(action==GD_ACTION_SIMILARITY_RETURN)return "No retained similarity context to return to; no automatic Run";
     if(action==GD_ACTION_VIEW_SELECTION_FOCUS)return "Select an item represented in this view";
     if(action==GD_ACTION_VIEW_COMPARE)return "Choose two retained entries to compare";
     if(action==GD_ACTION_VIEW_CELL_FIT)return "Select a represented noun/verb pair";
@@ -551,6 +560,8 @@ int gd_explorer_action_run(GD_ExplorerContext *context,GD_ExplorerAction action)
     if(action==GD_ACTION_UNDO || action==GD_ACTION_REDO)return gd_explorer_draft_history(context,action==GD_ACTION_REDO);
     if(action==GD_ACTION_DISCARD_REDO){context->project->draft->redo_count=0;return 1;}
     if(action==GD_ACTION_RESET_ALL)return gd_explorer_reset_all(context);
+    if(action==GD_ACTION_SIMILARITY_SOURCE)return gd_explorer_similarity_source(context);
+    if(action==GD_ACTION_SIMILARITY_RETURN)return gd_explorer_similarity_return(context);
     if (action!=GD_ACTION_INPUTS_RESET && gd_explorer_action_info(action)->form==GD_FORM_PRESENTATION) return gd_explorer_presentation_action(context,gd_explorer_action_info(action)->name);
     switch (action) {
         case GD_ACTION_INPUTS_RESET: {

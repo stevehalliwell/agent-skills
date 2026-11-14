@@ -40,6 +40,7 @@ typedef struct {
     GD_Query *query; GD_QueryScene *scene; GD_Layout *empty;
     GD_EffectQuery *selected;
     int coverage_page,contributor_page;
+    unsigned short case_participant_pages[GD_MAX_RULE_CASES];
     unsigned char case_pages[GD_MAX_PAIRS]; /* Exact scene edge; <=64 case pages. */
     GD_ActorComparison comparison; int comparison_first,comparison_second,comparison_ready;
     GD_RuleScenario fixed;
@@ -62,7 +63,10 @@ typedef struct {
     Camera2D similarity_camera; bool similarity_canvas,similarity_fit,similarity_camera_ready;
     int similarity_row,similarity_peer,similarity_page,comparison_first,comparison_second,comparison_available,comparison_work;
     double comparison_distance,comparison_components[GD_SIMILARITY_FEATURES];
-    int similarity_member_pages[GD_SIMILARITY_FEATURES];
+    int similarity_member_pages[GD_SIMILARITY_FEATURES],similarity_feature_page;
+    int marked_node_page,marked_link_page,peer_page,member_page,root_page,pair_page,overview_page,finding_pages[3],hypothesis_page;
+    unsigned short witness_pages[2],reach_member_pages[GD_MAX_RECORDS],matrix_case_pages[GD_MAX_EDGES],support_pages[2][GD_MAX_RECORDS];
+    int witness_arcs[GD_MAX_RECORDS]; /* Synchronous renderer scratch; never native result storage. */
 } GD_ExplorerStructureState;
 typedef struct {
     int kind,work_limit; bool bindings;
@@ -74,6 +78,7 @@ typedef struct {
     GD_Allocator allocator; GD_ExplorerRuleForm pending,applied; GD_NamedQuery *result; GD_Query *bindings;
     char fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1],status_tokens[GD_MAX_RULE_LINE+1];
     int page,row,peer_write,axis_page,context_open,context_outcomes; unsigned char marked_cases[GD_MAX_RULE_CASES];
+    unsigned short case_participant_pages[GD_MAX_RULE_CASES];
 } GD_ExplorerRuleState;
 typedef struct {
     const GD_ExplorerProject *project; int root,participant,axis,value,left,right,context_axis,context_value; bool context_false;
@@ -120,8 +125,8 @@ typedef struct {
     bool resource_only_witness;
     char resource_message[160];
     GD_MatrixGrid grid; /* Caller-owned presentation, never typed snapshot data. */
-    int noun_case_page;
-    int noun_source_pages[GD_EXPLORER_SOURCE_LISTS],noun_source_pairs[GD_EXPLORER_SOURCE_LISTS],noun_source_row,noun_source_column; /* Capped overview source lists, separate from primary inspector. */
+    int noun_case_page,overview_source_page,foundation_source_page,reach_source_page,find_source_page;
+    int noun_source_pages[GD_EXPLORER_SOURCE_LISTS],noun_source_pairs[GD_EXPLORER_SOURCE_LISTS],noun_source_row,noun_source_column; /* Visible source-page cache, separate from primary inspector. */
     GD_ExplorerSkillEditor editor;
     GD_ExplorerMdaDisplay mda;
     GD_Focus focus;
@@ -218,6 +223,7 @@ void gd_explorer_query_source(GD_ExplorerContext *context, int edge);
 int gd_explorer_query_case_count(const GD_ExplorerContext *context,int edge);
 int gd_explorer_query_record(const GD_ExplorerPane *pane);
 
+int gd_explorer_structure_row_count(const GD_ExplorerStructureState *state);
 int gd_explorer_structure_prepare(GD_ExplorerContext *context);
 int gd_explorer_structure_inputs(GD_ExplorerContext *context);
 int gd_explorer_structure_run(GD_ExplorerContext *context);
@@ -228,6 +234,11 @@ void gd_explorer_structure_destroy(GD_ExplorerStructureState *state);
 void gd_explorer_structure_controls(GD_ExplorerContext *context);
 void gd_explorer_structure_source_node(GD_ExplorerContext *context,int node);
 int gd_explorer_similarity_active(const GD_ExplorerContext *context);
+int gd_explorer_similarity_available(const GD_ExplorerContext *context);
+int gd_explorer_similarity_source_record(const GD_ExplorerContext *context);
+int gd_explorer_similarity_source(GD_ExplorerContext *context);
+int gd_explorer_similarity_return(GD_ExplorerContext *context);
+int gd_explorer_source_open(GD_ExplorerContext *context,int record);
 /* Exact current placed entry; select/frame only, no feature/query changes. */
 int gd_explorer_similarity_select(GD_ExplorerContext *context, int row);
 int gd_explorer_similarity_compare(GD_ExplorerContext *context);

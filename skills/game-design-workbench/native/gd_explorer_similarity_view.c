@@ -1,7 +1,9 @@
 #include "gd_explorer_ui.h"
+#include "gd_explorer_controls.h"
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_explorer_picker.h"
 #include <math.h>
 #include <string.h>
 
@@ -9,6 +11,22 @@ static const Color foreground={221,226,235,255},muted={151,165,185,255},first_co
 int gd_explorer_similarity_active(const GD_ExplorerContext *context) {
     const GD_ExplorerStructureState *state=context->pane->structure_state;
     return state && state->result && state->result->similarity && state->similarity_canvas;
+}
+int gd_explorer_similarity_available(const GD_ExplorerContext *context) {
+    const GD_ExplorerStructureState *state=context->pane->structure_state;
+    return state && state->result && state->result->project==context->project && state->result->similarity && state->result->similarity->table_complete &&
+        (gd_explorer_family(context->pane->view)!=GD_EXPLORER_SKILL_DATA || state->revision==context->project->revision);
+}
+int gd_explorer_similarity_source_record(const GD_ExplorerContext *context) {
+    const GD_ExplorerStructureState *state=context->pane->structure_state;const GD_SimilarityProjection *projection;int node;
+    if(!gd_explorer_similarity_available(context))return -1;projection=state->result->similarity;
+    if(state->similarity_row<0 || state->similarity_row>=projection->entry_count)return -1;node=projection->nodes[state->similarity_row];
+    if(!projection->context || !projection->context->layout || node<0 || node>=projection->context->layout->node_count)return -1;
+    return gd_structure_result_record(projection->context,projection->context->layout->nodes[node].key);
+}
+int gd_explorer_similarity_source(GD_ExplorerContext *context) {return gd_explorer_source_open(context,gd_explorer_similarity_source_record(context));}
+int gd_explorer_similarity_return(GD_ExplorerContext *context) {
+    if(!gd_explorer_similarity_available(context))return 0;context->pane->structure_state->similarity_canvas=true;return 1;
 }
 static int append(char *text,size_t capacity,const char *value) {
     size_t before=strlen(text),size=strlen(value);
@@ -110,8 +128,9 @@ static void catalogue(GD_ExplorerContext *context) {
     int i,count=gd_similarity_feature_catalogue(state->result,values);
     if (!igTreeNode_Str("Native feature catalogue (append to pending map)")) return;
     igTextWrapped("Capabilities depend on applied typed scope. Retained counts/sets are not proof of complete external source. Append IDs, edit literal weights, then Run.");
+    GD_EvidencePage page=gd_explorer_evidence_pager("Feature catalogue",&state->similarity_feature_page,count,GD_EVIDENCE_PAGE_ROWS);
     igBeginChild_Str("Similarity feature catalogue",(ImVec2_c){0,190},0,0);
-    for (i=0;i<count;++i) {
+    for (i=page.first;i<page.end;++i) {
         igPushID_Int(i);
         if (igSmallButton(values[i].id)) {
             if (append(state->pending.features,sizeof(state->pending.features),values[i].id)) {
@@ -136,7 +155,7 @@ static void compare(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_SimilarityProjection *projection=state->result->similarity; int i;
     if (state->similarity_row<0 || state->similarity_peer<0) return;
     gd_explorer_similarity_compare(context);
-    igSeparator(); igText("Pair #%d / #%d | %d independent native work",state->similarity_row,state->similarity_peer,state->comparison_work);
+    igSeparator(); igText("Similarity pair #%d / #%d | %d independent native distance work",state->similarity_row,state->similarity_peer,state->comparison_work);
     if (!state->comparison_available) { igTextWrapped("Distance unavailable: missing selected cell, unfinished range validation or independent work ceiling. No value imputed."); return; }
     igText("Native weighted distance %.17g",state->comparison_distance);
     for (i=0;i<projection->feature_count;++i) igText("%s | unweighted %.17g | weight %.17g",projection->features[i].name,state->comparison_components[i],projection->features[i].weight);
@@ -147,7 +166,7 @@ static void inspect(GD_ExplorerContext *context) {
     igSeparator(); igText("Selected #%d | %s",row,projection->ids[row]);
     if (projection->map && projection->map->available && projection->map->placed[row]) igText("Native coordinates %.17g, %.17g",projection->map->x[row],projection->map->y[row]);
     else igTextWrapped("Unplaced. Missing selected values exclude entry; unavailable fit withholds all coordinates. No '?' position is fabricated.");
-    if (igSmallButton("Open linked source definition")) gd_explorer_structure_source_node(context,projection->nodes[row]);
+    gd_explorer_action_button(context,GD_ACTION_SIMILARITY_SOURCE);
     igSameLine(0,-1); if (igSmallButton("Append exact ID to pending entries")) { if (!append(state->pending.entries,sizeof(state->pending.entries),projection->ids[row])) snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Entry input exceeds 8192 bytes"); }
     for (feature=0;feature<projection->feature_count;++feature) {
         size_t offset=(size_t)row*projection->feature_count+feature; const GD_SimilarityCell *value=&projection->cells[offset]; const GD_SimilarityFeature *definition=&projection->features[feature];
@@ -156,14 +175,10 @@ static void inspect(GD_ExplorerContext *context) {
         else if (definition->kind==GD_SIMILARITY_NUMBER) { igText("Value %.17g | complete-row observed range",value->number); if (projection->map && projection->map->input_complete && projection->map->complete_entries) igText("%.17g .. %.17g",projection->map->low[feature],projection->map->high[feature]); else igTextUnformatted("Range unavailable",NULL); }
         else if (definition->kind==GD_SIMILARITY_NAME) igText("Exact value: %s",value->name);
         else if (igTreeNode_Str(TextFormat("%d exact context members (known empty differs missing)",value->count))) {
-            int member,start,end,*page=&state->similarity_member_pages[feature];
-            if (*page<0 || *page*64>=value->count) *page=0;
-            if (igSmallButton("Previous members") && *page>0) --*page; igSameLine(0,-1);
-            if (igSmallButton("Next members") && (*page+1)*64<value->count) ++*page;
-            start=*page*64; end=start+64; if (end>value->count) end=value->count;
-            igText("Members %d .. %d / %d",start,end,value->count); igBeginChild_Str("Feature members",(ImVec2_c){0,130},0,0);
+            int member;GD_EvidencePage page=gd_explorer_evidence_pager("Members",&state->similarity_member_pages[feature],value->count,GD_EVIDENCE_PAGE_ROWS);
+            igBeginChild_Str("Feature members",(ImVec2_c){0,130},0,0);
             /* Exhaustive pagination; at most 64 widgets per expanded set. */
-            for (member=start;member<end;++member) {
+            for (member=page.first;member<page.end;++member) {
                 int node=value->members[member]; igPushID_Int(member);
                 if (igSmallButton(TextFormat("#%d %s",node,projection->context->layout->nodes[node].label))) gd_explorer_structure_source_node(context,node);
                 igPopID();
@@ -174,11 +189,14 @@ static void inspect(GD_ExplorerContext *context) {
     }
 }
 void gd_explorer_similarity_controls(GD_ExplorerContext *context) {
-    GD_ExplorerStructureState *state=context->pane->structure_state; const GD_SimilarityProjection *projection=state->result->similarity; const GD_Similarity *map=projection ? projection->map:NULL; int row,start,end;
+    GD_ExplorerStructureState *state=context->pane->structure_state; const GD_SimilarityProjection *projection=state->result->similarity; const GD_Similarity *map=projection ? projection->map:NULL; int row;GD_EvidencePage page;
     igSeparator(); igText("Applied: %s [%s]",state->result->options.question,state->result->options.projection);
     catalogue(context);
     if (!projection) { igTextWrapped("Discovery only; no distance, fit or source mutation performed. Select features for a map."); return; }
-    igCheckbox("Show separate similarity canvas",&state->similarity_canvas); igSameLine(0,-1); if (igSmallButton("Fit similarity")) state->similarity_fit=true;
+    igText("Current canvas: %s | %s",state->similarity_canvas ? "similarity map":"ordinary source",gd_explorer_view_names[context->pane->view]);
+    if(!state->similarity_canvas){gd_explorer_action_button(context,GD_ACTION_SIMILARITY_RETURN);igTextWrapped("Return retains selected analytical row, comparison peer and map camera; no Run. Back remains scoped to current canvas mode.");}
+    if(state->similarity_canvas){if(igSmallButton("Show ordinary canvas")){state->similarity_canvas=false;context->pane->fit=0;}igSameLine(0,-1);if(igSmallButton("Fit similarity map"))state->similarity_fit=true;}
+    else if(igSmallButton("Frame source selection / all (F)"))gd_explorer_action_run(context,GD_ACTION_VIEW_FIT);
     igTextWrapped("Ordinary layout/camera stay separate. Native coordinates use selected-feature distance units; display uses one uniform scale. No force layout, inferred importance, outcome equivalence or '?' hub. Unplaced entries stay inspectable below.");
     igText("Work %d / %d | owned %llu / peak %llu bytes",projection->work,projection->work_limit,(unsigned long long)projection->owned_bytes,(unsigned long long)projection->peak_owned_bytes);
     igText("Table %s | source cap %s | storage cap %s | source incomplete %s",projection->table_complete ? "complete":"unfinished",projection->source_limited ? "hit":"no",projection->storage_limited ? "hit":"no",state->result->source_incomplete ? "yes":"no");
@@ -190,16 +208,12 @@ void gd_explorer_similarity_controls(GD_ExplorerContext *context) {
         igText("Negative eigenvalues %d | normalized negative mass %.17g",map->negative_eigenvalues,map->negative_eigenvalue_mass);
     }
     if (!projection->table_complete) { igTextWrapped("Feature validation/extraction unfinished. No input table or coordinates published; inspect native context/limits."); return; }
-    if (state->similarity_page<0) state->similarity_page=0;
-    if (state->similarity_page*32>=projection->entry_count) state->similarity_page=projection->entry_count ? (projection->entry_count-1)/32:0;
     igText("Comparison entries %d | full context %d shown nodes, %d rows",projection->entry_count,state->result->query->shown_nodes,state->result->query->shown_edges);
-    if (igSmallButton("Previous similarity entries") && state->similarity_page>0) --state->similarity_page; igSameLine(0,-1);
-    if (igSmallButton("Next similarity entries") && (state->similarity_page+1)*32<projection->entry_count) ++state->similarity_page;
-    start=state->similarity_page*32; end=start+32; if (end>projection->entry_count) end=projection->entry_count;
-    for (row=start;row<end;++row) {
+    page=gd_explorer_evidence_pager("Similarity entries",&state->similarity_page,projection->entry_count,GD_EVIDENCE_PAGE_ROWS);
+    for (row=page.first;row<page.end;++row) {
         int placed=map && map->available && map->placed[row]; igPushID_Int(row);
         if (igSmallButton(TextFormat("Inspect #%d",row))) choose_row(state,row,0); igSameLine(0,-1);
-        if (igSmallButton("Compare")) choose_row(state,row,1); igSameLine(0,-1); igText("%s | %s",placed ? "placed":"unplaced",projection->ids[row]); igPopID();
+        if (igSmallButton("Use as comparison peer")) choose_row(state,row,1); igSameLine(0,-1); igText("%s | %s",placed ? "placed":"unplaced",projection->ids[row]); igPopID();
     }
     inspect(context); compare(context);
 }

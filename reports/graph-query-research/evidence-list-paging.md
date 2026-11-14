@@ -1,6 +1,6 @@
 # Evidence-list paging consistency
 
-First slice accepted for checkpoint by user without further visual review. User authorized commit. Matching-row paging covers GUI and IPC after contextual tools checkpoint `62ffa02`. Structural/similarity migration remains follow-up. No unperformed visual acceptance inferred.
+First slice checkpoint `6f298e2` accepted by user without further visual review. Follow-up migrates named structural/similarity inspectors and main explorer source groups. Compact graph-layer summaries and broader visual acceptance remain open. No unperformed visual acceptance inferred.
 
 ## Outcome
 
@@ -58,7 +58,7 @@ Use bounded read-only scans or matching-index scratch; no allocation proportiona
 - IPC evidence offsets count matching rows; native source slots and row keys remain exact. Full-result byte offsets remain bytes. Rules page controls work outside Resources. Test empty, exact-boundary, final-page, sparse, stale-scope and failure cases.
 - Focused Windows CJIT/CPU verification on both unchanged examples; separate authorized visual review. Existing review viewer remains untouched.
 
-## Implementation
+## First-slice implementation
 
 - `gd_evidence_page.h`: allocation-free range/clamp helper. Shared GUI pager uses Previous/Next, 1-based page slider and retained range; empty list reports 0 rows. Presentation page values remain 0-based.
 - Rule/binding rows, proposal/comparison rows, declared axes and Effect paths page retained native indices. Row inspection stays separate from page position.
@@ -70,7 +70,7 @@ Use bounded read-only scans or matching-index scratch; no allocation proportiona
 - Unknown producer omission count is null, not fabricated 0. Numeric diagnostic omissions cover native diagnostic scope, not inferred matching omissions for reference filter. Native limit/incomplete flags remain authoritative. Full-result byte pages unchanged.
 - Paging verification exposed refresh shortcut that skipped rule-owner remap in Actor/Effect panes. Refresh now rebuilds those clean applied workspaces and restores caller's context pane after candidate walk. Pending forms still block refresh; failed candidate retains old project/workspaces. No pending inputs run implicitly.
 
-## Verification
+## First-slice verification
 
 Artifacts: `skills/game-design-workbench/native/build/evidence-paging-work/`.
 
@@ -82,6 +82,27 @@ Artifacts: `skills/game-design-workbench/native/build/evidence-paging-work/`.
 - Synthetic 129 Effect cardinality tests zero-based page2 bounds without inventing authored contributor paths. Count restored before row serialization. Beyond16-axis behavior uses pure range coverage; no claim that examples contain that many declared axes. Real beyond64 Effect-path visual review remains unperformed.
 - Clean-refresh regression retains Actor bindings owner/count/applied inputs and caller pane. Harness explicitly undoes its own synthetic draft edits and discards harness Redo before this check; no live viewer buffers involved.
 - Existing Mario review viewer not changed or closed. User authorized separate paging review launch. PID10864/session`10864-68897605425c2e1a` appeared, then exited before setup; controls/inspect reads timed out. No mutation, staging or Run sent. Exit report showed no draft/source changes. User chose leave closed; no relaunch or automatic retry. GPU/font/pointer acceptance remains pending. Deep/research checks and final compiler/platform matrix not run; existing Mario deep drift blocker unchanged.
+
+## Follow-up implementation
+
+- Named structural inspectors share 64-row paging: node counts, declaration gaps, findings, finite hypotheses, marked nodes/links, source-backed nodes, checked peers, reached members, roots/targets, matrix loaded cases, related pairs and nonempty adjacency cells.
+- Support witnesses retain up to `GD_MAX_RECORDS` parent arcs, not first64. Page in existing root-to-target display order. These are graph support paths, not execution traces.
+- Similarity entries now use64 rows instead of32. Feature definitions and selected feature members use same pager. `structure_page` bounds follow node/gap table; feature catalogue uses independent cursor from optional canonical-context node table; `similarity_page` follows retained entries. State-coverage hypotheses use shared pager and scoped `coverage_page` maximum.
+- Main explorer overview/foundation/reachability source declarations and current-view Find representations page matching rows. Noun source-group cache keeps64 visible slots, keyed by native pair; page-relative cache position never becomes source identity. Groups beyond first64 remain reachable. Primary Noun-case page stays separate.
+- Rule and Actor/Effect case participant details page independently. Participant cursors live in heap-owned rule/query workspaces, not stack-copied `GD_ExplorerPane`; no stack-limit increase. Each owner adds8,192 bytes. Structural nested cursor arrays add90,112 bytes per activated question owner, plus scalar cursors and16,384-byte heap witness scratch. Expanded support paths do not add16KiB renderer stack frames. New retained result clears cursors; failed candidate preserves previous cursors/result.
+- Shared matching-row admission helper advances only after native membership test. Empty and last-page handling use existing bounded range helper. No new evaluator, solver, allocation per page or authored-data change.
+- IPC rule-row inspection exposed unconditional similarity-mode clearing. `select --form rule` and `rule.check` now retain current canvas, both cameras and ordinary selection. Explicit source/link/cell navigation retains existing mode policy; broader source-navigation direction remains separate.
+- Remaining compact graph-layer caps live in `gd_graph_analysis_ui.c` and `gd_graph_reachability_ui.c`: root/dominator summaries, support-candidate dropdown, foundation/reachability peer/member/witness lists and topology-family summaries. These are not the migrated named-question inspectors. Keep parent paging item open.
+
+## Follow-up verification
+
+Artifacts: `skills/game-design-workbench/native/build/evidence-paging-followup/`.
+
+- Windows CJIT Graph/ExplorerTest builds; core148/148; focused two-example Find/shared-UX/production-IPC suite9/9. No deep/research run or compiler/platform matrix. Later user-authorized separate Mario review prepared; session/setup recorded in [navigation report](similarity-navigation.md). Pointer acceptance remains pending.
+- Extended paging:22 checks/example. Covers sparse native slots67/153/998 and `INT_MAX` ordinal increment, actual structural counts (Crate63/Mario576), scoped valid/invalid page writes, no allocation/input/result/geometry/camera/selection changes, failed-reader cursor retention and successful-reader cursor clearing.
+- Synthetic similarity metadata uses129 entries; restore before serialization. Source-group metadata exercises slots70/129 and restores graph before rendering. Synthetic130-node chain retains129 witness arcs and reaches last page without changing native analysis work. No synthetic authored examples or runtime claims.
+- Production adapter reproduces rule-row inspection clearing active MDA similarity mode on both examples before fix. Regression verifies retained mode, row inspection, both cameras, ordinary MDA selection, active pane and allocation count after fix.
+- Existing paging checks remain Crate5,418/Mario6,103. Authored source hashes remain unchanged. CPU checks do not establish pointer/readability/restart/standalone acceptance.
 
 ## Comments
 

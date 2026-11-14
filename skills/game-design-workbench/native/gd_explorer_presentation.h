@@ -290,6 +290,9 @@ int gd_explorer_presentation_maximum(const GD_ExplorerContext *c,const char *nam
     else if(!strcmp(name,"actor_case_page"))total=gd_explorer_query_case_count(c,p->selection.cell);
     else if(!strcmp(name,"contributor_page"))total=p->query_state && p->query_state->selected ? p->query_state->selected->count:0;
     else if(!strcmp(name,"rules_page"))total=gd_explorer_rules_row_count(p->rule_state);
+    else if(!strcmp(name,"coverage_page"))total=p->query_state && p->query_state->query && p->query_state->query->state_coverage ? p->query_state->query->binding_count:0;
+    else if(!strcmp(name,"structure_page"))total=gd_explorer_structure_row_count(p->structure_state);
+    else if(!strcmp(name,"similarity_page"))total=p->structure_state && p->structure_state->result && p->structure_state->result->similarity ? p->structure_state->result->similarity->entry_count:0;
     else if(!strcmp(name,"rules_axis_page")){const GD_ExplorerRuleState *state=p->rule_state;total=0;size=GD_EVIDENCE_AXIS_ROWS;
         if(state && state->bindings && state->row>=0 && state->row<state->bindings->binding_count){const GD_Rules *rules=state->bindings->rules;const GD_RuleParticipant *actor=&rules->participants[state->bindings->bindings[state->row].participant];
             if(actor->noun_resolution==GD_RULE_RESOLVED){int edge;for(edge=rules->actor_first[actor->noun_record];edge>=0;edge=rules->next_axis[edge])++total;}
@@ -372,7 +375,7 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     if(!strcmp(name,"view.start.add")) { int node=analyze(c); return node>=0 && gd_graph_path_start(&p->paths,p->layout->nodes[node].key)>=0; }
     if(!strcmp(name,"view.expand")) { int record=selected_record(c); GD_Focus prior=p->focus; if(p->view!=GD_EXPLORER_RELATIONSHIPS || record<0) return 0; gd_focus_expand(gd_explorer_model(c->project,p->view),&p->focus,record); gd_explorer_presentation_read(c,&values); if(presentation_rearrange(c,&values,0)) return 1; p->focus=prior; return 0; }
     if(!strcmp(name,"view.analyze")) { int selected;if(!overview_available(c)) return 0;selected=analyze(c);if(overview_only(p)){(void)evidence(c,selected);return 1;} if(c->pane->view==GD_EXPLORER_SKILLS && (!c->query || !gd_skill_unlocks(gd_explorer_model(c->project,c->pane->view),p->known,selected_record(c),c->query))) return 0; (void)evidence(c,selected); if(p->paths.enabled && selected>=0) gd_graph_path_selection(c->analysis,selected); if(p->shared && selected>=0 && p->peer>=0) gd_graph_compare(c->analysis,selected,p->peer); return 1; }
-    if(!strcmp(name,"view.compare")) return !gd_explorer_similarity_active(c) && c->pane->view==GD_EXPLORER_ACTORS ? gd_explorer_query_compare(c):gd_explorer_similarity_compare(c);
+    if(!strcmp(name,"view.compare")) return gd_explorer_similarity_active(c) ? gd_explorer_similarity_compare(c):c->pane->view==GD_EXPLORER_ACTORS ? gd_explorer_query_compare(c):0;
     return 0;
 }
 #undef PV_ALL

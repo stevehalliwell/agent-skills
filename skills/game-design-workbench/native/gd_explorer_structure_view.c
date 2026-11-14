@@ -209,7 +209,7 @@ int gd_explorer_structure_remap(GD_ExplorerContext *context, const GD_ExplorerPr
         gd_explorer_structure_destroy(temporary); gd_explorer_structure_destroy(candidate);
         snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Refresh blocked: structural selector identity changed or unavailable. Clear question first."); return 0;
     }
-    gd_explorer_structure_destroy(temporary); candidate->page=state->page;
+    gd_explorer_structure_destroy(temporary);candidate->page=gd_evidence_page(gd_explorer_structure_row_count(candidate),GD_EVIDENCE_PAGE_ROWS,state->page).page;
     candidate->similarity_canvas=state->similarity_canvas; candidate->similarity_camera=state->similarity_camera; candidate->similarity_camera_ready=state->similarity_camera_ready; candidate->similarity_fit=state->similarity_fit || !state->similarity_camera_ready;
     /* Ad-hoc point inspection resets. Explicit pair re-resolves from IDs;
        never reinterpret old row offsets after source replacement. */
@@ -217,6 +217,7 @@ int gd_explorer_structure_remap(GD_ExplorerContext *context, const GD_ExplorerPr
 }
 static void navigate(GD_ExplorerContext *context, int record, int resource_node) {
     GD_ExplorerPane *pane=context->pane; if (record<0) return;
+    if(gd_explorer_similarity_available(context)){gd_explorer_source_open(context,record);return;}
     if (pane->view==GD_EXPLORER_MDA) { pane->mda.record=record; pane->mda.link=-1; }
     else if (pane->view==GD_EXPLORER_RESOURCES) { pane->selection.node=resource_node; pane->selection.cell=-1; pane->selection.linked=resource_node<0 ? record:-1; }
     else if (pane->view==GD_EXPLORER_ACTORS || pane->view==GD_EXPLORER_EFFECTS) { pane->selection.node=-1; pane->selection.cell=-1; pane->selection.linked=record; }
@@ -266,71 +267,78 @@ static void link_row(GD_ExplorerContext *context, int index, int reverse) {
     if (result->view==GD_EXPLORER_MATRIX && igTreeNode_Str("Loaded matrix source cases")) {
         const GD_Model *model=gd_explorer_model(result->project,result->view); const GD_Cell *cell=&model->cells[edge->key]; int i;
         igText("%d loaded cases: source context, not filtered contributor count",cell->pair_count);
-        for (i=0;i<cell->pair_count && i<64;++i) { int record=model->pairs[cell->first_pair+i].interaction; igPushID_Int(i); if (igSmallButton(model->records[record].reference)) navigate(context,record,-1); igPopID(); }
-        if (cell->pair_count>64) igText("%d further cases in native result",cell->pair_count-64); igTreePop();
+        GD_EvidencePage page=gd_explorer_evidence_cursor_pager("Loaded cases",&context->pane->structure_state->matrix_case_pages[index],cell->pair_count);
+        for (i=page.first;i<page.end;++i) { int record=model->pairs[cell->first_pair+i].interaction; igPushID_Int(i); if (igSmallButton(model->records[record].reference)) navigate(context,record,-1); igPopID(); }
+        igTreePop();
     }
     igPopID();
 }
-static void witness(GD_ExplorerContext *context, const char *label, const int *arcs, int retained, int length) {
-    const GD_StructureQuery *query=context->pane->structure_state->result->query; int i;
+static void witness(GD_ExplorerContext *context, const char *label, const int *arcs, int retained, int length,unsigned short *cursor) {
+    const GD_StructureQuery *query=context->pane->structure_state->result->query; int i;GD_EvidencePage page;
     igPushID_Str(label); igText("%s: length %d | %d trailing arcs retained",label,length,retained);
-    for (i=retained-1;i>=0;--i) link_row(context,arcs[i]/2,(arcs[i]%2) ^ (query->request.direction==GD_STRUCTURE_BACKWARD));
+    page=gd_explorer_evidence_cursor_pager("Support arcs",cursor,retained);
+    for (i=retained-1-page.first;i>=retained-page.end;--i) link_row(context,arcs[i]/2,(arcs[i]%2) ^ (query->request.direction==GD_STRUCTURE_BACKWARD));
     igPopID();
 }
 static void related_path_rows(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state;
     const GD_StructureResult *result=state->result; const GD_StructureQuery *query=result->query;
     const GD_GraphClosure *closure=&query->analysis.reachability; const GD_GraphComparison *comparison=gd_structure_comparison(query);
-    int i,shown=0;
+    int i,total=0,ordinal=0;GD_EvidencePage page;
     igTextWrapped("Strict reached-node sets through selected typed kinds, not an ordered-path grammar. Unselected kinds stop traversal; Relationships excludes next by default. Shared endpoints do not prove equivalent roles, learning, applicability or outcomes.");
     if (!comparison) { igTextWrapped("Selected closure rows unfinished or unavailable; no absence claim."); return; }
     igText("%d checked peers share reached nodes (finished rows only)",closure->peer_count);
-    for (i=0;i<closure->peer_count && i<64;++i) {
+    page=gd_explorer_evidence_pager("Checked peers",&state->peer_page,closure->peer_count,GD_EVIDENCE_PAGE_ROWS);
+    for (i=page.first;i<page.end;++i) {
         int peer=closure->peers[i]; char identity[GD_MAX_PATH]; igPushID_Int(peer);
         igText("#%d %s | %d shared",peer,result->layout->nodes[peer].label,closure->shared[peer]);
         if (node_id(result,peer,identity,sizeof(identity)) && igSmallButton("Compare this peer")) snprintf(state->pending.to,sizeof(state->pending.to),"%s",identity);
         igPopID();
     }
-    if (closure->peer_count>64) igText("%d further peers in native result",closure->peer_count-64);
+    for(i=0;i<closure->row_count;++i)total+=comparison->nodes[i]!=0;
+    page=gd_explorer_evidence_pager("Reached members",&state->member_page,total,GD_EVIDENCE_PAGE_ROWS);
     for (i=0;i<closure->row_count;++i) if (comparison->nodes[i]) {
-        if (shown++>=64) continue;
+        if(!gd_evidence_page_take(&page,&ordinal))continue;
         igPushID_Int(i);
         if (igTreeNode_Str(TextFormat("Reached member #%d: %s",i,result->layout->nodes[i].label))) {
             int side;
             igText("Membership: %s",comparison->nodes[i]==GD_GRAPH_SHARED ? "shared":comparison->nodes[i]==GD_GRAPH_A_ONLY ? "first only":"second only");
             for (side=0;side<2;++side) {
-                int arcs[64],length=gd_graph_closure_path(&query->analysis,closure,side,i,arcs,64);
-                witness(context,side ? "Second root support":"First root support",arcs,length<0 ? 0:length<64 ? length:64,length);
+                int *arcs=state->witness_arcs,length=gd_graph_closure_path(&query->analysis,closure,side,i,arcs,GD_MAX_RECORDS);
+                witness(context,side ? "Second root support":"First root support",arcs,length<0 ? 0:length,length,&state->support_pages[side][i]);
             }
             igTreePop();
         }
         igPopID();
     }
-    if (shown>64) igText("%d further members in native result",shown-64);
 }
-static void finding_rows(GD_ExplorerContext *context, const char *label, const GD_Finding *findings, int count, int omitted) {
-    int i; if (!igTreeNode_Str(label)) return;
+static void finding_rows(GD_ExplorerContext *context, const char *label, const GD_Finding *findings, int count, int omitted,int *cursor) {
+    int i;GD_EvidencePage page;if (!igTreeNode_Str(label)) return;
     igText("%d retained findings; %d omitted by native reader",count,omitted);
-    for (i=0;i<count && i<64;++i) { const GD_Finding *finding=&findings[i]; igPushID_Int(i); igTextWrapped("%s: %s | %s | line %d",finding->code,finding->message,finding->reference ? finding->reference:"unspecified",finding->line); if (finding->record>=0 && igSmallButton("Inspect finding source")) navigate(context,finding->record,-1); igPopID(); }
-    if (count>64) igText("%d further findings in native result",count-64); igTreePop();
+    page=gd_explorer_evidence_pager("Findings",cursor,count,GD_EVIDENCE_PAGE_ROWS);
+    for (i=page.first;i<page.end;++i) { const GD_Finding *finding=&findings[i]; igPushID_Int(i); igTextWrapped("%s: %s | %s | line %d",finding->code,finding->message,finding->reference ? finding->reference:"unspecified",finding->line); if (finding->record>=0 && igSmallButton("Inspect finding source")) navigate(context,finding->record,-1); igPopID(); }
+    igTreePop();
 }
 static void gap_panel(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_StructureResult *result=state->result; const GD_DeclarationGaps *gaps=result->gaps;
-    const GD_Model *model=gd_explorer_model(result->project,result->view); int i,total=gaps->rows-gaps->counts[GD_DECLARATION_RESOLVED],pages=(total+63)/64,ordinal=0;
+    const GD_Model *model=gd_explorer_model(result->project,result->view); int i,total=gaps->rows-gaps->counts[GD_DECLARATION_RESOLVED],ordinal=0;GD_EvidencePage page;
     igTextWrapped("Whole loaded reader diagnostic context, not graph/canvas filters. Only consumed explicit declarations and native findings; no new validation rules or required metadata inferred.");
     igTextWrapped("%d declared references: %d resolved; %d missing; %d unloaded; %d ambiguous",gaps->rows,gaps->counts[GD_DECLARATION_RESOLVED],gaps->counts[GD_DECLARATION_MISSING],gaps->counts[GD_DECLARATION_UNLOADED],gaps->counts[GD_DECLARATION_AMBIGUOUS]);
     igTextWrapped("Inventory checked; source %s. Domain/type findings below remain separate from identity resolution. Empty list is not a complete design or missing-metadata proof.",result->source_incomplete ? "incomplete":"checked within loaded scope");
-    if (state->page>=pages) state->page=pages ? pages-1:0;
-    if (pages) igSliderInt("Declaration gap page",&state->page,0,pages-1,"%d",0);
+    page=gd_explorer_evidence_pager("Declaration gaps",&state->page,total,GD_EVIDENCE_PAGE_ROWS);
     for (i=0;i<gaps->rows;++i) if (gaps->identities[i]!=GD_DECLARATION_RESOLVED) {
-        const GD_Edge *edge=&model->edges[i]; if (ordinal++<state->page*64 || ordinal>state->page*64+64) continue;
+        const GD_Edge *edge=&model->edges[i];if(!gd_evidence_page_take(&page,&ordinal))continue;
         igPushID_Int(i); igTextWrapped("%s | %s: %s | %s | line %d",model->records[edge->source].reference,gd_field_name(edge->field),edge->reference,gd_declaration_identity_name((GD_DeclarationIdentity)gaps->identities[i]),edge->line);
         if (igSmallButton("Inspect declaring source")) navigate(context,edge->source,-1); igPopID();
     }
-    igText("%d identity gaps; 64 rows/page",total);
-    finding_rows(context,"Model native findings",model->findings,model->finding_count,model->findings_omitted);
-    if (result->view==GD_EXPLORER_MDA) finding_rows(context,"MDA native findings",result->project->mda->findings,result->project->mda->finding_count,result->project->mda->findings_omitted);
-    if (result->view==GD_EXPLORER_RESOURCES || result->inventory || result->actor_scene || result->effects) finding_rows(context,"Rule native findings",result->project->rules->findings,result->project->rules->finding_count,result->project->rules->findings_omitted);
+    finding_rows(context,"Model native findings",model->findings,model->finding_count,model->findings_omitted,&state->finding_pages[0]);
+    if (result->view==GD_EXPLORER_MDA) finding_rows(context,"MDA native findings",result->project->mda->findings,result->project->mda->finding_count,result->project->mda->findings_omitted,&state->finding_pages[1]);
+    if (result->view==GD_EXPLORER_RESOURCES || result->inventory || result->actor_scene || result->effects) finding_rows(context,"Rule native findings",result->project->rules->findings,result->project->rules->finding_count,result->project->rules->findings_omitted,&state->finding_pages[2]);
+}
+int gd_explorer_structure_row_count(const GD_ExplorerStructureState *state) {
+    if(!state || !state->result)return 0;
+    if(state->result->gaps)return state->result->gaps->rows-state->result->gaps->counts[GD_DECLARATION_RESOLVED];
+    return state->result->query ? state->result->query->shown_nodes:0;
 }
 static void result_panel(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_StructureResult *result=state->result; const GD_StructureQuery *query=result->query; const GD_GraphAnalysis *analysis=&query->analysis; int i,count=0,indices[GD_MAX_RECORDS];
@@ -341,7 +349,7 @@ static void result_panel(GD_ExplorerContext *context) {
         const GD_ActorQuery *source=result->options.actor_query->variants; const GD_RuleCase *root=&result->project->rules->cases[source->case_index]; int i;
         igTextWrapped("Finite actor scope: %s#%s | local %s | %s. All retained hypotheses/excluded checks; independent of ghosts, camera and revealed neighborhood. Links are evidence associations, not execution order or feasibility proof.",gd_explorer_model(result->project,result->view)->records[result->project->rules->sources[root->source].record].reference,root->name,result->project->rules->participants[source->participant].name,gd_explorer_model(result->project,result->view)->records[source->axis].reference);
         igText("Native hypotheses %d | fixed facts %d | contexts %d | topology work %d/%d%s",source->variant_count,source->fixed.fact_count,source->fixed.context_count,result->actor_scene->work,result->actor_scene->work_limit,result->actor_scene->limited ? " [LIMITED]":"");
-        if (igTreeNode_Str("Applied finite hypotheses")) { for (i=0;i<source->variant_count;++i) igText("%s | %s | proposals %d%s",source->variants[i].value,gd_rule_truth_name(source->variants[i].applicability),source->variants[i].write_count,source->variants[i].limited ? " [LIMITED]":""); igTreePop(); }
+        if (igTreeNode_Str("Applied finite hypotheses")) {GD_EvidencePage page=gd_explorer_evidence_pager("Hypotheses",&state->hypothesis_page,source->variant_count,GD_EVIDENCE_PAGE_ROWS);for (i=page.first;i<page.end;++i) igText("%s | %s | proposals %d%s",source->variants[i].value,gd_rule_truth_name(source->variants[i].applicability),source->variants[i].write_count,source->variants[i].limited ? " [LIMITED]":""); igTreePop(); }
     }
     if (result->inventory) {
         const GD_ActorInventory *inventory=result->inventory;
@@ -369,47 +377,54 @@ static void result_panel(GD_ExplorerContext *context) {
     if (igTreeNodeEx_Str("Answer members and source rows",ImGuiTreeNodeFlags_DefaultOpen)) {
         int nodes=0,links=0;
         igTextWrapped("Retained native marks: support/context union, not the dominator set. Context counts below remain projection-wide; marks identify selected answer members. No query overlay changes canvas scope.");
-        for (i=0;i<analysis->node_count;++i) if (query->marked_nodes[i] && nodes++<64) { int key=result->layout->nodes[i].key,source=gd_structure_result_record(result,key); igPushID_Int(i); if (igSmallButton(TextFormat("#%d %s",i,result->layout->nodes[i].label))) navigate(context,source,result->view==GD_EXPLORER_RESOURCES ? key:-1); igPopID(); }
-        if (nodes>64) igText("%d further marked nodes in native result",nodes-64);
-        for (i=0;i<analysis->edge_count;++i) if (query->marked_edges[i] && links++<64) link_row(context,i,0);
-        if (links>64) igText("%d further marked source rows in native result",links-64);
+        int ordinal=0;GD_EvidencePage page;
+        for(i=0;i<analysis->node_count;++i)nodes+=query->marked_nodes[i]!=0;
+        for(i=0;i<analysis->edge_count;++i)links+=query->marked_edges[i]!=0;
+        page=gd_explorer_evidence_pager("Marked nodes",&state->marked_node_page,nodes,GD_EVIDENCE_PAGE_ROWS);
+        for (i=0;i<analysis->node_count;++i) if (query->marked_nodes[i]) {if(!gd_evidence_page_take(&page,&ordinal))continue;int key=result->layout->nodes[i].key,source=gd_structure_result_record(result,key); igPushID_Int(i); if (igSmallButton(TextFormat("#%d %s",i,result->layout->nodes[i].label))) navigate(context,source,result->view==GD_EXPLORER_RESOURCES ? key:-1); igPopID(); }
+        ordinal=0;page=gd_explorer_evidence_pager("Marked source rows",&state->marked_link_page,links,GD_EVIDENCE_PAGE_ROWS);
+        for (i=0;i<analysis->edge_count;++i) if (query->marked_edges[i] && gd_evidence_page_take(&page,&ordinal))link_row(context,i,0);
         if (!nodes && !links) igTextWrapped("No retained selection-specific marks. Inspect context counts, operation parameters and completeness; not a gameplay absence proof.");
         igTreePop();
     }
     if (igTreeNode_Str("Nodes, direct counts and source navigation")) {
         for (i=0;i<analysis->node_count;++i) if (analysis->shown[i]) indices[count++]=i;
-        if (state->page<0) state->page=0; if (state->page*64>=count) state->page=count ? (count-1)/64:0;
-        if (igSmallButton("Previous 64") && state->page) --state->page;
-        igSameLine(0,-1); if (igSmallButton("Next 64") && (state->page+1)*64<count) ++state->page;
-        igText("Page %d | %d source-backed entries",state->page+1,count);
-        for (i=state->page*64;i<count && i<(state->page+1)*64;++i) node_row(context,indices[i]);
+        GD_EvidencePage page=gd_explorer_evidence_pager("Source-backed nodes",&state->page,count,GD_EVIDENCE_PAGE_ROWS);
+        for (i=page.first;i<page.end;++i) node_row(context,indices[i]);
         igTreePop();
     }
     if (igTreeNode_Str("Native witnesses and members")) {
         if (query->request.kind==GD_STRUCTURE_RELATED_PATHS) related_path_rows(context);
-        if (query->request.kind==GD_STRUCTURE_REACHABILITY && query->request.source>=0 && query->request.target>=0) { int arcs[64],length=gd_graph_closure_path(analysis,&analysis->reachability,0,query->request.target,arcs,64); witness(context,"Support suffix",arcs,length<0 ? 0:length<64 ? length:64,length); }
+        if (query->request.kind==GD_STRUCTURE_REACHABILITY && query->request.source>=0 && query->request.target>=0) { int *arcs=state->witness_arcs,length=gd_graph_closure_path(analysis,&analysis->reachability,0,query->request.target,arcs,GD_MAX_RECORDS); witness(context,"Support suffix",arcs,length<0 ? 0:length,length,&state->witness_pages[0]); }
         if (query->request.kind==GD_STRUCTURE_REACHABILITY) {
-            int roots=0;
+            int roots=0,ordinal=0;GD_EvidencePage page;
+            for(i=0;i<analysis->node_count;++i)roots+=query->roots[i]!=0;
+            page=gd_explorer_evidence_pager("Starts",&state->root_page,roots,GD_EVIDENCE_PAGE_ROWS);
             for (i=0;i<analysis->node_count;++i) if (query->roots[i]) {
-                int member,shown=0; if (roots++>=64) continue; igPushID_Int(i);
+                int member,shown=0;if(!gd_evidence_page_take(&page,&ordinal))continue;igPushID_Int(i);
                 if (igTreeNode_Str(TextFormat("Start #%d: %s",i,result->layout->nodes[i].label))) {
                     igText("Row %s | %d retained targets",analysis->reachability.finished[i] ? "finished":"unfinished",analysis->reachability.count[i]);
-                    for (member=0;member<analysis->node_count;++member) if (gd_graph_closure_contains(&analysis->reachability,i,member) && shown++<64) { int key=result->layout->nodes[member].key,source=gd_structure_result_record(result,key); igPushID_Int(member); if (igSmallButton(TextFormat("#%d %s",member,result->layout->nodes[member].label))) navigate(context,source,result->view==GD_EXPLORER_RESOURCES ? key:-1); igPopID(); }
-                    if (shown>64) igText("%d further retained targets in native result",shown-64); igTreePop();
+                    GD_EvidencePage members=gd_explorer_evidence_cursor_pager("Retained targets",&state->reach_member_pages[i],analysis->reachability.count[i]);
+                    for (member=0;member<analysis->node_count;++member) if (gd_graph_closure_contains(&analysis->reachability,i,member)) {if(!gd_evidence_page_take(&members,&shown))continue;int key=result->layout->nodes[member].key,source=gd_structure_result_record(result,key); igPushID_Int(member); if (igSmallButton(TextFormat("#%d %s",member,result->layout->nodes[member].label))) navigate(context,source,result->view==GD_EXPLORER_RESOURCES ? key:-1); igPopID(); }
+                    igTreePop();
                 }
                 igPopID();
             }
-            if (roots>64) igText("%d further starts in native result",roots-64);
         }
         if (query->request.kind==GD_STRUCTURE_DOMINATORS || query->request.kind==GD_STRUCTURE_BYPASS) {
             const GD_GraphPaths *paths=&analysis->paths;
-            if (query->request.target>=0 && paths->selection.node==query->request.target) witness(context,"Support suffix",paths->selection.arcs,paths->selection.retained,paths->selection.length);
+            if (query->request.target>=0 && paths->selection.node==query->request.target) witness(context,"Support suffix",paths->selection.arcs,paths->selection.retained,paths->selection.length,&state->witness_pages[0]);
             else igTextUnformatted("Support suffix unavailable: no retained selected target",NULL);
-            if (query->request.kind==GD_STRUCTURE_BYPASS) { const GD_PathBypass *bypass=&paths->bypass; if (!bypass->valid) igTextWrapped("Native bypass unavailable: incomplete starts or selection is not a nonmandatory support-path candidate. Not proof of no alternative."); else { igText("Bypass %s | found %s",bypass->complete ? "finished":"unfinished",bypass->found ? "yes":"no"); if (bypass->found) witness(context,"Avoiding suffix",bypass->arcs,bypass->retained,bypass->length); } }
+            if (query->request.kind==GD_STRUCTURE_BYPASS) { const GD_PathBypass *bypass=&paths->bypass; if (!bypass->valid) igTextWrapped("Native bypass unavailable: incomplete starts or selection is not a nonmandatory support-path candidate. Not proof of no alternative."); else { igText("Bypass %s | found %s",bypass->complete ? "finished":"unfinished",bypass->found ? "yes":"no"); if (bypass->found) witness(context,"Avoiding suffix",bypass->arcs,bypass->retained,bypass->length,&state->witness_pages[1]); } }
         }
-        if (query->request.kind==GD_STRUCTURE_RELATED && !analysis->comparison.valid) { for (i=0;i<analysis->pair_count && i<64;++i) igText("#%d / #%d: %d shared",analysis->pairs[i].a,analysis->pairs[i].b,analysis->pairs[i].shared); if (analysis->pair_count>64) igText("%d further pairs in native result",analysis->pair_count-64); }
-        if (query->request.kind==GD_STRUCTURE_ADJACENCY) { int shown=0; const GD_GraphOverview *overview=&analysis->overview; igText("%d bins | %d input rows (not flow)",overview->bins,overview->link_count); for (i=0;i<overview->bins*overview->bins;++i) if (overview->counts[i] && shown++<64) { if (igTreeNode_Str(TextFormat("row bin %d / column bin %d: %d rows",i/overview->bins,i%overview->bins,overview->counts[i]))) { igTextUnformatted("First native source example (not complete cell provenance)",NULL); if (overview->first[i]>=0) link_row(context,overview->first[i],0); igTreePop(); } } if (shown>64) igText("%d further nonempty cells in native result",shown-64); }
-        igTextWrapped("Indices are snapshot-local. Arrows remain authored; support is structural, never temporal execution. Lists cap at 64; native CLI retains complete bounded evidence.");
+        if (query->request.kind==GD_STRUCTURE_RELATED && !analysis->comparison.valid) {GD_EvidencePage page=gd_explorer_evidence_pager("Related pairs",&state->pair_page,analysis->pair_count,GD_EVIDENCE_PAGE_ROWS);for (i=page.first;i<page.end;++i) igText("#%d / #%d: %d shared",analysis->pairs[i].a,analysis->pairs[i].b,analysis->pairs[i].shared);}
+        if (query->request.kind==GD_STRUCTURE_ADJACENCY) {int total=0,ordinal=0;const GD_GraphOverview *overview=&analysis->overview;GD_EvidencePage page;
+            igText("%d bins | %d input rows (not flow)",overview->bins,overview->link_count);
+            for(i=0;i<overview->bins*overview->bins;++i)total+=overview->counts[i]!=0;
+            page=gd_explorer_evidence_pager("Nonempty cells",&state->overview_page,total,GD_EVIDENCE_PAGE_ROWS);
+            for(i=0;i<overview->bins*overview->bins;++i)if(overview->counts[i]){if(!gd_evidence_page_take(&page,&ordinal))continue;if(igTreeNode_Str(TextFormat("row bin %d / column bin %d: %d rows",i/overview->bins,i%overview->bins,overview->counts[i]))){igTextUnformatted("First native source example (not complete cell provenance)",NULL);if(overview->first[i]>=0)link_row(context,overview->first[i],0);igTreePop();}}
+        }
+        igTextWrapped("Indices are snapshot-local. Arrows remain authored; support is structural, never temporal execution. Pages cover retained rows only; native omissions and witness retention stay separate.");
         igTreePop();
     }
 }
