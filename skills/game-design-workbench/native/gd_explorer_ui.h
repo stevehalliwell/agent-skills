@@ -13,6 +13,7 @@
 #include "gd_diagnostics_ui.h"
 #include "raylib.h"
 
+enum { GD_EXPLORER_SOURCE_LISTS=64 };
 typedef struct { int cell, node, interaction, linked, held; } GD_ExplorerSelection;
 typedef enum { GD_FOCUS_NONE, GD_FOCUS_FRAMED, GD_FOCUS_PARTIAL, GD_FOCUS_HIDDEN, GD_FOCUS_UNREPRESENTED, GD_FOCUS_UNPLACED } GD_ExplorerFocusStatus;
 typedef struct {
@@ -38,7 +39,8 @@ typedef struct {
     GD_Allocator allocator; GD_ExplorerQueryOptions applied;
     GD_Query *query; GD_QueryScene *scene; GD_Layout *empty;
     GD_EffectQuery *selected;
-    int coverage_page;
+    int coverage_page,contributor_page;
+    unsigned char case_pages[GD_MAX_PAIRS]; /* Exact scene edge; <=64 case pages. */
     GD_ActorComparison comparison; int comparison_first,comparison_second,comparison_ready;
     GD_RuleScenario fixed;
     char value_tokens[GD_MAX_RULE_LINE+1],fact_tokens[GD_MAX_RULE_LINE+1],context_tokens[GD_MAX_RULE_LINE+1];
@@ -84,7 +86,7 @@ typedef struct {
 typedef struct {
     int layout,actor_overview,noun_row,noun_column,noun_case_page,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
     int focus_root,mda_root,mda_direction,resource_witness,route_witness,similarity_row,similarity_peer;
-    int overview_row,overview_column,coverage_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
+    int overview_row,overview_column,coverage_page,actor_case_page,contributor_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
     bool paused,workspace_bounds,island_separation,visual_filter,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
     bool paths_enabled,paths_declared,paths_compare,reach_enabled,reach_reverse,overview_enabled;
     bool only_scope,only_path,role0,role1,role2,role3,only_witness,similarity_canvas,known;
@@ -119,6 +121,7 @@ typedef struct {
     char resource_message[160];
     GD_MatrixGrid grid; /* Caller-owned presentation, never typed snapshot data. */
     int noun_case_page;
+    int noun_source_pages[GD_EXPLORER_SOURCE_LISTS],noun_source_pairs[GD_EXPLORER_SOURCE_LISTS],noun_source_row,noun_source_column; /* Capped overview source lists, separate from primary inspector. */
     GD_ExplorerSkillEditor editor;
     GD_ExplorerMdaDisplay mda;
     GD_Focus focus;
@@ -212,6 +215,7 @@ void gd_explorer_query_draw(GD_ExplorerContext *context);
 void gd_explorer_query_input(GD_ExplorerContext *context);
 void gd_explorer_query_details(GD_ExplorerContext *context);
 void gd_explorer_query_source(GD_ExplorerContext *context, int edge);
+int gd_explorer_query_case_count(const GD_ExplorerContext *context,int edge);
 int gd_explorer_query_record(const GD_ExplorerPane *pane);
 
 int gd_explorer_structure_prepare(GD_ExplorerContext *context);
@@ -241,6 +245,7 @@ void gd_explorer_rule_context_discover(const GD_ExplorerContext *context,GD_Expl
 int gd_explorer_rule_context_option(const GD_ExplorerContext *context,int outcomes,int slot,char *key,size_t capacity,GD_ExplorerRuleForm *candidate);
 int gd_explorer_rule_context_slots(const GD_ExplorerContext *context,int outcomes);
 int gd_explorer_rule_context_stage(GD_ExplorerContext *context,const char *key,char *message,size_t capacity);
+int gd_explorer_rules_row_count(const GD_ExplorerRuleState *state);
 void gd_explorer_rules_choose(GD_ExplorerRuleState *state,int row,int peer);
 int gd_explorer_rules_marked(const GD_ExplorerContext *context,int case_index);
 

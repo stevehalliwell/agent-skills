@@ -85,6 +85,11 @@ static void mark_write(GD_ExplorerRuleState *state,const GD_RuleWrite *write) {
     if (write->origin_case>=0 && write->origin_case<rules->case_count) state->marked_cases[write->origin_case]=1;
     for (i=0;i<write->path_count && i<GD_MAX_RULE_EXPANSION_DEPTH;++i) if (write->path[i]>=0 && write->path[i]<rules->case_count) state->marked_cases[write->path[i]]=1;
 }
+int gd_explorer_rules_row_count(const GD_ExplorerRuleState *state) {
+    if(!state)return 0;if(state->bindings)return state->bindings->binding_count;
+    if(!state->result || !state->result->analysis)return 0;
+    return state->result->request.kind==GD_NAMED_OUTCOMES ? state->result->analysis->scenario.write_count:state->result->analysis->comparison_count;
+}
 void gd_explorer_rules_choose(GD_ExplorerRuleState *state,int row,int peer) {
     const GD_RuleAnalysis *analysis=state->result ? state->result->analysis:NULL; memset(state->marked_cases,0,sizeof(state->marked_cases)); state->row=row; state->peer_write=peer; state->axis_page=0;
     if (state->bindings) { if (row>=0 && row<state->bindings->binding_count) state->marked_cases[state->bindings->bindings[row].case_index]=1; return; }
@@ -139,13 +144,13 @@ static void proposal_details(GD_ExplorerContext *context,const GD_RuleWrite *wri
     case_details(context,write->origin_case); igPopID();
 }
 static void binding_details(GD_ExplorerContext *context,GD_ExplorerRuleState *state) {
-    const GD_Query *query=state->bindings; const GD_Rules *rules=query->rules; const GD_Model *model=query->model; int i,start,count=query->binding_count;
+    const GD_Query *query=state->bindings; const GD_Rules *rules=query->rules; const GD_Model *model=query->model; int i,start,count=gd_explorer_rules_row_count(state);
     igTextWrapped("Applied object-bindings: object %s | case %s | local %s | axis %s | statuses %s",*state->applied.object ? state->applied.object:"all",*state->applied.case_name ? state->applied.case_name:"all",*state->applied.participant ? state->applied.participant:"all",*state->applied.axis ? state->applied.axis:"all",*state->applied.statuses ? state->applied.statuses:"all");
     igTextWrapped("%d explicit local bindings | unexamined %d | excluded roots %d | work %d/%d | limited %s | native source findings %d (+%d omitted). Declarations, not applicability or merged runtime actors.",count,query->unexamined_bindings,query->excluded_roots,query->work,query->request.work_limit,query->limited ? "yes":"no",rules->finding_count,rules->findings_omitted);
     igTextWrapped(context->pane->view==GD_EXPLORER_RESOURCES ? "Purple source-case outlines follow selected row on ordinary Resource canvas. Facets/call placements retain Resource meaning; case outline is not an applicability claim.":"Tool row selection inspects evidence only. Canvas selection/camera stay unchanged; ordinary source navigation is explicit.");
     if (gd_explorer_similarity_active(context)) igTextWrapped("Source inspection returns to ordinary canvas; similarity geometry remains unchanged.");
-    if (count>64) igSliderInt("Binding page",&state->page,0,(count-1)/64,"%d",0); if (state->page<0 || state->page*64>=count) state->page=0; start=state->page*64;
-    for (i=start;i<count && i<start+64;++i) { const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleCase *item=&rules->cases[binding->case_index]; const GD_RuleParticipant *actor=&rules->participants[binding->participant];
+    GD_EvidencePage page=gd_explorer_evidence_pager("Bindings",&state->page,count,GD_EVIDENCE_PAGE_ROWS);start=page.first;
+    for (i=start;i<page.end;++i) { const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleCase *item=&rules->cases[binding->case_index]; const GD_RuleParticipant *actor=&rules->participants[binding->participant];
         igPushID_Int(i); if (igSelectable_Bool(TextFormat("%s#%s / %s | %s",model->records[rules->sources[item->source].record].reference,item->name,actor->name,gd_rule_noun_label(rules,actor)),state->row==i,0,(ImVec2_c){0,0})) gd_explorer_rules_choose(state,i,-1); igPopID();
     }
     if (state->row>=0 && state->row<count) { const GD_QueryBinding *binding=&query->bindings[state->row]; const GD_RuleParticipant *actor=&rules->participants[binding->participant];
@@ -153,8 +158,8 @@ static void binding_details(GD_ExplorerContext *context,GD_ExplorerRuleState *st
         if (actor->noun_resolution==GD_RULE_RESOLVED) { int edge; const GD_Record *record=&model->records[actor->noun_record]; igTextWrapped("Canonical noun %s | id %s | explicit axes %s",TextFormat("%s | %s",record->display_name,record->reference),record->id ? record->id:"none",record->axes_declared ? "declared":"unspecified");
             int total=0,index=0;
             for (edge=rules->actor_first[actor->noun_record];edge>=0;edge=rules->next_axis[edge]) ++total;
-            if (total>16) igSliderInt("Declared axis page",&state->axis_page,0,(total-1)/16,"%d",0);
-            for (edge=rules->actor_first[actor->noun_record];edge>=0;edge=rules->next_axis[edge],++index) if (index/16==state->axis_page) {
+            GD_EvidencePage axes=gd_explorer_evidence_pager("Declared axes",&state->axis_page,total,GD_EVIDENCE_AXIS_ROWS);
+            for (edge=rules->actor_first[actor->noun_record];edge>=0;edge=rules->next_axis[edge],++index) if (index>=axes.first && index<axes.end) {
                 igPushID_Int(edge); igTextWrapped("Axis reference %s | %s | source line %d",model->edges[edge].reference,gd_rule_resolution_name(rules->axis_resolution[edge]),model->edges[edge].line);
                 if (rules->axis_resolution[edge]==GD_RULE_RESOLVED) { const GD_Record *axis=&model->records[model->edges[edge].target]; const char *value=axis->axis.allowed; int j;
                     igTextWrapped("%s | id %s | type %s | unit %s | bounds %s .. %s | closed %s",axis->reference,axis->id ? axis->id:"none",axis->axis.type ? axis->axis.type:"unspecified",axis->axis.unit ? axis->axis.unit:"unspecified",axis->axis.minimum ? axis->axis.minimum:"unspecified",axis->axis.maximum ? axis->axis.maximum:"unspecified",axis->axis_closed ? "yes":"no");
@@ -246,7 +251,7 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
     if (!gd_explorer_form_equal(GD_FORM_RULES,&state->pending,&state->applied)) igTextWrapped("Pending inputs differ; evidence and declaration outlines remain last applied result.");
     if (state->bindings) { binding_details(context,state); return; }
     if (!state->result) return;
-    { const GD_RuleAnalysis *analysis=state->result->analysis; int count=state->result->request.kind==GD_NAMED_OUTCOMES ? analysis->scenario.write_count:analysis->comparison_count,start;
+    { const GD_RuleAnalysis *analysis=state->result->analysis; int count=gd_explorer_rules_row_count(state),start;
       igTextWrapped("Applied %s | owned result/workspace %llu bytes + controls %llu bytes; borrowed reader excluded.",gd_named_name(state->result->request.kind),(unsigned long long)state->result->owned_bytes,(unsigned long long)sizeof(*state));
       if (igCollapsingHeader_TreeNodeFlags("Applied rule assumptions (not pending edits)",0)) { igTextWrapped("Facts: %s",*state->applied.facts ? state->applied.facts:"none supplied"); igTextWrapped("Contexts: %s",*state->applied.contexts ? state->applied.contexts:"none supplied"); }
       if(pane->view==GD_EXPLORER_RESOURCES){ int marked=0,present=0,visible=0; const GD_ResourceGraph *graph=context->project->resources;
@@ -262,8 +267,8 @@ void gd_explorer_rules_controls(GD_ExplorerContext *context) {
           igTextWrapped("Proposals %d | conflicts %d | uncertain pairs %d | omitted checks %d | opaque effects %d | expansions %d | cycles %d | work %d/%d | limited %s",value->write_count,value->conflict_count,value->uncertain_write_pairs,value->checks_omitted,value->opaque_effects,value->expansions,value->cycle_count,value->work,value->work_limit,value->limited ? "yes":"no");
           case_details(context,state->result->root);
       } else igTextWrapped("Checked pairs %d | retained %d | unexamined %d | work %d/%d | limited %s. Role alignment is hypothetical, not shared runtime identity. Conflict is existential; equivalence bounded by native checked vocabulary/branches.",analysis->pair_count,analysis->comparison_count,analysis->pairs_unexamined,analysis->comparison_work,GD_RULE_ANALYSIS_WORK_LIMIT,analysis->comparison_limited ? "yes":"no");
-      if (count>64) igSliderInt("Rule result page",&state->page,0,(count-1)/64,"%d",0); if (state->page<0 || state->page*64>=count) state->page=0; start=state->page*64;
-      for (i=start;i<count && i<start+64;++i) { igPushID_Int(i); if (state->result->request.kind==GD_NAMED_OUTCOMES) { const GD_RuleWrite *write=&analysis->scenario.writes[i]; if (igSelectable_Bool(TextFormat("%d: %s | %s | line %d",i,write->kind==GD_WRITE_STATE ? "state":write->kind==GD_WRITE_QUANTITY ? "quantity":"preserve",write->axis>=0 ? model->records[write->axis].reference:"unknown axis",write->line),state->row==i,0,(ImVec2_c){0,0})) gd_explorer_rules_choose(state,i,-1); }
+      GD_EvidencePage page=gd_explorer_evidence_pager(state->result->request.kind==GD_NAMED_OUTCOMES ? "Proposals":"Comparisons",&state->page,count,GD_EVIDENCE_PAGE_ROWS);start=page.first;
+      for (i=start;i<page.end;++i) { igPushID_Int(i); if (state->result->request.kind==GD_NAMED_OUTCOMES) { const GD_RuleWrite *write=&analysis->scenario.writes[i]; if (igSelectable_Bool(TextFormat("%d: %s | %s | line %d",i,write->kind==GD_WRITE_STATE ? "state":write->kind==GD_WRITE_QUANTITY ? "quantity":"preserve",write->axis>=0 ? model->records[write->axis].reference:"unknown axis",write->line),state->row==i,0,(ImVec2_c){0,0})) gd_explorer_rules_choose(state,i,-1); }
           else { const GD_RuleComparisonResult *pair=&analysis->comparisons[i]; if (igSelectable_Bool(TextFormat("%d: %s / %s | %s",i,rules->cases[pair->first_case].name,rules->cases[pair->second_case].name,gd_rule_relation_name(pair->relation)),state->row==i,0,(ImVec2_c){0,0})) gd_explorer_rules_choose(state,i,-1); } igPopID(); }
       if (state->row>=0 && state->row<count) {
           if (state->result->request.kind==GD_NAMED_OUTCOMES) { proposal_details(context,&analysis->scenario.writes[state->row]); if (state->peer_write>=0 && state->peer_write<count) proposal_details(context,&analysis->scenario.writes[state->peer_write]); }

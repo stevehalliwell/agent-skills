@@ -338,7 +338,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             PRESENT_STAGE(v,"filter","");PRESENT_CHECK(strstr(reply,"\"configured\":true") && !*(v==GD_EXPLORER_RESOURCES ? panes[v].filter:panes[v].list_search));
         }
         PRESENT_ACTION(v,"view.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true")!=NULL);
-        PRESENT_REQUEST("evidence",v);strcpy(request.form,"links");before=*calls;PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"total_slots") && *calls==before);
+        PRESENT_REQUEST("evidence",v);strcpy(request.form,"links");before=*calls;PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"total_rows") && *calls==before);
         if(panes[v].layout && panes[v].layout->edge_count && !query_view((GD_ExplorerView)v)) {
             PRESENT_CHECK(presentation_token(reply,"selection_token",token,sizeof(token)) && presentation_token(reply,"key",key,sizeof(key)));
             PRESENT_REQUEST("select",v);strcpy(request.form,"link");strcpy(request.id,key);strcpy(request.expect,token);PRESENT_SEND();PRESENT_CHECK(strstr(reply,"\"selected\":true") && active==GD_EXPLORER_MATRIX);

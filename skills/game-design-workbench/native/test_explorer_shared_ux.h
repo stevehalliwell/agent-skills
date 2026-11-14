@@ -3,6 +3,7 @@
 #define TEST_EXPLORER_SHARED_UX_H
 #include "test_explorer_overview_coverage.h"
 #include "test_explorer_rule_context.h"
+#include "test_explorer_evidence_paging.h"
 int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *collections,int count,int *fail_at,int *calls){
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);GD_ExplorerContext c={0};GD_ExplorerPane *panes=NULL;GD_SelectionHistory *history=NULL;GD_Layout *saved=NULL;
     ImGuiContext *imgui=NULL;
@@ -233,6 +234,7 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
     }
     UX_CHECK(explorer_overview_coverage_checks(&c,saved,fail_at,calls));
     UX_CHECK(explorer_rule_context_checks(&c,saved,fail_at,calls));
+    {int paging=explorer_evidence_paging_checks(&c,saved,collections,count,fail_at,calls);project=c.project;UX_CHECK(paging);}
     result=0;
 cleanup:
     if(imgui)igDestroyContext(imgui);

@@ -24,16 +24,25 @@ static GD_DiagnosticSet viewer_diagnostic_set(GD_ExplorerContext *c) {
 }
 static int viewer_rule_rows(const GD_ExplorerPane *p,int checks) {
     const GD_ExplorerRuleState *s=p->rule_state;if(!s)return 0;
-    if(s->bindings)return checks ? 0:s->bindings->binding_count;
-    if(!s->result || !s->result->analysis)return 0;
-    if(checks)return s->result->request.kind==GD_NAMED_OUTCOMES ? s->result->analysis->scenario.checks_count:0;
-    return s->result->request.kind==GD_NAMED_OUTCOMES ? s->result->analysis->scenario.write_count:s->result->analysis->comparison_count;
+    if(!checks)return gd_explorer_rules_row_count(s);
+    if(s->bindings)return 0;
+    return s->result && s->result->analysis && s->result->request.kind==GD_NAMED_OUTCOMES ? s->result->analysis->scenario.checks_count:0;
+}
+static int viewer_evidence_match(const GD_ExplorerContext *c,const GD_ViewerRequest *request,int kind,int source_slot,const GD_DiagnosticSet *diagnostics,GD_DiagnosticItem *diagnostic) {
+    if(kind==10)return gd_query_scene_overview_case(c->pane->query_state->scene,c->pane->selection.cell,source_slot);
+    if(kind==9)return gd_noun_grid_case(c->project->noun_grid,c->pane->selection.cell,source_slot);
+    if(kind==6)return c->pane->known[source_slot]!=0;
+    if(kind==4){GD_DiagnosticItem temporary;if(!diagnostic)diagnostic=&temporary;
+        if(!gd_diagnostic_item(diagnostics,source_slot,diagnostic))return 0;
+        return !*request->reference || (diagnostic->record_reference && !strcmp(request->reference,diagnostic->record_reference));
+    }
+    return 1;
 }
 static void viewer_evidence(ExplorerViewer *viewer,const GD_ViewerRequest *request,GD_ExplorerContext *c,GD_ViewerWriter *w) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); GD_DiagnosticSet diagnostics=viewer_diagnostic_set(c);
-    int total=0,start=(int)request->offset,end,i,written=0,kind=0; char token[64]; const char *form=request->form;
+    int total=0,matching=0,ordinal=0,start=(int)request->offset,i,written=0,kind=0; char token[64]; const char *form=request->form;
     if(!*form) {
-        gd_viewer_write(w,"{\"ok\":true,\"forms\":[\"links\",\"cells\",\"cases\",\"diagnostics\",\"starts\",\"known\",\"rule-rows\",\"rule-checks\",\"noun-cases\"],\"selection_forms\":[\"source\",\"link\",\"cell\",\"case\",\"diagnostic\",\"rule\",\"rule.check\"],\"selection_guard\":\"selection_token from evidence, or presentation control_token\",\"native_results\":[\"query\",\"structure\",\"rules\",\"bindings\",\"resource\",\"mda\",\"challenges\",\"skills\",\"layers\",\"comparison\",\"actor-overview\",\"noun-grid\"],\"result_command\":\"viewer result --projection VIEW --form FAMILY; base64 byte pages of native JSON\",\"layers_require\":\"view.analyze or current GUI layer cache; no hidden evaluation\"}"); return;
+        gd_viewer_write(w,"{\"ok\":true,\"forms\":[\"links\",\"cells\",\"cases\",\"diagnostics\",\"starts\",\"known\",\"rule-rows\",\"rule-checks\",\"noun-cases\",\"actor-cases\"],\"selection_forms\":[\"source\",\"link\",\"cell\",\"case\",\"diagnostic\",\"rule\",\"rule.check\"],\"selection_guard\":\"selection_token from evidence, or presentation control_token\",\"offset_units\":\"matching-retained-rows\",\"source_slot\":\"native snapshot metadata, not a write selector\",\"native_results\":[\"query\",\"structure\",\"rules\",\"bindings\",\"resource\",\"mda\",\"challenges\",\"skills\",\"layers\",\"comparison\",\"actor-overview\",\"noun-grid\"],\"result_command\":\"viewer result --projection VIEW --form FAMILY; base64 byte pages of native JSON\",\"layers_require\":\"view.analyze or current GUI layer cache; no hidden evaluation\"}"); return;
     }
     if(!strcmp(form,"links")) {kind=1;total=p->prepared && p->layout && !gd_explorer_similarity_active(c) ? p->layout->edge_count:0;}
     else if(!strcmp(form,"cells")) {kind=2;total=p->view==GD_EXPLORER_MATRIX ? model->cell_count:0;}
@@ -44,20 +53,18 @@ static void viewer_evidence(ExplorerViewer *viewer,const GD_ViewerRequest *reque
     else if(!strcmp(form,"rule-rows")) {kind=7;total=viewer_rule_rows(p,0);}
     else if(!strcmp(form,"rule-checks")) {kind=8;total=viewer_rule_rows(p,1);}
     else if(!strcmp(form,"noun-cases")) {kind=9;total=p->view==GD_EXPLORER_NOUNS && p->selection.cell>=0 ? c->project->rules->case_count:0;}
+    else if(!strcmp(form,"actor-cases")){kind=10;total=p->view==GD_EXPLORER_ACTORS && p->query_state && p->query_state->scene && p->query_state->scene->overview && p->selection.cell>=0 && p->selection.cell<p->query_state->scene->layout.edge_count ? c->project->rules->case_count:0;}
     else {gd_viewer_error(w,"viewer.evidence","Unknown page family; read viewer evidence catalogue or use viewer result for native result tables");return;}
-    end=start+(int)request->limit; if(end>total) end=total;
+    for(i=0;i<total;++i)matching+=viewer_evidence_match(c,request,kind,i,&diagnostics,NULL);
     viewer_control_token(viewer,c,GD_FORM_PRESENTATION,token,sizeof(token));
     gd_viewer_write(w,"{\"ok\":true,"); viewer_member(w,"projection",viewer_projections[p->view]); gd_viewer_write(w,",");viewer_member(w,"form",form);
-    gd_viewer_write(w,",");viewer_member(w,"selection_token",token); gd_viewer_write(w,",\"total_slots\":%d,\"offset\":%d,\"rows\":[",total,start);
-    for(i=start;i<end;++i) {
+    gd_viewer_write(w,",");viewer_member(w,"selection_token",token); gd_viewer_write(w,",\"source_slots\":%d,\"total_rows\":%d,\"offset\":%d,\"offset_units\":\"matching-retained-rows\",\"rows\":[",total,matching,start);
+    for(i=0;i<total && written<(int)request->limit;++i) {
         char key[64]; GD_DiagnosticItem diagnostic;
-        if(kind==9 && !gd_noun_grid_case(c->project->noun_grid,p->selection.cell,i))continue;
-        if(kind==6 && !p->known[i]) continue;
-        if(kind==4) { if(!gd_diagnostic_item(&diagnostics,i,&diagnostic)) continue;
-            if(*request->reference && (!diagnostic.record_reference || strcmp(request->reference,diagnostic.record_reference))) continue;
-        }
+        if(!viewer_evidence_match(c,request,kind,i,&diagnostics,&diagnostic))continue;
+        if(ordinal++<start)continue;
         if(written++) gd_viewer_write(w,","); viewer_row_key(c,kind==1 ? "link":kind==2 ? "cell":kind==4 ? "diagnostic":kind==7 ? "rule":kind==8 ? "check":"row",i,key,sizeof(key));
-        gd_viewer_write(w,"{\"slot\":%d,",i);viewer_member(w,"key",key);
+        gd_viewer_write(w,"{\"source_slot\":%d,",i);viewer_member(w,"key",key);
         if(kind==1) {
             const GD_LayoutEdge *edge=&p->layout->edges[i]; char id[GD_MAX_PATH];
             gd_viewer_write(w,",\"from\":");gd_viewer_quote(w,presentation_node_id(c,edge->a,id,sizeof(id)) ? id:NULL);
@@ -79,13 +86,16 @@ static void viewer_evidence(ExplorerViewer *viewer,const GD_ViewerRequest *reque
         else if(kind==4) {gd_viewer_write(w,",\"kind\":%d,\"line\":%d,\"truncated\":%s,",diagnostic.kind,diagnostic.line,diagnostic.truncated ? "true":"false");viewer_member(w,"code",diagnostic.code);gd_viewer_write(w,",");viewer_member(w,"message",diagnostic.message);gd_viewer_write(w,",");viewer_member(w,"path",diagnostic.path);gd_viewer_write(w,",");viewer_member(w,"reference",diagnostic.record_reference);}
         else if(kind==5) {int node=-1,j;char id[GD_MAX_PATH];if(p->layout)for(j=0;j<p->layout->node_count;++j)if(p->layout->nodes[j].key==p->paths.keys[i])node=j;gd_viewer_write(w,",\"id\":");gd_viewer_quote(w,node>=0 && presentation_node_id(c,node,id,sizeof(id)) ? id:NULL);}
         else if(kind==7) {gd_viewer_write(w,",\"selected\":%s,\"row_kind\":",p->rule_state->row==i ? "true":"false");gd_viewer_quote(w,p->rule_state->bindings ? "binding":p->rule_state->result->request.kind==GD_NAMED_OUTCOMES ? "proposal":"comparison");gd_viewer_write(w,",\"evidence\":\"same slot in retained bindings/rules native result; exact rule key plus selection_token required\"");}
-        else if(kind==9) {const GD_Rules *rules=c->project->rules;const GD_RuleCase *item=&rules->cases[i];const GD_Record *source=&model->records[rules->sources[item->source].record];int participant;gd_viewer_write(w,",");viewer_member(w,"source",source->reference);gd_viewer_write(w,",");viewer_member(w,"case",item->name);gd_viewer_write(w,",");viewer_member(w,"context",item->context);gd_viewer_write(w,",\"line\":%d,\"participants\":[",item->line);for(participant=item->first_participant;participant<item->first_participant+item->participant_count;++participant){const GD_RuleParticipant *binding=&rules->participants[participant];if(participant>item->first_participant)gd_viewer_write(w,",");gd_viewer_write(w,"{");viewer_member(w,"local",binding->name);gd_viewer_write(w,",");viewer_member(w,"noun",binding->noun);gd_viewer_write(w,",");viewer_member(w,"label",binding->noun_resolution==GD_RULE_RESOLVED ? model->records[binding->noun_record].display_name:"[Unresolved noun]");gd_viewer_write(w,",");viewer_member(w,"requires",binding->requires);gd_viewer_write(w,",");viewer_member(w,"skip_if",binding->skip_if);gd_viewer_write(w,"}");}gd_viewer_write(w,"]");}
+        else if(kind==9 || kind==10) {const GD_Rules *rules=c->project->rules;const GD_RuleCase *item=&rules->cases[i];const GD_Record *source=&model->records[rules->sources[item->source].record];int participant;gd_viewer_write(w,",");viewer_member(w,"source",source->reference);gd_viewer_write(w,",");viewer_member(w,"case",item->name);gd_viewer_write(w,",");viewer_member(w,"context",item->context);gd_viewer_write(w,",\"line\":%d,\"participants\":[",item->line);for(participant=item->first_participant;participant<item->first_participant+item->participant_count;++participant){const GD_RuleParticipant *binding=&rules->participants[participant];if(participant>item->first_participant)gd_viewer_write(w,",");gd_viewer_write(w,"{");viewer_member(w,"local",binding->name);gd_viewer_write(w,",");viewer_member(w,"noun",binding->noun);gd_viewer_write(w,",");viewer_member(w,"label",binding->noun_resolution==GD_RULE_RESOLVED ? model->records[binding->noun_record].display_name:"[Unresolved noun]");gd_viewer_write(w,",");viewer_member(w,"requires",binding->requires);gd_viewer_write(w,",");viewer_member(w,"skip_if",binding->skip_if);gd_viewer_write(w,"}");}gd_viewer_write(w,"]");}
         else if(kind==8) {const GD_RuleWriteCheck *check=&p->rule_state->result->analysis->scenario.checks[i];gd_viewer_write(w,",\"first_proposal_slot\":%d,\"second_proposal_slot\":%d,\"conflict\":",check->first,check->second);gd_viewer_quote(w,gd_rule_truth_name(check->conflict));}
         else {gd_viewer_write(w,",\"reference\":");gd_viewer_quote(w,model->records[i].reference);}
         gd_viewer_write(w,"}");
     }
-    gd_viewer_write(w,"],\"next_offset\":");if(end<total)gd_viewer_write(w,"%d",end);else gd_viewer_write(w,"null");
-    gd_viewer_write(w,",\"scope\":\"retained source slots, not frozen transaction or absence proof; row keys require selection_token\",\"producer_omissions\":%d",kind==4 ? diagnostics.findings_omitted+model->errors_omitted+(diagnostics.rejected ? diagnostics.rejected->omitted:0):0);
+    gd_viewer_write(w,"],\"returned_rows\":%d,\"next_offset\":",written);if(start+written<matching)gd_viewer_write(w,"%d",start+written);else gd_viewer_write(w,"null");
+    gd_viewer_write(w,",\"scope\":\"matching retained rows; source_slot and guarded key retain native identity; no frozen transaction or source completeness proof\",\"producer_omissions\":");
+    if(kind==4)gd_viewer_write(w,"%d",diagnostics.findings_omitted+model->errors_omitted+(diagnostics.rejected ? diagnostics.rejected->omitted:0));else gd_viewer_write(w,"null");
+    if(kind==9 && c->project->noun_grid)gd_viewer_write(w,",\"producer_limited\":%s,\"source_incomplete\":%s",c->project->noun_grid->limited ? "true":"false",c->project->noun_grid->incomplete ? "true":"false");
+    if(kind==10 && p->query_state && p->query_state->scene && p->query_state->scene->overview)gd_viewer_write(w,",\"producer_limited\":%s,\"overview_incomplete\":%s",p->query_state->scene->limited ? "true":"false",gd_query_scene_overview_incomplete(p->query_state->scene) ? "true":"false");
     if(kind==4)gd_viewer_write(w,",\"findings_omitted\":%d,\"loaded_errors_omitted\":%d,\"rejected_errors_omitted\":%d,\"capture_failed\":%s",diagnostics.findings_omitted,model->errors_omitted,diagnostics.rejected ? diagnostics.rejected->omitted:0,p->diagnostics.capture_failed ? "true":"false");
     gd_viewer_write(w,"}");
 }

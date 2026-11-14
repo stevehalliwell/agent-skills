@@ -99,7 +99,7 @@ static void viewer_controls(ExplorerViewer *viewer,const GD_ViewerRequest *reque
             gd_viewer_write(w,",\"applied_value\":"); viewer_control_text(w,c,kind,field,applied);
             gd_viewer_write(w,",\"choice_slots\":%d,\"choices_closed\":%s",slots,slots>=0 && (field->type!=GD_CONTROL_TEXT || context_choice) ? "true":"false");
             if (field->type==GD_CONTROL_TEXT){gd_viewer_write(w,",\"capacity_bytes\":%u,\"validation\":",(unsigned)(field->capacity-1));gd_viewer_quote(w,context_choice ? "exact current-selection key required; stages only; dirty pending inputs block replacement":"native Run validates literal lists/selectors; choices are suggestions");}
-            if (editable && field->type==GD_CONTROL_INT && slots<0) gd_viewer_write(w,",\"minimum\":0,\"maximum\":%d",kind==GD_FORM_PRESENTATION && (!strcmp(field->name,"overview_row") || !strcmp(field->name,"overview_column")) ? GD_OVERVIEW_BINS-1:gd_explorer_form_work_limit(kind,pending));
+            if (editable && field->type==GD_CONTROL_INT && slots<0) gd_viewer_write(w,",\"minimum\":0,\"maximum\":%d",kind==GD_FORM_PRESENTATION ? gd_explorer_presentation_maximum(c,field->name):gd_explorer_form_work_limit(kind,pending));
             if (!configured && *request->control && slots>=0) {
                 unsigned slot,end=request->offset+request->limit; int options=0;
                 if (end>(unsigned)slots) end=(unsigned)slots;

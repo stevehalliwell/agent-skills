@@ -325,9 +325,20 @@ static void draw_matches(GD_ExplorerContext *c) {
     }
     EndMode2D(); EndScissorMode();
 }
+static int *noun_source_page(GD_ExplorerContext *c,int edge) {
+    GD_ExplorerPane *p=c->pane;int i,ordinal=0,pair;
+    if(edge<0 || edge>=p->layout->edge_count)return NULL;
+    if(p->noun_source_row!=p->overview.row || p->noun_source_column!=p->overview.column){memset(p->noun_source_pages,0,sizeof(p->noun_source_pages));p->noun_source_row=p->overview.row;p->noun_source_column=p->overview.column;}
+    for(i=0;i<edge;++i)ordinal+=c->analysis->overview.selected_edges[i]!=0;
+    if(ordinal>=GD_EXPLORER_SOURCE_LISTS)return NULL;
+    pair=p->layout->edges[edge].key;
+    if(p->noun_source_pairs[ordinal]!=pair){p->noun_source_pairs[ordinal]=pair;p->noun_source_pages[ordinal]=0;}
+    return &p->noun_source_pages[ordinal];
+}
 static void source(GD_ExplorerContext *c, int edge) {
     if(c->pane->view==GD_EXPLORER_NOUNS) {
-        if(edge>=0 && edge<c->pane->layout->edge_count)noun_grid_details_pair(c,c->pane->layout->edges[edge].key,0);
+        int fallback=0,*page=noun_source_page(c,edge);
+        if(edge>=0 && edge<c->pane->layout->edge_count)noun_grid_details_pair(c,c->pane->layout->edges[edge].key,0,page ? page:&fallback);
     }
     else if (is_graph(c->pane->view)) gd_explorer_graph_source(c,edge);
     else if (c->pane->view==GD_EXPLORER_MDA) gd_explorer_mda_source(c,edge);
@@ -363,7 +374,7 @@ static GD_ExplorerEvidence evidence(GD_ExplorerContext *c, int selected) {
 }
 static void sources_for_marks(GD_ExplorerContext *c, const unsigned char *marked) {
     int i,shown=0,total=0;
-    for (i=0;i<c->pane->layout->edge_count;++i) if (marked[i]) { if (shown++<64) {igPushID_Int(i);source(c,i);igPopID();} ++total; }
+    for (i=0;i<c->pane->layout->edge_count;++i) if (marked[i]) { if (shown++<GD_EXPLORER_SOURCE_LISTS) {igPushID_Int(i);source(c,i);igPopID();} ++total; }
     if (total>64) igText("%d further marked declarations; all remain highlighted",total-64);
 }
 static void overview_controls(GD_ExplorerContext *c) {
@@ -593,7 +604,7 @@ static void grid_frame_selection(GD_ExplorerContext *c);
 static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const GD_Collection *collections, int count,
                           char *failure, size_t failure_size) {
     union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; } defaults;
-    GD_ExplorerContext current=*c; int pane,form;
+    GD_ExplorerContext current=*c;GD_ExplorerPane *original_pane=c->pane;int pane,form;
     /* Cold forms can be configured before any canvas exists. Never skip their
        pending inputs, or consume them implicitly while rebuilding a snapshot. */
     for (pane=0;pane<GD_EXPLORER_VIEWS;++pane) for (form=0;form<GD_FORM_COUNT;++form) {
@@ -630,10 +641,12 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
             GD_ExplorerPane *p=&replacement[v]; const GD_ExplorerPane *prior=&panes[v];
             GD_Model *model=gd_explorer_model(old,(GD_ExplorerView)v),*next=gd_explorer_model(fresh,(GD_ExplorerView)v);
             GD_Focus focus={0}; int record,root=-1,j;
+            if(v==GD_EXPLORER_NOUNS)memset(p->noun_source_pages,0,sizeof(p->noun_source_pages));
             if (query_view((GD_ExplorerView)v)) {
                 candidate.pane=p; p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1}; p->prepared=0;
                 if (!gd_explorer_query_remap(&candidate,old,prior) || !pane_prepare(&candidate)) ready=0;
                 if (ready && !gd_explorer_structure_remap(&candidate,old,prior)) { ready=0; question_failure=p->query_message; }
+                if(ready && !gd_explorer_rules_remap(&candidate,old,prior)){ready=0;question_failure=p->rule_message;}
                 continue;
             }
             c->pane=&panes[v]; record=selected_record(c);
@@ -711,7 +724,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
         }
         memcpy(panes,replacement,GD_EXPLORER_VIEWS*sizeof(*panes));
         old->allocator.release(old->allocator.context,replacement);
-        c->project=fresh; c->analysis->initialized=0; gd_explorer_destroy(old); *failure=0;
+        c->project=fresh;c->pane=original_pane;c->analysis->initialized=0;gd_explorer_destroy(old);*failure=0;
         return 1;
     }
     snprintf(failure,failure_size,"Reload rejected: %s. Last good snapshot retained.",error ? error->message:question_failure ? question_failure:
@@ -723,7 +736,7 @@ static int reload_project(GD_ExplorerContext *c, GD_ExplorerPane *panes, const G
         }
         old->allocator.release(old->allocator.context,replacement);
     }
-    gd_explorer_destroy(fresh); return 0;
+    gd_explorer_destroy(fresh);c->pane=original_pane;return 0;
 }
 /* 1 loaded, 0 reload failed, -1 blocked. Never commits or discards editor input. */
 static int refresh_sources(GD_ExplorerContext *c, GD_ExplorerPane *panes, const GD_Collection *collections, int count, char *failure, size_t capacity) {

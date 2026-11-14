@@ -399,7 +399,7 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
              "actions [--projection VIEW] lists shared application actions; action --projection VIEW --action NAME runs one.\n"
              "controls [--projection VIEW] [--form FORM [--control NAME --offset N --limit N]] reads types/values/choice keys.\n"
              "configure --projection VIEW --form FORM --control NAME --value TEXT --expect TOKEN stages analytical input; presentation applies immediately like GUI. Empty text clears.\n"
-             "evidence [--projection VIEW] [--form links|cells|cases|diagnostics|layers|starts|known] [--offset N --limit N] reads retained pages.\n"
+             "evidence [--projection VIEW] [--form links|cells|cases|diagnostics|starts|known|rule-rows|rule-checks|noun-cases|actor-cases] [--offset N --limit N] reads matching retained rows; offsets count matches, not source slots.\n"
              "select --projection VIEW --form link|cell|case|source --id KEY --expect TOKEN changes exact inspection; cell also accepts --reference NOUN --id VERB.\n"
              "result --projection VIEW --form query|structure|rules|bindings|resource|mda|challenges|actor-overview|noun-grid [--fields NATIVE_FIELDS --offset BYTE --limit KIB --expect TOKEN] reads base64 native JSON chunks; no evaluation.\n"
              "refresh reloads original source bindings now; active edits/dirty drafts block, never discard.\n"
@@ -427,7 +427,7 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
     }
     if (offset) {
         Reader r={offset,offset+strlen(offset)};
-        if (!unsigned_value(&r,!strcmp(command,"result") ? 64u*1024u*1024u:!strcmp(command,"evidence") ? GD_MAX_EDGES:!strcmp(command,"controls") ? GD_VIEWER_CONTROL_OFFSET:GD_MAX_RECORDS,&page_offset) || r.p!=r.end) return cli_failure("viewer.arguments","offset outside command's bounded source-slot range");
+        if (!unsigned_value(&r,!strcmp(command,"result") ? 64u*1024u*1024u:!strcmp(command,"evidence") ? GD_MAX_EDGES:!strcmp(command,"controls") ? GD_VIEWER_CONTROL_OFFSET:GD_MAX_RECORDS,&page_offset) || r.p!=r.end) return cli_failure("viewer.arguments","offset outside command's bounded paging range");
     }
     if (limit) {
         Reader r={limit,limit+strlen(limit)};

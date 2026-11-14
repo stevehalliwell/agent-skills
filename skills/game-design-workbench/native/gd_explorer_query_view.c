@@ -6,6 +6,7 @@
 #include "gd_graph_analysis_draw.h"
 #include <math.h>
 #include <string.h>
+_Static_assert(GD_MAX_RULE_CASES<=256*GD_EVIDENCE_PAGE_ROWS,"case page index must fit one byte");
 
 void gd_explorer_query_destroy(GD_ExplorerQueryState *state) {
     if (!state) return;
@@ -35,7 +36,7 @@ static int focus_result(GD_ExplorerContext *context,GD_ExplorerQueryState *state
     for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].source==target && scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) ++matches;
     if (matches!=1) { gd_query_scene_destroy(scene); gd_effect_query_destroy(query); return 0; }
     if(state->scene && !query_place(context,scene,(GD_LayoutMode)context->pane->layout_choice)) {gd_query_scene_destroy(scene);gd_effect_query_destroy(query);return 0;}
-    gd_query_scene_destroy(state->scene); gd_effect_query_destroy(state->selected); state->selected=query; state->scene=scene; return 1;
+    gd_query_scene_destroy(state->scene); gd_effect_query_destroy(state->selected); state->selected=query; state->scene=scene;state->contributor_page=0; return 1;
 }
 static GD_ExplorerQueryState *build_state(GD_ExplorerContext *context, const GD_ExplorerQueryOptions *options, int allow_empty, const char *primary_value) {
     GD_Model *model=gd_explorer_model(context->project,context->pane->view); GD_Allocator allocator=context->project->allocator;
@@ -98,6 +99,7 @@ failure:
 }
 /* Scene slots are transient, even when two results have identical topology. */
 static void query_scene_changed(GD_ExplorerContext *context) {
+    if(context->pane->query_state)memset(context->pane->query_state->case_pages,0,sizeof(context->pane->query_state->case_pages));
     context->pane->overview.row=context->pane->overview.column=-1;
     if(context->analysis)context->analysis->initialized=0;
     ++context->scope_revision;
@@ -483,6 +485,12 @@ static void case_details(GD_ExplorerContext *context, int index) {
     for (i=item->first_participant;i<item->first_participant+item->participant_count && i<item->first_participant+64;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s (%s): requires %s | excludes %s | other axes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->other_axes ? actor->other_axes:"unspecified",actor->becomes ? actor->becomes:"none",actor->preserve ? actor->preserve:"none",actor->causes ? actor->causes:"none"); }
     if (item->participant_count>64) igText("%d more participants in full source/native CLI; inspection list capped at 64.",item->participant_count-64);
 }
+int gd_explorer_query_case_count(const GD_ExplorerContext *context,int edge) {
+    const GD_ExplorerQueryState *state=context->pane->query_state;int i,count=0;
+    if(!state || !state->scene || !state->scene->overview || edge<0 || edge>=state->scene->layout.edge_count)return 0;
+    for(i=0;i<context->project->rules->case_count;++i)count+=gd_query_scene_overview_case(state->scene,edge,i);
+    return count;
+}
 void gd_explorer_query_source(GD_ExplorerContext *context, int edge) {
     GD_ExplorerQueryState *state=context->pane->query_state; const GD_QuerySceneEdge *item; const GD_Rules *rules=context->project->rules;
     if (!state || !state->scene || edge<0 || edge>=state->scene->layout.edge_count) return;
@@ -490,10 +498,9 @@ void gd_explorer_query_source(GD_ExplorerContext *context, int edge) {
     if(state->scene->overview) {
         if(item->kind==GD_QUERY_EDGE_AXIS) {const GD_Edge *reference=&state->query->model->edges[item->source];igTextWrapped("Declared axis usage: %s | line %d | %s",state->query->model->records[reference->source].reference,reference->line,reference->reference);return;}
         igTextWrapped("%d distinct interaction records; same-case participation, not direct modification or frequency. Conditional/excluded declarations stay evidence, not proven applicability.",gd_query_scene_overview_count(state->scene,edge));
-        {int c,start,pages=(rules->case_count+63)/64;if(pages<1) return;if(state->coverage_page>=pages) state->coverage_page=pages-1;
-         igSliderInt("Interaction evidence source-slot page",&state->coverage_page,0,pages-1,"%d",0);start=state->coverage_page*64;
-         igTextWrapped("Scanning case slots %d..%d of %d; page may contain no matches. Full declarations remain in query result/source.",start,start+64<rules->case_count ? start+64:rules->case_count,rules->case_count);
-         for(c=start;c<start+64 && c<rules->case_count;++c) if(gd_query_scene_overview_case(state->scene,edge,c)) {igPushID_Int(c);case_details(context,c);igPopID();}}
+        igTextWrapped("Overview incomplete %s | construction limited %s",gd_query_scene_overview_incomplete(state->scene) ? "yes":"no",state->scene->limited ? "yes":"no");
+        {int c,ordinal=0,current=state->case_pages[edge];GD_EvidencePage page=gd_explorer_evidence_pager("Cases",&current,gd_explorer_query_case_count(context,edge),GD_EVIDENCE_PAGE_ROWS);state->case_pages[edge]=(unsigned char)current;
+         for(c=0;c<rules->case_count;++c)if(gd_query_scene_overview_case(state->scene,edge,c)){int row=ordinal++;if(row<page.first || row>=page.end)continue;igPushID_Int(c);case_details(context,c);igPopID();}}
         return;
     }
     if (state->query->effects) {
@@ -549,8 +556,9 @@ void gd_explorer_query_details(GD_ExplorerContext *context) {
         if (igTreeNode_Str("Incident guards/effects and exact source declarations")) { for (i=0;i<pane->layout->edge_count;++i) if (pane->layout->edges[i].a==selected || pane->layout->edges[i].b==selected) { igPushID_Int(i); gd_explorer_query_source(context,i); igPopID(); } igTreePop(); }
     }
     if (state && state->selected && igTreeNode_Str("Selected result: exact contributor paths")) {
-        for (i=0;i<state->selected->count && i<64;++i) { int path[GD_MAX_RULE_EXPANSION_DEPTH],count=gd_effect_contributor_path(state->selected,i,path,GD_MAX_RULE_EXPANSION_DEPTH),step; const GD_EffectLink *link=&state->query->effects->links[state->selected->links[i]]; igTextWrapped("Target: %s",link->participant>=0 ? context->project->rules->participants[link->participant].name:"unresolved"); for (step=0;step<count;++step) case_details(context,state->query->resource->nodes[state->query->effects->nodes[path[step]].activation].case_index); }
-        if (state->selected->count>64) igText("%d further contributor paths remain highlighted; use native CLI for all rows.",state->selected->count-64);
+        igTextWrapped("Producer limit %s | source incomplete %s | unexamined links %d | unresolved targets %d",state->selected->limited ? "yes":"no",state->selected->source_incomplete ? "yes":"no",state->selected->unexamined_links,state->selected->unresolved_targets);
+        GD_EvidencePage page=gd_explorer_evidence_pager("Contributor paths",&state->contributor_page,state->selected->count,GD_EVIDENCE_PAGE_ROWS);
+        for (i=page.first;i<page.end;++i) { int path[GD_MAX_RULE_EXPANSION_DEPTH],count=gd_effect_contributor_path(state->selected,i,path,GD_MAX_RULE_EXPANSION_DEPTH),step; const GD_EffectLink *link=&state->query->effects->links[state->selected->links[i]]; igTextWrapped("Target: %s",link->participant>=0 ? context->project->rules->participants[link->participant].name:"unresolved"); for (step=0;step<count;++step) case_details(context,state->query->resource->nodes[state->query->effects->nodes[path[step]].activation].case_index); }
         igTreePop();
     }
     if (pane->selection.cell>=0) gd_explorer_query_source(context,pane->selection.cell);

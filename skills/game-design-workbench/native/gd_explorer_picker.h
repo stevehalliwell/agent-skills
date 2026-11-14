@@ -1,7 +1,21 @@
 #ifndef GD_EXPLORER_PICKER_H
 #define GD_EXPLORER_PICKER_H
 #include "gd_picker.h"
+#include "gd_evidence_page.h"
 #include "gd_noun_label_ui.h"
+/* Page state belongs to caller's exact list; page changes inspect no row. */
+static GD_EvidencePage gd_explorer_evidence_pager(const char *label,int *page,int total,int size) {
+    GD_EvidencePage range=gd_evidence_page(total,size,*page);int human;
+    *page=range.page;igPushID_Str(label);
+    igBeginDisabled(!range.page);if(igSmallButton("Previous"))--*page;igEndDisabled();igSameLine(0,-1);
+    igBeginDisabled(!range.pages || range.page+1>=range.pages);if(igSmallButton("Next"))++*page;igEndDisabled();
+    range=gd_evidence_page(total,size,*page);human=range.page+1;
+    if(range.pages>1 && igSliderInt("Page",&human,1,range.pages,"%d",0))range=gd_evidence_page(total,size,human-1);
+    *page=range.page;
+    igText("%s %d-%d of %d retained",label,total ? range.first+1:0,range.end,total);
+    if(range.pages)igText("Page %d of %d",range.page+1,range.pages);else igTextUnformatted("No retained rows in this scope",NULL);
+    igPopID();return range;
+}
 /* Include after cimgui declarations. One popup at a time per independent pane.
    Search changes presentation only; callers adopt exact native choices. */
 static int gd_explorer_picker_begin(GD_ExplorerContext *context,const char *label,const char *preview) {

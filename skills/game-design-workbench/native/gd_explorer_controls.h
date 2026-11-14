@@ -46,6 +46,7 @@ int gd_explorer_control_set(GD_ExplorerContext *context, GD_ExplorerForm form, c
 /* Presentation is immediate, matching GUI; snapshots never own application state. */
 const GD_ExplorerControl *gd_explorer_presentation_fields(int *count);
 void gd_explorer_presentation_read(const GD_ExplorerContext *context,GD_ExplorerPresentation *values);
+int gd_explorer_presentation_maximum(const GD_ExplorerContext *context,const char *name);
 int gd_explorer_presentation_editable(const GD_ExplorerContext *context,const char *name);
 int gd_explorer_presentation_options(const GD_ExplorerContext *context,const GD_ExplorerControl *field);
 int gd_explorer_presentation_option(const GD_ExplorerContext *context,const GD_ExplorerControl *field,int ordinal,int *native,char *key,size_t capacity);

@@ -66,9 +66,11 @@ static const PresentationField presentation_fields[]={
  VF(similarity_peer,"Similarity peer entry",GD_CONTROL_INT,PV_ALL),
  VF(known,"Selected skill is hypothetically known",GD_CONTROL_BOOL,PV_SKILL),
  VF(coverage_page,"Coverage page",GD_CONTROL_INT,1u<<GD_EXPLORER_ACTORS),
+ VF(actor_case_page,"Actor association case page",GD_CONTROL_INT,1u<<GD_EXPLORER_ACTORS),
+ VF(contributor_page,"Effect contributor path page",GD_CONTROL_INT,1u<<GD_EXPLORER_EFFECTS),
  VF(structure_page,"Structure page",GD_CONTROL_INT,PV_ALL),
- VF(rules_page,"Rule inspection page",GD_CONTROL_INT,PV_RESOURCE),
- VF(rules_axis_page,"Binding declared-axis page",GD_CONTROL_INT,PV_RESOURCE),
+ VF(rules_page,"Rule inspection page",GD_CONTROL_INT,PV_ALL),
+ VF(rules_axis_page,"Binding declared-axis page",GD_CONTROL_INT,PV_ALL),
  VF(similarity_page,"Similarity entry page",GD_CONTROL_INT,PV_ALL),
  VF(bypass_candidate,"Shown support-path bypass candidate",GD_CONTROL_INT,PV_GRAPH)
 };
@@ -107,7 +109,9 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
     out->resource_witness=p->resource_witness; out->similarity_row=out->similarity_peer=-1;
     if(p->structure_state) { out->similarity_canvas=p->structure_state->similarity_canvas; out->similarity_row=p->structure_state->similarity_row; out->similarity_peer=p->structure_state->similarity_peer; out->structure_page=p->structure_state->page; }
     if(p->rule_state) out->rules_page=p->rule_state->page;
-    if(p->query_state) out->coverage_page=p->query_state->coverage_page;
+    if(p->query_state){out->coverage_page=p->query_state->coverage_page;out->contributor_page=p->query_state->contributor_page;
+        if(p->query_state->scene && p->selection.cell>=0 && p->selection.cell<p->query_state->scene->layout.edge_count)out->actor_case_page=p->query_state->case_pages[p->selection.cell];
+    }
     record=p->prepared ? selected_record((GD_ExplorerContext *)c):-1;
     out->known=record>=0 && record<GD_MAX_RECORDS && p->known[record];
     out->rules_axis_page=p->rule_state ? p->rule_state->axis_page:0;out->similarity_page=p->structure_state ? p->structure_state->similarity_page:0;
@@ -129,6 +133,8 @@ int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *na
     if(!strncmp(name,"similarity_",11)) return p->structure_state && p->structure_state->result && p->structure_state->result->similarity;
     if(!strcmp(name,"known")) { int record=selected_record((GD_ExplorerContext *)c); return record>=0 && gd_explorer_model(c->project,p->view)->records[record].role==GD_SKILL; }
     if(!strcmp(name,"resource_witness")) return p->resource_routes!=NULL;
+    if(!strcmp(name,"actor_case_page"))return p->view==GD_EXPLORER_ACTORS && p->query_state && p->query_state->scene && p->query_state->scene->overview && p->selection.cell>=0 && p->selection.cell<p->query_state->scene->layout.edge_count && p->query_state->scene->edges[p->selection.cell].kind!=GD_QUERY_EDGE_AXIS;
+    if(!strcmp(name,"contributor_page"))return p->query_state && p->query_state->selected;
     if(!strcmp(name,"coverage_page")) return p->query_state && p->query_state->query && p->query_state->query->state_coverage;
     if(!strcmp(name,"structure_page")) return p->structure_state!=NULL;
     if(!strcmp(name,"rules_page")) return p->rule_state!=NULL;
@@ -277,6 +283,21 @@ failed:
     if(next->layout) allocator.release(allocator.context,next->layout);
     gd_layout_focus_destroy(next->distance_focus);allocator.release(allocator.context,next);return 0;
 }
+int gd_explorer_presentation_maximum(const GD_ExplorerContext *c,const char *name) {
+    const GD_ExplorerPane *p=c->pane;int total=-1,size=GD_EVIDENCE_PAGE_ROWS;
+    if(!strcmp(name,"overview_row") || !strcmp(name,"overview_column"))return GD_OVERVIEW_BINS-1;
+    if(!strcmp(name,"noun_case_page"))total=c->project->noun_grid && p->selection.cell>=0 && p->selection.cell<c->project->noun_grid->pair_count ? c->project->noun_grid->pairs[p->selection.cell].count:0;
+    else if(!strcmp(name,"actor_case_page"))total=gd_explorer_query_case_count(c,p->selection.cell);
+    else if(!strcmp(name,"contributor_page"))total=p->query_state && p->query_state->selected ? p->query_state->selected->count:0;
+    else if(!strcmp(name,"rules_page"))total=gd_explorer_rules_row_count(p->rule_state);
+    else if(!strcmp(name,"rules_axis_page")){const GD_ExplorerRuleState *state=p->rule_state;total=0;size=GD_EVIDENCE_AXIS_ROWS;
+        if(state && state->bindings && state->row>=0 && state->row<state->bindings->binding_count){const GD_Rules *rules=state->bindings->rules;const GD_RuleParticipant *actor=&rules->participants[state->bindings->bindings[state->row].participant];
+            if(actor->noun_resolution==GD_RULE_RESOLVED){int edge;for(edge=rules->actor_first[actor->noun_record];edge>=0;edge=rules->next_axis[edge])++total;}
+        }
+    }
+    if(total<0)return 4096;
+    {GD_EvidencePage page=gd_evidence_page(total,size,0);return page.pages ? page.pages-1:0;}
+}
 int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const char *value,char *message,size_t capacity) {
     const PresentationField *entry=presentation_field(name); const GD_ExplorerControl *field=entry ? &entry->control:NULL; GD_ExplorerPresentation next; GD_ExplorerPane *p=c->pane;
     int slots,i,native=-1,found=0; char key[GD_MAX_PATH],*slot; const char *error="Presentation control unavailable; explicitly open projection first";
@@ -288,8 +309,8 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
         for(i=0;i<slots;++i) { int candidate; if(gd_explorer_presentation_option(c,field,i,&candidate,key,sizeof(key))!=1 || strcmp(key,value)) continue; if(found && native!=candidate) {error="Choice key ambiguous in current result";goto failed;} found=1;native=candidate; }
         if(!found) goto failed; if(field->type==GD_CONTROL_BOOL) *(bool *)slot=native!=0; else *(int *)slot=native;
     } else {
-        char *end; long number; error="Page/bin requires decimal integer in 0..4096";
-        if(!*value || *value<'0' || *value>'9') goto failed; errno=0; number=strtol(value,&end,10); if(errno || *end || number>4096) goto failed;
+        char *end; long number; error="Page/bin requires a decimal integer within current retained scope";
+        if(!*value || *value<'0' || *value>'9') goto failed; errno=0; number=strtol(value,&end,10); if(errno || *end || number>gd_explorer_presentation_maximum(c,name)) goto failed;
         if((!strcmp(name,"overview_row") || !strcmp(name,"overview_column")) && number>=GD_OVERVIEW_BINS) goto failed;
         *(int *)slot=(int)number;
     }
@@ -301,7 +322,7 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
     else if(!strcmp(name,"island_separation")){if(!pane_islands(c,next.island_separation))goto failed;p->island_separation=next.island_separation;if(next.island_separation)p->paused=false;}
     else if(!strcmp(name,"workspace_bounds")){if(!pane_workspace(c,next.workspace_bounds))goto failed;p->workspace_bounds=next.workspace_bounds;p->fit=1;}
     else if(!strcmp(name,"noun_row") || !strcmp(name,"noun_column")) noun_grid_choose(c,next.noun_row,next.noun_column);
-    else if(!strcmp(name,"noun_case_page")) {if(next.noun_case_page>=(c->project->rules->case_count+63)/64 && next.noun_case_page!=0)goto failed;p->noun_case_page=next.noun_case_page;}
+    else if(!strcmp(name,"noun_case_page")) p->noun_case_page=next.noun_case_page;
     else if(!strcmp(name,"actor_overview")) {if(!gd_explorer_query_overview(c,next.actor_overview)) goto failed;}
     else if(!strcmp(name,"distance_focus")) { if(!distance_focus_toggle(c,next.distance_focus)) goto failed; }
     else if(!strcmp(name,"focus_root")) { if(next.focus_root<0) goto failed; { GD_Focus old=p->focus; p->focus=(GD_Focus){0}; gd_focus_reset(gd_explorer_model(c->project,p->view),&p->focus,next.focus_root); if(!presentation_rearrange(c,&next,0)) {p->focus=old;goto failed;} } }
@@ -313,6 +334,8 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
     else if(!strcmp(name,"filter") && p->view!=GD_EXPLORER_RESOURCES)memcpy(p->list_search,next.filter,sizeof(p->list_search));
     else if(!strcmp(name,"known")) p->known[selected_record(c)]=next.known;
     else if(!strcmp(name,"coverage_page")) p->query_state->coverage_page=next.coverage_page;
+    else if(!strcmp(name,"actor_case_page"))p->query_state->case_pages[p->selection.cell]=(unsigned char)next.actor_case_page;
+    else if(!strcmp(name,"contributor_page"))p->query_state->contributor_page=next.contributor_page;
     else if(!strcmp(name,"structure_page")) p->structure_state->page=next.structure_page;
     else if(!strcmp(name,"rules_page")) p->rule_state->page=next.rules_page;
     else if(!strcmp(name,"rules_axis_page")) p->rule_state->axis_page=next.rules_axis_page;
