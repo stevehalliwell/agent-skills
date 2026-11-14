@@ -35,7 +35,6 @@ try {
     Copy-Item (Join-Path $root 'tests/fixtures/project') $project -Recurse
     Copy-Item (Join-Path $root 'README.md') (Join-Path $project 'README.md')
     Copy-Item (Join-Path $root '../references/build.md') (Join-Path $project 'build.md')
-    Copy-Item (Join-Path $root '../../../TODO.md') (Join-Path $project 'TODO.md')
     function Inventory {
         @(Get-ChildItem $project -Recurse -File -Force | Sort-Object FullName | ForEach-Object {
             [ordered]@{ path = [IO.Path]::GetRelativePath($project, $_.FullName); bytes = $_.Length; sha256 = (Get-FileHash $_.FullName -Algorithm SHA256).Hash }
@@ -122,7 +121,7 @@ try {
     $report = [ordered]@{
         ok = $true; platform = 'win32'; timestamp_utc = [DateTime]::UtcNow.ToString('o')
         logical_processors = [Environment]::ProcessorCount; run = $run
-        workload = 'Small test collections plus current native README, build reference and repository TODO; README initially open.'
+        workload = 'Small test collections plus current native README and build reference; README initially open.'
         limits = 'Warm sequential single run/compiler. Startup ends at IPC inspection, not first paint. CPU percent uses one logical core. No GPU measurement. Control round trips are not human input/Go completion latency. No numeric acceptance budget.'
         source_unchanged = $true; files = $before; results = $results
     }
