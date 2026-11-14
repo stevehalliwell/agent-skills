@@ -18,13 +18,13 @@ static int gui_slice(const char *text, usize start, usize end, const char **byte
     if (start == end) first = offset;
     *bytes = text + first; *size = offset - first; return 1;
 }
-static int gui_selection_ready(test_command_live *live, usize *offset, int *ready) {
+static int gui_event_ready(test_command_live *live, usize *offset, int *ready, const char *event) {
     while (*offset < live->result.output.len) {
         const char *line = (const char *)live->result.output.data + *offset;
         const char *end = memchr(line, '\n', live->result.output.len - *offset);
         if (!end) break; /* Wait for complete line, including fragmented UTF-8. */
         TEST_ASSERT(integration_json_parse(0, line, (usize)(end - line)) == 0);
-        if (integration_text_is("event", "selection-ready")) { TEST_ASSERT(!*ready); *ready = 1; }
+        if (integration_text_is("event", event)) { TEST_ASSERT(!*ready); *ready = 1; }
         *offset += (usize)(end - line) + 1;
     }
     return 0;
@@ -60,7 +60,7 @@ static int gui_preview(const char *mode, const char *text, const char *hash, int
     usize offset = 0; int ready = 0;
     while (!ready && !gui_live[0].complete) {
         TEST_ASSERT_COMMAND_OK(test_command_poll(&gui_live[0]));
-        TEST_ASSERT(gui_selection_ready(&gui_live[0], &offset, &ready) == 0);
+        TEST_ASSERT(gui_event_ready(&gui_live[0], &offset, &ready, "selection-ready") == 0);
         if (!ready && !gui_live[0].complete) test_command_sleep(1);
     }
     TEST_ASSERT(ready && gui_live[0].active && !gui_live[0].observed);
@@ -125,9 +125,71 @@ static int gui_preview(const char *mode, const char *text, const char *hash, int
     TEST_ASSERT(gui_resolve(project) == 0);
     ++gui_groups; return 0;
 }
+static int gui_wait_event(usize *offset, const char *event) {
+    int ready = 0;
+    while (!ready && !gui_live[0].complete) {
+        TEST_ASSERT_COMMAND_OK(test_command_poll(&gui_live[0]));
+        TEST_ASSERT(gui_event_ready(&gui_live[0], offset, &ready, event) == 0);
+        if (!ready && !gui_live[0].complete) test_command_sleep(1);
+    }
+    TEST_ASSERT(ready && gui_live[0].active && !gui_live[0].observed); return 0;
+}
+static int gui_search_roundtrip(void) {
+    char project[NATIVE_PATH_SIZE], baseline[NATIVE_PATH_SIZE], path[NATIVE_PATH_SIZE];
+    TEST_ASSERT_FILE_OK(test_directory_next(&gui_case, "search-project", project));
+    TEST_ASSERT_FILE_OK(file_directory_copy(&gui_files, (cstring){"tests/fixtures/project"}, (cstring){project}));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, project, ".gui-test-owned"));
+    TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "Owned search fixture\n"));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, project, "README.md"));
+    const char content[] = "Read **the** plan.\n\nSecond plan.\n";
+    TEST_ASSERT_FILE_OK(file_write_bytes((cstring){path}, content, sizeof(content) - 1));
+    TEST_ASSERT(gui_baseline(project, baseline) == 0);
+    const char *arguments[] = {gui_testing, "--project", project, "--assets", gui_assets, "--file", "records/tasks/first.md", "--frames", "1200", "--exercise-selection", "search-server"};
+    test_command_workspace buffers = {gui_commands.scratch, gui_live_output[0], gui_live_errors[0], sizeof(gui_live_output[0]), sizeof(gui_live_errors[0])};
+    test_command command = {.arguments = arguments, .argument_count = 11, .working_directory = gui_root, .timeout_ms = 30000};
+#if defined(__APPLE__)
+    test_command_environment environment = {"DYLD_LIBRARY_PATH", NULL}; command.environment = &environment; command.environment_count = 1;
+#endif
+    TEST_ASSERT_COMMAND_OK(test_command_start(&gui_live[0], &buffers, &command));
+    usize offset = 0; TEST_ASSERT(gui_wait_event(&offset, "search-ready") == 0);
+    const char *views[] = {"source", "preview", "sidebar"}, *queries[] = {"**the**", "the plan", "readme"};
+    for (int view = 0; view < 3; ++view) {
+        const char *search[] = {gui_other, "--project", project, "--find", queries[view], "--view", views[view], "--file", "README.md"};
+        TEST_ASSERT(gui_execute(search, view == 0 ? 9 : 7, 0, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0);
+        integration_json_node *delivered = integration_json_get(0, "delivered"), *focus = integration_json_get(0, "os_focus_changed");
+        TEST_ASSERT(delivered && delivered->type == PDJSON_TRUE && focus && focus->type == PDJSON_FALSE);
+        TEST_ASSERT(gui_wait_event(&offset, "search-applied") == 0 && integration_number_is("serial", view + 1) && integration_number_is("view", view == 2 ? 0 : view + 1));
+        if (view < 2) {
+            TEST_ASSERT(integration_number_is("count", 1));
+            const char *inspect[] = {gui_other, "--project", project, "--inspect"};
+            TEST_ASSERT(gui_execute(inspect, 4, 0, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0);
+            TEST_ASSERT(integration_text_is("selection.view", views[view]) && integration_text_is("selection.text", queries[view]));
+            integration_json_node *dirty = integration_json_get(0, "document.dirty"); TEST_ASSERT(dirty && dirty->type == PDJSON_FALSE);
+        }
+    }
+    for (int empty = 0; empty < 2; ++empty) {
+        const char *zero[] = {gui_other, "--project", project, "--find", empty ? "" : "Plan", "--view", empty ? "preview" : "source", "--match-case"};
+        TEST_ASSERT(gui_execute(zero, 8, 0, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0);
+        TEST_ASSERT(gui_wait_event(&offset, "search-applied") == 0 && integration_number_is("serial", 4 + empty) && integration_number_is("count", 0));
+    }
+    const char *unchanged[] = {gui_other, "--project", project, "--inspect"};
+    TEST_ASSERT(gui_execute(unchanged, 4, 0, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0 &&
+        integration_text_is("selection.view", "preview") && integration_text_is("selection.text", "the plan"));
+    const char *invalid[] = {gui_other, "--project", project, "--find", "bad\nquery", "--view", "source"};
+    TEST_ASSERT(gui_execute(invalid, 7, 2, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0 && integration_text_is("code", "invalid-search"));
+    const char *missing_view[] = {gui_other, "--project", project, "--find", "plan"};
+    TEST_ASSERT(gui_execute(missing_view, 5, 2, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0 && integration_text_is("code", "usage"));
+    while (!gui_live[0].complete) { TEST_ASSERT_COMMAND_OK(test_command_poll(&gui_live[0])); if (!gui_live[0].complete) test_command_sleep(1); }
+    TEST_ASSERT_COMMAND_EXIT(&gui_live[0].result, 0);
+    TEST_ASSERT_DIRECTORIES_EQUAL(&gui_files, ((cstring){project}), ((cstring){baseline}));
+    const char *absent[] = {gui_other, "--project", project, "--find", "plan", "--view", "source"};
+    TEST_ASSERT(gui_execute(absent, 7, 1, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0 && integration_text_is("code", "gui-not-running"));
+    return 0;
+}
 TEST(preview_multi_cross_compiler_inspection_context_save_send_and_resolution,
     TEST_ASSERT(gui_preview("multi", "plain **bold**\n\nsecond *emphasis* and [link](https://example.invalid)\n\n```c\ncode\n```",
         "4d332c91c7b1340f167508157f461f163b2d8d4f59a5dc2562dd790c72437e43", 0) == 0);
+    TEST_ASSERT(gui_search_roundtrip() == 0);
 )
 TEST(preview_context_cross_compiler_inspection_context_save_send_and_resolution,
     TEST_ASSERT(gui_preview("context", "plain  \nnext", "5c775689d1b5ecf557741bf872e2ad7cd1767e3675e922ed348ff759d7c125c3", 1) == 0);

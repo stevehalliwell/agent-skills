@@ -50,7 +50,7 @@ static int model_delayed_inspection(gui_workspace *workspace) {
     uint32_t started = system_milliseconds();
     gui_reveal pending = {0}; int ready = 0;
     while (system_milliseconds() - started < 4000) {
-        gui_ipc_poll(&server, workspace, &pending, &ready, snapshot);
+        gui_ipc_poll(&server, workspace, &pending, &ready, snapshot, NULL, NULL, 0);
         if (server.snapshot_size && !changed) {
             memset(workspace->preview_text, 'b', GUI_TEXT);
             memset(workspace->preview_context, 'd', GUI_TEXT); changed = 1;

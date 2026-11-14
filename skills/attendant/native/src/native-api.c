@@ -81,13 +81,12 @@ static const char *reference_path(context *c, record *source, field *declared, c
     }
     return NULL;
 }
+#include "core/workspace-browse.h"
 attendant_result attendant_read_workspace(attendant_session *session, const char *project, attendant_workspace *workspace) {
     context *c = request_begin(session);
     const char *root;
     attendant_document_info *documents;
     int i, j, k, count;
-    source_directory scan;
-    int next;
     if (workspace) memset(workspace, 0, sizeof(*workspace));
     if (setjmp(session->recovery)) return request_result(c, 0, NULL, NULL, NULL);
     if (!workspace) fail(c, "Missing workspace output");
@@ -126,25 +125,12 @@ attendant_result attendant_read_workspace(attendant_session *session, const char
             }
         }
     }
-    if (!source_directory_open(&scan, root)) fail(c, "Cannot browse workspace directory");
-    c->scanning_directory = &scan;
-    while ((next = source_directory_next(&scan)) > 0) {
-        const char *name = scan.name, *path;
-        size_t length = strlen(name);
-        if (*name == '.' || length < 3 || source_case_compare(name + length - 3, ".md")) continue;
-        path = full_path(c, root, name);
-        if (source_stat(path).kind != SOURCE_REGULAR) continue;
-        for (i = 0; i < count; i++) if (!source_path_compare(documents[i].path, path)) break;
-        if (i < count) continue;
-        if (count == MAX_RECORDS) fail(c, "Workspace document capacity exceeded");
-        documents[count].path = path; documents[count].name = copy_text(c, name, length); documents[count++].collection = "(workspace)";
-    }
-    if (next < 0) fail(c, "Cannot finish workspace enumeration");
-    int closed = source_directory_close(&scan); c->scanning_directory = NULL;
-    if (!closed) fail(c, "Cannot close workspace enumeration");
+    const char *warning = browse_workspace(c, root, documents, &count);
     workspace->root = root; workspace->documents = documents;
     workspace->document_count = count; workspace->diagnostic_count = c->diagnostic_count;
-    return request_result(c, 1, root, NULL, NULL);
+    attendant_result result = request_result(c, 1, root, NULL, NULL);
+    result.message = warning; /* Successful partial discovery: caller must display. */
+    return result;
 }
 static uint64_t attribute_time(const source_file_info *attributes) { return attributes->modified; }
 static uint64_t attribute_size(const source_file_info *attributes) { return attributes->size; }

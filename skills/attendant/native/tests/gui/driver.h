@@ -93,9 +93,15 @@ static void reveal_observe(gui_app *app, gui_tab *tab, ImGuiID widget) {
 #undef REVEAL_CHECK
 }
 
+#include "usability.h"
 static void exercise_input(gui_app *app, void *window, int frame) {
     ImVec2 position;
     app->test_frame = frame;
+    if (app->selection_exercise == 17) {
+        if (frame == 8) { puts("{\"event\":\"search-ready\"}"); fflush(stdout); }
+        return;
+    }
+    if (app->selection_exercise == 16) { usability_input(app, window, frame); return; }
     if (app->selection_exercise == 15) {
         ImGuiIO *io = igGetIO_Nil(); gui_workspace *workspace = &app->workspace;
         if (frame == 14 || frame == 54) {
@@ -253,7 +259,7 @@ static void exercise_input(gui_app *app, void *window, int frame) {
 
 static void selection_observe(gui_app *app, gui_tab *tab, size_t offset, int exact) {
         app->preview_scroll_y = igGetScrollY(); app->preview_clip_bottom = igGetWindowPos().y + igGetWindowHeight();
-        if (app->selection_exercise && app->selection_exercise != 15 && app->test_frame >= (app->selection_exercise == 12 ? 112 : 34) && !app->selection_ready) {
+        if (app->selection_exercise > 0 && app->selection_exercise < 15 && app->test_frame >= (app->selection_exercise == 12 ? 112 : 34) && !app->selection_ready) {
             gui_selection current = gui_selection_current(&app->workspace);
             if (!app->selection_source_seen || current.view != GUI_SELECTION_PREVIEW || current.status != (app->selection_exercise == 6 ? GUI_SELECTION_CONTEXT : app->selection_exercise == 13 ? GUI_SELECTION_UNSUPPORTED : GUI_SELECTION_MAPPED)) {
                 fprintf(stderr, "Preview context/widget did not replace older source selection: mode %d, view %d, status %d\n", app->selection_exercise, current.view, current.status);

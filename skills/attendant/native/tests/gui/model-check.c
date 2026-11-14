@@ -75,6 +75,32 @@ int main(int argc, char **argv) {
         CHECK(gui_inspection_json(empty, json, sizeof(json)) && strstr(json, "\"document\":null"));
         arena_memory_release(empty, sizeof(*empty));
     }
+    {
+        gui_search request = {0}, pending = {0}; int ready = 0;
+        request.version = 1; memcpy(request.project, workspace->root, strlen(workspace->root) + 1); strcpy(request.query, "plan");
+        CHECK(gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)) == GUI_SEARCH_ACCEPTED && ready && !strcmp(pending.query, "plan"));
+        CHECK(gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)) == GUI_SEARCH_BUSY);
+        ready = 0; CHECK(gui_search_receive(workspace, &pending, &ready, 1, &request, sizeof(request)) == GUI_SEARCH_BUSY && !ready);
+        request.view = 1; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        request.view = 3; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        request.view = 0; request.match_case = 2; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        request.match_case = 0; request.version = 2; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        request.version = 1; strcpy(request.query, "\xc0\xaf"); CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        strcpy(request.query, "two\nlines"); CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        memset(request.query, 'x', sizeof(request.query)); request.query[sizeof(request.query) - 1] = 0;
+        CHECK(gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)) == GUI_SEARCH_ACCEPTED);
+        ready = 0; request.query[sizeof(request.query) - 1] = 'x'; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        strcpy(request.query, "plan"); request.project[0] = '!'; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        memcpy(request.project, workspace->root, strlen(workspace->root) + 1); request.view = 1;
+        CHECK(gui_full_path(workspace->root, "../outside.md", request.path));
+        CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        CHECK(gui_full_path(workspace->root, "records/tasks/first.md", request.path));
+        memcpy(external + 1, &request, sizeof(request));
+        CHECK(gui_search_receive(workspace, &pending, &ready, 0, external + 1, sizeof(request)) == GUI_SEARCH_ACCEPTED && ready);
+        ready = 0; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, external + 1, sizeof(request) - 1));
+        request.view = 0; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        CHECK(!workspace->tab_count && workspace->active < 0);
+    }
     CHECK(gui_open_document(workspace, "records/tasks/first.md")); first = workspace->active; tab = &workspace->tabs[first];
     for (i = 0; i < workspace->navigation->count; i++) if (!strcmp(workspace->navigation->documents[i].path, tab->path)) {
         int j; attendant_document_info *document = &workspace->navigation->documents[i];

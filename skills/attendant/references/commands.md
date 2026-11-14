@@ -73,4 +73,4 @@ Ordinary query/search may include `meta_comments.pending` and concise notice. No
 <attendant> update -c _meta_comments -i '[{"name":"comment-name","fields":{"status":"resolved"}}]'
 ```
 
-GUI source editing and **Save & Send** are separate from CLI metadata writes. [GUI controls](../native/apps/gui/README.md#agent-controls) reveal files and inspect live selections; neither starts viewer or changes human selection on receipt.
+GUI source editing and **Save & Send** are separate from CLI metadata writes. [GUI controls](../native/apps/gui/README.md#agent-controls) reveal files, inspect live selections, or explicitly show find results in an existing viewer. Reveal/inspection preserve human selection on receipt. Separate `--find QUERY --view sidebar|source|preview` updates GUI find/selection without source writes or OS focus stealing; optional `--file` opens a document for source/preview search. No control starts a viewer.

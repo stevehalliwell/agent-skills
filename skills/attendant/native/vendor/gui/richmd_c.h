@@ -57,6 +57,12 @@ typedef struct crmd_preview_selection {
     size_t text_length, context_length;
 } crmd_preview_selection;
 CRMD_API int crmd_render_preview(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_preview_selection *selection, size_t selection_size);
+typedef struct crmd_find_result { int count, current, error; } crmd_find_result;
+/* Query borrowed for this call. action: 0 refresh, 1 next, -1 previous, 2 first.
+ * count/current are 0 for no hits, otherwise current is one-based. Selection
+ * uses the same provenance/context export as human preview selection. */
+CRMD_API int crmd_render_preview_find(const char *document_key, uint64_t revision, const char *markdown, size_t length,
+    crmd_preview_selection *selection, size_t selection_size, const char *query, int match_case, int action, crmd_find_result *find);
 /* Borrowed multiline-input geometry, immediate frame-local use only.
  * Caller owns decoration/navigation policy. Query never changes focus/selection. */
 typedef struct crmd_text_view {
@@ -66,6 +72,18 @@ typedef struct crmd_text_view {
     int caret, selection_start, selection_end; /* -1 when no retained state for widget. */
 } crmd_text_view;
 CRMD_API int crmd_get_text_view(uint32_t widget_id, crmd_text_view *view, size_t view_size);
+/* Offset to visual row origin, relative to text origin; uses the widget's wrap
+ * width/font. Immediate frame-local query, no focus or selection mutation. */
+CRMD_API int crmd_text_position(uint32_t widget_id, const char *text, size_t length, size_t offset, int wrapped, float *x, float *y);
+/* Isolate a short find field's ImGui input state. Exchange before/after drawing
+ * that field, balanced within one frame. Owned handle, one context/UI thread;
+ * destroy before shutdown. No source-buffer or undo-stack copying per frame. */
+CRMD_API void *crmd_input_state_create(void);
+CRMD_API void crmd_input_state_exchange(void *state);
+CRMD_API void crmd_input_state_destroy(void *state);
+/* Human find action only. Preserve undo; may need one initialization frame
+ * before an editor which has never owned focus can display its selection. */
+CRMD_API int crmd_source_select(uint32_t widget_id, const char *text, size_t length, size_t begin, size_t end);
 /* Render, then optionally screenshot, then present. */
 CRMD_API int crmd_end_frame(void);
 CRMD_API int crmd_present(void);

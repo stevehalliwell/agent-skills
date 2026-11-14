@@ -7,9 +7,11 @@ bash test.sh cjit
 bash test.sh zig
 ```
 
-Each command runs 47 cases under UTC and Pacific/Auckland, 26 isolated framework scenarios, then five integration cases with 23 contract groups. Builds selected compiler's CLI/API probe automatically. Requires installed compiler/Bash and repository checkout with sibling `skills/init-project/templates/`; no Node, GUI or downloads. Stdout contains retained run-directory path. TSV, generated C, build logs and diagnostics stay under `build/native-tests/run-*/`.
+Each command runs 56 cases under UTC and Pacific/Auckland, 26 isolated framework scenarios, then five integration cases with 23 contract groups. Builds selected compiler's CLI/API probe automatically. Requires installed compiler/Bash and repository checkout with sibling `skills/init-project/templates/`; no Node, GUI or downloads. Stdout contains retained run-directory path. TSV, generated C, build logs and diagnostics stay under `build/native-tests/run-*/`.
 
 Source/API/core tests live in `core/c/`, subprocess contracts in `core/integration/`. Separate generators share `src/include/test.h` with project-local preambles. Four core JS harnesses were removed after migration; real CLI/API interoperability, stdin/output, deadlines, workflows and isolated cold builds remain tested. All ten shared GUI groups per compiler also use C, including live previews. macOS control/bridge orchestration stays external.
+
+Usability coverage: `core/c/test-navigation.c` checks bounded discovery, owned-link exclusions, tree ordering/expansion and literal matching without GUI library. `gui/usability.h` drives 34 assertions through real widgets on owned fixtures: wrapped Go, source undo/focus, preview provenance, hidden/Clear filter behavior, real divider drags, dirty Close All/Cancel, modal search refusal and rejected clipboard input. Shared live GUI acceptance also sends cross-compiler `--find` controls, waits for bounded applied events, verifies source/preview selection through inspection, checks zero/empty matches and invalid/missing-recipient errors, and compares source snapshots. Clipboard getter is process-local mock; OS clipboard stays untouched. Windows CJIT/Zig pass; new macOS usability checks remain unrun.
 
 ## Header boundary
 
@@ -93,7 +95,34 @@ file_directory_remove_tree(&files, owned_directory);
 - Copy/removal can leave partial effects after mutation starts. Trees must be externally quiet. These checks are not an adversarial filesystem sandbox.
 - Paths are bounded by `NATIVE_PATH_SIZE` (1024 UTF-8 bytes including NUL). OS limits also apply; extended-length Win32 paths are not enabled.
 
-`file_directory_list_tree(&files, root, &tree)` exposes bounded root-relative entries/kinds/depths. Result remains in caller arena until caller rewinds it. Errors rewind temporary storage and leave result unchanged. Copy/compare/removal rewind their own temporary allocations on return.
+`file_directory_list_tree(&files, root, &tree)` exposes bounded root-relative entries/kinds/depths. Result and traversal scratch remain in caller arena until caller rewinds it. Errors rewind temporary storage and leave result unchanged. Copy/compare/removal rewind their own temporary allocations on return. Listing uses the same walker as filtered search; inventory remains strict and unfiltered.
+
+### Filtered recursive search
+
+```c
+file_search_options options = {
+    .pattern = "*.md",
+    .max_results = 4096,
+    .max_directories = 262144,
+    .max_depth = 32,
+    .skip_dot_names = 1,
+    .skip_unsupported = 1,
+    .issue = on_issue
+};
+file_error error = file_directory_search(scratch, root, &options, on_match, user);
+```
+
+- `on_match`: `file_error (void *user, const file_tree_entry *entry)`. Receives root-relative UTF-8 path with `/` separators, kind and entry depth. Pattern selects regular-file basenames, not directory traversal. NULL pattern includes files and directories. Visitor error stops search after handle cleanup.
+- Glob supports `*` sequences and `?` single UTF-8 characters. ASCII case-insensitive by default; `match_case = 1` makes comparison exact. Other Unicode stays exact. Pattern allows 1023 UTF-8 bytes, no path separators. No bracket expressions, DOS wildcard rules or Unicode folding.
+- `max_results` counts only entries delivered to visitor and must be positive. A nonmatching regular file consumes no result/directory capacity. `max_directories` separately bounds attempted directory descents below root; 0 means unlimited. Excluded names/links do not consume either budget. Exact limits succeed when no further eligible result/directory remains.
+- `max_depth` bounds directory levels below root; 0 permits root files but reports attempted deeper discovery as depth exhaustion. `root_only = 1` instead selects deliberate nonrecursive scope without depth warnings. Filtered root-only search never opens a directory-discovery pass; unfiltered root-only search returns immediate directory entries without entering them. Files in deepest permitted recursive directory remain eligible. Filtered search visits files before subdirectories at each depth, keeping root matches first. Source records remain caller's concern.
+- Windows passes masks such as `*.md` to `FindFirstFileW`; separate `FindFirstFileExW` directory pass checks cached attributes even when directory-only filter is ignored. Native `?` counts UTF-16 units, so those masks broaden to `*`; shared UTF-8 matcher preserves character semantics. Postfilter also rejects DOS/short-name extras and applies requested case mode. POSIX enumerates/filter names through same walker. Unrelated names may still require enumeration, but no longer truncate results.
+- Dot names and unsupported entries are excluded only when requested. Links/junctions/reparse points are never followed; linked root/ancestors fail even with `skip_unsupported`.
+- `on_issue`: `void (void *user, const char *path, file_search_problem problem)`. Receives affected absolute path and result-limit/directory-limit/depth-limit/path/open/read/close/entry-status problem. With handler, recoverable problems warn and skip; without handler, first problem stops. Result/directory exhaustion always stops. Search returns first error even when earlier visits remain usable; allocation failure takes precedence.
+- Search paths allow 4096 UTF-8 bytes including NUL. OS limits still apply; no extended-length Win32 path support added. Existing inventory/copy/compare/removal retain 1024-byte path limit.
+- Frames allocate only for reached depths and reuse storage across siblings. Scratch remains in caller arena on success/error; caller marks/rewinds it. Callbacks must copy retained paths, never modify borrowed paths, rewind search scratch or longjmp. All handles close before return, including visitor stop and allocation failure while descending.
+
+Attendant temporarily uses `*.md` with `root_only = 1`: root Markdown plus configured collection files, 4096 shared document capacity, no recursive discovery. Project adapter retains deduplication, result storage and warnings. Result paths/warnings allocate before search scratch mark; after handles close, adapter rewinds only temporary frames. No separate arena is needed because visitor never allocates from scratch. Flat collection readers also use shared `file_directory` iterator. No duplicate application walker/platform iterator or compiler-cache exclusion.
 
 ## Environment operations in `base.h`
 

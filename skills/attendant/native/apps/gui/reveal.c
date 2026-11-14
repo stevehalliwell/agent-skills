@@ -120,6 +120,25 @@ uintptr_t gui_reveal_receive(const gui_workspace *workspace, gui_reveal *pending
     memcpy(pending, request, sizeof(*pending)); *ready = 1;
     return GUI_REVEAL_ACCEPTED;
 }
+uintptr_t gui_search_receive(const gui_workspace *workspace, gui_search *pending, int *ready,
+    int busy, const void *data, size_t size) {
+    gui_search request; char absolute[GUI_PATH];
+    if (!workspace || !pending || !ready || !data || size != sizeof(request)) return 0;
+    memcpy(&request, data, sizeof(request));
+    if (request.version != 1 || request.view > 2 || request.match_case > 1 ||
+        !memchr(request.project, 0, sizeof(request.project)) || !memchr(request.path, 0, sizeof(request.path)) ||
+        !memchr(request.query, 0, sizeof(request.query)) || strpbrk(request.query, "\r\n") ||
+        !string_view_utf8_valid(string_view_from_cstr(request.query))) return 0;
+    if (!gui_full_path(NULL, request.project, absolute) || source_path_compare(absolute, workspace->root)) return 0;
+    if (*request.path) {
+        size_t length = strlen(request.path);
+        if (!request.view || length < 3 || source_case_compare(request.path + length - 3, ".md") ||
+            !gui_full_path(NULL, request.path, absolute) || source_path_compare(absolute, request.path) || !path_allowed(workspace, absolute)) return 0;
+        for (size_t i = 0; i < length; ++i) if ((unsigned char)request.path[i] < 32) return 0;
+    } else if (request.view && workspace->active < 0) return 0;
+    if (busy || *ready) return GUI_SEARCH_BUSY;
+    memcpy(pending, &request, sizeof(request)); *ready = 1; return GUI_SEARCH_ACCEPTED;
+}
 #if defined(_WIN32)
 static int deliver(HWND window, uintptr_t operation, const gui_reveal *request, DWORD timeout, uintptr_t *reply) {
     COPYDATASTRUCT copy;
@@ -230,5 +249,33 @@ int gui_reveal_send(const char *project, const char *path, uint32_t line) {
         return gui_reveal_error(1, "reveal-delivery-unknown", "Delivery failed or timed out; hint may have arrived. Retrying latest hint is safe");
     if (reply != GUI_REVEAL_ACCEPTED) return gui_reveal_error(1, "reveal-rejected", "Running GUI rejected hint; workspace or permitted target may have changed");
     puts("{\"ok\":true,\"hint_updated\":true,\"persistent\":false,\"focus_changed\":false}");
+    return 0;
+}
+int gui_search_send(const char *project, const char *path, const char *query, uint32_t view, int match_case) {
+    gui_search request = {0}; int status; uint32_t reply = 0;
+    size_t length = 0;
+    while (query && length < GUI_SEARCH_QUERY && query[length]) ++length;
+    if (!query || length == GUI_SEARCH_QUERY || strpbrk(query, "\r\n") || view > 2 ||
+        !string_view_utf8_valid(string_view_from_cstr(query)) || (!view && path))
+        return gui_reveal_error(2, "invalid-search", "Use one valid UTF-8 query of at most 1023 bytes; sidebar search cannot have --file");
+    request.version = 1; request.view = view; request.match_case = match_case != 0;
+    memcpy(request.query, query, length + 1);
+    if (!gui_full_path(NULL, project, request.project) || (path && !gui_full_path(request.project, path, request.path)))
+        return gui_reveal_error(1, "invalid-path", "Cannot resolve bounded search project/file path");
+    if (!gui_reveal_ordinary_path(request.project) || (path && !gui_reveal_ordinary_path(request.path)))
+        return gui_reveal_error(1, "unsupported-path", "Search requires ordinary local paths without application-link ancestry");
+    gui_endpoint endpoint = gui_find_workspace(request.project, &status); if (!endpoint) return status;
+#if defined(_WIN32)
+    COPYDATASTRUCT copy; DWORD_PTR received = 0;
+    copy.dwData = GUI_SEARCH_SET; copy.cbData = sizeof(request); copy.lpData = &request;
+    int delivered = SendMessageTimeoutA(endpoint, WM_COPYDATA, 0, (LPARAM)&copy, SMTO_ABORTIFHUNG | SMTO_BLOCK, 1000, &received) != 0;
+    reply = (uint32_t)received;
+#else
+    int delivered = gui_ipc_search_call(endpoint, &request, 1000, &reply) == 1;
+#endif
+    if (!delivered) return gui_reveal_error(1, "search-delivery-unknown", "Delivery failed or timed out; search may have arrived. Inspect GUI before retrying");
+    if (reply == GUI_SEARCH_BUSY) return gui_reveal_error(1, "gui-busy", "GUI is rendering, displaying a modal dialog or already has a queued search; no search queued");
+    if (reply != GUI_SEARCH_ACCEPTED) return gui_reveal_error(1, "search-refused", "GUI rejected search: missing active document, disallowed file, or unsupported command");
+    puts("{\"ok\":true,\"delivered\":true,\"persistent\":false,\"os_focus_changed\":false}");
     return 0;
 }

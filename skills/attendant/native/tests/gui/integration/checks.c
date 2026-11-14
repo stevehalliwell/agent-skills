@@ -27,6 +27,19 @@ TEST(existing_c_document_selection_ipc_model,
     integration_json_node *ok = integration_json_get(0, "ok"); int count;
     TEST_ASSERT(ok && ok->type == PDJSON_TRUE && gui_positive_count("checks", &count));
     fprintf(stderr, "model-checks:%d\n", count);
+    /* Exercise new controls without changing real source files or suite identities. */
+    char usability[8192], baseline[NATIVE_PATH_SIZE]; size_t used = 0;
+    for (int i = 0; i < 500; ++i) { memcpy(usability + used, "long paragraph ", 15); used += 15; }
+    const char *tail = "\n\nRead **the** plan.\n\nGo [Plan](https://hidden-target.test/path).\n";
+    memcpy(usability + used, tail, strlen(tail) + 1); used += strlen(tail);
+    TEST_ASSERT_FILE_OK(file_tree_join(path, project, "usability.md")); TEST_ASSERT_FILE_OK(file_create_bytes((cstring){path}, usability, used));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, project, "docs")); TEST_ASSERT(file_directory_create(path, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, project, "docs/sub")); TEST_ASSERT(file_directory_create(path, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, project, "docs/sub/guide.md")); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "Nested Markdown\n"));
+    TEST_ASSERT(gui_baseline(project, baseline) == 0);
+    const char *extra[] = {"--exercise-selection", "usability", "--frames", "202"};
+    TEST_ASSERT(gui_window(project, "usability.md", 0, 0, extra, 4) == 0 && integration_number_is("usability_checks", 34));
+    TEST_ASSERT_DIRECTORIES_EQUAL(&gui_files, ((cstring){project}), ((cstring){baseline}));
     ++gui_groups;
 )
 

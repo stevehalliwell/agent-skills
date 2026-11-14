@@ -1,6 +1,13 @@
     int exercise, reference_clicks, edit_exercise, save_fail_exercise, cancel_clicks, sent_comments, target_clicks, undo_seen, saved_not_queued;
     int preview_exercise, preview_exact_seen, preview_shared_seen, preview_dirty_send, inspection_requests, inspection_checked;
     int selection_exercise, selection_ready, selection_source_seen, selection_action_checked, undo_checks, issues_shown;
+    int usability_checks, usability_complete;
+    char *usability_original;
+    size_t usability_original_size;
+    const char *(*usability_clipboard)(ImGuiContext *);
+    int usability_clipboard_saved;
+    ImVec2 sidebar_divider_position, source_divider_position, divider_drag_origin, sidebar_clear_position;
+    int search_event_pending, search_event_serial;
     gui_selection selection_before_comment;
     int reveal_exercise, test_frame, reveal_phase, reveal_frame, reveal_go, reveal_failed, reveal_checks, marker_draws, reparse_go_armed;
     int before_active, before_tabs, before_activation, before_start, before_end;

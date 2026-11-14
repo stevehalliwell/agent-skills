@@ -1,5 +1,6 @@
     if (selection_exercise == 15 && (application->undo_checks != 5 || dirty_documents(&application->workspace))) { fprintf(stderr, "Undo exercise did not complete\n"); goto cleanup; }
-    if (selection_exercise && selection_exercise != 15 && (!application->selection_ready || !application->selection_action_checked || (selection_exercise != 1 && selection_exercise != 13 && application->sent_comments != 1))) { fprintf(stderr, "Selection exercise did not complete\n"); goto cleanup; }
+    if (selection_exercise == 16 && (!application->usability_complete || application->usability_checks != 34 || application->reveal_failed)) { fprintf(stderr, "Usability exercise did not complete (%d checks)\n", application->usability_checks); goto cleanup; }
+    if (selection_exercise > 0 && selection_exercise < 15 && (!application->selection_ready || !application->selection_action_checked || (selection_exercise != 1 && selection_exercise != 13 && application->sent_comments != 1))) { fprintf(stderr, "Selection exercise did not complete\n"); goto cleanup; }
     if (reveal_exercise && (reveal_exercise == 4 ? application->hint.version != 0 : application->reveal_phase != 3)) {
         fprintf(stderr, "Reveal exercise did not complete expected delivery/navigation checks\n"); goto cleanup;
     }

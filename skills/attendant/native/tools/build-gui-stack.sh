@@ -48,7 +48,7 @@ sources=(vendor/gui/richmd_c.cpp "$cimgui/cimgui.cpp"
 # Keep MD4C compiled as C99 rather than pretending its .c file is C++.
 "$zig" cc -std=c99 -O3 -c "$richmd/external/md4c/src/md4c.c" -o build/md4c.obj
 "$zig" c++ -std=c++17 -O3 -shared -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS \
-  -I"$imgui" -I"$richmd" -I"$richmd/external/md4c/src" \
+  -I"$imgui" -I"$richmd" -I"$richmd/external/md4c/src" -I"$root/vendor/gui" \
   "${sources[@]}" build/md4c.obj -o build/bin/cimgui_richmd.dll \
   -ld3d11 -ldxgi -ld3dcompiler_47 -ldwmapi -lgdi32 -limm32 -lole32 -luuid
 ATTENDANT_TOOL_COMPILER="${ATTENDANT_TOOL_COMPILER:-zig}" bash tools/native-tool.sh stack-manifest

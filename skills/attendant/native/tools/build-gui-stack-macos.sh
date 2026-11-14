@@ -60,7 +60,7 @@ sources=(vendor/gui/richmd_c.cpp "$cimgui/cimgui.cpp"
 for source in "${sources[@]}"; do
   object="build/gui-stack-objects/${source//\//_}.o"
   "$zig" c++ -std=c++17 -O3 -fPIC -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DGL_SILENCE_DEPRECATION \
-    "${sdk_flags[@]}" -I"$imgui" -I"$richmd" -I"$richmd/external/md4c/src" -I"$glfw/include" \
+    "${sdk_flags[@]}" -I"$imgui" -I"$richmd" -I"$richmd/external/md4c/src" -I"$glfw/include" -I"$root/vendor/gui" \
     -c "$source" -o "$object"
   objects+=("$object")
 done

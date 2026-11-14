@@ -23,6 +23,10 @@
 #include <string>
 #include "imgui.h"
 #include "imgui_internal.h"
+namespace ImStb {
+#include "imstb_textedit.h"
+}
+#include <utility>
 #if defined(_WIN32)
 #include "backends/imgui_impl_win32.h"
 #include "backends/imgui_impl_dx11.h"
@@ -336,6 +340,11 @@ int crmd_check_render_failure(void) {
     return fail("Render failure diagnostic did not throw");
 }
 int crmd_render_preview(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_preview_selection *selection, size_t selection_size) {
+    return crmd_render_preview_find(document_key, revision, markdown, length, selection, selection_size, nullptr, 0, 0, nullptr);
+}
+int crmd_render_preview_find(const char *document_key, uint64_t revision, const char *markdown, size_t length, crmd_preview_selection *selection, size_t selection_size,
+    const char *query, int match_case, int action, crmd_find_result *find) {
+    if (find) *find = {};
     bool render_complete = false;
     if (!selection || selection_size != sizeof(*selection)) return fail("Unexpected preview-selection layout");
     *selection = {}; preview_snapshot = {}; raw_interaction = 0;
@@ -347,6 +356,9 @@ int crmd_render_preview(const char *document_key, uint64_t revision, const char 
             RichMd::ClearSourceSelection(); raw_document = document_key; raw_revision = revision; raw_source = input; have_raw_input = raw_selectable = true;
         }
         render_named(document_key, input, true); render_complete = true;
+        if (query && find && !RichMd::FindPreview(query, match_case != 0, action, find->count, find->current)) {
+            find->error = 1; fail("Preview find capacity exceeded or query invalid");
+        }
         raw_interaction = selection->interaction = RichMd::LastSelectionInteraction();
         preview_snapshot = RichMd::LastPreviewSelection(input);
         selection->has_source_span = preview_snapshot.has_source_span;
@@ -377,6 +389,70 @@ int crmd_get_text_view(uint32_t widget_id, crmd_text_view *view, size_t view_siz
         }
         return 0;
     } catch (...) { return exception_error(); }
+}
+int crmd_text_position(uint32_t widget_id, const char *text, size_t length, size_t offset, int wrapped, float *x, float *y) {
+    crmd_text_view view;
+    if (!text || !x || !y || offset > length || (offset < length && ((unsigned char)text[offset] & 0xc0) == 0x80) ||
+        !crmd_get_text_view(widget_id, &view, sizeof(view))) return 0;
+    try {
+        ImGuiWindow *window = (ImGuiWindow *)view.window;
+        const ImGuiStyle& style = ImGui::GetStyle();
+        float width = wrapped ? ImMax(1.0f, window->WorkRect.Max.x - window->DC.CursorStartPos.x - style.FramePadding.x +
+            (window->ScrollbarY ? 0.0f : -style.ScrollbarSize)) : 0.0f;
+        if (ImGuiInputTextState *state = ImGui::GetInputTextState(widget_id))
+            if (wrapped && state->WrapWidth > 0) width = state->WrapWidth;
+        const char *at = text, *end = text + length, *target = text + offset;
+        unsigned row = 0;
+        while (at < end) {
+            const char *stop = width > 0 ? ImFontCalcWordWrapPositionEx(ImGui::GetFont(), ImGui::GetFontSize(), at, end, width, ImDrawTextFlags_WrapKeepBlanks) : (const char *)memchr(at, '\n', (size_t)(end - at));
+            if (!stop) stop = end;
+            if (stop == at && *at != '\n') { unsigned int character; int size = ImTextCharFromUtf8(&character, at, end); if (size <= 0) return 0; stop += size; }
+            const char *next = stop < end && *stop == '\n' ? stop + 1 : stop;
+            if (target < next || next == end) {
+                *x = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, at, target).x;
+                *y = row * view.line_height;
+                if (target == next && stop < end && *stop == '\n') { *x = 0; *y += view.line_height; }
+                return 1;
+            }
+            at = next; ++row;
+        }
+        *x = 0; *y = row * view.line_height; return 1;
+    } catch (...) { return exception_error(); }
+}
+void *crmd_input_state_create(void) {
+    if (!GImGui) return nullptr;
+    auto *state = IM_NEW(ImGuiInputTextState); state->Ctx = GImGui; return state;
+}
+void crmd_input_state_destroy(void *opaque) { IM_DELETE((ImGuiInputTextState *)opaque); }
+void crmd_input_state_exchange(void *opaque) {
+    if (!opaque || !GImGui) return;
+    static_assert(IMGUI_VERSION_NUM == 19300, "Review input-state ownership on ImGui upgrade");
+    auto& a = GImGui->InputTextState; auto& b = *(ImGuiInputTextState *)opaque;
+    /* Swap each owner, not an implicit copy of the owning Stb pointer. Pinned
+       internal layout; review this list when upgrading ImGui. */
+    using std::swap;
+    swap(a.Ctx, b.Ctx); swap(a.Stb, b.Stb); swap(a.Flags, b.Flags); swap(a.ID, b.ID);
+    swap(a.TextLen, b.TextLen); swap(a.TextSrc, b.TextSrc);
+    a.TextA.swap(b.TextA); a.TextToRevertTo.swap(b.TextToRevertTo); a.CallbackTextBackup.swap(b.CallbackTextBackup);
+    swap(a.BufCapacity, b.BufCapacity); swap(a.Scroll, b.Scroll); swap(a.LineCount, b.LineCount); swap(a.WrapWidth, b.WrapWidth);
+    swap(a.CursorAnim, b.CursorAnim); swap(a.CursorFollow, b.CursorFollow); swap(a.CursorCenterY, b.CursorCenterY);
+    swap(a.SelectedAllMouseLock, b.SelectedAllMouseLock); swap(a.EditedBefore, b.EditedBefore); swap(a.EditedThisFrame, b.EditedThisFrame);
+    swap(a.ValidatedThisFrame, b.ValidatedThisFrame); swap(a.WantReloadUserBuf, b.WantReloadUserBuf);
+    swap(a.LastMoveDirectionLR, b.LastMoveDirectionLR); swap(a.ReloadSelectionStart, b.ReloadSelectionStart); swap(a.ReloadSelectionEnd, b.ReloadSelectionEnd);
+}
+int crmd_source_select(uint32_t widget, const char *text, size_t length, size_t begin, size_t end) {
+    if (!GImGui || !text || length > 4 * 1024 * 1024 || begin >= end || end > length ||
+        ((unsigned char)text[begin] & 0xc0) == 0x80 || (end < length && ((unsigned char)text[end] & 0xc0) == 0x80)) return 0;
+    auto& state = GImGui->InputTextState;
+    if (state.ID != widget) {
+        state.ID = widget; state.TextLen = (int)length; state.WantReloadUserBuf = false;
+        state.Flags = ImGuiInputTextFlags_None;
+        state.TextA.resize((int)length + 1); memcpy(state.TextA.Data, text, length + 1); state.TextSrc = state.TextA.Data;
+        state.Stb->single_line = 1; /* Next multiline draw initializes its undo state without taking focus. */
+        return 0;
+    }
+    if (state.Stb->single_line) return 0;
+    state.SetSelection((int)begin, (int)end); state.CursorFollow = true; return 1;
 }
 int crmd_end_frame(void) {
     if (render_failed) return 0;

@@ -42,6 +42,8 @@ attendant_session *attendant_open(void);
 void attendant_close(attendant_session *session);
 /* Lists configured collection records plus immediate workspace Markdown files.
  * Never corrects source or creates projection/config. Views share result lifetime. */
+/* Successful browse may return partial discovery with result.message warning.
+   Message/document strings remain borrowed until next session request. */
 attendant_result attendant_read_workspace(attendant_session *session, const char *project, attendant_workspace *workspace);
 attendant_result attendant_read_document(attendant_session *session, const char *path);
 attendant_result attendant_save_document(attendant_session *session, const char *path, const char *expected_hash, const char *text);

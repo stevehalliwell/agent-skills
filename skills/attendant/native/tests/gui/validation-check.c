@@ -36,10 +36,13 @@ int main(void) {
     test_command_live live = {0}; usize offset = 0; int ready = 0;
     const char event[] = "{\"event\":\"selection-ready\"}\n";
     live.result.output = string_view_from_raw((u8 *)event, sizeof(event) - 2);
-    TEST_ASSERT(gui_selection_ready(&live, &offset, &ready) == 0 && !ready && offset == 0);
+    TEST_ASSERT(gui_event_ready(&live, &offset, &ready, "selection-ready") == 0 && !ready && offset == 0);
     live.result.output.len = sizeof(event) - 1;
-    TEST_ASSERT(gui_selection_ready(&live, &offset, &ready) == 0 && ready && offset == sizeof(event) - 1);
-    TEST_ASSERT(gui_selection_ready(&live, &offset, &ready) == 0 && ready);
-    puts("GUI validators: 12 count, 6 P6, 5 Unicode slice and 3 readiness cases passed");
+    TEST_ASSERT(gui_event_ready(&live, &offset, &ready, "selection-ready") == 0 && ready && offset == sizeof(event) - 1);
+    TEST_ASSERT(gui_event_ready(&live, &offset, &ready, "selection-ready") == 0 && ready);
+    const char applied[] = "{\"event\":\"search-applied\",\"count\":1}\n";
+    live.result.output = string_view_from_raw((u8 *)applied, sizeof(applied) - 1); offset = 0; ready = 0;
+    TEST_ASSERT(gui_event_ready(&live, &offset, &ready, "search-applied") == 0 && ready && integration_number_is("count", 1));
+    puts("GUI validators: 12 count, 6 P6, 5 Unicode slice and 4 readiness cases passed");
     return 0;
 }
