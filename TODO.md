@@ -5,6 +5,32 @@
 - User approved checkpoint of current native Attendant work, then a fresh Herdr agent for bounded cleanup before replacing MJS Attendant in `agent-skills`.
 - Preserve root-only workspace discovery and accepted behavior. Review stale references, duplicate/dead transition code, build/test boundaries and replacement blockers; make routine evidence-backed cleanup only.
 - Defer expanded Attendant documentation until native replacement work is ahead of `dev` in `agent-skills`. No automatic merge/rebase, installed-skill replacement, push or further commit approval implied.
+- Cleanup after `040534f`: native cutover is already complete; no maintained Attendant JS files or operative MJS invocations remain. Retain Git-history links, absence assertions and legacy projection/IPC compatibility, not a fallback runtime. Product builds stay independent of exploration/spikes; only integration tests need sibling init-project templates.
+- Fixed stack provenance gap: preparation/patch helpers compile shared core, bounded JSON and vendored C, but stack manifests omitted those inputs and shared build flags. Stack/GUI inventories now reuse one native-tool input list. Remove unrelated `tests/core/` from GUI inventory; retain actual GUI checks. Regression checks require shared inputs exactly once. Fresh stack records 951 files within unchanged 1200-file bound.
+- Corrected stale macOS wrapper messages that called all runtime qualification pending. No product runtime, discovery policy, resource limit, schema, IPC layout or dependency changes. Expanded documentation remains deferred.
+- Windows CJIT/Zig each pass ten tooling groups, 56 core cases under UTC and Pacific/Auckland, 26 framework scenarios and five integration cases/23 groups, including isolated missing-build recovery. Core evidence: `skills/attendant/native/build/native-tests/run-4O18cS/`, `run-XjnIno/`. Logs: `skills/attendant/native/build/replacement-cleanup/run-Z5jdJ7/`.
+- Offline-verified stack rebuild plus fresh production/check/model GUI variant `replacement-cleanup-20261114-141646` pass all 20 shared GUI groups, 212 model assertions/compiler; production/check provenance verified. GUI evidence: `skills/attendant/native/build/gui-check/run-nDVRCD/`. This cleanup run passed without retries; earlier root-only preview-selection/reverse-F3 failures remain unexplained, not invalidated by this pass. Existing user viewers and other checkouts untouched.
+- Ready for review, not an unconditional replacement verdict. macOS usability/root-only/cleanup build/runtime validation remains UNRUN; prior macOS qualification does not cover these changes. Windows benchmark/footprint follow-up passes; evidence below. Local `dev` has three later commits (`a3809e9`, `3aa079f`, `13498c1`); eventual integration must preserve its skill changes, yt-dlp and 0.3.0 release notes rather than overwrite with this branch's older Unreleased changelog. No branch integration or replacement performed.
+
+### Cleanup performance probes
+
+Ran sequentially after cleanup builds/checks finished, from `skills/attendant/native`; benchmark first, footprint second. Both exit 0 with `ok: true`, no retries or changed deadlines/assertions. Existing user viewers left untouched; footprint opens/closes only its owned viewers.
+
+```sh
+bash tools/benchmark.sh 30
+ATTENDANT_GUI_VARIANT=replacement-cleanup-20261114-141646 pwsh -NoProfile -File tools/footprint-windows.ps1 -Seconds 10
+```
+
+- Benchmark: 30 samples per command/compiler, 180 measured samples total. Warm synthetic fixture, rotating serial compiler order, process launch through exit; build/copy/warmup/result checks excluded. Median [minimum–maximum], milliseconds:
+  - CJIT sync: 31.4493 [30.0862–32.6514]; query: 31.66815 [30.3658–47.7121]; search: 31.48815 [30.5583–47.5083].
+  - Zig sync: 31.2165 [29.9047–46.3500]; query: 31.67055 [30.3705–47.3110]; search: 31.3925 [30.2920–48.0838].
+  - Full samples/summary: `skills/attendant/native/build/bench/run-PmElFV/results.json`. Independent post-run comparison confirms all nine source files in each owned compiler fixture match original fixture paths/bytes; generated `.attendant/` projection excluded.
+- Footprint: fresh verified production variant above, one warm sequential run/compiler; small test collections plus current README/build reference/TODO, README initially open. Ten idle samples/compiler after two-second settle. CPU uses one logical core; memory ranges use MiB:
+  - CJIT: startup-to-inspection 214.1188 ms; idle 10.1580521 s, CPU 953.125 ms / 9.38295%; working set 81.94–83.14 MiB, private 239.47–241.05 MiB. Five inspection round trips: median 24.9541 ms [23.2266–25.5721]; five reveal receipts: median 32.4111 ms [31.3547–46.2169].
+  - Zig: startup-to-inspection 228.6748 ms; idle 10.1407061 s, CPU 859.375 ms / 8.47451%; working set 81.89–83.47 MiB, private 239.84–241.79 MiB. Five inspection round trips: median 25.5965 ms [24.8836–33.2953]; five reveal receipts: median 33.2747 ms [30.9545–39.6589].
+  - Full report, executable hashes, ten memory samples/compiler, raw control timings, successful viewer completion and unchanged 12-file workspace inventory: `skills/attendant/native/build/footprint/run-87793e93144747d9a0d77a1daed8d9e4/results.json`. Both owned viewers closed cleanly; `source_unchanged: true`.
+- Stdout/stderr: `skills/attendant/native/build/replacement-cleanup/run-Z5jdJ7/{benchmark-30,footprint-10}.{stdout,stderr}`. Derived memory/control summary and benchmark source comparison: same directory's `performance-summary.json`.
+- Limits: no numeric performance acceptance budget, real-project responsiveness, first paint, GPU or human-input measurement. Control timings include client-process startup; reveal acknowledges receipt, not completed Go. These Windows synthetic/small-workspace passes do not validate macOS or explain earlier GUI selection/F3 failures. Expanded documentation stays deferred; no runtime source changes, installs, cache deletion, commits or deployment.
 
 ## Native Attendant usability follow-ups
 

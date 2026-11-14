@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [[ $(uname -s) != Darwin ]]; then
-  echo 'Requires native macOS. Runtime qualification pending; see TODO.md.' >&2
+  echo 'Requires native macOS; cannot run control acceptance on this host.' >&2
   echo '{"ok":false,"code":"unsupported-platform"}'; exit 2
 fi
 source tools/native-build.sh
