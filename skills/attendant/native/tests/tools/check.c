@@ -145,6 +145,17 @@ static int validation_local_acquisition(void) {
     TOOL_REQUIRE(validation_child_capture(root, "verify", &result) && error == test_command_ok && result.exited && result.exit_code == 0 && integration_json_parse(0, result.output.data, result.output.len) == 0 && integration_json_get(0, "verified") && integration_json_get(0, "verified")->type == PDJSON_TRUE, "Fresh locally acquired pins/patches do not verify offline"); return 1;
 }
 static int validation_provenance(void) {
+    tool_path_count = 0;
+    TOOL_REQUIRE(tool_native_inputs() && tool_hash_paths(), "Cannot inventory/hash native tooling inputs");
+    const char *required[] = {"tools/build-inputs.sh", "tools/build-platform.sh", "tools/native-tool.c", "tools/native/support.h", "tools/native/patches/imgui.json", "src/native-api.c", "src/core/core.c", "src/include/base.h", "tests/support/integration-json.h", "vendor/sqlite/sqlite3.c", "vendor/libyaml/src/api.c", "vendor/libpdjson5/pdjson5.c", "vendor/gui/preview-selection.cpp.inc", "vendor/gui/richmd_c.h", "vendor/gui/find-text.h"};
+    for (usize i = 0; i < sizeof(required) / sizeof(required[0]); ++i) {
+        usize found = 0;
+        for (usize j = 0; j < tool_path_count; ++j) if (!strcmp(required[i], tool_paths[j])) ++found;
+        TOOL_REQUIRE(found == 1, "Missing/duplicate native tooling provenance input");
+    }
+    TOOL_REQUIRE(tool_gui_inputs(), "Cannot inventory GUI inputs");
+    for (usize i = 0; i < tool_path_count; ++i)
+        TOOL_REQUIRE(strncmp(tool_paths[i], "tests/core/", 11), "Unrelated core tests remain in GUI provenance");
     char path[NATIVE_PATH_SIZE], root[NATIVE_PATH_SIZE], hash[65], records[4096];
     TOOL_REQUIRE(validation_path(path, "provenance") && file_create_text((cstring){path}, "abc") == file_error_ok && file_tree_path((cstring){"."}, root, 0) == file_error_ok && tool_sha256(path, hash), "Cannot create provenance fixture");
     usize prefix = strlen(root); TOOL_REQUIRE(!strncmp(path, root, prefix) && path[prefix] == '/', "Provenance fixture outside root"); const char *relative = path + prefix + 1;

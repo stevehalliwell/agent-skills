@@ -38,11 +38,21 @@ static int tool_walk_inputs(const char *folder) {
     }
     arena_reset(tool_files.memory); return 1;
 }
+/* Preparation/patch helpers compile shared core, bounded JSON and vendored C.
+   Bind their actual build inputs in both stack and GUI provenance. */
+static int tool_native_inputs(void) {
+    const char *paths[] = {"tools/build-inputs.sh", "tools/build-platform.sh", "tools/native-tool.c", "tools/native-tool.sh", "tools/native-build.sh", "tools/capture-command.sh"};
+    for (usize i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) TOOL_REQUIRE(tool_add_path(paths[i]), "Cannot add native tooling input");
+    const char *folders[] = {"src", "tests/support", "vendor", "tools/native"};
+    for (usize i = 0; i < sizeof(folders) / sizeof(folders[0]); ++i) TOOL_REQUIRE(tool_walk_inputs(folders[i]), "Cannot scan native tooling inputs");
+    return 1;
+}
 static int tool_gui_inputs(void) {
     tool_path_count = 0;
-    const char *paths[] = {"build-gui.sh", "tools/build-inputs.sh", "tools/build-platform.sh", "tools/build-gui-macos.sh", "tools/native-tool.c", "tools/native-tool.sh", "tools/native-build.sh", "tools/build-gui-tests.sh", "tools/check-gui.sh", "tools/check-bridge.sh", "tools/check-control-macos.sh", "tools/check-gui-bridge.sh", "tools/capture-command.sh"};
+    TOOL_REQUIRE(tool_native_inputs(), "Cannot inventory native tooling");
+    const char *paths[] = {"build-gui.sh", "tools/build-gui-macos.sh", "tools/build-gui-tests.sh", "tools/check-gui.sh", "tools/check-bridge.sh", "tools/check-control-macos.sh", "tools/check-gui-bridge.sh"};
     for (usize i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) TOOL_REQUIRE(tool_add_path(paths[i]), "Cannot add GUI build input");
-    const char *folders[] = {"src", "apps/gui", "tests/gui", "tests/core", "tests/support", "vendor", "tools/native"};
+    const char *folders[] = {"apps/gui", "tests/gui"};
     for (usize i = 0; i < sizeof(folders) / sizeof(folders[0]); ++i) TOOL_REQUIRE(tool_walk_inputs(folders[i]), "Cannot scan GUI build inputs");
     return tool_hash_paths();
 }
@@ -155,9 +165,9 @@ static int tool_gui_manifest(const char *compiler, int testing) {
 static int tool_stack_manifest(void) {
     TOOL_REQUIRE(tool_json_read(0, "build/dependencies.json"), "Missing/invalid dependency metadata");
     tool_path_count = 0;
-    const char *paths[] = {"vendor/gui/richmd_c.cpp", "vendor/gui/richmd_c.h", "vendor/gui/preview-selection.cpp.inc", "vendor/gui/find-text.h", "tools/build-gui-stack.sh", "tools/native-tool.c", "tools/native-tool.sh", "tools/native-build.sh", "tools/capture-command.sh"};
-    for (usize i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) TOOL_REQUIRE(tool_add_path(paths[i]), "Cannot record stack source");
-    TOOL_REQUIRE(tool_walk_inputs("tools/native"), "Cannot inventory native tooling");
+    TOOL_REQUIRE(tool_native_inputs() && tool_add_path("tools/build-gui-stack.sh"), "Cannot record stack inputs");
+    /* Bridge C++ is not part of the helper's C inventory. */
+    TOOL_REQUIRE(tool_add_path("vendor/gui/richmd_c.cpp"), "Cannot record stack bridge input");
 #if defined(__APPLE__)
     TOOL_REQUIRE(tool_add_path("tools/build-gui-stack-macos.sh"), "Cannot record macOS stack script");
 #endif
