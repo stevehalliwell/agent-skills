@@ -74,7 +74,7 @@ static int tool_allowed_dependency_edit(const char *name, const char *path) {
     if (!strcmp(name, "cimgui")) {
         const char *allowed[] = {"imgui", "cimgui.h", "cimgui.cpp", "generator/output/constants.json", "generator/output/constants.lua", "generator/output/definitions.json", "generator/output/definitions.lua", "generator/output/structs_and_enums.json", "generator/output/structs_and_enums.lua", "generator/output/overloads.txt"};
         for (usize i = 0; i < sizeof(allowed) / sizeof(allowed[0]); ++i) if (!strcmp(path, allowed[i])) return 1;
-    } else if (!strcmp(name, "cimgui/imgui")) return !strcmp(path, "imgui.h");
+    } else if (!strcmp(name, "cimgui/imgui")) return !strcmp(path, "imgui.h") || !strcmp(path, "imgui_widgets.cpp");
     else if (!strcmp(name, "richmd")) {
         const char *allowed[] = {"imgui_rich_md/rich_md.h", "imgui_rich_md/internal/rich_md_renderer.h", "imgui_rich_md/internal/rich_md_renderer.cpp", "imgui_rich_md/rich_md.cpp"};
         for (usize i = 0; i < 4; ++i) if (!strcmp(path, allowed[i])) return 1;
@@ -104,8 +104,8 @@ static int tool_prepare(int verify) {
             offset += length + 1;
         }
     }
-    TOOL_REQUIRE(tool_apply_patch("build/deps/cimgui/imgui", "tools/native/patches/imgui.json", verify), "ImGui source verification/patch failed");
-    TOOL_REQUIRE(tool_apply_patch("build/deps/richmd", "tools/native/patches/richmd.json", verify), "RichMd source verification/patch failed");
+    if (!tool_apply_patch("build/deps/cimgui/imgui", "tools/native/patches/imgui.json", verify)) return 0;
+    if (!tool_apply_patch("build/deps/richmd", "tools/native/patches/richmd.json", verify)) return 0;
     FILE *out = file_open_utf8("build/dependencies.json", "wb"); TOOL_REQUIRE(out, "Cannot write dependency manifest");
     fputs("{\"dependencies\":[", out);
     for (usize i = 0; i < sizeof(tool_dependencies) / sizeof(tool_dependencies[0]); ++i) {

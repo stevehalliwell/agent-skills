@@ -336,15 +336,15 @@ static void require_empty_directory(context *c, const char *directory) {
     source_kind kind = source_stat(directory).kind;
     if (kind == SOURCE_MISSING) return;
     if (kind != SOURCE_DIRECTORY) fail(c, "Collection target must be a regular empty directory");
-    source_directory scan;
+    file_directory scan;
     int next;
-    if (!source_directory_open(&scan, directory)) fail(c, "Cannot inspect collection directory");
+    if (!file_directory_open(&scan, directory)) fail(c, "Cannot inspect collection directory");
     c->scanning_directory = &scan;
-    while ((next = source_directory_next(&scan)) > 0) {
+    while ((next = file_directory_read(&scan)) > 0) {
         if (strcmp(scan.name, ".") && strcmp(scan.name, "..")) fail(c, "Collection target must not contain files");
     }
     if (next < 0) fail(c, "Cannot finish directory inspection");
-    int closed = source_directory_close(&scan); c->scanning_directory = NULL;
+    int closed = file_directory_close(&scan); c->scanning_directory = NULL;
     if (!closed) fail(c, "Cannot close directory inspection");
 }
 static const char *new_record_text(context *c, mapping *front, const char *body) {

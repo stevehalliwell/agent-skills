@@ -155,7 +155,7 @@ static int tool_gui_manifest(const char *compiler, int testing) {
 static int tool_stack_manifest(void) {
     TOOL_REQUIRE(tool_json_read(0, "build/dependencies.json"), "Missing/invalid dependency metadata");
     tool_path_count = 0;
-    const char *paths[] = {"vendor/gui/richmd_c.cpp", "vendor/gui/richmd_c.h", "vendor/gui/preview-selection.cpp.inc", "tools/build-gui-stack.sh", "tools/native-tool.c", "tools/native-tool.sh", "tools/native-build.sh", "tools/capture-command.sh"};
+    const char *paths[] = {"vendor/gui/richmd_c.cpp", "vendor/gui/richmd_c.h", "vendor/gui/preview-selection.cpp.inc", "vendor/gui/find-text.h", "tools/build-gui-stack.sh", "tools/native-tool.c", "tools/native-tool.sh", "tools/native-build.sh", "tools/capture-command.sh"};
     for (usize i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) TOOL_REQUIRE(tool_add_path(paths[i]), "Cannot record stack source");
     TOOL_REQUIRE(tool_walk_inputs("tools/native"), "Cannot inventory native tooling");
 #if defined(__APPLE__)

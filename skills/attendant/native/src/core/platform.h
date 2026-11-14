@@ -38,17 +38,6 @@ typedef struct source_file_info {
     double mtime_ms;
     int read_only;
 } source_file_info;
-typedef struct source_directory {
-#if defined(_WIN32)
-    HANDLE handle;
-    WIN32_FIND_DATAW entry;
-    int first;
-#else
-    DIR *handle;
-#endif
-    char name[SOURCE_PATH_CAPACITY];
-} source_directory;
-
 #if defined(_WIN32)
 static int source_wide(const char *path, wchar_t *output) {
     return path && MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, output, SOURCE_PATH_CAPACITY);
@@ -202,43 +191,6 @@ static void *source_stage_open(const char *temporary, const char *target) {
         close(descriptor); unlink(temporary); return NULL;
     }
     return (void *)(uptr)(descriptor + 1);
-#endif
-}
-static int source_directory_open(source_directory *directory, const char *path) {
-#if defined(_WIN32)
-    char pattern[SOURCE_PATH_CAPACITY];
-    wchar_t wide[SOURCE_PATH_CAPACITY];
-    int length = snprintf(pattern, sizeof(pattern), "%s/*", path);
-    if (length < 0 || length >= (int)sizeof(pattern) || !source_wide(pattern, wide)) return 0;
-    directory->handle = FindFirstFileW(wide, &directory->entry); directory->first = 1;
-    return directory->handle != INVALID_HANDLE_VALUE;
-#else
-    directory->handle = opendir(path);
-    return directory->handle != NULL;
-#endif
-}
-/* 1 entry, 0 end, -1 error; name borrowed until next read. */
-static int source_directory_next(source_directory *directory) {
-#if defined(_WIN32)
-    if (!directory->first && !FindNextFileW(directory->handle, &directory->entry))
-        return GetLastError() == ERROR_NO_MORE_FILES ? 0 : -1;
-    directory->first = 0;
-    return WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, directory->entry.cFileName, -1,
-        directory->name, sizeof(directory->name), NULL, NULL) ? 1 : -1;
-#else
-    errno = 0;
-    struct dirent *entry = readdir(directory->handle);
-    if (!entry) return errno ? -1 : 0;
-    size_t length = strlen(entry->d_name);
-    if (length >= sizeof(directory->name)) return -1;
-    memcpy(directory->name, entry->d_name, length + 1); return 1;
-#endif
-}
-static int source_directory_close(source_directory *directory) {
-#if defined(_WIN32)
-    return FindClose(directory->handle);
-#else
-    return closedir(directory->handle) == 0;
 #endif
 }
 /* Lexical absolute paths, including not-yet-created leaves. Do not resolve away

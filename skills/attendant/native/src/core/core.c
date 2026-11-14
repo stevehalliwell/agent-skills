@@ -95,7 +95,7 @@ typedef struct context {
     jmp_buf *recovery;
     char error_message[6144];
     void *reading_file;
-    source_directory *scanning_directory;
+    file_directory *scanning_directory;
     yaml_parser_t *yaml_scanner, *yaml_parser;
     yaml_document_t *yaml_document;
     char json_scratch[OUTPUT_CAPACITY];
@@ -165,7 +165,7 @@ static void fail(context *c, const char *format, ...) {
     cleaned[cleaned_length] = 0;
     if (!c->recovery) fprintf(stderr, "%s\n", cleaned);
     if (c->reading_file) { file_stream_close(c->reading_file); c->reading_file = NULL; }
-    if (c->scanning_directory) { source_directory_close(c->scanning_directory); c->scanning_directory = NULL; }
+    if (c->scanning_directory) { file_directory_close(c->scanning_directory); c->scanning_directory = NULL; }
     if (c->yaml_document) { yaml_document_delete(c->yaml_document); c->yaml_document = NULL; }
     if (c->yaml_parser) { yaml_parser_delete(c->yaml_parser); c->yaml_parser = NULL; }
     if (c->yaml_scanner) { yaml_parser_delete(c->yaml_scanner); c->yaml_scanner = NULL; }
@@ -652,12 +652,12 @@ static const char *iso_time(context *c, source_time stamp) {
 #include "records.h"
 static int compare_paths(const void *a, const void *b) { return strcmp(*(const char *const *)a, *(const char *const *)b); }
 static void load_records(context *c, collection *table) {
-    source_directory search;
+    file_directory search;
     const char *paths[MAX_RECORDS];
     int count = 0, i, next;
-    if (!source_directory_open(&search, table->directory)) { add_diagnostic(c, table, table->directory, "collection-read", "Collection directory cannot be read."); table->invalid = 1; return; }
+    if (!file_directory_open(&search, table->directory)) { add_diagnostic(c, table, table->directory, "collection-read", "Collection directory cannot be read."); table->invalid = 1; return; }
     c->scanning_directory = &search;
-    while ((next = source_directory_next(&search)) > 0) {
+    while ((next = file_directory_read(&search)) > 0) {
         const char *name = search.name, *path;
         size_t length = strlen(name);
         if (*name == '.' || length < 3 || strcmp(name + length - 3, ".md")) continue;
@@ -667,7 +667,7 @@ static void load_records(context *c, collection *table) {
         paths[count++] = path;
     }
     if (next < 0) fail(c, "Directory enumeration failed");
-    int closed = source_directory_close(&search); c->scanning_directory = NULL;
+    int closed = file_directory_close(&search); c->scanning_directory = NULL;
     if (!closed) fail(c, "Directory cleanup failed");
     qsort(paths, count, sizeof(paths[0]), compare_paths);
     for (i = 0; i < count; i++) {

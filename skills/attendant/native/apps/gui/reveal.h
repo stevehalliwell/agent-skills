@@ -25,6 +25,19 @@ typedef const char *gui_endpoint; /* Borrowed discovery path; single-threaded CL
 #endif
 gui_endpoint gui_find_workspace(const char *project, int *status);
 int gui_reveal_send(const char *project, const char *path, uint32_t line);
+/* Separate command from passive reveal. Receipt means queued, not match count.
+ * View: 0 sidebar, 1 source, 2 preview. No pointers, writes or OS focus change. */
+#define GUI_SEARCH_SET 0x41544631u
+#define GUI_SEARCH_ACCEPTED 0x41544632u
+#define GUI_SEARCH_BUSY 0x41544633u
+#define GUI_SEARCH_QUERY 1024
+typedef struct gui_search {
+    uint32_t version, view, match_case;
+    char project[GUI_PATH], path[GUI_PATH], query[GUI_SEARCH_QUERY];
+} gui_search;
+uintptr_t gui_search_receive(const gui_workspace *workspace, gui_search *pending, int *ready,
+    int busy, const void *data, size_t size);
+int gui_search_send(const char *project, const char *path, const char *query, uint32_t view, int match_case);
 /* Lines follow InputTextMultiline: LF/CRLF. Bare CR cannot be mapped safely. */
 int gui_reveal_has_line(const char *text, uint32_t line);
 /* Outside IPC callback. Ordinary local ancestry only; no application links.

@@ -44,11 +44,11 @@ macOS uses GLFW/OpenGL3 following upstream RichMd examples. Windows uses Win32/D
 
 ### Maintained bridge and patches
 
-`gui/richmd_c.cpp`, `gui/richmd_c.h` and `gui/preview-selection.cpp.inc` are maintained source, not generated output. Native generation/patch helpers live under `tools/native/`; strict ordered ImGui/RichMd patch data lives in `tools/native/patches/`. Preview-method include remains authoritative, not copied into patch data.
+`gui/richmd_c.cpp`, `gui/richmd_c.h`, `gui/preview-selection.cpp.inc` and `gui/find-text.h` are maintained source, not generated output. Native generation/patch helpers live under `tools/native/`; strict ordered ImGui/RichMd patch data lives in `tools/native/patches/`. Preview-method include remains authoritative, not copied into patch data.
 
-1. Guard ImGui `IM_NODEBUGSTEP` for generator compatibility without layout changes.
+1. Guard ImGui `IM_NODEBUGSTEP` for generator compatibility without layout changes. Add opt-in inactive input selection visibility for source find; no ImGui struct layout change.
 2. Remove known duplicate generated C typedefs; name three C-view anonymous unions for C99. GUI startup checks C/C++ sizes and union offsets.
-3. Reconstruct four RichMd file patches from pinned originals: genuine/synthetic run provenance, strict source proof, selectable preview/context, edge scrolling and invalidation/ownership. Reject unknown changes or missing expected patch.
+3. Reconstruct four RichMd file patches from pinned originals: genuine/synthetic run provenance, strict source proof, selectable preview/context, cached visible-text find/provenance, edge scrolling and invalidation/ownership. Reject unknown changes or missing expected patch.
 
 Build verifies revisions/allowed tracked edits offline and regenerates wrappers. Stack manifest hashes maintained inputs, dependencies, generated files, generator and native library; records host/backend. GUI manifests bind application binaries to stack. Use one cimgui/ImGui implementation; never mix wrapper revisions.
 

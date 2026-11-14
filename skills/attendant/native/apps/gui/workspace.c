@@ -4,6 +4,8 @@
 #include "../../src/core/platform.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include "navigation.h"
 #define GUI_NAV_MEMORY (sizeof(gui_navigation) + 16 * 1024 * 1024)
 #ifdef ATTENDANT_MODEL_TESTING
 void gui_model_after_read(const char *path);
@@ -72,6 +74,7 @@ int gui_refresh(gui_workspace *workspace) {
     if (!next) return problem(workspace, "Cannot allocate workspace navigation");
     memory = arena_from_buffer(next + 1, 16 * 1024 * 1024);
     next->memory = memory; next->count = source.document_count; next->diagnostics = source.diagnostic_count;
+    snprintf(next->discovery_warning, sizeof(next->discovery_warning), "%s", result.message ? result.message : "");
     for (i = 0; i < source.document_count; i++) {
         attendant_document_info *document = &next->documents[i], *original = &source.documents[i];
         arena_result references;
@@ -88,6 +91,7 @@ int gui_refresh(gui_workspace *workspace) {
             if (!reference->field || !reference->value || (old->target_path && !reference->target_path)) goto capacity;
         }
     }
+    if (!gui_tree_build(next, workspace->navigation, workspace->root)) goto capacity;
     if (workspace->navigation) arena_memory_release(workspace->navigation, GUI_NAV_MEMORY);
     workspace->navigation = next; return 1;
 capacity:

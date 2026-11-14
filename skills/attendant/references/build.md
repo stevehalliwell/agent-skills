@@ -72,7 +72,7 @@ bash test.sh cjit
 bash test.sh zig
 ```
 
-Each command runs 47 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios and five subprocess integration cases with 23 contract groups. Wrapper builds matching CLI/API probe. Integration retains actual subprocess interoperability, stdin/output/deadlines, schema/query/update checks, current task/decision template workflows and cold build from isolated skill copy. Four migrated core JS harnesses are removed. Template checkout is test-only, not a product build dependency.
+Each command runs 56 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios and five subprocess integration cases with 23 contract groups. Wrapper builds matching CLI/API probe. Integration retains actual subprocess interoperability, stdin/output/deadlines, schema/query/update checks, current task/decision template workflows and cold build from isolated skill copy. Four migrated core JS harnesses are removed. Template checkout is test-only, not a product build dependency.
 
 Stdout is retained run directory; TSV, diagnostics, generated runners, command captures and build logs stay in `build/native-tests/run-*/`. Assertions stay active at `-O3`/`NDEBUG`. Case failures exit 1; suite/infrastructure or generation/build failures exit 2. Hooks clean successful owned fixtures and retain/report failures. Install case also owns OS temp directory, excludes all prior builds/caches and builds copied source with 180000 ms deadline. See [test interfaces, memory/path limits and lifecycle contract](../native/tests/README.md).
 

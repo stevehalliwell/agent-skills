@@ -96,6 +96,181 @@ TEST(directory_copy_compare_layout_and_safe_removal,
     TEST_ASSERT(!file_is_directory(other, 1));
 )
 
+typedef struct file_search_test_result {
+    char paths[16][NATIVE_PATH_SIZE];
+    file_entry_kind kinds[16];
+    usize count, stop_after;
+    unsigned issues[file_search_entry + 1];
+} file_search_test_result;
+static file_error file_search_test_visit(void *user, const file_tree_entry *entry) {
+    file_search_test_result *result = user;
+    if (result->count == 16 || strlen(entry->path) >= NATIVE_PATH_SIZE) return file_error_capacity;
+    memcpy(result->paths[result->count], entry->path, strlen(entry->path) + 1);
+    result->kinds[result->count++] = entry->kind;
+    return result->stop_after && result->count == result->stop_after ? file_error_capacity : file_error_ok;
+}
+static void file_search_test_issue(void *user, const char *path, file_search_problem problem) {
+    file_search_test_result *result = user;
+    (void)path; ++result->issues[problem];
+}
+static file_error file_search_test_run(const char *root, file_search_options *options, file_search_test_result *result) {
+    arena_position_marker mark = arena_position_mark(source_test_files.memory);
+    file_error error = file_directory_search(source_test_files.memory, (cstring){(char *)root}, options, file_search_test_visit, result);
+    (void)arena_pop_to_marker(mark); return error;
+}
+TEST(directory_search_globs_are_literal_utf8_and_case_optional,
+    TEST_ASSERT(file_search_match("*.md", "README.MD", 0));
+    TEST_ASSERT(!file_search_match("*.md", "README.MD", 1));
+    TEST_ASSERT(!file_search_match("*.md", "README.md.bak", 0));
+    TEST_ASSERT(file_search_match("caf?.md", "caf\xc3\xa9.md", 1));
+    TEST_ASSERT(file_search_match("?.md", "\xf0\x9f\x98\x80.md", 1));
+    TEST_ASSERT(file_search_match("*caf?.md", "x caf\xc3\xa9.md", 1));
+    TEST_ASSERT(!file_search_match("caf\xc3\xa9.md", "CAF\xc3\x89.md", 0));
+    TEST_ASSERT(file_search_match("a*b?c", "aaabbbc", 1));
+    TEST_ASSERT(file_search_match("***", "", 1));
+    TEST_ASSERT(file_search_match("", "", 1));
+    TEST_ASSERT(!file_search_match("?", "", 1));
+    TEST_ASSERT(!file_search_match("*.*", "README", 0));
+    file_search_options options = {.pattern = "nested/*.md", .max_results = 128, .max_depth = 3};
+    file_search_test_result result = {0};
+    TEST_ASSERT(file_search_test_run(source_test_case_root, &options, &result) == file_error_invalid);
+    options.pattern = "nested\\*.md";
+    TEST_ASSERT(file_search_test_run(source_test_case_root, &options, &result) == file_error_invalid);
+    options.pattern = "\xc0\xaf";
+    TEST_ASSERT(file_search_test_run(source_test_case_root, &options, &result) == file_error_invalid);
+    char oversized[NATIVE_PATH_SIZE + 1]; memset(oversized, '*', sizeof(oversized)); oversized[NATIVE_PATH_SIZE] = 0;
+    options.pattern = oversized;
+    TEST_ASSERT(file_search_test_run(source_test_case_root, &options, &result) == file_error_invalid);
+)
+TEST(directory_search_filters_files_not_recursion_and_prioritizes_root_matches,
+    char root[NATIVE_PATH_SIZE], path[NATIVE_PATH_SIZE];
+    TEST_ASSERT_FILE_OK(file_tree_join(root, source_test_case_root, "tree")); TEST_ASSERT(file_directory_create(root, 1));
+    const char *directories[] = {"nested.md", "nested.md/deeper", ".hidden", "empty"};
+    for (usize i = 0; i < sizeof(directories)/sizeof(directories[0]); ++i) {
+        TEST_ASSERT_FILE_OK(file_tree_join(path, root, directories[i])); TEST_ASSERT(file_directory_create(path, 1));
+    }
+    const char *files[] = {"one.md", "two.MD", "skip.bin", "nested.md/guide.md", "nested.md/deeper/caf\xc3\xa9.md", "nested.md/deeper/literal.md.bak", ".secret.md", ".hidden/no.md", "\xf0\x9f\x98\x80.md"};
+    for (usize i = 0; i < sizeof(files)/sizeof(files[0]); ++i) {
+        TEST_ASSERT_FILE_OK(file_tree_join(path, root, files[i])); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "unchanged"));
+    }
+    file_search_options options = {.pattern = "*.md", .max_results = 128, .max_depth = 3, .skip_dot_names = 1};
+    file_search_test_result result = {0};
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(result.count == 5);
+    TEST_ASSERT(!strchr(result.paths[0], '/') && !strchr(result.paths[1], '/'));
+    for (usize i = 0; i < result.count; ++i) TEST_ASSERT(result.kinds[i] == file_entry_regular);
+    memset(&result, 0, sizeof(result)); options.match_case = 1;
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(result.count == 4);
+    memset(&result, 0, sizeof(result)); options.pattern = "caf?.md";
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result));
+    TEST_ASSERT(result.count == 1 && !strcmp(result.paths[0], "nested.md/deeper/caf\xc3\xa9.md"));
+    memset(&result, 0, sizeof(result)); options.pattern = "?.md";
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result));
+    TEST_ASSERT(result.count == 1 && !strcmp(result.paths[0], "\xf0\x9f\x98\x80.md"));
+    memset(&result, 0, sizeof(result)); options.pattern = "";
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(!result.count);
+    memset(&result, 0, sizeof(result)); options.pattern = NULL;
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(result.count == 10);
+    memset(&result, 0, sizeof(result)); options.pattern = "no-match*";
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(!result.count);
+    memset(&result, 0, sizeof(result)); options.root_only = 1; options.max_depth = 0; options.pattern = "*.md"; options.match_case = 0;
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(result.count == 3);
+    for (usize i = 0; i < result.count; ++i) TEST_ASSERT(!strchr(result.paths[i], '/'));
+    memset(&result, 0, sizeof(result)); options.pattern = NULL;
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(result.count == 6);
+    for (usize i = 0; i < result.count; ++i) TEST_ASSERT(!strchr(result.paths[i], '/'));
+    for (usize i = 0; i < sizeof(files)/sizeof(files[0]); ++i) {
+        TEST_ASSERT_FILE_OK(file_tree_join(path, root, files[i])); TEST_ASSERT_FILE_TEXT(((cstring){path}), "unchanged");
+    }
+)
+TEST(directory_search_limits_partial_results_and_early_stop_close_handles,
+    char root[NATIVE_PATH_SIZE], path[NATIVE_PATH_SIZE];
+    TEST_ASSERT_FILE_OK(file_tree_join(root, source_test_case_root, "tree")); TEST_ASSERT(file_directory_create(root, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "root.md")); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "original"));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "nested")); TEST_ASSERT(file_directory_create(path, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "nested/child.md")); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "deep"));
+    file_search_options options = {.pattern = "*.md", .max_results = 128, .max_depth = 0, .issue = file_search_test_issue};
+    file_search_test_result result = {0};
+    TEST_ASSERT(file_search_test_run(root, &options, &result) == file_error_capacity);
+    TEST_ASSERT(result.count == 1 && !strcmp(result.paths[0], "root.md") && result.issues[file_search_depth_limit] == 1);
+    memset(&result, 0, sizeof(result)); options.max_results = 1; options.max_depth = 3;
+    TEST_ASSERT(file_search_test_run(root, &options, &result) == file_error_capacity);
+    TEST_ASSERT(result.count == 1 && result.issues[file_search_result_limit] == 1);
+    /* Exact match/directory budgets succeed; unrelated files do not count. */
+    memset(&result, 0, sizeof(result)); options.max_results = 2; options.max_directories = 1;
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(result.count == 2);
+    memset(&result, 0, sizeof(result)); options.pattern = "no-match"; options.max_results = 1;
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(!result.count);
+#if defined(_WIN32)
+    DWORD handles_before = 0, handles_after = 0;
+    TEST_ASSERT(GetProcessHandleCount(GetCurrentProcess(), &handles_before));
+#endif
+    for (int iteration = 0; iteration < 32; ++iteration) {
+        memset(&result, 0, sizeof(result)); result.stop_after = 1;
+        options.pattern = "*.md"; options.max_results = 128;
+        TEST_ASSERT(file_search_test_run(root, &options, &result) == file_error_capacity && result.count == 1);
+    }
+    /* Fail child-frame allocation after opening root, not only before search. */
+    u8 limited[sizeof(file_search_frame) + 256];
+    for (int iteration = 0; iteration < 32; ++iteration) {
+        memset(&result, 0, sizeof(result));
+        arena *memory = arena_from_buffer(limited, sizeof(limited));
+        TEST_ASSERT(file_directory_search(memory, (cstring){root}, &options, file_search_test_visit, &result) == file_error_out_of_memory);
+        TEST_ASSERT(result.count == 1 && !strcmp(result.paths[0], "root.md"));
+    }
+#if defined(_WIN32)
+    TEST_ASSERT(GetProcessHandleCount(GetCurrentProcess(), &handles_after) && handles_before == handles_after);
+#endif
+    u8 tiny[128]; arena *memory = arena_from_buffer(tiny, sizeof(tiny));
+    TEST_ASSERT(file_directory_search(memory, (cstring){root}, &options, file_search_test_visit, &result) == file_error_out_of_memory);
+    TEST_ASSERT_FILE_TEXT(((cstring){path}), "deep");
+)
+
+TEST(directory_search_ignores_cache_files_but_bounds_matches_and_directories,
+    char root[NATIVE_PATH_SIZE], path[NATIVE_PATH_SIZE];
+    TEST_ASSERT_FILE_OK(file_tree_join(root, source_test_case_root, "tree")); TEST_ASSERT(file_directory_create(root, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "cache")); TEST_ASSERT(file_directory_create(path, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "docs")); TEST_ASSERT(file_directory_create(path, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "README.md")); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "root"));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "docs/last.md")); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "last"));
+    file_search_options options = {.pattern = "*.md", .max_results = 2, .max_directories = 2, .max_depth = 3, .issue = file_search_test_issue};
+    file_search_test_result result = {0};
+    arena_position_marker mark = arena_position_mark(source_test_files.memory);
+    usize before = arena_pos(source_test_files.memory);
+    TEST_ASSERT_FILE_OK(file_directory_search(source_test_files.memory, (cstring){root}, &options, file_search_test_visit, &result));
+    usize scratch_size = arena_pos(source_test_files.memory) - before;
+    TEST_ASSERT(result.count == 2 && arena_pop_to_marker(mark) == arena_error_ok);
+    for (int i = 0; i < 64; ++i) {
+        char relative[64]; snprintf(relative, sizeof(relative), "%snoise-%03d.bin", i % 2 ? "cache/" : "", i);
+        TEST_ASSERT_FILE_OK(file_tree_join(path, root, relative)); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "unrelated"));
+    }
+    memset(&result, 0, sizeof(result));
+    TEST_ASSERT_FILE_OK(file_directory_search(source_test_files.memory, (cstring){root}, &options, file_search_test_visit, &result));
+    TEST_ASSERT(result.count == 2 && arena_pos(source_test_files.memory) - before == scratch_size);
+    TEST_ASSERT(arena_pop_to_marker(mark) == arena_error_ok);
+#if defined(_WIN32)
+    /* Prove *.md reaches Windows, rather than enumerating '*' then filtering. */
+    file_directory directory; int native_matches = 0, valid = 1, next = 0;
+    TEST_ASSERT(file_directory_open_search(&directory, root, "*.md", 0));
+    while ((next = file_directory_read(&directory)) > 0) {
+        if (directory.entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        ++native_matches;
+        if (!file_search_match("*.md", directory.name, 0)) valid = 0;
+    }
+    int closed = file_directory_close(&directory);
+    TEST_ASSERT(closed && !next && valid && native_matches == 1);
+#endif
+    memset(&result, 0, sizeof(result)); options.max_directories = 1;
+    TEST_ASSERT(file_search_test_run(root, &options, &result) == file_error_capacity);
+    TEST_ASSERT(result.count >= 1 && result.issues[file_search_directory_limit] == 1);
+    memset(&result, 0, sizeof(result)); options.max_directories = 2; options.max_results = 1;
+    TEST_ASSERT(file_search_test_run(root, &options, &result) == file_error_capacity);
+    TEST_ASSERT(result.count == 1 && result.issues[file_search_result_limit] == 1);
+    memset(&result, 0, sizeof(result)); options.pattern = "no-match*";
+    TEST_ASSERT_FILE_OK(file_search_test_run(root, &options, &result)); TEST_ASSERT(!result.count);
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "docs/last.md")); TEST_ASSERT_FILE_TEXT(((cstring){path}), "last");
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "README.md")); TEST_ASSERT_FILE_TEXT(((cstring){path}), "root");
+)
+
 TEST(directory_limits_preflight_without_mutation,
     const file_tree_entry unsorted[] = {{"z", 0, 0}, {"b/nested", 0, 0}, {"a", 0, 0}, {"B", 0, 0}, {"a", 0, 0}};
     for (usize count = 0; count <= 5; ++count) {
@@ -177,6 +352,29 @@ static int filesystem_test_unlink(const char *path) {
     return unlink(path) == 0;
 #endif
 }
+
+TEST(directory_search_skips_links_only_when_requested_and_inventory_stays_strict,
+    char root[NATIVE_PATH_SIZE], outside[NATIVE_PATH_SIZE], path[NATIVE_PATH_SIZE], link[NATIVE_PATH_SIZE];
+    TEST_ASSERT_FILE_OK(file_tree_join(root, source_test_case_root, "tree")); TEST_ASSERT(file_directory_create(root, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(outside, source_test_case_root, "outside")); TEST_ASSERT(file_directory_create(outside, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, outside, "outside.md")); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "untouched"));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, root, "inside.md")); TEST_ASSERT_FILE_OK(file_create_text((cstring){path}, "inside"));
+    TEST_ASSERT_FILE_OK(file_tree_join(link, root, "linked.md")); TEST_ASSERT(filesystem_test_link(link, outside));
+    file_search_options options = {.pattern = "*.md", .max_results = 128, .max_depth = 3, .skip_unsupported = 1};
+    file_search_test_result result = {0};
+    file_error skipped = file_search_test_run(root, &options, &result);
+    int skipped_ok = skipped == file_error_ok && result.count == 1 && !strcmp(result.paths[0], "inside.md");
+    memset(&result, 0, sizeof(result)); options.skip_unsupported = 0; options.issue = file_search_test_issue;
+    file_error refused = file_search_test_run(root, &options, &result);
+    int refused_ok = refused == file_error_unsupported && result.count == 1 && result.issues[file_search_entry] == 1;
+    file_tree tree = {0}; usize before = arena_pos(source_test_files.memory);
+    file_error strict = file_directory_list_tree(&source_test_files, (cstring){root}, &tree);
+    int strict_ok = strict == file_error_unsupported && !tree.entries && !tree.count && arena_pos(source_test_files.memory) == before;
+    file_error ancestor = file_search_test_run(link, &options, &result);
+    int removed = filesystem_test_unlink(link);
+    TEST_ASSERT(removed && skipped_ok && refused_ok && strict_ok && ancestor == file_error_unsupported);
+    TEST_ASSERT_FILE_OK(file_tree_join(path, outside, "outside.md")); TEST_ASSERT_FILE_TEXT(((cstring){path}), "untouched");
+)
 
 TEST(directory_links_refused_including_ancestors_and_broken_links,
     char root[NATIVE_PATH_SIZE], outside[NATIVE_PATH_SIZE], link[NATIVE_PATH_SIZE], copy[NATIVE_PATH_SIZE], path[NATIVE_PATH_SIZE], keep[NATIVE_PATH_SIZE];

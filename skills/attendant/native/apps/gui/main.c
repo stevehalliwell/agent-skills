@@ -19,6 +19,8 @@
 #include "workspace.h"
 #include "reveal.h"
 #include "inspect.h"
+#include "find.h"
+#include "navigation.h"
 #if defined(_WIN32)
 __declspec(dllimport) LPWSTR *WINAPI CommandLineToArgvW(LPCWSTR, int *);
 #endif
@@ -28,12 +30,18 @@ typedef struct gui_app {
     gui_workspace workspace;
     char open_path[GUI_PATH];
     gui_reveal hint, pending_hint;
+    gui_search pending_search;
+    int search_ready;
     gui_inspection *inspection;
     int inspection_busy, render_failed;
     int pending_hint_ready, scroll_hint, marker_valid, hint_path_ok;
-    uint64_t marker_revision, preview_interaction;
+    uint64_t marker_revision, preview_interaction, marker_position_revision;
+    float marker_width, marker_height, marker_row;
+    uint32_t marker_line;
+    int marker_wrapped;
     char hint_notice[256];
-    int request_exit, shown_activation, bound_reached, exit_cancelled;
+    int request_exit, shown_activation, bound_reached, exit_cancelled, close_all;
+    float sidebar_width, source_fraction;
     gui_action pending_action;
     int pending_tab, pending_open, composer_active, composer_open, composer_tab, feedback_filter;
     int composer_start, composer_end, composer_from_preview;
@@ -42,6 +50,13 @@ typedef struct gui_app {
     char comment[64 * 1024];
     uint32_t last_poll;
     ImFont *source_font;
+    bool wrap_source, find_match_case;
+    gui_find find[3];
+    int find_target, find_return;
+    gui_navigation *filtered_navigation;
+    unsigned char document_visible[GUI_DOCUMENTS], tree_visible[GUI_TREE_NODES];
+    struct { ImGuiID id; int open; } groups[33];
+    int group_count;
 #ifdef ATTENDANT_GUI_TESTING
 #include "../../tests/gui/app-state.inc"
 #endif
@@ -52,6 +67,10 @@ static void link_clicked(const char *url, void *user) { gui_open_link(&((gui_app
 static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
     if (message == WM_COPYDATA && application && lparam) {
         const COPYDATASTRUCT *copy = (const COPYDATASTRUCT *)lparam;
+        if (copy->dwData == GUI_SEARCH_SET)
+            return (LRESULT)gui_search_receive(&application->workspace, &application->pending_search, &application->search_ready,
+                application->inspection_busy || application->composer_active || application->pending_action != GUI_ACTION_NONE || application->close_all,
+                copy->lpData, copy->cbData);
         if (copy->dwData == GUI_INSPECT_REQUEST) {
             uintptr_t result;
             if (!application->inspection) application->inspection = VirtualAlloc(NULL, sizeof(*application->inspection), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -92,17 +111,77 @@ static const char *file_name(const char *path) {
     const char *a = strrchr(path, '\\'), *b = strrchr(path, '/');
     return a && (!b || a > b) ? a + 1 : b ? b + 1 : path;
 }
+#include "find-ui.h"
+/* ImGui owns drag capture/cursor/hover; host owns bounded window-local sizes. */
+static void width_splitter(const char *name, float total, float height, float *left, float minimum_left, float minimum_right) {
+    float space = total > 8 ? total - 6 : 2;
+    if (minimum_left > space * 0.4f) minimum_left = space * 0.4f;
+    if (minimum_right > space * 0.4f) minimum_right = space * 0.4f;
+    if (*left < minimum_left) *left = minimum_left;
+    if (*left > space - minimum_right) *left = space - minimum_right;
+    float right = space - *left;
+    ImVec2 position = igGetCursorScreenPos();
+    ImRect_c bounds = {{position.x + *left, position.y}, {position.x + *left + 6, position.y + (height > 0 ? height : 1)}};
+    igSplitterBehavior(bounds, igGetID_Str(name), ImGuiAxis_X, left, &right, minimum_left, minimum_right, 2, 0.05f, 0);
+#ifdef ATTENDANT_GUI_TESTING
+    ImVec2 center = {bounds.Min.x + 3, (bounds.Min.y + bounds.Max.y) * 0.5f};
+    if (!strcmp(name, "navigation-divider")) application->sidebar_divider_position = center;
+    else application->source_divider_position = center;
+#endif
+}
+static void workspace_tree(gui_app *app) {
+    gui_navigation *navigation = app->workspace.navigation;
+    ImVec2 zero = {0, 0};
+    int ends[33], depth = 0;
+    for (int i = 0; i < navigation->tree_count;) {
+        gui_tree_node *first = &navigation->tree[i];
+        if (!app->tree_visible[i]) { i = first->end; continue; }
+        while (depth && i >= ends[depth - 1]) --depth;
+        int last = gui_tree_compact_end(navigation, i);
+        gui_tree_node *node = &navigation->tree[last];
+        float indent = depth * 16.0f;
+        if (indent) igIndent(indent);
+        igPushOverrideID(igImHashData(node->path, node->length, igGetID_Str("workspace-path")));
+        int filtering = *app->find[GUI_FIND_SIDEBAR].query != 0, open = first->expanded;
+        if (node->document < 0) {
+            igSetNextItemOpen(filtering || first->expanded, ImGuiCond_Always);
+            open = igTreeNodeEx_StrStr("directory", ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth,
+                "%.*s", node->length - first->name_begin, node->path + first->name_begin);
+            if (!filtering) first->expanded = open;
+        } else {
+            bool selected = app->workspace.active >= 0 && !source_path_compare(node->path, app->workspace.tabs[app->workspace.active].path);
+            if (igSelectable_Bool(node->path + first->name_begin, selected, 0, zero)) gui_open_document(&app->workspace, node->path);
+        }
+        igPopID(); if (indent) igUnindent(indent);
+        if (node->document < 0 && open) { ends[depth++] = node->end; i = last + 1; }
+        else i = node->end;
+    }
+}
 static void navigation_panel(gui_app *app) {
     gui_workspace *workspace = &app->workspace;
     gui_navigation *navigation = workspace->navigation;
     int i, j;
     ImVec2 zero = {0, 0};
+    if (igIsWindowHovered(ImGuiHoveredFlags_ChildWindows) && igIsMouseClicked_Bool(0, false)) app->find_target = GUI_FIND_SIDEBAR;
+    if (app->find_return == GUI_FIND_SIDEBAR) { igSetWindowFocus_Nil(); app->find_return = -1; }
+    find_bar(app, GUI_FIND_SIDEBAR);
     if (!navigation) return;
+    navigation_filter(app);
+#ifdef ATTENDANT_GUI_TESTING
+    search_observe(app, GUI_FIND_SIDEBAR);
+#endif
+    int visible = 0;
+    for (i = 0; i < navigation->count; ++i) visible += app->document_visible[i] != 0;
+    if (!visible) show_text("No matching files.");
     for (i = 0; i < navigation->count; i++) {
         const char *collection = navigation->documents[i].collection;
         for (j = 0; j < i; j++) if (!strcmp(collection, navigation->documents[j].collection)) break;
         if (j != i) continue;
-        if (igCollapsingHeader_TreeNodeFlags(collection, ImGuiTreeNodeFlags_DefaultOpen)) {
+        int matching = 0;
+        for (j = i; j < navigation->count; ++j) if (!strcmp(collection, navigation->documents[j].collection) && app->document_visible[j]) { matching = 1; break; }
+        if (!matching && *app->find[GUI_FIND_SIDEBAR].query && strcmp(collection, "_meta_comments")) continue;
+        if (navigation_group(app, collection)) {
+            if (!strcmp(collection, "(workspace)")) { workspace_tree(app); continue; }
             if (!strcmp(collection, "_meta_comments")) {
                 igRadioButton_IntPtr("All", &app->feedback_filter, 0); igSameLine(0, -1);
                 igRadioButton_IntPtr("Pending", &app->feedback_filter, 1); igSameLine(0, -1);
@@ -111,7 +190,7 @@ static void navigation_panel(gui_app *app) {
             for (j = i; j < navigation->count; j++) {
                 attendant_document_info *document = &navigation->documents[j];
                 char label[2048]; bool selected;
-                if (strcmp(collection, document->collection)) continue;
+                if (strcmp(collection, document->collection) || !app->document_visible[j]) continue;
                 if (!strcmp(collection, "_meta_comments") && ((app->feedback_filter == 1 && !document->pending) || (app->feedback_filter == 2 && !document->resolved))) continue;
                 snprintf(label, sizeof(label), "%s%s%s###document-%d", document->pending ? "[pending] " : "", document->invalid ? "[invalid] " : "", document->name, j);
                 selected = workspace->active >= 0 && !source_path_compare(document->path, workspace->tabs[workspace->active].path);
@@ -239,12 +318,22 @@ static void agent_marker(gui_app *app, gui_tab *tab, ImGuiID widget) {
         app->marker_valid = gui_reveal_has_line(tab->text, app->hint.line);
     }
     if (!app->marker_valid || !crmd_get_text_view(widget, &view, sizeof(view))) { app->scroll_hint = 0; return; }
+    float width = view.clip_max_x - view.clip_min_x;
+    if (app->marker_position_revision != tab->text_revision || app->marker_line != app->hint.line ||
+        app->marker_width != width || app->marker_height != view.line_height || app->marker_wrapped != app->wrap_source) {
+        size_t offset = 0; uint32_t line = 1; float x;
+        while (offset < tab->length && line < app->hint.line) if (tab->text[offset++] == '\n') ++line;
+        if (!crmd_text_position(widget, tab->text, tab->length, offset, app->wrap_source, &x, &app->marker_row)) { app->scroll_hint = 0; return; }
+        app->marker_position_revision = tab->text_revision; app->marker_line = app->hint.line;
+        app->marker_width = width; app->marker_height = view.line_height; app->marker_wrapped = app->wrap_source;
+    }
+    float row_y = app->marker_row;
     if (app->scroll_hint) {
         /* Explicit human Go only. Scroll window; never move caret/selection. */
-        igSetScrollY_WindowPtr((ImGuiWindow *)view.window, (app->hint.line - 1) * view.line_height);
+        igSetScrollY_WindowPtr((ImGuiWindow *)view.window, row_y);
         app->scroll_hint = 0;
     }
-    y = view.text_y + (app->hint.line - 1) * view.line_height;
+    y = view.text_y + row_y;
     if (y + view.line_height <= view.clip_min_y || y >= view.clip_max_y) return;
     clip_minimum.x = view.clip_min_x; clip_minimum.y = view.clip_min_y;
     clip_maximum.x = view.clip_max_x; clip_maximum.y = view.clip_max_y;
@@ -274,6 +363,7 @@ static void document_panel(gui_app *app, int index) {
         if (tab->dirty) pending_action(app, GUI_ACTION_RELOAD, index); else gui_reload_document(&app->workspace, index, 0);
     }
     igSameLine(0, -1);
+    igCheckbox("Wrap", &app->wrap_source); igSameLine(0, -1);
     selection = gui_selection_current(&app->workspace);
     igBeginDisabled((selection.status != GUI_SELECTION_EXACT && selection.status != GUI_SELECTION_MAPPED && selection.status != GUI_SELECTION_CONTEXT) || selection.tab != index);
     if (igButton("Comment on selection", zero)) {
@@ -302,34 +392,62 @@ static void document_panel(gui_app *app, int index) {
     show_text(selection.status == GUI_SELECTION_UNSUPPORTED ? "Selection capture unavailable; see error." : selection.status == GUI_SELECTION_NONE ? "Select text in source or preview." : selection.view == GUI_SELECTION_PREVIEW ? (selection.status == GUI_SELECTION_CONTEXT ? "Preview selection (context only)" : "Preview selection") : "Source selection");
     if (!app->composer_active && app->pending_action == GUI_ACTION_NONE && igGetIO_Nil()->KeyCtrl && igIsKeyPressed_Bool(ImGuiKey_S, false) && tab->dirty)
         gui_save_document(&app->workspace, index);
+    find_bar(app, GUI_FIND_SOURCE);
+    gui_find *raw_find = &app->find[GUI_FIND_SOURCE];
+    if (raw_find->open || raw_find->action) gui_find_source(raw_find, tab, index, app->find_match_case);
     remaining = igGetContentRegionAvail();
-    editor.x = remaining.x * 0.49f; editor.y = remaining.y;
+    editor.x = (remaining.x - 6) * app->source_fraction; editor.y = remaining.y;
+    width_splitter("source-preview-divider", remaining.x, remaining.y, &editor.x, 280, 280);
+    if (remaining.x > 8) app->source_fraction = editor.x / (remaining.x - 6);
     /* Hash literal path bytes; string IDs interpret "###" specially. */
     igPushOverrideID(igImHashData(tab->path, strlen(tab->path), igGetID_Str("source-path")));
     snprintf(editor_id, sizeof(editor_id), "##source-%d-%d", index, tab->generation);
     igPushFont(app->source_font, 16.0f);
-    if (tab->reveal_selection) igSetKeyboardFocusHere(0);
+    if (tab->reveal_selection || app->find_return == GUI_FIND_SOURCE) {
+        igSetKeyboardFocusHere(0); app->find_return = -1;
+    }
     if (igInputTextMultiline(editor_id, tab->text, GUI_TEXT + 1, editor,
-        ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_AllowTabInput, source_selection, tab)) {
+        ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_AllowTabInput |
+        (app->wrap_source ? ImGuiInputTextFlags_WordWrap : 0) |
+        (raw_find->open ? ImGuiInputTextFlags_KeepSelectionVisible : 0), source_selection, tab)) {
         tab->length = strlen(tab->text); tab->dirty = 1; tab->anchor_stale = 0; tab->text_revision = ++app->workspace.text_revision;
     }
-    if (igIsItemActive()) gui_selection_capture(&app->workspace, index, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, tab->selection_start, tab->selection_end);
+    if (igIsItemActive()) {
+        app->find_target = GUI_FIND_SOURCE;
+        gui_selection_capture(&app->workspace, index, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, tab->selection_start, tab->selection_end);
+    }
+    if (raw_find->open || raw_find->action) gui_find_source(raw_find, tab, index, app->find_match_case);
+    if (raw_find->apply && crmd_source_select(igGetID_Str(editor_id), tab->text, tab->length, raw_find->begin, raw_find->end)) {
+        tab->selection_start = (int)raw_find->begin; tab->selection_end = (int)raw_find->end;
+        gui_selection_capture(&app->workspace, index, GUI_SELECTION_SOURCE, GUI_SELECTION_EXACT, tab->selection_start, tab->selection_end);
+        raw_find->apply = 0;
+    }
 #ifdef ATTENDANT_GUI_TESTING
     { ImVec2 position = igGetItemRectMin(); app->editor_position.x = position.x + 30; app->editor_position.y = position.y + 12; }
 #endif
     agent_marker(app, tab, igGetID_Str(editor_id));
 #ifdef ATTENDANT_GUI_TESTING
+    search_observe(app, GUI_FIND_SOURCE);
     reveal_observe(app, tab, igGetID_Str(editor_id));
+    usability_observe(app, tab, igGetID_Str(editor_id));
 #endif
     igPopFont(); igPopID();
-    igSameLine(0, -1);
+    igSameLine(0, 0); igDummy((ImVec2){6, editor.y}); igSameLine(0, 0);
     igBeginChild_Str("preview", zero, ImGuiChildFlags_Borders, 0);
+    find_bar(app, GUI_FIND_PREVIEW);
     {
         crmd_preview_selection selected = {0};
         size_t offset = gui_body_offset(tab->text), length = tab->length - offset;
         int exact, rendered;
         uint64_t interaction;
+        gui_find *preview_find = &app->find[GUI_FIND_PREVIEW]; crmd_find_result found = {0};
+        if (preview_find->tab != index || preview_find->generation != tab->generation || preview_find->revision != tab->text_revision) {
+            if (preview_find->error == 2) preview_find->error = 0;
+            preview_find->tab = index; preview_find->generation = tab->generation; preview_find->revision = tab->text_revision;
+        }
         igBeginChild_Str("preview-scroll", zero, 0, 0);
+        if (igIsWindowHovered(ImGuiHoveredFlags_ChildWindows) && igIsMouseClicked_Bool(0, false)) app->find_target = GUI_FIND_PREVIEW;
+        if (app->find_return == GUI_FIND_PREVIEW) { igSetWindowFocus_Nil(); app->find_return = -1; }
 #ifdef ATTENDANT_GUI_TESTING
         app->preview_position = igGetCursorScreenPos(); app->preview_position.x += 2; app->preview_position.y += 10;
 #endif
@@ -337,7 +455,16 @@ static void document_panel(gui_app *app, int index) {
         if (app->selection_exercise == 14 && app->test_frame == 22) rendered = crmd_check_render_failure();
         else
 #endif
-        rendered = crmd_render_preview(tab->path, tab->text_revision, tab->text + offset, length, &selected, sizeof(selected));
+        rendered = crmd_render_preview_find(tab->path, tab->text_revision, tab->text + offset, length, &selected, sizeof(selected),
+            preview_find->open && !preview_find->error ? preview_find->query : NULL, app->find_match_case, preview_find->action, &found);
+        preview_find->action = 0;
+        if (preview_find->open) {
+            preview_find->count = found.count; preview_find->current = found.current;
+            if (found.error) { preview_find->error = 2; snprintf(app->workspace.error, sizeof(app->workspace.error), "%s", crmd_error()); }
+        }
+#ifdef ATTENDANT_GUI_TESTING
+        search_observe(app, GUI_FIND_PREVIEW);
+#endif
         if (crmd_render_failed()) { app->render_failed = 1; return; }
         if (!rendered) snprintf(app->workspace.error, sizeof(app->workspace.error), "%s", crmd_error());
         exact = rendered && selected.has_source_span && selected.begin < selected.end && selected.end <= length;
@@ -360,6 +487,13 @@ static void draw_dialogs(gui_app *app) {
     gui_workspace *workspace = &app->workspace;
     ImVec2 zero = {0, 0}, selected_size = {660, 80}, comment_size = {660, 150};
     const ImVec4 comment_border = {0.55f, 0.58f, 0.65f, 1.0f};
+    if (app->close_all && !app->composer_active && app->pending_action == GUI_ACTION_NONE) {
+        for (int tab = 0; tab < GUI_TABS; ++tab) if (workspace->tabs[tab].used) {
+            if (workspace->tabs[tab].dirty) { pending_action(app, GUI_ACTION_CLOSE, tab); break; }
+            if (!gui_close_document(workspace, tab, 0)) { app->close_all = 0; break; }
+        }
+        if (!workspace->tab_count) app->close_all = 0;
+    }
     if (app->request_exit && !app->composer_active && app->pending_action == GUI_ACTION_NONE) {
         int i;
         for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].used && workspace->tabs[i].dirty) { pending_action(app, GUI_ACTION_EXIT, i); break; }
@@ -384,7 +518,7 @@ static void draw_dialogs(gui_app *app) {
         }
         igSameLine(0, -1);
         if (igButton("Cancel", zero) || igIsKeyPressed_Bool(ImGuiKey_Escape, false)) {
-            app->pending_action = GUI_ACTION_NONE; app->request_exit = 0;
+            app->pending_action = GUI_ACTION_NONE; app->request_exit = app->close_all = 0;
             if (app->bound_reached) app->exit_cancelled = 1;
 #ifdef ATTENDANT_GUI_TESTING
             app->cancel_clicks++;
@@ -467,12 +601,13 @@ static void draw_dialogs(gui_app *app) {
 static void draw_workspace(gui_app *app) {
     gui_workspace *workspace = &app->workspace;
     ImGuiViewport *viewport = igGetMainViewport();
-    ImVec2 zero = {0, 0}, sidebar = {260, 0};
+    ImVec2 zero = {0, 0}, sidebar;
     int i, forced = app->shown_activation != workspace->activation ? workspace->active : -1;
     app->shown_activation = workspace->activation;
     igSetNextWindowPos(viewport->WorkPos, ImGuiCond_Always, zero);
     igSetNextWindowSize(viewport->WorkSize, ImGuiCond_Always);
     igBegin("Attendant shared Markdown", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
+    find_keys(app);
     show_text(workspace->root);
     if (igButton("Refresh files", zero)) gui_refresh(workspace);
     igSameLine(0, -1); igSetNextItemWidth(500);
@@ -495,14 +630,26 @@ static void draw_workspace(gui_app *app) {
         show_text(workspace->error); igSameLine(0, -1);
         if (igButton("Dismiss error", zero)) { workspace->error[0] = workspace->failed_path[0] = 0; workspace->surviving_count = workspace->surviving_total = 0; }
     }
+    if (workspace->navigation && *workspace->navigation->discovery_warning) {
+        if (igCollapsingHeader_TreeNodeFlags("Workspace discovery incomplete (Refresh files to retry)", 0))
+            show_text(workspace->navigation->discovery_warning);
+    }
     recovery_details(workspace);
     if (*workspace->notice) show_text(workspace->notice);
     agent_hint_bar(app);
     igSeparator();
+    ImVec2 available = igGetContentRegionAvail();
+    width_splitter("navigation-divider", available.x, available.y, &app->sidebar_width, 180, 560);
+    sidebar = (ImVec2){app->sidebar_width, 0};
     igBeginChild_Str("navigation", sidebar, ImGuiChildFlags_Borders, 0);
-    navigation_panel(app); igEndChild(); igSameLine(0, -1);
+    navigation_panel(app); igEndChild(); igSameLine(0, 0);
+    igDummy((ImVec2){6, available.y}); igSameLine(0, 0);
     igBeginChild_Str("documents", zero, 0, 0);
     if (igBeginTabBar("document-tabs", ImGuiTabBarFlags_Reorderable)) {
+        igBeginDisabled(!workspace->tab_count || app->composer_active || app->pending_action != GUI_ACTION_NONE);
+        if (igTabItemButton("X##close-all-tabs", ImGuiTabItemFlags_Trailing)) app->close_all = 1;
+        if (igIsItemHovered(0)) igSetTooltip("Close all tabs");
+        igEndDisabled();
         for (i = 0; i < GUI_TABS; i++) if (workspace->tabs[i].used) {
             gui_tab *tab = &workspace->tabs[i]; char label[2048]; bool opened = true;
             ImGuiTabItemFlags flags = forced == i ? ImGuiTabItemFlags_SetSelected : 0;
@@ -514,7 +661,11 @@ static void draw_workspace(gui_app *app) {
                     if (workspace->active != i) gui_selection_clear(workspace);
                     workspace->active = i;
                 }
-                document_panel(app, i); if (app->render_failed) return; igEndTabItem();
+                /* ImGui may still report old tab content for this frame. Never
+                   apply queued find/input to that tab after navigation changed. */
+                if (forced < 0 || forced == i) document_panel(app, i);
+                if (app->render_failed) return;
+                igEndTabItem();
             }
             if (!opened) {
                 if (tab->dirty) pending_action(app, GUI_ACTION_CLOSE, i); else gui_close_document(workspace, i, 0);
@@ -540,12 +691,13 @@ static int load_fonts(gui_app *app, const char *assets) {
     return app->source_font && igGetIO_Nil()->FontDefault;
 }
 static int usage(FILE *output, int code) {
-    fprintf(output, "Usage: attendant-gui --project DIR --assets DIR [--file PATH] [--frames 1..6000 --shot FILE.ppm]\n       attendant-gui --project DIR --reveal FILE [--line N]\n       attendant-gui --project DIR --inspect\n");
-    if (code) gui_reveal_error(code, "usage", "Expected GUI startup, --project DIR --inspect, or --project DIR --reveal FILE [--line N]; control cannot combine startup/test flags");
+    fprintf(output, "Usage: attendant-gui --project DIR --assets DIR [--file PATH] [--frames 1..6000 --shot FILE.ppm]\n       attendant-gui --project DIR --reveal FILE [--line N]\n       attendant-gui --project DIR --inspect\n       attendant-gui --project DIR --find QUERY --view sidebar|source|preview [--file PATH] [--match-case]\n");
+    if (code) gui_reveal_error(code, "usage", "Expected GUI startup or one control: --inspect, --reveal FILE [--line N], --find QUERY --view sidebar|source|preview [--file PATH] [--match-case]; control cannot combine startup/test flags");
     return code;
 }
 int main(int argc, char **argv) {
-    const char *project = NULL, *assets = NULL, *initial = NULL, *shot = NULL, *reveal = NULL;
+    const char *project = NULL, *assets = NULL, *initial = NULL, *shot = NULL, *reveal = NULL, *find_query = NULL;
+    uint32_t find_view = 1; int view_supplied = 0, find_case = 0;
     uint32_t reveal_line = 1;
     int line_supplied = 0, inspect = 0;
 #if defined(_WIN32)
@@ -596,6 +748,15 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) shot = argv[++i];
         else if (!strcmp(argv[i], "--reveal") && i + 1 < argc) reveal = argv[++i];
         else if (!strcmp(argv[i], "--inspect")) inspect = 1;
+        else if (!strcmp(argv[i], "--find") && i + 1 < argc) find_query = argv[++i];
+        else if (!strcmp(argv[i], "--match-case")) find_case = 1;
+        else if (!strcmp(argv[i], "--view") && i + 1 < argc) {
+            const char *view = argv[++i]; view_supplied = 1;
+            if (!strcmp(view, "sidebar")) find_view = 0;
+            else if (!strcmp(view, "source")) find_view = 1;
+            else if (!strcmp(view, "preview")) find_view = 2;
+            else return usage(stderr, 2);
+        }
         else if (!strcmp(argv[i], "--line") && i + 1 < argc) {
             char *end; const char *value = argv[++i]; unsigned long number = strtoul(value, &end, 10);
             if (*value < '0' || *value > '9' || *end || !number || number > GUI_TEXT + 1u) return usage(stderr, 2);
@@ -607,19 +768,25 @@ int main(int argc, char **argv) {
             frame_limit = (int)value;
         } else return usage(stderr, 2);
     }
-    if (reveal || inspect) {
-        if (!project || (reveal && inspect) || (inspect && line_supplied) || assets || initial || shot || frame_limit) return usage(stderr, 2);
+    if (reveal || inspect || find_query) {
+        if (!project || ((reveal != NULL) + inspect + (find_query != NULL) != 1) ||
+            ((!reveal) && line_supplied) || assets || (initial && !find_query) || shot || frame_limit ||
+            (find_query ? !view_supplied || (!find_view && initial) : view_supplied || find_case)) return usage(stderr, 2);
 #ifdef ATTENDANT_GUI_TESTING
         if (exercise || edit_exercise || preview_exercise || reveal_exercise || selection_exercise) return usage(stderr, 2);
 #endif
-        code = inspect ? gui_inspect(project) : gui_reveal_send(project, reveal, reveal_line);
+        code = find_query ? gui_search_send(project, initial, find_query, find_view, find_case) : inspect ? gui_inspect(project) : gui_reveal_send(project, reveal, reveal_line);
 #if defined(_WIN32)
         for (i = 0; i < argc; i++) HeapFree(GetProcessHeap(), 0, owned[i]);
 #endif
         return code;
     }
-    if (!project || !assets || line_supplied || (shot && !frame_limit)) return usage(stderr, 2);
+    if (!project || !assets || line_supplied || view_supplied || find_case || (shot && !frame_limit)) return usage(stderr, 2);
     application = native_memory_allocate(sizeof(*application));
+    if (application) {
+        application->wrap_source = true; application->find_target = application->find_return = -1;
+        application->sidebar_width = 260; application->source_fraction = 0.49f;
+    }
     if (!application) return 3;
     application->shown_activation = -1;
 #ifdef ATTENDANT_GUI_TESTING
@@ -675,7 +842,8 @@ int main(int argc, char **argv) {
         }
 #else
         glfwPollEvents();
-        gui_ipc_poll(&server, &application->workspace, &application->pending_hint, &application->pending_hint_ready, application->inspection);
+        gui_ipc_poll(&server, &application->workspace, &application->pending_hint, &application->pending_hint_ready, application->inspection,
+            &application->pending_search, &application->search_ready, application->composer_active || application->pending_action != GUI_ACTION_NONE || application->close_all);
 #ifdef ATTENDANT_GUI_TESTING
         application->inspection_requests = (int)server.inspections;
 #endif
@@ -695,6 +863,7 @@ int main(int argc, char **argv) {
 #endif
         application->inspection_busy = 1;
         if (!crmd_begin_frame()) goto cleanup;
+        apply_agent_search(application);
         /* Later human navigation cancels an unrendered Go; incoming hints do not. */
         if (application->scroll_hint && (application->workspace.active < 0 ||
             (application->shown_activation == application->workspace.activation &&
@@ -730,6 +899,7 @@ int main(int argc, char **argv) {
 #endif
     code = 0;
 cleanup:
+    for (i = 0; i < 3; ++i) { crmd_input_state_destroy(application->find[i].input_state); application->find[i].input_state = NULL; }
     if (gui_ready && !crmd_shutdown()) code = 1;
     if (crmd_live_images()) code = 1;
 #if defined(_WIN32)
@@ -744,10 +914,15 @@ cleanup:
         printf("{\"ok\":true,\"frames\":%d,\"tabs\":%d,\"vertices\":%d", frame, application->workspace.tab_count, crmd_vertex_count());
 #ifdef ATTENDANT_GUI_TESTING
         printf(",\"issues_shown\":%d", application->issues_shown);
+        if (selection_exercise == 16) printf(",\"usability_checks\":%d", application->usability_checks);
 #endif
         puts("}");
     } else fprintf(stderr, "GUI initialization, exercise, rendering or cleanup failed: %s\n", crmd_error());
     clear_composer_preview(application);
+#ifdef ATTENDANT_GUI_TESTING
+    if (application->usability_clipboard_saved) igGetPlatformIO_Nil()->Platform_GetClipboardTextFn = application->usability_clipboard;
+    if (application->usability_original) arena_memory_release(application->usability_original, application->usability_original_size);
+#endif
     if (application->inspection) arena_memory_release(application->inspection, sizeof(*application->inspection));
     gui_workspace_destroy(&application->workspace); arena_memory_release(application, sizeof(*application)); application = NULL;
 #if defined(_WIN32)

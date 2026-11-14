@@ -20,8 +20,15 @@ typedef struct gui_tab {
     int reveal_selection, anchor_stale;
     uint64_t modified, file_size;
 } gui_tab;
+#define GUI_TREE_NODES (GUI_DOCUMENTS * 33)
+typedef struct gui_tree_node {
+    const char *path;
+    int length, name_begin, parent, end, document, expanded;
+} gui_tree_node;
 typedef struct gui_navigation {
-    int count, diagnostics;
+    int count, diagnostics, tree_count;
+    char discovery_warning[8192];
+    gui_tree_node tree[GUI_TREE_NODES];
     attendant_document_info documents[GUI_DOCUMENTS];
     void *memory;
 } gui_navigation;

@@ -707,7 +707,7 @@ typedef struct string_result {
     arena_error error;
 } string_result;
 
-enum { NATIVE_PATH_SIZE = 1024 };
+enum { NATIVE_PATH_SIZE = 1024, FILE_SEARCH_PATH_SIZE = 4096 };
 
 typedef enum file_error {
     file_error_ok = 0,
@@ -4244,9 +4244,9 @@ typedef struct file_directory {
 
 #if defined(_WIN32)
 static DWORD file_native_attributes(const char *path) {
-    wchar_t wide[NATIVE_PATH_SIZE];
+    wchar_t wide[FILE_SEARCH_PATH_SIZE];
     if (!path || !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1,
-                                     wide, NATIVE_PATH_SIZE))
+                                     wide, FILE_SEARCH_PATH_SIZE))
         return INVALID_FILE_ATTRIBUTES;
     return GetFileAttributesW(wide);
 }
@@ -4296,23 +4296,34 @@ static int file_directory_create(const char *path, int exclusive) {
     return created || (!exclusive && file_is_directory(path, 1));
 }
 
-static int file_directory_open(file_directory *directory, const char *path) {
+/* Windows applies pattern natively. Directory-only search is advisory; caller
+   must check attributes. POSIX enumerates names; shared walker filters them. */
+static int file_directory_open_search(file_directory *directory, const char *path, const char *pattern, int directories_only) {
     if (!directory || !path || !file_is_directory(path, 0))
         return 0;
 #if defined(_WIN32)
-    char search[NATIVE_PATH_SIZE];
-    wchar_t wide[NATIVE_PATH_SIZE];
-    int length = snprintf(search, sizeof(search), "%s/*", path);
-    if (length < 0 || length >= NATIVE_PATH_SIZE ||
-        !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, search, -1, wide, NATIVE_PATH_SIZE))
+    char search[FILE_SEARCH_PATH_SIZE];
+    wchar_t wide[FILE_SEARCH_PATH_SIZE];
+    /* Native '?' counts UTF-16 units, not UTF-8 characters. Broaden that mask;
+       shared matcher below preserves scalar semantics and rejects DOS aliases. */
+    const char *mask = pattern && pattern[0] && !strchr(pattern, '?') ? pattern : "*";
+    int length = snprintf(search, sizeof(search), "%s/%s", path, mask);
+    if (length < 0 || length >= FILE_SEARCH_PATH_SIZE ||
+        !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, search, -1, wide, FILE_SEARCH_PATH_SIZE))
         return 0;
-    directory->handle = FindFirstFileW(wide, &directory->entry);
+    directory->handle = directories_only ?
+        FindFirstFileExW(wide, FindExInfoStandard, &directory->entry, FindExSearchLimitToDirectories, NULL, 0) :
+        FindFirstFileW(wide, &directory->entry);
     directory->first = 1;
     return directory->handle != INVALID_HANDLE_VALUE || GetLastError() == ERROR_FILE_NOT_FOUND;
 #else
+    (void)pattern; (void)directories_only;
     directory->handle = opendir(path);
     return directory->handle != NULL;
 #endif
+}
+static int file_directory_open(file_directory *directory, const char *path) {
+    return file_directory_open_search(directory, path, NULL, 0);
 }
 
 /* 1 entry, 0 end, -1 error. Names valid until next read; caller bounds visits. */
@@ -4323,7 +4334,7 @@ static int file_directory_read(file_directory *directory) {
     if (!directory->first && !FindNextFileW(directory->handle, &directory->entry))
         return GetLastError() == ERROR_NO_MORE_FILES ? 0 : -1;
     directory->first = 0;
-    return WideCharToMultiByte(CP_UTF8, 0, directory->entry.cFileName, -1, directory->name,
+    return WideCharToMultiByte(CP_UTF8, 0x80 /* WC_ERR_INVALID_CHARS */, directory->entry.cFileName, -1, directory->name,
                                sizeof(directory->name), NULL, NULL) ? 1 : -1;
 #else
     errno = 0;
@@ -4431,8 +4442,8 @@ typedef struct file_tree_workspace {
 
 static file_error file_native_kind(const char *path, file_entry_kind *kind) {
 #if defined(_WIN32)
-    wchar_t wide[NATIVE_PATH_SIZE];
-    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, NATIVE_PATH_SIZE))
+    wchar_t wide[FILE_SEARCH_PATH_SIZE];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, FILE_SEARCH_PATH_SIZE))
         return file_error_invalid;
     DWORD attributes = GetFileAttributesW(wide);
     if (attributes == INVALID_FILE_ATTRIBUTES) {
@@ -4471,16 +4482,16 @@ static usize file_path_root_size(const char *path) {
 /* Canonical absolute path; missing leaf allowed only for exclusive creation.
    Validate original POSIX prefixes before realpath so links followed by '..'
    cannot disappear during normalization. No OS resource survives this call. */
-static file_error file_tree_path(cstring input, char output[NATIVE_PATH_SIZE], int missing_leaf) {
-    if (!input.data || !input.data[0]) return file_error_invalid;
-    char raw[NATIVE_PATH_SIZE];
+static file_error file_tree_path_into(cstring input, char *output, usize capacity, int missing_leaf) {
+    if (!input.data || !input.data[0] || !output || !capacity) return file_error_invalid;
+    char raw[FILE_SEARCH_PATH_SIZE];
 #if defined(_WIN32)
-    wchar_t wide[NATIVE_PATH_SIZE], absolute[NATIVE_PATH_SIZE];
-    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, input.data, -1, wide, NATIVE_PATH_SIZE))
+    wchar_t wide[FILE_SEARCH_PATH_SIZE], absolute[FILE_SEARCH_PATH_SIZE];
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, input.data, -1, wide, FILE_SEARCH_PATH_SIZE))
         return file_error_invalid;
-    DWORD length = GetFullPathNameW(wide, NATIVE_PATH_SIZE, absolute, NULL);
+    DWORD length = GetFullPathNameW(wide, FILE_SEARCH_PATH_SIZE, absolute, NULL);
     if (!length) return file_error_invalid;
-    if (length >= NATIVE_PATH_SIZE || !WideCharToMultiByte(CP_UTF8, 0, absolute, -1,
+    if (length >= FILE_SEARCH_PATH_SIZE || !WideCharToMultiByte(CP_UTF8, 0x80, absolute, -1,
                                                          raw, sizeof(raw), NULL, NULL))
         return file_error_capacity;
     for (char *p = raw; *p; ++p) if (*p == '\\') *p = '/';
@@ -4488,7 +4499,7 @@ static file_error file_tree_path(cstring input, char output[NATIVE_PATH_SIZE], i
     int length;
     if (input.data[0] == '/') length = snprintf(raw, sizeof(raw), "%s", input.data);
     else {
-        char current[NATIVE_PATH_SIZE];
+        char current[FILE_SEARCH_PATH_SIZE];
         if (!getcwd(current, sizeof(current))) return file_error_open_failed;
         length = snprintf(raw, sizeof(raw), "%s/%s", current, input.data);
     }
@@ -4509,24 +4520,28 @@ static file_error file_tree_path(cstring input, char output[NATIVE_PATH_SIZE], i
         if (i != size && kind != file_entry_directory) return file_error_invalid;
     }
 #if defined(_WIN32)
+    if (size >= capacity) return file_error_capacity;
     memcpy(output, raw, size + 1);
 #else
     char resolved[PATH_MAX];
     if (!realpath(raw, resolved)) {
         if (!missing_leaf || errno != ENOENT) return file_error_open_failed;
         char *leaf = strrchr(raw, '/');
-        char name[NATIVE_PATH_SIZE];
+        char name[FILE_SEARCH_PATH_SIZE];
         snprintf(name, sizeof(name), "%s", leaf + 1);
         if (leaf == raw) leaf[1] = 0; else *leaf = 0;
         if (!realpath(raw, resolved)) return file_error_open_failed;
-        int count = snprintf(output, NATIVE_PATH_SIZE, "%s%s%s", resolved,
+        int count = snprintf(output, capacity, "%s%s%s", resolved,
                              strcmp(resolved, "/") ? "/" : "", name);
-        return count < 0 || count >= NATIVE_PATH_SIZE ? file_error_capacity : file_error_ok;
+        return count < 0 || (usize)count >= capacity ? file_error_capacity : file_error_ok;
     }
-    if (strlen(resolved) >= NATIVE_PATH_SIZE) return file_error_capacity;
+    if (strlen(resolved) >= capacity) return file_error_capacity;
     memcpy(output, resolved, strlen(resolved) + 1);
 #endif
     return file_error_ok;
+}
+static file_error file_tree_path(cstring input, char output[NATIVE_PATH_SIZE], int missing_leaf) {
+    return file_tree_path_into(input, output, NATIVE_PATH_SIZE, missing_leaf);
 }
 
 /* Exclusive byte/text creation; partial new file can remain after I/O failure.
@@ -4689,54 +4704,221 @@ static file_error file_tree_join(char output[NATIVE_PATH_SIZE], const char *root
 
 /* Breadth-first inventory; no recursion. Each directory handle closes before
    visiting next directory. Error rewinds scratch and leaves output unchanged. */
+typedef enum file_search_problem {
+    file_search_result_limit, file_search_directory_limit, file_search_depth_limit, file_search_path,
+    file_search_open, file_search_read, file_search_close, file_search_entry,
+} file_search_problem;
+typedef file_error (*file_search_visit)(void *user, const file_tree_entry *entry);
+typedef void (*file_search_issue)(void *user, const char *path, file_search_problem problem);
+typedef struct file_search_options {
+    const char *pattern; /* Basename glob: '*' sequence, '?' one UTF-8 character.
+                           NULL includes directories; a pattern returns only regular files. */
+    usize max_results, max_depth; /* Returned matches; directory levels below root. */
+    usize max_directories; /* Descended directories excluding root; 0 means unlimited. */
+    int match_case, skip_dot_names, skip_unsupported;
+    int root_only; /* Deliberate shallow search, not depth-limit exhaustion. */
+    file_search_issue issue; /* NULL stops on first problem; otherwise report/skip.
+                              Result/directory limits and visitor errors always stop. */
+} file_search_options;
+
+/* Literal non-ASCII bytes; optional ASCII case folding on both platforms.
+   No path separators, bracket expressions, DOS wildcard rules or Unicode folding. */
+static int file_search_match(const char *pattern, const char *name, int match_case) {
+    const char *star = NULL, *retry = NULL, *end = name + strlen(name);
+    while (name < end) {
+        if (*pattern == '*') { star = ++pattern; retry = name; continue; }
+        if (*pattern == '?') {
+            usize size = string_utf8_sequence_size((const u8 *)name, (usize)(end - name));
+            if (!size) return 0;
+            ++pattern; name += size; continue;
+        }
+        unsigned char a = (unsigned char)*pattern, b = (unsigned char)*name;
+        if (!match_case) {
+            if (a >= 'A' && a <= 'Z') a += 'a' - 'A';
+            if (b >= 'A' && b <= 'Z') b += 'a' - 'A';
+        }
+        if (a == b) { ++pattern; ++name; continue; }
+        if (!star) return 0;
+        usize size = string_utf8_sequence_size((const u8 *)retry, (usize)(end - retry));
+        if (!size) return 0;
+        retry += size; name = retry; pattern = star;
+    }
+    while (*pattern == '*') ++pattern;
+    return !*pattern;
+}
+static int file_search_report(const file_search_options *options, void *user, const char *path,
+                              file_search_problem problem, file_error cause, file_error *result) {
+    if (*result == file_error_ok) *result = cause;
+    if (options->issue) options->issue(user, path, problem);
+    return options->issue != NULL;
+}
+typedef struct file_search_frame {
+    file_directory directory;
+    usize path_size;
+    int phase; /* Filtered search: files first, then subdirectories. */
+    struct file_search_frame *parent, *child;
+} file_search_frame;
+
+/* Iterative depth-first search; every directory handle closes before return.
+   Scratch stays in caller arena, including on error; caller marks/rewinds it.
+   Callbacks must not modify borrowed paths, longjmp or rewind search scratch.
+   Recoverable problems retain earlier visits; return first error after cleanup.
+   Arena allocation failure takes precedence over recoverable problems.
+   Filtered search enumerates file matches, then directories, at each depth.
+   Only returned matches consume result capacity; other files consume no budget.
+   Directory/depth budgets bound descent; exclusions do not warn. */
+static file_error file_directory_search(arena *memory, cstring path, const file_search_options *options,
+                                       file_search_visit visit, void *user) {
+    if (!memory || !path.data || !options || !visit || !options->max_results ||
+        options->max_depth >= SIZE_MAX / sizeof(file_search_frame)) return file_error_invalid;
+    if (options->pattern && (strlen(options->pattern) >= NATIVE_PATH_SIZE ||
+        strchr(options->pattern, '/') || strchr(options->pattern, '\\') ||
+        !string_view_utf8_valid(string_view_from_cstr(options->pattern)))) return file_error_invalid;
+    char root[FILE_SEARCH_PATH_SIZE], absolute[FILE_SEARCH_PATH_SIZE];
+    file_error result = file_tree_path_into(path, root, sizeof(root), 0);
+    file_entry_kind kind;
+    if (result != file_error_ok) return result;
+    if ((result = file_native_kind(root, &kind)) != file_error_ok) return result;
+    if (kind != file_entry_directory) return file_error_invalid;
+    arena_result allocation = arena_alloc(memory, sizeof(file_search_frame), _Alignof(file_search_frame));
+    if (allocation.error != arena_error_ok) return file_error_from_arena_error(allocation.error);
+    file_search_frame *current = allocation.ptr;
+    current->parent = current->child = NULL;
+    current->path_size = strlen(root); current->phase = 0;
+    memcpy(absolute, root, current->path_size + 1);
+    if (!file_directory_open_search(&current->directory, root, options->pattern, 0)) {
+        (void)file_search_report(options, user, root, file_search_open, file_error_open_failed, &result);
+        return result;
+    }
+    usize active = 1, results = 0, directories = 0, root_size = strlen(root);
+    usize relative_begin = root_size + (root[root_size - 1] != '/');
+    int stopped = 0;
+    while (active && !stopped) {
+        usize depth = active - 1;
+        file_search_frame *frame = current;
+        absolute[frame->path_size] = 0;
+        int next = file_directory_read(&frame->directory);
+        if (next <= 0) {
+            if (next < 0 && !file_search_report(options, user, absolute, file_search_read, file_error_read_failed, &result)) stopped = 1;
+            if (!file_directory_close(&frame->directory) && !file_search_report(options, user, absolute, file_search_close, file_error_cleanup_failed, &result)) stopped = 1;
+            if (!next && !stopped && options->pattern && !options->root_only && !frame->phase) {
+                frame->phase = 1;
+                if (file_directory_open_search(&frame->directory, absolute, NULL, 1)) continue;
+                (void)file_search_report(options, user, absolute, file_search_open, file_error_open_failed, &result);
+            }
+            --active; current = frame->parent;
+            continue;
+        }
+        const char *name = frame->directory.name;
+        if (!strcmp(name, ".") || !strcmp(name, "..")) continue;
+        if (options->skip_dot_names && name[0] == '.') continue;
+#if defined(_WIN32)
+        /* Directory-only enumeration may still return regular files. Reject
+           them from cached attributes before path conversion or metadata I/O. */
+        if (options->pattern && !!(frame->directory.entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != frame->phase) continue;
+#endif
+        int size = snprintf(absolute + frame->path_size, sizeof(absolute) - frame->path_size,
+                            "%s%s", absolute[frame->path_size - 1] == '/' ? "" : "/", name);
+        if (size < 0 || (usize)size >= sizeof(absolute) - frame->path_size) {
+            absolute[frame->path_size] = 0;
+            if (!file_search_report(options, user, absolute, file_search_path, file_error_capacity, &result)) stopped = 1;
+            continue;
+        }
+        file_error error;
+#if defined(_WIN32)
+        DWORD attributes = frame->directory.entry.dwFileAttributes;
+        kind = attributes & FILE_ATTRIBUTE_DIRECTORY ? file_entry_directory : file_entry_regular;
+        error = attributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DEVICE) ? file_error_unsupported : file_error_ok;
+#else
+        kind = file_entry_regular;
+        error = file_native_kind(absolute, &kind);
+        if (options->pattern && error == file_error_ok && (kind == file_entry_directory) != frame->phase) continue;
+        if (options->pattern && frame->phase && error == file_error_unsupported) continue;
+#endif
+        if (error != file_error_ok) {
+            if (error == file_error_unsupported && options->skip_unsupported) continue;
+            if (!file_search_report(options, user, absolute, file_search_entry, error, &result)) stopped = 1;
+            continue;
+        }
+        if (kind == file_entry_directory && !options->root_only && depth == options->max_depth) {
+            if (!file_search_report(options, user, absolute, file_search_depth_limit, file_error_capacity, &result)) stopped = 1;
+            continue;
+        }
+        if (kind == file_entry_directory && !options->root_only && options->max_directories && directories == options->max_directories) {
+            (void)file_search_report(options, user, absolute, file_search_directory_limit, file_error_capacity, &result);
+            break;
+        }
+        if (!options->pattern || (kind == file_entry_regular && file_search_match(options->pattern, name, options->match_case))) {
+            if (results == options->max_results) {
+                (void)file_search_report(options, user, absolute, file_search_result_limit, file_error_capacity, &result);
+                break;
+            }
+            ++results;
+            file_tree_entry entry = {absolute + relative_begin, kind, depth + 1};
+            error = visit(user, &entry);
+            if (error != file_error_ok) { if (result == file_error_ok) result = error; break; }
+        }
+        if (kind == file_entry_directory && !options->root_only) {
+            /* Allocate only reached depths; reuse frame when visiting siblings.
+               Arena failure returns normally through owned-handle cleanup. */
+            if (!frame->child) {
+                allocation = arena_alloc(memory, sizeof(file_search_frame), _Alignof(file_search_frame));
+                if (allocation.error != arena_error_ok) { result = file_error_from_arena_error(allocation.error); break; }
+                frame->child = allocation.ptr; frame->child->parent = frame; frame->child->child = NULL;
+            }
+            file_search_frame *child = frame->child;
+            child->path_size = frame->path_size + (usize)size; child->phase = 0;
+            if (options->max_directories) ++directories;
+            if (!file_directory_open_search(&child->directory, absolute, options->pattern, 0)) {
+                if (!file_search_report(options, user, absolute, file_search_open, file_error_open_failed, &result)) stopped = 1;
+            } else { ++active; current = child; }
+        }
+    }
+    while (active) {
+        file_search_frame *frame = current;
+        --active; current = frame->parent;
+        absolute[frame->path_size] = 0;
+        if (!file_directory_close(&frame->directory))
+            (void)file_search_report(options, user, absolute, file_search_close, file_error_cleanup_failed, &result);
+    }
+    return result;
+}
+
+typedef struct file_tree_collect {
+    file_tree_workspace *workspace;
+    file_tree tree;
+    usize root_size;
+} file_tree_collect;
+static file_error file_tree_collect_entry(void *user, const file_tree_entry *entry) {
+    file_tree_collect *collection = user;
+    if (entry->depth > collection->workspace->max_depth || collection->tree.count == collection->workspace->max_entries)
+        return file_error_capacity;
+    /* Keep legacy inventory path capacity; streaming search supports longer paths. */
+    if (collection->root_size + strlen(entry->path) >= NATIVE_PATH_SIZE) return file_error_capacity;
+    usize size = strlen(entry->path) + 1;
+    arena_result allocation = arena_alloc(collection->workspace->memory, size, 1);
+    if (allocation.error != arena_error_ok) return file_error_from_arena_error(allocation.error);
+    file_tree_entry *copy = &collection->tree.entries[collection->tree.count++];
+    *copy = *entry; copy->path = allocation.ptr; memcpy(copy->path, entry->path, size);
+    return file_error_ok;
+}
 static file_error file_directory_list_tree(file_tree_workspace *workspace, cstring path, file_tree *out) {
     if (!workspace || !workspace->memory || !out || !workspace->max_entries ||
         !workspace->max_depth || workspace->max_entries > SIZE_MAX / sizeof(file_tree_entry))
         return file_error_invalid;
-    char root[NATIVE_PATH_SIZE], parent[NATIVE_PATH_SIZE], child[NATIVE_PATH_SIZE];
+    char root[NATIVE_PATH_SIZE];
     file_error error = file_tree_path(path, root, 0);
-    file_entry_kind kind;
     if (error != file_error_ok) return error;
-    if ((error = file_native_kind(root, &kind)) != file_error_ok) return error;
-    if (kind != file_entry_directory) return file_error_invalid;
     arena_position_marker mark = arena_position_mark(workspace->memory);
-    arena_result allocation = arena_alloc(workspace->memory,
-        workspace->max_entries * sizeof(file_tree_entry), _Alignof(file_tree_entry));
-    if (allocation.error != arena_error_ok) {
-        (void)arena_pop_to_marker(mark);
-        return file_error_from_arena_error(allocation.error);
+    arena_result allocation = arena_alloc(workspace->memory, workspace->max_entries * sizeof(file_tree_entry), _Alignof(file_tree_entry));
+    error = allocation.error == arena_error_ok ? file_error_ok : file_error_from_arena_error(allocation.error);
+    if (error == file_error_ok) {
+        file_tree_collect collection = {workspace, {allocation.ptr, 0}, strlen(root) + (root[strlen(root) - 1] != '/')};
+        file_search_options options = {.max_results = workspace->max_entries, .max_depth = workspace->max_depth};
+        error = file_directory_search(workspace->memory, (cstring){root}, &options, file_tree_collect_entry, &collection);
+        if (error == file_error_ok) *out = collection.tree;
     }
-    file_tree tree = { .entries = allocation.ptr };
-    for (usize cursor = 0; cursor <= tree.count && error == file_error_ok; ++cursor) {
-        const char *relative = cursor ? tree.entries[cursor - 1].path : "";
-        usize depth = cursor ? tree.entries[cursor - 1].depth : 0;
-        if (cursor && tree.entries[cursor - 1].kind != file_entry_directory) continue;
-        error = file_tree_join(parent, root, relative);
-        if (error != file_error_ok) break;
-        file_directory directory;
-        if (!file_directory_open(&directory, parent)) { error = file_error_open_failed; break; }
-        int next = 0;
-        while ((next = file_directory_read(&directory)) > 0) {
-            if (!strcmp(directory.name, ".") || !strcmp(directory.name, "..")) continue;
-            if (tree.count == workspace->max_entries || depth == workspace->max_depth) {
-                error = file_error_capacity; break;
-            }
-            int size = snprintf(child, sizeof(child), "%s%s%s", relative,
-                                relative[0] ? "/" : "", directory.name);
-            if (size < 0 || size >= (int)sizeof(child)) { error = file_error_capacity; break; }
-            char absolute[NATIVE_PATH_SIZE];
-            error = file_tree_join(absolute, root, child);
-            if (error != file_error_ok || (error = file_native_kind(absolute, &kind)) != file_error_ok) break;
-            allocation = arena_alloc(workspace->memory, (usize)size + 1, 1);
-            if (allocation.error != arena_error_ok) { error = file_error_from_arena_error(allocation.error); break; }
-            memcpy(allocation.ptr, child, (usize)size + 1);
-            tree.entries[tree.count++] = (file_tree_entry){ allocation.ptr, kind, depth + 1 };
-        }
-        if (next < 0 && error == file_error_ok) error = file_error_read_failed;
-        if (!file_directory_close(&directory) && error == file_error_ok) error = file_error_cleanup_failed;
-    }
-    if (error == file_error_ok) *out = tree;
-    else (void)arena_pop_to_marker(mark);
+    if (error != file_error_ok) (void)arena_pop_to_marker(mark);
     return error;
 }
 
