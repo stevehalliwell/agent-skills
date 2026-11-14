@@ -1,0 +1,145 @@
+# Build native Attendant
+
+- [Required tools](#required-tools)
+- [CLI](#cli)
+- [GUI dependencies and application](#gui-dependencies-and-application)
+- [Focused development checks](#focused-development-checks)
+- [Windows footprint sanity probe](#windows-footprint-sanity-probe)
+- [macOS bring-up checkpoint](#macos-bring-up-checkpoint)
+- [Missing build or failed setup](#missing-build-or-failed-setup)
+
+Read when native executable is missing, user requests build/evaluation, or GUI dependencies need setup. Native CLI/GUI is active Attendant implementation; no JS fallback. Build with installed tools, then return to original target project and requested operation. Building does not authorize unrelated source edits.
+
+Resolve `<skill-dir>` from `SKILL.md`; native root is `<skill-dir>/native`. Run commands below from native root. CLI/API/GUI builds support Windows Git Bash and macOS arm64 Bash. Windows commands use `.exe`; omit suffix on macOS. Platform details are below. Paths may contain spaces; quote them.
+
+## Required tools
+
+- Windows x64 or macOS arm64. GUI needs local desktop; macOS builds need installed Apple command-line tools/SDK.
+- CLI: installed CJIT or Zig. Paths are independent; Zig does not require CJIT.
+- GUI library: installed Zig, Git and Bash; macOS also needs make. GUI C99 app can then build with CJIT or Zig.
+- Native core/source tests: Bash and selected compiler only.
+- Native build/check helpers: installed CJIT by default, or `ATTENDANT_TOOL_COMPILER=zig`. Helpers build fresh in owned `build/native-tools/run-*/`; use `CJIT`/`ZIG` to select executable.
+- No Attendant runtime/build/test/benchmark command needs Node. LuaJIT remains pinned binding generator.
+
+No script installs compilers/packages. `CJIT` and `ZIG` override compilation executables. cimgui generator still invokes `zig cc` through PATH, even with `ZIG` override. Build caches live under native `build/`, never remove user's global cache.
+
+## CLI
+
+C dependencies are vendored; builds do not download.
+
+```sh
+bash build.sh cjit
+bash build.sh zig
+build/attendant-zig.exe --help
+```
+
+Choose compiler actually installed; both commands are needed only for dual-compiler verification. macOS outputs omit `.exe`, for example `build/attendant-zig --help`. `SDKROOT` overrides discovered Apple SDK; CJIT outputs receive local ad-hoc signatures. Zig uses `-O3`, no fast-math or explicit assertion removal.
+
+## GUI dependencies and application
+
+One explicit acquisition step requires network. Do not run it implicitly during ordinary record operations:
+
+```sh
+bash tools/native-tool.sh prepare
+```
+
+For offline setup, supply already acquired pinned `build/deps/` checkouts, including Git metadata. `bash tools/native-tool.sh prepare --verify` checks pins/patches offline; no network fallback. Sources/assets remain under native root.
+
+```sh
+bash tools/build-gui-stack.sh
+bash build-gui.sh cjit
+bash build-gui.sh zig
+```
+
+Library build verifies dependencies and regenerates matching wrappers. GUI build fails with build-reference guidance when library is absent; it never acquires dependencies. Runtime library is copied beside each application executable. Font/assets path is explicit:
+
+```sh
+# Windows: append .exe; macOS command below works with zig or cjit output.
+build/gui/attendant-gui-zig --project /path/to/owned/workspace \
+  --assets "$PWD/build/deps/richmd/assets" --file README.md
+```
+
+macOS Zig embeds executable-relative rpath. CJIT links against a private dylib copy with executable-relative install identity; runtime copy stays byte-identical to stack library. Link copy is build-manifest hashed. This avoids patching CJIT's Mach-O output, which installed `install_name_tool` rejects. Both GUI outputs run without `DYLD_LIBRARY_PATH`.
+
+Never overwrite mapped application/DLL or restart a manual viewer to make build succeed. Set `ATTENDANT_GUI_VARIANT=review2` to use fresh `build/gui-review2/`; same variable must be used for related builds/checks. Allowed variant: lowercase letters, digits and hyphens, starting with letter/digit.
+
+## Focused development checks
+
+C suites use reusable `base.h` ordinary operations and `test.h` lifecycle/assertions/test-command support. Run from repository checkout with sibling `skills/init-project/templates/`. No Node.js, GUI, downloads or prebuilt CLI needed:
+
+```sh
+bash test.sh cjit
+bash test.sh zig
+```
+
+Each command runs 56 C cases under UTC and Pacific/Auckland, 26 isolated framework scenarios and five subprocess integration cases with 23 contract groups. Wrapper builds matching CLI/API probe. Integration retains actual subprocess interoperability, stdin/output/deadlines, schema/query/update checks, current task/decision template workflows and cold build from isolated skill copy. Four migrated core JS harnesses are removed. Template checkout is test-only, not a product build dependency.
+
+Stdout is retained run directory; TSV, diagnostics, generated runners, command captures and build logs stay in `build/native-tests/run-*/`. Assertions stay active at `-O3`/`NDEBUG`. Case failures exit 1; suite/infrastructure or generation/build failures exit 2. Hooks clean successful owned fixtures and retain/report failures. Install case also owns OS temp directory, excludes all prior builds/caches and builds copied source with 180000 ms deadline. See [test interfaces, memory/path limits and lifecycle contract](../native/tests/README.md).
+
+Desktop/IPC orchestration uses native C coordinators:
+
+```sh
+bash tools/check-native-tools.sh
+ATTENDANT_TOOL_COMPILER=zig bash tools/check-native-tools.sh
+bash build-gui.sh cjit --check
+bash build-gui.sh zig --check
+bash tools/check-gui.sh
+bash tools/benchmark.sh 5
+# macOS only:
+bash tools/check-control-macos.sh
+bash tools/check-bridge.sh
+```
+
+GUI checks need matching production/test GUI and CLI builds for both compilers, installed compilers and Bash. Check builds also produce headless model executables. `bash tools/check-gui.sh` verifies manifests in C, builds fresh C runners through `tools/build-gui-tests.sh`, runs all ten groups per compiler in C, including two caller-polled live previews with opposite-compiler inspection. No JS coordinator remains. Total stays 20 groups. C runner artifacts/build logs stay under `build/gui-tests/run-*/`; GUI report links per-compiler TSV/diagnostics and preserved production screenshot under its owned run folder. Use unique owned fixtures, never live projects. Generated evidence is not imported historical evidence. Standalone API consumer probe remains available through `tools/build-api-check.sh`; `test.sh` already builds it for integration. Historical API totals below describe pre-migration suite.
+
+### Windows footprint sanity probe
+
+After production builds, from native root with PowerShell 7:
+
+```powershell
+# Match variant used for production GUI builds; omit for build/gui.
+$env:ATTENDANT_GUI_VARIANT = 'windows-regression'
+pwsh -NoProfile -File tools/footprint-windows.ps1 -Seconds 10
+```
+
+Opens one owned viewer at a time for each compiler. Copies test collections and current product docs into unique `build/footprint/run-*/workspace/`; checks source inventory unchanged and closes only its own processes. JSON stdout and `results.json` record startup-to-inspection, idle CPU/working-set/private memory and inspection/reveal round trips. CPU percentage uses one logical core. Startup is not first paint; reveal response acknowledges receipt, not completed Go. No GPU/human-input latency measurement or numeric acceptance budget. Small-workspace sanity check only; macOS needs separate measurement.
+
+## macOS bring-up checkpoint
+
+Historical checkpoint before `test.h` migration: native CLI/API and interactive GLFW/OpenGL3 workspace build/run with Zig and CJIT. Combined acceptance passed 20 CLI groups, 94 API cases, 20 GUI/model groups (194 macOS model assertions per compiler) and 16 local-control groups on owned Unicode-path workspaces. API checks include timezone-independent UTC timestamps from 1601 through 9999, epoch boundaries and invalid-calendar rejection. Post-port Windows x64 qualification also passes: fresh CJIT/Zig CLI/API/production/test GUI/model builds, rebuilt Win32/D3D11 dependency DLL, 20 CLI groups, 94 API cases and 20 GUI/model groups with 193 model assertions per compiler. Pinned dependencies verified offline; checks use owned fixtures and fresh `ATTENDANT_GUI_VARIANT=windows-regression`.
+
+```sh
+bash build.sh zig
+bash build.sh cjit
+bash test.sh zig
+bash test.sh cjit
+build/attendant-zig --help
+```
+
+Source publication uses staged flushes and atomic rename/create-exclusive publication. On macOS, failed collection/feedback bootstrap retains already-published files and reports written paths; no check-and-unlink rollback or custom recovery system. Staging files and empty owned directories are cleaned. Inspect reported files before retrying. Windows keeps handle-based rollback. API failure checks cover retained seed/comment files, external edits, config conflicts and retry without overwrite.
+
+GUI: native arm64 dependency library, C99 application and bridge consumers with GLFW 3.4/OpenGL3, matching pinned upstream RichMd examples. Windows retains Win32/D3D11. Requires installed Zig, make, Apple command-line tools/SDK and CJIT for dual-compiler bridge checks. C/Bash replacements pass fresh macOS 14.5 arm64 compilation/runtime validation with CJIT/Zig; [project checks](../../../TODO.md#checks) retain evidence and scoped test fixes. No script installs tools.
+
+Explicit acquisition and checks:
+
+```sh
+bash tools/native-tool.sh prepare
+bash tools/native-tool.sh prepare --verify
+bash tools/build-gui-stack.sh
+bash tools/check-bridge.sh
+```
+
+Acquisition includes pinned GLFW only on macOS. Native LuaJIT recipe builds generation tool; no Windows x64 generator reuse. `SDKROOT` overrides Apple SDK; `MACOSX_DEPLOYMENT_TARGET` defaults to 11.0 for arm64 bring-up. This default is not tested minimum-OS support. SDK frameworks compile as system headers; Zig framework-link flags apply only at link time. No project diagnostic downgrade. MD4C alone uses upstream's `OFF_MAX` macro-warning compatibility flag.
+
+Output: `build/bin/libcimgui_richmd.dylib`, `build/bin/luajit`, `build/bridge-check-results.json` and per-compiler P6 screenshots. Bridge checks create one bounded hidden window each; verify C99/C++ ABI, selectable Markdown rendering, image texture lifetime, Retina screenshot content and terminal render-failure cleanup. CJIT consumers use SDK includes and local ad-hoc signing; test process alone receives explicit library lookup path. No release signing/notarization claim.
+
+macOS controls use existing bounded same-UID Unix message pipes. One request at a time; GUI pumps between frames, with frozen selection snapshot, per-connection deadline and bounded work. Discovery rejects ambiguous/unresponsive/malformed/unsafe candidates and never removes stale endpoints. Scope spans same UID across login sessions, not desktop isolation or application authentication. Same-UID processes can inspect selections or impersonate endpoints.
+
+Human workflow and distribution/license review accepted as complete by user. Windows small-workspace footprint sanity check completed; macOS footprint measurement waived, with no macOS footprint claim. Native skill cutover approved. Known platform/failure limits stay documented, not an exhaustive rollout gate. Build/check success does not authorize committing or publishing.
+
+## Missing build or failed setup
+
+1. Read this reference, build requested target with installed compiler, then run its `--help` or focused check.
+2. Return to original task and original target project; build working directory is not record workspace.
+3. If tool/dependency/build is unavailable, report exact blocker and reference path. Do not auto-install, silently fall back to JS, or substitute old spike binaries.
+4. Continue only original authorized operation; setup does not grant broader editing authority. Known limitations: [native README](../native/README.md#remaining-limits-and-history).

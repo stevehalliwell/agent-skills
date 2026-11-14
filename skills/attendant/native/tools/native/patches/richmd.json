@@ -1,0 +1,89 @@
+[
+  {
+    "path": "imgui_rich_md/rich_md.h",
+    "operations": [
+      {
+        "before": "#include <cstdint>",
+        "after": "#include <cstdint>\n#include <cstddef>"
+      },
+      {
+        "before": "    void RenderRaw(const std::string& markdownString);",
+        "after": "    void RenderRaw(const std::string& markdownString);\n\n    // Local source-selection patch. Call snapshot while exact RenderRaw input remains alive.\n    enum class SourceSelectionStatus { None = 0, Exact = 1, Unsupported = 2 };\n    struct SourceSelection { SourceSelectionStatus status = SourceSelectionStatus::None; std::size_t begin = 0, end = 0; std::uint64_t interaction = 0; };\n    SourceSelection LastSourceSelection(const std::string& exactInput);\n    void ClearSourceSelection();\n    struct PreviewSelection { bool has_source_span = false; std::size_t begin = 0, end = 0; std::uint64_t interaction = 0; std::string text, context; };\n    void RenderSelectable(const std::string& markdownString);\n    PreviewSelection LastPreviewSelection(const std::string& exactInput);\n    std::uint64_t LastSelectionInteraction();\n    int FindPreview(const char* query, bool matchCase, int action, int& count, int& current);"
+      }
+    ]
+  },
+  {
+    "path": "imgui_rich_md/internal/rich_md_renderer.h",
+    "operations": [
+      {
+        "before": "\tint print(const char* str, const char* str_end);",
+        "after": "\tint print(const char* str, const char* str_end);\n\tSourceSelection source_selection(const char* input, size_t length) const;\n\tvoid clear_source_selection();\n\tPreviewSelection preview_selection(const char* input, size_t length) const;\n\tint find_preview(const char* query, bool matchCase, int action, int& count, int& current);\n\tbool selectablePreview = false;\n\tstd::uint64_t selection_interaction() const { return m_source_selection_interaction; }"
+      },
+      {
+        "before": "\tImGuiID m_selection_fragment = 0;",
+        "after": "\tstruct FindRun { size_t begin, end; int block; bool source; std::string replacement; };\n\tstd::vector<FindRun> m_find_runs;\n\tstd::string m_find_text, m_find_query;\n\tstruct FindSource { size_t text_begin, text_end, source_begin, source_end; bool direct; };\n\tstd::vector<FindSource> m_find_sources;\n\tbool m_find_case = false;\n\tint m_find_count = 0, m_find_current = 0;\n\tstd::uint64_t m_source_selection_interaction = 0;\n\tbool m_source_widget_selection = false;\n\tImGuiID m_selection_fragment = 0;"
+      },
+      {
+        "before": "\t\tstd::string replacement;      // what it shows instead of its bytes, when not empty (a soft break, a formula)",
+        "after": "\t\tstd::string replacement;      // what it shows instead of its bytes, when not empty (a soft break, a formula)\n\t\tbool source_bytes = false;    // direct interval in current original-input buffer, not synthetic/foreign"
+      }
+    ]
+  },
+  {
+    "path": "imgui_rich_md/internal/rich_md_renderer.cpp",
+    "operations": [
+      {
+        "prefix": "#include <stdexcept>\n#include \"find-text.h\"\n"
+      },
+      {
+        "before": "\tif (str >= str_end)\n        return 0;",
+        "after": "\tif (str >= str_end) {\n        clear_source_selection(); m_fragment_begin = str; m_fragment_end = str_end; m_fragment_id = 0; m_runs.clear(); return 0;\n    }"
+      },
+      {
+        "before": "\tif (str != nullptr && str >= m_fragment_begin && str < str_end && str_end <= m_fragment_end) {",
+        "after": "\tconst auto address = reinterpret_cast<std::uintptr_t>(str), finish = reinterpret_cast<std::uintptr_t>(str_end);\n    if (str && str_end && address >= reinterpret_cast<std::uintptr_t>(m_fragment_begin) && address < finish && finish <= reinterpret_cast<std::uintptr_t>(m_fragment_end)) {\n        run.source_bytes = true;"
+      },
+      {
+        "before": "void Renderer::update_selection(ImGuiID fragmentId)\n{",
+        "after": "void Renderer::clear_source_selection()\n{\n    if (m_selection_fragment && GImGui && GImGui->ActiveId == m_selection_fragment)\n        ImGui::ClearActiveID();\n    m_selection_fragment = m_selection_text_hash = 0;\n    m_selection_anchor = m_selection_focus = 0;\n    m_source_widget_selection = false;\n    m_find_runs.clear(); m_find_text.clear(); m_find_query.clear(); m_find_sources.clear(); m_find_count = m_find_current = 0;\n}\n\nSourceSelection Renderer::source_selection(const char* input, size_t length) const\n{\n    SourceSelection result;\n    result.interaction = m_source_selection_interaction;\n    if (m_source_widget_selection) { result.status = SourceSelectionStatus::Unsupported; return result; }\n    if (!length || !m_selection_fragment || m_selection_fragment != m_fragment_id || m_selection_anchor == m_selection_focus)\n        return result;\n    result.status = SourceSelectionStatus::Unsupported;\n    size_t begin = ImMin(m_selection_anchor, m_selection_focus), end = ImMax(m_selection_anchor, m_selection_focus);\n    if (m_fragment_begin != input || m_fragment_end != input + length || begin >= end || end > length ||\n        (begin < length && ((unsigned char)input[begin] & 0xc0) == 0x80) ||\n        (end < length && ((unsigned char)input[end] & 0xc0) == 0x80)) return result;\n    // ponytail: only exact contiguous original bytes; broader spans need piecewise provenance.\n    size_t cursor = begin;\n    for (const TextRun& run : m_runs) {\n        if (run.end <= begin || run.begin >= end) continue;\n        size_t from = ImMax(begin, run.begin), to = ImMin(end, run.end);\n        if (!run.source_bytes || !run.replacement.empty() || from != cursor || to > length) return result;\n        cursor = to;\n    }\n    if (cursor != end) return result;\n    std::string visible;\n    visible_text(begin, end, visible);\n    if (visible.size() != end - begin || visible.compare(0, visible.size(), input + begin, end - begin)) return result;\n    result.status = SourceSelectionStatus::Exact; result.begin = begin; result.end = end;\n    return result;\n}\n\n__NATIVE_PREVIEW_METHODS__void Renderer::update_selection(ImGuiID fragmentId)\n{"
+      },
+      {
+        "before": "\t\tImGui::KeepAliveID(fragmentId);",
+        "after": "\t\tImGui::KeepAliveID(fragmentId);\n        if (selectablePreview && ImGui::IsMouseDragging(0) && g.CurrentWindow->ScrollMax.y > 0) {\n            const ImGuiIO& io = g.IO;\n            const ImRect clip = g.CurrentWindow->InnerClipRect;\n            const float direction = io.MousePos.y < clip.Min.y + 12 ? -1.0f : io.MousePos.y > clip.Max.y - 12 ? 1.0f : 0.0f;\n            if (direction) ImGui::SetScrollY(ImClamp(g.CurrentWindow->Scroll.y + direction * ImGui::GetTextLineHeight() * 40 * ImMin(io.DeltaTime, 0.05f), 0.0f, g.CurrentWindow->ScrollMax.y));\n        }"
+      },
+      {
+        "before": "void Renderer::select_at(ImGuiID fragmentId, size_t offset, int clicks)\n{",
+        "after": "void Renderer::select_at(ImGuiID fragmentId, size_t offset, int clicks)\n{\n    ++m_source_selection_interaction; m_source_widget_selection = false;"
+      },
+      {
+        "before": "void Renderer::select_all(ImGuiID fragmentId)\n{",
+        "after": "void Renderer::select_all(ImGuiID fragmentId)\n{\n    ++m_source_selection_interaction; m_source_widget_selection = false;"
+      },
+      {
+        "before": "\tif (mouseFree && ImGui::IsMouseClicked(0)) {",
+        "after": "\tif (mouseFree && ImGui::IsMouseClicked(0)) {\n        ++m_source_selection_interaction; m_source_widget_selection = false;"
+      },
+      {
+        "before": "\tif (mouseFree && onTextLine && ImGui::IsMouseReleased(1)) {",
+        "after": "\tif (mouseFree && onTextLine && ImGui::IsMouseReleased(1)) {\n        ++m_source_selection_interaction; m_source_widget_selection = false;"
+      },
+      {
+        "before": "\tbool mouseFree = ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && g.ActiveId == 0;",
+        "after": "\t// A child widget owns its own selection. Never export stale surrounding text.\n    const bool childClick = ImGui::IsMouseClicked(0) && g.HoveredWindow && !(g.HoveredWindow->Flags & ImGuiWindowFlags_Popup) &&\n        ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !ImGui::IsWindowHovered();\n    if (childClick || (g.ActiveId && g.ActiveId != fragmentId && g.ActiveIdWindow && !(g.ActiveIdWindow->Flags & ImGuiWindowFlags_Popup) &&\n        (g.ActiveIdWindow == g.CurrentWindow || ImGui::IsWindowChildOf(g.ActiveIdWindow, g.CurrentWindow, true)))) {\n        clear_source_selection();\n        // Child/custom widgets expose no original-source proof, even when their text is not selectable.\n        m_source_widget_selection = true;\n        ++m_source_selection_interaction;\n    }\n\tbool mouseFree = ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && g.ActiveId == 0;"
+      }
+    ]
+  },
+  {
+    "path": "imgui_rich_md/rich_md.cpp",
+    "operations": [
+      {
+        "before": "        bool can_use_child_windows() const override\n        {",
+        "after": "        bool can_use_child_windows() const override\n        {\n            if (selectablePreview) return false;"
+      },
+      {
+        "before": "    const std::vector<Heading>& LastRenderHeadings()",
+        "after": "    SourceSelection LastSourceSelection(const std::string& exactInput)\n    {\n        MarkdownRenderer* renderer = _Renderer();\n        return renderer ? renderer->source_selection(exactInput.data(), exactInput.size()) : SourceSelection{};\n    }\n    void ClearSourceSelection()\n    {\n        MarkdownRenderer* renderer = _Renderer();\n        if (renderer) renderer->clear_source_selection();\n    }\n\n    void RenderSelectable(const std::string& text)\n    {\n        MarkdownRenderer* renderer = _Renderer();\n        if (!renderer) return;\n        struct Restore { bool& flag; bool previous; ~Restore() { flag = previous; } } restore{renderer->selectablePreview, renderer->selectablePreview};\n        renderer->selectablePreview = true;\n        RenderRaw(text);\n    }\n    PreviewSelection LastPreviewSelection(const std::string& exactInput)\n    {\n        MarkdownRenderer* renderer = _Renderer();\n        return renderer ? renderer->preview_selection(exactInput.data(), exactInput.size()) : PreviewSelection{};\n    }\n\n    int FindPreview(const char* query, bool matchCase, int action, int& count, int& current)\n    {\n        MarkdownRenderer* renderer = _Renderer();\n        return renderer ? renderer->find_preview(query, matchCase, action, count, current) : 0;\n    }\n\n    std::uint64_t LastSelectionInteraction()\n    {\n        MarkdownRenderer* renderer = _Renderer();\n        return renderer ? renderer->selection_interaction() : 0;\n    }\n\n    const std::vector<Heading>& LastRenderHeadings()"
+      }
+    ]
+  }
+]
