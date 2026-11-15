@@ -7,6 +7,7 @@
 #include "test_sidebar.h"
 #include "test_explorer_presentation.h"
 #include "test_explorer_configuration.h"
+#include "test_explorer_similarity.h"
 int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, int count, int *fail_at, int *calls,int run_deep_checks,int run_layout_research) {
     GD_ExplorerProject *project=gd_explorer_load(a,collections,count);
     GD_ExplorerPane *panes=NULL,*before=NULL; GD_GraphAnalysis *analysis=NULL; char *reply=NULL,*configuration_json=NULL,*presentation_json=NULL;
@@ -18,6 +19,7 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
 #define ACTION(projection_,action_) do { memset(&request,0,sizeof(request)); strcpy(request.command,"action"); snprintf(request.projection,sizeof(request.projection),"%s",projection_); snprintf(request.action,sizeof(request.action),"%s",action_); w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0}; viewer_dispatch(&viewer,&request,&w); } while (0)
     CHECK(project && !gd_explorer_error(project) && (project->available&(1u<<active)));
     CHECK(!run_layout_research || run_deep_checks);
+    {int similarity_checks=similarity_view_checks(a,fail_at,calls);CHECK(similarity_checks>0);checks+=similarity_checks;}
     panes=a.allocate(a.context,sizeof(*panes)*GD_EXPLORER_VIEWS);
     if (panes) memset(panes,0,sizeof(*panes)*GD_EXPLORER_VIEWS);
     before=a.allocate(a.context,sizeof(*panes)*GD_EXPLORER_VIEWS);

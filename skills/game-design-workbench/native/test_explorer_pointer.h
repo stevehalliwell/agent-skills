@@ -3,6 +3,7 @@
    Not human-pointer/platform acceptance. Invoke explicitly with --pointer-helpers. */
 #ifndef TEST_EXPLORER_POINTER_H
 #define TEST_EXPLORER_POINTER_H
+#include "gd_similarity_view.h"
 /* raylib 6 rcore AutomationEventType (not exposed by public SDK header).
    Assert resulting state before exercising handlers; unsupported SDK fails. */
 enum { POINTER_TEST_UP=5,POINTER_TEST_DOWN=6,POINTER_TEST_POSITION=7 };
@@ -113,6 +114,36 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
      bounds=unchanged;shown[0]=0;POINTER_CHECK(!gd_graph_content_bounds(before,&pose->layout,shown,24,&bounds) && !memcmp(&bounds,&unchanged,sizeof(bounds)));
      pose->layout.nodes[0].x=NAN;POINTER_CHECK(!gd_graph_content_bounds(before,&pose->layout,NULL,24,&bounds) && !memcmp(&bounds,&unchanged,sizeof(bounds)));
      POINTER_CHECK(before->workspace.bounds.left==-500 && before->workspace.bounds.right==500 && before->nodes[0].x==10 && *calls==allocations);
+    }
+    /* Actual retained map: ambiguous presses open chooser, never pick a hidden
+       last-painted row. Exercise ImGui popup lifecycle in owned hidden window. */
+    c.pane=&panes[GD_EXPLORER_MDA];c.display_layout=NULL;c.render_pose=NULL;
+    POINTER_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));c.pane->structure_state->pending.kind=GD_STRUCTURE_COUNT+1;
+    snprintf(c.pane->structure_state->pending.features,sizeof(c.pane->structure_state->pending.features),"retained-partners");
+    POINTER_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));
+    {GD_ExplorerStructureState *state=c.pane->structure_state;GD_Similarity *map=state->result->similarity->map;GD_SimilarityView *view=state->similarity_view;
+     POINTER_CHECK(view && map->available && map->complete_entries>1);
+     Camera2D ordinary=c.pane->camera;state->similarity_camera=(Camera2D){{400,300},{0,0},0,0.00001f};state->similarity_camera_ready=true;state->similarity_fit=false;
+     Camera2D camera=state->similarity_camera;int row=state->similarity_row,peer=state->similarity_peer,allocations=*calls;
+     uint64_t hash=viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map));
+     ImGuiIO *io=igGetIO_Nil();io->DisplaySize=(ImVec2_c){800,600};io->DeltaTime=1.0f/60.0f;io->BackendFlags|=ImGuiBackendFlags_RendererHasTextures;
+     pointer_test_frame();pointer_test_sample(400,300,1);BeginDrawing();igNewFrame();io->WantCaptureMouse=false;canvas_input(&c);
+     POINTER_CHECK(view->pick_open && view->pick_count==map->complete_entries && state->similarity_row==row && state->similarity_peer==peer);
+     gd_explorer_similarity_draw(&c);gd_explorer_similarity_popup(&c);POINTER_CHECK(igIsPopupOpen_Str("Similarity entries under pointer",0));igEndFrame();EndDrawing();
+     ImGuiIO_AddKeyEvent(io,ImGuiKey_Escape,true);pointer_test_frame();pointer_test_sample(400,300,0);igNewFrame();gd_explorer_similarity_popup(&c);
+     POINTER_CHECK(!view->pick_open && !igIsPopupOpen_Str("Similarity entries under pointer",0));igEndFrame();
+     ImGuiIO_AddKeyEvent(io,ImGuiKey_Escape,false);pointer_test_frame();pointer_test_sample(400,300,1);
+     PlayAutomationEvent((AutomationEvent){.type=2,.params={KEY_LEFT_SHIFT,0,0,0}});POINTER_CHECK(IsKeyDown(KEY_LEFT_SHIFT));
+     igNewFrame();io->WantCaptureMouse=false;canvas_input(&c);POINTER_CHECK(view->pick_open && view->pick_peer && state->similarity_peer==peer);
+     gd_explorer_similarity_popup(&c);igEndFrame();PlayAutomationEvent((AutomationEvent){.type=1,.params={KEY_LEFT_SHIFT,0,0,0}});pointer_test_frame();pointer_test_sample(400,300,0);
+     /* Owner tag mismatch closes before borrowed row lookup. */
+     igNewFrame();ImGuiStorage_SetVoidPtr(igGetStateStorage(),igGetID_Str("Similarity popup owner"),NULL);gd_explorer_similarity_popup(&c);
+     POINTER_CHECK(!view->pick_open && !igIsPopupOpen_Str("Similarity entries under pointer",0));igEndFrame();
+     /* Leaving canvas also closes popup without reusing old inspection. */
+     igNewFrame();ImGuiStorage_SetVoidPtr(igGetStateStorage(),igGetID_Str("Similarity popup owner"),state);view->pick_open=1;igOpenPopup_Str("Similarity entries under pointer",0);
+     state->similarity_canvas=false;gd_explorer_similarity_popup(&c);POINTER_CHECK(!igIsPopupOpen_Str("Similarity entries under pointer",0));igEndFrame();
+     POINTER_CHECK(!memcmp(&ordinary,&c.pane->camera,sizeof(ordinary)) && !memcmp(&camera,&state->similarity_camera,sizeof(camera)) && state->similarity_row==row && state->similarity_peer==peer);
+     POINTER_CHECK(hash==viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map)) && allocations==*calls);
     }
     result=0;
 cleanup:

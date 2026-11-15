@@ -56,6 +56,7 @@ typedef struct {
 typedef struct {
     GD_Allocator allocator; GD_ExplorerStructureForm pending,applied;
     GD_StructureResult *result,*picker_context; unsigned revision,picker_revision; int has_applied,page,picker_scope;
+    struct GD_SimilarityView *similarity_view; /* Owned presentation; lifetime matches retained state. */
     char start_tokens[GD_MAX_RULE_LINE+1],relation_tokens[GD_MAX_RULE_LINE+1],status_tokens[GD_MAX_RULE_LINE+1];
     char feature_tokens[GD_MAX_RULE_LINE+1],entry_tokens[GD_MAX_RULE_LINE+1],feature_ids[GD_SIMILARITY_FEATURES][128];
     const char *feature_names[GD_SIMILARITY_FEATURES],*entry_ids[GD_STRUCTURE_SELECTORS]; double feature_weights[GD_SIMILARITY_FEATURES];
@@ -247,6 +248,8 @@ int gd_explorer_similarity_compare(GD_ExplorerContext *context);
 void gd_explorer_similarity_controls(GD_ExplorerContext *context);
 void gd_explorer_similarity_input(GD_ExplorerContext *context);
 void gd_explorer_similarity_draw(GD_ExplorerContext *context);
+int gd_explorer_similarity_prepare_view(GD_ExplorerStructureState *state);
+void gd_explorer_similarity_popup(GD_ExplorerContext *context);
 
 void gd_explorer_rules_destroy(GD_ExplorerRuleState *state);
 int gd_explorer_rules_inputs(GD_ExplorerContext *context);

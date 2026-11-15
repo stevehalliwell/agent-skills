@@ -109,6 +109,8 @@ int gd_explorer_find_checks(GD_Allocator allocator,const GD_Collection *collecti
      snprintf(text,sizeof(text),"%.100s",find_label(&c,0));find_collect(&c,text,&matches);FIND_CHECK(matches.count && find_navigate(&c,panes,&matches,0));
      FIND_CHECK(c.pane->find_hold_node==hold && c.pane->find_hold_layout==held_layout);
      FIND_CHECK(!memcmp(&ordinary,&c.pane->camera,sizeof(ordinary)) && hash==viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map)));
+     {GD_SimilarityProjection *projection=c.pane->structure_state->result->similarity;const char *saved=projection->ids[0];
+      projection->ids[0]="local-case:find-exact-entry";find_collect(&c,projection->ids[0],&matches);int exact=matches.count==1 && matches.nodes[0]==0;projection->ids[0]=saved;FIND_CHECK(exact);}
      map->placed[0]=0;FIND_CHECK(!find_select(&c,panes,0));map->placed[0]=1;}
     FIND_CHECK(!project->draft || (!project->draft->modified_count && !project->draft->history_count));
     if(project->draft){GD_Model *skills=gd_explorer_model(project,GD_EXPLORER_SKILLS);int history,modified;

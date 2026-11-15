@@ -1199,6 +1199,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (!gd_explorer_similarity_active(&c)) { draw_matches(&c); if (overview_available(&c)) gd_graph_overview_draw_metric(c.analysis,&p->overview,c.viewport,p->view==GD_EXPLORER_MDA && p->mda.link>=0 ? -1:selected,!igGetIO_Nil()->WantCaptureMouse,overview_metric(p)); }
         DrawText(gd_explorer_similarity_active(&c) ? "Similarity: Click inspect | Shift-click compare | Wheel zoom | Right/middle pan | F fit | F5 refresh":grid_view(p) ? "Grid: Arrows select | PageUp/Down cases | Wheel zoom | Right/middle drag pan | F fit | F5 refresh":p->distance_focus_enabled ? "Distance focus: click inspects | Toggle focus to refocus | Off: restore pose | F: fit":"Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
         DrawText(gd_explorer_similarity_active(&c) ? "Selected typed-feature distance approximation only; missing entries remain unplaced. No importance or execution proof.":incidence(p->view) ? "Shown incidence only; not flow, causality or equivalence.":"Authored declarations only; not learning, causality or physical reachability.",20,height-18,13,muted);
+        gd_explorer_similarity_popup(&c);
         c.display_layout=NULL;p->focus_camera_override=false;
         rlImGuiEnd(); EndDrawing(); ++frame;
         if (screenshot && frame==frames && !gd_save_screenshot(screenshot)) { gd_error(diagnostic,"view.screenshot","Explorer screenshot export failed",screenshot,0); result=2; break; }

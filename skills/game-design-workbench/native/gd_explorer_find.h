@@ -2,12 +2,13 @@
 #ifndef GD_EXPLORER_FIND_H
 #define GD_EXPLORER_FIND_H
 #include <assert.h>
+#include "gd_similarity_view.h"
 enum { GD_FIND_PREVIEW=6 };
 enum { GD_FIND_NONE,GD_FIND_OPEN,GD_FIND_FIT };
 typedef struct GD_ExplorerFind {char text[GD_FIND_TEXT];bool open,focus;} GD_ExplorerFind;
 typedef struct {int nodes[GD_MAX_RECORDS],count,current;} GD_FindMatches;
 static const char *find_label(const GD_ExplorerContext *c,int node){
-    if(gd_explorer_similarity_active(c))return c->pane->structure_state->result->similarity->ids[node];
+    if(gd_explorer_similarity_active(c))return gd_similarity_view_name(c->pane->structure_state->result->similarity,node);
     return query_view(c->pane->view) ? gd_explorer_query_node_label(c,node):c->pane->layout->nodes[node].label;
 }
 static void find_collect(GD_ExplorerContext *c,const char *text,GD_FindMatches *matches){
@@ -15,7 +16,7 @@ static void find_collect(GD_ExplorerContext *c,const char *text,GD_FindMatches *
     matches->count=0;matches->current=-1;if(!*text || !viewer_canvas_current(c))return;find_pattern(&pattern,text);
     assert(total>=0 && total<=GD_MAX_RECORDS);
     for(i=0;i<total;++i){int record=viewer_canvas_record(c,i);const GD_Record *source=record>=0 && record<model->record_count ? &model->records[record]:NULL;
-        if(!find_contains(&pattern,find_label(c,i)) && !find_contains(&pattern,source ? source->display_name:NULL) && !find_contains(&pattern,source ? source->reference:NULL))continue;
+        if(!find_contains(&pattern,find_label(c,i)) && !find_contains(&pattern,source ? source->display_name:NULL) && !find_contains(&pattern,source ? source->reference:NULL) && !(gd_explorer_similarity_active(c) && find_contains(&pattern,c->pane->structure_state->result->similarity->ids[i])))continue;
         if(!viewer_canvas_visible(c,i))continue;
         if(i==selected)matches->current=matches->count;matches->nodes[matches->count++]=i;
     }
@@ -66,7 +67,7 @@ static void find_controls(GD_ExplorerContext *c,GD_ExplorerPane *panes,GD_Explor
         if(record>=0 && record<model->record_count)igTextDisabled("%s",model->records[record].reference);igPopID();}
     igPopTextWrapPos();
     if(matches.count>GD_FIND_PREVIEW)igText("First %d listed; Enter / Shift+Enter cycles all.",GD_FIND_PREVIEW);
-    if(!gd_explorer_similarity_active(c) && c->pane->distance_focus_enabled && c->pane->find_hold_node>=0)igTextWrapped("Find does not retarget layout focus. Click canvas to resume selection follow.");
+    if(!gd_explorer_similarity_active(c) && c->pane->distance_focus_enabled && c->pane->find_hold_node>=0)igTextWrapped("Find does not retarget layout focus. Toggle focus off/on to refocus; canvas clicks inspect without refocus.");
     igEndDisabled();igSeparator();igPopID();
 }
 #endif

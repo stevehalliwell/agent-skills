@@ -50,13 +50,39 @@ Reviewed source/return transition accepted: user confirms changing between views
 
 ## Readability follow-up
 
-Status: needs-refinement. User explicitly requests recording that current similarity view needs work because it cannot be read. Navigation acceptance stays separate.
+Status: agreed readability slice implemented; focused checks pass. Human readability review pending. User approved counted overlap markers and a named chooser with fixed map points. Navigation acceptance stays separate.
 
 - Read-only native result:44 records at12 distinct coordinates. Enemy contact shares position with4 other records; Death and retry shares with11 others. Overlapping records need clear reveal/selection.
 - Above32 entries, renderer labels only selected/peer row numbers. Record names are not legible/discoverable enough.
 - Explain chosen measurements and weights with explicit legend. Current retained-neighbour-count/record-type demo does not explain gameplay meaning.
 - Explain that axes have no independent meaning; proximity is approximate similarity on chosen features, not execution order, causal influence or importance. Identical feature values can hide distinct records at same point.
-- Captured directions: record names, measurement legend and overlap reveal/selection. Exact design and acceptance TBD. No readability redesign authorized or implemented.
+- Agreed result: plotted entries are discoverable by name without moving native coordinates. Coincident plotted points show entry counts; ambiguous pointer hits open a named chooser. Click inspects; Shift-click chooses comparison peer. Cancel changes nothing.
+- Preserve exact typed entry IDs even when labels, source definitions or coordinates match. Chooser uses retained row order and shared 64-row paging across at most 4096 entries. Unplaced entries remain in existing named list; no fabricated point or inferred feature equality.
+- Show names instead of internal row numbers. Always show selected/peer names; show other names where space permits and reveal crowded names on hover. Keep blue/gold cues independent when entries share position.
+- Draw compact legend from applied feature names/weights, not pending edits. Explain approximate 2D fit, axes without independent meaning, and no execution/causality/importance claim. Keep full native measurements and pair decomposition available in inspector.
+- Presentation cache belongs to retained structure-state owner and uses its allocator. Group coincident plotted points once per retained map; no quadratic per-frame grouping or per-click application allocation. ImGui owns popup resources. Candidate scan stays bounded by 4096. Failed preparation retains last-good result; popup closes on owner/canvas change.
+- Preserve cameras, pending/applied inputs, results, drafts/history and source/return navigation. Inspection/chooser never Run or reframe. No solver, feature-extraction, distance, fit, native-result paging or authored-source changes.
+- Acceptance: every overlap member selectable by exact identity, including pages beyond64; Shift selects peer; cancellation/unplaced/owner replacement safe; names/legend visible; map bytes, cameras and independent state unchanged by inspection. Test bounded helpers and retained-map integration on both examples. Rendered readability acceptance remains separate.
+
+### Readability checks
+
+- Warning-free CJIT graph and explorer-adapter builds. Focused Node suite: 20 passed, 3 expected skips (deep/research opt-ins and unprovided transport fixture). Both example source hashes unchanged. No alternate-compiler/full-matrix run.
+- CPU checks cover duplicate names with distinct typed IDs, exact typed-ID Find fallback, 65 coincident entries across 64-row page boundary, 4096-entry capacity, unplaced/empty maps, 16-pixel hit boundary, zoom, invalid coordinates and presentation-allocation failure. Inspection/peer selection preserves camera; helper scans preserve native map bytes and perform no application allocations.
+- Opt-in hidden-window checks use real shared canvas dispatcher and actual retained maps on both examples. Ambiguous press does not pick last-painted row; chooser captures Shift-peer intent. Exercise named rendering, Escape with keyboard navigation disabled, stale-owner tag and canvas-exit closure. Verify retained map bytes, both cameras and selection unchanged on cancellation, with no per-click application allocation.
+- Initial/explicit Fit reserves legend/footer space. Ordinary source camera, native coordinates and feature/distance production unchanged. Find shows names while retaining exact typed-ID matching. Corrected obsolete Find hint that claimed canvas clicks refocus layout.
+- CPU/owned-window checks do not establish human readability, every-view usability, restart or final platform acceptance. Authorized live review prepared below. User authorized local checkpoint; no push.
+
+### Readability live review
+
+- User authorized separate Mario viewer and explicit similarity setup/Run confined to new session. PID27464; session `27464-c9bc3ac9993fb8ec`; executable `native/build/similarity-readability-view/gd-view.exe`.
+- Discovered feature catalogue through explicit `similarity-features` Run. Staged discovered `retained-partners` and `source-loaded-role`, then explicitly Ran `similarity-map`. Current canvas has 44 retained entries. Selected exact discovered `mechanics/enemy-contact` and comparison peer `mechanics/death-and-retry` through guarded presentation controls; no implicit camera action.
+- Readiness snapshot: MDA active, similarity row 8/peer 6; modified-records 0, Undo 0, Redo 0, no pending rank edit. No source writes or other-pane analytical Run. Setup is not human readability acceptance; review pending.
+- Artifacts: `native/build/similarity-readability-view/` executable/logs; focused diagnostics in `native/build/similarity-readability-work/`.
+- User reported different first-hover panel size, stable afterward. Stable screenshot captured without pointer/focus changes: `native/build/manual-review-captures/review-27464-562547a866744d69b532996b3d7cde23.png`. Added reusable guarded-size live-window capture script `scripts/capture-native-review-window.ps1`; requires authorized visible window, captures only its current screen rectangle.
+- Reproduced pooled ImGui tooltip's stale size through actual similarity tooltip body; regression fails before fix. Measure current wrapped text before Begin; set content/window size and viewport limits before tooltip placement. Preserve full IDs, names, weights and units; units use separate line rather than bounded concatenation. Verify first/stable geometry for legend-to-entries, reverse transition and shorter entry content, using public ImGui queries only.
+- Tooltip fix: warning-free CJIT graph/adapter builds in `native/build/similarity-tooltip-{view,work}/`; focused Node 20 passed/3 expected skips. Both-example hashes and hidden-window pointer checks pass. First-hover fix accepted below; overall counted-marker/chooser readability still pending. Fresh old-session snapshot had no drafts/history/pending rank work.
+- User authorized restart. Fresh inspection then timed out; guard threw before any close request. OS process check and viewer list confirmed old viewer already absent. No close/kill executed. Launched fixed build as PID4516, session `4516-09d49ac0974d99cb`. Re-discovered exact controls/features/identities; explicitly Ran catalogue and map. Same row8/peer6 and identical camera x39.7134018/y7.42452431/zoom2.18515897 restored. Ready snapshot still has modified-records 0, Undo 0, Redo 0, no pending rank edit.
+- User explicitly accepted first-hover tooltip sizing as stable in fixed live build. This accepts tooltip fix only; it does not establish whole chooser/readability flow or every-view/platform acceptance.
 
 ## Comments
 

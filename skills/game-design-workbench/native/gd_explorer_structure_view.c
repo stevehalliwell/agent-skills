@@ -15,6 +15,7 @@ int gd_explorer_structure_pending(const GD_ExplorerPane *pane) {
 }
 void gd_explorer_structure_destroy(GD_ExplorerStructureState *state) {
     if (!state) return;
+    if(state->similarity_view)state->allocator.release(state->allocator.context,state->similarity_view);
     gd_structure_result_destroy(state->result); gd_structure_result_destroy(state->picker_context); state->allocator.release(state->allocator.context,state);
 }
 static GD_ExplorerStructureState *empty_state(GD_Allocator allocator) {
@@ -72,6 +73,7 @@ static GD_ExplorerStructureState *build_state(const GD_ExplorerProject *project,
             if (state->result->similarity->nodes[i]==state->result->similarity_second_node) state->similarity_peer=i;
         }
     }
+    if(!gd_explorer_similarity_prepare_view(state)){snprintf(message,size,"Cannot prepare bounded similarity presentation; last result retained");gd_explorer_structure_destroy(state);return NULL;}
     state->has_applied=1; state->revision=project->revision; state->similarity_canvas=form->kind==GD_STRUCTURE_COUNT+1; state->similarity_fit=true; return state;
 }
 int gd_explorer_structure_prepare(GD_ExplorerContext *context) {
