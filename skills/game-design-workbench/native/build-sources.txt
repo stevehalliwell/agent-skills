@@ -33,6 +33,7 @@ core gd_effect_graph.c
 core gd_effect_query.c
 core gd_query.c
 core gd_named_query.c
+core gd_decisions.c
 core gd_query_output.c
 core gd_query_scene.c
 core gd_actor_query.c

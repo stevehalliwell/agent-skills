@@ -38,6 +38,17 @@ Safer terrain allows exploration without local enemies or lethal gaps, not unlim
 
 Intent check: should time pressure make reward gathering a meaningful choice, or should this room mainly support safer exploration? Desired balance and experienced tension remain unverified; do not silently change clock rules to resolve question.
 
+```decision-assessment
+id: reward-time
+task: Choose optional coin gathering or earlier departure.
+context: Safer room shares active course clock; whether time cost matters to player is unverified.
+evidence_status: prediction
+rule_cases: []
+demands:
+  - kind: trade-off
+    intent: undecided
+```
+
 ## Route
 
 Reach exit connector to bonus-return. Coin collection is optional; no exact token count or hidden completion condition.

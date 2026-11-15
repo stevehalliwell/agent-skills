@@ -40,3 +40,15 @@ Contextual assessment uses [shared vocabulary](../../../../references/decision-s
 Finding a feasible solution is not automatically optimization. Minimizing pushes/time needs an explicit goal; counting pushes becomes calculation only when comparison requires work. No deliberation deadline, reaction window or controller-specific dexterity demand is established. Energy constrains successful actions, not thinking duration.
 
 Intent check: should this room test planning and prediction rather than reaction or controller dexterity? Concept favors thoughtful commitment over fast execution; layout, inputs and assistance must establish that fit. Introducing and requiring coordination in same room remains a support question, not a silent learning-role change.
+
+```decision-assessment
+id: crate-switch-plan
+task: Position crate on switch to open exit within finite push energy.
+context: Intended conceptual puzzle; no physical layout, certified solution or deliberation deadline supplied.
+evidence_status: prediction
+rule_cases:
+  - "mechanics/crate-pushing#successful-push"
+demands:
+  - kind: planning
+    intent: undecided
+```

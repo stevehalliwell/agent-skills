@@ -1,6 +1,6 @@
 # Decision structure — example review and proposed additions
 
-Status: P1–P4 confirmed. Six-record prose pilot applied: M2, M6, M10, M15, M18 and C4. Remaining example proposals pending. Rules, learning-role metadata, templates, schemas and query behavior unchanged.
+Status: P1–P4 confirmed. Six-record prose pilot applied: M2, M6, M10, M15, M18 and C4. Remaining example proposals pending. Rules, learning-role metadata and schema fields unchanged. Approved six records now contain contextual YAML assessments; CLI-only demand/intent query implemented. Viewer integration unavailable.
 
 ## Scope and review method
 
@@ -428,7 +428,7 @@ These are absences of sufficient evidence in reviewed situations, not claims tha
 5. Only then choose optional fields needed for specific queries. Separate game judgment, decision demands, timing and evidence status rather than introduce one exclusive `decision_kind` label.
 6. Consider graph annotations/filters only after stored meaning and a concrete question are agreed. Declared relationship graphs cannot currently display or derive this full contextual assessment.
 
-Current disposition: P1–P4 confirmed, including reaction/dexterity distinctions and design-intent review. M2, M6, M10, M15, M18 and C4 applied as contextual prose. Other M/C/D/E proposals remain pending. No schema, automatic inference, aggregate quality score, experiment execution or code change approved by this document.
+Current disposition: P1–P4 confirmed, including reaction/dexterity distinctions and design-intent review. M2, M6, M10, M15, M18 and C4 applied as contextual prose and structured body assessments. Other M/C/D/E proposals remain pending. User subsequently chose contextual YAML storage and CLI-first query delivery. No automatic inference, aggregate quality score, experiment execution or viewer integration adopted.
 
 ### Pilot checks and frontmatter conversion
 
@@ -454,7 +454,7 @@ node scripts/convert-workbench-frontmatter.mjs --apply --json
 node --test skills/game-design-workbench/test/frontmatter-migration.test.mjs
 ```
 
-Current plan reports 0 remaining conversions. No experiments, viewer refreshes, compiler builds or commits performed.
+Current conversion plan reports 0 remaining conversions. Conversion did not run experiments, refresh viewers or build compilers. Vocabulary/pilot/YAML-authoring checkpoint committed as `68b21bb`; later query work described below remains a separate slice.
 
 ### Query direction — not implemented
 
@@ -464,4 +464,96 @@ Queries should support both description and design review:
 - What source supports assessment, and is it authored intent, prediction, model result or observation?
 - Would an input/timing alternative remove unwanted demand while preserving wanted choice?
 
-Any structured representation must keep current and intended demand separate, preserve unknowns and bind each assessment to its own situation. One Challenge can contain multiple situations; combining unrelated tags must not manufacture a matching context. No frontmatter keys, enums, IPC fields, query selectors or new collection selected yet. Plain prose/text search is not an exact typed classification query.
+Any structured representation must keep current and intended demand separate, preserve unknowns and bind each assessment to its own situation. One Challenge can contain multiple situations; combining unrelated tags must not manufacture a matching context. No new frontmatter fields, IPC fields or collection. First body contract and CLI selectors adopted below; remaining dimensions are prose. Plain prose/text search is not an exact typed classification query.
+
+### Q1. Contextual assessment storage — confirmed
+
+First question: **which situations demand a selected kind of performance, and is that demand wanted, unwanted or undecided?** Example: find dexterity tests with undecided intent, then ask designer whether that demand should remain.
+
+Before this slice, native queries returned declared rule, actor/effect, structural, similarity, skill and Resource facts but did not parse decision assessments. New query below reads explicit stored blocks; neither path classifies prose.
+
+**Confirmed storage:** one fenced YAML `decision-assessment` block per situation inside existing Challenge body. Keep narrative explanation alongside it. Frontmatter remains flat block YAML; no new collection or nested frontmatter. Stable assessment ID is local to exact Challenge identity. Multiple situations retain separate context, demands and intent.
+
+Reviewed shape for first-Walker context, now adopted in expanded wording in its source record:
+
+```yaml
+id: walker-survival-small
+task: Get past Walker alive.
+context: Small, unprotected Hero; harmful side contact is lethal.
+evidence_status: authored-assessment
+rule_cases:
+  - "interactions/touch-walker-small#lethal-side"
+demands:
+  - kind: knowledge
+    intent: undecided
+  - kind: execution
+    intent: undecided
+```
+
+Confirmed first-slice rules:
+- `demands` entries bind one performance kind to its own `intent`: wanted, unwanted or undecided. Missing/unreviewed intent remains undecided, not unwanted. Absence of a demand is not proof it is absent from gameplay.
+- Filter demand and intent on same entry within same assessment. Never combine knowledge intent from one situation with dexterity demand from another.
+- Return exact Challenge/assessment identity, context, evidence status and rule/source references. State these are authored assessments, not observed difficulty or inferred player knowledge.
+- No automatic prose classification, timing cutoff, score, mechanic change or experiment execution. No automatic Run or new graph implied.
+- Existing pilot has no established dexterity classification. A dexterity filter must not invent a match; regression fixtures can supply explicit illustrative assessments without rewriting authored examples.
+- Intended-but-not-present demands, remaining vocabulary dimensions and numeric timing queries are later contract work, not silently represented by this first filter.
+
+User selected contextual YAML blocks. Prose-only storage was not selected for typed queries; flat per-Challenge tag unions cannot preserve required situation-level binding. Structured blocks now added only to six approved pilot records; all intent entries remain undecided. Reader/query contract follows below.
+
+### Q2. First native query slice — implemented CLI
+
+Question name: `decision-assessments`, projection `challenges`. Read explicit assessment blocks only; do not infer classifications from prose, button counts, timers or linked rule bodies.
+
+CLI, available in fresh CJIT build:
+
+```sh
+gd query --question decision-assessments --projection challenges \
+  --challenges challenges=PATH/TO/challenges \
+  --demand dexterity --intent undecided --json
+```
+
+Inputs and matching:
+- Require explicit Challenge collection binding. Preserve exact alias, record identity and local assessment ID; do not rely on row order.
+- Optional `--demand` selects one exact authored demand label. Labels describe assessed demands, not a universal exclusive taxonomy; no synonym inference.
+- Optional `--intent` selects wanted, unwanted or undecided. Omitted intent on a demand means undecided. Unknown is not false or unwanted.
+- Both filters apply to same demand entry in same assessment. With no demand selector, intent can match any demand entry. With no selectors, return all authored assessments, including ones with no classified demands.
+- Return each matching assessment once, with matching demand entries identified. Counts refer to assessments and demand entries, not executions, frequency or player failures.
+
+Result retains Challenge reference/ID, local assessment ID, task, context, declared evidence status, authored rule references, full demand/intent entries, matching entries and source location. References are supporting declarations, not proof that linked case executes or applies. Evidence status is an authored claim, not independently verified by query.
+
+Empty result is successful and means no retained explicit assessment matches. It does not establish absence of a gameplay demand. Unsupported/malformed blocks, duplicate local IDs, duplicate/conflicting demand entries, invalid intent or exhausted source limits must be disclosed rather than silently skipped or coerced. Reader bounds and atomic failure behavior are fixed below. Viewer integration remains excluded; no last-good GUI result is replaced.
+
+Acceptance examples:
+- Knowledge wanted in one situation plus dexterity undecided in another must not match dexterity wanted.
+- An explicit dexterity/undecided entry matches and returns its exact situation/context.
+- Missing intent remains undecided; knowledge failure and input-performance failure are not inferred from outcome.
+- Prose-only records produce no typed assessment rows. Six pilot blocks adopted; no synthetic dexterity/reaction matches added to game examples.
+- Existing rules, other queries, routes, learning roles, drafts, selections and analytical inputs remain unchanged.
+
+**Confirmed scope:** CLI first. Viewer controls/results, new graphs and automatic analytical Run are excluded.
+
+Implementation contract: named `decision-assessments` query on `challenges`; single exact `--demand` and/or `--intent` filters; `--fields summary,assessments` prunes data only, retaining parameters, coverage and errors. Demand labels are bounded open technical names, not a closed universal taxonomy. Intent values are wanted, unwanted and undecided; missing intent defaults to undecided. Context/evidence may be unknown; rule references remain authored strings, not applicability checks. Parser rejects unknown keys, duplicate IDs/kinds/fields, aliases, anchors, explicit YAML tags, malformed types and unsupported documents.
+
+Fixed bounds: 4,096 total assessments, 16 per Challenge, 16 demand entries and 16 rule references per assessment, 32,768 aggregate demand entries/references each, 64 KiB per YAML block, 2,048 YAML events per block, nesting depth8, 4 MiB retained assessment text. Technical names at most128 bytes; other scalar text at most4,095 bytes. Reuse source-loader bounds. All result storage stays heap-owned; result borrows immutable model identities. Parse/load/allocation/limit failure returns nonzero with explicit diagnostics and no success-shaped rows; no clipped findings presented as a complete empty result. Repeated CLI selectors fail rather than replace earlier values. Existing query families reject these new selectors.
+
+Adopt structured blocks only in six approved pilot records; retain prose and unknown intent rather than fabricate answers. Verification uses explicit synthetic dexterity/wanted/unwanted fixtures, cross-situation counterexamples, parser/limit failures, source-byte invariance and unchanged existing native facts. Dedicated Challenge-only source loader shares existing scan/identity/remap path without loosening legacy `gd_load` role combinations. No experiment or viewer mutation authorized.
+
+### Q3. Query verification
+
+Delivered [source/output contract](skills/game-design-workbench/native/decisions.md), bounded native reader and [CLI regression fixtures](skills/game-design-workbench/test/native-decisions.test.mjs). Fresh executable: `skills/game-design-workbench/native/build/decision-assessments-work/gd.exe`. Query slice committed as separate checkpoint; vocabulary/YAML checkpoint is `68b21bb`.
+
+Observed inventory:
+- Crate: 4 source Challenges, 1 assessment, 1 demand entry.
+- Mario: 19 source Challenges, 5 assessments, 7 demand entries.
+- All intent entries undecided. Knowledge + undecided matches first-Walker/final-gap contexts. No authored dexterity/reaction entries; filters return no rows without implying no such gameplay demand.
+- Two example summary queries: 29.4 ms combined in one local run. Not a platform/performance guarantee.
+
+Checks:
+- Warning-free focused CJIT CLI/core builds. Native core148/148.
+- Native decision/actor query tests14/14 with explicit `GD_DEEP_CHECKS=1`, including exact aggregate limits and text exhaustion. Default path skips those two capacity probes.
+- Combined authoring/migration/native default run:24 passed,6 skipped. Skips:4 externally configured integration tests and2 opt-in capacity probes. Direct native Attendant validation performed separately below.
+- Strict Attendant: Crate67 records, Mario225; zero diagnostics/corrections. Six pilot frontmatter blocks unchanged from checkpoint; prior prose preserved, only assessment blocks added.
+- Ten before/after native controls/matrix/rules/scaffolding/MDA comparisons unchanged across both examples, excluding source-line provenance. Legacy structural Challenge-only source rejection remains intact.
+- Skill frontmatter, new source/query links, shared reference/model/review links and diff checks pass. Broader README audit reports three pre-existing stale `controls.md` heading anchors; new query link is valid. Unrelated anchor repair deferred.
+
+No experiment run, viewer launch/mutation, alternate compiler, full platform matrix or visual acceptance. No new frontmatter field, collection, automatic classification or quality score.

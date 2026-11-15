@@ -1,6 +1,7 @@
 #include "gd_query.h"
 #include "gd_structure_cli.h"
 #include "gd_named_query.h"
+#include "gd_decisions.h"
 #include <math.h>
 #include <string.h>
 
@@ -172,7 +173,7 @@ static void contributor(FILE *out, const GD_Query *query, int row) {
 int gd_write_query_catalogue(FILE *out, int json) {
     int i;
     static const char *const parameters[]={"--object, --case, --participant, --axis, --status", "--case and --axis required; --participant (default authored A), --object, --value (repeatable), --assume, --context, --context-not, --status", "--to opaque result ID OR --axis/--value/--effect; --object, --case (root placement), --status", "--axis required; --object, --case, --participant (requires --case), --value (repeatable; required for numeric axis), --status"};
-    if (!json) { for (i=0;i<GD_QUERY_COUNT;++i) fprintf(out,"%s [%s]: %s\n",gd_query_name((GD_QueryKind)i),gd_query_projection((GD_QueryKind)i),parameters[i]); return gd_write_named_catalogue(out,0,0) && gd_write_structure_catalogue(out,0,0); }
+    if (!json) { for (i=0;i<GD_QUERY_COUNT;++i) fprintf(out,"%s [%s]: %s\n",gd_query_name((GD_QueryKind)i),gd_query_projection((GD_QueryKind)i),parameters[i]); return gd_write_named_catalogue(out,0,0) && gd_write_structure_catalogue(out,0,0) && gd_write_decision_catalogue(out,0,0); }
     fputs("{\"schema_version\":1,\"ok\":true,\"data\":{\"questions\":[",out);
     for (i=0;i<GD_QUERY_COUNT;++i) {
         if (i) fputc(',',out); fputs("{\"name\":",out); gd_json_string(out,gd_query_name((GD_QueryKind)i)); member(out,"projection",gd_query_projection((GD_QueryKind)i)); member(out,"parameters",parameters[i]);
@@ -195,6 +196,7 @@ int gd_write_query_catalogue(FILE *out, int json) {
     }
     gd_write_named_catalogue(out,1,GD_QUERY_COUNT);
     gd_write_structure_catalogue(out,1,GD_QUERY_COUNT+GD_NAMED_COUNT);
+    gd_write_decision_catalogue(out,1,1);
     fputs("]},\"coverage\":{\"scope\":\"implemented_builtin_catalogue_only\",\"complete\":true,\"source_data_loaded\":false},\"errors\":[],\"breadcrumbs\":[\"gd query --question NAME --projection NAME with explicit collection bindings; query --list advertises only implemented operations\"]}\n",out); return !ferror(out);
 }
 static int write_query(FILE *out, const GD_Model *model, const GD_Query *query, int json, const char *fields,int compare) {

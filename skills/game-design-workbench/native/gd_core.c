@@ -748,7 +748,7 @@ int gd_sources_changed(GD_Model *model) {
     uint64_t digest;
     return !scan(model, 1, &digest) || digest != model->source_digest;
 }
-int gd_load(GD_Model *model, const GD_Collection *collections, int count) {
+static int load_model(GD_Model *model, const GD_Collection *collections, int count, int challenge_only) {
     int i, j, roles = 0, remap[GD_MAX_RECORDS];
     if (count < 1 || count > GD_MAX_COLLECTIONS) { gd_error(model, "input.collections", "Supply explicit domain roles and at most 16 collections", NULL, 0); return 0; }
     model->collection_count = count;
@@ -767,7 +767,10 @@ int gd_load(GD_Model *model, const GD_Collection *collections, int count) {
         if (!technical_name(collections[i].alias)) gd_error(model, "input.alias", "Collection alias must be an ASCII technical name", collections[i].directory, 0);
         for (j = 0; j < i; ++j) if (!strcmp(collections[i].alias, collections[j].alias)) gd_error(model, "input.alias", "Collection aliases must be unique", collections[i].directory, 0);
     }
-    if (model->rule_mode) {
+    if (challenge_only) {
+        if (count != 1 || roles != (1 << GD_CHALLENGE))
+            gd_error(model,"input.collections","Challenge assessments require exactly one Challenge collection",NULL,0);
+    } else if (model->rule_mode) {
         int permitted = (1 << GD_NOUN) | (1 << GD_VERB) | (1 << GD_CONTROL) | (1 << GD_AXIS) | (1 << GD_RESOURCE);
         if (roles & ~permitted)
             gd_error(model,"input.collections","Rules require rule sources, optional axes/nouns/verbs/control-vars and related collections",NULL,0);
@@ -792,4 +795,10 @@ int gd_load(GD_Model *model, const GD_Collection *collections, int count) {
     else if (!model->rule_mode && !model->mda_mode && !model->control_mode) { build_matrix(model); build_components(model); }
     if (!model->error_count && gd_sources_changed(model)) gd_error(model, "input.changed", "Source changed while loading; retry explicitly", NULL, 0);
     return model->error_count == 0 && model->errors_omitted == 0;
+}
+int gd_load(GD_Model *model, const GD_Collection *collections, int count) {
+    return load_model(model,collections,count,0);
+}
+int gd_load_challenges(GD_Model *model, const GD_Collection *collections, int count) {
+    return load_model(model,collections,count,1);
 }

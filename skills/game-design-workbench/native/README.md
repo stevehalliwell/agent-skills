@@ -347,6 +347,10 @@ $inputs = @('--skill-atoms', "skill-atoms=$game/skill-atoms",
 
 [Built-in queries](#built-in-actoreffect-queries) expose selectors and source/status scope. Integrated panes add typed root/value remapping, drawing and ghosts. Variant contexts never inflate `gd_effect_incoming` declaration counts.
 
+## Authored decision assessments — CLI only
+
+`gd query --question decision-assessments --projection challenges --challenges ALIAS=FOLDER` reads explicit per-situation YAML blocks inside Challenges. Optional exact `--demand` and `--intent wanted|unwanted|undecided` filter the same demand entry, never unrelated situations. Return task/context, declared evidence, source references and explicit unknown intent; no inferred player knowledge, difficulty or quality. `--fields summary,assessments` selects data only. No viewer/IPC controls or automatic Run. [Source format, bounds, output and checks](decisions.md).
+
 ## Delegated rule, knowledge and Resource questions
 
 Five named delegates reuse existing native algorithms/report writers: `conditional-outcomes`, `conditional-consistency`, `skill-unlocks`, `resource-declarations`, `resource-routes`. Rules use projection `rules`, explicit knowledge uses `skills`, Resource delegates use `resources`. JSON nests unchanged native report; text calls native text writer. Source bindings, distinct status policies, typed facts, limits and ownership remain explicit.

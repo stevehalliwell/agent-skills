@@ -8,6 +8,7 @@
 #include "gd_structure_cli.h"
 #include "gd_similarity_projection.h"
 #include "gd_named_query.h"
+#include "gd_decisions.h"
 #include "gd_skill_unlocks.h"
 #include "gd_explorer.h"
 #include "gd_matrix_grid.h"
@@ -34,7 +35,9 @@ static void help(void) {
          "       gd view matrix|skill-atoms|mda|resources|explorer [options]\n"
          "       gd query --list | --question NAME --projection NAME [options]\n"
          "       gd viewer list|inspect|nodes|hint|navigate|actions|action|refresh|controls|configure [options] (viewer --help)\n\n"
-         "Built-in actor/effect, structural and similarity queries: query --list for supported pairs/parameters. No DSL.\n"
+         "Built-in decision, actor/effect, structural and similarity queries: query --list for supported pairs/parameters. No DSL.\n"
+         "  --demand KIND        decision-assessments: exact authored performance label\n"
+         "  --intent STATE       decision-assessments: wanted, unwanted or undecided; CLI only\n"
          "  --feature ID[=WEIGHT]  similarity-map: repeat advertised features; similarity-features discovers IDs\n"
          "  --entry ID            similarity-map: repeat up to 64 exact native IDs; default all shown\n"
          "  --object ALIAS/NOUN    Exact declared noun type; not a global runtime actor\n"
@@ -202,6 +205,7 @@ static int application(int argc, char **argv) {
     GD_StructureResult *actor_structure=NULL; GD_ExplorerProject actor_project={0};
     structural.work_limit=GD_GRAPH_ANALYSIS_WORK;
     const char *question=NULL,*projection=NULL,*object_name=NULL,*axis_name=NULL;
+    const char *decision_demand=NULL,*decision_intent=NULL;
     const char *error_code="cli.arguments"; int query_list=0;
     query_request.case_index=query_request.noun=query_request.axis=query_request.effect_kind=-1;
     query_request.work_limit=GD_EFFECT_WORK;
@@ -299,6 +303,10 @@ static int application(int argc, char **argv) {
         } else if (command==15 && (!strcmp(argv[i],"--question") || !strcmp(argv[i],"--projection") || !strcmp(argv[i],"--object") || !strcmp(argv[i],"--axis") || !strcmp(argv[i],"--participant"))) {
             const char **destination=!strcmp(argv[i],"--question") ? &question:!strcmp(argv[i],"--projection") ? &projection:!strcmp(argv[i],"--object") ? &object_name:!strcmp(argv[i],"--axis") ? &axis_name:&query_request.participant;
             if (++i==argc || *destination || !*argv[i] || strlen(argv[i])>386) { error="Query selector needs one nonempty value of at most 386 bytes"; break; }
+            *destination=argv[i];
+        } else if (command==15 && (!strcmp(argv[i],"--demand") || !strcmp(argv[i],"--intent"))) {
+            const char **destination=!strcmp(argv[i],"--demand") ? &decision_demand:&decision_intent;
+            if (++i==argc || *destination || !*argv[i] || !strncmp(argv[i],"--",2) || strlen(argv[i])>128) { error="Decision selector requires one nonempty value of at most 128 bytes"; break; }
             *destination=argv[i];
         } else if (command==15 && !strcmp(argv[i],"--feature")) {
             int feature=similarity.feature_count; structural_only=1;
@@ -458,6 +466,14 @@ static int application(int argc, char **argv) {
             if (++i == argc) { error = "--screenshot requires a PNG path"; break; }
             screenshot = argv[i];
         } else error = "Unknown option; see --help";
+    }
+    if ((decision_demand || decision_intent) && (command!=15 || query_list || !question || strcmp(question,"decision-assessments")) && !error)
+        error="--demand and --intent apply only to decision-assessments";
+    if (command==15 && !query_list && question && !strcmp(question,"decision-assessments")) {
+        if (!error && (structural_only || query_work_supplied || object_name || axis_name || query_request.participant || query_request.target_id || query_request.value_count || query_request.effect_kind>=0 || analyze || case_name || assumption_count || context_assumption_count || control_filter.status_count || control_filter.include_count || control_filter.exclude_count || known_count || from || resource_accepted || frames || screenshot || output_path || layout_supplied || direction_supplied || other_pairs || import_option || as_supplied || override_count || explorer_mode_supplied))
+            error="decision-assessments accepts only --challenges, --projection, --demand, --intent and output format/fields";
+        for (i=0;i<count;++i) collections[i].role=source_roles[i];
+        return gd_decisions_cli(allocator,collections,count,projection,decision_demand,decision_intent,json,fields,error);
     }
     if (command==15 && resource_accepted && gd_named_kind(question)!=GD_NAMED_RESOURCE_ROUTES && !error) error="--accepted-only requires named resource-routes";
     if (command==15 && !query_list && gd_named_kind(question)>=0) {

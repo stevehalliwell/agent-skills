@@ -1,6 +1,6 @@
 # Decision structure — working vocabulary
 
-Status: working vocabulary. User confirmed shared contextual representation and test/quiz distinction, and added reaction/dexterity tests. Remaining terms/examples stay under review. Not a universal taxonomy, schema, classifier or quality score.
+Status: working vocabulary. User confirmed shared contextual representation and test/quiz distinction, and added reaction/dexterity tests. Remaining terms/examples stay under review. Not a universal taxonomy, automatic classifier or quality score. Optional [authored assessment body/query contract](../native/decisions.md) implements contextual demand/intent filtering, not every dimension below.
 
 - [Purpose](#purpose)
 - [Context required](#context-required)
@@ -246,9 +246,9 @@ Status: predicted decision structure, not observed behavior
 
 ## Existing data-layer candidates
 
-Agreed direction: use existing data owners for contextual descriptions and consider optional structured classifications after definitions/examples are settled. No new collection or machine-readable field has been adopted.
+Agreed direction: existing owners retain contextual descriptions; repeatable Challenge body assessments provide first structured demand/intent query. No new collection or frontmatter classification fields adopted. Remaining definitions/examples still need review.
 
-Current source model has no dedicated decision collection or decision-classification field.
+Source model has no dedicated decision collection or frontmatter classification fields. Optional [decision-assessment body blocks](../native/decisions.md) retain repeatable situations in Challenges; native CLI filters explicit demand/intent entries. Six approved pilot records use this contract. Other dimensions below remain prose unless explicitly structured later.
 
 - Shared vocabulary/reference owns definitions. Existing glossary can point to canonical definitions; do not copy independent definitions into every record.
 - Challenges own concrete goals/context and can identify a decision or test opportunity. Existing `introduces`, `practises`, `requires` and `tests_mastery` links support intended learning/assessment relationships; they do not encode complete response criteria or prove a player passed/failed.
@@ -256,7 +256,7 @@ Current source model has no dedicated decision collection or decision-classifica
 - Dynamics own intended/predicted/observed behavior with explicit epistemic status. Contextual claims about how players deliberate may fit here.
 - Experiments own hypotheses, method, observations and interpretation used to test classification or quality claims.
 
-Choose exact owner and optional machine-readable fields only after vocabulary and classification purpose are agreed. Do not add collections, migrate examples or implement automatic classification from this draft.
+Keep confirmed assessment blocks in existing Challenge owners. Review remaining vocabulary and any further machine-readable dimensions before extending contract. This reference does not authorize new collections, additional example migrations or automatic classification.
 
 ## Review outcome needed
 
@@ -271,7 +271,7 @@ Choose exact owner and optional machine-readable fields only after vocabulary an
 - Which remaining terms need different boundaries or additional examples?
 - How should optional timing context be expressed without fabricating player capability or a universal deliberation threshold?
 - Which task/response criteria, reaction windows and device-dependent input demands need structured representation?
-- Which optional structured fields and queries best serve confirmed uses: reviewing existing decision opportunities and questioning whether proposed demands fit design intent? Six-record prose pilot precedes schema/query design.
+- Which optional structured fields and queries best serve confirmed uses: reviewing existing decision opportunities and questioning whether proposed demands fit design intent? Six-record pilot now includes explicit body assessments; first native CLI supports contextual demand/intent filtering. Further dimensions and viewer integration remain separate work.
 
 ## Comments
 

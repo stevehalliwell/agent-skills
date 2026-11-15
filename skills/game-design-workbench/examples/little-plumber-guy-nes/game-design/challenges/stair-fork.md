@@ -36,6 +36,17 @@ Separate route deliberation from execution after commitment. Available decision 
 
 Intent check: should this fork offer a meaningful easier-travel alternative under clock pressure? Geometry, costs and play evidence must establish whether both options actually serve that intent.
 
+```decision-assessment
+id: approach-route
+task: Choose upper or lower approach to final gap.
+context: Narrow upper supports versus longer lower ground passage; time advantage and player preferences unmeasured.
+evidence_status: prediction
+rule_cases: []
+demands:
+  - kind: trade-off
+    intent: undecided
+```
+
 ## Route
 
 Branch to high-stair or low-path, both rejoining final-gap. No physics solver or measured time advantage establishes the route labels.

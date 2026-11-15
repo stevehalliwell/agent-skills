@@ -38,6 +38,19 @@ Approach deliberation, remaining clock and jump-execution window are different t
 
 Intent check: is this intended to test a prepared combination of skills or discovery under pressure? Review route-specific support before deciding whether reaction/dexterity demands serve intended final assessment.
 
+```decision-assessment
+id: final-crossing
+task: Cross last floor break alive before course finish.
+context: Combine landing and remaining-time awareness; preparation varies by route and precise response windows are unknown.
+evidence_status: authored-assessment
+rule_cases: []
+demands:
+  - kind: knowledge
+    intent: undecided
+  - kind: execution
+    intent: undecided
+```
+
 ## Route
 
 Successful crossing leads to finish. Retry state and exact jump geometry remain outside this route graph.

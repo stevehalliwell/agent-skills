@@ -39,6 +39,20 @@ Player may know correct response but mistime it. No knowledge-only quiz, acquire
 
 Intent check: should first encounter primarily teach contact distinction, test execution, or combine both? Multiple new skills arrive together; current source does not establish whether that demand fits intended introduction.
 
+```decision-assessment
+id: walker-survival-small
+task: Get past Walker alive.
+context: Small, unprotected Hero; harmful side contact is lethal, while bypass and stomp are alternatives.
+evidence_status: authored-assessment
+rule_cases:
+  - "interactions/touch-walker-small#lethal-side"
+demands:
+  - kind: knowledge
+    intent: undecided
+  - kind: execution
+    intent: undecided
+```
+
 ## Route
 
 Continue to first-supply. Next does not assert that enemy was defeated.

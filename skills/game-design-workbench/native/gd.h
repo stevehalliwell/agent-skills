@@ -115,6 +115,8 @@ void gd_destroy(GD_Model *model);
 /* Call once on a fresh model. Explicit folders only; immediate, non-hidden
    .md files. No schemas/registry. Collection strings must outlive the model. */
 int gd_load(GD_Model *model, const GD_Collection *collections, int count);
+/* Explicit assessment source loader; preserve legacy gd_load role requirements. */
+int gd_load_challenges(GD_Model *model, const GD_Collection *collections, int count);
 int gd_sources_changed(GD_Model *model);
 int gd_valid_utf8(const unsigned char *text, size_t size);
 /* Reads bounded UTF-8 text into model->input; does not alter retained records. */

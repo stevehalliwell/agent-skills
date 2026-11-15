@@ -35,6 +35,17 @@ Recognizing required jump differs from performing launch and landing. Existing m
 
 Intent check: is landing execution the intended test, and should player have time to inspect approach before committing? Earlier practice opportunities support that question but do not prove understanding or readiness.
 
+```decision-assessment
+id: gap-crossing
+task: Cross floor break alive.
+context: Visible lethal gap and broad landing; approach deliberation and input windows unspecified.
+evidence_status: authored-assessment
+rule_cases: []
+demands:
+  - kind: execution
+    intent: undecided
+```
+
 ## Route
 
 Continue to low-ceiling. Cellar bypass skips this challenge, so it cannot be assumed prior practice for every later arrival.
