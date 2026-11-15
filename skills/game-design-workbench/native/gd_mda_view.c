@@ -84,7 +84,7 @@ static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout,co
     camera->offset = (Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) display->held = -1;
     if (blocked) { display->held=-1; return; }
-    if (display->held >= 0) {
+    if (display->held >= 0 && gd_layout_pointer_dragged(layout,display->held,mouse.x,mouse.y)) {
         world = GetScreenToWorld2D(mouse,*camera); gd_layout_drag_node(layout,display->held,world.x/spacing(layout),world.y/spacing(layout));
     }
     if (!CheckCollisionPointRec(mouse,viewport) || igGetIO_Nil()->WantCaptureMouse) return;
@@ -104,7 +104,7 @@ static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout,co
         Vector2 position = point(shown,node);
         if (visible(model,mda,display,node->key) && CheckCollisionPointRec(world,(Rectangle){position.x-105,position.y-32,210,64})) {
             display->record = node->key; display->held = i; display->link = -1;
-            gd_layout_pickup_node(layout,i,world.x/spacing(layout),world.y/spacing(layout)); return;
+            gd_layout_pointer_begin(layout,i,world.x/spacing(layout),world.y/spacing(layout),mouse.x,mouse.y); return;
         }
     }
     for (i = 0; i < layout->edge_count; ++i) {
@@ -390,7 +390,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
         const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,0);
         draw(model,mda,layout,layout,&display,camera,viewport,analysis,shared,shared_selected,shared_peer,branches,paths,bypass,reachability,reach_pair,shapes,overview);
-        gd_graph_workspace_draw(layout,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
+        gd_graph_workspace_draw(layout,layout,analysis->shown,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
         gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
         gd_graph_overview_draw(analysis,&overview_controls,viewport,display.link>=0 ? -1:shared_selected,!igGetIO_Nil()->WantCaptureMouse);
         if (paths) DrawText(TextFormat("D: dominated targets | J: incoming neighbors | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,155,12,gd_path_color);

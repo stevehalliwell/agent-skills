@@ -225,6 +225,19 @@ void gd_layout_pickup_node(GD_Layout *layout, int node, float x, float y) {
     layout->pickup_x=layout->nodes[node].x-x; layout->pickup_y=layout->nodes[node].y-y;
     layout->pickup_cursor_x=x; layout->pickup_cursor_y=y;
 }
+void gd_layout_pointer_begin(GD_Layout *layout,int node,float x,float y,float screen_x,float screen_y) {
+    layout->pickup_node=-1;layout->pickup_dragging=0;
+    if(node<0 || node>=layout->node_count || !isfinite(x) || !isfinite(y) || !isfinite(screen_x) || !isfinite(screen_y))return;
+    gd_layout_pickup_node(layout,node,x,y);
+    layout->pickup_screen_x=screen_x;layout->pickup_screen_y=screen_y;layout->pickup_node=node;
+}
+int gd_layout_pointer_dragged(GD_Layout *layout,int node,float screen_x,float screen_y) {
+    float dx,dy;
+    if(node<0 || node>=layout->node_count || layout->pickup_node!=node || !isfinite(screen_x) || !isfinite(screen_y))return 0;
+    dx=screen_x-layout->pickup_screen_x;dy=screen_y-layout->pickup_screen_y;
+    if(dx*dx+dy*dy>GD_NODE_DRAG_PIXELS*GD_NODE_DRAG_PIXELS)layout->pickup_dragging=1;
+    return layout->pickup_dragging;
+}
 void gd_layout_drag_node(GD_Layout *layout, int node, float x, float y) {
     if (!isfinite(x) || !isfinite(y) || (x==layout->pickup_cursor_x && y==layout->pickup_cursor_y)) return;
     layout->pickup_cursor_x=x; layout->pickup_cursor_y=y;

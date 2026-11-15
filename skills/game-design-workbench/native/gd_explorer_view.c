@@ -227,6 +227,7 @@ static int distance_focus_toggle(GD_ExplorerContext *c, int enabled) {
         if (p->fit==3) p->fit=0;
         p->distance_focus->active=0;
     }
+    p->distance_focus_started=true;
     p->find_hold_node=-1;p->distance_focus_enabled=enabled!=0; p->selection.held=p->mda.held=-1;
     return 1;
 }
@@ -245,7 +246,7 @@ static void distance_focus_update(GD_ExplorerContext *c, int selected) {
         else gd_layout_focus_reapply(p->distance_focus,p->layout,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
         p->selection.held=p->mda.held=-1; return;
     }
-    gd_layout_focus_begin(p->distance_focus,p->layout);
+    gd_layout_focus_begin(p->distance_focus,p->layout);p->distance_focus_started=true;
     result=gd_layout_focus_apply(p->distance_focus,p->layout,c->analysis->shown,
         p->view==GD_EXPLORER_MATRIX ? p->overlay:1,!incidence(p->view) && !free_graph(p),selected,
         p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
@@ -254,6 +255,23 @@ static void distance_focus_update(GD_ExplorerContext *c, int selected) {
     p->distance_focus->returning=!p->distance_focus->active;
     gd_layout_focus_advance(p->distance_focus,p->layout,0,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
     p->selection.held=p->mda.held=-1;
+}
+static void canvas_node_hold(GD_ExplorerContext *c,int node) {
+    GD_ExplorerPane *p=c->pane;
+    if(node<0 || node>=p->layout->node_count)return;
+    /* Selection inspects; only explicit focus/layout actions retarget geometry.
+       Reuse Find's pose guard without copying displayed coordinates to solver. */
+    p->find_hold_node=node;p->find_hold_layout=p->layout;
+    if(p->distance_focus && !p->distance_focus->returning)p->distance_focus->animating=0;
+}
+static void distance_focus_frame(GD_ExplorerContext *c,float seconds) {
+    GD_ExplorerPane *p=c->pane;
+    if(!p->distance_focus || !p->distance_focus->animating){p->distance_focus_started=false;return;}
+    /* Holding during return pauses transition, not normalizes geometry against
+       old workspace. Release resumes return before regular solver runs. */
+    if((p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held)>=0)return;
+    gd_layout_focus_advance(p->distance_focus,p->layout,p->distance_focus_started ? 0:seconds,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
+    p->distance_focus_started=false;
 }
 static void matches(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view);
@@ -465,10 +483,23 @@ static void resource_input(GD_ExplorerContext *c) {
         }
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) for (i=p->layout->node_count-1;i>=0;--i) if (visible(c,i)) {
             Vector2 point=position(c,i);
-            if (CheckCollisionPointRec(world,(Rectangle){point.x-90,point.y-24,180,48})) { p->selection.node=p->selection.held=i; p->selection.linked=-1; gd_layout_pickup_node(p->layout,i,world.x,world.y); break; }
+            if (CheckCollisionPointRec(world,(Rectangle){point.x-90,point.y-24,180,48})) { p->selection.node=p->selection.held=i; p->selection.linked=-1; gd_layout_pointer_begin(p->layout,i,world.x,world.y,mouse.x,mouse.y); break; }
         }
-        if (p->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_layout_drag_node(p->layout,p->selection.held,world.x,world.y);
+        if (p->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT) && gd_layout_pointer_dragged(p->layout,p->selection.held,mouse.x,mouse.y)) gd_layout_drag_node(p->layout,p->selection.held,world.x,world.y);
     }
+}
+static void canvas_input(GD_ExplorerContext *c) {
+    GD_ExplorerPane *p=c->pane;
+    if(!IsMouseButtonDown(MOUSE_BUTTON_LEFT))p->selection.held=p->mda.held=-1;
+    if(gd_explorer_similarity_active(c))gd_explorer_similarity_input(c);
+    else if(overview_only(p) && overview_available(c) && gd_graph_overview_hit(&p->overview,c->viewport,GetMousePosition()))p->selection.held=p->mda.held=-1;
+    else if(grid_view(p))grid_input(c);
+    else if(p->view==GD_EXPLORER_NOUNS)noun_graph_input(c);
+    else if(is_graph(p->view))gd_explorer_graph_input(c);
+    else if(p->view==GD_EXPLORER_MDA)gd_explorer_mda_input(c);
+    else if(query_view(p->view))gd_explorer_query_input(c);
+    else resource_input(c);
+    if(!gd_explorer_similarity_active(c) && !grid_view(p) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))canvas_node_hold(c,p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held);
 }
 static int choose_view(const GD_ExplorerProject *project, const char *label, int active, int include_current) {
     int v,result=-1;
@@ -560,7 +591,7 @@ static int layout_controls(GD_ExplorerContext *c) {
         if(igIsItemHovered(ImGuiHoveredFlags_None))igSetTooltip("Bounds follow shown cards in retained active-edge components. Whole-island forces run while settling; no analysis Run or inferred links.");
         if(p->layout->islands.enabled){igTextDisabled("%d islands; %u overlap/clearance pairs before last step",p->layout->islands.count,p->layout->islands.overlaps);if(p->layout->islands.limited)igTextDisabled("Island separation limited by work or workspace.");}
     }
-    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool workspace=p->workspace_bounds;if(igCheckbox("Workspace bounds",&workspace))gd_explorer_presentation_set(c,"workspace_bounds",workspace ? "true":"false",p->query_message,sizeof(p->query_message));if(p->workspace_bounds){igTextDisabled("Fixed container bounds; F frames selection or shown nodes. Drag outside; release returns inside.");igTextDisabled("Bounds can crowd edges; internal motion may remain.");}}
+    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool workspace=p->workspace_bounds;if(igCheckbox("Workspace bounds",&workspace))gd_explorer_presentation_set(c,"workspace_bounds",workspace ? "true":"false",p->query_message,sizeof(p->query_message));if(p->workspace_bounds){igTextDisabled("Outline follows shown card/label footprints. Solver container stays fixed; release returns outside cards inside.");igTextDisabled("Bounds can crowd edges; internal motion may remain.");}}
     if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool filtered=p->visual_filter;if(igCheckbox("Smooth displayed motion",&filtered))gd_explorer_presentation_set(c,"visual_filter",filtered ? "true":"false",p->query_message,sizeof(p->query_message));if(filtered)igTextDisabled("Rendering only; solver positions and velocities remain raw.");}
     if (!layout_settles(p))
         igTextWrapped("Stable layout; settling applies only to movable graph layouts.");
@@ -973,6 +1004,13 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if(sidebar_section(&sidebar,GD_SIDEBAR_VIEW)){
             gd_explorer_action_button(&c,GD_ACTION_VIEW_RESET);
             igTextWrapped("Reset view: camera/layout/display only. Selection, analysis and drafts stay intact.");
+            if (p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view)) {
+                bool enabled=p->distance_focus_enabled;
+                if (igCheckbox("Focus layout by shown-link distance",&enabled) && !distance_focus_toggle(&c,enabled))
+                    snprintf(failure,sizeof(failure),"Cannot allocate bounded distance-focus scratch; regular layout retained.");
+                igCheckbox("Auto-fit camera on focus changes",&p->focus_auto_fit);
+                if (p->distance_focus_enabled) igTextWrapped("Shown-link distance is layout only, not flow. Animated 220 ms transitions retain constrained bands/roots; Free graphs do not pin data roots. Canvas clicks inspect and hold current pose, without refocus or auto-fit. Toggle focus off/on to refocus. Auto-fit off keeps camera unchanged on focus changes. Off returns to regular pose, then resumes drag/settling. F and Find still frame explicitly.");
+            }
             if (!gd_explorer_similarity_active(&c) && layout_controls(&c)) { p->prepared=0; pane_prepare(&c); p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1; }
             if(gd_explorer_similarity_active(&c))gd_explorer_action_button(&c,GD_ACTION_VIEW_FIT);
         igBeginDisabled(!gd_explorer_action_available(&c,GD_ACTION_VIEW_SELECTION_FOCUS));gd_explorer_action_button(&c,GD_ACTION_VIEW_SELECTION_FOCUS);igEndDisabled();
@@ -980,13 +1018,6 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         igSameLine(0,8);gd_explorer_action_button(&c,GD_ACTION_SELECTION_CLEAR);
         if(igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))igSetTooltip("Clear active pane selection and overview brush. Keep camera, filters, queries and drafts. Escape dismisses text/popups first.");
         if(p->focus_result.status!=GD_FOCUS_NONE)igTextWrapped("Last focus: %s | %d selected, %d hidden, %d direct context | %s%s",focus_status_name(p->focus_result.status),p->focus_result.selected,p->focus_result.hidden,p->focus_result.context,p->focus_result.clipped ? "some context off-screen":"no framing clip",p->focus_result.hidden_link ? " | selected link remains hidden":"");
-        if (p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view)) {
-            bool enabled=p->distance_focus_enabled;
-            if (igCheckbox("Focus layout by shown-link distance",&enabled) && !distance_focus_toggle(&c,enabled))
-                snprintf(failure,sizeof(failure),"Cannot allocate bounded distance-focus scratch; regular layout retained.");
-            igCheckbox("Auto-fit camera on focus changes",&p->focus_auto_fit);
-            if (p->distance_focus_enabled) igTextWrapped("Shown-link distance is layout only, not flow. Animated 220 ms transitions retain constrained bands/roots; Free graphs do not pin data roots. Click again to interrupt. Auto-fit off keeps camera unchanged on focus selection/off. Off returns to regular pose, then resumes drag/settling. F and Find still frame explicitly.");
-        }
         }
         if(p->focus_result.status==GD_FOCUS_HIDDEN)igTextWrapped("Selection hidden by current filters/scope; camera unchanged. No data revealed.");
         if(p->focus_result.status==GD_FOCUS_UNREPRESENTED || p->focus_result.status==GD_FOCUS_UNPLACED)igTextWrapped("No placed selection representation here; source may still be loaded. No query or filter changed.");
@@ -1007,7 +1038,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(&c); gd_explorer_rules_controls(&c); }
         if (query_view(p->view)) gd_explorer_query_controls(&c);
         if (!gd_explorer_similarity_active(&c) && !grid_view(p) && p->distance_focus_enabled && distance_focus_node(p,selected)<0)
-            igTextWrapped("No distance focus applied: select a visible node. Source-only or edge inspection has no focus anchor.");
+            igTextWrapped("No distance focus applied: select a visible node, then toggle Focus layout off/on. Canvas clicks inspect without refocus; source-only or edge inspection has no focus anchor.");
         gd_explorer_structure_controls(&c);
         if (p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view) && igCollapsingHeader_TreeNodeFlags("Analysis layers",0)) analysis_controls(&c,selected);
         if (overview_only(p) && overview_available(&c) && igCollapsingHeader_TreeNodeFlags("Adjacency / incidence overview",0)) overview_controls(&c);
@@ -1139,26 +1170,14 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         c.display_layout=NULL;if(p->fit)render->valid=0;
         if (!gd_explorer_similarity_active(&c) && p->fit) { fit_view(&c,p->fit==GD_EXPLORER_FIT_SELECTION ? GD_EXPLORER_FIT_SELECTION:p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
         if(render_active(&c)){if(gd_render_pose_matches(render,p->layout,render_identity(&c)))c.display_layout=&render->layout;else render_update(&c,render,0,1);}else render->valid=0;
-        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !igGetIO_Nil()->WantCaptureMouse && CheckCollisionPointRec(GetMousePosition(),c.viewport))p->find_hold_node=-1;
-        if (gd_explorer_similarity_active(&c)) gd_explorer_similarity_input(&c);
-        else if (overview_only(p) && overview_available(&c) && gd_graph_overview_hit(&p->overview,c.viewport,GetMousePosition())) p->selection.held=-1;
-        else if (grid_view(p)) grid_input(&c);
-        else if (p->view==GD_EXPLORER_NOUNS) noun_graph_input(&c);
-        else if (is_graph(p->view)) gd_explorer_graph_input(&c);
-        else if (p->view==GD_EXPLORER_MDA) gd_explorer_mda_input(&c);
-        else if (query_view(p->view)) gd_explorer_query_input(&c);
-        else resource_input(&c);
+        canvas_input(&c);
         c.display_layout=NULL;
-        if (!p->distance_focus_enabled && p->distance_focus && p->distance_focus->animating &&
-            (p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held)>=0)
-            p->distance_focus->animating=p->distance_focus->returning=0;
         if (!gd_explorer_similarity_active(&c) && layout_settles(p) && !p->distance_focus_enabled && !(p->distance_focus && p->distance_focus->animating) && !p->paused) {
             int held=p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held;
             if(query_view(p->view)) gd_query_scene_step(p->query_state->scene,held);else gd_layout_step(p->layout,held);
         }
         selected=analyze(&c); if (!gd_explorer_similarity_active(&c)) distance_focus_update(&c,selected);
-        if (!gd_explorer_similarity_active(&c) && !grid_view(p) && p->distance_focus && p->distance_focus->animating)
-            gd_layout_focus_advance(p->distance_focus,p->layout,GetFrameTime(),p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
+        if (!gd_explorer_similarity_active(&c) && !grid_view(p))distance_focus_frame(&c,GetFrameTime());
         if (!gd_explorer_similarity_active(&c) && p->fit==3) { fit_view(&c,2); p->fit=0; }
         if(render_active(&c))render_update(&c,render,GetFrameTime(),0);
         {
@@ -1174,11 +1193,11 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         overview_marks_draw(&c);
         pair_selection_draw(&c);
         if(!gd_explorer_similarity_active(&c) && free_graph(p)){
-            gd_graph_workspace_draw(p->layout,p->camera,c.viewport,p->view==GD_EXPLORER_MDA ? 3:1);
+            gd_graph_workspace_draw(p->layout,c.display_layout ? c.display_layout:p->layout,query_view(p->view) || p->view==GD_EXPLORER_NOUNS ? NULL:c.analysis->shown,p->camera,c.viewport,p->view==GD_EXPLORER_MDA ? 3:1);
             gd_graph_islands_draw(p->layout,c.display_layout ? c.display_layout:p->layout,query_view(p->view) ? NULL:c.analysis->shown,p->camera,c.viewport,p->view==GD_EXPLORER_MDA ? 3:1);
         }
         if (!gd_explorer_similarity_active(&c)) { draw_matches(&c); if (overview_available(&c)) gd_graph_overview_draw_metric(c.analysis,&p->overview,c.viewport,p->view==GD_EXPLORER_MDA && p->mda.link>=0 ? -1:selected,!igGetIO_Nil()->WantCaptureMouse,overview_metric(p)); }
-        DrawText(gd_explorer_similarity_active(&c) ? "Similarity: Click inspect | Shift-click compare | Wheel zoom | Right/middle pan | F fit | F5 refresh":grid_view(p) ? "Grid: Arrows select | PageUp/Down cases | Wheel zoom | Right/middle drag pan | F fit | F5 refresh":p->distance_focus_enabled ? "Distance focus: click node to refocus | Off: restore pose/drag | Pan/zoom unchanged | F: fit all":"Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
+        DrawText(gd_explorer_similarity_active(&c) ? "Similarity: Click inspect | Shift-click compare | Wheel zoom | Right/middle pan | F fit | F5 refresh":grid_view(p) ? "Grid: Arrows select | PageUp/Down cases | Wheel zoom | Right/middle drag pan | F fit | F5 refresh":p->distance_focus_enabled ? "Distance focus: click inspects | Toggle focus to refocus | Off: restore pose | F: fit":"Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
         DrawText(gd_explorer_similarity_active(&c) ? "Selected typed-feature distance approximation only; missing entries remain unplaced. No importance or execution proof.":incidence(p->view) ? "Shown incidence only; not flow, causality or equivalence.":"Authored declarations only; not learning, causality or physical reachability.",20,height-18,13,muted);
         c.display_layout=NULL;p->focus_camera_override=false;
         rlImGuiEnd(); EndDrawing(); ++frame;
@@ -1239,6 +1258,7 @@ cleanup:
 #ifdef GD_EXPLORER_TEST
 #include "test_explorer_viewer.h"
 #include "test_explorer_find.h"
+#include "test_explorer_pointer.h"
 #include "test_explorer_shared_ux.h"
 #include "test_explorer_view.h"
 #endif

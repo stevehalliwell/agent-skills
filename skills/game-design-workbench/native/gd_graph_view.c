@@ -76,7 +76,7 @@ static void graph_input(GD_Layout *layout,const GD_Layout *shown, GraphSelection
     camera->offset = (Vector2){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) selection->held = -1;
     if (blocked) { selection->held=-1; return; }
-    if (selection->held >= 0) {
+    if (selection->held >= 0 && gd_layout_pointer_dragged(layout,selection->held,mouse.x,mouse.y)) {
         world = GetScreenToWorld2D(mouse, *camera);
         gd_layout_drag_node(layout, selection->held, world.x, world.y);
     }
@@ -100,7 +100,7 @@ static void graph_input(GD_Layout *layout,const GD_Layout *shown, GraphSelection
         float dx = point.x-world.x, dy = point.y-world.y;
         if (dx*dx+dy*dy <= 22*22) {
             selection->node = selection->held = i; selection->cell = selection->linked = -1;
-            gd_layout_pickup_node(layout,i,world.x,world.y);
+            gd_layout_pointer_begin(layout,i,world.x,world.y,mouse.x,mouse.y);
             selection->interaction = 0; return;
         }
     }
@@ -841,7 +841,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
         const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,!focused && !model->skill_mode);
         draw_graph(model,layout, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair,reachability,reach_pair,shapes,overview);
-        gd_graph_workspace_draw(layout,camera,viewport,1);
+        gd_graph_workspace_draw(layout,layout,analysis->shown,camera,viewport,1);
         gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,1);
         if (query && !focused && !challenges) {
             int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);

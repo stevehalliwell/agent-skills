@@ -43,6 +43,8 @@ typedef struct {
     int edge_lane[GD_MAX_PAIRS], route_lanes[GD_MAX_RECORDS];
     float layer_span[GD_MAX_RECORDS+2];
     float pickup_x,pickup_y,pickup_cursor_x,pickup_cursor_y; /* Raw layout-space cursor offset, presentation only. */
+    float pickup_screen_x,pickup_screen_y;
+    int pickup_node,pickup_dragging; /* Screen-space gesture; no solver position writes before drag. */
     int directed_shelf;
     int order[GD_MAX_RECORDS], position[GD_MAX_RECORDS];
     int node_count, edge_count, group_count;
@@ -115,6 +117,11 @@ void gd_layout_step_weighted(GD_Layout *layout,int held_node,const int *counts);
 /* Directed layers lock the ordering axis, including paused pointer dragging.
    layer=-1 denotes an explicitly unplaced shelf; caller owns layer semantics. */
 void gd_layout_move_node(GD_Layout *layout, int node, float x, float y);
+/* Pickup uses layout units; drag threshold uses unscaled screen pixels.
+   Caller supplies held node to solver until release. Neither call moves nodes. */
+enum { GD_NODE_DRAG_PIXELS=4 };
+void gd_layout_pointer_begin(GD_Layout *layout,int node,float x,float y,float screen_x,float screen_y);
+int gd_layout_pointer_dragged(GD_Layout *layout,int node,float screen_x,float screen_y);
 void gd_layout_pickup_node(GD_Layout *layout, int node, float x, float y);
 void gd_layout_drag_node(GD_Layout *layout, int node, float x, float y);
 /* Sparse noun/verb cells; active means at least one declared case. */

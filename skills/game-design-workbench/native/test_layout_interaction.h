@@ -17,6 +17,25 @@ TEST(layout_interaction,
     TEST_ASSERT(fabsf(layout->nodes[1].x-1.3f)<0.00001f && fabsf(layout->nodes[1].y-2.7f)<0.00001f);
     before=layout->nodes[1]; gd_layout_drag_node(layout,1,NAN,0);
     TEST_ASSERT(!memcmp(&before,&layout->nodes[1],sizeof(before)));
+    /* Pointer jitter is measured in screen pixels, never world units/zoom.
+       Press and sub-threshold motion preserve every node, including velocity. */
+    { GD_LayoutNode nodes[4];memcpy(nodes,layout->nodes,sizeof(nodes));
+      gd_layout_pointer_begin(layout,1,10,20,100,200);
+      TEST_ASSERT(!gd_layout_pointer_dragged(layout,1,100,200));
+      TEST_ASSERT(!gd_layout_pointer_dragged(layout,1,104,200));
+      TEST_ASSERT(!gd_layout_pointer_dragged(layout,1,102,202));
+      TEST_ASSERT(!gd_layout_pointer_dragged(layout,2,110,200));
+      TEST_ASSERT(!gd_layout_pointer_dragged(layout,1,NAN,200));
+      TEST_ASSERT(!memcmp(nodes,layout->nodes,sizeof(nodes)));
+      TEST_ASSERT(gd_layout_pointer_dragged(layout,1,105,200));
+      gd_layout_drag_node(layout,1,12,23);
+      TEST_ASSERT(fabsf(layout->nodes[1].x-nodes[1].x-2)<0.00001f && fabsf(layout->nodes[1].y-nodes[1].y-3)<0.00001f);
+      TEST_ASSERT(gd_layout_pointer_dragged(layout,1,101,200)); /* Once dragged, no jitter dead zone. */
+      gd_layout_pointer_begin(layout,1,12,23,300,400);
+      TEST_ASSERT(!gd_layout_pointer_dragged(layout,1,302,401));
+      gd_layout_pointer_begin(layout,1,12,23,NAN,400);
+      TEST_ASSERT(!gd_layout_pointer_dragged(layout,1,310,400));
+    }
     gd_layout_focus_capture(focus,layout); gd_layout_focus_begin(focus,layout);
     TEST_ASSERT(gd_layout_focus_apply(focus,layout,NULL,1,1,1,1)==2);
     gd_layout_focus_advance(focus,layout,0,1);

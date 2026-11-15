@@ -468,14 +468,10 @@ void gd_explorer_query_input(GD_ExplorerContext *context) {
         const GD_Layout *shown=gd_explorer_display_layout(context);int hit=gd_query_scene_hit_layout(pane->query_state->scene,shown,world.x,world.y);
         if (hit>=0) {
             pane->selection=(GD_ExplorerSelection){-1,hit,0,-1,hit};
-            gd_layout_pickup_node(pane->layout,hit,world.x,world.y);
-            if (pane->query_state && pane->query_state->query && pane->query_state->query->effects) {
-                GD_ExplorerQueryState *state=pane->query_state; int source=state->scene->nodes[hit].source;
-                if (state->query->effects->nodes[source].kind!=GD_EFFECT_ACTIVATION && !gd_explorer_query_select_result(context,source)) snprintf(pane->query_message,sizeof(pane->query_message),"Cannot allocate contributor selection/drawing; previous result retained.");
-            }
+            gd_layout_pointer_begin(pane->layout,hit,world.x,world.y,mouse.x,mouse.y);
         } else for (i=0;i<pane->layout->edge_count;++i) if (gd_layout_route_distance(shown,i,world.x,world.y)<=7/pane->camera.zoom) { pane->selection=(GD_ExplorerSelection){i,-1,0,-1,-1}; break; }
     }
-    if (pane->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) gd_query_scene_drag(pane->query_state->scene,pane->selection.held,world.x,world.y);
+    if (pane->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT) && gd_layout_pointer_dragged(pane->layout,pane->selection.held,mouse.x,mouse.y)) gd_query_scene_drag(pane->query_state->scene,pane->selection.held,world.x,world.y);
 }
 static void case_details(GD_ExplorerContext *context, int index) {
     const GD_Rules *rules=context->project->rules; const GD_RuleCase *item=&rules->cases[index]; const GD_Record *record=&rules->model->records[rules->sources[item->source].record]; int i;
@@ -550,7 +546,13 @@ void gd_explorer_query_details(GD_ExplorerContext *context) {
             char id[GD_EFFECT_ID_CAPACITY]; const GD_EffectNode *node=&state->query->effects->nodes[item->source];
             if (gd_effect_node_id(state->query->effects,item->source,id,sizeof(id))) { igTextWrapped("Exact typed ID: %s",id); if (igSmallButton("Copy typed ID")) SetClipboardText(id); }
             if (node->kind==GD_EFFECT_ACTIVATION) { const GD_ResourceNode *activation=&state->query->resource->nodes[node->activation]; case_details(context,activation->case_index); igText("Mapped instance %s | depth %d | frontier %s | pool conflict %s",activation->instance ? "yes":"no",activation->depth,activation->frontier ? "yes":"no",activation->binding_conflict ? "yes":"no"); }
-            else igText("%d direct declarations in shown contributor context; not gameplay frequency.",item->incoming);
+            else {
+                igText("%d direct declarations in shown contributor context; not gameplay frequency.",item->incoming);
+                if(igSmallButton("Show this result's contributor context")) {
+                    if(!gd_explorer_query_select_result(context,item->source))snprintf(pane->query_message,sizeof(pane->query_message),"Cannot allocate contributor context; previous result retained.");
+                    return; /* Explicit action can replace scene; do not retain borrowed node below. */
+                }
+            }
         } else if (item->kind==GD_QUERY_NODE_ACTIVATION) case_details(context,state->query->variants->activations[item->source].case_index);
         if (igTreeNode_Str("Incident guards/effects and exact source declarations")) { for (i=0;i<pane->layout->edge_count;++i) if (pane->layout->edges[i].a==selected || pane->layout->edges[i].b==selected) { igPushID_Int(i); gd_explorer_query_source(context,i); igPopID(); } igTreePop(); }
     }

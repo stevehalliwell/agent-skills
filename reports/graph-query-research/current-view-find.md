@@ -36,7 +36,7 @@
 - Scan current prepared node/entry order. Include off-screen items; exclude filtered/unplaced items through existing canvas visibility rules. Grid indexes named headers, not numeric cells or invented pair labels. Existing pair selection survives empty/no-match input.
 - Bound text to128 UTF-8 bytes and matches to `GD_MAX_RECORDS`. Show first6 result rows with source references; buttons and Enter/Shift+Enter cycle all matches. Matcher uses linear prefix scan; no query application, per-search allocation or cached result indices.
 - Use direct typed selection plus existing readable Focus. Do not reuse IPC Effect navigation: that action may rebuild contributor context. Find keeps retained query/scene and raw geometry unchanged.
-- Suspend selection-driven distance-layout refocus for Find-selected node on same layout. Keep setting enabled and existing animation/solver behavior unchanged. Canvas click, another native selection or layout replacement resumes normal follow behavior. Escape retains last selection/camera and does not resume layout refocus.
+- Suspend selection-driven distance-layout refocus for Find-selected node on same layout. Keep setting enabled and existing animation/solver behavior unchanged. Another native selection or layout replacement can resume follow. Canvas clicks now inspect without refocus under [node click safety](node-click-drag-safety.md). Escape retains last selection/camera and does not resume layout refocus.
 - Pending rank edit blocks opening/navigation with explanation. Active drag/dialog blocks Ctrl+F. Other pending analytical inputs and draft/Undo state stay unchanged. Close remains available when navigation is blocked.
 
 ## Verification

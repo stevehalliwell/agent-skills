@@ -5,10 +5,25 @@
 #include "raylib.h"
 #include <stdio.h>
 #include <math.h>
-/* Same raw workspace outline in unified and standalone Free viewers. */
-static inline void gd_graph_workspace_draw(const GD_Layout *layout,Camera2D camera,Rectangle viewport,float scale){
-    const GD_LayoutBounds *b=&layout->workspace.bounds;
-    if(layout->mode!=GD_LAYOUT_FORCE || !layout->workspace.enabled)return;
+/* Read-only content envelope. Raw footprints include measured labels/badges;
+   displayed centers may be filtered. Never feed this envelope into solver. */
+static inline int gd_graph_content_bounds(const GD_Layout *raw,const GD_Layout *display,const unsigned char *shown,float padding,GD_LayoutBounds *out){
+    GD_LayoutBounds bounds={INFINITY,INFINITY,-INFINITY,-INFINITY};int i,count=0;
+    if(!raw || !display || !out || raw->node_count<0 || raw->node_count>GD_MAX_RECORDS || display->node_count!=raw->node_count || !isfinite(padding) || padding<0)return 0;
+    for(i=0;i<raw->node_count;++i){
+        const GD_LayoutNode *node=&display->nodes[i];const GD_LayoutBounds *footprint=&raw->nodes[i].footprint;
+        float left=node->x+footprint->left-padding,right=node->x+footprint->right+padding,top=node->y+footprint->top-padding,bottom=node->y+footprint->bottom+padding;
+        if(shown && !shown[i])continue;
+        if(!isfinite(left)||!isfinite(right)||!isfinite(top)||!isfinite(bottom)||left>=right||top>=bottom)return 0;
+        bounds.left=fminf(bounds.left,left);bounds.right=fmaxf(bounds.right,right);bounds.top=fminf(bounds.top,top);bounds.bottom=fmaxf(bounds.bottom,bottom);++count;
+    }
+    if(!count)return 0;*out=bounds;return 1;
+}
+/* Outline follows shown content, including focus/drag/return. Fixed raw solver
+   workspace remains separate; outline changes never clamp or move nodes. */
+static inline void gd_graph_workspace_draw(const GD_Layout *layout,const GD_Layout *display,const unsigned char *shown,Camera2D camera,Rectangle viewport,float scale){
+    GD_LayoutBounds bounds;const GD_LayoutBounds *b=&bounds;
+    if(layout->mode!=GD_LAYOUT_FORCE || !layout->workspace.enabled || !isfinite(scale) || scale<=0 || !gd_graph_content_bounds(layout,display,shown,48/scale,&bounds))return;
     BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height);BeginMode2D(camera);
     DrawRectangleLinesEx((Rectangle){b->left*scale,b->top*scale,(b->right-b->left)*scale,(b->bottom-b->top)*scale},1.5f/camera.zoom,(Color){104,142,181,160});
     EndMode2D();EndScissorMode();

@@ -1,4 +1,5 @@
-// Headless Windows/macOS IPC. Build explicitly with CJIT; never starts a GUI.
+// Default Windows/macOS diagnostics open no window and post no OS input.
+// GD_POINTER_CHECKS=1 explicitly enables a hidden owned raylib window, not a review viewer.
 // GD_NATIVE_EXE=.../gd.exe GD_VIEWER_TEST_EXE=.../test-viewer.exe node --test this-file
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -92,9 +93,20 @@ test('shared UX adapter: both examples unchanged',{skip:!adapter},async t=>{
     assert.deepEqual(await sourceHashes(root),before);
   });
 });
+test('node click-versus-drag: real canvas handlers, no OS input or source writes',{skip:!adapter||process.env.GD_POINTER_CHECKS!=='1'},async t=>{
+  for(const name of ['crate-puzzle','little-plumber-guy-nes'])await t.test(name,async()=>{
+    const root=join(examples,name,'game-design'),before=await sourceHashes(root);
+    const result=spawnSync(adapter,['--pointer-helpers',root],{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:1024*1024});
+    assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
+    const value=JSON.parse(result.stdout);assert.equal(value.ok,true);
+    assert.ok(value.pointer_checks>=336);assert.ok(value.gestures>=22);
+    assert.ok(Number.isInteger(value.empty_actor_maps));assert.match(value.scope,/hidden owned window; no OS input or source writes; human-pointer acceptance separate/);
+    assert.deepEqual(await sourceHashes(root),before);
+  });
+});
 test('diagnostic flag parsing rejects implicit or malformed modes',{skip:!adapter},()=>{
   const root=join(examples,'crate-puzzle','game-design');
-  for(const args of [['--layout-research',root],['--deep-checks',root],['--ipc-helpers',root,'--layout-reseach'],['--ipc-helpers',root,'--deep-check'],['--find-helpers',root,'--layout-research'],['--find-helpers',root,'--deep-checks'],['--ux-helpers',root,'--deep-checks'],['--ipc-helpers',root,'--layout-research','--layout-research'],['--ipc-helpers',root,'--deep-checks','--deep-checks']]){
+  for(const args of [['--layout-research',root],['--deep-checks',root],['--ipc-helpers',root,'--layout-reseach'],['--ipc-helpers',root,'--deep-check'],['--find-helpers',root,'--layout-research'],['--find-helpers',root,'--deep-checks'],['--ux-helpers',root,'--deep-checks'],['--pointer-helpers',root,'--deep-checks'],['--pointer-helpers',root,'--layout-research'],['--ipc-helpers',root,'--layout-research','--layout-research'],['--ipc-helpers',root,'--deep-checks','--deep-checks']]){
     const result=spawnSync(adapter,args,{encoding:'utf8',windowsHide:true,timeout:30000});
     assert.equal(result.status,2,result.stderr);assert.equal(result.stdout,'');assert.match(result.stderr,/--ipc-helpers GAME-DESIGN-DIRECTORY \[--deep-checks\] \[--layout-research\]/);
   }

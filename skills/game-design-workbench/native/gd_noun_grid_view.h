@@ -73,9 +73,9 @@ static void noun_graph_input(GD_ExplorerContext *c) {
     if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)||IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)){Vector2 delta=GetMouseDelta();p->camera.target.x-=delta.x/p->camera.zoom;p->camera.target.y-=delta.y/p->camera.zoom;}
     if(GetMouseWheelMove()){Vector2 after;p->camera.zoom=fminf(4,fmaxf(0.0001f,p->camera.zoom*powf(1.15f,GetMouseWheelMove())));after=GetScreenToWorld2D(mouse,p->camera);p->camera.target.x+=world.x-after.x;p->camera.target.y+=world.y-after.y;}
     world=GetScreenToWorld2D(mouse,p->camera);
-    if(p->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){gd_layout_drag_node(p->layout,p->selection.held,world.x,world.y);return;}
+    if(p->selection.held>=0 && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){if(gd_layout_pointer_dragged(p->layout,p->selection.held,mouse.x,mouse.y))gd_layout_drag_node(p->layout,p->selection.held,world.x,world.y);return;}
     if(!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))return;
-    for(i=shown->node_count-1;i>=0;--i){const GD_LayoutNode *node=&shown->nodes[i];if(CheckCollisionPointRec(world,(Rectangle){node->x-node->width/2,node->y-24,node->width,48})){p->selection=(GD_ExplorerSelection){-1,i,0,-1,i};gd_layout_pickup_node(p->layout,i,world.x,world.y);return;}}
+    for(i=shown->node_count-1;i>=0;--i){const GD_LayoutNode *node=&shown->nodes[i];if(CheckCollisionPointRec(world,(Rectangle){node->x-node->width/2,node->y-24,node->width,48})){p->selection=(GD_ExplorerSelection){-1,i,0,-1,i};gd_layout_pointer_begin(p->layout,i,world.x,world.y,mouse.x,mouse.y);return;}}
     for(i=0;i<p->layout->edge_count;++i)if(gd_layout_route_distance(shown,i,world.x,world.y)<=7/p->camera.zoom){const GD_NounPair *pair=&c->project->noun_grid->pairs[p->layout->edges[i].key];noun_grid_choose(c,pair->a,pair->b);return;}
 }
 static void noun_graph_draw(GD_ExplorerContext *c) {

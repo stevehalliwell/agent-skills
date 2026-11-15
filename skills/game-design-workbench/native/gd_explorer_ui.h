@@ -106,6 +106,7 @@ typedef struct {
     GD_LayoutFocus *distance_focus;
     bool distance_focus_enabled,focus_auto_fit;
     uint64_t distance_focus_revision;
+    bool distance_focus_started; /* Previous frame time predates new transition. */
     const GD_Layout *find_hold_layout;
     int find_hold_node; /* >=0: Find anchor; -2: cleared selection holds focus pose; -1: no hold. */
     Vector2 right_origin;
