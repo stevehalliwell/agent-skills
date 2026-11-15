@@ -1,6 +1,6 @@
 # Decision structure — example review and proposed additions
 
-Status: P1–P4 confirmed. Initial six-record pilot applied: M2, M6, M10, M15, M18 and C4. Follow-up M5/M7 applied as separate local tasks, with unclassified demands preserved. Other example proposals pending. Rules, learning-role metadata and schema fields unchanged. Eight approved records now contain contextual YAML assessments; CLI-only demand/intent query implemented. Viewer integration unavailable.
+Status: P1–P4 confirmed. Initial six-record pilot applied: M2, M6, M10, M15, M18 and C4. Follow-ups M5/M7 and M4/M8 applied as separate local tasks, with unclassified demands preserved. Bounded Step 3 contrast/capability review delivered; other example proposals remain unadopted. Rules, learning-role metadata and schema fields unchanged. Ten approved records now contain contextual YAML assessments; CLI-only demand/intent query implemented. Viewer integration unavailable.
 
 ## Scope and review method
 
@@ -18,6 +18,7 @@ This review covers decision content and data placement. It does not assess every
 - [Categories not yet established](#categories-not-yet-established)
 - [Proposed application order](#proposed-application-order)
 - [Multi-situation follow-up and capability assessment](#q4-multi-situation-review-and-capability-assessment)
+- [Final contrast review and Step 3 outcome](#q5-final-contrast-review-and-step-3-outcome)
 
 Definitions now live in [shared workbench reference](skills/game-design-workbench/references/decision-structure.md). This document applies them; it does not create competing definitions.
 
@@ -108,6 +109,8 @@ Keep current demand, intended demand and observed player difficulty separate. Wh
 
 ### M4. Brick canopy — infer a state-dependent rule
 
+Applied contrast review: discovery opportunity and chosen execution task kept separate. Prediction prompt remains a hypothetical quiz, not an added in-game task or knowledge label.
+
 [Source: brick-canopy](skills/game-design-workbench/examples/little-plumber-guy-nes/game-design/challenges/brick-canopy.md)
 
 **Found:** small and powered forms produce different brick responses; mixed blocks, optional concealed life supply and shorter-jump practice over broad support.
@@ -151,6 +154,8 @@ Applied in approved follow-up: separate traversal and chosen shortened-jump rewa
 **Boundary:** no general optimization claim without goal and constrained improvements. No pass/fail criterion should rely on unresolved clearance behavior.
 
 ### M8. Flower shelf — capability pursuit under state conditions
+
+Applied contrast review: optional pursuit and chosen release/collection kept separate. No optimization/trade-off label inferred from useful capability; starting form and collection gate remain explicit.
 
 [Source: flower-shelf](skills/game-design-workbench/examples/little-plumber-guy-nes/game-design/challenges/flower-shelf.md)
 
@@ -433,7 +438,7 @@ These are absences of sufficient evidence in reviewed situations, not claims tha
 5. Only then choose optional fields needed for specific queries. Separate game judgment, decision demands, timing and evidence status rather than introduce one exclusive `decision_kind` label.
 6. Consider graph annotations/filters only after stored meaning and a concrete question are agreed. Declared relationship graphs cannot currently display or derive this full contextual assessment.
 
-Current disposition: P1–P4 confirmed, including reaction/dexterity distinctions and design-intent review. M2, M6, M10, M15, M18 and C4 applied as contextual prose and structured body assessments. M5/M7 multi-situation follow-up also applied; other M/C/D/E proposals remain pending. User subsequently chose contextual YAML storage and CLI-first query delivery. No automatic inference, aggregate quality score, experiment execution or viewer integration adopted.
+Current disposition: P1–P4 confirmed, including reaction/dexterity distinctions and design-intent review. M2, M6, M10, M15, M18 and C4 applied as contextual prose and structured body assessments. M5/M7 multi-situation and M4/M8 contrast follow-ups also applied; other M/C/D/E proposals remain unadopted. User subsequently chose contextual YAML storage and CLI-first query delivery. No automatic inference, aggregate quality score, experiment execution or viewer integration adopted.
 
 ### Pilot checks and frontmatter conversion
 
@@ -576,7 +581,7 @@ User approved Pipe steps/Low ceiling follow-up. Added five assessments across tw
 - `ceiling-traversal`: ground route remains valid; demands empty. Skipping optional reward does not establish encounter failure.
 - `shortened-jump-reward`: player chooses that technique and collection goal; execution/undecided. Reward miss leaves local goal unmet, not necessarily failed traversal or a game-declared wrong answer. Geometry does not prove technique is compulsory. Tall stand-up response remains unresolved.
 
-Current Mario inventory:19 source Challenges,10 assessments,9 demand entries. Eight records across both examples now carry11 assessments total. Unclassified means unknown assessment demands, not no gameplay demand.
+Mario inventory at multi-situation checkpoint:19 source Challenges,10 assessments,9 demand entries. Eight records across both examples now carry11 assessments total. Unclassified means unknown assessment demands, not no gameplay demand.
 
 #### Supported questions and limits
 
@@ -596,3 +601,36 @@ Current Mario inventory:19 source Challenges,10 assessments,9 demand entries. Ei
 - Strict native Attendant:225 Mario records; zero diagnostics/corrections. Both changed headers and Route sections unchanged from Git checkpoint.
 - Five Mario controls/matrix/rules/scaffolding/MDA semantic comparisons unchanged, excluding source-line provenance. Crate sources unchanged.
 - No native code change or compiler build; existing focused CJIT executable used. No experiment, viewer launch/mutation or new visual acceptance. Follow-up committed as checkpoint.
+
+### Q5. Final contrast review and Step 3 outcome
+
+User approved Brick canopy/Flower shelf contrast and bounded review closure. Added four assessments in those two existing records; no other proposal adopted.
+
+**Brick canopy:** small/powered forms have different declared ordinary-brick outcomes. Discovery is an opportunity, not demonstrated knowledge. Performing chosen contact/shortened-jump action has execution/undecided assessment. A supplied-state prediction question could isolate knowledge, but remains a proposed quiz, not an existing gameplay prompt or typed assessment. Brick destruction is not pickup collection and removes support; form/contact conditions matter.
+
+**Flower shelf:** optional pursuit has no classified demand; chosen release/access/collection has execution/undecided assessment. Starting form changes released supply and collection effect. Useful capability does not establish a player goal, comparison among constrained improvements or optimization. Arrival is not collection, and spark form does not remove shot-capacity constraints. No mandatory reward or best-route claim.
+
+Current Mario inventory:19 source Challenges,14 assessments,11 demand entries. Five assessments have empty demand lists;9 match undecided intent on a declared demand. Across both examples:10 records carry15 assessments and12 demand entries. Numbers describe authored data, not gameplay frequency or quality.
+
+#### Working distinctions and negative findings
+
+[Shared reference review outcome](skills/game-design-workbench/references/decision-structure.md#review-outcome) records working boundaries. Use overlapping contextual descriptions, not one exclusive taxonomy. User-established meanings remain identified; other definitions are working descriptions open to correction, not new universal claims.
+
+- Availability does not establish meaningful alternatives. Goal, information and relevant consequences determine comparison.
+- Calculation is work to find/compare an answer; optimization is constrained improvement toward a chosen goal. Neither follows from a useful item or numeric resource.
+- Discovering a rule, predicting its outcome and executing an action differ. A proposed research/prediction quiz is not an implemented in-game quiz; a failed action does not diagnose failed knowledge.
+- Task-relative failure differs from foregoing optional benefit or preferring another route. A local collection goal is not automatically a game-declared wrong-answer criterion.
+- Reaction needs cue/response-window context; dexterity needs controller-performance requirements. Ordinary button acceptance or extended clock alone establishes neither.
+- Reviewed situations do not establish genuine dilemma, nontrivial player calculation or known-probability choice. Competing route costs are not trolley-like conflict. Crate simulation delay distributions are model assumptions, not player-facing game odds or measured deliberation. This is insufficient evidence, not proof those categories cannot occur.
+- No observed player learning, enjoyment, difficulty or error cause. Remaining Dynamics/Experiment proposals are not silently adopted or executed.
+
+**Step 3 result:** bounded vocabulary, representative examples, source owners, minimal contextual body/query contract and capability limits delivered. Existing native query finds explicit assessment claims; agent reviews prose/conditions; empirical player claims require appropriate evidence. No further schema/query/viewer extension justified by this slice. Other example proposals remain available, not a mandatory migration queue or blocker to this scoped outcome.
+
+Next scheduled work: refine node click-versus-drag safety. Click must not move node/view; press holds position, movement requires drag. Lock lifetime and drag threshold remain unresolved; no implementation or new behavior chosen here. Similarity readability and final general UX review remain separate.
+
+#### Contrast checks
+
+- Default decision/actor/authoring tests:18 passed,6 skipped. Four external integrations unconfigured; two opt-in capacity probes not rerun. New source assertions ensure discovery/pursuit do not become knowledge quizzes or optimization labels.
+- Strict native Attendant:225 Mario records, zero diagnostics/corrections. Both original records byte-equivalent after removing added section; metadata, prior prose and Route retained.
+- Five Mario controls/matrix/rules/scaffolding/MDA semantic comparisons unchanged, excluding source-line provenance. Crate and frozen experiment sources unchanged.
+- Existing focused CJIT executable used; no native code/compiler change, experiment or viewer mutation. Visual/platform acceptance not inferred. Changes uncommitted.

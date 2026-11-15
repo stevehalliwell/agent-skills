@@ -1,6 +1,6 @@
 # Decision structure — working vocabulary
 
-Status: working vocabulary. User confirmed shared contextual representation and test/quiz distinction, and added reaction/dexterity tests. Remaining terms/examples stay under review. Not a universal taxonomy, automatic classifier or quality score. Optional [authored assessment body/query contract](../native/decisions.md) implements contextual demand/intent filtering, not every dimension below.
+Status: working vocabulary. User confirmed shared contextual representation and test/quiz distinction, and added reaction/dexterity tests. Working descriptions below support bounded contextual review; remaining example proposals are not adopted facts. Not a universal taxonomy, automatic classifier or quality score. Optional [authored assessment body/query contract](../native/decisions.md) implements contextual demand/intent filtering, not every dimension below.
 
 - [Purpose](#purpose)
 - [Context required](#context-required)
@@ -246,9 +246,9 @@ Status: predicted decision structure, not observed behavior
 
 ## Existing data-layer candidates
 
-Agreed direction: existing owners retain contextual descriptions; repeatable Challenge body assessments provide first structured demand/intent query. No new collection or frontmatter classification fields adopted. Remaining definitions/examples still need review.
+Agreed direction: existing owners retain contextual descriptions; repeatable Challenge body assessments provide first structured demand/intent query. No new collection or frontmatter classification fields adopted. Unadopted examples remain proposals; working definitions can be corrected without treating bounded review as an exhaustive taxonomy.
 
-Source model has no dedicated decision collection or frontmatter classification fields. Optional [decision-assessment body blocks](../native/decisions.md) retain repeatable situations in Challenges; native CLI filters explicit demand/intent entries. Initial six approved pilot records use this contract. Pipe-steps/low-ceiling follow-up adds separate local tasks and preserves empty demand lists where classification is not established. Other dimensions below remain prose unless explicitly structured later.
+Source model has no dedicated decision collection or frontmatter classification fields. Optional [decision-assessment body blocks](../native/decisions.md) retain repeatable situations in Challenges; native CLI filters explicit demand/intent entries. Initial six approved pilot records use this contract. Pipe-steps/low-ceiling and brick-canopy/flower-shelf follow-ups separate local tasks and preserve empty demand lists where classification is not established. Discovery is not automatically a quiz; useful capability is not automatically optimization. Other dimensions below remain prose unless explicitly structured later.
 
 - Shared vocabulary/reference owns definitions. Existing glossary can point to canonical definitions; do not copy independent definitions into every record.
 - Challenges own concrete goals/context and can identify a decision or test opportunity. Existing `introduces`, `practises`, `requires` and `tests_mastery` links support intended learning/assessment relationships; they do not encode complete response criteria or prove a player passed/failed.
@@ -258,20 +258,24 @@ Source model has no dedicated decision collection or frontmatter classification 
 
 Keep confirmed assessment blocks in existing Challenge owners. Review remaining vocabulary and any further machine-readable dimensions before extending contract. This reference does not authorize new collections, additional example migrations or automatic classification.
 
-## Review outcome needed
+## Review outcome
 
-- Definitions with examples and counterexamples sufficiently precise for discussion.
-- Distinguish overlapping descriptors from mutually exclusive categories.
-- Establish what can be authored, derived under explicit assumptions, or only investigated through play evidence.
-- Test representative Mario/Crate situations without inventing source facts.
-- Recommend data owner and minimal optional representation, retaining provenance and unknowns.
+Bounded review uses these working distinctions, not an exhaustive classification scheme:
+- Availability is not meaningful choice. Trade-off needs relevant competing criteria; calculation needs work toward an answer; optimization needs a chosen goal and constrained improvement. Puzzle concerns finding a solution, not merely performing a known action.
+- Test is task-relative; quiz isolates knowledge. Discovery offers a chance to learn, not proof of understanding or a required question/answer interaction. Reaction, dexterity and execution can overlap without being interchangeable.
+- Dilemma needs unresolved competing considerations; sacrifice or route cost alone is insufficient. Known-probability risk differs from incomplete information and uncertain execution. Another enemy is not automatically an adaptive decision-maker.
+- Author task/context, intent and assessment claims in existing owners. Derive rule outcomes only under explicit supported assumptions. Player understanding, error cause, experienced difficulty and enjoyment need separate evidence.
+- Representative Mario/Crate cases now exercise tests, conditional execution, optional rewards, route preferences and incomplete puzzle context. They do not establish genuine dilemma, nontrivial player calculation or known-probability choice merely because vocabulary supports discussing them.
+- Keep current body/query contract. Additional task/judgment/timing structure needs a concrete question first; no automatic classification, new collection or compulsory schema extension follows.
+
+User-established distinctions remain identified under Purpose. Other terms remain working descriptions, open to correction; closure of bounded review is not universal or per-term empirical validation.
 
 ## Open questions
 
 - Which remaining terms need different boundaries or additional examples?
 - How should optional timing context be expressed without fabricating player capability or a universal deliberation threshold?
 - Which task/response criteria, reaction windows and device-dependent input demands need structured representation?
-- Which optional structured fields and queries best serve confirmed uses: reviewing existing decision opportunities and questioning whether proposed demands fit design intent? Six-record pilot now includes explicit body assessments; first native CLI supports contextual demand/intent filtering. Further dimensions and viewer integration remain separate work.
+- Which optional structured fields and queries best serve confirmed uses: reviewing existing decision opportunities and questioning whether proposed demands fit design intent? Initial six-record pilot and four follow-up records now include explicit body assessments; native CLI supports contextual demand/intent filtering. Further dimensions and viewer integration remain separate work.
 
 ## Comments
 

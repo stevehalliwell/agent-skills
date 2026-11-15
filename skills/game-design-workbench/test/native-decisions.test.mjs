@@ -202,8 +202,8 @@ test('retained text exhaustion is explicit and does not emit partial rows', deep
 test('multi-situation examples separate execution from unclassified discovery, route and traversal goals', enabled, () => {
   const folder = fileURLToPath(new URL('../examples/little-plumber-guy-nes/game-design/challenges/', import.meta.url));
   const all = query(folder);
-  assert.equal(all.data.summary.retained_assessments, 10);
-  assert.equal(all.data.summary.retained_demand_entries, 9);
+  assert.equal(all.data.summary.retained_assessments, 14);
+  assert.equal(all.data.summary.retained_demand_entries, 11);
   const pipe = all.data.assessments.filter(row => row.record === 'tasks/pipe-steps');
   assert.deepEqual(pipe.map(row => row.assessment_id), ['pipe-landing', 'entrance-discovery', 'cellar-route-choice']);
   assert.deepEqual(pipe.map(row => row.demands.map(entry => entry.kind)), [['execution'], [], []]);
@@ -213,13 +213,32 @@ test('multi-situation examples separate execution from unclassified discovery, r
   const execution = query(folder, ['--demand', 'execution', '--intent', 'undecided']).data.assessments;
   assert.deepEqual(execution.filter(row => row.record === 'tasks/pipe-steps').map(row => row.assessment_id), ['pipe-landing']);
   assert.deepEqual(execution.filter(row => row.record === 'tasks/low-ceiling').map(row => row.assessment_id), ['shortened-jump-reward']);
-  assert.equal(query(folder, ['--intent', 'undecided']).data.summary.matched_assessments, 7);
+  assert.equal(query(folder, ['--intent', 'undecided']).data.summary.matched_assessments, 9);
   assert.equal(query(folder, ['--intent', 'wanted']).data.summary.matched_assessments, 0);
+});
+
+test('contrast examples do not invent a quiz, optimization or observed difficulty', enabled, () => {
+  const folder = fileURLToPath(new URL('../examples/little-plumber-guy-nes/game-design/challenges/', import.meta.url));
+  const rows = query(folder).data.assessments;
+  const brick = rows.filter(row => row.record === 'tasks/brick-canopy');
+  const flower = rows.filter(row => row.record === 'tasks/flower-shelf');
+  assert.deepEqual(brick.map(row => row.assessment_id), ['block-response-discovery', 'chosen-canopy-action']);
+  assert.deepEqual(flower.map(row => row.assessment_id), ['optional-supply-pursuit', 'chosen-supply-collection']);
+  for (const pair of [brick, flower]) {
+    assert.deepEqual(pair[0].demands, []);
+    assert.deepEqual(pair[1].demands.map(({ kind, intent }) => ({ kind, intent })), [{ kind: 'execution', intent: 'undecided' }]);
+    assert.ok(pair.every(row => row.evidence_status === 'authored-assessment'));
+  }
+  const knowledge = query(folder, ['--demand', 'knowledge']).data.assessments;
+  assert.ok(knowledge.every(row => row.record !== 'tasks/brick-canopy' && row.record !== 'tasks/flower-shelf'));
+  for (const kind of ['quiz', 'optimization', 'calculation', 'dilemma', 'risk']) {
+    assert.equal(query(folder, ['--demand', kind]).data.summary.matched_assessments, 0);
+  }
 });
 
 test('shipped examples expose only explicit authored pilot assessments', enabled, () => {
   const home = fileURLToPath(new URL('../', import.meta.url));
-  for (const [example, count] of [['crate-puzzle', 1], ['little-plumber-guy-nes', 10]]) {
+  for (const [example, count] of [['crate-puzzle', 1], ['little-plumber-guy-nes', 14]]) {
     const folder = join(home, 'examples', example, 'game-design', 'challenges');
     assert.equal(query(folder).data.summary.retained_assessments, count);
     assert.equal(query(folder, ['--demand', 'dexterity']).data.summary.matched_assessments, 0);
