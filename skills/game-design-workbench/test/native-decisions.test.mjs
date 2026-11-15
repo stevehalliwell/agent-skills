@@ -199,9 +199,27 @@ test('retained text exhaustion is explicit and does not emit partial rows', deep
   assert.equal(value.data.summary, null);
 });
 
+test('multi-situation examples separate execution from unclassified discovery, route and traversal goals', enabled, () => {
+  const folder = fileURLToPath(new URL('../examples/little-plumber-guy-nes/game-design/challenges/', import.meta.url));
+  const all = query(folder);
+  assert.equal(all.data.summary.retained_assessments, 10);
+  assert.equal(all.data.summary.retained_demand_entries, 9);
+  const pipe = all.data.assessments.filter(row => row.record === 'tasks/pipe-steps');
+  assert.deepEqual(pipe.map(row => row.assessment_id), ['pipe-landing', 'entrance-discovery', 'cellar-route-choice']);
+  assert.deepEqual(pipe.map(row => row.demands.map(entry => entry.kind)), [['execution'], [], []]);
+  const ceiling = all.data.assessments.filter(row => row.record === 'tasks/low-ceiling');
+  assert.deepEqual(ceiling.map(row => row.assessment_id), ['ceiling-traversal', 'shortened-jump-reward']);
+  assert.deepEqual(ceiling.map(row => row.demands.map(entry => entry.kind)), [[], ['execution']]);
+  const execution = query(folder, ['--demand', 'execution', '--intent', 'undecided']).data.assessments;
+  assert.deepEqual(execution.filter(row => row.record === 'tasks/pipe-steps').map(row => row.assessment_id), ['pipe-landing']);
+  assert.deepEqual(execution.filter(row => row.record === 'tasks/low-ceiling').map(row => row.assessment_id), ['shortened-jump-reward']);
+  assert.equal(query(folder, ['--intent', 'undecided']).data.summary.matched_assessments, 7);
+  assert.equal(query(folder, ['--intent', 'wanted']).data.summary.matched_assessments, 0);
+});
+
 test('shipped examples expose only explicit authored pilot assessments', enabled, () => {
   const home = fileURLToPath(new URL('../', import.meta.url));
-  for (const [example, count] of [['crate-puzzle', 1], ['little-plumber-guy-nes', 5]]) {
+  for (const [example, count] of [['crate-puzzle', 1], ['little-plumber-guy-nes', 10]]) {
     const folder = join(home, 'examples', example, 'game-design', 'challenges');
     assert.equal(query(folder).data.summary.retained_assessments, count);
     assert.equal(query(folder, ['--demand', 'dexterity']).data.summary.matched_assessments, 0);

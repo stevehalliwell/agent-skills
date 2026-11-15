@@ -248,7 +248,7 @@ Status: predicted decision structure, not observed behavior
 
 Agreed direction: existing owners retain contextual descriptions; repeatable Challenge body assessments provide first structured demand/intent query. No new collection or frontmatter classification fields adopted. Remaining definitions/examples still need review.
 
-Source model has no dedicated decision collection or frontmatter classification fields. Optional [decision-assessment body blocks](../native/decisions.md) retain repeatable situations in Challenges; native CLI filters explicit demand/intent entries. Six approved pilot records use this contract. Other dimensions below remain prose unless explicitly structured later.
+Source model has no dedicated decision collection or frontmatter classification fields. Optional [decision-assessment body blocks](../native/decisions.md) retain repeatable situations in Challenges; native CLI filters explicit demand/intent entries. Initial six approved pilot records use this contract. Pipe-steps/low-ceiling follow-up adds separate local tasks and preserves empty demand lists where classification is not established. Other dimensions below remain prose unless explicitly structured later.
 
 - Shared vocabulary/reference owns definitions. Existing glossary can point to canonical definitions; do not copy independent definitions into every record.
 - Challenges own concrete goals/context and can identify a decision or test opportunity. Existing `introduces`, `practises`, `requires` and `tests_mastery` links support intended learning/assessment relationships; they do not encode complete response criteria or prove a player passed/failed.

@@ -1,6 +1,6 @@
 # Decision structure — example review and proposed additions
 
-Status: P1–P4 confirmed. Six-record prose pilot applied: M2, M6, M10, M15, M18 and C4. Remaining example proposals pending. Rules, learning-role metadata and schema fields unchanged. Approved six records now contain contextual YAML assessments; CLI-only demand/intent query implemented. Viewer integration unavailable.
+Status: P1–P4 confirmed. Initial six-record pilot applied: M2, M6, M10, M15, M18 and C4. Follow-up M5/M7 applied as separate local tasks, with unclassified demands preserved. Other example proposals pending. Rules, learning-role metadata and schema fields unchanged. Eight approved records now contain contextual YAML assessments; CLI-only demand/intent query implemented. Viewer integration unavailable.
 
 ## Scope and review method
 
@@ -17,6 +17,7 @@ This review covers decision content and data placement. It does not assess every
 - [Experiment additions](#experiment-additions)
 - [Categories not yet established](#categories-not-yet-established)
 - [Proposed application order](#proposed-application-order)
+- [Multi-situation follow-up and capability assessment](#q4-multi-situation-review-and-capability-assessment)
 
 Definitions now live in [shared workbench reference](skills/game-design-workbench/references/decision-structure.md). This document applies them; it does not create competing definitions.
 
@@ -117,6 +118,8 @@ Keep current demand, intended demand and observed player difficulty separate. Wh
 
 ### M5. Pipe steps — separate discovery, route choice and input
 
+Applied in approved follow-up: three assessments for landing, entrance discovery and route choice. Discovery/route demand lists remain empty; no compelled search or best-route claim. See [follow-up capability assessment](#q4-multi-situation-review-and-capability-assessment).
+
 [Source: pipe-steps](skills/game-design-workbench/examples/little-plumber-guy-nes/game-design/challenges/pipe-steps.md)
 
 **Found:** jumping/landing practice; only one designated pipe offers cellar entry; hint/discoverability unresolved; entry requires alignment and down input.
@@ -136,6 +139,8 @@ Keep current demand, intended demand and observed player difficulty separate. Wh
 **Timing:** distinguish time available to inspect approach from airborne control/landing window. Neither has a numeric value. Familiarity may reduce deliberation but not eliminate execution demand.
 
 ### M7. Low ceiling — cleaner execution is not compulsory success
+
+Applied in approved follow-up: separate traversal and chosen shortened-jump reward task. Ground traversal has no classified demand; optional technique retains execution/undecided. Success criteria remain prose, not new fields.
 
 [Source: low-ceiling](skills/game-design-workbench/examples/little-plumber-guy-nes/game-design/challenges/low-ceiling.md)
 
@@ -428,7 +433,7 @@ These are absences of sufficient evidence in reviewed situations, not claims tha
 5. Only then choose optional fields needed for specific queries. Separate game judgment, decision demands, timing and evidence status rather than introduce one exclusive `decision_kind` label.
 6. Consider graph annotations/filters only after stored meaning and a concrete question are agreed. Declared relationship graphs cannot currently display or derive this full contextual assessment.
 
-Current disposition: P1–P4 confirmed, including reaction/dexterity distinctions and design-intent review. M2, M6, M10, M15, M18 and C4 applied as contextual prose and structured body assessments. Other M/C/D/E proposals remain pending. User subsequently chose contextual YAML storage and CLI-first query delivery. No automatic inference, aggregate quality score, experiment execution or viewer integration adopted.
+Current disposition: P1–P4 confirmed, including reaction/dexterity distinctions and design-intent review. M2, M6, M10, M15, M18 and C4 applied as contextual prose and structured body assessments. M5/M7 multi-situation follow-up also applied; other M/C/D/E proposals remain pending. User subsequently chose contextual YAML storage and CLI-first query delivery. No automatic inference, aggregate quality score, experiment execution or viewer integration adopted.
 
 ### Pilot checks and frontmatter conversion
 
@@ -542,7 +547,7 @@ Adopt structured blocks only in six approved pilot records; retain prose and unk
 
 Delivered [source/output contract](skills/game-design-workbench/native/decisions.md), bounded native reader and [CLI regression fixtures](skills/game-design-workbench/test/native-decisions.test.mjs). Fresh executable: `skills/game-design-workbench/native/build/decision-assessments-work/gd.exe`. Query slice committed as separate checkpoint; vocabulary/YAML checkpoint is `68b21bb`.
 
-Observed inventory:
+Observed inventory at first CLI checkpoint:
 - Crate: 4 source Challenges, 1 assessment, 1 demand entry.
 - Mario: 19 source Challenges, 5 assessments, 7 demand entries.
 - All intent entries undecided. Knowledge + undecided matches first-Walker/final-gap contexts. No authored dexterity/reaction entries; filters return no rows without implying no such gameplay demand.
@@ -557,3 +562,37 @@ Checks:
 - Skill frontmatter, new source/query links, shared reference/model/review links and diff checks pass. Broader README audit reports three pre-existing stale `controls.md` heading anchors; new query link is valid. Unrelated anchor repair deferred.
 
 No experiment run, viewer launch/mutation, alternate compiler, full platform matrix or visual acceptance. No new frontmatter field, collection, automatic classification or quality score.
+
+### Q4. Multi-situation review and capability assessment
+
+User approved Pipe steps/Low ceiling follow-up. Added five assessments across two existing Challenges; kept prior prose, headers, route links and rules. Brick canopy and other pending proposals remain outside this slice. No new field, selector, game rule or intended-demand decision.
+
+**Pipe steps:**
+- `pipe-landing`: local chosen-support task; execution/undecided. Missing support does not alone establish lethal failure or a knowledge error.
+- `entrance-discovery`: optional opportunity. Hint, discovery criterion and player knowledge unknown; demands empty rather than invent a knowledge/search requirement.
+- `cellar-route-choice`: valid cellar/overworld alternatives. Destination knowledge, comparative costs and preferences unknown; demands empty rather than assume a trade-off or best route. Entry input is separate from preference; linked entrance predicate remains unencoded.
+
+**Low ceiling:**
+- `ceiling-traversal`: ground route remains valid; demands empty. Skipping optional reward does not establish encounter failure.
+- `shortened-jump-reward`: player chooses that technique and collection goal; execution/undecided. Reward miss leaves local goal unmet, not necessarily failed traversal or a game-declared wrong answer. Geometry does not prove technique is compulsory. Tall stand-up response remains unresolved.
+
+Current Mario inventory:19 source Challenges,10 assessments,9 demand entries. Eight records across both examples now carry11 assessments total. Unclassified means unknown assessment demands, not no gameplay demand.
+
+#### Supported questions and limits
+
+- **Which situations explicitly assess execution with undecided intent?** Exact native demand/intent query. Pipe landing and chosen shortened-jump reward match; their discovery, route-choice and ground-traversal siblings do not. Conditions remain returned context, not executable predicates.
+- **Which situations have no classified demand yet?** Read all assessment rows and inspect empty `demands`; no new selector needed. Three Mario follow-up rows are empty. `--intent undecided` matches7 assessments, not all10: unknown demand classification and undecided intent on an existing entry are different states.
+- **What counts as success, failure or a valid alternative?** Agent can review task/context and supporting rules. Criteria remain prose; no exact native correctness/optional-goal filter or game-outcome classifier. Distinguish author-selected local goals from declared game success/failure/feedback.
+- **Is this knowledge, discovery, reaction or dexterity?** Native returns explicit labels, not diagnoses. Agent can compare available information, controller requirements and timing declarations; missing hints/windows/mapping prevent firm claims. A timer or failed action alone is insufficient.
+- **Is this calculation, optimization, trade-off, puzzle or dilemma?** Exact label lookup works if authored. Establishing category needs goals, alternatives, constraints, information and relevant criteria. No algorithm derives meaningfulness, probabilities, dominance, global optimum or conflicting values from route counts/skill links.
+- **Did player learn, misunderstand, mistime or choose a sacrifice?** Not established. Declared practice/mastery links and rule outcomes cannot identify player knowledge, performance cause, enjoyment or difficulty. Need appropriately scoped evidence.
+- **Would wider timing or destination disclosure preserve wanted choice?** Agent can propose a comparison and identify intended invariants. No alternative adopted or measured here; this is not causal evidence or automatic redesign.
+
+**Recommendation:** keep task/judgment distinctions in prose for now. Current reader already preserves separate situations and exposes unclassified rows. Before extending schema/query, choose an exact unanswered question and distinguish local goal criteria, game-declared judgment and observed player outcome. Do not add `correct_choice`, infer unwanted demand, or tag discovery merely to populate filters. Remaining vocabulary/example proposals still need review; no viewer work follows automatically.
+
+#### Follow-up checks
+
+- Default decision/actor/authoring tests:17 passed,6 skipped. Four external integration checks unconfigured; two deep capacity probes deliberately not rerun. New real-example assertions verify five distinct local IDs, empty demand lists and execution/intent filtering without cross-situation leakage.
+- Strict native Attendant:225 Mario records; zero diagnostics/corrections. Both changed headers and Route sections unchanged from Git checkpoint.
+- Five Mario controls/matrix/rules/scaffolding/MDA semantic comparisons unchanged, excluding source-line provenance. Crate sources unchanged.
+- No native code change or compiler build; existing focused CJIT executable used. No experiment, viewer launch/mutation or new visual acceptance. Follow-up committed as checkpoint.
