@@ -1,28 +1,23 @@
 ---
-{
-  "id": "01a15175-3c00-74e8-81e5-dcc6330be146",
-  "name": "energy-encourages-planning",
-  "created_at": "2026-10-19T00:00:00.000Z",
-  "desc": "Energy encourages planning investigation",
-  "tags": [],
-  "status": "accepted",
-  "stage": "proposed",
-  "experiment_kind": "playtest",
-  "control-vars": [],
-  "mechanics": [
-    "mechanics/crate-pushing"
-  ],
-  "interactions": [],
-  "dynamics": [
-    "dynamics/careful-positioning"
-  ],
-  "aesthetics": [
-    "aesthetics/deliberate-tension"
-  ],
-  "program": null,
-  "inputs": null,
-  "results": null
-}
+id: "01a15175-3c00-74e8-81e5-dcc6330be146"
+name: "energy-encourages-planning"
+created_at: "2026-10-19T00:00:00.000Z"
+desc: "Energy encourages planning investigation"
+tags: []
+status: "accepted"
+stage: "proposed"
+experiment_kind: "playtest"
+control-vars: []
+mechanics:
+  - "mechanics/crate-pushing"
+interactions: []
+dynamics:
+  - "dynamics/careful-positioning"
+aesthetics:
+  - "aesthetics/deliberate-tension"
+program: null
+inputs: null
+results: null
 ---
 # Question
 

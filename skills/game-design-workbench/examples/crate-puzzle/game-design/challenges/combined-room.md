@@ -30,3 +30,13 @@ resources: []
 Declared conceptual route only; no physical level map. Learning roles describe intent, not proof.
 
 Player combines planning with switch routing. Intentional discovery may be appropriate; prior planning support is not yet documented.
+
+## Decision and assessment
+
+Contextual assessment uses [shared vocabulary](../../../../references/decision-structure.md). Intended task from concept: use finite push energy to position crate on switch and open exit. This is a puzzle/planning-test candidate combining rule knowledge and constrained actions, not a certified solvable room or observed player test.
+
+[Crate-pushing](../mechanics/crate-pushing.md) owns push conditions, energy spending and unavailable pulling. Distinguish permitted action, successful push and progress toward local task. A blocked attempt and a successful but unhelpful push need not have same meaning. Without physical layout, no particular push can be declared an irreversible dead end or wrong puzzle answer.
+
+Finding a feasible solution is not automatically optimization. Minimizing pushes/time needs an explicit goal; counting pushes becomes calculation only when comparison requires work. No deliberation deadline, reaction window or controller-specific dexterity demand is established. Energy constrains successful actions, not thinking duration.
+
+Intent check: should this room test planning and prediction rather than reaction or controller dexterity? Concept favors thoughtful commitment over fast execution; layout, inputs and assistance must establish that fit. Introducing and requiring coordination in same room remains a support question, not a silent learning-role change.

@@ -27,6 +27,14 @@ A clear break in floor requires a committed jump to a broad landing. Falling cro
 
 Earlier pipe tops offered jumping and landing opportunities. No evidence establishes mastery.
 
+## Decision and assessment
+
+Contextual assessment uses [shared vocabulary](../../../../references/decision-structure.md). Task: cross floor break alive. Successful crossing and landing satisfy local survival task; crossing lethal fall boundary fails it. This is an explicit survival/execution test, not a preference between rewards or an established dilemma.
+
+Recognizing required jump differs from performing launch and landing. Existing mastery link identifies intended assessment, not demonstrated player skill. Deliberation on approach and execution during jump are separate; neither has a numeric window. No specific reaction or dexterity difficulty is established without input/timing details.
+
+Intent check: is landing execution the intended test, and should player have time to inspect approach before committing? Earlier practice opportunities support that question but do not prove understanding or readiness.
+
 ## Route
 
 Continue to low-ceiling. Cellar bypass skips this challenge, so it cannot be assumed prior practice for every later arrival.

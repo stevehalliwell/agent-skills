@@ -28,6 +28,16 @@ An enclosed side room contains low and raised coin rows without enemies or letha
 
 Safer terrain permits movement practice. Shared clock still spends, creating an authored trade-off rather than a free pause.
 
+## Decision and assessment
+
+Contextual assessment uses [shared vocabulary](../../../../references/decision-structure.md). Alternatives include pursuing optional coins and leaving quickly. Shared clock gives reward gathering a time cost; relevant priorities include rewards and conserving enough time to finish. No compulsory collection total makes skipping coins a wrong answer.
+
+This is an authored trade-off opportunity, not proof that cost meaningfully affects players. A generous budget could make it negligible. Calculation or optimization may apply when a player deliberately budgets time or selects constrained reward collection, but numbers alone establish neither demand.
+
+Safer terrain allows exploration without local enemies or lethal gaps, not unlimited deliberation or a paused clock. Collection costs, player knowledge/preferences and decision windows remain unknown.
+
+Intent check: should time pressure make reward gathering a meaningful choice, or should this room mainly support safer exploration? Desired balance and experienced tension remain unverified; do not silently change clock rules to resolve question.
+
 ## Route
 
 Reach exit connector to bonus-return. Coin collection is optional; no exact token count or hidden completion condition.

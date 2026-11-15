@@ -1,12 +1,10 @@
 ---
-{
-  "id": "01a15175-3c00-7df0-886a-c9d1efc9219d",
-  "name": "pull",
-  "created_at": "2026-10-19T00:00:00.000Z",
-  "desc": "Rejected pulling alternative",
-  "tags": [],
-  "status": "rejected"
-}
+id: "01a15175-3c00-7df0-886a-c9d1efc9219d"
+name: "pull"
+created_at: "2026-10-19T00:00:00.000Z"
+desc: "Rejected pulling alternative"
+tags: []
+status: "rejected"
 ---
 # Pulling proposal
 

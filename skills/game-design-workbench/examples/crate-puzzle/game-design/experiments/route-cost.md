@@ -1,5 +1,29 @@
 ---
-{ "id": "01a15175-3c00-7e68-8f3b-b760984a9a2d", "name": "route-cost", "created_at": "2026-10-19T00:00:00.000Z", "desc": "Executed 1000-trial route timing baseline; 245 finished within 8 s", "tags": [], "status": "proposed", "stage": "completed", "experiment_kind": "simulation", "control-vars": [ "control-vars/tile-distance", "control-vars/walk-speed", "control-vars/walk-duration", "control-vars/push-duration", "control-vars/initial-energy", "control-vars/energy-capacity", "control-vars/push-cost" ], "mechanics": [ "mechanics/grid-walking", "mechanics/crate-pushing" ], "interactions": [], "dynamics": [], "aesthetics": [], "program": experiments/route-cost/route_timing.c, "inputs": experiments/route-cost/frozen-input.json, "results": game-design-results/route-cost/20261024T193020Z-baseline-speed-2 }
+id: "01a15175-3c00-7e68-8f3b-b760984a9a2d"
+name: "route-cost"
+created_at: "2026-10-19T00:00:00.000Z"
+desc: "Executed 1000-trial route timing baseline; 245 finished within 8 s"
+tags: []
+status: "proposed"
+stage: "completed"
+experiment_kind: "simulation"
+control-vars:
+  - "control-vars/tile-distance"
+  - "control-vars/walk-speed"
+  - "control-vars/walk-duration"
+  - "control-vars/push-duration"
+  - "control-vars/initial-energy"
+  - "control-vars/energy-capacity"
+  - "control-vars/push-cost"
+mechanics:
+  - "mechanics/grid-walking"
+  - "mechanics/crate-pushing"
+interactions: []
+dynamics: []
+aesthetics: []
+program: "experiments/route-cost/route_timing.c"
+inputs: "experiments/route-cost/frozen-input.json"
+results: "game-design-results/route-cost/20261024T193020Z-baseline-speed-2"
 ---
 # Question
 

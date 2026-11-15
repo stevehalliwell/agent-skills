@@ -28,6 +28,16 @@ A last visible floor break separates approach from finish. Combine launch, landi
 
 Prerequisite opportunities exist earlier, but high-stair is optional and finish-approach has no prior explicit introduction. These are review prompts, not proof the design is impossible.
 
+## Decision and assessment
+
+Contextual assessment uses [shared vocabulary](../../../../references/decision-structure.md). Task: cross last floor break alive on approach to finish. Crossing successfully satisfies this local task; lethal falling fails it. Reaching finish post remains a separate course-success event.
+
+Composite test combines launch/landing execution, edge reading and remaining-time awareness. Existing mastery target describes intended assessment, not observed mastery. Preparation opportunities differ by route; high-stair is optional and finish-approach has no prior explicit introduction. Neither fact alone proves player incompetence or impossible design.
+
+Approach deliberation, remaining clock and jump-execution window are different timing facts. No numeric response window or specific dexterity difficulty is supplied. Correctly identifying response does not prove ability to perform it.
+
+Intent check: is this intended to test a prepared combination of skills or discovery under pressure? Review route-specific support before deciding whether reaction/dexterity demands serve intended final assessment.
+
 ## Route
 
 Successful crossing leads to finish. Retry state and exact jump geometry remain outside this route graph.

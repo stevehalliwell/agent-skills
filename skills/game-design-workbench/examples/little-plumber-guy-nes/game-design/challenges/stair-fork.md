@@ -26,6 +26,16 @@ Choose an exposed staircase of smaller supports or a lower, longer ground passag
 
 Prior landings should make upper route legible; lower route preserves an easier alternative.
 
+## Decision and assessment
+
+Contextual assessment uses [shared vocabulary](../../../../references/decision-structure.md). Task: choose an approach to final gap. Upper narrow supports and lower longer ground passage are legitimate alternatives; neither branch is declared universally correct.
+
+Candidate trade-off concerns landing/execution demands versus travel/time cost, with preference depending on current state, goals and player capability. Source describes lower route as longer but supplies no measured upper-route time advantage or failure probabilities. No calculation, optimum, quantified risk or dilemma is established.
+
+Separate route deliberation from execution after commitment. Available decision time, exact input demands and player's knowledge of both routes remain unspecified. Selecting low path does not itself reveal motive or missing skill.
+
+Intent check: should this fork offer a meaningful easier-travel alternative under clock pressure? Geometry, costs and play evidence must establish whether both options actually serve that intent.
+
 ## Route
 
 Branch to high-stair or low-path, both rejoining final-gap. No physics solver or measured time advantage establishes the route labels.

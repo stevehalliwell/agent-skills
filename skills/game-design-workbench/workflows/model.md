@@ -2,6 +2,8 @@
 
 Live schemas and usage are authoritative for actual fields. Shipped template files are authoritative starting contracts: copy/adapt them rather than regenerate them from code. They are not instructions to overwrite local schemas. No separate database or collection per theory.
 
+Author record and `.schema.md` frontmatter as flat **block YAML** between `---` delimiters, using block lists for nonempty arrays. Do not author JSON objects or flow mappings as frontmatter. Preserve scalar types: quote strings that could be read as booleans, numbers, nulls or dates; keep real booleans, numbers and nulls unquoted. JSON remains valid for CLI requests/results and experiment inputs, not Markdown frontmatter.
+
 ## Owners
 
 - `nouns`, `verbs`: entity/action identity and meaning. Optional noun `is_actor` is boolean: true classifies actor, false classifies non-actor, omission remains unclassified. Keep one noun identity and existing queries across all classifications. See [noun field contract](../templates/nouns/.usage.md). Noun `axes` explicitly references applicable typed dimensions; do not infer applicability from rule mentions.

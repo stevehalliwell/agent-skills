@@ -1,5 +1,23 @@
 ---
-{ "id": "01a15175-3c00-7b48-808f-34e6fe935d28", "name": "occupied-switch", "created_at": "2026-10-19T00:00:00.000Z", "desc": "Crate activates switch", "tags": [], "status": "accepted", "nouns": [ "nouns/switch" ], "verb": "verbs/activate", "context_nouns": [ "nouns/crate", "nouns/exit" ], "mechanics": [ "mechanics/switch-exit" ], "control-vars": [], "resources": [], "coverage": "defined", context_axes: [ axes/Contact ] }
+id: "01a15175-3c00-7b48-808f-34e6fe935d28"
+name: "occupied-switch"
+created_at: "2026-10-19T00:00:00.000Z"
+desc: "Crate activates switch"
+tags: []
+status: "accepted"
+nouns:
+  - "nouns/switch"
+verb: "verbs/activate"
+context_nouns:
+  - "nouns/crate"
+  - "nouns/exit"
+mechanics:
+  - "mechanics/switch-exit"
+control-vars: []
+resources: []
+coverage: "defined"
+context_axes:
+  - "axes/Contact"
 ---
 # Occupied switch
 
