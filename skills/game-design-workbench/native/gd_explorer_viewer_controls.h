@@ -58,6 +58,7 @@ static void viewer_control_token(ExplorerViewer *viewer,GD_ExplorerContext *c,GD
         if(c->pane->query_state)hash=viewer_control_hash(hash,&c->pane->query_state->scene,sizeof(c->pane->query_state->scene));
         if(c->pane->structure_state)hash=viewer_control_hash(hash,&c->pane->structure_state->similarity_canvas,sizeof(bool));
     }
+    if(c->pane->chart_state){hash=viewer_control_hash(hash,&c->pane->chart_state->generation,sizeof(uint64_t));hash=viewer_control_hash(hash,&c->pane->chart_state->query,sizeof(c->pane->chart_state->query));}
     if (form==GD_FORM_QUERY) hash=viewer_control_hash(hash,&selected,sizeof(selected));
     snprintf(token,capacity,"%016llx",(unsigned long long)hash);
 }
@@ -66,7 +67,7 @@ static void viewer_control_text(GD_ViewerWriter *w,GD_ExplorerContext *c,GD_Expl
     gd_viewer_quote(w,available==1 ? text:NULL);
 }
 static void viewer_controls(ExplorerViewer *viewer,const GD_ViewerRequest *request,GD_ExplorerContext *c,GD_ViewerWriter *w,int configured) {
-    union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; GD_ExplorerPresentation presentation; } defaults;
+    union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; GD_ExplorerChartForm chart; GD_ExplorerPresentation presentation; } defaults;
     GD_ExplorerContext current=*c;GD_ExplorerRuleContext selection;
     int form,written=0,want=*request->form ? viewer_form_kind(request->form):-1;
     gd_explorer_rule_context_discover(c,&selection);current.rule_context=&selection;c=&current;

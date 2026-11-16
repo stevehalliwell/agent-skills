@@ -146,7 +146,7 @@ Artifacts: `native/build/residual-paging-{cli,core,view,work}/` under skill root
 
 ### Residual live review setup
 
-User response: “seemed fine”. Accepts reviewed three-item batch, not unperformed beyond64 pointer cases, full standalone workflow, every-view usability or platform matrix. User authorized local checkpoint before question review; no push. Review windows not closed by agent.
+User response: “seemed fine”. Accepts reviewed three-item batch, not unperformed beyond64 pointer cases, full standalone workflow, every-view usability or platform matrix. Local checkpoint `edc2509` was made before separate commit approval. Agent disclosed error; user chose **Keep local commit**. No push. Review windows not closed by agent.
 
 - Fresh Mario unified PID6736/session `6736-c03aad8ad7958320`; standalone PID34280, title `Resource graph preview`. Both use `native/build/residual-paging-view/gd-view.exe`. Standalone has no viewer IPC server; its pager/scroll review uses window controls, not guessed IPC commands.
 - Unified: discovered current presentation controls, exact `condition incidence` key and native case identity. Enabled typed layer and explicitly navigated to `case:interactions%2Fbump-brick-small#small-bump`. Selected occupied overview cell0,0 after explicit navigation, which had reset brush through existing navigation invalidation. Native layer setup is not an analytical question Run. No source writes; fresh snapshot modified-records0/Undo0/Redo0, no pending rank edit.

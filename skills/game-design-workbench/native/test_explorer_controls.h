@@ -2,7 +2,7 @@
 #ifndef TEST_EXPLORER_CONTROLS_H
 #define TEST_EXPLORER_CONTROLS_H
 static int explorer_control_checks(GD_ExplorerContext *context,char *reply,int *fail_at,int *calls,int *checks) {
-    union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; GD_ExplorerPresentation presentation; } a,b;
+    union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; GD_ExplorerChartForm chart; GD_ExplorerPresentation presentation; } a,b;
     GD_ExplorerPane *prior=context->pane; GD_ExplorerPane temporary; GD_ExplorerContext c=*context;
     int form,i,j,count,ok=0; GD_ViewerWriter writer;
 #define CONTROL_CHECK(value) do { ++*checks; if (!(value)) { fprintf(stderr,"Shared control check failed: %s (line %d)\n",#value,__LINE__); goto cleanup; } } while (0)

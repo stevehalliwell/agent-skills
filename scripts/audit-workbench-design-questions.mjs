@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Re-run source-backed Mario question probes. Native C99 owns all semantics.
+// Re-run baseline and current typed Mario question probes. Native C99 owns all semantics.
 // Usage: node scripts/audit-workbench-design-questions.mjs --output NEW_DIRECTORY
 // Optional: --executable PATH. Refuses existing output; never edits source data.
+import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -64,6 +65,7 @@ const matrix = bindings(['nouns', 'verbs', 'interactions']);
 const rules = [...bindings(['interactions', 'mechanics', 'nouns', 'verbs', 'axes', 'resources', 'control-vars']), '--related', `systems=${join(example, 'systems')}`];
 const ruleCase = (name, assumptions, context) => [...rules, '--case', name, ...assumptions.flatMap(value => ['--assume', value]), '--context', context, '--fields', 'analysis'];
 try {
+  probe('query-catalogue', ['query', '--list']);
   probe('matrix', ['matrix', ...matrix]);
   probe('connectivity', ['connectivity', ...matrix]);
   probe('skills', ['skill-atoms', ...bindings(['skill-atoms']), '--from', 'skill-atoms/fall-stomp', '--known', 'skill-atoms/stomp-walker', '--known', 'skill-atoms/control-fall']);
@@ -96,6 +98,54 @@ try {
   query('capped-life-frontier', '--to', lives);
   query('cross-case-identity-gap', '--from', bank, '--to', score);
   query('unbound-coin-role', '--to', 'resource_role:resources%2Fcoin-progress');
+  // Current surfaces missing from historical baseline. Read-only native queries;
+  // successful extraction is not human acceptance of the broader design question.
+  probe('hero-bindings', ['query', '--question', 'object-bindings', '--projection', 'actors', ...rules, '--object', 'nouns/hero']);
+  probe('hero-form-variants', ['query', '--question', 'actor-states', '--projection', 'actors', ...rules,
+    '--case', 'interactions/touch-walker-small#lethal-side', '--participant', 'Hero', '--axis', 'axes/Form']);
+  probe('shellback-state-chart', ['query', '--question', 'state-chart', '--projection', 'actors', ...rules,
+    '--object', 'nouns/shellback', '--axis', 'axes/ShellState']);
+  probe('shellback-joint-state-chart', ['query', '--question', 'state-chart', '--projection', 'actors', ...rules,
+    '--object', 'nouns/shellback', '--axis', 'axes/ShellState', '--with-axis', 'axes/Life']);
+  // Q8: environmental opportunity stays on exact local Block; no pool or spawn inferred.
+  const supply = probe('environmental-supply-state-chart', ['query', '--question', 'state-chart', '--projection', 'actors', ...rules,
+    '--object', 'nouns/supply-block', '--axis', 'axes/SupplyState']);
+  assert(supply.data.scenarios.some(scenario => scenario.from === 'unspent' &&
+    scenario.transitions.some(transition => transition.to === 'spent' && transition.conditional)));
+  assert(supply.data.cases.some(entry => entry.declaration.case === 'growth-small' &&
+    entry.declaration.unknown_effects.includes('spawn geometry/motion unconfigured')));
+  const spent = probe('environmental-supply-spent', ['query', '--question', 'state-chart', '--projection', 'actors', ...rules,
+    '--object', 'nouns/supply-block', '--axis', 'axes/SupplyState',
+    '--case', 'mechanics/supply-release#spent-no-payout', '--participant', 'Block']);
+  const unspentHypothesis = spent.data.scenarios.find(scenario => scenario.from === 'unspent');
+  const spentHypothesis = spent.data.scenarios.find(scenario => scenario.from === 'spent');
+  assert.equal(unspentHypothesis.applicability, 'false');
+  assert.equal(unspentHypothesis.transitions.length, 0);
+  assert(spentHypothesis.transitions.some(transition => transition.kind === 'preserve' && transition.to === 'spent'));
+  const growth = probe('environmental-supply-growth', ['rules', ...ruleCase('mechanics/supply-release#growth-small', [
+    'Hero:axes/Motion=rising', 'Hero:axes/Form=small',
+    'Block:axes/SupplyState=unspent', 'Block:axes/SupplyContent=growth',
+  ], 'Hero axes/Contact.undersideContacts Block')]);
+  assert.equal(growth.data.analysis.scenario.context, 'true');
+  assert.equal(growth.data.analysis.scenario.applicability, 'unknown');
+  assert(growth.data.analysis.scenario.writes.some(write => write.actor.participant === 'Block' &&
+    write.axis === 'axes/SupplyState' && write.state === 'spent' && write.conditional));
+  probe('death-contributors', ['query', '--question', 'effect-contributors', '--projection', 'effects', ...rules, '--axis', 'axes/Life', '--value', 'dead']);
+  probe('hero-death-contributors', ['query', '--question', 'effect-contributors', '--projection', 'effects', ...rules,
+    '--axis', 'axes/Life', '--value', 'dead', '--object', 'nouns/hero']);
+  const mdaBindings = bindings(['mechanics', 'systems', 'dynamics', 'aesthetics']);
+  probe('mda-dominators', ['query', '--question', 'structural-dominators', '--projection', 'mda', ...mdaBindings, '--start', 'mechanics/enemy-contact']);
+  probe('mda-dominators-backward', ['query', '--question', 'structural-dominators', '--projection', 'mda', ...mdaBindings,
+    '--start', 'mechanics/enemy-contact', '--direction', 'backward']);
+  probe('mda-declaration-gaps', ['query', '--question', 'declaration-gaps', '--projection', 'mda', ...mdaBindings]);
+  const features = probe('mda-similarity-features', ['query', '--question', 'similarity-features', '--projection', 'mda', ...mdaBindings]);
+  const selectedFeatures = ['retained-partners', 'source-loaded-role'];
+  for (const id of selectedFeatures) {
+    if (!features.data.features.some(feature => feature.id === id)) throw new Error(`Missing advertised similarity feature: ${id}`);
+  }
+  probe('mda-similarity-map', ['query', '--question', 'similarity-map', '--projection', 'mda', ...mdaBindings,
+    ...selectedFeatures.flatMap(id => ['--feature', `${id}=1`])]);
+  probe('decision-assessments', ['query', '--question', 'decision-assessments', '--projection', 'challenges', ...bindings(['challenges'])]);
   // Select only native-typed declarations; do not infer causality, applicability or identity.
   const declarations = resources.data.relations;
   writeFileSync(join(output, 'declaration-index.json'), `${JSON.stringify({

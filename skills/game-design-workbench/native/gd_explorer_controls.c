@@ -71,6 +71,14 @@ static const GD_ExplorerControl resource_fields[]={
     FIELD(GD_ExplorerResourceForm,accepted,"Accepted sources only",GD_CONTROL_BOOL,NULL,0),
     FIELD(GD_ExplorerResourceForm,work_limit,"Route work ceiling 0..16777216",GD_CONTROL_INT,NULL,0)
 };
+static const GD_ExplorerControl chart_fields[]={
+    FIELD(GD_ExplorerChartForm,object,"Exact noun reference",GD_CONTROL_TEXT,NULL,0),
+    FIELD(GD_ExplorerChartForm,axis,"Enum axis",GD_CONTROL_TEXT,NULL,0),
+    FIELD(GD_ExplorerChartForm,companion_axis,"Companion enum axis (optional)",GD_CONTROL_TEXT,NULL,0),
+    FIELD(GD_ExplorerChartForm,case_name,"Exact source#case (optional)",GD_CONTROL_TEXT,NULL,0),
+    FIELD(GD_ExplorerChartForm,participant,"Local participant (requires case)",GD_CONTROL_TEXT,NULL,0),
+    FIELD(GD_ExplorerChartForm,work_limit,"Native work ceiling",GD_CONTROL_INT,NULL,0)
+};
 #undef FIELD
 #undef KEYFIELD
 int gd_explorer_rank_pending(const GD_ExplorerProject *project,const GD_ExplorerPane *panes) {
@@ -92,6 +100,7 @@ const GD_ExplorerControl *gd_explorer_form_fields(GD_ExplorerForm form,int *coun
         case GD_FORM_QUERY: *count=(int)(sizeof(query_fields)/sizeof(*query_fields)); return query_fields;
         case GD_FORM_STRUCTURE: *count=(int)(sizeof(structure_fields)/sizeof(*structure_fields)); return structure_fields;
         case GD_FORM_RULES: *count=(int)(sizeof(rule_fields)/sizeof(*rule_fields)); return rule_fields;
+        case GD_FORM_CHART: *count=(int)(sizeof(chart_fields)/sizeof(*chart_fields)); return chart_fields;
         case GD_FORM_PRESENTATION: return gd_explorer_presentation_fields(count);
         case GD_FORM_RESOURCE: *count=(int)(sizeof(resource_fields)/sizeof(*resource_fields)); return resource_fields;
         default: return NULL;
@@ -109,6 +118,7 @@ size_t gd_explorer_form_size(GD_ExplorerForm form) {
         case GD_FORM_STRUCTURE: return sizeof(GD_ExplorerStructureForm);
         case GD_FORM_RULES: return sizeof(GD_ExplorerRuleForm);
         case GD_FORM_RESOURCE: return sizeof(GD_ExplorerResourceForm);
+        case GD_FORM_CHART: return sizeof(GD_ExplorerChartForm);
         case GD_FORM_PRESENTATION: return sizeof(GD_ExplorerPresentation);
         default: return 0;
     }
@@ -121,13 +131,18 @@ void gd_explorer_form_defaults(GD_ExplorerForm form,void *values) {
     } else if (form==GD_FORM_STRUCTURE) ((GD_ExplorerStructureForm *)values)->work_limit=GD_GRAPH_ANALYSIS_WORK;
     else if (form==GD_FORM_RESOURCE) { GD_ExplorerResourceForm *p=values; p->from=p->to=-1; p->work_limit=GD_RESOURCE_ROUTE_WORK; }
     else if (form==GD_FORM_RULES) ((GD_ExplorerRuleForm *)values)->work_limit=GD_RULE_EVALUATION_WORK_LIMIT;
+    else if (form==GD_FORM_CHART) ((GD_ExplorerChartForm *)values)->work_limit=GD_ACTOR_WORK;
 }
 void *gd_explorer_form_pending(GD_ExplorerContext *context,GD_ExplorerForm form,int create) {
     GD_ExplorerPane *pane;
     if (!context || !context->project || !(pane=context->pane) || !(context->project->available&(1u<<pane->view))) return NULL;
     switch (form) {
         case GD_FORM_QUERY: return pane->view==GD_EXPLORER_ACTORS || pane->view==GD_EXPLORER_EFFECTS ? &pane->query_options:NULL;
+        case GD_FORM_CHART:
+            if (pane->view!=GD_EXPLORER_STATES || (create && !gd_explorer_chart_prepare(context))) return NULL;
+            return pane->chart_state ? &pane->chart_state->pending:NULL;
         case GD_FORM_STRUCTURE:
+            if (pane->view==GD_EXPLORER_STATES) return NULL;
             if (create && !gd_explorer_structure_inputs(context)) return NULL;
             return pane->structure_state ? &pane->structure_state->pending:NULL;
         case GD_FORM_RESOURCE: return pane->view==GD_EXPLORER_RESOURCES ? &pane->resource_pending:NULL;
@@ -215,16 +230,18 @@ int gd_explorer_rule_mode(GD_ExplorerRuleForm *form,int mode) {
     form->work_limit=mode==2 ? GD_EFFECT_WORK:mode==1 ? -1:GD_RULE_EVALUATION_WORK_LIMIT; return 1;
 }
 const char *gd_explorer_form_name(GD_ExplorerForm form) {
-    static const char *const names[]={"query","structure","rules","resource","presentation"};
+    static const char *const names[]={"query","structure","rules","resource","chart","presentation"};
     return form>=0 && form<GD_FORM_COUNT ? names[form]:NULL;
 }
 int gd_explorer_form_available(const GD_ExplorerContext *c,GD_ExplorerForm form) {
     if (!c || !c->project || !c->pane || !(c->project->available&(1u<<c->pane->view))) return 0;
+    if (c->pane->view==GD_EXPLORER_STATES) return form==GD_FORM_PRESENTATION || form==GD_FORM_CHART;
     return form==GD_FORM_PRESENTATION || (form==GD_FORM_STRUCTURE && c->pane->view!=GD_EXPLORER_NOUNS) || (form==GD_FORM_RULES && c->project->rules && c->project->models[GD_EXPLORER_RULE_DATA]) || (form==GD_FORM_RESOURCE && c->pane->view==GD_EXPLORER_RESOURCES) ||
         (form==GD_FORM_QUERY && (c->pane->view==GD_EXPLORER_ACTORS || c->pane->view==GD_EXPLORER_EFFECTS));
 }
 const void *gd_explorer_form_applied(const GD_ExplorerContext *c,GD_ExplorerForm form) {
     const GD_ExplorerPane *p=c->pane;
+    if (form==GD_FORM_CHART) return p->chart_state && p->chart_state->query ? &p->chart_state->applied:NULL;
     if (form==GD_FORM_QUERY) return p->query_state ? &p->query_state->applied:NULL;
     if (form==GD_FORM_STRUCTURE) return p->structure_state && p->structure_state->has_applied ? &p->structure_state->applied:NULL;
     if (form==GD_FORM_RESOURCE) return p->resource_routes ? &p->resource_applied:NULL;
@@ -240,7 +257,7 @@ const GD_StructureResult *gd_explorer_structure_choices(const GD_ExplorerContext
 }
 int gd_explorer_form_work_limit(GD_ExplorerForm form,const void *values) {
     if(form==GD_FORM_PRESENTATION)return 4096;
-    if(form==GD_FORM_QUERY)return GD_EFFECT_WORK;
+    if(form==GD_FORM_QUERY || form==GD_FORM_CHART)return GD_EFFECT_WORK;
     if (form==GD_FORM_RESOURCE) return GD_RESOURCE_ROUTE_WORK;
     if (form==GD_FORM_STRUCTURE) return ((const GD_ExplorerStructureForm *)values)->kind>=GD_STRUCTURE_COUNT ? GD_SIMILARITY_WORK:GD_GRAPH_ANALYSIS_WORK;
     return ((const GD_ExplorerRuleForm *)values)->bindings ? GD_EFFECT_WORK:GD_RULE_EVALUATION_WORK_LIMIT;
@@ -403,7 +420,7 @@ void gd_explorer_rule_case_transition(GD_ExplorerRuleForm *form,int before,int a
     if (form->bindings) *form->participant=0; else *form->facts=*form->contexts=0;
 }
 int gd_explorer_control_set(GD_ExplorerContext *c,GD_ExplorerForm form,const char *name,const char *value,char *message,size_t capacity) {
-    union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; } next;
+    union { GD_ExplorerQueryOptions query; GD_ExplorerStructureForm structure; GD_ExplorerRuleForm rules; GD_ExplorerResourceForm resource; GD_ExplorerChartForm chart; } next;
     const GD_ExplorerControl *field=gd_explorer_form_field(form,name); void *prior,*target; char *slot; int native=-1,count,i;
     const char *error="Control unknown, inactive or unavailable for this pane/question";
     if (form==GD_FORM_PRESENTATION) return gd_explorer_presentation_set(c,name,value,message,capacity);
@@ -481,7 +498,9 @@ static const GD_ExplorerActionInfo actions[]={
     {"rules.outcomes.open","Inspect conditional outcomes",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
     {"rules.inputs.reset","Reset rule inputs (keep result)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_RULES},
     {"view.similarity.source","Open linked source (current pane)",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
-    {"view.similarity.return","Return to similarity",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION}
+    {"view.similarity.return","Return to similarity",(1u<<GD_EXPLORER_VIEWS)-1,GD_FORM_PRESENTATION},
+    {"chart.run","Run state hypotheses",1u<<GD_EXPLORER_STATES,GD_FORM_CHART},
+    {"chart.clear","Clear chart result",1u<<GD_EXPLORER_STATES,GD_FORM_CHART}
 };
 const GD_ExplorerActionInfo *gd_explorer_action_info(GD_ExplorerAction action) {
     return action>=0 && action<GD_ACTION_COUNT ? &actions[action]:NULL;
@@ -500,9 +519,10 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
     if (info->form==GD_FORM_PRESENTATION) {
         const GD_ExplorerPane *p=context->pane;
         if(!p->prepared)return 0;
+        if(action==GD_ACTION_VIEW_SELECTION_FOCUS)return gd_explorer_focus_available(context);
+        if(p->view==GD_EXPLORER_STATES) return action==GD_ACTION_VIEW_FIT || action==GD_ACTION_VIEW_RESET || action==GD_ACTION_INPUTS_RESET || action==GD_ACTION_SELECTION_CLEAR || action==GD_ACTION_VIEW_FIND_CLEAR;
         if(action==GD_ACTION_SIMILARITY_SOURCE)return gd_explorer_similarity_source_record(context)>=0;
         if(action==GD_ACTION_SIMILARITY_RETURN)return gd_explorer_similarity_available(context) && !p->structure_state->similarity_canvas;
-        if(action==GD_ACTION_VIEW_SELECTION_FOCUS)return gd_explorer_focus_available(context);
         if(action==GD_ACTION_VIEW_REARRANGE && p->view==GD_EXPLORER_NOUNS)return p->prepared;
         if(action==GD_ACTION_VIEW_REARRANGE && p->view>=GD_EXPLORER_ACTORS) return p->query_state && p->query_state->scene && !(p->structure_state && p->structure_state->similarity_canvas);
         if(action==GD_ACTION_VIEW_WITNESS_FIT)return p->resource_routes && p->resource_routes->witness_count>0;
@@ -516,6 +536,7 @@ int gd_explorer_action_available(const GD_ExplorerContext *context,GD_ExplorerAc
         }
         return 1;
     }
+    if(context->pane->view==GD_EXPLORER_STATES && info->form!=GD_FORM_CHART)return 0;
     if(info->form==GD_FORM_RULES && !gd_explorer_form_available(context,GD_FORM_RULES))return 0;
     if(action==GD_ACTION_RULES_BINDINGS_OPEN || action==GD_ACTION_RULES_OUTCOMES_OPEN){
         GD_ExplorerContext current=*context;GD_ExplorerRuleContext selection;
@@ -576,6 +597,10 @@ int gd_explorer_action_run(GD_ExplorerContext *context,GD_ExplorerAction action)
             }
             snprintf(context->pane->query_message,sizeof(context->pane->query_message),"Default inputs staged. Run to replace retained results.");return 1;
         }
+        case GD_ACTION_CHART_RUN: return gd_explorer_chart_run(context);
+        case GD_ACTION_CHART_CLEAR:
+            if(context->pane->chart_state){GD_ExplorerChartState *state=context->pane->chart_state;gd_query_destroy(state->query);state->query=NULL;++state->generation;state->row=state->column=state->scenario=-1;state->page=state->arrow_page=0;}
+            context->pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};return 1;
         case GD_ACTION_QUERY_RUN: return gd_explorer_query_run(context);
         case GD_ACTION_QUERY_DISPLAY: return gd_explorer_query_display(context);
         case GD_ACTION_STRUCTURE_RUN: return gd_explorer_structure_run(context);
@@ -603,7 +628,7 @@ int gd_explorer_action_request(GD_ExplorerContext *context,GD_ExplorerAction act
 int gd_explorer_action_button(GD_ExplorerContext *context,GD_ExplorerAction action) {
     const GD_ExplorerActionInfo *info=gd_explorer_action_info(action);int pressed=gd_explorer_action_request(context,action);
     if(pressed)gd_explorer_action_run(context,action);
-    if(action==GD_ACTION_QUERY_RUN || action==GD_ACTION_STRUCTURE_RUN || action==GD_ACTION_RULES_RUN || action==GD_ACTION_RESOURCE_RUN){
+    if(action==GD_ACTION_QUERY_RUN || action==GD_ACTION_STRUCTURE_RUN || action==GD_ACTION_RULES_RUN || action==GD_ACTION_RESOURCE_RUN || action==GD_ACTION_CHART_RUN){
         const void *pending=gd_explorer_form_pending(context,info->form,0),*applied=gd_explorer_form_applied(context,info->form);
         igSameLine(0,8);igTextWrapped("%s",!applied ? "Inputs not run":!gd_explorer_form_equal(info->form,pending,applied) ? "Inputs changed; showing last applied result":"Showing applied inputs");
     }

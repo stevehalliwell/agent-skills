@@ -3,6 +3,7 @@
 static int explorer_test_native_questions(GD_ExplorerContext *c,GD_ExplorerPane *panes,const GD_Collection *collections,int count,const char *output,int *fail_at,int *calls) {
     char path[GD_MAX_PATH],failure[512]; int v,i,ok=0; GD_ExplorerPane *pane;
     for (v=0;v<=GD_EXPLORER_VIEWS;++v) {
+        if(v==GD_EXPLORER_STATES)continue; /* Dedicated state-chart query, not a canonical structural projection. */
         GD_ExplorerStructureState *state; GD_LayoutNode ordinary; Camera2D camera;
         c->pane=&panes[v==GD_EXPLORER_VIEWS ? GD_EXPLORER_ACTORS:v]; NATIVE_QUESTION_CHECK(explorer_test_fresh_pane(c) && pane_prepare(c)); pane=c->pane;
         if (v==GD_EXPLORER_VIEWS) {
@@ -33,7 +34,7 @@ static int explorer_test_native_questions(GD_ExplorerContext *c,GD_ExplorerPane 
         snprintf(state->pending.features,sizeof(state->pending.features),"missing-feature"); NATIVE_QUESTION_CHECK(!gd_explorer_structure_run(c) && pane->structure_state==state); state->pending=state->applied;
     }
     NATIVE_QUESTION_CHECK(reload_project(c,panes,collections,count,failure,sizeof(failure)));
-    for (v=0;v<GD_EXPLORER_VIEWS;++v) { c->pane=&panes[v]; NATIVE_QUESTION_CHECK(gd_explorer_similarity_active(c) && explorer_test_fresh_pane(c) && !c->pane->structure_state); }
+    for (v=0;v<GD_EXPLORER_VIEWS;++v) { if(v==GD_EXPLORER_STATES)continue;c->pane=&panes[v]; NATIVE_QUESTION_CHECK(gd_explorer_similarity_active(c) && explorer_test_fresh_pane(c) && !c->pane->structure_state); }
     c->pane=&panes[GD_EXPLORER_RESOURCES]; pane=c->pane; NATIVE_QUESTION_CHECK(pane_prepare(c)); explorer_test_render(c);
     NATIVE_QUESTION_CHECK(pane->rule_state); pane->rule_state->pending.kind=GD_NAMED_CONSISTENCY; pane->rule_state->pending.work_limit=-1;
     NATIVE_QUESTION_CHECK(gd_explorer_rules_run(c) && pane->rule_state->result && !pane->rule_state->bindings);

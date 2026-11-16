@@ -15,6 +15,7 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     choose_view(c->project,"Data / projection",p->view,1);
     gd_explorer_action_button(c,GD_ACTION_VIEW_RESET);
     match_details(c); if (!gd_explorer_similarity_active(c)) layout_controls(c); selected=analyze(c);
+    if(p->view==GD_EXPLORER_STATES){gd_explorer_chart_controls(c);gd_explorer_chart_details(c);}
     if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(c); igSetNextItemOpen(true,ImGuiCond_Always); gd_explorer_rules_controls(c); }
     if (query_view(p->view)) { gd_explorer_query_controls(c); gd_explorer_query_details(c); }
     if (p->structure_state) { igSetNextItemOpen(true,ImGuiCond_Always); gd_explorer_structure_controls(c); }
@@ -22,7 +23,7 @@ static void explorer_test_render(GD_ExplorerContext *c) {
         if(p->view==GD_EXPLORER_NOUNS)noun_grid_details(c);
         else if (!grid_blank_details(c)) gd_explorer_graph_details(c);
     } else if (overview_only(p) && overview_available(c)) overview_controls(c);
-    else if (!overview_only(p) && !p->structure_state) analysis_controls(c,selected);
+    else if (p->view!=GD_EXPLORER_STATES && !overview_only(p) && !p->structure_state) analysis_controls(c,selected);
     if (p->view==GD_EXPLORER_RESOURCES) gd_explorer_resource_details(c);
     igEnd();
     matches(c); if (!gd_explorer_similarity_active(c)) distance_focus_update(c,selected);
@@ -32,6 +33,7 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     {
         GD_ExplorerEvidence e=evidence(c,selected);
         if (gd_explorer_similarity_active(c)) gd_explorer_similarity_draw(c);
+        else if(p->view==GD_EXPLORER_STATES)gd_explorer_chart_draw(c);
         else if (grid_view(p)) grid_draw(c);
         else if (p->view==GD_EXPLORER_NOUNS) noun_graph_draw(c);
         else if (is_graph(p->view)) gd_explorer_graph_draw(c,&e);

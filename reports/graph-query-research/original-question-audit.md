@@ -1,5 +1,7 @@
 # Original design-question audit
 
+Historical baseline and question inventory. [Current joint-review table](../../original-question-review.md) supersedes capability labels below with fresh evidence; baseline findings and original evidence remain unchanged.
+
 ## Result and scope
 
 Current tools answer declared relationships and selected conditional-rule hypotheses. They do not yet answer shared-outcome, actor-state, gameplay-role or resource-conversion questions end to end. Better layout does not close those gaps.

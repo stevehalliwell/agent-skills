@@ -59,6 +59,7 @@ graph gd_explorer_view.c
 graph gd_sidebar.c
 graph gd_explorer_controls.c
 graph gd_explorer_query_view.c
+graph gd_explorer_state_chart_view.c
 graph gd_explorer_structure_view.c
 graph gd_explorer_similarity_view.c
 graph gd_explorer_rules_view.c

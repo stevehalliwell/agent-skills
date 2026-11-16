@@ -3,7 +3,7 @@
 #define GD_EXPLORER_VIEWER_H
 #include "gd_viewer.h"
 #include "gd_actor_identity.h"
-static const char *const viewer_projections[GD_EXPLORER_VIEWS]={"skills","challenges","relationships","matrix","mda","resources","actors","effects","noun-interactions"};
+static const char *const viewer_projections[GD_EXPLORER_VIEWS]={"skills","challenges","relationships","matrix","mda","resources","actors","effects","noun-interactions","state-charts"};
 typedef struct {
     GD_ExplorerContext *context; GD_ExplorerPane *panes; GD_ViewerServer *server;
     int *active,*stale; uint64_t reload_generation;
@@ -105,7 +105,7 @@ static void viewer_node_id(GD_ViewerWriter *w, GD_ExplorerContext *c, int node) 
 static void viewer_layers(GD_ViewerWriter *w, GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int i,emitted=0;
     gd_viewer_write(w,"{\"available\":%s,\"shared\":%s,\"lens\":%d,\"branches\":%s,\"foundations\":%s,\"shapes\":%s,\"overlay\":%s,\"peer_node\":%d,\"foundation_peer_node\":%d,\"paths\":{\"enabled\":%s,\"declared\":%s,\"lost\":%d,\"compare\":%d,\"starts\":[",
-        p->view!=GD_EXPLORER_NOUNS&&!query_view(p->view)&&!grid_view(p)?"true":"false",p->shared?"true":"false",p->lens,p->branches?"true":"false",p->foundations?"true":"false",p->shapes?"true":"false",p->overlay?"true":"false",p->peer,p->foundation_peer,p->paths.enabled?"true":"false",p->paths.declared?"true":"false",p->paths.lost,p->paths.compare);
+        p->view!=GD_EXPLORER_STATES&&p->view!=GD_EXPLORER_NOUNS&&!query_view(p->view)&&!grid_view(p)?"true":"false",p->shared?"true":"false",p->lens,p->branches?"true":"false",p->foundations?"true":"false",p->shapes?"true":"false",p->overlay?"true":"false",p->peer,p->foundation_peer,p->paths.enabled?"true":"false",p->paths.declared?"true":"false",p->paths.lost,p->paths.compare);
     for (i=0;i<p->paths.count;++i) { if (i) gd_viewer_write(w,","); viewer_key(w,c,p->paths.keys[i]); }
     gd_viewer_write(w,"]},\"reach\":{\"enabled\":%s,\"relation\":%d,\"reverse\":%d,\"peer_node\":%d,\"target_node\":%d},\"overview\":{\"available\":%s,\"enabled\":%s,\"row\":%d,\"column\":%d,\"metric\":",
         p->reach.enabled?"true":"false",p->reach.relation,p->reach.reverse,p->reach.peer,p->reach.target,overview_available(c)?"true":"false",p->overview.enabled?"true":"false",p->overview.row,p->overview.column);
@@ -177,6 +177,8 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
             gd_viewer_write(w,",\"applied\":"); viewer_form(w,GD_FORM_STRUCTURE,gd_explorer_form_applied(&item,GD_FORM_STRUCTURE));
             gd_viewer_write(w,",\"similarity\":{\"active\":%s,\"row\":%d,\"peer\":%d,\"camera\":{\"x\":%.9g,\"y\":%.9g,\"zoom\":%.9g}}}",gd_explorer_similarity_active(&item)?"true":"false",p->structure_state->similarity_row,p->structure_state->similarity_peer,(double)p->structure_state->similarity_camera.target.x,(double)p->structure_state->similarity_camera.target.y,(double)p->structure_state->similarity_camera.zoom);
         } else gd_viewer_write(w,"null");
+        gd_viewer_write(w,",\"chart\":");
+        if(p->chart_state){GD_ExplorerChartState *state=p->chart_state;gd_viewer_write(w,"{\"mode\":\"%s\",\"generic_graph_available\":false,\"pending\":",state->mode ? "grid":"statechart");viewer_form(w,GD_FORM_CHART,&state->pending);gd_viewer_write(w,",\"applied\":");viewer_form(w,GD_FORM_CHART,gd_explorer_form_applied(&item,GD_FORM_CHART));gd_viewer_write(w,",\"filtered_row\":%d,\"filtered_column\":%d,\"inspected_scenario\":%d,\"indices_scope\":\"current retained query only; inspect result --form query for exact source/binding/axis/value identities\"}",state->row,state->column,state->scenario);}else gd_viewer_write(w,"null");
         gd_viewer_write(w,",\"rules\":");
         if (p->rule_state) {
             gd_viewer_write(w,"{\"context_open\":%s,\"context_question\":\"%s\",\"pending\":",p->rule_state->context_open ? "true":"false",p->rule_state->context_outcomes ? "conditional-outcomes":"object-bindings"); viewer_form(w,GD_FORM_RULES,&p->rule_state->pending); gd_viewer_write(w,",\"applied\":"); viewer_form(w,GD_FORM_RULES,gd_explorer_form_applied(&item,GD_FORM_RULES)); gd_viewer_write(w,"}");

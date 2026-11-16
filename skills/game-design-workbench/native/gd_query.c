@@ -1,8 +1,8 @@
 #include "gd_query.h"
 #include <string.h>
 
-static const char *const names[]={"object-bindings","actor-states","effect-contributors","state-coverage"};
-static const char *const projections[]={"actors","actors","effects","actors"};
+static const char *const names[]={"object-bindings","actor-states","effect-contributors","state-coverage","state-chart"};
+static const char *const projections[]={"actors","actors","effects","actors","actors"};
 const char *gd_query_name(GD_QueryKind kind) { return kind>=0 && kind<GD_QUERY_COUNT ? names[kind]:NULL; }
 const char *gd_query_projection(GD_QueryKind kind) { return kind>=0 && kind<GD_QUERY_COUNT ? projections[kind]:NULL; }
 int gd_query_kind(const char *name) { int i; if (name) for (i=0;i<GD_QUERY_COUNT;++i) if (!strcmp(name,names[i])) return i; return -1; }
@@ -62,11 +62,58 @@ static int coverage_values(GD_Model *model, GD_Query *query) {
     }
     return 1;
 }
+static int chart_retain(GD_Query *query, const GD_ActorQuery *variants, int binding, int value) {
+    GD_StateChart *chart=query->state_chart; GD_StateCoverage *coverage=query->state_coverage;
+    const GD_ActorVariant *variant=&variants->variants[value]; GD_StateChartScenario *scenario; int i;
+    int work=1+variant->write_count+variant->activation_count*(GD_MAX_RULE_EXPANSION_DEPTH+1);
+    chart->storage_limited=chart->scenario_count==GD_ACTOR_ACTIVATIONS || variant->write_count>GD_ACTOR_WRITES-chart->write_count ||
+        variant->activation_count>GD_ACTOR_ACTIVATIONS-chart->activation_count;
+    chart->work_limited=work>query->request.work_limit-query->work-coverage->work;
+    if (chart->storage_limited || chart->work_limited) { chart->limited=coverage->limited=1; return 0; }
+    coverage->work+=work; scenario=&chart->scenarios[chart->scenario_count++];
+    *scenario=(GD_StateChartScenario){0}; scenario->binding=binding; scenario->value=value;
+    scenario->first_write=chart->write_count; scenario->write_count=variant->write_count;
+    scenario->first_activation=chart->activation_count; scenario->activation_count=variant->activation_count;
+    scenario->applicability=variant->applicability; scenario->context=variant->context; scenario->requirements=variant->requirements;
+    scenario->exclusion=variant->exclusion; scenario->constraints_complete=variant->constraints_complete; scenario->values_complete=variant->values_complete;
+    scenario->limited=variant->limited; scenario->opaque_effects=variant->opaque_effects; scenario->cycles=variant->cycles;
+    scenario->conflicts=variant->conflicts; scenario->uncertain_pairs=variant->uncertain_pairs;
+    for (i=0;i<variant->write_count;++i) {
+        int source=variant->first_write+i, target=chart->write_count++;
+        chart->writes[target]=variants->writes[source]; chart->families[target]=variants->write_effects[source]>=0 ? variants->effects[variants->write_effects[source]].kind:GD_EFFECT_UNKNOWN;
+        chart->write_activations[target]=variants->write_activations[source]-variant->first_activation;
+    }
+    for (i=0;i<variant->activation_count;++i) {
+        const GD_RuleActivation *activation=&variants->activations[variant->first_activation+i];
+        chart->activations[chart->activation_count++]=*activation; chart->cases[activation->case_index]=1;
+    }
+    return 1;
+}
 static int state_coverage(GD_Model *model, GD_Query *query) {
     GD_StateCoverage *coverage; uint64_t all; int i,j;
     query->state_coverage=model->allocator.allocate(model->allocator.context,sizeof(*coverage)); if (!query->state_coverage) { gd_error(model,"coverage.memory","Cannot allocate bounded finite state coverage",NULL,0); return 0; }
     coverage=query->state_coverage; memset(coverage,0,sizeof(*coverage));
     if (!coverage_values(model,query)) return 0;
+    if (query->request.kind==GD_QUERY_STATE_CHART) {
+        query->state_chart=model->allocator.allocate(model->allocator.context,sizeof(*query->state_chart));
+        if (!query->state_chart) { gd_error(model,"chart.memory","Cannot allocate bounded state chart",NULL,0); return 0; }
+        memset(query->state_chart,0,sizeof(*query->state_chart));
+        query->state_chart->companion_axis=-1;
+        if (query->request.companion_axis) {
+            GD_StateChart *chart=query->state_chart;
+            const char *value;
+            chart->companion_axis=gd_query_record(model,query->request.companion_axis,GD_AXIS);
+            value=model->records[chart->companion_axis].axis.allowed;
+            for (j=0;j<model->records[chart->companion_axis].axis.allowed_count;++j) {
+                int n; for (n=0;n<chart->companion_count;++n) if (!strcmp(value,chart->companion_values[n])) break;
+                if (n==chart->companion_count) {
+                    if (chart->companion_count==GD_ACTOR_VARIANTS) { gd_error(model,"chart.values","Companion enum exceeds finite value bound",NULL,0); return 0; }
+                    chart->companion_values[chart->companion_count++]=value;
+                }
+                value+=strlen(value)+1;
+            }
+        }
+    }
     coverage->source_incomplete=!query->rules->bindings_complete || !query->rules->axis_definitions_complete || !query->rules->condition_bindings_complete || query->rules->findings_omitted;
     if (query->request.case_index<0) for (i=0;i<query->rules->source_count;++i) if (status_matches(&query->request,&model->records[query->rules->sources[i].record]) && query->rules->sources[i].state!=GD_RULE_PARSED) coverage->source_incomplete=1;
     for (i=0;i<query->rules->case_count;++i) if ((query->request.case_index<0 || query->request.case_index==i) && case_matches(query,i) && !query->rules->cases[i].participant_count) coverage->source_incomplete=1;
@@ -74,20 +121,37 @@ static int state_coverage(GD_Model *model, GD_Query *query) {
     /* Reuse native finite variants, including whole-case guards/exclusions.
        Outcome work is conservative overhead, not a second applicability engine. */
     for (i=0;i<query->binding_count && coverage->value_count;++i) {
-        const GD_QueryBinding *binding=&query->bindings[i]; GD_ActorSelection selection={0}; GD_ActorQuery *variants; int remaining=query->request.work_limit-query->work-coverage->work;
-        if (remaining<=0) { coverage->limited=1; break; }
-        selection.case_index=binding->case_index; selection.participant=binding->participant; selection.axis=query->request.axis; selection.value_count=coverage->value_count;
-        for (j=0;j<coverage->value_count;++j) selection.values[j]=coverage->values[j].value;
-        variants=gd_actor_query_build(model,query->analysis,&selection,remaining); if (!variants) return 0;
-        coverage->work+=variants->work; ++coverage->evaluated_bindings;
-        for (j=0;j<variants->variant_count;++j) {
-            const GD_ActorVariant *variant=&variants->variants[j]; uint64_t bit=UINT64_C(1)<<j;
-            coverage->present[i]|=bit;
-            if (variant->applicability==GD_RULE_TRUTH_TRUE) coverage->definite[i]|=bit;
-            else if (variant->applicability==GD_RULE_TRUTH_UNKNOWN) coverage->undetermined[i]|=bit;
-            if (!variant->limited) coverage->finished[i]|=bit;
+        const GD_QueryBinding *binding=&query->bindings[i];
+        int companion,companions=query->request.companion_axis ? query->state_chart->companion_count:1;
+        coverage->finished[i]=companions ? all:0;
+        for (companion=0;companion<companions;++companion) {
+            GD_ActorSelection selection={0}; GD_ActorQuery *variants; GD_RuleScenario fixed={0}; uint64_t finished=0;
+            int remaining=query->request.work_limit-query->work-coverage->work;
+            if (remaining<=0) { coverage->finished[i]=0; coverage->limited=1; break; }
+            selection.case_index=binding->case_index; selection.participant=binding->participant; selection.axis=query->request.axis; selection.value_count=coverage->value_count;
+            for (j=0;j<coverage->value_count;++j) selection.values[j]=coverage->values[j].value;
+            if (query->request.companion_axis) {
+                if (!gd_rule_assume_value(model,query->rules,binding->case_index,binding->participant,query->state_chart->companion_axis,query->state_chart->companion_values[companion],&fixed)) return 0;
+                selection.fixed=&fixed;
+            }
+            variants=gd_actor_query_build(model,query->analysis,&selection,remaining); if (!variants) return 0;
+            coverage->work+=variants->work; if (!companion) ++coverage->evaluated_bindings;
+            for (j=0;j<variants->variant_count;++j) {
+                const GD_ActorVariant *variant=&variants->variants[j]; uint64_t bit=UINT64_C(1)<<j;
+                if (query->state_chart) {
+                    if (!chart_retain(query,variants,i,j)) break;
+                    query->state_chart->scenarios[query->state_chart->scenario_count-1].companion_value=query->request.companion_axis ? query->state_chart->companion_values[companion]:NULL;
+                }
+                coverage->present[i]|=bit;
+                if (variant->applicability==GD_RULE_TRUTH_TRUE) coverage->definite[i]|=bit;
+                else if (variant->applicability==GD_RULE_TRUTH_UNKNOWN) coverage->undetermined[i]|=bit;
+                if (!variant->limited) finished|=bit;
+            }
+            coverage->finished[i]&=finished;
+            coverage->limited=coverage->limited || variants->limited; gd_actor_query_destroy(variants);
+            if (coverage->limited) { if (companion+1<companions) coverage->finished[i]=0; break; }
         }
-        coverage->limited=variants->limited; gd_actor_query_destroy(variants); if (coverage->limited) break;
+        if (coverage->limited) break;
     }
     for (i=0;i<query->binding_count;++i) {
         const GD_QueryBinding *binding=&query->bindings[i]; coverage->case_unfinished[binding->case_index]|=all^coverage->finished[i];
@@ -133,8 +197,28 @@ GD_Query *gd_query_build(GD_Model *model, const GD_Rules *rules, const GD_RuleAn
         (request->kind==GD_QUERY_CONTRIBUTORS && (request->participant || request->fixed || request->value_count>1 || (request->target_id && (request->axis>=0 || request->value_count || request->effect_kind>=0))))) {
         gd_error(model,"query.parameters","Parameters do not match operation; inspect query --list",NULL,0); return NULL;
     }
+    if (request->companion_axis && request->kind!=GD_QUERY_STATE_CHART) { gd_error(model,"query.parameters","Companion axis is supported only by state-chart",NULL,0); return NULL; }
+    if (request->kind==GD_QUERY_STATE_CHART) {
+        int edge,applicable=0;
+        if (request->noun<0 || request->axis<0 || request->target_id || request->effect_kind>=0 || request->fixed ||
+            (request->participant && request->case_index<0)) { gd_error(model,"query.parameters","state-chart requires exact --object and --axis; no scenario/effect selectors",NULL,0); return NULL; }
+        if (rules->axes[request->axis].type!=GD_AXIS_ENUM) { gd_error(model,"chart.axis_type","State chart requires one enum state axis; use finite actor-states for quantities",NULL,0); return NULL; }
+        for (edge=rules->actor_first[request->noun];edge>=0;edge=rules->next_axis[edge])
+            if (rules->axis_resolution[edge]==GD_RULE_RESOLVED && model->edges[edge].target==request->axis) applicable=1;
+        if (!applicable) { gd_error(model,"query.axis","Selected axis is not explicitly declared on selected object",NULL,0); return NULL; }
+        if (request->companion_axis) {
+            int companion;
+            if (!text_within(request->companion_axis,GD_MAX_PATH-1) || (companion=gd_query_record(model,request->companion_axis,GD_AXIS))<0 || companion==request->axis || !rules->axes[companion].valid || rules->axes[companion].type!=GD_AXIS_ENUM) {
+                gd_error(model,"chart.companion_axis","Companion must be a distinct exact valid enum axis",NULL,0); return NULL;
+            }
+            applicable=0;
+            for (edge=rules->actor_first[request->noun];edge>=0;edge=rules->next_axis[edge])
+                if (rules->axis_resolution[edge]==GD_RULE_RESOLVED && model->edges[edge].target==companion) applicable=1;
+            if (!applicable) { gd_error(model,"chart.companion_axis","Companion axis is not explicitly declared on selected object",NULL,0); return NULL; }
+        }
+    }
     if (request->kind==GD_QUERY_STATE_COVERAGE && rules->axes[request->axis].type!=GD_AXIS_ENUM && rules->axes[request->axis].type!=GD_AXIS_INTEGER && rules->axes[request->axis].type!=GD_AXIS_NUMBER) { gd_error(model,"coverage.axis_type","Coverage requires explicit enum, integer or number axis type",NULL,0); return NULL; }
-    if (request->kind==GD_QUERY_STATE_COVERAGE && request->participant) {
+    if ((request->kind==GD_QUERY_STATE_COVERAGE || request->kind==GD_QUERY_STATE_CHART) && request->participant) {
         p=local_participant(rules,request->case_index,request->participant);
         if (p<0 || (request->noun>=0 && (rules->participants[p].noun_resolution!=GD_RULE_RESOLVED || rules->participants[p].noun_record!=request->noun))) { gd_error(model,"query.binding","Select one exact local participant matching optional object",NULL,0); return NULL; }
         if (!axis_applies(rules,p,request->axis,NULL)) { gd_error(model,"query.axis","Selected axis is not explicitly applicable to selected binding",NULL,0); return NULL; }
@@ -142,7 +226,7 @@ GD_Query *gd_query_build(GD_Model *model, const GD_Rules *rules, const GD_RuleAn
     query=model->allocator.allocate(model->allocator.context,sizeof(*query));
     if (!query) { gd_error(model,"query.memory","Cannot allocate bounded query adapter",NULL,0); return NULL; }
     memset(query,0,sizeof(*query)); query->allocator=model->allocator; query->model=model; query->rules=rules; query->analysis=analysis; query->request=*request;
-    if (request->kind==GD_QUERY_BINDINGS || request->kind==GD_QUERY_STATE_COVERAGE) {
+    if (request->kind==GD_QUERY_BINDINGS || request->kind==GD_QUERY_STATE_COVERAGE || request->kind==GD_QUERY_STATE_CHART) {
         for (i=0;i<rules->case_count && !query->limited;++i) {
             const GD_RuleCase *item=&rules->cases[i];
             if (!charge(query,1)) break;
@@ -157,7 +241,7 @@ GD_Query *gd_query_build(GD_Model *model, const GD_Rules *rules, const GD_RuleAn
             }
         }
         if (query->limited) query->unexamined_bindings=rules->participant_count; /* Conservative upper bound, not an exact missing-match count. */
-        if (request->kind==GD_QUERY_STATE_COVERAGE && !state_coverage(model,query)) goto failure;
+        if ((request->kind==GD_QUERY_STATE_COVERAGE || request->kind==GD_QUERY_STATE_CHART) && !state_coverage(model,query)) goto failure;
     } else if (request->kind==GD_QUERY_ACTOR_STATES) {
         int participant=local_participant(rules,request->case_index,request->participant);
         GD_ActorSelection selection={0};
@@ -211,6 +295,7 @@ failure:
 void gd_query_destroy(GD_Query *query) {
     if (!query) return;
     if (query->state_coverage) query->allocator.release(query->allocator.context,query->state_coverage);
+    if (query->state_chart) query->allocator.release(query->allocator.context,query->state_chart);
     gd_effect_query_destroy(query->contributors); gd_effect_graph_destroy(query->effects); gd_resource_graph_destroy(query->resource); gd_actor_query_destroy(query->variants);
     query->allocator.release(query->allocator.context,query);
 }

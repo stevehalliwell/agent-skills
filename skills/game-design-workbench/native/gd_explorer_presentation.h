@@ -14,6 +14,7 @@ typedef struct { GD_ExplorerControl control; unsigned views; size_t source; int 
 #define PF(name,label,type,choices,keys,views,member,integer_bool) {{#name,label,choices,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,keys},views,offsetof(GD_ExplorerPane,member),integer_bool}
 #define VF(name,label,type,views) {{#name,label,NULL,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,NULL},views,(size_t)-1,0}
 static const PresentationField presentation_fields[]={
+ {{"state_chart_mode","State chart mode","Statechart\0Grid\0",GD_CONTROL_INT,offsetof(GD_ExplorerPresentation,state_chart_mode),sizeof(int),0,"statechart\0grid\0"},1u<<GD_EXPLORER_STATES,(size_t)-1,0},
  VF(layout,"Layout",GD_CONTROL_INT,PV_ALL&~PV_RESOURCE),
  PF(noun_row,"Row noun",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,grid.noun,0),
  PF(noun_column,"Column noun",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,grid.verb,0),
@@ -104,6 +105,7 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
     out->layout=p->view==GD_EXPLORER_ACTORS && p->query_state && gd_query_scene_overview_mode(p->query_state->scene)==GD_ACTOR_INTERACTIONS ? 1:p->view==GD_EXPLORER_SKILLS ? p->layout_choice==GD_LAYOUT_FORCE ? 2:p->rank:
         p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS || query_view(p->view) ? p->layout_choice==GD_LAYOUT_FORCE:p->layout_choice;
     if(p->view!=GD_EXPLORER_RESOURCES)memcpy(out->filter,p->list_search,sizeof(out->filter));
+    out->state_chart_mode=p->chart_state ? p->chart_state->mode:0;
     out->distance_focus=p->distance_focus_enabled; out->focus_root=p->focus.root;
     out->mda_root=c->project->mda ? c->project->mda->root:-1; out->mda_direction=c->project->mda ? c->project->mda->direction:0;
     out->resource_witness=p->resource_witness; out->similarity_row=out->similarity_peer=-1;
@@ -120,6 +122,7 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
 int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *name) {
     const PresentationField *field=presentation_field(name); const GD_ExplorerPane *p=c->pane;
     if(!field || !(field->views&(1u<<p->view))) return 0;
+    if(p->view==GD_EXPLORER_STATES)return p->prepared && p->chart_state && !strcmp(name,"state_chart_mode");
     if(!strncmp(name,"overview_",9))return overview_available(c);
     if(p->view==GD_EXPLORER_NOUNS && !strcmp(name,"paused"))return p->prepared && !grid_view(p);
     if(!strcmp(name,"list_search") || !strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
@@ -322,6 +325,7 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
         if(!presentation_rearrange(c,&next,0)) goto failed;
         if(!strcmp(name,"layout") && free_graph(p)) p->paused=false;
     }
+    else if(!strcmp(name,"state_chart_mode")){GD_ExplorerChartState *state=p->chart_state;if(state->mode!=next.state_chart_mode){state->cameras[state->mode]=p->camera;state->camera_ready[state->mode]=true;state->mode=next.state_chart_mode;p->camera=state->cameras[state->mode];if(!state->camera_ready[state->mode]){p->fit=1;state->camera_ready[state->mode]=true;}}}
     else if(!strcmp(name,"island_separation")){if(!pane_islands(c,next.island_separation))goto failed;p->island_separation=next.island_separation;if(next.island_separation)p->paused=false;}
     else if(!strcmp(name,"workspace_bounds")){if(!pane_workspace(c,next.workspace_bounds))goto failed;p->workspace_bounds=next.workspace_bounds;p->fit=1;}
     else if(!strcmp(name,"noun_row") || !strcmp(name,"noun_column")) noun_grid_choose(c,next.noun_row,next.noun_column);
@@ -361,6 +365,7 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
         p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};p->grid.noun=p->grid.verb=-1;p->mda.record=p->mda.link=p->mda.held=-1;p->inspected_record=p->editor.record=p->navigate=-1;
         p->overview.row=p->overview.column=-1;p->find_hold_node=-2;p->find_hold_layout=p->layout;*p->find_reference=0;p->focus_result=(GD_ExplorerFocusResult){0};
         memset(p->mda.path_nodes,0,sizeof(p->mda.path_nodes));memset(p->mda.path_links,0,sizeof(p->mda.path_links));
+        if(p->chart_state){p->chart_state->scenario=-1;p->chart_state->proposal_page=p->chart_state->activation_page=0;}
         if(p->structure_state){p->structure_state->similarity_row=p->structure_state->similarity_peer=-1;}
         if(p->rule_state){p->rule_state->row=p->rule_state->peer_write=-1;memset(p->rule_state->marked_cases,0,sizeof(p->rule_state->marked_cases));}
         if(c->analysis)c->analysis->initialized=0;return 1;

@@ -2,9 +2,10 @@
 #ifndef GD_EXPLORER_HISTORY_H
 #define GD_EXPLORER_HISTORY_H
 enum { GD_SELECTION_HISTORY=128 };
-enum { GD_HISTORY_NODE,GD_HISTORY_PAIR,GD_HISTORY_SOURCE,GD_HISTORY_EDGE,GD_HISTORY_EMPTY };
+enum { GD_HISTORY_NODE,GD_HISTORY_PAIR,GD_HISTORY_SOURCE,GD_HISTORY_EDGE,GD_HISTORY_EMPTY,GD_HISTORY_CHART };
 typedef struct {
     int view,kind,relation,similarity;
+    uint64_t chart_generation; int chart_row,chart_column,chart_scenario;
     char id[GD_MAX_PATH],peer[GD_MAX_PATH],detail[GD_MAX_PATH],linked[GD_MAX_PATH],node_kind[32];
 } GD_HistoryEntry;
 typedef struct GD_SelectionHistory {
@@ -16,6 +17,7 @@ static uint64_t history_stamp(const GD_ExplorerContext *c){
     selection.held=-1;
 #define HISTORY_HASH(value) hash=viewer_control_hash(hash,&(value),sizeof(value))
     HISTORY_HASH(c->project);HISTORY_HASH(c->project->revision);HISTORY_HASH(p->view);HISTORY_HASH(p->layout);HISTORY_HASH(selection);HISTORY_HASH(p->mda.record);HISTORY_HASH(p->mda.link);HISTORY_HASH(p->grid.noun);HISTORY_HASH(p->grid.verb);HISTORY_HASH(sim);HISTORY_HASH(row);
+    if(p->chart_state){HISTORY_HASH(p->chart_state->generation);HISTORY_HASH(p->chart_state->row);HISTORY_HASH(p->chart_state->column);HISTORY_HASH(p->chart_state->scenario);}
     if(p->query_state){HISTORY_HASH(p->query_state->query);HISTORY_HASH(p->query_state->scene);}
     if(p->structure_state){HISTORY_HASH(p->structure_state->result);HISTORY_HASH(p->structure_state->similarity_peer);}
 #undef HISTORY_HASH
@@ -26,6 +28,7 @@ static int history_capture(GD_ExplorerContext *c,GD_HistoryEntry *entry){
     GD_ExplorerPane *p=c->pane;GD_Model *model=gd_explorer_model(c->project,p->view);ViewerIdentities ids;int node=viewer_selected_node(c),a=-1,b=-1,edge=-1,i;
     memset(entry,0,sizeof(*entry));entry->view=p->view;entry->similarity=gd_explorer_similarity_active(c);viewer_identities(c,&ids);
     if(p->selection.linked>=0 && p->selection.linked<model->record_count && !history_text(entry->linked,model->records[p->selection.linked].reference))return 0;
+    if(p->view==GD_EXPLORER_STATES && p->chart_state){entry->kind=GD_HISTORY_CHART;entry->chart_generation=p->chart_state->generation;entry->chart_row=p->chart_state->row;entry->chart_column=p->chart_state->column;entry->chart_scenario=p->chart_state->scenario;return 1;}
     if(node>=0){
         entry->kind=GD_HISTORY_NODE;if(!viewer_canvas_id(c,node,&ids,entry->id,sizeof(entry->id)))return 0;
         snprintf(entry->node_kind,sizeof(entry->node_kind),"%s",viewer_canvas_kind(c,node));
@@ -73,6 +76,7 @@ int gd_explorer_history_move(GD_ExplorerContext *c,int direction){
     if(!(c->project->available&(1u<<entry->view)) || !viewer_canvas_current(&target) || gd_explorer_similarity_active(&target)!=entry->similarity)goto unavailable;
     model=gd_explorer_model(c->project,p->view);
     if(*entry->linked){linked=gd_explorer_record(model,entry->linked);if(linked<0)goto unavailable;}
+    if(entry->kind==GD_HISTORY_CHART){if(!p->chart_state || p->chart_state->generation!=entry->chart_generation)goto unavailable;}
     if(entry->kind==GD_HISTORY_NODE){node=history_node(&target,entry->id);if(node<0 || strcmp(viewer_canvas_kind(&target,node),entry->node_kind))goto unavailable;if(entry->similarity && *entry->peer){peer=history_node(&target,entry->peer);if(peer<0)goto unavailable;}}
     else if(entry->kind==GD_HISTORY_SOURCE){linked=gd_explorer_record(model,entry->id);if(linked<0)goto unavailable;}
     else if(entry->kind==GD_HISTORY_PAIR){
@@ -84,6 +88,7 @@ int gd_explorer_history_move(GD_ExplorerContext *c,int direction){
         a=history_node(&target,entry->id);b=history_node(&target,entry->peer);if(a<0 || b<0)goto unavailable;
         for(i=0;i<p->layout->edge_count;++i)if(p->layout->edges[i].a==a && p->layout->edges[i].b==b && p->layout->edges[i].relation==entry->relation){if(edge>=0)goto unavailable;edge=i;}if(edge<0)goto unavailable;
     }
+    if(entry->kind==GD_HISTORY_CHART){p->chart_state->row=entry->chart_row;p->chart_state->column=entry->chart_column;p->chart_state->scenario=entry->chart_scenario;p->chart_state->page=p->chart_state->arrow_page=0;}
     if(entry->similarity){p->structure_state->similarity_row=node;p->structure_state->similarity_peer=peer;}
     else if(p->view==GD_EXPLORER_MDA){p->mda.record=node>=0 ? p->layout->nodes[node].key:linked;p->mda.link=edge>=0 ? p->layout->edges[edge].key:-1;}
     else{p->selection=(GD_ExplorerSelection){edge>=0 ? p->layout->edges[edge].key:cell,node,interaction,linked,-1};if(entry->kind==GD_HISTORY_PAIR){p->grid.noun=a;p->grid.verb=b;}else if(entry->kind==GD_HISTORY_EMPTY){p->grid.noun=p->grid.verb=-1;}}

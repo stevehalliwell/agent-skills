@@ -12,6 +12,7 @@ static int explorer_viewer_nodes_checks(ExplorerViewer *viewer, GD_ExplorerPane 
         GD_ExplorerContext target=*c; target.pane=&panes[v]; viewer_identities(&target,&ids); node=-1;
         for (i=0;i<viewer_canvas_count(&target);++i) if (viewer_canvas_visible(&target,i) && viewer_canvas_id(&target,i,&ids,identity,sizeof(identity))) { node=i; break; }
         if(v==GD_EXPLORER_ACTORS && !viewer_canvas_count(&target)) continue; /* No noun is implicitly an actor. */
+        if(v==GD_EXPLORER_STATES){NODE_CHECK(target.pane->chart_state && !target.pane->chart_state->query && !viewer_canvas_count(&target) && gd_explorer_form_available(&target,GD_FORM_CHART));continue;} /* Explicit Run; no invented default noun/state. */
         NODE_CHECK(node>=0);
         if (v==GD_EXPLORER_ACTORS) snprintf(old_actor,sizeof(old_actor),"%s",identity);
         memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);

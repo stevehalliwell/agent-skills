@@ -92,8 +92,8 @@ static void viewer_nodes(ExplorerViewer *viewer, const GD_ViewerRequest *request
     gd_viewer_write(w,","); viewer_member(w,"session",gd_viewer_session(viewer->server));
     gd_viewer_write(w,",\"reload_generation\":\"%llu\",\"draft_revision\":%u,\"stale\":%s,\"prepared\":%s,\"canvas\":",
         (unsigned long long)viewer->reload_generation,c->project->revision,*viewer->stale?"true":"false",c->pane->prepared?"true":"false");
-    gd_viewer_quote(w,gd_explorer_similarity_active(c)?"similarity":"ordinary");
-    gd_viewer_write(w,",\"available\":%s,\"pane_revision\":%u,\"total\":%d,\"offset\":%u,\"nodes\":[",c->pane->prepared && (gd_explorer_similarity_active(c)?c->pane->structure_state->result->similarity->table_complete:c->pane->layout!=NULL)?"true":"false",c->pane->revision,total,request->offset);
+    gd_viewer_quote(w,c->pane->view==GD_EXPLORER_STATES ? "statechart/grid; inspect result --form query":gd_explorer_similarity_active(c)?"similarity":"ordinary");
+    gd_viewer_write(w,",\"available\":%s,\"pane_revision\":%u,\"total\":%d,\"offset\":%u,\"nodes\":[",c->pane->view!=GD_EXPLORER_STATES && c->pane->prepared && (gd_explorer_similarity_active(c)?c->pane->structure_state->result->similarity->table_complete:c->pane->layout!=NULL)?"true":"false",c->pane->revision,total,request->offset);
     for (i=(int)request->offset;i<end;++i) {
         char id[GD_MAX_PATH]; int record=viewer_canvas_record(c,i),available=viewer_canvas_id(c,i,&ids,id,sizeof(id));
         const char *label=gd_explorer_similarity_active(c)?c->pane->structure_state->result->similarity->ids[i]:c->pane->layout->nodes[i].label;

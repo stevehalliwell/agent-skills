@@ -478,9 +478,11 @@ static void case_details(GD_ExplorerContext *context, int index) {
     igTextWrapped("%s | status %s | %s",record->reference,record->status ? record->status:"unspecified",record->source_path);
     igTextWrapped("Case %s | line %d | authored A %s | context %s",item->name,item->line,item->primary_target ? item->primary_target:"unspecified",item->context ? item->context:"unspecified");
     if (item->unknown_conditions) igTextWrapped("Unknown conditions: %s",item->unknown_conditions); if (item->unknown_effects) igTextWrapped("Unknown effects: %s",item->unknown_effects);
-    GD_EvidencePage participants=gd_explorer_evidence_cursor_pager("Local participants",&context->pane->query_state->case_participant_pages[index],item->participant_count);
+    unsigned short *cursor=context->pane->view==GD_EXPLORER_STATES ? &context->pane->chart_state->participant_pages[index]:&context->pane->query_state->case_participant_pages[index];
+    GD_EvidencePage participants=gd_explorer_evidence_cursor_pager("Local participants",cursor,item->participant_count);
     for (i=item->first_participant+participants.first;i<item->first_participant+participants.end;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s (%s): requires %s | excludes %s | other axes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->other_axes ? actor->other_axes:"unspecified",actor->becomes ? actor->becomes:"none",actor->preserve ? actor->preserve:"none",actor->causes ? actor->causes:"none"); }
 }
+void gd_explorer_rule_case_details(GD_ExplorerContext *context,int index) { case_details(context,index); }
 int gd_explorer_query_case_count(const GD_ExplorerContext *context,int edge) {
     const GD_ExplorerQueryState *state=context->pane->query_state;int i,count=0;
     if(!state || !state->scene || !state->scene->overview || edge<0 || edge>=state->scene->layout.edge_count)return 0;

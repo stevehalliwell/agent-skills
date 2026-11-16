@@ -14,6 +14,21 @@
 #include "raylib.h"
 
 enum { GD_EXPLORER_SOURCE_LISTS=64 };
+typedef struct {
+    char object[GD_MAX_PATH],axis[GD_MAX_PATH],companion_axis[GD_MAX_PATH],case_name[GD_MAX_PATH],participant[129];
+    int work_limit;
+} GD_ExplorerChartForm;
+typedef struct {
+    GD_Allocator allocator; GD_ExplorerChartForm pending,applied; GD_Query *query;
+    int mode,row,column,scenario,page,arrow_page,proposal_page,activation_page;
+    Camera2D cameras[2]; bool camera_ready[2];
+    unsigned short participant_pages[GD_MAX_RULE_CASES];
+    int node_count[2],edge_count;
+    const char *nodes[2][GD_ACTOR_WRITES+GD_ACTOR_VARIANTS];
+    int edge_scenarios[GD_ACTOR_WRITES],edge_writes[GD_ACTOR_WRITES];
+    struct { int matching,unknown,excluded,unfinished,retained; } cells[GD_ACTOR_VARIANTS*GD_ACTOR_VARIANTS];
+    uint64_t generation;
+} GD_ExplorerChartState;
 typedef struct { int cell, node, interaction, linked, held; } GD_ExplorerSelection;
 typedef enum { GD_FOCUS_NONE, GD_FOCUS_FRAMED, GD_FOCUS_PARTIAL, GD_FOCUS_HIDDEN, GD_FOCUS_UNREPRESENTED, GD_FOCUS_UNPLACED } GD_ExplorerFocusStatus;
 typedef struct {
@@ -90,6 +105,7 @@ typedef struct {
 } GD_ExplorerResourceForm;
 /* Value snapshot only; pane/domain state remains authoritative. */
 typedef struct {
+    int state_chart_mode;
     int layout,actor_overview,noun_row,noun_column,noun_case_page,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
     int focus_root,mda_root,mda_direction,resource_witness,route_witness,similarity_row,similarity_peer;
     int overview_row,overview_column,coverage_page,actor_case_page,contributor_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
@@ -117,6 +133,7 @@ typedef struct {
     GD_ExplorerQueryState *query_state;
     GD_ExplorerStructureState *structure_state;
     GD_ExplorerRuleState *rule_state;
+    GD_ExplorerChartState *chart_state;
     char rule_message[256];
     char picker_search[129];
     GD_ExplorerAssumptionForm assumption_form;
@@ -176,6 +193,18 @@ typedef struct {
     struct GD_ExplorerFind *finds; /* Optional shell-owned transient Find state. */
     struct GD_Sidebar *sidebar; /* Optional shell-owned shared fold preferences. */
 } GD_ExplorerContext;
+int gd_explorer_chart_prepare(GD_ExplorerContext *context);
+int gd_explorer_chart_run(GD_ExplorerContext *context);
+void gd_explorer_chart_destroy(GD_ExplorerChartState *state);
+int gd_explorer_chart_remap(GD_ExplorerContext *context,const GD_ExplorerProject *old,const GD_ExplorerPane *prior);
+void gd_explorer_chart_controls(GD_ExplorerContext *context);
+void gd_explorer_chart_draw(GD_ExplorerContext *context);
+void gd_explorer_chart_input(GD_ExplorerContext *context);
+int gd_explorer_chart_fit(GD_ExplorerContext *context);
+int gd_explorer_chart_focus(GD_ExplorerContext *context);
+int gd_explorer_chart_cell_filtered(const GD_ExplorerChartState *state,int row,int column);
+void gd_explorer_chart_details(GD_ExplorerContext *context);
+void gd_explorer_rule_case_details(GD_ExplorerContext *context,int index);
 int gd_explorer_reset_all(GD_ExplorerContext *context);
 int gd_explorer_history_available(const GD_ExplorerContext *context,int direction);
 int gd_explorer_history_move(GD_ExplorerContext *context,int direction);

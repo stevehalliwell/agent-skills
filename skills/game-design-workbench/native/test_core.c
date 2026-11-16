@@ -2503,6 +2503,7 @@ TEST(rules_allocation_failure,
 #include "test_effect_query.h"
 #include "test_actor_query.h"
 #include "test_state_coverage.h"
+#include "test_state_chart.h"
 #include "test_structure_result.h"
 #include "test_actor_query_limits.h"
 #include "test_actor_query_provenance.h"
@@ -2542,7 +2543,7 @@ int main(int argc, char **argv) {
     failed += test_named_rule_delegates_private_slots_inputs_limits_and_failures(); failed += test_named_resource_delegates_native_graph_and_zero_work(); failed += test_named_skill_delegate_explicit_knowledge_not_learning(); failed += test_named_empty_readers_and_unavailable_selectors();
     failed += test_similarity_typed_distances_missing_and_reorder(); failed += test_similarity_degenerate_non_euclidean_and_bounds(); failed += test_similarity_small_representable_distances(); failed += test_similarity_landmarks_all_entries_and_capacity();
     failed += test_actor_inventory_local_bindings_declarations_and_work(); failed += test_actor_inventory_capacity_and_whole_template_maps(); failed += test_actor_inventory_unknown_scope_has_no_invented_bindings();
-    failed += test_state_coverage_whole_cases_local_hypotheses_and_limits(); failed += test_shared_structural_result_scope_ownership_and_failures(); failed += test_declaration_gap_inventory_native_identities_and_failures();
+    failed += test_state_coverage_whole_cases_local_hypotheses_and_limits(); failed += test_state_chart_retains_native_proposals_and_allocation_failures(); failed += test_shared_structural_result_scope_ownership_and_failures(); failed += test_declaration_gap_inventory_native_identities_and_failures();
     failed += test_structural_summary_parallel_roles_and_scope(); failed += test_structural_mixed_kind_paths_dominators_and_boundaries(); failed += test_structural_capacity_and_empty_scope();
     failed += test_empty(); failed += test_matrix(); failed += test_unsafe_input(); failed += test_ambiguous_endpoints();
     failed += test_text_types(); failed += test_missing_endpoint();
@@ -2569,6 +2570,6 @@ int main(int argc, char **argv) {
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/148 passed\n", 148-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/149 passed\n", 149-failed);
     return failed ? 1 : 0;
 }

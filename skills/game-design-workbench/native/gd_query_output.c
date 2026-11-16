@@ -24,7 +24,8 @@ int gd_query_fields(GD_QueryKind kind, const char *fields) {
         valid=!strcmp(key,"cases") || !strcmp(key,"findings") || (kind==GD_QUERY_BINDINGS && !strcmp(key,"bindings")) ||
             (kind==GD_QUERY_ACTOR_STATES && (!strcmp(key,"variants") || !strcmp(key,"comparisons"))) ||
             (kind==GD_QUERY_CONTRIBUTORS && (!strcmp(key,"concepts") || !strcmp(key,"contributors"))) ||
-            (kind==GD_QUERY_STATE_COVERAGE && (!strcmp(key,"axis_definition") || !strcmp(key,"state_values") || !strcmp(key,"state_bindings")));
+            (kind==GD_QUERY_STATE_COVERAGE && (!strcmp(key,"axis_definition") || !strcmp(key,"state_values") || !strcmp(key,"state_bindings"))) ||
+            (kind==GD_QUERY_STATE_CHART && (!strcmp(key,"axis_definition") || !strcmp(key,"companion_axis_definition") || !strcmp(key,"state_values") || !strcmp(key,"scenarios")));
         if (!valid) return 0;
         if (!end) return 1; p=end+1; if (!*p) return 0;
     }
@@ -51,7 +52,7 @@ static void selectors(FILE *out, const GD_Query *query) {
     fputs("{\"case\":",out); if (request->case_index>=0) source_case(out,query,request->case_index); else fputs("null",out);
     member(out,"participant",query->variants ? query->rules->participants[query->variants->participant].name:request->participant);
     member(out,"object",request->noun>=0 ? query->model->records[request->noun].reference:NULL);
-    member(out,"axis",request->axis>=0 ? query->model->records[request->axis].reference:NULL); member(out,"to",request->target_id);
+    member(out,"axis",request->axis>=0 ? query->model->records[request->axis].reference:NULL); member(out,"companion_axis",request->companion_axis); member(out,"to",request->target_id);
     member(out,"effect",request->effect_kind>=0 ? gd_effect_kind_name((GD_EffectKind)request->effect_kind):NULL);
     fputs(",\"values\":[",out); for (i=0;i<request->value_count;++i) { if (i) fputc(',',out); gd_json_string(out,request->values[i]); }
     fputs("],\"statuses\":[",out); for (i=0;i<request->status_count;++i) { if (i) fputc(',',out); gd_json_string(out,request->statuses[i]); }
@@ -170,12 +171,29 @@ static void contributor(FILE *out, const GD_Query *query, int row) {
     for (i=0;i<count && !ferror(out);++i) { if (i) fputc(',',out); activation(out,query,path[i]); }
     fputs("]}",out);
 }
+static void state_axis_definition(FILE *out,const GD_Query *query,int index) {
+    const GD_Record *axis=&query->model->records[index]; const char *value=axis->axis.allowed; int i;
+    fputs("{\"reference\":",out); gd_json_string(out,axis->reference);
+    member(out,"record_id",axis->id); member(out,"source_path",axis->source_path); member(out,"status",axis->status); member(out,"value_type",axis->axis.type); member(out,"unit",axis->axis.unit); member(out,"minimum",axis->axis.minimum); member(out,"maximum",axis->axis.maximum);
+    fprintf(out,",\"closed\":%s,\"definition_valid\":%s,\"unit_known\":%s,\"allowed_values\":[",axis->axis_closed ? "true":"false",query->rules->axes[index].valid ? "true":"false",query->rules->axes[index].unit_known ? "true":"false");
+    for (i=0;i<axis->axis.allowed_count;++i) { if (i) fputc(',',out); gd_json_string(out,value); value+=strlen(value)+1; } fputs("]}",out);
+}
+static int chart_hypotheses(const GD_Query *query) {
+    return query->binding_count*query->state_coverage->value_count*(query->request.companion_axis ? query->state_chart->companion_count:1);
+}
+#include "gd_state_chart_output.h"
+
 int gd_write_query_catalogue(FILE *out, int json) {
     int i;
-    static const char *const parameters[]={"--object, --case, --participant, --axis, --status", "--case and --axis required; --participant (default authored A), --object, --value (repeatable), --assume, --context, --context-not, --status", "--to opaque result ID OR --axis/--value/--effect; --object, --case (root placement), --status", "--axis required; --object, --case, --participant (requires --case), --value (repeatable; required for numeric axis), --status"};
+    static const char *const parameters[]={"--object, --case, --participant, --axis, --status", "--case and --axis required; --participant (default authored A), --object, --value (repeatable), --assume, --context, --context-not, --status", "--to opaque result ID OR --axis/--value/--effect; --object, --case (root placement), --status", "--axis required; --object, --case, --participant (requires --case), --value (repeatable; required for numeric axis), --status", "--object and enum --axis required; --with-axis (optional second declared enum on same local binding), --case, --participant (requires --case), --value (repeatable; default declared values), --status"};
     if (!json) { for (i=0;i<GD_QUERY_COUNT;++i) fprintf(out,"%s [%s]: %s\n",gd_query_name((GD_QueryKind)i),gd_query_projection((GD_QueryKind)i),parameters[i]); return gd_write_named_catalogue(out,0,0) && gd_write_structure_catalogue(out,0,0) && gd_write_decision_catalogue(out,0,0); }
     fputs("{\"schema_version\":1,\"ok\":true,\"data\":{\"questions\":[",out);
     for (i=0;i<GD_QUERY_COUNT;++i) {
+        if (i==GD_QUERY_STATE_CHART) {
+            fputs(",{\"name\":\"state-chart\",\"projection\":\"actors\",\"parameters\":",out); gd_json_string(out,parameters[i]);
+            fputs(",\"required_bindings\":{\"any_of\":[\"interactions\",\"mechanics\"],\"all_of\":[\"nouns\",\"axes\"]},\"required_parameters\":[\"--object\",\"--axis\"],\"optional_parameters\":[\"--case\",\"--participant\",\"--value\",\"--status\",\"--work-limit\",\"--with-axis\"],\"repeatable_parameters\":[\"--value\",\"--status\"],\"fields\":[\"axis_definition\",\"companion_axis_definition\",\"state_values\",\"scenarios\",\"cases\",\"findings\"],\"ui_available\":true,\"ui_mode\":\"state-charts\",\"ui_unavailable_parameters\":[\"--status\",\"--value\"],\"ipc_available\":true,\"ipc_form\":\"chart\",\"ipc_actions\":[\"chart.run\",\"chart.clear\"],\"ipc_result_form\":\"query\",\"scope\":\"One or two declared enum axes on one noun; independent local-binding hypotheses with retained conditional proposals, mapped calls, whole guards and side effects; not combined-state reachability, inferred gameplay role or executable state machine\"",out);
+            fprintf(out,",\"work_limit_max\":%d,\"scenario_limit\":%d,\"proposal_limit\":%d,\"activation_limit\":%d}",GD_EFFECT_WORK,GD_ACTOR_ACTIVATIONS,GD_ACTOR_WRITES,GD_ACTOR_ACTIVATIONS); continue;
+        }
         if (i) fputc(',',out); fputs("{\"name\":",out); gd_json_string(out,gd_query_name((GD_QueryKind)i)); member(out,"projection",gd_query_projection((GD_QueryKind)i)); member(out,"parameters",parameters[i]);
         fputs(",\"required_bindings\":{\"any_of\":[\"interactions\",\"mechanics\"],\"all_of\":[",out); if (i==GD_QUERY_ACTOR_STATES || i==GD_QUERY_STATE_COVERAGE) fputs("\"nouns\",\"axes\"",out); fputs("]},\"required_parameters\":[",out);
         if (i==GD_QUERY_ACTOR_STATES) fputs("\"--case\",\"--axis\"",out); else if (i==GD_QUERY_STATE_COVERAGE) fputs("\"--axis\"",out);
@@ -205,11 +223,14 @@ static int write_query(FILE *out, const GD_Model *model, const GD_Query *query, 
     if (query && (query->limited || (query->state_coverage && (query->state_coverage->limited || query->state_coverage->source_incomplete)))) complete=0;
     if (query && query->variants) { if (query->variants->limited) complete=0; for (i=0;i<query->variants->variant_count;++i) if (!query->variants->variants[i].constraints_complete || !query->variants->variants[i].values_complete) complete=0; }
     if (query && query->contributors && (query->contributors->limited || query->contributors->source_incomplete || query->resource->binding_conflicts || query->resource->identity_collisions)) complete=0;
+    if (query && query->state_chart) for (i=0;i<query->state_chart->scenario_count;++i)
+        if (!query->state_chart->scenarios[i].constraints_complete || !query->state_chart->scenarios[i].values_complete) complete=0;
     if (query && (!query->rules->bindings_complete || query->rules->findings_omitted)) complete=0;
     if (!json) {
         if (query) {
             fprintf(out,"%s [%s]\n",gd_query_name(query->request.kind),gd_query_projection(query->request.kind));
-            for (i=0;i<query->binding_count;++i) { const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleCase *item=&query->rules->cases[binding->case_index]; fprintf(out,"%s#%s :: %s (%s)%s\n",model->records[query->rules->sources[item->source].record].reference,item->name,query->rules->participants[binding->participant].name,query->rules->participants[binding->participant].noun ? query->rules->participants[binding->participant].noun:"[unspecified noun]",binding->participant==item->primary_participant ? " [A]":""); }
+            if (query->state_chart) chart_text(out,query);
+            for (i=0;i<query->binding_count && !query->state_chart;++i) { const GD_QueryBinding *binding=&query->bindings[i]; const GD_RuleCase *item=&query->rules->cases[binding->case_index]; fprintf(out,"%s#%s :: %s (%s)%s\n",model->records[query->rules->sources[item->source].record].reference,item->name,query->rules->participants[binding->participant].name,query->rules->participants[binding->participant].noun ? query->rules->participants[binding->participant].noun:"[unspecified noun]",binding->participant==item->primary_participant ? " [A]":""); }
             if (query->variants) for (i=0;i<query->variants->variant_count;++i) fprintf(out,"Value %s: applicability %s; %d proposals; %d conflicts; constraints %s; limited %s\n",query->variants->variants[i].value,gd_rule_truth_name(query->variants->variants[i].applicability),query->variants->variants[i].write_count,query->variants->variants[i].conflicts,query->variants->variants[i].constraints_complete ? "complete":"incomplete",query->variants->variants[i].limited ? "yes":"no");
             if (query->state_coverage) for (i=0;i<query->state_coverage->value_count;++i) { const GD_StateCoverageValue *value=&query->state_coverage->values[i]; fprintf(out,"Value %s: %d definite cases; %d undetermined cases; %d excluded cases; %d unfinished cases; no retained candidate %s%s\n",value->value,value->definite_cases,value->undetermined_cases,value->excluded_cases,value->unfinished_cases,gd_rule_truth_name(value->no_retained_candidate),value->declared ? " [declared]":" [requested hypothesis]"); }
             if (query->contributors) for (i=0;i<query->effects->node_count;++i) if (concept_matches(query,i)) { char id[GD_EFFECT_ID_CAPACITY]; fprintf(out,"%s: %d direct target-labelled declarations\n",gd_effect_node_id(query->effects,i,id,sizeof(id)) ? id:"[identity unavailable]",query->contributors->incoming[i]); }
@@ -237,12 +258,9 @@ static int write_query(FILE *out, const GD_Model *model, const GD_Query *query, 
             fputc(']',out);
         }
         if (query->state_coverage && selected(fields,"axis_definition")) {
-            const GD_Record *axis=&model->records[query->request.axis]; const char *value=axis->axis.allowed;
-            if (comma++) fputc(',',out); fputs("\"axis_definition\":{\"reference\":",out); gd_json_string(out,axis->reference);
-            member(out,"record_id",axis->id); member(out,"source_path",axis->source_path); member(out,"status",axis->status); member(out,"value_type",axis->axis.type); member(out,"unit",axis->axis.unit); member(out,"minimum",axis->axis.minimum); member(out,"maximum",axis->axis.maximum);
-            fprintf(out,",\"closed\":%s,\"definition_valid\":%s,\"unit_known\":%s,\"allowed_values\":[",axis->axis_closed ? "true":"false",query->rules->axes[query->request.axis].valid ? "true":"false",query->rules->axes[query->request.axis].unit_known ? "true":"false");
-            for (i=0;i<axis->axis.allowed_count;++i) { if (i) fputc(',',out); gd_json_string(out,value); value+=strlen(value)+1; } fputs("]}",out);
+            if (comma++) fputc(',',out); fputs("\"axis_definition\":",out); state_axis_definition(out,query,query->request.axis);
         }
+        if (query->request.companion_axis && selected(fields,"companion_axis_definition")) { if(comma++)fputc(',',out);fputs("\"companion_axis_definition\":",out);state_axis_definition(out,query,query->state_chart->companion_axis); }
         if (query->state_coverage && selected(fields,"state_values")) {
             if (comma++) fputc(',',out); fputs("\"state_values\":[",out);
             for (i=0;i<query->state_coverage->value_count;++i) {
@@ -252,7 +270,7 @@ static int write_query(FILE *out, const GD_Model *model, const GD_Query *query, 
             }
             fputc(']',out);
         }
-        if (query->state_coverage && selected(fields,"state_bindings")) {
+        if (query->state_coverage && !query->state_chart && selected(fields,"state_bindings")) {
             if (comma++) fputc(',',out); fputs("\"state_bindings\":[",out);
             for (i=0;i<query->binding_count;++i) {
                 if (i) fputc(',',out); fputs("{\"source\":",out); source_case(out,query,query->bindings[i].case_index); fputs(",\"actor\":",out); actor(out,query,query->bindings[i].participant); fputs(",\"values\":[",out);
@@ -265,6 +283,7 @@ static int write_query(FILE *out, const GD_Model *model, const GD_Query *query, 
             }
             fputc(']',out);
         }
+        if (query->state_chart && selected(fields,"scenarios")) { if (comma++) fputc(',',out); fputs("\"scenarios\":",out); chart_scenarios(out,query); }
         if (query->request.kind==GD_QUERY_ACTOR_STATES && selected(fields,"variants")) { if (comma++) fputc(',',out); fputs("\"variants\":[",out); if (query->variants) for (i=0;i<query->variants->variant_count && !ferror(out);++i) { if (i) fputc(',',out); variant(out,query,i); } fputc(']',out); }
         if (compare && query->request.kind==GD_QUERY_ACTOR_STATES && selected(fields,"comparisons")) {
             int pairs=0; if (comma++) fputc(',',out); fputs("\"comparisons\":[",out);
@@ -277,7 +296,7 @@ static int write_query(FILE *out, const GD_Model *model, const GD_Query *query, 
             fputc(']',out);
         }
         if (query->effects && selected(fields,"contributors")) { if (comma++) fputc(',',out); fputs("\"contributors\":[",out); for (i=0;i<query->contributors->count && !ferror(out);++i) { if (i) fputc(',',out); contributor(out,query,i); } fputc(']',out); }
-        if (selected(fields,"cases")) { int count=0; if (comma++) fputc(',',out); fputs("\"cases\":[",out); for (i=0;i<query->rules->case_count && !ferror(out);++i) if (query->cases[i]) { if (count++) fputc(',',out); fprintf(out,"{\"index\":%d,\"declaration\":",i); gd_write_rule_case(out,model,query->rules,i); fputc('}',out); } fputc(']',out); }
+        if (selected(fields,"cases")) { int count=0; if (comma++) fputc(',',out); fputs("\"cases\":[",out); for (i=0;i<query->rules->case_count && !ferror(out);++i) if (query->cases[i] || (query->state_chart && query->state_chart->cases[i])) { if (count++) fputc(',',out); fprintf(out,"{\"index\":%d,\"declaration\":",i); gd_write_rule_case(out,model,query->rules,i); fputc('}',out); } fputc(']',out); }
         if (selected(fields,"findings")) { if (comma++) fputc(',',out); fputs("\"findings\":[",out); for (i=0;i<query->rules->finding_count;++i) { const GD_Finding *finding=&query->rules->findings[i]; if (i) fputc(',',out); fputs("{\"code\":",out); gd_json_string(out,finding->code); member(out,"message",finding->message); member(out,"record",finding->record>=0 ? model->records[finding->record].reference:NULL); fprintf(out,",\"line\":%d}",finding->line); } fputc(']',out); }
     }
     fprintf(out,"},\"coverage\":{\"complete\":%s,\"read_only\":true,\"scope\":",complete ? "true":"false");
@@ -286,6 +305,7 @@ static int write_query(FILE *out, const GD_Model *model, const GD_Query *query, 
     if (query && query->variants) fprintf(out,",\"requested_variants\":%d,\"retained_variants\":%d,\"unexamined_variants\":%d,\"variant_work\":%d,\"variant_limited\":%s,\"vocabulary_closed\":%s",query->variants->requested,query->variants->variant_count,query->variants->unexamined_variants,query->variants->work,query->variants->limited ? "true":"false",query->variants->vocabulary_closed ? "true":"false");
     if (query && query->state_coverage) fprintf(out,",\"state_coverage_work\":%d,\"state_coverage_limited\":%s,\"state_query_complete\":%s,\"state_source_incomplete\":%s,\"state_evaluated_bindings\":%d,\"state_scope\":\"Independent finite value hypothesis on each selected local binding; whole root-case guards/exclusions, not outcome feasibility. Other bindings/context stay unknown. Case counts deduplicate local bindings; counts are not partner breadth or gameplay frequency. Null absence means unchecked; missing retained candidates are inspection hints, not design defects. Numeric values are samples, never exhaustive ranges. Child outcome work can conservatively limit matching coverage. Input validation and fixed bounded aggregation are separate from matching work budget.\"",query->state_coverage->work,query->state_coverage->limited ? "true":"false",query->limited || query->state_coverage->limited ? "false":"true",query->state_coverage->source_incomplete ? "true":"false",query->state_coverage->evaluated_bindings);
     if (query && query->resource) fprintf(out,",\"resource_limited\":%s,\"resource_nodes\":%d,\"resource_relations\":%d,\"resource_work\":%d,\"resource_unexamined_cases\":%d,\"composition_unexamined\":%d,\"calls_bound\":%s,\"projection_limited\":%s,\"projection_unexamined_nodes\":%d,\"projection_unexamined_relations\":%d,\"retained_contributors\":%d",query->resource->limited ? "true":"false",query->resource->node_count,query->resource->relation_count,query->resource->work,query->resource->unexamined_cases,query->resource->composition_unexamined,query->resource->calls_bound ? "true":"false",query->effects->limited ? "true":"false",query->effects->unexamined_source_nodes,query->effects->unexamined_relations,query->contributors->count);
+    if (query && query->state_chart) fprintf(out,",\"state_chart\":{\"retained_scenarios\":%d,\"retained_proposals\":%d,\"retained_activations\":%d,\"retention_limited\":%s,\"storage_limited\":%s,\"retention_work_limited\":%s,\"selected_bindings\":%d,\"retained_binding_hypotheses\":%d,\"unretained_hypotheses\":%d,\"scenario_limit\":%d,\"proposal_limit\":%d,\"activation_limit\":%d,\"owned_bytes\":%llu,\"combined_state_reachability_evaluated\":false,\"gameplay_roles_inferred\":false,\"semantics\":\"Each scenario assigns selected axis and optional companion axis only to selected local binding, never same-noun peers. With a companion axis, state_values summaries aggregate existentially over its declared values; unfinished counts include any unfinished combination. Transitions reference retained state/preservation proposals, not guaranteed changes. Empty transitions do not imply preservation. Full root/ancestor guards and side declarations remain in cases; mapped calls remain in activations. False, unknown and unfinished hypotheses remain distinct; definition/placement rows are not distinct runtime events.\"}",query->state_chart->scenario_count,query->state_chart->write_count,query->state_chart->activation_count,query->state_chart->limited ? "true":"false",query->state_chart->storage_limited ? "true":"false",query->state_chart->work_limited ? "true":"false",query->binding_count,chart_hypotheses(query),chart_hypotheses(query)-query->state_chart->scenario_count,GD_ACTOR_ACTIVATIONS,GD_ACTOR_WRITES,GD_ACTOR_ACTIVATIONS,(unsigned long long)sizeof(*query->state_chart));
     if (query && query->contributors) fprintf(out,",\"contributor_work\":%d,\"contributor_limited\":%s,\"source_incomplete\":%s,\"unexamined_links\":%d,\"unresolved_targets\":%d,\"excluded_scope\":%d,\"excluded_targets\":%d,\"binding_conflicts\":%d",query->contributors->work,query->contributors->limited ? "true":"false",query->contributors->source_incomplete ? "true":"false",query->contributors->unexamined_links,query->contributors->unresolved_targets,query->contributors->excluded_scope,query->contributors->excluded_target,query->resource->binding_conflicts);
     if (query && query->resource) fprintf(out,",\"cycle_frontiers\":%d,\"depth_frontiers\":%d,\"identity_collisions\":%d,\"preservation_unexamined\":%d,\"unknown_case_coverage\":%d",query->resource->cycle_frontiers,query->resource->depth_frontiers,query->resource->identity_collisions,query->resource->preservation_unexamined,query->resource->unknown_case_coverage);
     if (query && query->state_coverage) fprintf(out,",\"state_fixed_bounds\":{\"local_bindings\":%d,\"summary_incidences\":%d,\"axis_text_bytes\":%d,\"literal_bytes\":%d,\"owned_bytes\":%llu}",GD_MAX_RULE_PARTICIPANTS,(GD_MAX_RULE_PARTICIPANTS+GD_MAX_RULE_CASES)*GD_ACTOR_VARIANTS,GD_MAX_FRONTMATTER,GD_MAX_RULE_LINE,(unsigned long long)sizeof(*query->state_coverage));

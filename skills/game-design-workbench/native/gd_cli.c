@@ -47,13 +47,14 @@ static void help(void) {
          "  --status STATUS        Query source filter; repeatable or all alone\n"
          "  --work-limit N         Search work: actor/effect/similarity 0..67108864, structural 0..16777216; construction separate\n"
          "  Actor states require --case/--axis; default only authored A. Other facts stay fixed.\n"
+         "  state-chart requires --object and enum --axis; optional --with-axis adds joint same-binding enum hypotheses.\n"
          "  Effect contributors include definitions/placements, whole guards and exact calls.\n"
          "  Query --fields and narrower Actors/Effects UI controls: see --list. Viewer IPC: viewer --help.\n"
          "  Structural --relation/--start repeat; --scope-root restricts Relationships.\n"
          "  Structural --direction forward|backward|both; --avoid only native support candidates.\n\n"
          "Unified explorer: gd view explorer with explicit collection bindings below.\n"
-         "  One window; eight projections; unavailable views explain missing roles.\n"
-         "  --mode skills|challenges|relationships|matrix|mda|resources|actors|effects|noun-interactions (default first available)\n"
+         "  One window; independent panes; unavailable views explain missing roles.\n"
+         "  --mode skills|challenges|relationships|matrix|mda|resources|actors|effects|noun-interactions|state-charts (default first available)\n"
          "  --layout grid|graph|columns             Explorer: matrix; noun-interactions: grid|graph\n"
          "  Supports --frames, --screenshot, --output and error-output format flags.\n"
          "  Standalone view commands also available. No automatic folder discovery.\n\n"
@@ -300,8 +301,8 @@ static int application(int argc, char **argv) {
             ++count;
         } else if (!strcmp(argv[i],"--list") && command==15) {
             query_list=1;
-        } else if (command==15 && (!strcmp(argv[i],"--question") || !strcmp(argv[i],"--projection") || !strcmp(argv[i],"--object") || !strcmp(argv[i],"--axis") || !strcmp(argv[i],"--participant"))) {
-            const char **destination=!strcmp(argv[i],"--question") ? &question:!strcmp(argv[i],"--projection") ? &projection:!strcmp(argv[i],"--object") ? &object_name:!strcmp(argv[i],"--axis") ? &axis_name:&query_request.participant;
+        } else if (command==15 && (!strcmp(argv[i],"--question") || !strcmp(argv[i],"--projection") || !strcmp(argv[i],"--object") || !strcmp(argv[i],"--axis") || !strcmp(argv[i],"--with-axis") || !strcmp(argv[i],"--participant"))) {
+            const char **destination=!strcmp(argv[i],"--question") ? &question:!strcmp(argv[i],"--projection") ? &projection:!strcmp(argv[i],"--object") ? &object_name:!strcmp(argv[i],"--axis") ? &axis_name:!strcmp(argv[i],"--with-axis") ? &query_request.companion_axis:&query_request.participant;
             if (++i==argc || *destination || !*argv[i] || strlen(argv[i])>386) { error="Query selector needs one nonempty value of at most 386 bytes"; break; }
             *destination=argv[i];
         } else if (command==15 && (!strcmp(argv[i],"--demand") || !strcmp(argv[i],"--intent"))) {
@@ -405,10 +406,10 @@ static int application(int argc, char **argv) {
             explorer_mode_supplied = 1;
             if (++i == argc) { error="--mode requires a supported projection name"; break; }
             if (command==13) {
-                const char *names[]={"skills","challenges","relationships","matrix","mda","resources","actors","effects","noun-interactions"}; int m;
+                const char *names[]={"skills","challenges","relationships","matrix","mda","resources","actors","effects","noun-interactions","state-charts"}; int m;
                 unified_mode=-1;
                 for (m=0;m<GD_EXPLORER_VIEWS;++m) if (!strcmp(argv[i],names[m])) unified_mode=m;
-                if (unified_mode<0) { error="Explorer --mode requires skills, challenges, relationships, matrix, mda, resources, actors, effects or noun-interactions"; break; }
+                if (unified_mode<0) { error="Explorer --mode requires skills, challenges, relationships, matrix, mda, resources, actors, effects, noun-interactions or state-charts"; break; }
             } else {
                 if (strcmp(argv[i],"skills") && strcmp(argv[i],"challenges") && strcmp(argv[i],"relationships")) { error="--mode requires skills, challenges, or relationships"; break; }
                 explorer_mode = !strcmp(argv[i],"relationships") ? GD_EXPLORE_RELATIONSHIPS : !strcmp(argv[i],"challenges") ? GD_EXPLORE_CHALLENGES : GD_EXPLORE_SKILLS;
@@ -467,6 +468,7 @@ static int application(int argc, char **argv) {
             screenshot = argv[i];
         } else error = "Unknown option; see --help";
     }
+    if (!error && query_request.companion_axis && (query_list || !question || strcmp(question,"state-chart"))) error="--with-axis applies only to state-chart";
     if ((decision_demand || decision_intent) && (command!=15 || query_list || !question || strcmp(question,"decision-assessments")) && !error)
         error="--demand and --intent apply only to decision-assessments";
     if (command==15 && !query_list && question && !strcmp(question,"decision-assessments")) {
@@ -534,7 +536,7 @@ static int application(int argc, char **argv) {
             if (!error && kind<0) error="--question needs an implemented name from query --list";
             if (!error && (!projection || strcmp(projection,gd_query_projection((GD_QueryKind)kind)))) { error="Operation unavailable on requested projection; inspect query --list"; error_code="query.projection_unavailable"; }
             query_request.kind=(GD_QueryKind)kind;
-            if (!error && kind==GD_QUERY_STATE_COVERAGE && (!(roles & (1 << GD_NOUN)) || !(roles & (1 << GD_AXIS)))) error="state-coverage requires explicit --nouns and --axes collection bindings";
+            if (!error && (kind==GD_QUERY_STATE_COVERAGE || kind==GD_QUERY_STATE_CHART) && (!(roles & (1 << GD_NOUN)) || !(roles & (1 << GD_AXIS)))) error=kind==GD_QUERY_STATE_CHART ? "state-chart requires explicit --nouns and --axes collection bindings":"state-coverage requires explicit --nouns and --axes collection bindings";
             if (!error && fields && !(structural_actor ? gd_structure_question_fields(question,fields):gd_query_fields(query_request.kind,fields))) error="Unsupported query fields; inspect query --list";
         }
     }

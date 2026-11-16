@@ -2,14 +2,16 @@
 .SYNOPSIS
 Capture visible pixels inside one authorized native review window.
 .DESCRIPTION
-Usage: pwsh -NoProfile -File scripts/capture-native-review-window.ps1 -ProcessId PID [-OutputDirectory PATH]
-Read-only screen capture. Does not focus, move, close or send input to window.
+Usage: pwsh -NoProfile -File scripts/capture-native-review-window.ps1 -ProcessId PID [-OutputDirectory PATH] [-BringToFront]
+Default: read-only screen capture; no focus, geometry, close or input changes.
+-BringToFront explicitly focuses only this authorized window before capture; never restores a minimized window.
 Window must be visible and unobscured. Output uses unique PNG name; no overwrite.
 Default artifacts: skills/game-design-workbench/native/build/manual-review-captures/.
 #>
 param(
     [Parameter(Mandatory=$true)][ValidateRange(1,2147483647)][int]$ProcessId,
-    [string]$OutputDirectory=''
+    [string]$OutputDirectory='',
+    [switch]$BringToFront
 )
 $ErrorActionPreference='Stop'
 if (![OperatingSystem]::IsWindows()) { throw 'Windows desktop required.' }
@@ -23,12 +25,19 @@ public static class NativeReviewCapture {
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr window);
     [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr window);
     [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr window);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
 }
 '@
 [NativeReviewCapture]::SetProcessDPIAware() | Out-Null
 $process=Get-Process -Id $ProcessId
 $window=$process.MainWindowHandle
 if (!$window -or ![NativeReviewCapture]::IsWindowVisible($window) -or [NativeReviewCapture]::IsIconic($window)) { throw 'Process has no visible, non-minimized main window.' }
+if ($BringToFront -and [NativeReviewCapture]::GetForegroundWindow() -ne $window) {
+    if (![NativeReviewCapture]::SetForegroundWindow($window)) { throw 'Windows refused requested focus; bring review window forward manually.' }
+    Start-Sleep -Milliseconds 200
+    if ([NativeReviewCapture]::GetForegroundWindow() -ne $window) { throw 'Review window did not become foreground; no capture taken.' }
+}
 $bounds=[NativeReviewCapture+Bounds]::new()
 if (![NativeReviewCapture]::GetWindowRect($window,[ref]$bounds)) { throw 'Cannot read window bounds.' }
 $width=$bounds.Right-$bounds.Left; $height=$bounds.Bottom-$bounds.Top
@@ -44,4 +53,4 @@ try {
 } finally {
     if ($graphics) { $graphics.Dispose() }; if ($bitmap) { $bitmap.Dispose() }
 }
-@{ok=$true;process_id=$ProcessId;image=[IO.Path]::GetFullPath($output);width=$width;height=$height;scope='visible window pixels only; no input/focus changes; occlusion not removed'} | ConvertTo-Json -Compress
+@{ok=$true;process_id=$ProcessId;image=[IO.Path]::GetFullPath($output);width=$width;height=$height;focus_requested=[bool]$BringToFront;scope='visible window pixels only; no pointer/keyboard input or geometry changes; occlusion not removed'} | ConvertTo-Json -Compress

@@ -20,6 +20,7 @@ void gd_explorer_focus_camera(Camera2D *camera,Rectangle viewport,Rectangle sele
 int gd_explorer_focus_available(const GD_ExplorerContext *c) {
     const GD_ExplorerPane *p=c->pane;
     if(!p->prepared || !p->layout)return 0;
+    if(p->view==GD_EXPLORER_STATES)return p->chart_state && p->chart_state->query && (p->chart_state->row>=0 || p->chart_state->column>=0 || p->chart_state->scenario>=0);
     if(gd_explorer_similarity_active(c))return p->structure_state->similarity_row>=0;
     if(overview_available(c) && p->overview.row>=0 && p->overview.column>=0)return 1;
     if(p->view==GD_EXPLORER_MDA)return p->mda.record>=0 || p->mda.link>=0;
@@ -54,6 +55,7 @@ static int focus_selection(GD_ExplorerContext *c,int frame) {
     GD_ExplorerPane *p=c->pane;const GD_Layout *shown;GD_ExplorerFocusResult result={0};
     unsigned char marked[GD_MAX_RECORDS]={0};Rectangle selected={0},context={0},primary_bounds={0};int found=0,primary=-1,edge=-1,i,count=0,nodes[2];
     if(!gd_explorer_focus_available(c) || !(c->viewport.width>0) || !(c->viewport.height>0) || !isfinite(c->viewport.width) || !isfinite(c->viewport.height))return 0;
+    if(p->view==GD_EXPLORER_STATES)return frame ? gd_explorer_chart_fit(c):gd_explorer_chart_focus(c);
     if(gd_explorer_similarity_active(c))return frame ? gd_explorer_similarity_frame(c):gd_explorer_similarity_focus(c);
     /* Borrow matching active pose only inside this operation. Never expose
        filtered positions through node IPC, reset sampler or borrow other pane. */

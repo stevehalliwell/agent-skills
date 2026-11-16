@@ -2,7 +2,7 @@
 #define GD_QUERY_H
 #include "gd_actor_query.h"
 #include "gd_effect_query.h"
-typedef enum { GD_QUERY_BINDINGS, GD_QUERY_ACTOR_STATES, GD_QUERY_CONTRIBUTORS, GD_QUERY_STATE_COVERAGE, GD_QUERY_COUNT } GD_QueryKind;
+typedef enum { GD_QUERY_BINDINGS, GD_QUERY_ACTOR_STATES, GD_QUERY_CONTRIBUTORS, GD_QUERY_STATE_COVERAGE, GD_QUERY_STATE_CHART, GD_QUERY_COUNT } GD_QueryKind;
 /* Case/noun/axis/effect_kind use -1 for no selector; zero work is valid.
    Status all must stand alone. Fixed inputs and strings remain borrowed. */
 typedef struct {
@@ -10,6 +10,7 @@ typedef struct {
     int case_index, noun, axis, effect_kind, value_count, status_count, work_limit;
     const char *participant, *target_id, *values[GD_ACTOR_VARIANTS], *statuses[GD_MAX_CONTROL_FILTERS];
     const GD_RuleScenario *fixed;
+    const char *companion_axis; /* state-chart only: exact second enum axis, optional. */
 } GD_QueryRequest;
 typedef struct { int case_index, participant; } GD_QueryBinding;
 typedef struct {
@@ -27,6 +28,26 @@ typedef struct {
     uint64_t undetermined[GD_MAX_RULE_PARTICIPANTS], finished[GD_MAX_RULE_PARTICIPANTS];
     uint64_t case_definite[GD_MAX_RULE_CASES], case_undetermined[GD_MAX_RULE_CASES], case_unfinished[GD_MAX_RULE_CASES];
 } GD_StateCoverage;
+/* Retained independent hypotheses, not an executable state machine. Each
+   scenario owns slices of these bounded arrays; strings borrow rules/inputs. */
+typedef struct {
+    int binding, value, first_write, write_count, first_activation, activation_count;
+    const char *companion_value;
+    GD_RuleTruth applicability, context, requirements;
+    GD_RuleExclusionCheck exclusion;
+    int constraints_complete, values_complete, limited, opaque_effects, cycles, conflicts, uncertain_pairs;
+} GD_StateChartScenario;
+typedef struct {
+    int scenario_count, write_count, activation_count, limited, storage_limited, work_limited;
+    int companion_axis, companion_count;
+    const char *companion_values[GD_ACTOR_VARIANTS];
+    GD_StateChartScenario scenarios[GD_ACTOR_ACTIVATIONS];
+    GD_RuleWrite writes[GD_ACTOR_WRITES];
+    int write_activations[GD_ACTOR_WRITES];
+    GD_EffectKind families[GD_ACTOR_WRITES];
+    GD_RuleActivation activations[GD_ACTOR_ACTIVATIONS];
+    unsigned char cases[GD_MAX_RULE_CASES];
+} GD_StateChart;
 typedef struct {
     GD_Allocator allocator; const GD_Model *model; const GD_Rules *rules; const GD_RuleAnalysis *analysis;
     GD_QueryRequest request;
@@ -34,6 +55,7 @@ typedef struct {
     GD_QueryBinding bindings[GD_MAX_RULE_PARTICIPANTS];
     unsigned char cases[GD_MAX_RULE_CASES], activation_mask[GD_EFFECT_NODES];
     GD_StateCoverage *state_coverage;
+    GD_StateChart *state_chart;
     GD_ActorQuery *variants; GD_ResourceGraph *resource; GD_EffectGraph *effects; GD_EffectQuery *contributors;
 } GD_Query;
 const char *gd_query_name(GD_QueryKind kind);
