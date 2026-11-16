@@ -6,7 +6,7 @@
 typedef struct {
     int shared_peers,roots,candidates,ancestors,support,bypass,foundation_peers,foundation_members;
     int reach_peers,reach_targets,witness[2],families,signature,members,bin[2];
-    int foundation_sources,reach_sources,overview_sources;
+    int foundation_sources,reach_sources,overview_sources,reach_kinds,overview_kinds;
 } GD_GraphEvidencePages;
 _Static_assert(sizeof(GD_GraphEvidencePages)<=128,"Keep stack-copied pane paging state small");
 /* Shared controls/details for cimgui views. Returns retained evidence-pair index,

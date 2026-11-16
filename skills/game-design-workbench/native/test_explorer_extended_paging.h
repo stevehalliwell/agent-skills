@@ -105,6 +105,51 @@ static int explorer_extended_paging_checks(GD_ExplorerContext *c,GD_Layout *save
         }
         c->analysis->initialized=0;
     }
+    /* Every distinct tag remains reachable, including unknown integer tags;
+       histogram membership counts native rows, never page ordinals. */
+    {
+        memset(saved,0,sizeof(*saved));saved->node_count=2;saved->edge_count=129;
+        for(i=0;i<2;++i){saved->nodes[i].key=0;saved->nodes[i].label="Synthetic tag endpoint";}
+        for(i=0;i<129;++i)saved->edges[i]=(GD_LayoutEdge){0,1,i,1,1000+128-i};
+        gd_graph_analyze_bounded(saved,NULL,0,GD_GRAPH_ANY,0,c->analysis);
+        int allocations=*calls,work=c->analysis->work,cursor=0,total=0;GD_GraphKind kind;
+        EXT_PAGE_CHECK(gd_graph_kind_count(c->analysis,NULL)==129);
+        while(gd_graph_kind_next(c->analysis,NULL,&cursor,&kind)){EXT_PAGE_CHECK(kind.relation==1000+total && kind.rows==1 && kind.first_edge==128-total);++total;}
+        EXT_PAGE_CHECK(total==129 && *calls==allocations && c->analysis->work==work);
+        GD_OverviewControls overview={1,-1,-1};const GD_GraphOverview *cell=gd_graph_overview(c->analysis,&overview,0);
+        overview.row=0;overview.column=1;gd_graph_overview_select(c->analysis,0,1);
+        EXT_PAGE_CHECK(cell && cell->selected_count==129 && gd_graph_kind_count(c->analysis,cell->selected_edges)==129);
+        GD_GraphEvidencePages pages={0};GD_ReachControls controls={1,1000,0,-1,1};pages.reach_kinds=pages.overview_kinds=2;
+        const GD_GraphClosure *closure=gd_graph_reachability_prepare(c->analysis,&controls,0);EXT_PAGE_CHECK(closure && closure->complete);
+        gd_graph_closure_choose_into(c->analysis,&c->analysis->reachability,0,&controls.peer);GD_ReachControls before=controls;int closure_work=closure->work;
+        for(j=0;j<2;++j){
+            igNewFrame();igBegin("Residual kind paging",NULL,0);ImGuiStorage_SetInt(igGetStateStorage(),igGetID_Str("Overview cell source evidence"),1);
+            gd_graph_reachability_panel(saved,c->analysis,0,&controls,0,&pages);gd_graph_overview_panel(NULL,saved,c->analysis,&overview,0,&pages);igEnd();igEndFrame();
+            EXT_PAGE_CHECK(pages.reach_kinds==(j ? 0:2) && pages.overview_kinds==(j ? 0:2) && !memcmp(&before,&controls,sizeof(before)));
+            EXT_PAGE_CHECK(overview.row==0 && overview.column==1 && closure->work==closure_work && c->analysis->work==work && *calls==allocations);
+            pages.reach_kinds=pages.overview_kinds=0;
+        }
+        /* Sparse selected mask and filtered/inactive scope invalidate correctly. */
+        memset(c->analysis->overview.selected_edges,0,sizeof(c->analysis->overview.selected_edges));
+        for(i=0;i<129;i+=64)c->analysis->overview.selected_edges[i]=1;
+        EXT_PAGE_CHECK(gd_graph_kind_count(c->analysis,c->analysis->overview.selected_edges)==3);
+        saved->edges[128].relation=saved->edges[0].relation;gd_graph_analyze_bounded(saved,NULL,0,GD_GRAPH_ANY,0,c->analysis);
+        EXT_PAGE_CHECK(gd_graph_kind_count(c->analysis,NULL)==128 && gd_graph_kind_count(c->analysis,c->analysis->overview.selected_edges)==2);
+        cursor=total=0;while(gd_graph_kind_next(c->analysis,NULL,&cursor,&kind)){total+=kind.rows;if(kind.relation==1128)EXT_PAGE_CHECK(kind.rows==2 && kind.first_edge==0);}
+        EXT_PAGE_CHECK(total==129);
+        saved->edges[128].relation=1000;
+        saved->edges[0].active=0;gd_graph_analyze_bounded(saved,NULL,0,GD_GRAPH_ANY,0,c->analysis);EXT_PAGE_CHECK(gd_graph_kind_count(c->analysis,NULL)==128);
+        unsigned char shown[2]={1,0};gd_graph_analyze_bounded(saved,shown,1,GD_GRAPH_ANY,0,c->analysis);EXT_PAGE_CHECK(!gd_graph_kind_count(c->analysis,NULL));
+        gd_graph_analyze_overview(saved,NULL,c->analysis);EXT_PAGE_CHECK(gd_graph_kind_count(c->analysis,NULL)==129);
+        /* Capacity case: no 64-kind producer/display conflation or truncation. */
+        saved->edge_count=GD_MAX_PAIRS;
+        for(i=0;i<GD_MAX_PAIRS;++i)saved->edges[i]=(GD_LayoutEdge){0,1,i,1,INT_MAX-i};
+        gd_graph_analyze_bounded(saved,NULL,0,GD_GRAPH_ANY,0,c->analysis);EXT_PAGE_CHECK(gd_graph_kind_count(c->analysis,NULL)==GD_MAX_PAIRS);
+        cursor=total=0;while(gd_graph_kind_next(c->analysis,NULL,&cursor,&kind)){EXT_PAGE_CHECK(kind.relation==INT_MAX-GD_MAX_PAIRS+1+total && kind.rows==1);++total;}
+        EXT_PAGE_CHECK(total==GD_MAX_PAIRS && *calls==allocations && !c->analysis->work);
+        saved->edge_count=0;gd_graph_analyze_bounded(saved,NULL,0,GD_GRAPH_ANY,0,c->analysis);EXT_PAGE_CHECK(!gd_graph_kind_count(c->analysis,NULL));
+        c->analysis->initialized=0;
+    }
     result=1;
 cleanup:
     *fail_at=0;fprintf(stderr,"Extended paging: %d checks; structure cursor arrays %llu bytes; participants %llu bytes per rule/query owner\n",checks,

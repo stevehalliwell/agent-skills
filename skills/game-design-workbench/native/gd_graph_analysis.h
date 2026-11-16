@@ -9,6 +9,8 @@
 typedef enum { GD_GRAPH_ANY, GD_GRAPH_SAME_ROLE, GD_GRAPH_CHANGED_ROLE, GD_GRAPH_LENS_COUNT } GD_GraphLens;
 extern const char *const gd_graph_lens_names[GD_GRAPH_LENS_COUNT];
 typedef struct { int owner, neighbor, edge, endpoint, relation, owner_end; } GD_GraphFeature;
+typedef struct { int relation,edge; } GD_GraphKindOccurrence;
+typedef struct { int relation,rows,first_edge; } GD_GraphKind;
 typedef struct { int a, b, shared, first_a, first_b; } GD_GraphMatch;
 /* Neighbor nodes have one class; link rows may combine classes from their two
    incident roles (for example a direct A--B link). Other-role means shared
@@ -94,7 +96,14 @@ typedef struct {
     GD_GraphShapes shapes;
     GD_GraphOverview overview;
     int shown_nodes, shown_edges, feature_count, pair_count, complete, work, work_limit;
+    /* Lazy read-only presentation index over shown retained rows. No query work. */
+    GD_GraphKindOccurrence kind_rows[GD_MAX_PAIRS];
+    int kind_rows_valid,kind_rows_count;
 } GD_GraphAnalysis;
+/* Sorted exact tags; optional native-edge mask restricts histogram scope. Cursor
+   starts at zero. No page ordinals become tags; no discovery/work counters change. */
+int gd_graph_kind_next(GD_GraphAnalysis *analysis,const unsigned char *edges,int *cursor,GD_GraphKind *kind);
+int gd_graph_kind_count(GD_GraphAnalysis *analysis,const unsigned char *edges);
 /* Zero-initialize once. NULL mask includes all nodes. Inactive edges count only
    when include_inactive is true. Cached analysis->shown may serve as mask for
    a lens-only update. Recomputes after topology/tag/lens/display-mask changes;

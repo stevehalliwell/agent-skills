@@ -54,38 +54,46 @@ static const GD_Record *relation_source(const GD_ResourceGraph *graph, int index
     int c=relation->source_case;
     return c>=0 ? &graph->model->records[graph->rules->sources[graph->rules->cases[c].source].record]:NULL;
 }
-static int path_sources(const GD_ResourceGraph *graph, const GD_Layout *layout, const int *arcs, int retained, int x, int y) {
-    int i;
-    for (i=(retained<4 ? retained:4)-1;i>=0;--i) {
-        int index=layout->edges[arcs[i]/2].key; const GD_ResourceRelation *relation=&graph->relations[index];
-        const GD_Record *source=relation_source(graph,index);
-        DrawText(TextFormat("%s | line %d",relation_name(relation->kind),relation->line),x,y,13,muted); y+=18;
-        if (source) { DrawText(TextFormat("%.43s",source->reference),x,y,13,foreground); y+=18; }
-    }
+#include "gd_resource_evidence.h"
+static int source_row(const GD_ResourceGraph *graph,int index,int x,int y) {
+    const GD_ResourceRelation *relation=&graph->relations[index];const GD_Record *source=relation_source(graph,index);
+    y=resource_text(TextFormat("relation #%d | %s | line %d | case #%d",index,relation_name(relation->kind),relation->line,relation->source_case),x,y,13,muted);
+    if(source)y=resource_text(source->reference,x,y,13,foreground);
     return y;
 }
-static void overview_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
-                             GD_OverviewControls *controls, int x) {
-    const GD_GraphOverview *overview=gd_graph_overview(analysis,controls,1); int i,count=0,arcs[4],types[7]={0},y=390;
+static int path_sources(const GD_ResourceGraph *graph,const GD_Layout *layout,const int *arcs,int retained,GD_EvidencePage page,int x,int y) {
+    for(int i=page.first;i<page.end;++i)y=source_row(graph,layout->edges[arcs[retained-1-i]/2].key,x,y);
+    return y;
+}
+static int overview_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                             GD_OverviewControls *controls, int x,GD_ResourceEvidence *evidence) {
+    const GD_GraphOverview *overview=gd_graph_overview(analysis,controls,1); int i,types[7]={0},y=390;
     DrawText(controls->enabled ? "[x] Incidence overview (click)":"[ ] Incidence overview (click)",x,114,16,foreground);
-    if (!overview) return;
+    if (!overview) return y;
     DrawText("Row + (click)",x,146,14,foreground); DrawText("Column + (click)",x+160,146,14,foreground);
     DrawText("Next occupied cell (click)",x,178,14,foreground); DrawText("Clear cell (click)",x,210,14,foreground);
-    DrawText("Symmetric incidence, NOT flow. Log brightness:",x,244,13,muted);
+    DrawText("Symmetric incidence, NOT flow. Linear brightness:",x,244,13,muted);
     DrawText("projected link rows, not quantities/strength.",x,264,13,muted);
     DrawText("Index bins, not clusters. Diagonal is not",x,284,13,muted);
     DrawText("necessarily a self-link. Gold: contributors.",x,304,13,muted);
     DrawText(TextFormat("%d identities / %d bins / %d input rows",overview->node_count,overview->bins,overview->link_count),x,330,13,muted);
-    if (controls->row<0 || controls->column<0 || !overview->bins) return;
+    if (controls->row<0 || controls->column<0 || !overview->bins) return y;
     DrawText(TextFormat("Cell %d,%d: %d rows | arrows: move cell",controls->row,controls->column,overview->selected_count),x,352,13,foreground);
     DrawText(TextFormat("Row ordinals %d..%d | column %d..%d",overview->start[controls->row],overview->start[controls->row+1]-1,overview->start[controls->column],overview->start[controls->column+1]-1),x,372,12,muted);
     for (i=0;i<analysis->edge_count;++i) if (overview->selected_edges[i]) {
         int kind=graph->relations[layout->edges[i].key].kind;
         if (kind>=0 && kind<7) ++types[kind];
-        if (count<4) arcs[count++]=2*i;
+
     }
     for (i=0;i<7;++i) if (types[i]) { DrawText(TextFormat("%s: %d",relation_name((GD_ResourceRelationKind)i),types[i]),x,y,12,muted); y+=18; }
-    DrawText("Up to four contributing source examples:",x,y+4,12,muted); path_sources(graph,layout,arcs,count,x,y+24);
+    for(int side=0;side<2;++side){
+        int bin=side ? controls->column:controls->row,begin=overview->start[bin],end=overview->start[bin+1];
+        GD_EvidencePage page=resource_pager(side ? "Column identities":"Row identities",&evidence->bin[side],end-begin,x,&y,evidence);
+        for(i=begin+page.first;i<begin+page.end;++i){int node=overview->nodes[i];y=resource_text(TextFormat("#%d",node),x,y,12,muted);y=resource_text(node_label(graph,node),x,y,13,foreground);}
+    }
+    GD_EvidencePage page=resource_pager("Contributing link rows",&evidence->sources,overview->selected_count,x,&y,evidence);int ordinal=0;
+    for(i=0;i<analysis->edge_count;++i)if(overview->selected_edges[i] && gd_evidence_page_take(&page,&ordinal))y=source_row(graph,layout->edges[i].key,x,y);
+    return resource_text("Retained shown incidences only; source omissions remain separate.",x,y,12,muted);
 }
 static const GD_GraphShapes *resource_shapes(const GD_ResourceGraph *graph, GD_GraphAnalysis *analysis, int enabled) {
     int roles[GD_MAX_RECORDS],i;
@@ -93,25 +101,23 @@ static const GD_GraphShapes *resource_shapes(const GD_ResourceGraph *graph, GD_G
     for (i=0;i<analysis->node_count;++i) roles[i]=graph->nodes[i].kind;
     return gd_graph_shapes(analysis,roles,GD_GRAPH_ANALYSIS_WORK);
 }
-static void shape_details(const GD_ResourceGraph *graph, const GD_GraphShapes *shapes, int enabled, int selected, int x) {
+static int shape_details(const GD_ResourceGraph *graph, const GD_GraphShapes *shapes, int enabled, int selected, int x,GD_ResourceEvidence *evidence) {
     int i,shown=0,y=290;
     DrawText(enabled ? "[x] Structural shapes (click)":"[ ] Structural shapes (click)",x,114,16,foreground);
     DrawText("Two exact typed endpoint-neighborhood rounds.",x,146,13,muted);
     DrawText("Next repeated family (click)",x,178,14,foreground);
     DrawText("Transient IDs; NOT identity or equivalence.",x,210,13,muted);
     DrawText("Shown incidences, NOT resource flow.",x,232,13,muted);
-    if (!shapes) return;
-    if (!shapes->complete) { DrawText("Unavailable: shape work limit.",x,256,14,muted); return; }
+    if (!shapes) return y;
+    if (!shapes->complete) { DrawText("Unavailable: shape work limit.",x,256,14,muted); return y; }
     DrawText(TextFormat("%d families | gold outline: selected family",shapes->family_count),x,256,13,muted);
-    if (selected<0 || selected>=shapes->node_count) return;
+    if (selected<0 || selected>=shapes->node_count) return y;
     DrawText(TextFormat("shape %d / %d members",shapes->colors[selected]+1,shapes->size[shapes->colors[selected]]),x,y,14,foreground); y+=24;
-    for (i=0;i<shapes->node_count && shown<12;++i) if (shapes->colors[i]==shapes->colors[selected]) {
-        /* Case-local facets can share labels; preserve distinct snapshot keys. */
-        DrawText(TextFormat("#%d %.39s",i,node_label(graph,i)),x,y,13,foreground); y+=18; ++shown;
+    GD_EvidencePage page=resource_pager("Family members",&evidence->members,shapes->size[shapes->colors[selected]],x,&y,evidence);
+    for(i=0;i<shapes->node_count;++i)if(shapes->colors[i]==shapes->colors[selected] && gd_evidence_page_take(&page,&shown)){
+        y=resource_text(TextFormat("member #%d (snapshot-local)",i),x,y,12,muted);y=resource_text(node_label(graph,i),x,y,13,foreground);
     }
-    if (shapes->size[shapes->colors[selected]]>shown) { DrawText(TextFormat("%d more members",shapes->size[shapes->colors[selected]]-shown),x,y,13,muted); y+=20; }
-    DrawText("Missing data can change families; rarity is",x,y+12,13,muted);
-    DrawText("not a design defect. Member # keys are local.",x,y+32,13,muted);
+    return resource_text("Missing data can change families; rarity is not a design defect. Member keys are local.",x,y+12,13,muted);
 }
 static void next_reach_kind(const GD_GraphAnalysis *analysis, GD_ReachControls *controls) {
     int i,first=-1,next=-1;
@@ -123,39 +129,42 @@ static void next_reach_kind(const GD_GraphAnalysis *analysis, GD_ReachControls *
     }
     controls->relation=next>=0 ? next:first;
 }
-static void reach_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
-                          GD_ReachControls *controls, int selected, int x) {
+static int reach_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                          GD_ReachControls *controls, int selected, int x,GD_ResourceEvidence *evidence) {
     const GD_GraphClosure *closure=gd_graph_reachability_prepare(analysis,controls,1);
     const GD_GraphComparison *comparison=closure ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selected,&controls->peer):NULL;
     int i,j,y=350;
     DrawText(controls->enabled ? "[x] Typed multi-hop (click)":"[ ] Typed multi-hop (click)",x,114,16,foreground);
-    if (!controls->enabled) return;
+    if (!controls->enabled) return y;
     DrawText(TextFormat("Kind: %.36s (click)",controls->relation>=0 ? gd_graph_relation_name(controls->relation):"none"),x,146,13,foreground);
     DrawText(TextFormat("B: %.24s | %d peers (click)",comparison && comparison->b>=0 ? node_label(graph,comparison->b):"none",closure ? closure->peer_count:0),x,178,13,foreground);
     DrawText("Same-kind incidence connections, NOT flow.",x,211,14,muted);
     DrawText("T: other origins reaching this identity.",x,233,14,muted);
     DrawText("Purple shared | blue A-only | amber B-only",x,255,13,muted);
-    if (!closure) { DrawText("No shown relation kind.",x,278,14,muted); return; }
-    if (!comparison) { DrawText("Select node with completed local traversal.",x,278,14,muted); return; }
+    if (!closure) { DrawText("No shown relation kind.",x,278,14,muted); return y; }
+    if (!comparison) { DrawText("Select node with completed local traversal.",x,278,14,muted); return y; }
     DrawText(TextFormat("A: %.22s | %d targets%s",node_label(graph,selected),closure->count[selected],closure->complete ? "":" | partial"),x,278,13,muted);
     DrawText("Witness target (click to cycle)",x,302,14,foreground);
     if (controls->target<0 || controls->target>=layout->node_count || !comparison->nodes[controls->target]) {
         controls->target=-1; for (i=0;i<layout->node_count;++i) if (comparison->nodes[i]) { controls->target=i; break; }
     }
-    if (controls->target>=0) DrawText(TextFormat("%.45s",node_label(graph,controls->target)),x,324,13,foreground);
+    if (controls->target>=0){y=resource_text(TextFormat("Target #%d (snapshot-local)",controls->target),x,324,12,muted);y=resource_text(node_label(graph,controls->target),x,y,13,foreground);}
     for (j=0;j<2 && controls->target>=0;++j) {
-        int arcs[64],length=gd_graph_closure_path(analysis,closure,j,controls->target,arcs,64),retained=length<64 ? length:64;
+        int arcs[GD_RESOURCE_EVIDENCE_ROWS],length=gd_graph_closure_path(analysis,closure,j,controls->target,NULL,0);
         if (length<0) continue;
-        DrawText(TextFormat("%c: %d links; last %d shown",j ? 'B':'A',length,retained<4 ? retained:4),x,y,13,foreground); y+=20;
-        y=path_sources(graph,layout,arcs,retained,x,y)+12;
+        DrawText(TextFormat("%c witness: %d retained parent arcs",j ? 'B':'A',length),x,y,13,foreground);y+=20;
+        GD_EvidencePage page=resource_pager(j ? "B witness":"A witness",&evidence->witness[j],length,x,&y,evidence);int retained=page.end-page.first;
+        gd_graph_closure_path_slice(analysis,closure,j,controls->target,length-page.end,arcs,retained);
+        for(i=retained-1;i>=0;--i)y=source_row(graph,layout->edges[arcs[i]/2].key,x,y);
+        y+=12;
     }
-    DrawText("Shown links only; not complete source semantics.",x,y,12,muted);
+    return resource_text("Shown links only; not complete source semantics or execution.",x,y,12,muted);
 }
-static void path_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
-                         const GD_GraphPaths *paths, const GD_PathControls *controls, int selected, int x) {
+static int path_details(const GD_ResourceGraph *graph, const GD_Layout *layout, GD_GraphAnalysis *analysis,
+                         const GD_GraphPaths *paths, const GD_PathControls *controls, int selected, int x,GD_ResourceEvidence *evidence) {
     const GD_PathSelection *support; int y=controls->compare ? 280:248;
     DrawText(controls->enabled ? "[x] Mandatory connections (click)":"[ ] Mandatory connections (click)",x,114,14,foreground);
-    if (!paths) { DrawText("Enable, then choose analysis starts.",x,148,14,muted); return; }
+    if (!paths) { DrawText("Enable, then choose analysis starts.",x,148,14,muted); return y; }
     DrawRectangleLines(x,144,320,25,muted); DrawText("Add selection as analysis start",x+5,150,14,foreground);
     DrawRectangleLines(x,176,240,25,muted); DrawText("Clear analysis starts",x+5,182,14,foreground);
     DrawText(controls->compare ? "[x] Compare support / bypass (click)":"[ ] Compare support / bypass (click)",x,212,14,foreground);
@@ -166,30 +175,33 @@ static void path_details(const GD_ResourceGraph *graph, const GD_Layout *layout,
     DrawText("D-: unreachable | D?: unavailable",x,y,13,muted); y+=20;
     DrawText("Pink: support | cyan: bypass | !: mandatory",x,y,13,muted); y+=20;
     DrawText("White triangle: chosen analysis start",x,y,13,muted); y+=20;
-    if (!paths->root_count) { DrawText("Unavailable: no shown analysis starts.",x,y,14,selected_color); return; }
-    if (!paths->complete) { DrawText("Work limit: intermediate results NOT proofs.",x,y,13,selected_color); return; }
+    if (!paths->root_count) { DrawText("Unavailable: no shown analysis starts.",x,y,14,selected_color); return y+22; }
+    if (!paths->complete) { DrawText("Work limit: intermediate results NOT proofs.",x,y,13,selected_color); return y+22; }
     DrawText(TextFormat("%d / %d shown nodes reachable",paths->reachable_count,analysis->shown_nodes),x,y,14,muted); y+=23;
     DrawText("Shown incidence only; no composed outcomes.",x,y,13,muted); y+=23;
     support=gd_graph_path_selection(analysis,selected);
-    if (!support) { DrawText("Selection has no path from starts.",x,y,14,muted); return; }
+    if (!support) { DrawText("Selection has no path from starts.",x,y,14,muted); return y+22; }
     DrawText(TextFormat("Selected D%d | %d mandatory ancestors",paths->dominated[selected],support->ancestor_count),x,y,14,foreground); y+=23;
-    DrawText(TextFormat("Support: %d links; last %d shown below",support->length,support->retained<4 ? support->retained:4),x,y,13,muted); y+=23;
-    y=path_sources(graph,layout,support->arcs,support->retained,x,y);
+    y=resource_text(TextFormat("Support: %d total links | %d native retained | %d earlier arcs not retained",support->length,support->retained,support->length-support->retained),x,y,13,muted);
+    GD_EvidencePage page=resource_pager("Support arcs",&evidence->support,support->retained,x,&y,evidence);
+    y=path_sources(graph,layout,support->arcs,support->retained,page,x,y);
     if (controls->compare) {
         const GD_PathBypass *bypass=gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK);
-        if (!bypass) { DrawText("No nonmandatory node on this support path.",x,y,13,muted); DrawText("Alternatives elsewhere are not ruled out.",x,y+18,13,muted); return; }
-        if (!bypass->complete || !bypass->found) { DrawText("Bypass witness unavailable; no partial proof.",x,y,13,muted); return; }
-        DrawText(TextFormat("C (avoided): %.28s",node_label(graph,bypass->candidate)),x,y,13,gd_bypass_color); y+=20;
-        DrawText(TextFormat("F (fork): %.29s",bypass->fork>=0 ? node_label(graph,bypass->fork):"virtual root (separate starts)"),x,y,13,gd_bypass_color); y+=20;
-        DrawText(TextFormat("R (rejoin): %.27s",node_label(graph,bypass->rejoin)),x,y,13,gd_bypass_color); y+=20;
-        DrawText(TextFormat("Bypass: %d links; last %d shown",bypass->length,bypass->retained<4 ? bypass->retained:4),x,y,13,muted); y+=20;
-        path_sources(graph,layout,bypass->arcs,bypass->retained,x,y);
+        if (!bypass) { DrawText("No nonmandatory node on this support path.",x,y,13,muted); DrawText("Alternatives elsewhere are not ruled out.",x,y+18,13,muted); return y+40; }
+        if (!bypass->complete || !bypass->found) { DrawText("Bypass witness unavailable; no partial proof.",x,y,13,muted); return y+22; }
+        y=resource_text(TextFormat("C (avoided) #%d:",bypass->candidate),x,y,13,gd_bypass_color);y=resource_text(node_label(graph,bypass->candidate),x,y,13,gd_bypass_color);
+        y=resource_text(TextFormat("F (fork) #%d:",bypass->fork),x,y,13,gd_bypass_color);y=resource_text(bypass->fork>=0 ? node_label(graph,bypass->fork):"virtual root (separate starts)",x,y,13,gd_bypass_color);
+        y=resource_text(TextFormat("R (rejoin) #%d:",bypass->rejoin),x,y,13,gd_bypass_color);y=resource_text(node_label(graph,bypass->rejoin),x,y,13,gd_bypass_color);
+        y=resource_text(TextFormat("Bypass: %d total links | %d native retained | %d earlier arcs not retained",bypass->length,bypass->retained,bypass->length-bypass->retained),x,y,13,muted);
+        page=resource_pager("Bypass arcs",&evidence->bypass,bypass->retained,x,&y,evidence);
+        y=path_sources(graph,layout,bypass->arcs,bypass->retained,page,x,y);
     }
+    return y+20;
 }
-static void shared_details(const GD_ResourceGraph *graph, const GD_Layout *layout, const GD_GraphAnalysis *analysis, const GD_GraphComparison *comparison, int selected, int pair, int x) {
+static int shared_details(const GD_ResourceGraph *graph, const GD_Layout *layout, const GD_GraphAnalysis *analysis, const GD_GraphComparison *comparison, int selected, int pair, int x) {
     int i,y=292;
     DrawText(TextFormat("Shown: %d nodes / %d links",analysis->shown_nodes,analysis->shown_edges),x,198,14,muted);
-    if (selected<0) { DrawText("Select a node for shared neighbors",x,220,14,muted); return; }
+    if (selected<0) { DrawText("Select a node for shared neighbors",x,220,14,muted); return y; }
     DrawText(TextFormat("%d%s related | %d other neighbors",analysis->matched[selected],analysis->complete ? "":"+ retained",analysis->neighbors[selected]),x,220,14,muted);
     DrawText("Next retained match",x+6,249,14,foreground);
     if (pair>=0) {
@@ -198,80 +210,115 @@ static void shared_details(const GD_ResourceGraph *graph, const GD_Layout *layou
         DrawText(TextFormat("%.31s | %d%s shared",node_label(graph,other),match->shared,analysis->complete ? "":"+"),x,274,14,foreground);
         for (i=0;i<2;++i) {
             const GD_GraphFeature *feature=&analysis->features[i ? match->first_b:match->first_a];
-            const GD_ResourceRelation *relation=&graph->relations[layout->edges[feature->edge].key];
-            const GD_Record *record=relation_source(graph,layout->edges[feature->edge].key);
-            DrawText(TextFormat("%s | line %d",relation_name(relation->kind),relation->line),x,y,13,muted); y+=18;
-            if (record) {
-                DrawText(TextFormat("%.43s",record->reference),x,y,13,muted); y+=18;
-            }
+            y=resource_text(i ? "B native example declaration:":"A native example declaration:",x,y,12,muted);
+            y=source_row(graph,layout->edges[feature->edge].key,x,y);
         }
     } else DrawText(analysis->complete ? "No shared-neighbor match":"No retained match; result is partial",x,274,14,muted);
-    DrawText(analysis->complete ? (comparison ? "S: global matches | pair branches: one hop":"S: matches | thick purple: example links"):
-        comparison ? "PARTIAL discovery | exact one-hop branches":"PARTIAL: counts are lower bounds",x,372,13,muted);
-    DrawText("Incident role is not resource flow.",x,390,13,muted);
+    if(y<372)y=372;
+    y=resource_text(analysis->complete ? (comparison ? "S: global matches | pair branches: one hop":"S: matches | thick purple: example links"):
+        comparison ? "PARTIAL discovery | exact one-hop branches":"PARTIAL: counts are lower bounds",x,y,13,muted);
+    y=resource_text("Native examples do not retain all parallel declarations. Incident role is not resource flow.",x,y,13,muted);
     if (comparison) {
-        DrawText(TextFormat("A: %.18s | B: %.18s",node_label(graph,comparison->a),node_label(graph,comparison->b)),x,412,13,foreground);
-        DrawText(TextFormat("Shared %d | A only %d | B only %d",comparison->shared,comparison->a_only,comparison->b_only),x,430,13,muted);
-        DrawText(TextFormat("Shared identity, other role: %d",comparison->other_role),x,448,13,muted);
-        DrawText("Purple shared | blue A | amber B",x,466,13,muted);
-        DrawText("Gray other role | white mixed links",x,484,13,muted);
+        y=resource_text("A:",x,y,13,foreground);y=resource_text(node_label(graph,comparison->a),x,y,13,foreground);
+        y=resource_text("B:",x,y,13,foreground);y=resource_text(node_label(graph,comparison->b),x,y,13,foreground);
+        y=resource_text(TextFormat("Shared %d | A only %d | B only %d | other role %d",comparison->shared,comparison->a_only,comparison->b_only,comparison->other_role),x,y,13,muted);
+        y=resource_text("Purple shared | blue A | amber B | gray other role | white mixed links",x,y,13,muted);
     }
+    return y+16;
 }
-static void detail(const GD_ResourceGraph *graph, int selected, int x, int width, int y) {
+static int detail(const GD_ResourceGraph *graph, int selected, int x, int y,GD_ResourceEvidence *evidence) {
     const GD_ResourceNode *node; const GD_Record *source=NULL;
     DrawText("Selection",x,y,20,foreground); y+=32;
-    if (selected<0 || selected>=graph->node_count) { DrawText("Select a node",x,y,16,muted); return; }
+    if (selected<0 || selected>=graph->node_count) { DrawText("Select a node",x,y,16,muted); return y+22; }
     node=&graph->nodes[selected];
-    BeginScissorMode(x,y,width,GetScreenHeight()-y-20);
     DrawText(node->kind==GD_RESOURCE_CASE ? "Rule case":node->kind==GD_RESOURCE_ROLE ? "Resource role":"Actor facet",x,y,17,selected_color); y+=27;
-    DrawText(node_label(graph,selected),x,y,16,foreground); y+=25;
+    y=resource_text(node_label(graph,selected),x,y,16,foreground);
     if (node->kind==GD_RESOURCE_CASE) {
         const GD_RuleCase *item=&graph->rules->cases[node->case_index];
         source=&graph->model->records[graph->rules->sources[item->source].record];
         DrawText(TextFormat("case line: %d",item->line),x,y,15,muted); y+=23;
         if (node->instance) {
-            DrawText(TextFormat("Placement in %.40s",node_label(graph,node->parent)),x,y,15,selected_color); y+=23;
+            y=resource_text("Placement in:",x,y,15,selected_color);y=resource_text(node_label(graph,node->parent),x,y,15,selected_color);
             DrawText(TextFormat("call line %d | template origin above",graph->calls->calls[node->call].line),x,y,14,muted); y+=23;
         }
-        DrawText(TextFormat("context: %.55s",item->context ? item->context:"unspecified"),x,y,15,muted); y+=23;
+        y=resource_text("Context:",x,y,15,muted);y=resource_text(item->context,x,y,15,muted);
     } else if (node->kind==GD_RESOURCE_ROLE) {
         if (node->record>=0) source=&graph->model->records[node->record];
         DrawText(TextFormat("resolution: %s",gd_rule_resolution_name(node->resolution)),x,y,15,muted); y+=23;
     } else {
         const GD_RuleParticipant *actor=&graph->rules->participants[node->participant];
         source=&graph->model->records[graph->rules->sources[graph->rules->cases[node->case_index].source].record];
-        DrawText(TextFormat("participant: %.40s",actor->name),x,y,15,muted); y+=23;
-        DrawText(TextFormat("noun: %.48s",gd_rule_noun_label(graph->rules,actor)),x,y,15,muted); y+=23;
-        DrawText(TextFormat("axis: %.48s",node->axis>=0 ? graph->model->records[node->axis].reference:"unresolved"),x,y,15,muted); y+=23;
+        y=resource_text("Participant:",x,y,15,muted);y=resource_text(actor->name,x,y,15,muted);
+        y=resource_text("Noun:",x,y,15,muted);y=resource_text(gd_rule_noun_label(graph->rules,actor),x,y,15,muted);
+        y=resource_text("Axis:",x,y,15,muted);y=resource_text(node->axis>=0 ? graph->model->records[node->axis].reference:"unresolved",x,y,15,muted);
     }
     if (source) {
-        DrawText(TextFormat("source: %.52s",source->reference),x,y,15,foreground); y+=23;
-        DrawText(TextFormat("status: %.42s",source->status ? source->status:"unspecified"),x,y,15,muted); y+=23;
-        DrawText(TextFormat("path: %.52s",source->source_path),x,y,14,muted); y+=29;
+        y=resource_text("Source:",x,y,15,foreground);y=resource_text(source->reference,x,y,15,foreground);
+        y=resource_text("Status:",x,y,15,muted);y=resource_text(source->status,x,y,15,muted);
+        y=resource_text("Path:",x,y,14,muted);y=resource_text(source->source_path,x,y,14,muted);
     }
     DrawText("Incident declarations:",x,y,16,foreground); y+=23;
-    { int i,shown=0;
-      for (i=0;i<graph->relation_count && y<GetScreenHeight()-30;++i) {
+    { int i,total=0,ordinal=0;
+      for(i=0;i<graph->relation_count;++i)total+=graph->relations[i].facet==selected || graph->relations[i].activation==selected;
+      GD_EvidencePage page=resource_pager("Incident declarations",&evidence->incidents,total,x,&y,evidence);
+      for (i=0;i<graph->relation_count;++i) {
           const GD_ResourceRelation *edge=&graph->relations[i];
-          if (edge->facet!=selected && edge->activation!=selected) continue;
-          DrawText(TextFormat("%s | line %d",relation_name(edge->kind),edge->line),x,y,14,muted); y+=20; ++shown;
+          if ((edge->facet!=selected && edge->activation!=selected) || !gd_evidence_page_take(&page,&ordinal)) continue;
+          y=source_row(graph,i,x,y);
           if (edge->kind==GD_RESOURCE_QUANTITY_WRITE) {
               const GD_RuleAssignment *assignment=&graph->rules->assignments[edge->declaration];
-              DrawText(TextFormat("  %.48s",assignment->expression),x,y,14,muted); y+=20;
+              y=resource_text(assignment->expression,x,y,14,muted);
               if (edge->delta_recognized && edge->delta.known) { DrawText(TextFormat("  signed delta: %g",edge->delta.number),x,y,14,muted); y+=20; }
           } else if (edge->kind==GD_RESOURCE_STATE_WRITE) {
               const GD_RuleStateEffect *effect=&graph->rules->state_effects[edge->declaration];
-              DrawText(TextFormat("  %s becomes %.38s",graph->rules->participants[edge->mapped_participant].name,effect->target.state ? effect->target.state:"unresolved state"),x,y,14,muted); y+=20;
+              y=resource_text(graph->rules->participants[edge->mapped_participant].name,x,y,14,muted);y=resource_text("becomes:",x,y,14,muted);y=resource_text(effect->target.state ? effect->target.state:"unresolved state",x,y,14,muted);
           } else if (edge->kind==GD_RESOURCE_REQUIREMENT || edge->kind==GD_RESOURCE_EXCLUSION) {
               const GD_RuleParticipant *actor=&graph->rules->participants[edge->participant];
               const char *condition=edge->kind==GD_RESOURCE_REQUIREMENT ? actor->requires:actor->skip_if;
-              DrawText(TextFormat("  %.48s",condition ? condition:"unspecified"),x,y,14,muted); y+=20;
+              y=resource_text(condition,x,y,14,muted);
           }
       }
-      if (!shown) DrawText("None retained",x,y,14,muted);
+      if (!total) {DrawText("None retained",x,y,14,muted);y+=20;}
     }
-    EndScissorMode();
+    return resource_text("Presentation pages cover retained declarations, not omitted or unexamined source.",x,y,12,muted);
 }
+#ifdef GD_EXPLORER_TEST
+/* Hidden-window helper checks only; never opens a window or sends OS input. */
+int gd_resource_evidence_checks(const GD_ResourceGraph *graph,GD_Layout *layout,GD_GraphAnalysis *analysis,int *calls) {
+    int checks=0,allocations=*calls,y,cursor=0,selected=-1,total=0;GD_ResourceEvidence evidence={0};GD_EvidencePage page;
+#define RESOURCE_PAGE_CHECK(test) do{++checks;if(!(test)){fprintf(stderr,"Resource paging failed: %s (line %d)\n",#test,__LINE__);return 0;}}while(0)
+    RESOURCE_PAGE_CHECK(resource_layout(graph,layout));gd_graph_analyze(layout,NULL,1,GD_GRAPH_ANY,analysis);
+    const unsigned char *bytes=(const unsigned char *)layout;uint64_t before=1,after=1;
+    for(size_t i=0;i<sizeof(*layout);++i)before=(before^bytes[i])*UINT64_C(1099511628211);
+    Rectangle panel={400,100,380,400};resource_sidebar_input(&evidence,panel,0,1000,(Vector2){450,200},-2,1);
+    RESOURCE_PAGE_CHECK(evidence.scroll[0]==84 && evidence.mouse.y==284 && evidence.clicked);
+    resource_sidebar_input(&evidence,panel,1,1000,(Vector2){450,200},-1,0);RESOURCE_PAGE_CHECK(evidence.scroll[0]==84 && evidence.scroll[1]==42);
+    resource_sidebar_input(&evidence,panel,0,1000,(Vector2){200,200},-100,1);RESOURCE_PAGE_CHECK(evidence.scroll[0]==84 && evidence.mouse.y==200 && !evidence.clicked);
+    resource_sidebar_input(&evidence,panel,0,200,(Vector2){450,200},0,0);RESOURCE_PAGE_CHECK(evidence.scroll[0]==0 && evidence.mouse.y==200);
+    BeginDrawing();evidence.clicked=1;evidence.mouse=(Vector2){104,108};y=100;page=resource_pager("Test",&cursor,9,14,&y,&evidence);EndDrawing();
+    RESOURCE_PAGE_CHECK(cursor==1 && page.first==4 && page.end==8);
+    BeginDrawing();y=100;page=resource_pager("Test",&cursor,9,14,&y,&evidence);EndDrawing();RESOURCE_PAGE_CHECK(cursor==2 && page.first==8 && page.end==9);
+    BeginDrawing();y=100;page=resource_pager("Test",&cursor,9,14,&y,&evidence);EndDrawing();RESOURCE_PAGE_CHECK(cursor==2 && page.end==9);
+    evidence.mouse.x=20;BeginDrawing();y=100;page=resource_pager("Test",&cursor,9,14,&y,&evidence);EndDrawing();RESOURCE_PAGE_CHECK(cursor==1 && page.first==4);
+    evidence.clicked=0;
+    for(int rows=0;rows<=9;++rows){cursor=100;BeginDrawing();y=100;page=resource_pager("Boundary",&cursor,rows,14,&y,&evidence);EndDrawing();RESOURCE_PAGE_CHECK(page.end==rows && cursor==(rows ? (rows-1)/4:0));}
+    for(int node=0;node<graph->node_count;++node){int matches=0;for(int row=0;row<graph->relation_count;++row)matches+=graph->relations[row].facet==node || graph->relations[row].activation==node;if(matches>total){total=matches;selected=node;}}
+    if(selected>=0){
+        int reached=0;
+        for(int index=0;index<(total+3)/4;++index){int ordinal=0,returned=0;page=gd_evidence_page(total,4,index);
+            for(int row=0;row<graph->relation_count;++row)if(graph->relations[row].facet==selected || graph->relations[row].activation==selected){if(gd_evidence_page_take(&page,&ordinal)){RESOURCE_PAGE_CHECK(ordinal-1==reached);++reached;++returned;}}
+            evidence.incidents=index;BeginDrawing();y=detail(graph,selected,414,100,&evidence);EndDrawing();RESOURCE_PAGE_CHECK(evidence.incidents==index && returned==page.end-page.first && y>100);
+        }
+        RESOURCE_PAGE_CHECK(reached==total);
+        int arcs[64]={0};evidence.support=15;BeginDrawing();y=100;page=resource_pager("Native retained support",&evidence.support,64,14,&y,&evidence);y=path_sources(graph,layout,arcs,64,page,414,y);EndDrawing();
+        RESOURCE_PAGE_CHECK(page.first==60 && page.end==64 && evidence.support==15 && y>100);
+    }
+    for(size_t i=0;i<sizeof(*layout);++i)after=(after^bytes[i])*UINT64_C(1099511628211);
+    RESOURCE_PAGE_CHECK(before==after && *calls==allocations);fprintf(stderr,"Resource paging: %d checks; %d matching incident rows; presentation helpers only\n",checks,total);
+#undef RESOURCE_PAGE_CHECK
+    return checks;
+}
+#endif
 static void draw_resource_graph(const GD_ResourceGraph *graph,GD_Layout *raw, GD_Layout *layout, GD_GraphAnalysis *analysis,
     Camera2D camera, Rectangle viewport, int selected, int shared, int pair, const GD_GraphComparison *comparison,
     const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability,
@@ -338,6 +385,8 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
     GD_PathControls path_controls={0}; int path_tab=0;
     GD_ReachControls reach_controls={0,-1,0,-1,-1}; int shape_enabled=0;
     GD_OverviewControls overview_controls={1,-1,-1};
+    GD_ResourceEvidence evidence={0};float content_bottom[6]={0};
+    evidence.selected=evidence.row=evidence.column=evidence.target=evidence.relation=evidence.peer=-1;
     if (!layout || !analysis || !resource_layout(graph,layout) || !gd_layout_prepare_free(layout,model->allocator,1.4f,1)) {
         if (analysis) model->allocator.release(model->allocator.context,analysis);
         if (layout) model->allocator.release(model->allocator.context,layout);
@@ -376,12 +425,14 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,72,100,25})) path_tab=0;
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+124,72,70,25})) path_tab=1;
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+204,72,140,25})) path_tab=path_tab>=2 && path_tab<5 ? path_tab+1:2;
+        Rectangle sidebar={(float)split,100,(float)(width-split),(float)(height-145)};
+        resource_sidebar_input(&evidence,sidebar,path_tab,content_bottom[path_tab],mouse,GetMouseWheelMove(),IsMouseButtonPressed(MOUSE_BUTTON_LEFT));mouse=evidence.mouse;
         if (path_tab==5) {
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) overview_controls.enabled=!overview_controls.enabled;
+            if (evidence.clicked && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) overview_controls.enabled=!overview_controls.enabled;
             if (overview_controls.enabled) {
                 const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,1);
                 int row=overview_controls.row<0 ? 0:overview_controls.row,column=overview_controls.column<0 ? 0:overview_controls.column,changed=0;
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                if (evidence.clicked) {
                     if (overview->bins && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,140,150,25})) { row=(row+1)%overview->bins; changed=1; }
                     if (overview->bins && CheckCollisionPointRec(mouse,(Rectangle){(float)split+174,140,170,25})) { column=(column+1)%overview->bins; changed=1; }
                     if (overview->bins && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,172,340,25})) {
@@ -397,7 +448,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                 if (changed) { overview_controls.row=row; overview_controls.column=column; gd_graph_overview_select(analysis,row,column); }
             }
         }
-        if (path_tab==4 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (path_tab==4 && evidence.clicked) {
             if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) shape_enabled=!shape_enabled;
             if (shape_enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,172,340,25})) {
                 const GD_GraphShapes *shapes=resource_shapes(graph,analysis,1); int family=selected>=0 ? shapes->colors[selected]:-1;
@@ -407,7 +458,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                 }
             }
         }
-        if (path_tab==3 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (path_tab==3 && evidence.clicked) {
             if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) reach_controls.enabled=!reach_controls.enabled;
             if (reach_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,140,340,25})) next_reach_kind(analysis,&reach_controls);
             if (reach_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,172,340,25})) {
@@ -426,7 +477,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                 }
             }
         }
-        if (path_tab==1 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (path_tab==1 && evidence.clicked) {
             if (CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) path_controls.enabled=!path_controls.enabled;
             if (path_controls.enabled && selected>=0 && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,144,320,25})) gd_graph_path_start(&path_controls,selected);
             if (path_controls.enabled && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,176,240,25})) path_controls.count=0;
@@ -439,12 +490,12 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                 }
             }
         }
-        if (!path_tab && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) shared=!shared;
-        if (!path_tab && shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,136,340,25})) shared_lens=(GD_GraphLens)((shared_lens+1)%GD_GRAPH_LENS_COUNT);
-        if (!path_tab && shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,162,340,25})) branches=!branches;
+        if (!path_tab && evidence.clicked && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,110,340,25})) shared=!shared;
+        if (!path_tab && shared && evidence.clicked && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,136,340,25})) shared_lens=(GD_GraphLens)((shared_lens+1)%GD_GRAPH_LENS_COUNT);
+        if (!path_tab && shared && evidence.clicked && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,162,340,25})) branches=!branches;
         if (gd_graph_analyze(layout,NULL,1,shared_lens,analysis)) peer=-1;
         if (!frame && analysis->pair_count) selected=analysis->pairs[0].a;
-        pair=shared_choice(analysis,selected,&peer,!path_tab && shared && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,242,190,25}));
+        pair=shared_choice(analysis,selected,&peer,!path_tab && shared && evidence.clicked && CheckCollisionPointRec(mouse,(Rectangle){(float)split+14,242,190,25}));
         const GD_GraphComparison *comparison=shared && branches && pair>=0 ? gd_graph_compare(analysis,selected,peer):NULL;
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls,NULL,1);
         const GD_PathBypass *bypass=paths && path_controls.compare ? gd_graph_path_bypass(analysis,selected,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
@@ -467,6 +518,12 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
         DrawText(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
         DrawText(path_tab==1 ? "[Paths]":"Paths",split+124,76,14,foreground);
         DrawText(path_tab==5 ? "[Overview]":path_tab==4 ? "[Shapes]": path_tab==3 ? "[Typed paths]":path_tab==2 ? "[Foundations]":"Layers (click)",split+204,76,12,foreground);
+        BeginScissorMode(split,100,width-split,height-145);
+        Camera2D sidebar_camera={0};sidebar_camera.zoom=1;sidebar_camera.offset.y=-evidence.scroll[path_tab];BeginMode2D(sidebar_camera);
+        int bottom=280;
+        if(selected!=evidence.selected){evidence.members=evidence.incidents=evidence.support=evidence.bypass=evidence.witness[0]=evidence.witness[1]=0;evidence.selected=selected;}
+        if(overview_controls.row!=evidence.row || overview_controls.column!=evidence.column){evidence.sources=evidence.bin[0]=evidence.bin[1]=0;evidence.row=overview_controls.row;evidence.column=overview_controls.column;}
+        if(reach_controls.target!=evidence.target || reach_controls.relation!=evidence.relation || reach_controls.peer!=evidence.peer){evidence.witness[0]=evidence.witness[1]=0;evidence.target=reach_controls.target;evidence.relation=reach_controls.relation;evidence.peer=reach_controls.peer;}
         if (path_tab==2) {
             DrawText("Prerequisite foundations: unavailable",split+14,114,15,foreground);
             DrawText("This projection has resource/rule facets,",split+14,145,14,muted);
@@ -475,19 +532,22 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             DrawText("Resource incidences are not AND skills,",split+14,225,14,muted);
             DrawText("learning requirements or proof of flow.",split+14,245,14,muted);
         }
-        else if (path_tab==5) overview_details(graph,layout,analysis,&overview_controls,split+14);
-        else if (path_tab==4) shape_details(graph,shapes,shape_enabled,selected,split+14);
-        else if (path_tab==3) reach_details(graph,layout,analysis,&reach_controls,selected,split+14);
-        else if (path_tab==1) path_details(graph,layout,analysis,paths,&path_controls,selected,split+14);
+        else if (path_tab==5) bottom=overview_details(graph,layout,analysis,&overview_controls,split+14,&evidence);
+        else if (path_tab==4) bottom=shape_details(graph,shapes,shape_enabled,selected,split+14,&evidence);
+        else if (path_tab==3) bottom=reach_details(graph,layout,analysis,&reach_controls,selected,split+14,&evidence);
+        else if (path_tab==1) bottom=path_details(graph,layout,analysis,paths,&path_controls,selected,split+14,&evidence);
         else {
         DrawText(shared ? "[x] Shared neighbors (click)":"[ ] Shared neighbors (click)",split+14,114,16,foreground);
         if (shared) {
             DrawText(TextFormat("Lens: %s (click)",gd_graph_lens_names[shared_lens]),split+14,140,14,foreground);
             DrawText(branches ? "[x] Compare branches (click)":"[ ] Compare branches (click)",split+14,166,14,foreground);
-            DrawRectangleLines(split+14,242,190,25,muted); shared_details(graph,layout,analysis,comparison,selected,pair,split+14);
+            DrawRectangleLines(split+14,242,190,25,muted);bottom=shared_details(graph,layout,analysis,comparison,selected,pair,split+14);
         }
-        detail(graph,selected,split+14,width-split-28,shared ? (comparison ? 510:417):150);
+        bottom=detail(graph,selected,split+14,shared ? bottom:150,&evidence);
         }
+        content_bottom[path_tab]=(float)bottom+16;
+        EndMode2D();EndScissorMode();
+        if(content_bottom[path_tab]>height-45)DrawText("Wheel over sidebar: scroll evidence",split+14,height-59,12,muted);
         if (stale) DrawText("STALE: sources changed. Close and reopen preview.",18,height-38,15,selected_color);
         else DrawText("Drag nodes | Right drag: pan | Wheel: zoom | F: fit | Space: settle/pause",18,height-38,15,muted);
         DrawText("Edges: teal condition | red exclusion | blue write | green preservation | purple role | gold call",18,height-20,13,muted);

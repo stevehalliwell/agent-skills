@@ -28,6 +28,34 @@ static int same_projection(const GD_Layout *layout, const unsigned char *shown,
     }
     return 1;
 }
+static int kind_order(const void *left,const void *right) {
+    const GD_GraphKindOccurrence *a=left,*b=right;
+    if(a->relation!=b->relation)return a->relation<b->relation ? -1:1;
+    return (a->edge>b->edge)-(a->edge<b->edge);
+}
+int gd_graph_kind_next(GD_GraphAnalysis *analysis,const unsigned char *edges,int *cursor,GD_GraphKind *kind) {
+    assert(analysis && analysis->initialized && cursor && kind && *cursor>=0);
+    if(!analysis->kind_rows_valid){
+        analysis->kind_rows_count=0;
+        for(int i=0;i<analysis->edge_count;++i){const GD_LayoutEdge *edge=&analysis->edges[i];
+            if(analysis->shown[edge->a] && analysis->shown[edge->b] && (edge->active || analysis->include_inactive))
+                analysis->kind_rows[analysis->kind_rows_count++]=(GD_GraphKindOccurrence){edge->relation,i};
+        }
+        qsort(analysis->kind_rows,(size_t)analysis->kind_rows_count,sizeof(*analysis->kind_rows),kind_order);analysis->kind_rows_valid=1;
+    }
+    while(*cursor<analysis->kind_rows_count){
+        GD_GraphKind value={analysis->kind_rows[*cursor].relation,0,-1};
+        do{int edge=analysis->kind_rows[(*cursor)++].edge;if(!edges || edges[edge]){++value.rows;if(value.first_edge<0)value.first_edge=edge;}}
+        while(*cursor<analysis->kind_rows_count && analysis->kind_rows[*cursor].relation==value.relation);
+        if(value.rows){*kind=value;return 1;}
+    }
+    return 0;
+}
+int gd_graph_kind_count(GD_GraphAnalysis *analysis,const unsigned char *edges) {
+    int count=0,cursor=0;GD_GraphKind kind;
+    while(gd_graph_kind_next(analysis,edges,&cursor,&kind))++count;
+    return count;
+}
 static int charge(GD_GraphAnalysis *analysis) {
     if (analysis->work==analysis->work_limit) return 0;
     ++analysis->work; return 1;
@@ -81,6 +109,7 @@ int gd_graph_analyze_overview(const GD_Layout *layout, const unsigned char *show
     assert(layout && analysis && layout->node_count>=0 && layout->node_count<=GD_MAX_RECORDS);
     assert(layout->edge_count>=0 && layout->edge_count<=GD_MAX_PAIRS);
     if (analysis->overview_only && same_projection(layout,shown,1,GD_GRAPH_ANY,analysis)) return 0;
+    analysis->kind_rows_valid=0;
     analysis->initialized=analysis->overview_only=analysis->include_inactive=analysis->complete=1;
     analysis->lens=GD_GRAPH_ANY; analysis->node_count=layout->node_count; analysis->edge_count=layout->edge_count;
     analysis->shown_nodes=analysis->shown_edges=analysis->feature_count=analysis->pair_count=analysis->work=analysis->work_limit=0;
@@ -105,6 +134,7 @@ int gd_graph_analyze_bounded(const GD_Layout *layout, const unsigned char *shown
     assert(lens>=GD_GRAPH_ANY && lens<GD_GRAPH_LENS_COUNT && work_limit>=0 && work_limit<=GD_GRAPH_ANALYSIS_WORK);
     include_inactive=include_inactive!=0;
     if (!analysis->overview_only && analysis->work_limit==work_limit && same_projection(layout,shown,include_inactive,lens,analysis)) return 0;
+    analysis->kind_rows_valid=0;
     analysis->work_limit=work_limit;
     analysis->initialized=1; analysis->overview_only=0; analysis->include_inactive=include_inactive; analysis->lens=lens;
     analysis->node_count=layout->node_count; analysis->edge_count=layout->edge_count;

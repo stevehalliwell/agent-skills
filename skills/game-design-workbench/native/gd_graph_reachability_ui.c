@@ -8,23 +8,24 @@
 int gd_graph_reachability_panel(const GD_Layout *layout, GD_GraphAnalysis *analysis, int selected,
                                 GD_ReachControls *controls, int undirected,GD_GraphEvidencePages *pages) {
     const GD_GraphClosure *closure; const GD_GraphComparison *comparison;
-    bool enabled=controls->enabled!=0; int kinds[64],count=0,i,j,choice=0;
-    const char *names[64];
+    bool enabled=controls->enabled!=0; int count,i,j,cursor=0,ordinal=0;GD_GraphKind kind;
     igSeparator(); igCheckbox("Typed multi-hop layer",&enabled); controls->enabled=enabled;
     if (!enabled) return 0;
-    if (controls->relation>=0) kinds[count++]=controls->relation;
-    for (i=0;i<analysis->edge_count && count<64;++i) {
-        const GD_LayoutEdge *edge=&analysis->edges[i];
-        if (!analysis->shown[edge->a] || !analysis->shown[edge->b] || (!edge->active && !analysis->include_inactive)) continue;
-        for (j=0;j<count && kinds[j]!=edge->relation;++j) {}
-        if (j==count) kinds[count++]=edge->relation;
-    }
-    if (count==64) igTextWrapped("Kind menu retains first 64 kinds plus current selection within that limit; other source links remain visible.");
+    count=gd_graph_kind_count(analysis,NULL);
     if (!count) { igTextWrapped("Unavailable: no shown relation kind to traverse."); return 0; }
-    for (i=0;i<count;++i) { names[i]=gd_graph_relation_name(kinds[i]); if (kinds[i]==controls->relation) choice=i; }
-    if (igCombo_Str_arr("Traverse one kind",&choice,names,count,-1) || controls->relation<0) controls->relation=kinds[choice];
+    /* Preserve initial source-order default, not first row of current page. */
+    if(controls->relation<0)for(i=0;i<analysis->edge_count;++i){const GD_LayoutEdge *edge=&analysis->edges[i];if(analysis->shown[edge->a] && analysis->shown[edge->b] && (edge->active || analysis->include_inactive)){controls->relation=edge->relation;break;}}
+    GD_EvidencePage kinds=gd_explorer_evidence_pager("Shown relation kinds",&pages->reach_kinds,count,GD_EVIDENCE_PAGE_ROWS);
+    char preview[128];snprintf(preview,sizeof(preview),"%s | tag %d",gd_graph_relation_name(controls->relation),controls->relation);
+    if(igBeginCombo("Traverse one kind",preview,0)){
+        while(gd_graph_kind_next(analysis,NULL,&cursor,&kind))if(gd_evidence_page_take(&kinds,&ordinal)){
+            char label[160];snprintf(label,sizeof(label),"%s | tag %d | %d rows",gd_graph_relation_name(kind.relation),kind.relation,kind.rows);
+            igPushID_Int(kind.relation);if(igSelectable_Bool(label,kind.relation==controls->relation,0,(ImVec2_c){0,0}))controls->relation=kind.relation;igPopID();
+        }igEndCombo();
+    }
     if (!undirected) { int reverse=controls->reverse; if (igCombo_Str("Traversal",&reverse,"Shown arrows\0Against shown arrows\0",-1)) controls->reverse=reverse; }
     closure=gd_graph_reachability_prepare(analysis,controls,undirected);
+    if(!closure){igTextWrapped("Unavailable: choose a supported shown relation tag.");return 0;}
     igTextWrapped(undirected ? "Same-kind incidence connections, NOT flow, ancestry or requirements.":"Same-kind shown directed reachability, NOT causality, mastery or prerequisite necessity.");
     igTextWrapped("T: other shown origins reaching this identity. Purple: shared reached identity; blue: A-reached only; amber: B-reached only. Roots excluded. Missing/filtered declarations can change wider conclusions.");
     if (!closure->complete) igTextWrapped("PARTIAL: work limit. T counts/peer discovery are lower bounds; unfinished rows cannot prove absence.");
@@ -138,15 +139,11 @@ int gd_graph_overview_panel_metric(const GD_Model *model, const GD_Layout *layou
     if (!igCollapsingHeader_TreeNodeFlags("Overview cell source evidence",0)) return 0;
     if(metric)return 1;
     {
-        int kinds[64],counts[64]={0},count=0,other=0,j;
-        for (i=0;i<analysis->edge_count;++i) if (overview->selected_edges[i]) {
-            int kind=analysis->edges[i].relation;
-            for (j=0;j<count && kinds[j]!=kind;++j) {}
-            if (j==count) { if (count==64) { ++other; continue; } kinds[count++]=kind; }
-            ++counts[j];
-        }
-        for (i=0;i<count;++i) igTextWrapped("%s: %d link rows",gd_graph_relation_name(kinds[i]),counts[i]);
-        if (other) igText("%d rows have unlisted kinds",other);
+        int count=gd_graph_kind_count(analysis,overview->selected_edges),cursor=0,ordinal=0;GD_GraphKind kind;
+        GD_EvidencePage page=gd_explorer_evidence_pager("Cell relation kinds",&pages->overview_kinds,count,GD_EVIDENCE_PAGE_ROWS);
+        while(gd_graph_kind_next(analysis,overview->selected_edges,&cursor,&kind))if(gd_evidence_page_take(&page,&ordinal))
+            igTextWrapped("%s | tag %d: %d link rows",gd_graph_relation_name(kind.relation),kind.relation,kind.rows);
+        igTextWrapped("Counts cover retained shown link rows in selected cell; source omissions/completeness are separate. Page changes do not change traversal kind or cell.");
     }
     return 1;
 }

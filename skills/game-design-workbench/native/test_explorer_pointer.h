@@ -4,6 +4,7 @@
 #ifndef TEST_EXPLORER_POINTER_H
 #define TEST_EXPLORER_POINTER_H
 #include "gd_similarity_view.h"
+int gd_resource_evidence_checks(const GD_ResourceGraph *graph,GD_Layout *layout,GD_GraphAnalysis *analysis,int *calls);
 /* raylib 6 rcore AutomationEventType (not exposed by public SDK header).
    Assert resulting state before exercising handlers; unsupported SDK fails. */
 enum { POINTER_TEST_UP=5,POINTER_TEST_DOWN=6,POINTER_TEST_POSITION=7 };
@@ -145,6 +146,7 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
      POINTER_CHECK(!memcmp(&ordinary,&c.pane->camera,sizeof(ordinary)) && !memcmp(&camera,&state->similarity_camera,sizeof(camera)) && state->similarity_row==row && state->similarity_peer==peer);
      POINTER_CHECK(hash==viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map)) && allocations==*calls);
     }
+    if(project->resources)POINTER_CHECK(gd_resource_evidence_checks(project->resources,before,c.analysis,calls)>0);
     result=0;
 cleanup:
     c.display_layout=NULL;c.render_pose=NULL;

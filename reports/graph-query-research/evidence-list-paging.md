@@ -1,6 +1,6 @@
 # Evidence-list paging consistency
 
-Checkpoints: first slice `6f298e2`; named-inspector/similarity-navigation follow-up `395a3e7`. Shared compact graph-layer evidence lists now paged; user authorized checkpoint commit. Kind-catalogue bounds, legacy Resource sidebar and broader visual acceptance remain open. No unperformed visual acceptance inferred.
+Checkpoints: first slice `6f298e2`; named-inspector/similarity-navigation follow-up `395a3e7`. Shared compact graph-layer evidence lists now paged; user authorized checkpoint commit. Residual kind-catalogue/histogram and legacy Resource paging implemented; user accepted reviewed three-item batch. Broader every-view/platform acceptance remains open. No unperformed visual acceptance inferred.
 
 ## Outcome
 
@@ -123,11 +123,35 @@ Artifacts: `skills/game-design-workbench/native/build/compact-sidebar-paging/` a
 - Synthetic repeated representations exercise family membership beyond64 without first-alias navigation. Synthetic130-node star exercises128 retained shared-neighbor matches while retaining peer outside visible page. Fixtures never change authored models.
 - No live viewer launched or mutated. No GPU/pointer, restart, standalone launch, deep/research or compiler/platform acceptance inferred.
 
-### Residual bounds
+### Residual batch
 
-- Shared relation-kind picker and overview kind histogram retain64 distinct tags. Not migrated in this slice.
-- Legacy standalone raylib Resource sidebar retains its own compact member/path/source summaries. Shared cimgui migration does not change that renderer.
-- Parent paging task stays open. Practical pointer review and broader every-view/restart/standalone checks remain unperformed. Similarity readability stays deferred under separate task.
+User authorized all three residual items together, with review only after batch: kind picker/histogram, standalone Resource summaries, and accurate retained/page/producer counts. No broader workflow audit, compiler matrix, viewer mutation or commit included.
+
+- Shared relation-kind picker and generic overview cell histogram now page all distinct retained shown tags. Numeric tag order; exact tag remains selection identity. Preserve source-order initial traversal default and current kind outside page. Unknown tags keep native name plus exact integer; no invented meaning. Cell histogram counts selected projected link rows, not unique source records, weight or traffic.
+- Lazy index owns at most `GD_MAX_PAIRS` `(relation, native edge)` pairs in existing heap-owned analysis scratch:262,144 bytes plus two integers. Invalidate on topology/mask/inactive-scope replacement. Sort once per scope; bounded scans thereafter. No application allocation per page, query-work charge, source read or analytical input change. Existing analytical caches/results and geometry stay separate. `GD_GraphEvidencePages` now88 bytes;128-byte guard unchanged.
+- Standalone raylib Resources keeps its renderer. Add Previous/Next, retained ranges and page positions for family members, overview row/column identities, contributing link rows, incident declarations and support/bypass/typed witnesses. Four provenance rows per page to allow nested source details. Independent per-tab sidebar scroll exposes content below window; coordinate translation applies only inside sidebar. Header/tab controls remain fixed. No graph camera/solver change.
+- Source rows retain native relation/case indices and full source references. Member/target/candidate identities retain snapshot-local keys. UTF-8 wrapping replaces fixed-prefix source/selection truncation. Canonical source, case, instance and local identities are not replaced by page ordinals. Shared-neighbor examples stay explicitly native examples; paging cannot recover unretained parallel witnesses.
+- Typed witnesses page full retained parent chains using existing slice reader. Support/bypass producers still retain native last64 arcs: display total path length, native retained count, earlier arcs not retained and current page separately. Source graph limits, unresolved facets, unexamined composition and incomplete analysis stay visible. No producer cap increase, inferred omission count or claim of complete external source.
+- Page/scroll transitions do not Run, navigate, reframe, select first visible row, mutate drafts/inputs or change source scope. Scope-specific cursors reset/clamp separately; other panes unchanged. Native-result byte pagination and IPC evidence matching-row/source-slot distinction unchanged. No new IPC fields or compatibility aliases.
+
+### Residual checks
+
+Artifacts: `native/build/residual-paging-{cli,core,view,work}/` under skill root.
+
+- Focused CJIT core/CLI/graph/adapter builds; core148/148 and focused Node20 passed/3 expected skips. Final rerun used freshly built CLI and adapter with pointer helpers enabled;20 passed/3 expected skips, core148/148. All four build logs warning-free; `git diff --check` clean except existing informational todo line-ending notice. No alternate compiler/full-matrix/deep/research run or threshold change. Both example source hashes unchanged.
+- CPU real panels exercise129 distinct tags across64-row pages, selection outside visible page, histogram membership and unchanged cell/typed controls/native work/application allocation count. Sparse masks, duplicate-tag counts, inactive/hidden scope invalidation, empty scopes and32,768 distinct integer tags covered. No authored example adds synthetic tags.
+- Owned hidden-window checks exercise actual raylib Resource pager/helper rendering: empty/exact/final pages, Previous/Next bounds, source-backed incident rows beyond first page, native64-arc retained-tail presentation and unchanged raw layout/application allocation count. Separate sidebar input checks cover wheel translation, per-tab scroll, outside-panel click isolation and content-shrink clamp.
+- Helper-level Resource checks: Crate25 checks/2 matching incident rows; Mario45/18. Existing actual shared-canvas pointer checks also pass on both examples. These do not prove whole standalone-window pointer workflow, human readability, full UTF-8/font coverage or every-view/platform acceptance.
+- No live viewer launched, closed or mutated during implementation batch. After completion, user authorized fresh unified and standalone Resource review windows. Existing viewers left untouched. User accepted reviewed three-item batch; bounded paging implementation complete. Broader every-view/platform checks remain in general tour/final gate. Similarity readability tracked separately.
+
+### Residual live review setup
+
+User response: “seemed fine”. Accepts reviewed three-item batch, not unperformed beyond64 pointer cases, full standalone workflow, every-view usability or platform matrix. User authorized local checkpoint before question review; no push. Review windows not closed by agent.
+
+- Fresh Mario unified PID6736/session `6736-c03aad8ad7958320`; standalone PID34280, title `Resource graph preview`. Both use `native/build/residual-paging-view/gd-view.exe`. Standalone has no viewer IPC server; its pager/scroll review uses window controls, not guessed IPC commands.
+- Unified: discovered current presentation controls, exact `condition incidence` key and native case identity. Enabled typed layer and explicitly navigated to `case:interactions%2Fbump-brick-small#small-bump`. Selected occupied overview cell0,0 after explicit navigation, which had reset brush through existing navigation invalidation. Native layer setup is not an analytical question Run. No source writes; fresh snapshot modified-records0/Undo0/Redo0, no pending rank edit.
+- Review paths: unified Analysis > Analysis layers > relation-kind picker and Overview cell source evidence; standalone Context incident pages or Layers > Shapes/Overview/Typed paths, with sidebar wheel scrolling. Actual example has fewer than64 kinds; beyond64/capacity proof remains synthetic CPU coverage, not live corpus evidence.
+- Setup read mistakes (`viewer links` unsupported; `navigate --expect` unsupported) rejected before navigation/mutation. Used documented evidence/explicit navigation commands afterward. Guarded presentation staging used exact discovered session/control tokens. No timeout/retry, forced close, extra analytical Run or existing-viewer mutation.
 
 ## Comments
 
