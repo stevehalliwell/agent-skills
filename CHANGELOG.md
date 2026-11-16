@@ -11,6 +11,7 @@
 
 ### Changed
 
+- Independent developer persona asks for final report choice before starting: None, Offline HTML, or Markdown (.md). Reports are no longer mandatory; plan, validation evidence, and handoff remain required.
 - Temporarily disable recursive workspace discovery on open/Refresh files. Show root Markdown plus configured Attendant files only; shared `base.h` retains recursive search and adds explicit warning-free `root_only` scope.
 - Native filesystem helpers now share one bounded recursive walker for strict tree operations and glob-filtered search such as `*.md`. Attendant discovery uses shared search; duplicate application walker/platform directory iterators removed. Windows passes `*.md` to native search; separate match/directory limits prevent unrelated cache files from exhausting Markdown results.
 - **Breaking:** Attendant uses native CLI on Windows x64/macOS arm64. Build on demand with installed CJIT or Zig; runtime, build, test and benchmark commands need no Node.js.
