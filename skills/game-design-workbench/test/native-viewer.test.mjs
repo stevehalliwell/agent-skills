@@ -183,7 +183,8 @@ for(const [runDeepChecks,runLayoutResearch] of [[false,false],[true,false],[true
     assert.ok(value.resource_actions.actions.every(action=>action.available ? action.disabled_reason===null:typeof action.disabled_reason==='string' && action.disabled_reason.length>0));
     assert.equal(value.resource_actions.source_draft_edits,true);
     const snapshot=value.snapshot;assert.equal(snapshot.draft.redo_steps,0);assert.equal(snapshot.ok,true);assert.equal(snapshot.projection,'matrix');
-    assert.equal(snapshot.panes.length,9);
+    assert.deepEqual(snapshot.panes.map(pane=>pane.projection),['skills','challenges','relationships','matrix','mda','resources','actors','effects','noun-interactions','state-charts']);
+    assert.equal(snapshot.panes.find(pane=>pane.projection==='state-charts').available,true);
     assert.equal(snapshot.panes.find(pane=>pane.projection==='noun-interactions').available,true);assert.equal(snapshot.draft.modified_records,0);assert.equal(snapshot.draft.undo_steps,0);
     assert.equal(snapshot.panes.find(pane=>pane.projection==='actors').query.pending.values,'unapplied Ω');
     assert.notEqual(snapshot.panes.find(pane=>pane.projection==='actors').query.applied?.values,'unapplied Ω');

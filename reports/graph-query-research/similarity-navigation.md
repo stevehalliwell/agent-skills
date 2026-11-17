@@ -84,6 +84,16 @@ Status: agreed readability slice implemented; focused checks pass. Human readabi
 - User authorized restart. Fresh inspection then timed out; guard threw before any close request. OS process check and viewer list confirmed old viewer already absent. No close/kill executed. Launched fixed build as PID4516, session `4516-09d49ac0974d99cb`. Re-discovered exact controls/features/identities; explicitly Ran catalogue and map. Same row8/peer6 and identical camera x39.7134018/y7.42452431/zoom2.18515897 restored. Ready snapshot still has modified-records 0, Undo 0, Redo 0, no pending rank edit.
 - User explicitly accepted first-hover tooltip sizing as stable in fixed live build. This accepts tooltip fix only; it does not establish whole chooser/readability flow or every-view/platform acceptance.
 
+## Discovery follow-up — Q13
+
+Corrected stale CLI discovery; existing projection/chooser behavior unchanged.
+
+- `similarity-features` and `similarity-map` now advertise `ui_available:true` and actual **Built-in structural / similarity questions** path. Text discovery also names viewer controls and explicit Run.
+- JSON states separate map canvas, exact entry/peer inspection, counted overlaps, named chooser, source/return, pending/applied boundary, newline list syntax and UI input/field-selection limits.
+- Guarded `structure` configuration and `structure.run` / `structure.clear` actions are advertised. Keep `ipc_available:false`: complete parameterized evidence export is still unavailable. Partial forms are not a complete workflow bridge.
+- Regression fails against prior CLI and passes against fresh build. [Combined Q12/Q13 checks](unresolved-reference-identity.md#checks-and-open-review):17 CLI checks, both-example CPU adapter checks, source hashes unchanged. Fresh CLI/production graph/adapter builds warning-free; no window launched.
+- User explicitly deferred fresh Q12/Q13 viewer review after delivery. Broader counted-marker/chooser readability still needs human pointer review. Existing first-hover sizing acceptance and source/return acceptance remain separate. No coordinate, distance, solver, camera, pending/applied, draft or navigation change in this follow-up.
+
 ## Comments
 
 Grounding: `gd_explorer_similarity_view.c`, `gd_explorer_structure_view.c`, ordinary navigation dispatch in `gd_explorer_view.c`, `gd_explorer_viewer.h`, `gd_explorer_history.h`. Compact graph-layer paging caps remain separate open work; see paging report.

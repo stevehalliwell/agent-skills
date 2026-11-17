@@ -26,7 +26,19 @@ test('structural catalogue advertises only delivered parameters and narrower UI 
   const catalogue=run(['--list']); const projected=catalogue.data.questions.filter(item=>item.projections);
   assert.deepEqual(projected.map(item=>item.name),[...structural,'similarity-features','similarity-map']);
   const questions=projected.filter(item=>structural.includes(item.name));
-  for (const item of projected.filter(item=>item.name.startsWith('similarity-'))) { assert.equal(item.ui_available,false); assert.equal(item.work_limit_max,67108864); assert.equal(item.ipc_available,false); assert.deepEqual(item.required_parameters_by_projection.actors,['--case','--axis']); }
+  for (const item of projected.filter(item=>item.name.startsWith('similarity-'))) {
+    assert.equal(item.ui_available,true); assert.match(item.ui_scope,/separate similarity canvas/);
+    assert.match(item.ui_scope,/Pending inputs do not replace applied results/);
+    assert.doesNotMatch(item.ui_scope,/viewer integration pending/);
+    assert.equal(item.ipc_form,'structure'); assert.deepEqual(item.ipc_actions,['structure.run','structure.clear']);
+    assert.match(item.ipc_scope,/complete parameterized evidence export remains unavailable/);
+    assert.ok(item.ui_unavailable_parameters.includes('--fields JSON pruning (expand result tables instead)'));
+    assert.equal(item.work_limit_max,67108864); assert.equal(item.ipc_available,false);
+    assert.deepEqual(item.required_parameters_by_projection.actors,['--case','--axis']);
+  }
+  const text=spawnSync(executable,['query','--list','--format','text'],{encoding:'utf8',timeout:30000,windowsHide:true});
+  assert.equal(text.status,0,text.stderr); assert.equal(text.stderr,'');
+  for (const name of ['similarity-features','similarity-map']) assert.match(text.stdout,new RegExp(name+'[^\\n]*viewer: Built-in structural / similarity questions; explicit Run'));
   for (const item of questions) { assert.deepEqual(item.projections,['skills','challenges','relationships','matrix','mda','resources','actor-inventory','actors','effects']); assert.equal(item.ui_available,true); assert.match(item.ui_scope,/canonical projection/); assert.ok(item.ui_unavailable_parameters.includes('repeatable input beyond 8192 combined bytes per list')); assert.equal(item.ipc_available,false); assert.equal(item.work_limit_max,16777216); for (const bindings of Object.values(item.required_bindings_by_projection)) { assert.ok(Array.isArray(bindings.all_of)); assert.ok(Array.isArray(bindings.any_of)); } assert.deepEqual(item.required_bindings_by_projection.resources.any_of,['interactions','mechanics']); assert.deepEqual(item.required_bindings_by_projection['actor-inventory'].all_of,['nouns','axes']); assert.deepEqual(item.required_bindings_by_projection.actors.all_of,['nouns','axes']); if (item.name!=='declaration-gaps') assert.deepEqual(item.required_parameters_by_projection.actors,['--case','--axis']); }
   assert.ok(!questions.find(item=>item.name==='adjacency').parameters.includes('--from'));
   assert.ok(!questions.find(item=>item.name==='direct-connections').repeatable_parameters.includes('--start'));
@@ -87,7 +99,7 @@ test('Resource incidence retains native body and placement provenance without se
   const native=spawnSync(executable,['resources',...bindings,'--json'],{encoding:'utf8',timeout:30000,maxBuffer:32*1024*1024,windowsHide:true}); assert.equal(native.status,0,native.stderr); assert.deepEqual(value.data.native_resource_coverage,JSON.parse(native.stdout).coverage);
   const source=value.data.nodes.find(node=>node.case>=0); const selected=question('direct-connections','resources',bindings,['--from',source.id]); assert.ok(selected.data.evidence.marked_nodes.includes(source.index));
 });
-test('unloaded and missing reference identities retain placeholders; MDA type findings are not dropped',{skip:!executable},async t=>{
+test('unloaded and missing reference identities retain raw declarations; MDA type findings are not dropped',{skip:!executable},async t=>{
   const {root}=await fixture(t,{skills:{wrong:record('wrong','prerequisites: [r/x]\n')},r:{x:record('x','mechanics: [bound/absent, unloaded/unknown]\n')},bound:{},m:{},d:{bad:record('bad','mechanics: [d/bad]\n')},a:{}});
   const value=question('direct-connections','relationships',['--skill-atoms',`skills=${root}/skills`,'--related',`r=${root}/r`,'--related',`bound=${root}/bound`]);
   assert.deepEqual(value.data.declarations.filter(item=>item.target_record<0).map(item=>item.identity_resolution),['missing','unloaded']); assert.ok(value.data.declarations.every(item=>item.line>0));

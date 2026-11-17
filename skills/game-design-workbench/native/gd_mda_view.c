@@ -248,7 +248,7 @@ static void source_details(const GD_Model *model, const GD_Mda *mda, MdaDisplay 
             const GD_Edge *edge = &model->edges[i]; igPushID_Int(i);
             igTextWrapped("%s: %s (line %d)",gd_field_name(edge->field),edge->reference,edge->line);
             if (edge->target >= 0) { if (igSmallButton("Inspect target")) { display->record = edge->target; display->link = -1; } }
-            else igTextUnformatted("No unique loaded target. Inspect scoped core findings; other references are context only.",NULL);
+            else igTextWrapped("No unique loaded target; no placeholder node is drawn. Exact reference stays above and in declaration-gap inventory (CLI/unified explorer). Unloaded alias is not a proven missing record.");
             igPopID();
         }
     }
