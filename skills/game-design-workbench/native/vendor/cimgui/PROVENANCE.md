@@ -1,12 +1,22 @@
 # cimgui and Dear ImGui provenance
 
 - cimgui upstream: https://github.com/cimgui/cimgui
-- Exact cimgui commit: `125f397e0982fe9466eb0a162de547be5efec849`.
+- cimgui pin: `2a6a93fccd10f275ee9206167dc9698f6f00fac1`.
 - Dear ImGui upstream: https://github.com/ocornut/imgui
-- Exact ImGui submodule commit supplied by cimgui: `b48d1afbe8ee8b238e2961dc363a949dd7304e23`.
-- ImGui version in these sources: **1.92.9b**, version number **19291**.
-- Licenses: cimgui `LICENSE` and ImGui `imgui/LICENSE.txt` (MIT).
+- ImGui pin: `c1aaac65e896a45f81f47a4d68f9959e0f86c859`.
+- ImGui version: **1.93.0**, version number **19300**.
+- Licenses: `LICENSE` and `imgui/LICENSE.txt` (MIT).
 
-Vendored contents are generated `cimgui.h`, `cimgui.cpp`, `cimconfig.h`, licenses, and the ImGui core headers/sources, including the demo translation unit required by generated wrapper exports. Sources are unchanged from these revisions. The docking-capable generated binding exposes upstream APIs, but the showcase does not enable docking or multiple OS windows.
+Imported from existing local pinned Git objects; no downloads. Pins match native Attendant's dependency declarations, not cimgui's default submodule revision. Retain generated bindings, core/demo sources, licenses and upstream Win32/D3D11 and GLFW/OpenGL3 backends. No upstream examples, generator, build system, repository metadata or binaries retained. Line endings and thirteen imported trailing-whitespace locations normalized; no executable changes.
 
-Generator scripts, binding metadata, upstream build systems, examples, other backends, binaries, and repository metadata are omitted. Normal builds compile the supplied generated bindings; LuaJIT or a binding generator is not required. This subset was paired with the revision in `../rlImGui/PROVENANCE.md` and raylib 6.0 in its source prototype project. Workbench copies the same sources unchanged and now recompiles against raylib 6.0 headers/library. Earlier Windows graph captures used 5.5; Mac 6.0 compile/link and CPU checks do not establish rendered acceptance. See `../../THIRD-PARTY.md`.
+## Local header adaptation
+
+`cimgui.h` uses Attendant's C99/CJIT layout adaptation: remove duplicate generated aliases and name three anonymous unions `value`, `backup` and `event`. Header marks alteration. No RichMd-specific selection flag or ImGui behavior patch imported. Other sources match pinned content after documented whitespace normalization.
+
+Compile **all** C++ translation units with `IMGUI_DISABLE_OBSOLETE_FUNCTIONS`, matching generated binding profile. Without this definition, ImGuiIO/ImGuiStyle sizes differ across C99/C++ boundary. `test-native-ui.ps1` verifies public sizes, named-union offsets and context access against built DLL; do not bypass failed ABI checks.
+
+## Migration boundary
+
+`build-native-ui.ps1` builds Win32/D3D11 C ABI library without raylib. Application remains C99/CJIT. macOS GLFW/OpenGL3 build/host remains pending; upstream backend sources are retained for that port.
+
+Existing raylib/rlImGui application remains during migration. Transitional UI recipes use same 1.93 binding profile; running old binaries retain their own matching DLLs. No complete raylib-removal or rendered-acceptance claim yet. See `../../THIRD-PARTY.md`.

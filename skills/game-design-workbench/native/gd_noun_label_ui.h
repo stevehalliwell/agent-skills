@@ -11,7 +11,7 @@ static inline void gd_noun_ui_decorate(const GD_Record *record,const char *text,
     if(line)position.y+=igCalcTextSize(prefix,NULL,false,-1).y-igGetFontSize();
     color=igGetColorU32_Col(ImGuiCol_Text,1);
     if(gd_noun_label_style(record)==GD_NOUN_LABEL_BOLD){position.x+=1;ImDrawList_AddText_Vec2(igGetWindowDrawList(),position,color,record->display_name,NULL);}
-    else{float width=igCalcTextSize(record->display_name,NULL,false,-1).x;position.y+=igGetFontSize()+1;ImDrawList_AddLine(igGetWindowDrawList(),position,(ImVec2_c){position.x+width,position.y},color,1);}
+    else{float width=igCalcTextSize(record->display_name,NULL,false,-1).x;position.y+=igGetFontSize()+1;ImDrawList_AddLine(igGetWindowDrawList(),position,(ImVec2_c){position.x+width,position.y},color,1,0);}
 }
 static inline void gd_noun_ui_text(const GD_Record *record,const char *text){
     ImVec2_c position=igGetCursorScreenPos();igTextUnformatted(text,NULL);gd_noun_ui_decorate(record,text,position);

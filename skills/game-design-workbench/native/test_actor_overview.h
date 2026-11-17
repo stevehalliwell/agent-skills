@@ -24,7 +24,7 @@ TEST(actor_overview_pairs_cloud_and_evidence,
     request.kind=GD_QUERY_BINDINGS;request.noun=request.axis=request.case_index=request.effect_kind=-1;request.work_limit=GD_ACTOR_WORK;
     query=gd_query_build(model,rules,analysis,&request);TEST_ASSERT(query!=NULL);
     map=gd_query_scene_overview(query,GD_ACTOR_INTERACTIONS,GD_EFFECT_WORK);cloud=gd_query_scene_overview(query,GD_ACTOR_USAGE,GD_EFFECT_WORK);
-    TEST_ASSERT(map && cloud && map->layout.node_count==3 && map->layout.edge_count==1 && !map->limited && gd_query_scene_overview_unclassified(map)==1);
+    TEST_ASSERT(map && cloud && !gd_query_scene_overview_browsing(map) && !gd_query_scene_overview_browsing(cloud) && map->layout.node_count==3 && map->layout.edge_count==1 && !map->limited && gd_query_scene_overview_unclassified(map)==1);
     hero=overview_find_node(map,"things/hero");walker=overview_find_node(map,"things/walker");isolated=overview_find_node(map,"things/isolated");
     TEST_ASSERT(hero>=0 && walker>=0 && isolated>=0 && overview_find_node(map,"things/lives")==-1);
     edge=overview_find_edge(map,hero,walker);TEST_ASSERT(edge>=0 && gd_query_scene_overview_count(map,edge)==2);
@@ -74,6 +74,27 @@ TEST(actor_overview_pairs_cloud_and_evidence,
     {char path[GD_MAX_PATH];FILE *file;snprintf(path,sizeof(path),"%s/actor-overview.json",root);file=fopen(path,"wb");TEST_ASSERT(file && gd_query_scene_overview_write(file,cloud));TEST_ASSERT(!fclose(file));}
     TEST_ASSERT(!gd_sources_changed(model));
     gd_query_scene_destroy(cloud);gd_query_scene_destroy(map);gd_query_destroy(query);gd_rule_analysis_destroy(analysis);gd_rules_destroy(rules);gd_destroy(model);
+)
+TEST(actor_overview_unclassified_nouns_remain_browsable,
+    GD_Model *model=model_create();GD_Rules *rules;GD_RuleAnalysis *analysis;GD_Query *query;GD_QueryScene *scene;GD_QueryRequest request={0};int mode,node;
+    TEST_ASSERT(model && setup("actor-overview-noun-browser"));collections[1].role=GD_AXIS;collections[2].role=GD_RULE;
+    TEST_ASSERT(write_record(0,"crate","---\naxes: []\n---\nUnclassified."));
+    TEST_ASSERT(write_record(0,"energy","---\nis_actor: false\naxes: []\n---\nNot an actor."));
+    TEST_ASSERT(gd_load(model,collections,3));rules=gd_read_rules(model);analysis=gd_analyze_rules(model,rules);TEST_ASSERT(rules && analysis && !model->error_count);
+    request.kind=GD_QUERY_BINDINGS;request.noun=request.axis=request.case_index=request.effect_kind=-1;request.work_limit=GD_ACTOR_WORK;
+    query=gd_query_build(model,rules,analysis,&request);TEST_ASSERT(query);
+    for(mode=GD_ACTOR_INTERACTIONS;mode<=GD_ACTOR_USAGE;++mode) {
+        scene=gd_query_scene_overview(query,(GD_ActorOverviewMode)mode,GD_EFFECT_WORK);
+        TEST_ASSERT(scene && scene->layout.node_count==2 && !scene->layout.edge_count && !scene->limited);
+        TEST_ASSERT(gd_query_scene_overview_unclassified(scene)==1 && gd_query_scene_overview_browsing(scene));
+        node=overview_find_node(scene,"things/crate");TEST_ASSERT(node>=0 && strstr(scene->labels[node],"unclassified noun"));
+        node=overview_find_node(scene,"things/energy");TEST_ASSERT(node>=0 && strstr(scene->labels[node],"non-actor noun"));
+        TEST_ASSERT(gd_query_scene_place(scene,GD_LAYOUT_FORCE,1,1.4f) && scene->layout.node_count==2 && !scene->layout.edge_count);
+        TEST_ASSERT(gd_query_scene_place(scene,GD_LAYOUT_DIRECTED,1,1.4f) && scene->layout.node_count==2);
+        gd_query_scene_destroy(scene);
+    }
+    TEST_ASSERT(!gd_sources_changed(model));
+    gd_query_destroy(query);gd_rule_analysis_destroy(analysis);gd_rules_destroy(rules);gd_destroy(model);
 )
 TEST(actor_overview_limits_and_allocations,
     GD_Model *model=model_create();GD_Rules *rules;GD_RuleAnalysis *analysis;GD_Query *query;GD_QueryScene *scene;GD_QueryRequest request={0};int stage;

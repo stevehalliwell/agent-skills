@@ -95,6 +95,27 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
         c.pane=&panes[v]; CHECK(pane_prepare(&c));
         if (c.pane->layout && c.pane->layout->node_count && (v==GD_EXPLORER_SKILLS || v==GD_EXPLORER_RESOURCES || v==GD_EXPLORER_EFFECTS)) c.pane->selection.node=0;
     }
+    if(project->available&(1u<<GD_EXPLORER_ACTORS)) {
+        GD_ExplorerContext actor=c;GD_ExplorerPane *p=&panes[GD_EXPLORER_ACTORS];GD_Model *model=gd_explorer_model(project,GD_EXPLORER_ACTORS);
+        GD_Query *retained=p->query_state->query;GD_ExplorerQueryOptions pending=p->query_options;int nouns=0,actors=0,node,mode;
+        actor.pane=p;
+        for(node=0;node<model->record_count;++node)if(model->records[node].role==GD_NOUN){++nouns;actors+=model->records[node].is_actor_line && model->records[node].is_actor;}
+        snprintf(p->query_options.values,sizeof(p->query_options.values),"pending reset samples");
+        for(mode=GD_ACTOR_INTERACTIONS;mode<=GD_ACTOR_USAGE;++mode) {
+            CHECK(gd_explorer_query_overview(&actor,mode) && pane_prepare(&actor) && reset_view(&actor));
+            CHECK(p->query_state->query==retained && !strcmp(p->query_options.values,"pending reset samples"));
+            CHECK(gd_query_scene_overview_browsing(p->query_state->scene)==!actors);
+            if(!actors) {
+                CHECK(p->layout->node_count==nouns && !p->layout->edge_count);
+                for(node=0;node<p->layout->node_count;++node) {
+                    CHECK(gd_explorer_source_open(&actor,gd_query_scene_record(p->query_state->scene,node)) && p->selection.node==node);
+                    CHECK(reset_view(&actor) && p->query_state->query==retained && p->selection.node==node && p->layout->node_count==nouns);
+                }
+            }
+        }
+        CHECK(gd_explorer_query_overview(&actor,GD_ACTOR_INTERACTIONS) && pane_prepare(&actor) && reset_view(&actor));
+        p->query_options=pending;
+    }
     c.pane=&panes[active];
     snprintf(panes[GD_EXPLORER_ACTORS].query_options.values,sizeof(panes[GD_EXPLORER_ACTORS].query_options.values),"unapplied Ω");
     memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);

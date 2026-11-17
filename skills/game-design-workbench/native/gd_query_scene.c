@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
-struct GD_ActorOverview { GD_ActorOverviewMode mode; int unclassified,incomplete; int counts[GD_MAX_PAIRS]; };
+struct GD_ActorOverview { GD_ActorOverviewMode mode; int unclassified,incomplete,noun_browser; int counts[GD_MAX_PAIRS]; };
 #include "gd_query_scene_free.h"
 
 const char *gd_query_scene_node_kind_name(GD_QueryNodeKind kind) {

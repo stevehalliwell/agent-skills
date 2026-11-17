@@ -6,6 +6,8 @@ Sections: [Build](#build), [Unified explorer](#unified-explorer), [Viewer IPC](#
 
 ## Build
 
+**Native UI migration in progress:** ImGui/cimgui uses 1.93.0. New no-raylib Windows C ABI dependency builds with Zig/C++; application remains C99/CJIT. 21/21 headless ABI checks and 48/48 authorized hidden GPU checks pass. Existing application commands below still use transitional raylib backend; full removal is not delivered yet. [Migration boundary, commands and remaining work](native-ui-migration.md).
+
 ### macOS
 
 Run from repository root. Installed CJIT/Zig and Apple command-line tools required. Builds never launch programs, fetch dependencies or write project data.

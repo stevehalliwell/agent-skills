@@ -2530,7 +2530,7 @@ int main(int argc, char **argv) {
     failed += test_rule_quantities(); failed += test_rule_numeric_comparisons();
     failed += test_rule_condition_logic(); failed += test_rule_exclusion_limits(); failed += test_rule_effect_bindings();
     failed += test_noun_labels_preserve_canonical_identity(); failed += test_noun_grid_case_counts_diagonal_limits_and_evidence();
-    failed += test_actor_overview_pairs_cloud_and_evidence(); failed += test_actor_overview_limits_and_allocations();
+    failed += test_actor_overview_pairs_cloud_and_evidence(); failed += test_actor_overview_unclassified_nouns_remain_browsable(); failed += test_actor_overview_limits_and_allocations();
     failed += test_noun_actor_classification(); failed += test_noun_actor_classification_errors();
     failed += test_rule_axis_definitions(); failed += test_rule_axis_errors(); failed += test_rule_axis_references(); failed += test_rule_axis_incomplete(); failed += test_rule_axis_limits();
     failed += test_rule_primary_targets(); failed += test_rule_primary_equivalence(); failed += test_rule_primary_errors(); failed += test_rule_primary_allocation_failure();
@@ -2570,6 +2570,6 @@ int main(int argc, char **argv) {
     failed += test_graph_input_links(); failed += test_resource_input_links();
     failed += test_focused_relationships(); failed += test_focused_relationship_capacity();
     failed += test_diagnostic_projection(); failed += test_diagnostic_retention();
-    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/149 passed\n", 149-failed);
+    printf("native domain/layout/draft/route/MDA/control/rule checks: %d/150 passed\n", 150-failed);
     return failed ? 1 : 0;
 }

@@ -32,11 +32,13 @@ typedef struct {
 GD_QueryScene *gd_query_scene_build(const GD_Query *query, GD_QueryGhostMode ghosts, int primary, int weighted, int include_excluded, int work_limit);
 /* Explicit-actor overview over a binding query; no query evaluation or filtering
    changes. Interaction records only, same-case pairs, record-deduplicated counts.
-   Cloud uses actors' own declared axes; no referenced-mechanic/call expansion. */
+   Cloud uses actors' own declared axes; no referenced-mechanic/call expansion.
+   With no explicit actors, show noun definitions as link-free query entry points. */
 GD_QueryScene *gd_query_scene_overview(const GD_Query *query,GD_ActorOverviewMode mode,int work_limit);
 int gd_query_scene_overview_mode(const GD_QueryScene *scene); /* -1 for query scenes. */
 int gd_query_scene_overview_count(const GD_QueryScene *scene,int edge);
 int gd_query_scene_overview_case(const GD_QueryScene *scene,int edge,int case_index);
+int gd_query_scene_overview_browsing(const GD_QueryScene *scene);
 int gd_query_scene_overview_unclassified(const GD_QueryScene *scene);
 int gd_query_scene_overview_incomplete(const GD_QueryScene *scene);
 int gd_query_scene_overview_write(FILE *out,const GD_QueryScene *scene);

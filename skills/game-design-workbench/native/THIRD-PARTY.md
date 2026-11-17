@@ -31,12 +31,12 @@
 
 ## cimgui / Dear ImGui / rlImGui
 
-- Copied vendored source subset from `D:/Repos/proto-framework/vendor/`, with licenses/provenance intact. No proprietary framework modules, adapter, or prebuilt prototype DLL copied.
-- cimgui pin: `125f397e0982fe9466eb0a162de547be5efec849`; Dear ImGui pin: `b48d1afbe8ee8b238e2961dc363a949dd7304e23` (1.92.9b / 19291). MIT licenses: `vendor/cimgui/LICENSE`, `vendor/cimgui/imgui/LICENSE.txt`.
+- cimgui/ImGui updated from existing local pinned Git objects; no downloads or prebuilt Attendant DLL imported. [Pins, C99 header adaptation and ABI profile](vendor/cimgui/PROVENANCE.md).
+- cimgui pin: `2a6a93fccd10f275ee9206167dc9698f6f00fac1`; Dear ImGui pin: `c1aaac65e896a45f81f47a4d68f9959e0f86c859` (1.93.0 / 19300). MIT licenses: `vendor/cimgui/LICENSE`, `vendor/cimgui/imgui/LICENSE.txt`. Retained upstream Win32/D3D11 and GLFW/OpenGL3 backend sources share ImGui license.
 - rlImGui pin: `1550009359ad975927f7f0e4a3f47e3f27123ea9`; zlib license: `vendor/rlImGui/LICENSE`. Retained marked local safety patches for backend shutdown and failed texture bookkeeping/upload; source provenance details them.
 - `build-ui.ps1` / `build-ui.sh` explicitly compile existing UI sources with installed Zig C++, exceptions/RTTI disabled, `NO_FONT_AWESOME`, and matching raylib **6.0** headers/library. No font/icon assets, bindings generator, package install, or implicit download required.
 - Existing Windows visual evidence used 5.5. Mac 6.0 compile/link and CPU adapter checks do not establish rendered acceptance.
-- Application stays C99; C++ exists only in vendored dependencies. Headless computation does not link graphics. Windows plain `-View` remains raylib-only; Mac `--view` shares prepared UI dylib to avoid a second dependency build.
+- Native migration: `build-native-ui.ps1` compiles ImGui and narrow `gd_native_ui.cpp` C ABI adapter into no-raylib Win32/D3D11 DLL. `test-native-ui.ps1` compiles headless ABI check with CJIT. Application/window owner stays C99; C++ is limited to GUI dependency and its C ABI adapter. Headless computation does not link graphics. Existing raylib application remains until host/canvas migration; macOS native backend remains pending. Windows plain `-View` remains raylib-only; Mac `--view` shares prepared UI dylib to avoid a second dependency build.
 
 ## Local message pipes
 

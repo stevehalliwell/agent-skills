@@ -288,6 +288,7 @@ void gd_explorer_query_controls(GD_ExplorerContext *context) {
         if (inventory) {
             const GD_QueryScene *scene=pane->query_state->scene; int selected=gd_explorer_query_record(pane);
             if (selected>=0 && model->records[selected].role!=GD_NOUN) selected=-1;
+            if(gd_query_scene_overview_browsing(scene)) igTextWrapped("No explicitly classified actors. Showing noun definitions as query entry points, not inferred actors. Select a noun, then choose Inspect states in case / local binding and an axis; Run to apply.");
             igTextWrapped("Actor overview: explicit is_actor:true only on perimeter/map. %d unclassified nouns are not actors by default. Scope %s; missing connections are not proof of absence.",gd_query_scene_overview_unclassified(scene),gd_query_scene_overview_incomplete(scene) ? "incomplete":"loaded declarations");
             igTextWrapped(pane->actor_overview==GD_ACTOR_USAGE ? "Used noun concepts and own declared axes. Concept size: distinct connected actors. Unclassified noun concepts labelled separately. Select nodes to highlight usages. Native keeps fixed actor ring; Free lets all actors and concepts move with shared settling and dragging.":"Links count distinct interaction records sharing actor types within a case. Thicker links have stronger bounded attraction. Not direct contact, runtime frequency or applicability proof.");
             if (gd_explorer_picker_begin(context,"Browse object / actor",selected>=0 ? model->records[selected].display_name:NULL)) {

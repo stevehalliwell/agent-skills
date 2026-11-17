@@ -53,7 +53,7 @@ done
 while read -r kind path; do
   [[ "$kind" == ui ]] || continue
   object="$output/objects/$(basename "$path").o"
-  "$zig" c++ -std=c++11 -O2 -fPIC -fno-exceptions -fno-rtti -DBUILD_LIBTYPE_SHARED -DNO_FONT_AWESOME \
+  "$zig" c++ -std=c++11 -O2 -fPIC -fno-exceptions -fno-rtti -DBUILD_LIBTYPE_SHARED -DNO_FONT_AWESOME -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS \
     "${sdk_flags[@]}" -I "$root/vendor/raylib" -I "$root/vendor/cimgui" \
     -I "$root/vendor/cimgui/imgui" -I "$root/vendor/rlImGui" \
     -c "$root/$path" -o "$object" >&2 || fail "UI dependency build failed: $path"

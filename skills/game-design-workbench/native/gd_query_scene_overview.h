@@ -66,6 +66,15 @@ GD_QueryScene *gd_query_scene_overview(const GD_Query *query,GD_ActorOverviewMod
         if(record->role==GD_NOUN && !record->is_actor_line) ++scene->overview->unclassified;
         if(overview_actor(record)) overview_node(scene,scratch,i);
     }
+    /* No explicit actors is not an unusable canvas. Keep noun definitions as
+       query entry points without classifying them or inventing actor links. */
+    if(!scene->limited && !scene->layout.node_count) {
+        scene->overview->noun_browser=1;
+        for(i=0;i<query->model->record_count && !scene->limited;++i) {
+            if(!charge(scene,1)) break;
+            if(query->model->records[i].role==GD_NOUN) overview_node(scene,scratch,i);
+        }
+    }
     for(i=0;i<query->binding_count && !scene->limited;++i) {if(!charge(scene,1)) break;scratch->cases[query->bindings[i].case_index]=1;}
     for(s=0;s<query->rules->source_count && !scene->limited;++s) {
         const GD_RuleSource *source=&query->rules->sources[s];
@@ -117,6 +126,7 @@ GD_QueryScene *gd_query_scene_overview(const GD_Query *query,GD_ActorOverviewMod
 }
 int gd_query_scene_overview_mode(const GD_QueryScene *scene) {return scene && scene->overview ? (int)scene->overview->mode:-1;}
 int gd_query_scene_overview_count(const GD_QueryScene *scene,int edge) {return scene && scene->overview && edge>=0 && edge<scene->layout.edge_count ? scene->overview->counts[edge]:0;}
+int gd_query_scene_overview_browsing(const GD_QueryScene *scene) {return scene && scene->overview && scene->overview->noun_browser;}
 int gd_query_scene_overview_unclassified(const GD_QueryScene *scene) {return scene && scene->overview ? scene->overview->unclassified:0;}
 int gd_query_scene_overview_incomplete(const GD_QueryScene *scene) {return scene && scene->overview && (scene->overview->incomplete || scene->limited);}
 int gd_query_scene_overview_case(const GD_QueryScene *scene,int edge,int case_index) {
@@ -133,7 +143,7 @@ int gd_query_scene_overview_write(FILE *out,const GD_QueryScene *scene) {
     int i;if(!out || !scene || !scene->overview) return 0;
     fprintf(out,"{\"ok\":true,\"mode\":\"%s\",\"unclassified_nouns\":%d,\"incomplete\":%s,\"limited\":%s,\"work\":%d,\"work_limit\":%d,\"size_metric\":\"distinct connected actors\",\"nodes\":[",scene->overview->mode==GD_ACTOR_INTERACTIONS ? "interactions":"usage",scene->overview->unclassified,gd_query_scene_overview_incomplete(scene) ? "true":"false",scene->limited ? "true":"false",scene->work,scene->work_limit);
     for(i=0;i<scene->layout.node_count && !ferror(out);++i) {const GD_Record *record=&scene->query->model->records[scene->nodes[i].source];if(i) fputc(',',out);fputs("{\"reference\":",out);gd_json_string(out,record->reference);fprintf(out,",\"kind\":\"%s\",\"is_actor\":%s,\"connected_actors\":%d}",record->role==GD_AXIS ? "axis":"noun",record->role!=GD_NOUN || !record->is_actor_line ? "null":record->is_actor ? "true":"false",scene->nodes[i].incoming);}
-    fputs("],\"links\":[",out);
+    fprintf(out,"],\"noun_browser\":%s,\"links\":[",scene->overview->noun_browser ? "true":"false");
     for(i=0;i<scene->layout.edge_count && !ferror(out);++i) {const GD_LayoutEdge *edge=&scene->layout.edges[i];if(i) fputc(',',out);fprintf(out,"{\"from\":%d,\"to\":%d,\"kind\":",edge->a,edge->b);gd_json_string(out,gd_query_scene_edge_kind_name(scene->edges[i].kind));fprintf(out,",\"record_count\":%d,\"evidence_source\":",scene->edges[i].kind==GD_QUERY_EDGE_AXIS ? 0:scene->overview->counts[i]);gd_json_string(out,scene->query->model->records[scene->edges[i].kind==GD_QUERY_EDGE_AXIS ? scene->nodes[edge->a].source:scene->query->rules->sources[scene->query->rules->cases[scene->edges[i].source].source].record].reference);fputc('}',out);}
     fputs("],\"claim\":\"same-case participation or declared axis use; not direct modification, frequency, applicability or reachability proof\"}",out);return !ferror(out);
 }
