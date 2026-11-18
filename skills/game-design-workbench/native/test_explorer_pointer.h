@@ -1,22 +1,20 @@
-/* Source-read-only real canvas handlers with raylib 6 automation events.
-   Hidden owned window; events update raylib state only, never OS mouse input.
-   Not human-pointer/platform acceptance. Invoke explicitly with --pointer-helpers. */
+/* Source-read-only real canvas handlers with app-local ImGui events.
+   No window, OS input or human-pointer/platform acceptance. */
 #ifndef TEST_EXPLORER_POINTER_H
 #define TEST_EXPLORER_POINTER_H
 #include "gd_similarity_view.h"
 int gd_resource_evidence_checks(const GD_ResourceGraph *graph,GD_Layout *layout,GD_GraphAnalysis *analysis,int *calls);
-/* raylib 6 rcore AutomationEventType (not exposed by public SDK header).
-   Assert resulting state before exercising handlers; unsupported SDK fails. */
-enum { POINTER_TEST_UP=5,POINTER_TEST_DOWN=6,POINTER_TEST_POSITION=7 };
 static void pointer_test_sample(int x,int y,int down) {
-    PlayAutomationEvent((AutomationEvent){.type=POINTER_TEST_POSITION,.params={x,y,0,0}});
-    PlayAutomationEvent((AutomationEvent){.type=down ? POINTER_TEST_DOWN:POINTER_TEST_UP,.params={MOUSE_BUTTON_LEFT,0,0,0}});
+    ImGuiIO *io=igGetIO_Nil();
+    ImGuiIO_AddMousePosEvent(io,(float)x,(float)y);
+    ImGuiIO_AddMouseButtonEvent(io,ImGuiMouseButton_Left,down!=0);
+    igNewFrame();io->WantCaptureMouse=false;
 }
-static void pointer_test_frame(void) {BeginDrawing();ClearBackground((Color){18,24,34,255});EndDrawing();}
+static void pointer_test_frame(void) {if(igGetCurrentContext()->WithinFrameScope)igEndFrame();}
 int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *collections,int count,int *calls) {
     GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);GD_ExplorerContext c={0};
     GD_ExplorerPane *panes=NULL;GD_Layout *before=NULL;GD_RenderPose *pose=NULL;
-    ImGuiContext *imgui=NULL;int v,pass,checks=0,result=2,window=0,gestures=0,empty_actor_maps=0;
+    ImGuiContext *imgui=NULL;int v,pass,checks=0,result=2,gestures=0,empty_actor_maps=0;
 #define POINTER_CHECK(value) do{++checks;if(!(value)){fprintf(stderr,"Pointer check failed: %s (line %d, view %d, pass %d)\n",#value,__LINE__,v,pass);goto cleanup;}}while(0)
     v=pass=-1;POINTER_CHECK(project && !gd_explorer_error(project));
     panes=allocator.allocate(allocator.context,sizeof(*panes)*GD_EXPLORER_VIEWS);
@@ -24,14 +22,16 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
     if(panes)memset(panes,0,sizeof(*panes)*GD_EXPLORER_VIEWS);
     c.analysis=allocator.allocate(allocator.context,sizeof(*c.analysis));
     POINTER_CHECK(panes && before && pose && c.analysis);memset(c.analysis,0,sizeof(*c.analysis));
-    c.project=project;c.panes=panes;c.viewport=(Rectangle){0,0,800,600};
-    SetTraceLogLevel(LOG_WARNING);SetConfigFlags(FLAG_WINDOW_HIDDEN|FLAG_WINDOW_UNFOCUSED);InitWindow(800,600,"Workbench pointer checks");
-    POINTER_CHECK(IsWindowReady());window=1;
-    imgui=igCreateContext(NULL);POINTER_CHECK(imgui);igGetIO_Nil()->IniFilename=NULL;igGetIO_Nil()->LogFilename=NULL;
+    c.project=project;c.panes=panes;c.viewport=(GD_Rect){0,0,800,600};
+    imgui=igCreateContext(NULL);POINTER_CHECK(imgui);
+    ImGuiIO *input=igGetIO_Nil();input->IniFilename=NULL;input->LogFilename=NULL;
+    input->DisplaySize=(ImVec2_c){800,600};input->DeltaTime=1.0f/60;
+    input->BackendFlags|=ImGuiBackendFlags_RendererHasTextures;
     for(v=0;v<GD_EXPLORER_VIEWS;++v)pane_defaults(&panes[v],(GD_ExplorerView)v);
     for(pass=0;pass<3;++pass)for(v=0;v<GD_EXPLORER_VIEWS;++v)if(project->available&(1u<<v)) {
         GD_ExplorerPane *p=&panes[v];GD_QueryScene *scene;GD_EffectQuery *selected_result;
-        Camera2D camera;GD_ExplorerQueryOptions options;Vector2 point,mouse;int node,held,allocations,fit,focus_case=pass==2 && p->view!=GD_EXPLORER_NOUNS;
+        GD_Camera camera;GD_ExplorerQueryOptions options;GD_Point point,mouse;int node,held,allocations,fit,focus_case=pass==2 && p->view!=GD_EXPLORER_NOUNS;
+        if(p->view==GD_EXPLORER_STATES)continue; /* State-chart clicks use a separate non-drag handler. */
         c.pane=p;c.display_layout=NULL;c.render_pose=NULL;
         if(pass==1){p->layout_choice=p->view==GD_EXPLORER_NOUNS ? GD_NOUN_LAYOUT_FREE:p->view==GD_EXPLORER_MDA ? 1:GD_LAYOUT_FORCE;p->prepared=0;if(query_view(p->view))POINTER_CHECK(gd_explorer_query_display(&c));}
         if(pass==2 && (query_view(p->view) || grid_view(p)))continue;
@@ -41,14 +41,14 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
             distance_focus_frame(&c,0.11f);POINTER_CHECK(p->distance_focus->transition_time==0.11f);
         } else {POINTER_CHECK(pane_prepare(&c));if(pass==2)POINTER_CHECK(pane_islands(&c,1));}
         if(p->view==GD_EXPLORER_ACTORS && !p->layout->node_count){++empty_actor_maps;continue;} /* No inferred actor classification. */
-        if(grid_view(p))continue; /* Existing fixed headers are not draggable nodes. */
+        if(grid_view(p))continue; /* Fixed headers are not draggable nodes. */
         POINTER_CHECK(p->layout->node_count>0);
         node=p->layout->node_count-1;
         if(query_view(p->view) && p->query_state->query->effects){
             for(;node>=0;--node)if(p->query_state->query->effects->nodes[p->query_state->scene->nodes[node].source].kind!=GD_EFFECT_ACTIVATION && gd_query_scene_hit_layout(p->query_state->scene,p->layout,p->layout->nodes[node].x,p->layout->nodes[node].y)==node)break;
             POINTER_CHECK(node>=0);
         }
-        p->overview.enabled=false;p->fit=0;p->camera.zoom=pass==0 ? 2:pass==1 ? 0.5f:1;p->camera.rotation=0;p->camera.offset=(Vector2){400,300};
+        p->overview.enabled=false;p->fit=0;p->camera.zoom=pass==0 ? 2:pass==1 ? 0.5f:1;p->camera.offset=(GD_Point){400,300};
         if(pass==1){
             memset(pose,0,sizeof(*pose));c.render_pose=pose;render_update(&c,pose,1.0/60,1);
             /* Create raw/display lag through its actual geometry owner. */
@@ -57,10 +57,10 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
             render_update(&c,pose,1.0/60,0);
         }
         point=position(&c,node);p->camera.target=point;
-        mouse=GetWorldToScreen2D(point,p->camera);POINTER_CHECK(mouse.x==400 && mouse.y==300);
-        pointer_test_sample(400,300,0);pointer_test_frame();
+        mouse=gd_world_to_screen(point,p->camera);POINTER_CHECK(mouse.x==400 && mouse.y==300);
+        pointer_test_frame();pointer_test_sample(400,300,0);pointer_test_frame();
         pointer_test_sample(400,300,1);
-        POINTER_CHECK(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && GetMousePosition().x==400 && GetMousePosition().y==300);
+        POINTER_CHECK(gd_mouse_pressed(ImGuiMouseButton_Left) && gd_mouse_position().x==400 && gd_mouse_position().y==300);
         if(query_view(p->view))snprintf(p->query_options.values,sizeof(p->query_options.values),"Unapplied node click input");
         memcpy(before,p->layout,sizeof(*before));camera=p->camera;options=p->query_options;fit=p->fit;
         scene=p->query_state ? p->query_state->scene:NULL;selected_result=p->query_state ? p->query_state->selected:NULL;allocations=*calls;
@@ -70,7 +70,7 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
         POINTER_CHECK(!memcmp(&options,&p->query_options,sizeof(options)) && (!p->query_state || (scene==p->query_state->scene && selected_result==p->query_state->selected)));
         if(focus_case){distance_focus_update(&c,analyze(&c));POINTER_CHECK(!p->distance_focus->animating && !memcmp(before->nodes,p->layout->nodes,sizeof(before->nodes)) && !memcmp(&camera,&p->camera,sizeof(camera)));}
         if(pass==1){double x=pose->layout.nodes[node].x,y=pose->layout.nodes[node].y;render_update(&c,pose,1.0/60,0);POINTER_CHECK(pose->layout.nodes[node].x==x && pose->layout.nodes[node].y==y);}
-        pointer_test_frame();pointer_test_sample(402,301,1);POINTER_CHECK(!IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
+        pointer_test_frame();pointer_test_sample(402,301,1);POINTER_CHECK(!gd_mouse_pressed(ImGuiMouseButton_Left));
         canvas_input(&c);POINTER_CHECK(!p->layout->pickup_dragging && !memcmp(before->nodes,p->layout->nodes,sizeof(before->nodes)) && !memcmp(&camera,&p->camera,sizeof(camera)) && *calls==allocations);
         if(pass==1){
             float x=p->layout->nodes[node].x,y=p->layout->nodes[node].y,shown_x=pose->layout.nodes[node].x,shown_y=pose->layout.nodes[node].y;int step;
@@ -117,28 +117,28 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
      POINTER_CHECK(before->workspace.bounds.left==-500 && before->workspace.bounds.right==500 && before->nodes[0].x==10 && *calls==allocations);
     }
     /* Actual retained map: ambiguous presses open chooser, never pick a hidden
-       last-painted row. Exercise ImGui popup lifecycle in owned hidden window. */
+       last-painted row. Exercise ImGui popup lifecycle with app-local events. */
     c.pane=&panes[GD_EXPLORER_MDA];c.display_layout=NULL;c.render_pose=NULL;
     POINTER_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));c.pane->structure_state->pending.kind=GD_STRUCTURE_COUNT+1;
     snprintf(c.pane->structure_state->pending.features,sizeof(c.pane->structure_state->pending.features),"retained-partners");
     POINTER_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));
     {GD_ExplorerStructureState *state=c.pane->structure_state;GD_Similarity *map=state->result->similarity->map;GD_SimilarityView *view=state->similarity_view;
      POINTER_CHECK(view && map->available && map->complete_entries>1);
-     Camera2D ordinary=c.pane->camera;state->similarity_camera=(Camera2D){{400,300},{0,0},0,0.00001f};state->similarity_camera_ready=true;state->similarity_fit=false;
-     Camera2D camera=state->similarity_camera;int row=state->similarity_row,peer=state->similarity_peer,allocations=*calls;
+     GD_Camera ordinary=c.pane->camera;state->similarity_camera=(GD_Camera){{400,300},{0,0},0.00001f};state->similarity_camera_ready=true;state->similarity_fit=false;
+     GD_Camera camera=state->similarity_camera;int row=state->similarity_row,peer=state->similarity_peer,allocations=*calls;
      uint64_t hash=viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map));
      ImGuiIO *io=igGetIO_Nil();io->DisplaySize=(ImVec2_c){800,600};io->DeltaTime=1.0f/60.0f;io->BackendFlags|=ImGuiBackendFlags_RendererHasTextures;
-     pointer_test_frame();pointer_test_sample(400,300,1);BeginDrawing();igNewFrame();io->WantCaptureMouse=false;canvas_input(&c);
+     pointer_test_frame();pointer_test_sample(400,300,1);canvas_input(&c);
      POINTER_CHECK(view->pick_open && view->pick_count==map->complete_entries && state->similarity_row==row && state->similarity_peer==peer);
-     gd_explorer_similarity_draw(&c);gd_explorer_similarity_popup(&c);POINTER_CHECK(igIsPopupOpen_Str("Similarity entries under pointer",0));igEndFrame();EndDrawing();
-     ImGuiIO_AddKeyEvent(io,ImGuiKey_Escape,true);pointer_test_frame();pointer_test_sample(400,300,0);igNewFrame();gd_explorer_similarity_popup(&c);
+     gd_explorer_similarity_draw(&c);gd_explorer_similarity_popup(&c);POINTER_CHECK(igIsPopupOpen_Str("Similarity entries under pointer",0));igEndFrame();
+     ImGuiIO_AddKeyEvent(io,ImGuiKey_Escape,true);pointer_test_sample(400,300,0);gd_explorer_similarity_popup(&c);
      POINTER_CHECK(!view->pick_open && !igIsPopupOpen_Str("Similarity entries under pointer",0));igEndFrame();
-     ImGuiIO_AddKeyEvent(io,ImGuiKey_Escape,false);pointer_test_frame();pointer_test_sample(400,300,1);
-     PlayAutomationEvent((AutomationEvent){.type=2,.params={KEY_LEFT_SHIFT,0,0,0}});POINTER_CHECK(IsKeyDown(KEY_LEFT_SHIFT));
-     igNewFrame();io->WantCaptureMouse=false;canvas_input(&c);POINTER_CHECK(view->pick_open && view->pick_peer && state->similarity_peer==peer);
-     gd_explorer_similarity_popup(&c);igEndFrame();PlayAutomationEvent((AutomationEvent){.type=1,.params={KEY_LEFT_SHIFT,0,0,0}});pointer_test_frame();pointer_test_sample(400,300,0);
+     ImGuiIO_AddKeyEvent(io,ImGuiKey_Escape,false);ImGuiIO_AddKeyEvent(io,ImGuiKey_LeftShift,true);
+     pointer_test_sample(400,300,1);POINTER_CHECK(igIsKeyDown_Nil(ImGuiKey_LeftShift));
+     canvas_input(&c);POINTER_CHECK(view->pick_open && view->pick_peer && state->similarity_peer==peer);
+     gd_explorer_similarity_popup(&c);igEndFrame();ImGuiIO_AddKeyEvent(io,ImGuiKey_LeftShift,false);pointer_test_sample(400,300,0);
      /* Owner tag mismatch closes before borrowed row lookup. */
-     igNewFrame();ImGuiStorage_SetVoidPtr(igGetStateStorage(),igGetID_Str("Similarity popup owner"),NULL);gd_explorer_similarity_popup(&c);
+     ImGuiStorage_SetVoidPtr(igGetStateStorage(),igGetID_Str("Similarity popup owner"),NULL);gd_explorer_similarity_popup(&c);
      POINTER_CHECK(!view->pick_open && !igIsPopupOpen_Str("Similarity entries under pointer",0));igEndFrame();
      /* Leaving canvas also closes popup without reusing old inspection. */
      igNewFrame();ImGuiStorage_SetVoidPtr(igGetStateStorage(),igGetID_Str("Similarity popup owner"),state);view->pick_open=1;igOpenPopup_Str("Similarity entries under pointer",0);
@@ -150,11 +150,11 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
     result=0;
 cleanup:
     c.display_layout=NULL;c.render_pose=NULL;
-    if(imgui)igDestroyContext(imgui);if(window)CloseWindow();
+    if(imgui){pointer_test_frame();igDestroyContext(imgui);}
     if(panes){for(v=0;v<GD_EXPLORER_VIEWS;++v){gd_diagnostics_clear(&panes[v].diagnostics);gd_layout_focus_destroy(panes[v].distance_focus);gd_resource_routes_destroy(panes[v].resource_routes);pane_release_layout(allocator,&panes[v]);}allocator.release(allocator.context,panes);}
     if(before)allocator.release(allocator.context,before);if(pose)allocator.release(allocator.context,pose);if(c.analysis)allocator.release(allocator.context,c.analysis);
     gd_explorer_destroy(project);
-    if(!result)printf("{\"ok\":true,\"pointer_checks\":%d,\"gestures\":%d,\"empty_actor_maps\":%d,\"scope\":\"raylib 6 automation through real canvas handlers; hidden owned window; no OS input or source writes; human-pointer acceptance separate\"}\n",checks,gestures,empty_actor_maps);
+    if(!result)printf("{\"ok\":true,\"pointer_checks\":%d,\"gestures\":%d,\"empty_actor_maps\":%d,\"scope\":\"app-local ImGui events through real canvas handlers; no window, OS input or source writes; human-pointer acceptance separate\"}\n",checks,gestures,empty_actor_maps);
 #undef POINTER_CHECK
     return result;
 }

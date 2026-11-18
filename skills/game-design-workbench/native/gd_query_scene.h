@@ -50,7 +50,7 @@ const char *gd_query_scene_edge_kind_name(GD_QueryEdgeKind kind);
 /* Exact contributor context plus all direct side effects. Counts use native
    context mask; scope must outlive scene. Wrapped rows are display, not time. */
 GD_QueryScene *gd_query_scene_effect_context(const GD_Query *query, const GD_EffectQuery *scope, int weighted, int work_limit);
-/* Color membership only; no source topology, semantic facts or counts change. */
+/* GD_Color membership only; no source topology, semantic facts or counts change. */
 int gd_query_scene_compare(GD_QueryScene *scene, int first, int second);
 /* Geometry only: retain typed scene/query/metadata. Native restores build pose.
    Free uses shared Neighborhood preparation and solver with compound stacked-variant footprints. Candidate

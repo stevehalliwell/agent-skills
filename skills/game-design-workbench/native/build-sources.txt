@@ -53,6 +53,8 @@ yaml vendor/libyaml/src/reader.c
 yaml vendor/libyaml/src/scanner.c
 view gd_view.c
 view gd_resource_view.c
+view gd_scene_draw.c
+view gd_native_canvas.c
 graph gd_graph_view.c
 graph gd_mda_view.c
 graph gd_explorer_view.c
@@ -72,4 +74,3 @@ ui vendor/cimgui/imgui/imgui_draw.cpp
 ui vendor/cimgui/imgui/imgui_tables.cpp
 ui vendor/cimgui/imgui/imgui_widgets.cpp
 ui vendor/cimgui/imgui/imgui_demo.cpp
-ui vendor/rlImGui/rlImGui.cpp

@@ -11,9 +11,9 @@ output="$root/build/mac"
 ui_library=''
 usage() {
   printf '%s\n' 'Usage: bash build.sh [--compiler cjit|zig] [--test|--viewer-test|--explorer-test] [--view|--graph] [--ui-library PATH] [--output-directory PATH]' \
-    'macOS only. CLI default; --explorer-test builds graph fixture, never launches it.' \
-    'Prepare graphics library explicitly with build-ui.sh. No downloads or implicit dependency builds.' \
-    'SDKROOT overrides xcrun SDK. CJIT/ZIG override compiler executable. Outputs may replace earlier builds; use separate directory for a running viewer.' \
+    'macOS only. CLI default; --view (also --graph) builds all windows; --explorer-test never launches.' \
+    'Prepare native UI library with build-native-ui.sh. View output must be new/empty.' \
+    'SDKROOT overrides xcrun SDK. CJIT/ZIG override compiler executable. No downloads or implicit dependency builds.' \
     'Stdout: executable path; diagnostics stderr. Exit 0 success, 1 build/prerequisite failure, 2 usage.'
 }
 fail() { printf '%s\n' "$*" >&2; exit 1; }
@@ -31,8 +31,7 @@ while [[ $# -gt 0 ]]; do
     --test|--viewer-test|--explorer-test)
       [[ "$target" == cli ]] || { usage >&2; exit 2; }
       target=${1#--}; shift ;;
-    --view) view=1; shift ;;
-    --graph) graph=1; view=1; shift ;;
+    --view|--graph) graph=1; view=1; shift ;;
     *) usage >&2; exit 2 ;;
   esac
 done
@@ -43,6 +42,13 @@ done
 [[ $(uname -s) == Darwin ]] || fail 'This build entry point requires macOS.'
 sdk=${SDKROOT:-$(xcrun --show-sdk-path)} || fail 'Cannot locate Apple SDK; set SDKROOT.'
 [[ -d "$sdk/usr/include" ]] || fail 'Apple SDK headers unavailable; set SDKROOT.'
+if [[ "$view" == 1 ]]; then
+  ui_library=${ui_library:-"$root/build/mac-native-ui/libgd-native-ui.dylib"}
+  [[ -f "$ui_library" && $(basename "$ui_library") == libgd-native-ui.dylib ]] || fail 'Supply libgd-native-ui.dylib from build-native-ui.sh with --ui-library.'
+  include=$(cd "$(dirname "$ui_library")" && pwd)/include
+  [[ -f "$include/GLFW/glfw3.h" ]] || fail 'Keep the prepared GLFW header beside native UI library in include/GLFW/.'
+  if [[ -d "$output" && -n $(ls -A "$output") ]]; then fail 'View output must be new/empty; choose --output-directory.'; fi
+fi
 mkdir -p "$output"
 output=$(cd "$output" && pwd)
 arguments=(-DHAVE_CONFIG_H=1 -DYAML_DECLARE_STATIC=1 -I "$root/vendor/libyaml/include" -I "$root/vendor/libyaml/src")
@@ -63,17 +69,10 @@ esac
 arguments+=("$root/$entry")
 if [[ "$view" == 1 ]]; then
   [[ "$target" != cli ]] || name=gd-view
-  if [[ -z "$ui_library" ]]; then ui_library="$root/build/mac-ui/libgd-ui.dylib"; fi
-  [[ -f "$ui_library" ]] || fail 'Missing prepared graphics library. Run build-ui.sh explicitly, or supply --ui-library PATH.'
-  ui_library=$(cd "$(dirname "$ui_library")" && pwd)/$(basename "$ui_library")
-  [[ $(basename "$ui_library") == libgd-ui.dylib ]] || fail 'Graphics library must be named libgd-ui.dylib.'
-  arguments+=(-DGD_WITH_VIEW=1 -I "$root/vendor/raylib")
-  if [[ "$graph" == 1 ]]; then
-    arguments+=(-DGD_WITH_GRAPH=1 -DNO_FONT_AWESOME=1 -I "$root/vendor/cimgui" -I "$root/vendor/rlImGui")
-  fi
-  # Backend identity is @executable_path/libgd-ui.dylib for CJIT and Zig.
-  [[ "$ui_library" == "$output/libgd-ui.dylib" ]] || cp "$ui_library" "$output/libgd-ui.dylib"
-  arguments+=("$output/libgd-ui.dylib")
+  arguments+=(-DGD_WITH_VIEW=1 -DGD_WITH_GRAPH=1 -I "$root/vendor/cimgui" -I "$include" "$root/gd_native_window_macos.c")
+  cp "$ui_library" "$output/libgd-native-ui.dylib"
+  if [[ -f "$(dirname "$ui_library")/GLFW-LICENSE.md" ]]; then cp "$(dirname "$ui_library")/GLFW-LICENSE.md" "$output/GLFW-LICENSE.md"; fi
+  arguments+=("$output/libgd-native-ui.dylib")
 fi
 destination="$output/$name-$compiler"
 if [[ "$compiler" == cjit ]]; then

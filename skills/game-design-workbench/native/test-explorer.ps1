@@ -1,21 +1,18 @@
 <#
 Verify unified explorer with private copies of both examples. No OS input posted,
 source-record writes, downloads, prompts, or existing-window manipulation.
-Usage: ./test-explorer.ps1 -RaylibDirectory PATH [-UiLibrary PATH] [-Cjit cjit]
+Usage: ./test-explorer.ps1 -UiLibrary PATH [-Cjit cjit]
 Creates ignored build/explorer-checks-GUID; retains logs, JSON and screenshots.
 App-local checks prove state transitions/rendering, not real-pointer acceptance.
 #>
 param(
-    [string]$RaylibDirectory = $env:RAYLIB_ROOT,
     [string]$UiLibrary = '',
     [string]$Cjit = 'cjit',
     [ValidateRange(5, 300)][int]$TimeoutSeconds = 60
 )
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
-if (-not $RaylibDirectory -or -not (Test-Path -LiteralPath (Join-Path $RaylibDirectory 'lib/raylib.dll') -PathType Leaf)) {
-    throw 'Supply prepared raylib 6.0 SDK with -RaylibDirectory; no download/install attempted.'
-}
+if (-not $UiLibrary -or -not (Test-Path -LiteralPath $UiLibrary -PathType Leaf)) { throw 'Supply prepared gd-native-ui.dll with -UiLibrary.' }
 $examples = Join-Path (Split-Path $root -Parent) 'examples'
 $sourceFiles = @(Get-ChildItem -LiteralPath $examples -Recurse -File | Sort-Object FullName | ForEach-Object {
     [pscustomobject]@{ Path = $_.FullName; Hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
@@ -26,10 +23,8 @@ $nativeSources = @(Get-ChildItem -LiteralPath $root -File | Where-Object { $_.Ex
     [pscustomobject]@{ Path = $_.FullName; Hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
 })
 $nativeSources | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $run 'source-hashes.json') -Encoding UTF8
-$build = @{ Graph = $true; RaylibDirectory = $RaylibDirectory; Cjit = $Cjit; OutputDirectory = $run }
-if ($UiLibrary) { $build.UiLibrary = $UiLibrary }
-& (Join-Path $root 'build.ps1') @build | Out-Host
-& (Join-Path $root 'build.ps1') @build -ExplorerTest | Out-Host
+$view = & (Join-Path $root 'build.ps1') -View -Cjit $Cjit -UiLibrary $UiLibrary -OutputDirectory (Join-Path $run 'view')
+$adapter = & (Join-Path $root 'build.ps1') -ExplorerTest -Cjit $Cjit -UiLibrary $UiLibrary -OutputDirectory (Join-Path $run 'adapter')
 function Invoke-OwnedProbe([string]$Executable, [string[]]$Arguments, [string]$Log) {
     # Windows argv: input paths cannot contain quotes; quote every argument.
     if (@($Arguments | Where-Object { $_.Contains('"') }).Count) { throw 'Probe argument contains unsupported quote.' }
@@ -51,7 +46,7 @@ try {
         $fixtureSources = @(Get-ChildItem -LiteralPath $game -Recurse -File | ForEach-Object {
             [pscustomobject]@{ Path = $_.FullName; Hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
         })
-        Invoke-OwnedProbe (Join-Path $run 'test-explorer-view.exe') @($game, $fixture) (Join-Path $fixture 'state-checks')
+        Invoke-OwnedProbe $adapter @($game, $fixture) (Join-Path $fixture 'state-checks')
         $checks = Get-Content -LiteralPath (Join-Path $fixture 'state-checks.json') -Raw | ConvertFrom-Json
         $warning = Get-Content -LiteralPath (Join-Path $fixture 'state-checks.stderr.log') -Raw
         if (-not $warning.Contains('Explorer structured stdout: stderr warning probe')) { throw 'Warning did not reach stderr' }
@@ -63,11 +58,11 @@ try {
         foreach ($mode in @('skills', 'challenges', 'relationships', 'matrix', 'mda', 'resources', 'actors', 'effects', 'noun-interactions')) {
             $capture = Join-Path $fixture "$mode.png"
             $log = Join-Path $fixture "$mode-draft"
-            Invoke-OwnedProbe (Join-Path $run 'gd-view.exe') (@('view', 'explorer') + $inputs + @('--mode', $mode, '--frames', '4', '--screenshot', $capture)) $log
+            Invoke-OwnedProbe $view (@('view', 'explorer') + $inputs + @('--mode', $mode, '--frames', '4', '--screenshot', $capture)) $log
             $draft = Get-Content -LiteralPath "$log.json" -Raw | ConvertFrom-Json
             if (-not $draft.ok -or $draft.data.changes.Count -ne 0 -or -not (Test-Path -LiteralPath $capture)) { throw "Capture/draft check failed: $mode" }
         }
-        Invoke-OwnedProbe (Join-Path $run 'gd-view.exe') (@('view', 'explorer') + $inputs + @('--mode', 'matrix', '--layout', 'grid', '--frames', '4', '--screenshot', (Join-Path $fixture 'matrix-grid.png'))) (Join-Path $fixture 'matrix-grid-draft')
+        Invoke-OwnedProbe $view (@('view', 'explorer') + $inputs + @('--mode', 'matrix', '--layout', 'grid', '--frames', '4', '--screenshot', (Join-Path $fixture 'matrix-grid.png'))) (Join-Path $fixture 'matrix-grid-draft')
         $gridDraft = Get-Content -LiteralPath (Join-Path $fixture 'matrix-grid-draft.json') -Raw | ConvertFrom-Json
         if (-not $gridDraft.ok -or $gridDraft.data.changes.Count -ne 0) { throw 'Grid capture changed draft' }
         if (@(Get-ChildItem -LiteralPath $game -Recurse -File).Count -ne $fixtureSources.Count) { throw "Private fixture inventory changed: $game" }

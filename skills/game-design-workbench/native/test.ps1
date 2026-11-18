@@ -1,8 +1,8 @@
 <# Native/core and CLI regression checks. No downloads or source-record changes.
-Usage: ./test.ps1 [-View -RaylibDirectory PATH] [-Cjit PATH]
+Usage: ./test.ps1 [-View [-Graph] -UiLibrary PATH] [-Cjit PATH]
 Fixtures and captures stay in ignored build/. View opens a bounded visible window.
 #>
-param([switch]$View, [switch]$Graph, [string]$RaylibDirectory = $env:RAYLIB_ROOT, [string]$Cjit = 'cjit', [string]$OutputDirectory = '')
+param([switch]$View, [switch]$Graph, [string]$UiLibrary = '', [string]$Cjit = 'cjit', [string]$OutputDirectory = '')
 $ErrorActionPreference = 'Stop'
 if ($Graph) { $View = $true }
 $root = $PSScriptRoot
@@ -342,8 +342,8 @@ if ($LASTEXITCODE -ne 0 -or $controlText -notmatch '7/7 resolved') { throw 'Cont
 $controlSourcesAfter = @(Get-ChildItem -LiteralPath "$example/control-vars" -File | Get-FileHash | Select-Object Path,Hash)
 if (($controlSources | ConvertTo-Json -Compress) -ne ($controlSourcesAfter | ConvertTo-Json -Compress)) { throw 'Canonical control files changed during tests' }
 if ($View) {
-    & (Join-Path $root 'build.ps1') -View -Graph:$Graph -RaylibDirectory $RaylibDirectory -Cjit $Cjit -OutputDirectory $OutputDirectory | Out-Host
-    $viewExecutable=if ($OutputDirectory) { Join-Path ([IO.Path]::GetFullPath($OutputDirectory)) 'gd-view.exe' } else { Join-Path $root 'build/gd-view.exe' }
+    if (!$OutputDirectory) { $OutputDirectory=Join-Path $root ('build/native-view-test-' + [guid]::NewGuid().ToString('N')) }
+    $viewExecutable = & (Join-Path $root 'build.ps1') -View -UiLibrary $UiLibrary -Cjit $Cjit -OutputDirectory $OutputDirectory
     $capture = Join-Path $unicode 'matrix.png'
     & $viewExecutable view matrix @unicodeInputs --frames 3 --screenshot $capture
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $capture -PathType Leaf)) { throw 'Bounded view/Unicode capture failed' }

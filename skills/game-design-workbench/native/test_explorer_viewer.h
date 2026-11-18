@@ -28,7 +28,7 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
     memset(panes,0,sizeof(*panes)*GD_EXPLORER_VIEWS); memset(analysis,0,sizeof(*analysis));
     for (v=0;v<GD_EXPLORER_VIEWS;++v) pane_defaults(&panes[v],(GD_ExplorerView)v);
     imgui=igCreateContext(NULL); CHECK(imgui!=NULL); igGetIO_Nil()->IniFilename=NULL;
-    c.project=project; c.pane=&panes[active]; c.analysis=analysis; c.viewport=(Rectangle){0,0,800,600};
+    c.project=project; c.pane=&panes[active]; c.analysis=analysis; c.viewport=(GD_Rect){0,0,800,600};
     c.pane->layout_choice=GD_MATRIX_GRID_CHOICE; CHECK(pane_prepare(&c)); c.pane->fit=0;
     viewer=(ExplorerViewer){&c,panes,NULL,&active,&stale,1,{0},0}; viewer.collections=collections; viewer.collection_count=count;
     memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);

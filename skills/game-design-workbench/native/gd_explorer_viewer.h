@@ -19,8 +19,8 @@ static int viewer_hint_current(const ExplorerViewer *viewer) {
     return !*viewer->hint.id || (viewer->hint_generation==viewer->reload_generation && viewer->hint_revision==viewer->context->project->revision);
 }
 static int viewer_interacting(void) {
-    return igGetIO_Nil()->WantTextInput || IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) ||
-        IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_TAB) || IsKeyDown(KEY_UP) || IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_RIGHT);
+    return igGetIO_Nil()->WantTextInput || igIsMouseDown_Nil(ImGuiMouseButton_Left) || igIsMouseDown_Nil(ImGuiMouseButton_Right) || igIsMouseDown_Nil(ImGuiMouseButton_Middle) ||
+        igIsKeyDown_Nil(ImGuiKey_Enter) || igIsKeyDown_Nil(ImGuiKey_Space) || igIsKeyDown_Nil(ImGuiKey_Tab) || igIsKeyDown_Nil(ImGuiKey_UpArrow) || igIsKeyDown_Nil(ImGuiKey_DownArrow) || igIsKeyDown_Nil(ImGuiKey_LeftArrow) || igIsKeyDown_Nil(ImGuiKey_RightArrow);
 }
 static void viewer_apply_hint(ExplorerViewer *viewer) {
     if (!viewer->hint_pending || viewer_interacting()) return;

@@ -1,5 +1,5 @@
 // Default Windows/macOS diagnostics open no window and post no OS input.
-// GD_POINTER_CHECKS=1 explicitly enables a hidden owned raylib window, not a review viewer.
+// GD_POINTER_CHECKS=1 enables app-local ImGui event checks without a window.
 // GD_NATIVE_EXE=.../gd.exe GD_VIEWER_TEST_EXE=.../test-viewer.exe node --test this-file
 import test from 'node:test';
 import assert from 'node:assert/strict';

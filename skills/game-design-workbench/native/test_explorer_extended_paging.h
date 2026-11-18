@@ -12,7 +12,7 @@ static int explorer_extended_paging_checks(GD_ExplorerContext *c,GD_Layout *save
     {GD_EvidencePage page=gd_evidence_page(INT_MAX,64,INT_MAX);int ordinal=INT_MAX-1;EXT_PAGE_CHECK(gd_evidence_page_take(&page,&ordinal) && ordinal==INT_MAX);}
     p=c->pane=&c->panes[GD_EXPLORER_ACTORS];*c->active_view=p->view;
     EXT_PAGE_CHECK(pane_prepare(c) && gd_explorer_structure_run(c));
-    {GD_ExplorerStructureState *state=p->structure_state;GD_StructureResult *retained=state->result;Camera2D camera=p->camera;GD_ExplorerSelection selection=p->selection;
+    {GD_ExplorerStructureState *state=p->structure_state;GD_StructureResult *retained=state->result;GD_Camera camera=p->camera;GD_ExplorerSelection selection=p->selection;
         int total=gd_explorer_structure_row_count(state),maximum=gd_explorer_presentation_maximum(c,"structure_page"),allocations=*calls,changed;
         uint64_t pending=viewer_form_hash(1,GD_FORM_STRUCTURE,&state->pending),applied=viewer_form_hash(1,GD_FORM_STRUCTURE,&state->applied);
         memcpy(saved,p->layout,sizeof(*saved));EXT_PAGE_CHECK(total==retained->query->shown_nodes && total>0 && maximum==(total-1)/64);

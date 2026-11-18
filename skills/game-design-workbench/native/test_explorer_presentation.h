@@ -56,7 +56,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
 #define PRESENT_STAGE(view_,field_,value_) do {PRESENT_REQUEST("configure",view_);strcpy(request.form,"presentation");strcpy(request.control,field_);snprintf(request.value,sizeof(request.value),"%s",value_);viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));PRESENT_SEND();}while(0)
 #define PRESENT_ACTION(view_,action_) do {PRESENT_REQUEST("action",view_);strcpy(request.action,action_);viewer_control_token(&viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));PRESENT_SEND();}while(0)
     {
-        GD_CountRange counts={2,10};Color low=gd_count_color(counts,2),high=gd_count_color(counts,10),blank=gd_count_color(counts,0);
+        GD_CountRange counts={2,10};GD_Color low=gd_count_color(counts,2),high=gd_count_color(counts,10),blank=gd_count_color(counts,0);
         PRESENT_CHECK(low.r==32 && low.g==48 && low.b==82 && high.r==24 && high.g==112 && high.b==96 && blank.r==29 && blank.g==38 && blank.b==51);
         counts=(GD_CountRange){7,7};low=gd_count_color(counts,7);
         PRESENT_CHECK(low.r==28 && low.g==80 && low.b==89 && low.a==255);
@@ -65,17 +65,17 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
     {
         GD_LayoutNode node={.x=10,.y=20};
         PRESENT_CHECK(gd_layout_set_footprint(&node,-1,-1,1,1));
-        gd_graph_footprint_rect(&node,(Rectangle){-75,28,210,64},3);
+        gd_graph_footprint_rect(&node,(GD_Rect){-75,28,210,64},3);
         PRESENT_CHECK(fabsf(node.footprint.left+35)<0.001f && fabsf(node.footprint.right-35)<0.001f);
         PRESENT_CHECK(fabsf(node.footprint.top+32.0f/3)<0.001f && fabsf(node.footprint.bottom-32.0f/3)<0.001f);
-        gd_graph_footprint_rect(&node,(Rectangle){180,105,120,14},3);
+        gd_graph_footprint_rect(&node,(GD_Rect){180,105,120,14},3);
         PRESENT_CHECK(fabsf(node.footprint.right-90)<0.001f && fabsf(node.footprint.bottom-59.0f/3)<0.001f);
         PRESENT_CHECK(fabsf(node.footprint.left+35)<0.001f && fabsf(node.footprint.top+32.0f/3)<0.001f);
     }
     for(i=1;i<=3;i+=2){float scale=(float)i;GD_LayoutNode raw={.x=-10.4f,.y=20.6f},shown={.x=110.9f,.y=-4.6f},expected=raw;
         gd_layout_set_footprint(&raw,-1,-1,1,1);expected=raw;
-        gd_graph_footprint_rect(&expected,(Rectangle){(int)(raw.x*scale)+36,(int)(raw.y*scale)-8,120,14},scale);
-        gd_graph_footprint_rect_at(&raw,&shown,(Rectangle){(int)(shown.x*scale)+36,(int)(shown.y*scale)-8,120,14},scale);
+        gd_graph_footprint_rect(&expected,(GD_Rect){(int)(raw.x*scale)+36,(int)(raw.y*scale)-8,120,14},scale);
+        gd_graph_footprint_rect_at(&raw,&shown,(GD_Rect){(int)(shown.x*scale)+36,(int)(shown.y*scale)-8,120,14},scale);
         PRESENT_CHECK(!memcmp(&raw,&expected,sizeof(raw)));
     }
     {
@@ -95,7 +95,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
     panes=a.allocate(a.context,GD_EXPLORER_VIEWS*sizeof(*panes));analysis=a.allocate(a.context,sizeof(*analysis));knowledge=a.allocate(a.context,sizeof(*knowledge));PRESENT_CHECK(panes && analysis && knowledge);
     memset(panes,0,GD_EXPLORER_VIEWS*sizeof(*panes));memset(analysis,0,sizeof(*analysis));memset(knowledge,0,sizeof(*knowledge));
     for(v=0;v<GD_EXPLORER_VIEWS;++v)pane_defaults(&panes[v],(GD_ExplorerView)v);
-    c.pane=&panes[active];c.analysis=analysis;c.query=knowledge;c.viewport=(Rectangle){0,0,1000,700};viewer.context=&c;viewer.panes=panes;viewer.active=&active;viewer.stale=&stale;viewer.reload_generation=19;
+    c.pane=&panes[active];c.analysis=analysis;c.query=knowledge;c.viewport=(GD_Rect){0,0,1000,700};viewer.context=&c;viewer.panes=panes;viewer.active=&active;viewer.stale=&stale;viewer.reload_generation=19;
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(c.project->available&(1u<<v)) {
         PRESENT_REQUEST("controls",v);strcpy(request.form,"presentation");before=*calls;PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"\"presentation\"") && *calls==before && !panes[v].prepared);
         target=c;target.pane=&panes[v];PRESENT_CHECK(pane_prepare(&target));
@@ -199,11 +199,11 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
                 }
             }
             if(v==GD_EXPLORER_MATRIX) {
-                c.viewport=(Rectangle){0};PRESENT_CHECK(gd_layout_seed_neighborhood(native,a,1));
+                c.viewport=(GD_Rect){0};PRESENT_CHECK(gd_layout_seed_neighborhood(native,a,1));
                 PRESENT_ACTION(v,"view.rearrange");PRESENT_CHECK(strstr(reply,"\"executed\":true"));
-                c.viewport=(Rectangle){0,0,1200,400};PRESENT_REQUEST("controls",v);strcpy(request.form,"presentation");PRESENT_SEND();PRESENT_CHECK(!w.failed);
+                c.viewport=(GD_Rect){0,0,1200,400};PRESENT_REQUEST("controls",v);strcpy(request.form,"presentation");PRESENT_SEND();PRESENT_CHECK(!w.failed);
                 for(node=0;node<native->node_count;++node) PRESENT_CHECK(native->nodes[node].x==panes[v].layout->nodes[node].x && native->nodes[node].y==panes[v].layout->nodes[node].y);
-                c.viewport=(Rectangle){0,0,1000,700};
+                c.viewport=(GD_Rect){0,0,1000,700};
             }
             if(v<=GD_EXPLORER_RELATIONSHIPS) {
                 PRESENT_CHECK(!memcmp(&scope,&panes[v].focus,sizeof(scope)));
@@ -418,10 +418,10 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         if(v==GD_EXPLORER_MATRIX){for(cell=0;cell<model->cell_count && !model->cells[cell].pair_count;++cell){}PRESENT_CHECK(cell<model->cell_count);noun=model->cells[cell].noun;verb=model->cells[cell].verb;grid_choose(&target,p->grid.slot[noun],p->grid.slot[verb]);p->selection.interaction=model->cells[cell].pair_count-1;}
         else{noun=c.project->noun_grid->pairs[cell].a;verb=c.project->noun_grid->pairs[cell].b;noun_grid_choose(&target,noun,verb);}
         p->selection.linked=selected_record(&target);saved=p->selection;case_page=p->noun_case_page;
-        for(mode=0;mode<4;++mode){const char *layout=mode==1 ? "grid":mode==2 && v==GD_EXPLORER_MATRIX ? "columns":"free";Rectangle bounds={0};
+        for(mode=0;mode<4;++mode){const char *layout=mode==1 ? "grid":mode==2 && v==GD_EXPLORER_MATRIX ? "columns":"free";GD_Rect bounds={0};
             PRESENT_STAGE(v,"layout",layout);PRESENT_CHECK(strstr(reply,"\"configured\":true") && !memcmp(&saved,&p->selection,sizeof(saved)) && p->noun_case_page==case_page && p->grid.noun==noun && p->grid.verb==verb);
             PRESENT_CHECK(pair_selection_nodes(&target,nodes)==(noun==verb ? 1:2));memcpy(raw,p->layout,sizeof(*raw));
-            if(grid_view(p)){Rectangle area=v==GD_EXPLORER_NOUNS ? noun_grid_bounds(p,noun,verb):grid_bounds(&p->grid,noun,verb);grid_fit(&target,-1);PRESENT_CHECK(p->camera.zoom==1 && fabsf(p->camera.target.x-area.x-area.width/2)<0.01f && fabsf(p->camera.target.y-area.y-area.height/2)<0.01f);}
+            if(grid_view(p)){GD_Rect area=v==GD_EXPLORER_NOUNS ? noun_grid_bounds(p,noun,verb):grid_bounds(&p->grid,noun,verb);grid_fit(&target,-1);PRESENT_CHECK(p->camera.zoom==1 && fabsf(p->camera.target.x-area.x-area.width/2)<0.01f && fabsf(p->camera.target.y-area.y-area.height/2)<0.01f);}
             else{PRESENT_CHECK(p->fit==GD_EXPLORER_FIT_SELECTION && pair_selection_bounds(&target,&bounds));fit_view(&target,GD_EXPLORER_FIT_SELECTION);PRESENT_CHECK(p->camera.zoom>0 && p->camera.zoom<=1.2f && bounds.width*p->camera.zoom<target.viewport.width && bounds.height*p->camera.zoom<target.viewport.height && fabsf(p->camera.target.x-bounds.x-bounds.width/2)<0.01f && fabsf(p->camera.target.y-bounds.y-bounds.height/2)<0.01f);PRESENT_ACTION(v,"view.cell.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true") && p->fit==GD_EXPLORER_FIT_SELECTION);}
             PRESENT_ACTION(v,"view.selection.focus");PRESENT_CHECK(strstr(reply,"\"framing\":{") && p->focus_result.selected==(grid_view(p) ? 1:noun==verb ? 1:2) && p->camera.zoom>=1);
             PRESENT_CHECK(!memcmp(raw,p->layout,sizeof(*raw)) && !memcmp(&saved,&p->selection,sizeof(saved)));
@@ -440,7 +440,7 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         for(i=0;i<model->cell_count;++i)if(!model->cells[i].active){int edge;grid_choose(&target,p->grid.slot[model->cells[i].noun],p->grid.slot[model->cells[i].verb]);p->overlay=false;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell==i && pair_selection_nodes(&target,nodes)==2 && !p->overlay);for(edge=0;edge<p->layout->edge_count && p->layout->edges[edge].key!=i;++edge){}PRESENT_CHECK(edge<p->layout->edge_count && !p->layout->edges[edge].active);PRESENT_ACTION(GD_EXPLORER_MATRIX,"view.selection.focus");PRESENT_CHECK(strstr(reply,"\"executed\":true") && p->focus_result.hidden_link && !p->overlay);p->overlay=overlay;break;}
     }
     {
-        GD_ExplorerPane *source=&panes[GD_EXPLORER_MATRIX],*destination=&panes[GD_EXPLORER_NOUNS],*prior=c.pane;GD_ExplorerSelection first=source->selection,second=destination->selection;Camera2D camera=source->camera,other=destination->camera;
+        GD_ExplorerPane *source=&panes[GD_EXPLORER_MATRIX],*destination=&panes[GD_EXPLORER_NOUNS],*prior=c.pane;GD_ExplorerSelection first=source->selection,second=destination->selection;GD_Camera camera=source->camera,other=destination->camera;
         const GD_Model *model=gd_explorer_model(c.project,GD_EXPLORER_MATRIX);const char *reference=model->records[source->grid.noun].reference;
         c.pane=source;enter_view(&c,panes,GD_EXPLORER_NOUNS,NULL);PRESENT_CHECK(!memcmp(&second,&destination->selection,sizeof(second)) && !memcmp(&other,&destination->camera,sizeof(other)));
         enter_view(&c,panes,GD_EXPLORER_MATRIX,NULL);PRESENT_CHECK(!memcmp(&first,&source->selection,sizeof(first)) && !memcmp(&camera,&source->camera,sizeof(camera)));

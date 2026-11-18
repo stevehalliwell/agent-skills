@@ -1,5 +1,5 @@
 #include "gd_diagnostics_ui.h"
-#include "raylib.h"
+#include "gd_scene_draw.h"
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
@@ -23,7 +23,7 @@ int gd_diagnostics_panel(GD_DiagnosticBrowser *browser, const GD_Model *model,
         igSetNextItemOpen(browser->open_next,ImGuiCond_Always);
         browser->open_next=browser->collapse_next=false;
     }
-    if (!igCollapsingHeader_TreeNodeFlags(TextFormat("Diagnostics (%d retained%s)###domain-diagnostics",total,partial ? " | partial":""),total || partial ? ImGuiTreeNodeFlags_DefaultOpen:0)) return -1;
+    if (!igCollapsingHeader_TreeNodeFlags(gd_scene_format("Diagnostics (%d retained%s)###domain-diagnostics",total,partial ? " | partial":""),total || partial ? ImGuiTreeNodeFlags_DefaultOpen:0)) return -1;
     igPushID_Str("Domain diagnostics");
     igTextUnformatted("Search code / message / source",NULL); igSetNextItemWidth(-1);
     igInputText("##diagnostic-search",browser->filter,sizeof(browser->filter),0,NULL,NULL);
@@ -48,7 +48,7 @@ int gd_diagnostics_panel(GD_DiagnosticBrowser *browser, const GD_Model *model,
         if (item.record>=0 && igButton(item.kind==GD_DIAGNOSTIC_RELOAD ? "Inspect last-good loaded record":"Inspect loaded record",(ImVec2_c){0,0})) {
             navigate=item.record; browser->collapse_next=true;
         }
-        if (item.path && *item.path && igButton("Copy retained source path",(ImVec2_c){0,0})) SetClipboardText(item.path);
+        if (item.path && *item.path && igButton("Copy retained source path",(ImVec2_c){0,0})) igSetClipboardText(item.path);
         igSeparator(); igPopID();
     }
     if (!shown) igTextWrapped(total ? "No matching diagnostics. Filters do not change analysis or prove completeness.":"No retained diagnostics in supplied domain scope. Not a schema, coverage, learning or experience verdict.");

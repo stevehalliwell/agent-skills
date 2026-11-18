@@ -26,7 +26,7 @@ One Markdown game-design model, selected framework reviews, and agent workflows 
 - `workflows/`: agent procedures and shared model/intent contracts.
 - [Framework index](frameworks/index.md): when to use each lens; `frameworks/` contains selected application guides.
 - [Reference index](references/README.md): supporting source captures, readable Markdown, and provenance separate from application guidance. Includes 13 source-backed framework folders and supplied Schell deck data. Follow per-source rights limits; local retention/checkpoint does not authorize publication.
-- `native/`: C99 domain computation, CLI, optional raylib table/cimgui graph views, shared graphics-free graph layout, build/check entry points, and pinned dependency notices.
+- `native/`: C99 domain computation, CLI, optional native ImGui table/graph views, shared graphics-free graph layout, build/check entry points, and pinned dependency notices.
 - `templates/`: authoritative starting collection files.
 - `examples/`: small crate-puzzle tutorial, larger 225-record Little plumber guy NES design, focused 24-record Forge chain resource model, and historical evidence. Plumber example is an authored fictional course, not reverse-engineered game data.
 

@@ -6,81 +6,49 @@ Sections: [Build](#build), [Unified explorer](#unified-explorer), [Viewer IPC](#
 
 ## Build
 
-**Native UI migration in progress:** ImGui/cimgui uses 1.93.0. New no-raylib Windows C ABI dependency builds with Zig/C++; application remains C99/CJIT. 21/21 headless ABI checks and 48/48 authorized hidden GPU checks pass. Existing application commands below still use transitional raylib backend; full removal is not delivered yet. [Migration boundary, commands and remaining work](native-ui-migration.md).
-
-### macOS
-
-Run from repository root. Installed CJIT/Zig and Apple command-line tools required. Builds never launch programs, fetch dependencies or write project data.
-
-```sh
-native=skills/game-design-workbench/native
-bash "$native/build.sh"                      # CJIT CLI, ad-hoc signed
-bash "$native/build.sh" --test               # Build core checks only
-bash "$native/build.sh" --compiler zig       # Zig CLI
-```
-
-Shared `build-sources.txt` supplies Windows/Mac inputs. Stdout returns absolute artifact path; diagnostics go to stderr. `--output-directory PATH` keeps running artifacts separate. Defaults: `native/build/mac/{gd,test-core,test-viewer,gd-view,test-explorer-view}-{cjit,zig}`. `CJIT`, `ZIG`, `SDKROOT` override tools/SDK. Apple/CJIT float-limit definitions reuse existing proto-header compatibility without importing framework code into application.
-
-Prepare raylib **6.0** explicitly once; do not use old 5.5 binaries or c-ink's patched snapshot:
-
-```sh
-git clone --depth 1 --branch 6.0 https://github.com/raysan5/raylib.git "$native/build/deps/raylib-6.0"
-git -C "$native/build/deps/raylib-6.0" rev-parse HEAD
-# Expected: dbc56a87da87d973a9c5baa4e7438a9d20121d28
-bash "$native/build-ui.sh"                   # Zig builds raylib/C++ into libgd-ui.dylib
-bash "$native/build.sh" --graph              # Compile/link only; no window
-bash "$native/build.sh" --explorer-test      # Compile test shell only; no window
-```
-
-`build-ui.sh --raylib-directory PATH` accepts prepared source root (`src/rcore.c`), also via `RAYLIB_ROOT`; Mac does not use Windows SDK layout. Headers must match committed 6.0 files. Backend defaults to `native/build/mac-ui/libgd-ui.dylib`; `build.sh --ui-library PATH` accepts another prepared copy. Executable-relative dylib identity and adjacent runtime copy remove runtime dependency on source checkout. Mac plain `--view` uses same backend as `--graph`.
-
-Headless verification, including CPU ImGui adapters but **no window**:
-
-```sh
-bash "$native/build.sh" --viewer-test
-"$native/build/mac/test-core-cjit" "$PWD/$native/build/mac/checks-new"
-"$native/build/mac/test-viewer-cjit"
-GD_NATIVE_EXE="$PWD/$native/build/mac/gd-cjit" \
-GD_VIEWER_TEST_EXE="$PWD/$native/build/mac/test-viewer-cjit" \
-GD_VIEWER_ADAPTER_EXE="$PWD/$native/build/mac/test-explorer-view-cjit" \
-node --test skills/game-design-workbench/test/native-viewer.test.mjs
-```
-
-Mac port checks: CJIT and Zig CLI/core/viewer builds, 136/136 core checks, 90 protocol cases, 3 writer checks and 115 capture checks; CJIT transport/CPU-adapter Node suite 19 passed, zero skipped; full `native-*.test.mjs` suite 62 passed, zero skipped. Build help/failure contracts: 10 passed. Raylib 6 backend, table and graph executables link. **Mac UI/live IPC smoke test accepted by user:** Mario explorer launches; selection, Free layout, pause/resume, view switching, Grid and Fit work through IPC. Draft/source files unchanged. [Verification record and limits](../../../reports/graph-query-research/macos-native-port.md). Native Mac experiment supervision remains unsupported; existing stub fails explicitly without launching model.
+All views use ImGui/cimgui **1.93.0**: Win32/D3D11 on Windows, GLFW/OpenGL3 on macOS. Application remains C99; Zig/C++ builds graphics dependencies only for current qualification. Headless commands need no graphics library. [Migration checks and limits](native-ui-migration.md).
 
 ### Windows
 
-Windows development build uses installed CJIT 1.2.0. Run from repository root:
+Run from repository root with installed CJIT and Zig. `-View` and `-Graph` build the same full viewer. Use fresh output paths; never replace running binaries.
 
 ```powershell
-./skills/game-design-workbench/native/build.ps1
+$native = 'skills/game-design-workbench/native'
+& "$native/build.ps1"  # headless CLI
+$ui = & "$native/build-native-ui.ps1" -OutputDirectory "$native/build/native-ui" | ConvertFrom-Json
+$view = & "$native/build.ps1" -View -UiLibrary $ui.library -OutputDirectory "$native/build/native-view"
 ```
 
-Optional view needs explicitly supplied raylib **6.0 win64** SDK containing `include/raylib.h` and `lib/raylib.dll`. Rebuild UI dependencies too. Windows 6.0 build/runtime regression checks pass: both examples, all eight projections plus Grid, CPU adapters and live explorer IPC. These checks do not establish real-pointer or visual acceptance. [Verification and cache workaround](../../../reports/graph-query-research/macos-native-port.md#windows-regression-check).
+Build scripts never launch windows, download dependencies or write source data. Run returned `$view` directly or set `GD_VIEW_EXECUTABLE` for `gd.ps1`. CJIT 1.2.0 requires ASCII build paths; runtime source and screenshot paths support Unicode. DLL must match pinned headers and build profile.
 
-```powershell
-./skills/game-design-workbench/native/build.ps1 -View -RaylibDirectory C:/Dependencies/raylib-6.0_win64_mingw-w64
-# For Graph, explicitly rebuild matching UI dependencies first:
-./skills/game-design-workbench/native/build-ui.ps1 -RaylibDirectory C:/Dependencies/raylib-6.0_win64_mingw-w64
+### macOS
+
+Needs installed CJIT, Zig and Apple SDK. Prepare upstream GLFW 3.4 source separately from [release tag `3.4`](https://github.com/glfw/glfw/tree/3.4). Scripts never download or modify dependency checkout. New native macOS build/runtime checks remain pending on a Mac.
+
+```sh
+native=skills/game-design-workbench/native
+bash "$native/build.sh"                    # headless CJIT CLI
+ui=$(bash "$native/build-native-ui.sh" --glfw-directory /path/to/glfw-3.4)
+bash "$native/build.sh" --view --ui-library "$ui" --output-directory "$native/build/mac-native-view"
+bash "$native/build.sh" --explorer-test --ui-library "$ui" --output-directory "$native/build/mac-native-adapter"
 ```
 
-Build never downloads dependencies or builds them implicitly. Outputs default to ignored `native/build/`. Use explicit `-OutputDirectory PATH` for a separate build without replacing a running explorer or interrupting its draft; prepared UI library still defaults to `native/build/gd-ui.dll`. Launcher `native/gd.ps1` chooses headless or view executable; it never builds automatically. Direct executable invocation works too.
-
-CJIT application code is unoptimized. Windows Zig 0.17.0 `zig cc -std=c99` headless build also checked; native Linux remains unverified. `build-sources.txt` owns current source lists; do not maintain a separate manual compile list.
+`CJIT`, `ZIG`, `SDKROOT` override tools/SDK. Full compiler matrix stays in Step 6. Native `libgd-native-ui.dylib` loads relative to executable; prepared GLFW header lives beside dependency. `build-sources.txt` owns shared application source lists. Native macOS experiment supervision still fails explicitly; no model launch.
 
 ## Unified explorer
 
-`view explorer` opens Skills, Challenges, Relationships, Interactions, MDA and Resources in one window. Needs prepared `-Graph` build. Working-branch command compatibility is not required. No new dependency, registry reader, schema change or automatic folder discovery.
+`view explorer` opens Skills, Challenges, Relationships, Interactions, MDA and Resources in one window. Needs full native view build. Working-branch command compatibility is not required. No new dependency, registry reader, schema change or automatic folder discovery.
 
 ```powershell
 $native = 'skills/game-design-workbench/native'
 $game = 'skills/game-design-workbench/examples/little-plumber-guy-nes/game-design'
-./skills/game-design-workbench/native/build.ps1 -Graph -RaylibDirectory C:/Dependencies/raylib-6.0_win64_mingw-w64
+
+# $view is the executable path returned under Windows Build.
 $inputs = foreach ($role in @('skill-atoms', 'challenges', 'nouns', 'verbs', 'interactions',
     'mechanics', 'systems', 'dynamics', 'aesthetics', 'axes', 'resources', 'control-vars')) {
     "--$role"; "$role=$game/$role"
 }
-& "$native/build/gd-view.exe" view explorer @inputs
+& $view view explorer @inputs
 ```
 
 - **Data / projection** selects existing projection. **Layout** selects its supported presentation independently. New arbitrary data/view combinations remain out of scope. Unavailable projections explain missing explicit role bindings; empty valid folders remain valid.
@@ -113,7 +81,7 @@ Free graph coverage now includes Actor usage cloud and standalone Skills/Challen
 
 Experimental position-correction and force-based uncrossing did not work well enough in user review and were removed. Shared Free solver retains ordinary springs/repulsion and reviewed footprint separation, with no crossing-specific forces, corrections or scratch. Revisit edge-crossing work before final review; no replacement selected. [Failed trials and removal checks](../../../reports/graph-query-research/shared-force-layout-force-uncrossing.md); [algorithm research](../../../reports/graph-query-research/directed-crossing-algorithms/first-blush/recommendation.md).
 
-Skills and Challenges use direct inter-band connections and rounded same-band/loop routes; rounded component backgrounds are omitted. MDA curves and Resource straight lines retain existing semantics/renderers. Graph windows request raylib 4× MSAA; realized driver sample count and zoomed-out readability still need visual review.
+Skills and Challenges use direct inter-band connections and rounded same-band/loop routes; rounded component backgrounds are omitted. MDA curves and Resource straight lines retain existing semantics/renderers. Native canvas uses ImGui anti-aliasing and a scalable font; zoomed-out readability still needs visual review.
 - Pickup preserves raw layout-space cursor offset in all graph/MDA/Resource adapters, including standalone views. Zero pointer delta does not move node or clear velocity; dragging obeys existing directed bands. No mouse automation used for checks.
 - `F`: frame all current selections, otherwise shown node footprints; never workspace bounds. `Escape`: clear active pane selection/overview brush after dismissing text/popups; **Clear selection (Esc)** and IPC `view.selection.clear` provide same operation. Camera, filters, analyses and drafts stay intact. [Framing contract](../../../reports/graph-query-research/selection-framing.md). `F5`: refresh; Ctrl+Z: undo when not editing text; Space: pause/resume movable layout. Right/middle drag pans; right click without drag opens Find menu. Control/overview interaction stops node drag.
 - Refresh prepares all typed snapshots and every visited replacement layout before swapping. Failed load, allocation or disappearing query/focus root retains last good project. Qualified identities remap selections, relationship centers, skill assumptions and analysis starts; Resource starts use case/participant/axis/pool identity, not record indices. Lost starts are disclosed. Modified/invalid draft blocks refresh.
@@ -122,10 +90,10 @@ Skills and Challenges use direct inter-band connections and rounded same-band/lo
 Implementation retains existing typed readers in at most four domain snapshots, one skill draft, ten independent panes and one active generic analysis scratch. State charts retains its own read-only query/cache and an empty ordinary-graph adapter. Actors/Effects share RULE_DATA and own lazy queries/scenes outside snapshots; no additional snapshot family. `gd_explorer.c` owns project lifecycle/source identity; `gd_explorer_view.c` owns window and independent pane state. Existing renderer/source adapters avoid a second graph evaluator.
 
 ```powershell
-./skills/game-design-workbench/native/test-explorer.ps1 -RaylibDirectory C:/Dependencies/raylib-6.0_win64_mingw-w64
+& "$native/test-explorer.ps1" -UiLibrary $ui.library
 ```
 
-Checks use private copies of both examples, an owned bounded window and app-local state transitions. Verify nine projections plus Verb usage Grid, native actor/result scenes, ghost/pair display, atomic query/reset/reload allocation rollback, typed focused-result identity, reverse-painter hit geometry, 4,095-column access, balanced 2,048×2,048 axes and empty axes, case/blank inspection, Grid switching/reset/reload, independent switching, multi-match Find/hidden counts, reset/draft isolation, qualified relationship centers, rank-validated selection, stale-edge recovery after edits/Undo, identity remapping and atomic reload rollback. Force raylib warning to stderr while stdout remains valid JSON. Allocation failures are injected; no OS input posted. Retain JSON/logs/screenshots and native source hashes in fresh ignored `build/explorer-checks-*`; original/private example hashes must stay unchanged. These checks do **not** establish real-pointer acceptance, layout readability or design usefulness. Review against [integrated notes](../../../reports/graph-query-research/integrated-review-notes.md); drawing/AA/jitter/selection-layout work and original-question audit remain open.
+Checks use private copies of both examples, an owned bounded window and app-local state transitions. Verify nine projections plus Verb usage Grid, native actor/result scenes, ghost/pair display, atomic query/reset/reload allocation rollback, typed focused-result identity, reverse-painter hit geometry, 4,095-column access, balanced 2,048×2,048 axes and empty axes, case/blank inspection, Grid switching/reset/reload, independent switching, multi-match Find/hidden counts, reset/draft isolation, qualified relationship centers, rank-validated selection, stale-edge recovery after edits/Undo, identity remapping and atomic reload rollback. Send warning probe to stderr while stdout remains valid JSON. Allocation failures are injected; no OS input posted. Retain JSON/logs/screenshots and native source hashes in fresh ignored `build/explorer-checks-*`; original/private example hashes must stay unchanged. These checks do **not** establish real-pointer acceptance, layout readability or design usefulness. Review against [integrated notes](../../../reports/graph-query-research/integrated-review-notes.md); drawing/AA/jitter/selection-layout work and original-question audit remain open.
 
 ## Viewer IPC
 
@@ -188,12 +156,12 @@ $native = 'skills/game-design-workbench/native'
 $out = "$native/build/control-work" # Use different output if this viewer binary is running.
 & "$native/build.ps1" -OutputDirectory $out
 & "$native/build.ps1" -ViewerTest -OutputDirectory $out
-# Compile graph and test shell only, using explicitly prepared dependencies:
-& "$native/build.ps1" -Graph -RaylibDirectory $env:RAYLIB_ROOT -OutputDirectory $out
-& "$native/build.ps1" -ExplorerTest -RaylibDirectory $env:RAYLIB_ROOT -OutputDirectory $out
+# Compile full view and test shell into separate fresh paths using prepared $ui.library:
+& "$native/build.ps1" -View -UiLibrary $ui.library -OutputDirectory "$out/view"
+& "$native/build.ps1" -ExplorerTest -UiLibrary $ui.library -OutputDirectory "$out/adapter"
 $env:GD_NATIVE_EXE = "$out/gd.exe"
 $env:GD_VIEWER_TEST_EXE = "$out/test-viewer.exe"
-$env:GD_VIEWER_ADAPTER_EXE = "$out/test-explorer-view.exe"
+$env:GD_VIEWER_ADAPTER_EXE = "$out/adapter/test-explorer-view.exe"
 node --test skills/game-design-workbench/test/native-viewer.test.mjs
 ```
 
@@ -206,8 +174,9 @@ Normal `--ipc-helpers` runs basic adapter/control/query/configuration/serializat
 Optional suites are explicit:
 
 ```powershell
-& "$out/test-explorer-view.exe" --ipc-helpers $game --deep-checks
-& "$out/test-explorer-view.exe" --ipc-helpers $game --layout-research
+& "$out/adapter/test-explorer-view.exe" --scene-helpers $game
+& "$out/adapter/test-explorer-view.exe" --ipc-helpers $game --deep-checks
+& "$out/adapter/test-explorer-view.exe" --ipc-helpers $game --layout-research
 ```
 
 `--deep-checks` adds extended presentation/layout/selection, refresh/remap and small-page boundary checks. Includes unchanged Resource 600-step non-overlap and noun 4096-step convergence regression gates. `--layout-research` implies deep checks and adds 17 configurations ×4096 steps and 85 `layout-reference` JSON records on stderr. Both flags may be supplied in either order. Failed checks remain nonzero; no source writes or GUI launch.
@@ -586,7 +555,7 @@ Repeat `--related ALIAS=FOLDER` to load linked rule/context records for navigati
 
 ## View
 
-Select cells with click/arrows. Held arrows repeat using raylib's native repeat events. Wheel pans rows; Shift+wheel pans columns. PageUp/PageDown (also held-repeat) or Previous/Next cycles cases. Right panel shows original Markdown and declared links; click uniquely loaded links for focused navigation, then Back to case. Wheel scrolls details; `C` copies shown source path. This is path navigation, not launching an external editor.
+Select cells with click/arrows. Held arrows repeat using ImGui key repeat. Wheel pans rows; Shift+wheel pans columns. PageUp/PageDown (also held-repeat) or Previous/Next cycles cases. Right panel shows original Markdown and declared links; click uniquely loaded links for focused navigation, then Back to case. Wheel scrolls details; `C` copies shown source path. This is path navigation, not launching an external editor.
 
 Source content is checked about once per second. Changes show stale banner; `F5` explicitly loads a fresh model. Failed refresh retains previous snapshot and failure banner. View never writes records. No automatic refresh or repair.
 
@@ -597,19 +566,15 @@ Bounded visible smoke capture:
   --frames 3 --screenshot skills/game-design-workbench/native/build/matrix.png
 ```
 
-`--frames` accepts `1..600`; screenshot requires bounded frames and `.png` destination. Capture overwrites that explicit output file. Screenshots support Windows Unicode paths; font glyph coverage is limited by raylib's default font. Live stale/F5/failure/recovery behavior is checked by the desktop workflow below. Broader mouse/keyboard and clipboard review remains.
+`--frames` accepts `1..600`; screenshot requires bounded frames and `.png` destination. Capture overwrites that explicit output file. Screenshots support Windows Unicode paths; glyph coverage depends on bundled font. Live stale/F5/failure/recovery behavior is checked by the desktop workflow below. Broader mouse/keyboard and clipboard review remains.
 
 ## Dynamic graph
 
-Build graph UI dependencies explicitly, using installed Zig 0.17.0 and the same raylib 6.0 Windows SDK. Only vendored dependencies compile as C++; application/layout code remains C99. No implicit download or dependency rebuild:
+Use full native viewer from [Build](#build). Same executable includes standalone matrix, graph, skill/progression, MDA, resources and unified explorer.
 
 ```powershell
-./skills/game-design-workbench/native/build-ui.ps1 -RaylibDirectory C:/Dependencies/raylib-6.0_win64_mingw-w64
-./skills/game-design-workbench/native/build.ps1 -Graph -RaylibDirectory C:/Dependencies/raylib-6.0_win64_mingw-w64
-./skills/game-design-workbench/native/build/gd-view.exe view matrix @collections --layout graph
+& $view view matrix @collections --layout graph
 ```
-
-`-Graph` includes matrix table/graph and skill graph views and links prepared `gd-ui.dll`. Plain `-View` retains raylib-only table build; headless build needs neither graphics dependency. Close running view before rebuilding locked DLL/executable. Workbench now rebuilds cimgui/rlImGui against retained **6.0** headers and matching runtime. No prototype prebuilt DLL is reused. Mac CPU checks and user-reviewed UI/live IPC smoke test pass. Windows 6.0 runtime and exhaustive rendered/control acceptance remain unverified.
 
 - **Force-directed:** nodes settle live. Drag holds a node; release resumes settling. Pause freezes settling but still permits dragging.
 - **Noun / verb columns:** stable arrangement within connected groups. Start directly with `--layout columns` or switch in cimgui panel.
@@ -632,7 +597,7 @@ Prepared Free graphs use **Workspace bounds**, default on; shared GUI/IPC boolea
 
 All unified and standalone Free/force viewers share **Neighborhood preparation**: selection-independent topology hubs, compact BFS placement and footprint-aware component packing toward canvas aspect; unknown viewport uses 1:1. `gd_layout_prepare_free()` composes shared seeder and workspace setup. No separate Native initial-arrangement selector or `initial_arrangement` GUI/IPC field; unreleased control removed without migration. Fixed native/Grid/band layouts and exact query/cloud restoration remain. Preparation occurs once on geometry creation/rearrangement, not on selection, filtering, camera movement or resize. Resource startup keeps120 shared-solver steps after seeding; no wider budgets. Failed replacement retains last-good state. A seed does not guarantee all linked nodes remain nearer than unrelated nodes or reduce crossings. [Current contract and review](../../../reports/graph-query-research/resource-readability.md).
 
-Repeatable six-view rendering probes: `pwsh -NoProfile -File scripts/capture-workbench-graph-review.ps1 -RaylibDirectory PATH` from repository root. Requires prepared SDK/UI/executable; no downloads, prompts or OS input. Default captures five layer states for plumber; `-Example crate-puzzle` changes fixture. Each run uses fresh ignored directory, JSON metadata, unchanged-example/source checks and empty-draft assertions. Non-default layers use PRIVATE source copies with seeded flags/selections; they are rendering evidence, not real-control/input-isolation acceptance. Use PowerShell `Get-Help ./scripts/capture-workbench-graph-review.ps1` for contract.
+Repeatable six-view rendering probes: `pwsh -NoProfile -File scripts/capture-workbench-graph-review.ps1 -Executable PATH -UiLibrary PATH` from repository root. Requires prepared native UI library and executable; no downloads, prompts or OS input. Default captures five layer states for plumber; `-Example crate-puzzle` changes fixture. Each run uses fresh ignored directory, JSON metadata, unchanged-example/source checks and empty-draft assertions. Non-default layers use PRIVATE source copies with seeded flags/selections; they are rendering evidence, not real-control/input-isolation acceptance. Use PowerShell `Get-Help ./scripts/capture-workbench-graph-review.ps1` for contract.
 
 Bounded graph capture works with existing `--frames`/`--screenshot` options. Physical pointer/clipboard behavior and large-project rendering still need review. Live external-edit/F5/failure/recovery paths are checked by the desktop workflow below; bounded captures and graphics-free solver/source-change paths are also checked.
 
@@ -760,7 +725,7 @@ Graphics-free `gd_graph_paths.c` reuses cached topology and its own DFS forest f
 
 ## Diagnostics browser
 
-Shared **Diagnostics** panel in matrix graph, Skills/Challenges/Relationships explorer, and MDA explorer. Plain raylib matrix table retains existing error display; initial load failures remain CLI errors, not an apparently empty graph.
+Shared **Diagnostics** panel in matrix graph, Skills/Challenges/Relationships explorer, and MDA explorer. Standalone matrix table retains existing error display; initial load failures remain CLI errors, not an apparently empty graph.
 
 - Browse existing domain findings/questions, loaded operation errors, and latest rejected-reload errors. No new schema reader, validation rules, repair, severity ranking, or design verdict.
 - Search code, message, qualified record, field, referenced target, or source path. Search is plain substring, ASCII-case-insensitive; non-ASCII bytes match exactly. Source bodies are not searched.
@@ -1036,8 +1001,8 @@ Attendant retains collection discovery, schemas, CRUD, search/query, generic val
 
 ```powershell
 ./skills/game-design-workbench/native/test.ps1
-./skills/game-design-workbench/native/test.ps1 -View -RaylibDirectory C:/Dependencies/raylib-6.0_win64_mingw-w64
-./skills/game-design-workbench/native/test.ps1 -Graph -RaylibDirectory C:/Dependencies/raylib-6.0_win64_mingw-w64
+& "$native/test.ps1" -View -UiLibrary $ui.library
+& "$native/test.ps1" -View -Graph -UiLibrary $ui.library
 ```
 
 Native checks use copied MIT [base/test headers](vendor/proto-headers/README.md), caller-backed allocation, temporary fixtures, and direct domain APIs. Native domain/layout/draft/route/MDA/control/rule/graph checks: 112/112 under Windows CJIT; changed units also pass strict Zig C99 compilation. Shared-neighbor checks compare 128 projected graphs/masks against an independent adjacency oracle, retain duplicate/self-link evidence without inflated counts, verify inactive/hidden scope and camera-only cache reuse, and exercise pair/record/link capacity plus empty results. Incident-role results/witnesses match independent role-set oracle across 384 graph/mask/lens cases; explicit parallel alternatives satisfy both lenses without inflated counts. Role-only and lens-only changes invalidate cache. A no-match role-search workload exhausts work budget explicitly rather than silently returning a complete empty result. Selected-pair node/link classes match independent role-set oracle across same 384 projection/lens cases, including reversed-side counts. Dedicated checks cover unique versus excluded common identities, mixed direct links, hidden/invalid/self pairs, camera cache, projection invalidation, all 65,536 distinct incident roles and exact local comparison under both discovery limits. Rooted path checks compare 1,536 graph/mask/start/direction cases with independent vertex-removal reachability oracle, including cycles, multiple/hidden starts, inactive edges and support-path direction/provenance. Dedicated checks cover no starts, declared/explicit controls, zero/32-step and pre-fixed-point budget exhaustion/recovery, cache invalidation/camera reuse, 4,096-node chain/64-link suffix, 32,768-link projection despite partial global discovery, full root capacity and unique/missing/ambiguous reload remapping. Paired-path checks cover every nominated candidate in the same 1,536 oracle cases: avoided vertex, edge flags/direction/scope, fixed starts, disjoint witness branches, valid F/R ordering, cache and unchanged dominator/discovery work. Explicit cases cover reversed common-node order in cycles, synthetic multi-entry forks, hidden starts, invalid candidates, zero/one/32-step exhaustion/recovery, 4,096-node witnesses with rejoin outside retained suffix and complete local bypass despite truncated global discovery. Overview checks compare every cell/count/first-source/brush flag across 64 independent masked/active/directed/incidence projections; test parallel kinds, self-links versus within-bin entries, symmetric totals, 4,096-node/32,768-row capacity, empty scope, camera cache, mode reset and exact counts despite partial pair discovery. Shape checks compare 128 small projections against independent boolean-adjacency, insertion-sorted-token and pairwise-interning oracle. Dedicated checks cover relabeling/permutation partitions, direction/role/multiplicity changes, duplicate declarations, 4,096 isolates, all 65,536 distinct incident features, explicit work exhaustion/recovery, camera cache, empty projection and exact shape groups despite truncated pair discovery. Settling regression compares a 64-node cycle over 4,096 display steps: last-120-step RMS reduced from 0.342987 to 0.025314 and maximum from 0.982166 to 0.073985 world units/step. Tick-phase invariance is checked; no full-convergence or universal layout-quality claim. Directed drawing checks verify deterministic crossing reduction on three initial inversions, long-label/card separation through 120 settling steps, unchanged layer/key/link identities, both orientations, unplaced shelf, long/parallel/opposite/self/back geometry, finite points, route-segment hit distances and reserved-label/third-node avoidance in fixture. Existing late-root check now verifies routed false incidence rather than requiring different root columns. Prerequisite-closure checks compare 384 typed/direction/mask projections with independent boolean-matrix transitive-closure oracle, including direct AND deduplication, strict/self-cycle handling, boundary propagation, users, pair/link classes and unchanged discovery work. All completed oracle pair/target combinations additionally check typed BFS witness reachability, direction, scope, suffix continuity and unchanged discovery work. Typed-control checks cover independent foundation/reachability caches, default/retained relation, reverse/incidence modes, peer reset, camera/projection invalidation, empty kind/projection and zero-capacity witness suffix. Dedicated checks cover 4,096-node chain, exact work boundary, partial global/exact local rows, 32,768 duplicate links, hidden/missing projected declarations, unresolved/wrong-role sources, equivalent Skills/Relationships orientation, empty scope and cache/camera invalidation. Diagnostics checks cover metadata/kind/selection filtering, unknown/ambiguous source identities, independent finding arrays, owned error lifetime, UTF-8 shortening, shortened-path non-navigation, omission/overflow bounds, 384 retained items, empty scope, and allocation failure. Focused checks cover explicit one-hop/recenter, incoming/outgoing raw direction, duplicates/self links, statuses, unknown/outside boundaries, revealed isolates, draft edit/undo propagation, empty scope, and 4,096-node/32,768-link capacity. Staged graph suite checks direct root, unknown root failure, Unicode captures, and unchanged proposal. Private-copy relationship F5 checks cover changed scope, malformed source and removed root retaining snapshot, and restore/recovery; mouse-driven expansion/mode acceptance remains final-gate. Combined explorer checks alternate all three modes' layouts while preserving draft history, recompute transitive demands, retain route cycles/duplicate arrows/unreachable nodes, and cover exact 4,096-node/32,768-link layout capacity. Full graph-enabled CLI/capture suite and 5/5 public-Attendant authoring/adoption tests pass; pointer-driven mode switching remains final-gate manual acceptance. MDA adds custom aliases, statuses/isolates, source directions, optional systems, duplicate declarations, alternative/boundary links, context separation, strict fields, partial ambiguity preservation, 64 random graphs/2,304 focused queries against independent shortest-path closure oracle, exact 4,096-node/32,768-link limits, 64-node path suffixes, finding omission, and allocation failure. Shared API JSON matches CLI output exactly. Draft checks cover exact ranks, prerequisite changes/cycles, descendant preservation, undo/history/relationship capacity, three-way JSON handoff, identity/unavailable-disk errors, empty reports, and exclusive-output failure. CLI checks cover matrix/connectivity, cases/dispositions, skill prerequisites/ranks/findings, route opportunity classifications and concrete bypass/practice witnesses, cycles/missing targets, empty results, field selection, text, Windows Unicode/space paths, and structured failure. Core tests cover branches/merges, null/negative/zero/exact-limit ranks, late roots, cycle membership versus affected descendants, maximum-capacity SCC/topological analysis, and constrained dragging/settling in both layouts/directions. Route tests additionally cover duplicate roles/all statuses, transitive demand closure, wrong-role/missing references, missing entries, unreachable fragments, typed fields, 96 small graphs compared with independent product-graph transitive-closure oracle, 32,768-check boundary/overflow, witness/path/finding caps, and result/scratch allocation failures. Optional visible checks capture matrix table/force/columns, skill prerequisite/rank layouts in both directions, and cyclic/incomplete/empty graphs. Graph checks consume explicitly prepared UI dependency; they never compile it implicitly. Fixtures stay in ignored build directory; no test writes shipped game facts.

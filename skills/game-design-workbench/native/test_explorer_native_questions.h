@@ -4,7 +4,7 @@ static int explorer_test_native_questions(GD_ExplorerContext *c,GD_ExplorerPane 
     char path[GD_MAX_PATH],failure[512]; int v,i,ok=0; GD_ExplorerPane *pane;
     for (v=0;v<=GD_EXPLORER_VIEWS;++v) {
         if(v==GD_EXPLORER_STATES)continue; /* Dedicated state-chart query, not a canonical structural projection. */
-        GD_ExplorerStructureState *state; GD_LayoutNode ordinary; Camera2D camera;
+        GD_ExplorerStructureState *state; GD_LayoutNode ordinary; GD_Camera camera;
         c->pane=&panes[v==GD_EXPLORER_VIEWS ? GD_EXPLORER_ACTORS:v]; NATIVE_QUESTION_CHECK(explorer_test_fresh_pane(c) && pane_prepare(c)); pane=c->pane;
         if (v==GD_EXPLORER_VIEWS) {
             const GD_Rules *rules=c->project->rules; int root,edge,found=0;
@@ -27,7 +27,7 @@ static int explorer_test_native_questions(GD_ExplorerContext *c,GD_ExplorerPane 
         if (pane->layout->node_count) ordinary=pane->layout->nodes[0]; camera=pane->camera;
         state->similarity_row=0; state->similarity_peer=state->result->similarity->entry_count>1 ? 1:0;
         /* Explicit test-only camera avoids consuming actual pointer/key input. */
-        state->similarity_camera=(Camera2D){.offset={450,503},.zoom=0.7f}; state->similarity_camera_ready=true; state->similarity_fit=false;
+        state->similarity_camera=(GD_Camera){.offset={450,503},.zoom=0.7f}; state->similarity_camera_ready=true; state->similarity_fit=false;
         for (i=0;i<3;++i) explorer_test_render(c);
         NATIVE_QUESTION_CHECK((!pane->layout->node_count || !memcmp(&ordinary,&pane->layout->nodes[0],sizeof(ordinary))) && camera.target.x==pane->camera.target.x && camera.target.y==pane->camera.target.y && camera.zoom==pane->camera.zoom);
         NATIVE_QUESTION_CHECK(snprintf(path,sizeof(path),"%s/similarity-%d.png",output,v)<(int)sizeof(path) && gd_save_screenshot(path));

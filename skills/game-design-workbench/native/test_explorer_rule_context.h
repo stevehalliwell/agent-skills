@@ -12,7 +12,7 @@ static int explorer_rule_context_checks(GD_ExplorerContext *c,GD_Layout *saved,i
     for(i=0;i<model->record_count && axis<0;++i)if(model->records[i].role==GD_AXIS)axis=i;
     CONTEXT_CHECK(root>=0 && noun>=0 && axis>=0 && gd_explorer_reset_all(c));
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(c->project->available&(1u<<v)) {
-        Camera2D camera;GD_ExplorerSelection selection;GD_ExplorerQueryOptions pending;GD_ExplorerQueryState *query;
+        GD_Camera camera;GD_ExplorerSelection selection;GD_ExplorerQueryOptions pending;GD_ExplorerQueryState *query;
         GD_ExplorerRuleState *states[GD_EXPLORER_VIEWS];int mapped;
         p=c->pane=&c->panes[v];*c->active_view=v;CONTEXT_CHECK(pane_prepare(c));
         mapped=gd_explorer_record(gd_explorer_model(c->project,v),model->records[noun].reference);CONTEXT_CHECK(mapped>=0);
@@ -31,7 +31,7 @@ static int explorer_rule_context_checks(GD_ExplorerContext *c,GD_Layout *saved,i
     }
     p=c->pane=&c->panes[GD_EXPLORER_NOUNS];*c->active_view=p->view;
     CONTEXT_CHECK(gd_explorer_action_run(c,GD_ACTION_RULES_RUN) && p->rule_state->bindings && p->rule_state->bindings->binding_count>0);
-    {Camera2D camera=p->camera;GD_ExplorerSelection selection=p->selection;
+    {GD_Camera camera=p->camera;GD_ExplorerSelection selection=p->selection;
         gd_explorer_rules_choose(p->rule_state,0,-1);CONTEXT_CHECK(p->rule_state->row==0 && !memcmp(&camera,&p->camera,sizeof(camera)) && !memcmp(&selection,&p->selection,sizeof(selection)));
     }
     owner=p->rule_state;*snapshot=*owner;*fail_at=*calls+1;

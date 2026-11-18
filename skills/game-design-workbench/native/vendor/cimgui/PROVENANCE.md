@@ -17,6 +17,4 @@ Compile **all** C++ translation units with `IMGUI_DISABLE_OBSOLETE_FUNCTIONS`, m
 
 ## Migration boundary
 
-`build-native-ui.ps1` builds Win32/D3D11 C ABI library without raylib. Application remains C99/CJIT. macOS GLFW/OpenGL3 build/host remains pending; upstream backend sources are retained for that port.
-
-Existing raylib/rlImGui application remains during migration. Transitional UI recipes use same 1.93 binding profile; running old binaries retain their own matching DLLs. No complete raylib-removal or rendered-acceptance claim yet. See `../../THIRD-PARTY.md`.
+`build-native-ui.ps1` selects Win32/D3D11; `build-native-ui.sh` selects GLFW/OpenGL3. Application remains C99/CJIT. Raylib/rlImGui are removed; running old binaries retain their own dependencies. Windows build checked; macOS runtime and human graphical acceptance pending. See `../../THIRD-PARTY.md`.

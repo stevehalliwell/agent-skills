@@ -22,7 +22,7 @@ static int explorer_evidence_paging_checks(GD_ExplorerContext *c,GD_Layout *save
     viewer.context=c;viewer.panes=c->panes;viewer.active=c->active_view;
     p=c->pane=&c->panes[GD_EXPLORER_NOUNS];*c->active_view=p->view;PAGE_CHECK(pane_prepare(c));
     strcpy(request.command,"evidence");strcpy(request.projection,"noun-interactions");strcpy(request.form,"noun-cases");request.limit=1;
-    for(i=0;i<c->project->noun_grid->pair_count;++i){Camera2D camera;GD_ExplorerSelection selection;GD_OverviewControls overview;
+    for(i=0;i<c->project->noun_grid->pair_count;++i){GD_Camera camera;GD_ExplorerSelection selection;GD_OverviewControls overview;
         p->selection=(GD_ExplorerSelection){i,-1,0,-1,-1};camera=p->camera;selection=p->selection;overview=p->overview;ordinal=0;
         for(j=0;j<c->project->rules->case_count;++j)if(gd_noun_grid_case(c->project->noun_grid,i,j)){
             request.offset=(unsigned)ordinal;allocations=*calls;writer=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(&viewer,&request,&writer);
@@ -64,7 +64,7 @@ static int explorer_evidence_paging_checks(GD_ExplorerContext *c,GD_Layout *save
     /* Pane-owned rule pages outside Resources preserve exact row inspection. */
     p=c->pane=&c->panes[GD_EXPLORER_ACTORS];*c->active_view=p->view;PAGE_CHECK(pane_prepare(c));
     PAGE_CHECK(gd_explorer_control_set(c,GD_FORM_RULES,"bindings","true",message,sizeof(message)) && gd_explorer_action_run(c,GD_ACTION_RULES_RUN));
-    {GD_ExplorerRuleState *state=p->rule_state;GD_ExplorerQueryState *query=p->query_state;Camera2D camera=p->camera;GD_ExplorerSelection selection=p->selection;GD_OverviewControls overview=p->overview;
+    {GD_ExplorerRuleState *state=p->rule_state;GD_ExplorerQueryState *query=p->query_state;GD_Camera camera=p->camera;GD_ExplorerSelection selection=p->selection;GD_OverviewControls overview=p->overview;
         GD_Query *bindings=state->bindings;uint64_t draft=c->project->draft ? viewer_control_hash(1,c->project->draft,sizeof(*c->project->draft)):0;
         uint64_t pending=viewer_form_hash(1,GD_FORM_RULES,&state->pending),applied=viewer_form_hash(1,GD_FORM_RULES,&state->applied),canvas=viewer_form_hash(1,GD_FORM_QUERY,&p->query_options);int maximum=gd_explorer_presentation_maximum(c,"rules_page");allocations=*calls;
         memcpy(saved,p->layout,sizeof(*saved));PAGE_CHECK(gd_explorer_presentation_editable(c,"rules_page") && gd_explorer_rules_row_count(state)>0);gd_explorer_rules_choose(state,0,-1);
@@ -85,7 +85,7 @@ static int explorer_evidence_paging_checks(GD_ExplorerContext *c,GD_Layout *save
 
         for(page=0;page<gd_evidence_page(total,64,0).pages;++page){snprintf(expected,sizeof(expected),"%d",page);PAGE_CHECK(gd_explorer_presentation_set(c,"actor_case_page",expected,message,sizeof(message)) && p->query_state->case_pages[i]==page);}
     }
-    if(p->layout->edge_count){GD_QueryScene *scene=p->query_state->scene;Camera2D camera=p->camera;GD_ExplorerSelection selection=p->selection;int changed;
+    if(p->layout->edge_count){GD_QueryScene *scene=p->query_state->scene;GD_Camera camera=p->camera;GD_ExplorerSelection selection=p->selection;int changed;
         p->query_state->case_pages[0]=1;*fail_at=*calls+1;changed=gd_explorer_query_overview(c,GD_ACTOR_USAGE);*fail_at=0;
         PAGE_CHECK(!changed && p->query_state->scene==scene && p->query_state->case_pages[0]==1 && !memcmp(&camera,&p->camera,sizeof(camera)) && !memcmp(&selection,&p->selection,sizeof(selection)));
         PAGE_CHECK(gd_explorer_query_overview(c,GD_ACTOR_USAGE) && !p->query_state->case_pages[0]);
@@ -93,7 +93,7 @@ static int explorer_evidence_paging_checks(GD_ExplorerContext *c,GD_Layout *save
     /* Synthetic cardinality exercises controls beyond64 without inventing
        authored contributor paths; restore count before any row serialization. */
     p=c->pane=&c->panes[GD_EXPLORER_EFFECTS];*c->active_view=p->view;PAGE_CHECK(pane_prepare(c) && p->query_state->selected);
-    {GD_ExplorerQueryState *state=p->query_state;GD_EffectQuery *selected=state->selected;int retained=selected->count,page=state->contributor_page;Camera2D camera=p->camera;GD_ExplorerSelection selection=p->selection;
+    {GD_ExplorerQueryState *state=p->query_state;GD_EffectQuery *selected=state->selected;int retained=selected->count,page=state->contributor_page;GD_Camera camera=p->camera;GD_ExplorerSelection selection=p->selection;
         selected->count=129;
         {int maximum=gd_explorer_presentation_maximum(c,"contributor_page"),valid=gd_explorer_presentation_set(c,"contributor_page","2",message,sizeof(message));
             int changed=state->contributor_page==2,invalid=gd_explorer_presentation_set(c,"contributor_page","3",message,sizeof(message));selected->count=retained;state->contributor_page=page;

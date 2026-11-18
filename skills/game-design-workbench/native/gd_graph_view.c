@@ -6,8 +6,7 @@
 #include "gd_skill_unlocks.h"
 #include "gd_diagnostics_ui.h"
 #include "gd_explorer_ui.h"
-#include "raylib.h"
-#include "rlImGui.h"
+#include "gd_scene_draw.h"
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
@@ -17,18 +16,18 @@
 #include <stdarg.h>
 #include <string.h>
 
-static const Color graph_background = {18, 24, 34, 255};
-static const Color graph_text = {225, 233, 241, 255};
-static const Color graph_muted = {150, 169, 190, 255};
-static const Color graph_active = {65, 180, 165, 255};
-static const Color graph_selected = {255, 217, 125, 255};
+static const GD_Color graph_background = {18, 24, 34, 255};
+static const GD_Color graph_text = {225, 233, 241, 255};
+static const GD_Color graph_muted = {150, 169, 190, 255};
+static const GD_Color graph_active = {65, 180, 165, 255};
+static const GD_Color graph_selected = {255, 217, 125, 255};
 
 typedef GD_ExplorerSelection GraphSelection;
 static int measure_directed(GD_Layout *layout) {
     int i;
-    if (layout->mode!=GD_LAYOUT_DIRECTED || !IsWindowReady()) return 1;
+    if (layout->mode!=GD_LAYOUT_DIRECTED || !igGetCurrentContext()) return 1;
     for (i=0;i<layout->node_count;++i) {
-        layout->nodes[i].width=fmaxf(220,(float)MeasureText(layout->nodes[i].label,18)+44);
+        layout->nodes[i].width=fmaxf(220,(float)gd_scene_text_width(layout->nodes[i].label,18)+44);
         layout->nodes[i].height=120;
     }
     return gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,layout->sort);
@@ -47,56 +46,56 @@ static int prepare_native_layout(const GD_Model *model, GD_Layout *layout, GD_La
 static int prepare_layout(const GD_Model *model,GD_Layout *layout,GD_LayoutMode mode,GD_LayoutSort sort,int rank_mode,int horizontal,int challenges,GD_Focus *focus){
     GD_Allocator allocator=model->allocator;GD_Layout *candidate=allocator.allocate(allocator.context,sizeof(*candidate));int okay;float aspect=1.4f;
     if(!candidate)return 0;memset(candidate,0,sizeof(*candidate));
-    if(IsWindowReady() && GetScreenHeight()>190)aspect=(GetScreenWidth()*0.6f-24)/(GetScreenHeight()-190);
+    if(igGetCurrentContext() && gd_scene_height()>190)aspect=(gd_scene_width()*0.6f-24)/(gd_scene_height()-190);
     okay=prepare_native_layout(model,candidate,mode,sort,rank_mode,horizontal,challenges,focus) && gd_layout_prepare_free(candidate,allocator,aspect,1) && gd_layout_islands_set(candidate,layout->islands.preferred);
     if(okay)memcpy(layout,candidate,sizeof(*layout));allocator.release(allocator.context,candidate);return okay;
 }
-static Vector2 node_point(const GD_LayoutNode *node) { return (Vector2){node->x, node->y}; }
-static void fit_camera(Camera2D *camera, const GD_Layout *layout, Rectangle viewport) {
+static GD_Point node_point(const GD_LayoutNode *node) { return (GD_Point){node->x, node->y}; }
+static void fit_camera(GD_Camera *camera, const GD_Layout *layout, GD_Rect viewport) {
     float min_x = 0, min_y = 0, max_x = 1, max_y = 1;
     int i;
     for (i = 0; i < layout->node_count; ++i) {
         const GD_LayoutNode *node = &layout->nodes[i];
-        float label_width = (float)MeasureText(node->label, 18)/2+20;
+        float label_width = (float)gd_scene_text_width(node->label, 18)/2+20;
         if (!i || node->x-label_width < min_x) min_x = node->x-label_width;
         if (!i || node->x+label_width > max_x) max_x = node->x+label_width;
         if (!i || node->y-85 < min_y) min_y = node->y-85;
         if (!i || node->y+50 > max_y) max_y = node->y+50;
     }
-    camera->target = (Vector2){(min_x+max_x)/2, (min_y+max_y)/2};
-    camera->offset = (Vector2){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
+    camera->target = (GD_Point){(min_x+max_x)/2, (min_y+max_y)/2};
+    camera->offset = (GD_Point){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
     camera->zoom = fminf(viewport.width/(max_x-min_x+130), viewport.height/(max_y-min_y+70));
     if (camera->zoom > 1.2f) camera->zoom = 1.2f;
     if (camera->zoom < 0.002f) camera->zoom = 0.002f;
 }
-static void graph_input(GD_Layout *layout,const GD_Layout *shown, GraphSelection *selection, Camera2D *camera,
-                        Rectangle viewport, int other_pairs, int blocked) {
-    Vector2 mouse = GetMousePosition(), world;
+static void graph_input(GD_Layout *layout,const GD_Layout *shown, GraphSelection *selection, GD_Camera *camera,
+                        GD_Rect viewport, int other_pairs, int blocked) {
+    GD_Point mouse = gd_mouse_position(), world;
     int i;
-    camera->offset = (Vector2){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
-    if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) selection->held = -1;
+    camera->offset = (GD_Point){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
+    if (!igIsMouseDown_Nil(ImGuiMouseButton_Left)) selection->held = -1;
     if (blocked) { selection->held=-1; return; }
     if (selection->held >= 0 && gd_layout_pointer_dragged(layout,selection->held,mouse.x,mouse.y)) {
-        world = GetScreenToWorld2D(mouse, *camera);
+        world = gd_screen_to_world(mouse, *camera);
         gd_layout_drag_node(layout, selection->held, world.x, world.y);
     }
-    if (!CheckCollisionPointRec(mouse, viewport) || igGetIO_Nil()->WantCaptureMouse) return;
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
-        Vector2 delta = GetMouseDelta(); camera->target.x -= delta.x/camera->zoom; camera->target.y -= delta.y/camera->zoom;
+    if (!gd_rect_hit(mouse, viewport) || igGetIO_Nil()->WantCaptureMouse) return;
+    if (igIsMouseDown_Nil(ImGuiMouseButton_Right) || igIsMouseDown_Nil(ImGuiMouseButton_Middle)) {
+        GD_Point delta = gd_mouse_delta(); camera->target.x -= delta.x/camera->zoom; camera->target.y -= delta.y/camera->zoom;
     }
-    world = GetScreenToWorld2D(mouse, *camera);
-    if (GetMouseWheelMove()) {
-        Vector2 after;
-        camera->zoom *= powf(1.15f, GetMouseWheelMove());
+    world = gd_screen_to_world(mouse, *camera);
+    if (gd_mouse_wheel()) {
+        GD_Point after;
+        camera->zoom *= powf(1.15f, gd_mouse_wheel());
         if (camera->zoom < 0.002f) camera->zoom = 0.002f;
         if (camera->zoom > 4) camera->zoom = 4;
-        after = GetScreenToWorld2D(mouse, *camera);
+        after = gd_screen_to_world(mouse, *camera);
         camera->target.x += world.x-after.x; camera->target.y += world.y-after.y;
     }
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
-    world = GetScreenToWorld2D(mouse, *camera);
+    if (!gd_mouse_pressed(ImGuiMouseButton_Left)) return;
+    world = gd_screen_to_world(mouse, *camera);
     for (i = layout->node_count-1; i >= 0; --i) {
-        Vector2 point = node_point(&shown->nodes[i]);
+        GD_Point point = node_point(&shown->nodes[i]);
         float dx = point.x-world.x, dy = point.y-world.y;
         if (dx*dx+dy*dy <= 22*22) {
             selection->node = selection->held = i; selection->cell = selection->linked = -1;
@@ -127,31 +126,31 @@ static int witness_edge(const GD_Routes *routes, int witness, int source, int ta
     return 0;
 }
 static void draw_graph(const GD_Model *model,GD_Layout *raw, GD_Layout *layout, const GraphSelection *selection,
-                       Camera2D camera, Rectangle viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
+                       GD_Camera camera, GD_Rect viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
                        GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass,
                        const GD_GraphClosure *foundations, const GD_GraphComparison *foundation_pair,
                        const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
-    const Color shared_color={193,155,228,255};
+    const GD_Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selection->node,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
     const GD_GraphFeature *right=pair>=0 ? &analysis->features[analysis->pairs[pair].first_b]:NULL;
     const GD_GraphComparison *comparison=pair>=0 && branches ? gd_graph_compare(analysis,selection->node,peer):NULL;
     const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selection->node):NULL;
-    Rectangle bounds[GD_MAX_RECORDS];
+    GD_Rect bounds[GD_MAX_RECORDS];
     int i;
     memset(bounds, 0, sizeof(bounds));
     if (!layout->node_count) {
-        DrawText(focused ? "No relationship root selected." : challenges ? "No challenge nodes in supplied folder." : model->skill_mode ? "No skill nodes in supplied folder." : "No noun/verb nodes in supplied folders.", (int)viewport.x+16, (int)viewport.y+24, 18, graph_muted);
+        gd_scene_text(focused ? "No relationship root selected." : challenges ? "No challenge nodes in supplied folder." : model->skill_mode ? "No skill nodes in supplied folder." : "No noun/verb nodes in supplied folders.", (int)viewport.x+16, (int)viewport.y+24, 18, graph_muted);
         return;
     }
-    BeginScissorMode((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
-    BeginMode2D(camera);
+    gd_scene_clip((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
+    gd_scene_set_camera(camera);
     for (i = 0; i < layout->node_count; ++i) {
         const GD_LayoutNode *node = &layout->nodes[i];
-        Rectangle *box = &bounds[node->group];
-        float half = (float)MeasureText(node->label, 18)/2+22;
+        GD_Rect *box = &bounds[node->group];
+        float half = (float)gd_scene_text_width(node->label, 18)/2+22;
         float left = node->x-half, right = node->x+half, top = node->y-55, bottom = node->y+50;
-        if (!box->width) *box = (Rectangle){left, top, right-left, bottom-top};
+        if (!box->width) *box = (GD_Rect){left, top, right-left, bottom-top};
         else {
             float x = fminf(box->x, left), y = fminf(box->y, top);
             box->width = fmaxf(box->x+box->width, right)-x;
@@ -163,16 +162,16 @@ static void draw_graph(const GD_Model *model,GD_Layout *raw, GD_Layout *layout, 
         const char *prefix = group->member_count == 1 && !group->edge_count ? "Isolated: " : "Group: ";
         if (model->skill_mode && group->member_count == 1 && model->skills[group->anchor].incomplete)
             prefix = model->skills[group->anchor].cycle ? "Cycle: " : "Unresolved: ";
-        DrawText(TextFormat("%s%s", prefix, model->records[group->anchor].display_name),
+        gd_scene_text(gd_scene_format("%s%s", prefix, model->records[group->anchor].display_name),
                  (int)bounds[i].x+10, (int)bounds[i].y+9, 14, graph_muted);
     }
     for (i = 0; i < layout->edge_count; ++i) {
         const GD_LayoutEdge *edge = &layout->edges[i];
-        GD_LayoutRoute route; Vector2 middle;
+        GD_LayoutRoute route; GD_Point middle;
         gd_layout_route(layout,i,&route);
-        middle=(Vector2){route.points[route.count/2].x,route.points[route.count/2].y};
+        middle=(GD_Point){route.points[route.count/2].x,route.points[route.count/2].y};
         if (route.count%2==0) { middle.x=(middle.x+route.points[route.count/2-1].x)/2; middle.y=(middle.y+route.points[route.count/2-1].y)/2; }
-        Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
+        GD_Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
         if (!edge->active && !other_pairs) continue;
         int conflict = !focused && !challenges && model->skill_mode && (model->skills[layout->nodes[edge->a].key].incomplete || model->skills[layout->nodes[edge->b].key].incomplete);
         if (overview && overview->selected_edges[i]) gd_graph_route_line(&route,21,graph_selected,!edge->active || conflict);
@@ -181,85 +180,85 @@ static void draw_graph(const GD_Model *model,GD_Layout *raw, GD_Layout *layout, 
         if (path_selection && path_selection->edges[i]) gd_graph_route_line(&route,11,gd_path_color,!edge->active || conflict);
         if (foundation_pair && foundation_pair->edges[i]) gd_graph_route_line(&route,9,gd_graph_branch_color(foundation_pair->edges[i]),!edge->active || conflict);
         if ((comparison && comparison->edges[i]) || (!comparison && pair>=0 && (i==left->edge || i==right->edge))) {
-            Color underlay=comparison ? gd_graph_branch_color(comparison->edges[i]):shared_color;
+            GD_Color underlay=comparison ? gd_graph_branch_color(comparison->edges[i]):shared_color;
             gd_graph_route_line(&route,7,underlay,!edge->active || conflict);
         }
         if (challenges && witness_edge(routes,witness,layout->nodes[edge->a].key,layout->nodes[edge->b].key)) color=graph_selected;
-        if (conflict && selection->cell != edge->key) color = (Color){238, 114, 120, 255};
+        if (conflict && selection->cell != edge->key) color = (GD_Color){238, 114, 120, 255};
         gd_graph_route_line(&route,selection->cell==edge->key ? 4/camera.zoom:edge->active && !conflict ? 2.5f:1.5f,color,!edge->active || conflict);
         if (focused || model->skill_mode) {
             gd_graph_route_arrow(&route,color);
             if (focused && selection->cell==edge->key) {
                 const char *label=gd_field_name(model->edges[edge->key].field);
-                int width=MeasureText(label,13), x=(int)middle.x-width/2, y=(int)middle.y-8;
-                DrawRectangle(x-3,y-2,width+6,18,graph_background); DrawText(label,x,y,13,color);
+                int width=gd_scene_text_width(label,13), x=(int)middle.x-width/2, y=(int)middle.y-8;
+                gd_scene_rect_pixels(x-3,y-2,width+6,18,graph_background); gd_scene_text(label,x,y,13,color);
             }
         } else {
-            const char *label = TextFormat("%d cases", model->cells[edge->key].pair_count);
-            int width = MeasureText(label, 15), x = (int)middle.x-width/2, y = (int)middle.y-9;
-            DrawRectangle(x-4, y-2, width+8, 20, graph_background); DrawText(label, x, y, 15, color);
+            const char *label = gd_scene_format("%d cases", model->cells[edge->key].pair_count);
+            int width = gd_scene_text_width(label, 15), x = (int)middle.x-width/2, y = (int)middle.y-9;
+            gd_scene_rect_pixels(x-4, y-2, width+8, 20, graph_background); gd_scene_text(label, x, y, 15, color);
         }
     }
     for (i = 0; i < layout->node_count; ++i) {
         GD_LayoutNode *node = &layout->nodes[i],*physical=&raw->nodes[i];
         gd_layout_set_footprint(physical,-40,-40,40,40);
-        Color color = selection->node == i ? graph_selected : node->side ? (Color){224, 160, 109, 255} : (Color){108, 171, 230, 255};
+        GD_Color color = selection->node == i ? graph_selected : node->side ? (GD_Color){224, 160, 109, 255} : (GD_Color){108, 171, 230, 255};
         if (challenges && witness_node(routes,witness,node->key)) color=graph_selected;
-        if (node->side) DrawRectangle((int)node->x-12, (int)node->y-12, 24, 24, color);
-        else DrawCircleV(node_point(node), 13, color);
-        gd_graph_record_text_at(physical,node,&model->records[node->key],node->label, (int)node->x-MeasureText(node->label, 18)/2, (int)node->y+22, 18, graph_text,1);
+        if (node->side) gd_scene_rect_pixels((int)node->x-12, (int)node->y-12, 24, 24, color);
+        else gd_scene_circle(node_point(node), 13, color);
+        gd_graph_record_text_at(physical,node,&model->records[node->key],node->label, (int)node->x-gd_scene_text_width(node->label, 18)/2, (int)node->y+22, 18, graph_text,1);
         if (draft && (draft->rank_changed[node->key] || draft->prerequisites_changed[node->key])) {
-            DrawCircleLines((int)node->x, (int)node->y, 25, graph_selected);
+            gd_scene_ring_pixels((int)node->x, (int)node->y, 25, graph_selected);
             gd_graph_node_text_at(physical,node,"*", (int)node->x+22, (int)node->y-28, 24, graph_selected,1);
         }
         if (focused) {
             int collection=model->records[node->key].collection;
             const char *alias=collection>=0 && collection<model->collection_count ? model->collections[collection].alias:"loaded record";
-            const char *caption = node->side ? TextFormat("ROOT | %s",alias):alias;
-            gd_graph_node_text_at(physical,node,caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted,1);
+            const char *caption = node->side ? gd_scene_format("ROOT | %s",alias):alias;
+            gd_graph_node_text_at(physical,node,caption,(int)node->x-gd_scene_text_width(caption,13)/2,(int)node->y+43,13,graph_muted,1);
         } else if (challenges) {
             const char *caption = model->records[node->key].entry ? "ENTRY" : routes && routes->reachable[node->key] ? "declared reachable" : "no declared entry path";
-            gd_graph_node_text_at(physical,node,caption,(int)node->x-MeasureText(caption,13)/2,(int)node->y+43,13,graph_muted,1);
+            gd_graph_node_text_at(physical,node,caption,(int)node->x-gd_scene_text_width(caption,13)/2,(int)node->y+43,13,graph_muted,1);
         } else if (model->skill_mode) {
             const GD_Record *record = &model->records[node->key]; const GD_SkillState *state = &model->skills[node->key];
             const char *caption = state->cycle ? "CYCLE" : state->incomplete ? "UNKNOWN ANCESTRY" :
-                state->rank_conflict ? TextFormat("rank %lld -> %lld (conflict)", (long long)record->rank, (long long)state->display_rank) :
-                record->has_rank ? TextFormat("rank %lld", (long long)record->rank) : "rank null";
-            if (layout->mode==GD_LAYOUT_FORCE) caption=node->layer<0 ? TextFormat("Unplaced | %s",caption):TextFormat("Band %d | %s",node->layer,caption);
-            Color warning = state->incomplete ? (Color){238,114,120,255} : (Color){245,179,96,255};
-            if (state->incomplete || state->rank_conflict) DrawCircleLines((int)node->x, (int)node->y, 18, warning);
-            gd_graph_node_text_at(physical,node,caption, (int)node->x-MeasureText(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted,1);
+                state->rank_conflict ? gd_scene_format("rank %lld -> %lld (conflict)", (long long)record->rank, (long long)state->display_rank) :
+                record->has_rank ? gd_scene_format("rank %lld", (long long)record->rank) : "rank null";
+            if (layout->mode==GD_LAYOUT_FORCE) caption=node->layer<0 ? gd_scene_format("Unplaced | %s",caption):gd_scene_format("Band %d | %s",node->layer,caption);
+            GD_Color warning = state->incomplete ? (GD_Color){238,114,120,255} : (GD_Color){245,179,96,255};
+            if (state->incomplete || state->rank_conflict) gd_scene_ring_pixels((int)node->x, (int)node->y, 18, warning);
+            gd_graph_node_text_at(physical,node,caption, (int)node->x-gd_scene_text_width(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted,1);
         }
         if (shared) {
-            const char *badge=TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+");
-            gd_graph_node_text_at(physical,node,badge,(int)node->x-MeasureText(badge,13)/2,(int)node->y-37,13,shared_color,1);
-            if (pair>=0 && (i==analysis->pairs[pair].a || i==analysis->pairs[pair].b)) DrawCircleLines((int)node->x,(int)node->y,30,shared_color);
+            const char *badge=gd_scene_format("S%d%s",analysis->matched[i],analysis->complete ? "":"+");
+            gd_graph_node_text_at(physical,node,badge,(int)node->x-gd_scene_text_width(badge,13)/2,(int)node->y-37,13,shared_color,1);
+            if (pair>=0 && (i==analysis->pairs[pair].a || i==analysis->pairs[pair].b)) gd_scene_ring_pixels((int)node->x,(int)node->y,30,shared_color);
             if (comparison) {
                 unsigned category=comparison->nodes[i];
                 if (category) {
-                    Color branch_color=gd_graph_branch_color(category);
-                    DrawCircleLines((int)node->x,(int)node->y,21,branch_color);
+                    GD_Color branch_color=gd_graph_branch_color(category);
+                    gd_scene_ring_pixels((int)node->x,(int)node->y,21,branch_color);
                     gd_graph_footprint_rect_at(physical,node,gd_graph_branch_badge(category,(int)node->x+36,(int)node->y-8,graph_background),1);
                 }
                 if (i==comparison->a || i==comparison->b) gd_graph_node_text_at(physical,node,i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text,1);
             } else if (pair>=0 && i==left->neighbor) gd_graph_node_text_at(physical,node,"shared",(int)node->x+19,(int)node->y-8,13,shared_color,1);
         }
-        if (overview && overview->selected_nodes[i]) DrawCircleLines((int)node->x,(int)node->y,40,graph_selected);
+        if (overview && overview->selected_nodes[i]) gd_scene_ring_pixels((int)node->x,(int)node->y,40,graph_selected);
         if (shapes) {
             gd_graph_footprint_rect_at(physical,node,gd_graph_shape_badge(shapes,i,(int)node->x-65,(int)node->y-71,graph_background),1);
-            if (gd_graph_shape_peer(shapes,i,selection->node)) DrawCircleLines((int)node->x,(int)node->y,36,(Color){220,205,148,255});
+            if (gd_graph_shape_peer(shapes,i,selection->node)) gd_scene_ring_pixels((int)node->x,(int)node->y,36,(GD_Color){220,205,148,255});
         }
         if (reachability) {
             gd_graph_footprint_rect_at(physical,node,gd_graph_reachability_badge(reachability,i,(int)node->x+36,(int)node->y-53,graph_background),1);
             if (reach_pair) {
-                if (reach_pair->nodes[i]) DrawCircleLines((int)node->x,(int)node->y,32,gd_graph_branch_color(reach_pair->nodes[i]));
+                if (reach_pair->nodes[i]) gd_scene_ring_pixels((int)node->x,(int)node->y,32,gd_graph_branch_color(reach_pair->nodes[i]));
                 if (i==reach_pair->a || i==reach_pair->b) gd_graph_node_text_at(physical,node,i==reach_pair->a ? "T-A":"T-B",(int)node->x-67,(int)node->y-53,12,graph_text,1);
             }
         }
         if (foundations && foundations->eligible[i]) {
             gd_graph_footprint_rect_at(physical,node,gd_graph_foundation_badge(foundations,i,(int)node->x+36,(int)node->y-23,graph_background),1);
             if (foundation_pair) {
-                if (foundation_pair->nodes[i]) DrawCircleLines((int)node->x,(int)node->y,28,gd_graph_branch_color(foundation_pair->nodes[i]));
+                if (foundation_pair->nodes[i]) gd_scene_ring_pixels((int)node->x,(int)node->y,28,gd_graph_branch_color(foundation_pair->nodes[i]));
                 if (i==foundation_pair->a || i==foundation_pair->b) gd_graph_node_text_at(physical,node,i==foundation_pair->a ? "A":"B",(int)node->x-43,(int)node->y-23,13,graph_text,1);
             }
         }
@@ -268,7 +267,7 @@ static void draw_graph(const GD_Model *model,GD_Layout *raw, GD_Layout *layout, 
             if (paths->roots[i]) gd_graph_path_start_marker((int)node->x-49,(int)node->y-24);
         }
     }
-    EndMode2D(); EndScissorMode();
+    gd_scene_screen(); gd_scene_unclip();
 }
 static void projected_source(const GD_Model *model, const GD_Layout *layout, int index, int focused, int challenges) {
     int key=layout->edges[index].key,i; const GD_Edge *edge=NULL;
@@ -406,7 +405,7 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
         igText("Coverage: %s", model->records[record_index].coverage ? model->records[record_index].coverage : "unset");
     } else if (selection->node >= 0) {
         record_index = layout->nodes[selection->node].key;
-        gd_noun_ui_text(&model->records[record_index],TextFormat("%s: %s",focused ? "Record":challenges ? "Challenge":model->skill_mode ? "Skill":model->records[record_index].role==GD_NOUN ? "Noun":"Verb",model->records[record_index].display_name));
+        gd_noun_ui_text(&model->records[record_index],gd_scene_format("%s: %s",focused ? "Record":challenges ? "Challenge":model->skill_mode ? "Skill":model->records[record_index].role==GD_NOUN ? "Noun":"Verb",model->records[record_index].display_name));
         if (!focused && !challenges && model->skill_mode) igText("%d loaded prerequisites | %d dependents", model->skills[record_index].prerequisite_count, model->skills[record_index].dependent_count);
         else if (!focused && !challenges) igText("%d active partners | %d total cases", model->connectivity[record_index].partners, model->connectivity[record_index].cases);
     }
@@ -429,10 +428,10 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
     if (focused && igButton("Expand this record one hop (in + out)",(ImVec2_c){0,0})) *focus_expand=record_index;
     if (model->records[record_index].role == GD_SKILL) {
         const GD_Record *record = &model->records[record_index]; const GD_SkillState *state = &model->skills[record_index];
-        igText("Authored rank: %s", record->has_rank ? TextFormat("%lld", (long long)record->rank) : "null");
-        igText("Prerequisite depth: %s", state->depth >= 0 ? TextFormat("%d", state->depth) : "unknown");
+        igText("Authored rank: %s", record->has_rank ? gd_scene_format("%lld", (long long)record->rank) : "null");
+        igText("Prerequisite depth: %s", state->depth >= 0 ? gd_scene_format("%d", state->depth) : "unknown");
         igText("Relative prerequisite layer: %d (not authored rank)", state->layout_layer);
-        igText("Minimum rank: %s | Display rank: %s", state->has_minimum ? TextFormat("%lld", (long long)state->minimum_rank) : state->incomplete ? "unknown" : "none", state->has_display ? TextFormat("%lld", (long long)state->display_rank) : state->incomplete ? "unknown" : "unranked (null)");
+        igText("Minimum rank: %s | Display rank: %s", state->has_minimum ? gd_scene_format("%lld", (long long)state->minimum_rank) : state->incomplete ? "unknown" : "none", state->has_display ? gd_scene_format("%lld", (long long)state->display_rank) : state->incomplete ? "unknown" : "unranked (null)");
         if (state->incomplete) igTextUnformatted(state->cycle ? "CONFLICT: prerequisite cycle." : "UNKNOWN: incomplete prerequisite ancestry.", NULL);
         else if (state->rank_conflict) igTextUnformatted("CONFLICT: authored rank precedes prerequisites. No source edit.", NULL);
         else igTextUnformatted("No declared rank conflict. Not evidence of learning.", NULL);
@@ -451,7 +450,7 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
                 const GD_Edge *edge=&model->edges[i];
                 if (edge->target!=record_index || edge->field<GD_INTRODUCES || edge->field>GD_TESTS_MASTERY || model->records[edge->source].role!=GD_CHALLENGE) continue;
                 igPushID_Int(i);
-                if (igButton(TextFormat("%s: %s",gd_field_name(edge->field),model->records[edge->source].reference),(ImVec2_c){0,0})) *navigate=edge->source;
+                if (igButton(gd_scene_format("%s: %s",gd_field_name(edge->field),model->records[edge->source].reference),(ImVec2_c){0,0})) *navigate=edge->source;
                 igPopID();
             }
         }
@@ -460,7 +459,7 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
                 const GD_RouteCheck *check=&routes->checks[i];
                 if (check->skill!=record_index || !check->prerequisite) continue;
                 igPushID_Int(GD_MAX_EDGES+i);
-                if (igButton(TextFormat("Prerequisite demand: %s via %s",model->records[check->challenge].reference,model->records[check->demanded_by].reference),(ImVec2_c){0,0})) *navigate=check->challenge;
+                if (igButton(gd_scene_format("Prerequisite demand: %s via %s",model->records[check->challenge].reference,model->records[check->demanded_by].reference),(ImVec2_c){0,0})) *navigate=check->challenge;
                 igPopID();
             }
         }
@@ -468,13 +467,13 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
     }
     igPushTextWrapPos(0);
     igTextUnformatted(model->records[record_index].source_path, NULL);
-    if (igButton("Copy source path", (ImVec2_c){0,0})) SetClipboardText(model->records[record_index].source_path);
+    if (igButton("Copy source path", (ImVec2_c){0,0})) igSetClipboardText(model->records[record_index].source_path);
     for (i = 0; i < model->edge_count; ++i) {
         const GD_Edge *edge = &model->edges[i];
         const char *label;
         if (edge->source != record_index) continue;
         igPushID_Int(i);
-        label = TextFormat("%s: %s%s", gd_field_name(edge->field), edge->reference, edge->target < 0 ? " [not uniquely loaded]" : "");
+        label = gd_scene_format("%s: %s%s", gd_field_name(edge->field), edge->reference, edge->target < 0 ? " [not uniquely loaded]" : "");
         igTextUnformatted(label, NULL);
         if (igIsItemClicked(ImGuiMouseButton_Left) && edge->target >= 0) *navigate = edge->target;
         igPopID();
@@ -490,9 +489,6 @@ static int details(const GD_Model *model, const GD_Layout *layout, GraphSelectio
     }
     igSeparator(); igTextUnformatted(model->records[record_index].body, NULL); igPopTextWrapPos();
     return changed;
-}
-static void graph_log(int level, const char *text, va_list arguments) {
-    (void)level; vfprintf(stderr, text, arguments); fputc('\n', stderr);
 }
 static int selected_record(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection, int challenges, int focused) {
     const GD_Cell *cell;
@@ -586,10 +582,10 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
     char browse[129]="";
     SkillEditor editor = {-1,0,0,{0},{0}};
     char report_path[GD_MAX_PATH] = "";
-    int finish_next = 0, close_seen = 0, timed_finish_seen = 0;
+    int finish_next=0,timed_finish_seen=0;
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context, sizeof(*layout));
     GraphSelection selection = {-1, -1, 0, -1, -1};
-    Camera2D camera = {{0,0},{0,0},0,1};
+    GD_Camera camera = {{0,0},{0,0},1};GD_NativeWindow window={0};
     int frame=0,result=0,sort=GD_SORT_NAME;
     int mode=initial_layout==GD_VIEW_COLUMNS ? GD_LAYOUT_COLUMNS:GD_LAYOUT_FORCE;
     if(model->skill_mode || focused || challenges)mode=initial_layout==GD_VIEW_GRAPH ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;
@@ -628,28 +624,30 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (initial_query) memcpy(known,initial_query->known,sizeof(known));
         gd_skill_unlocks(model,known,-1,query);
     }
-    SetTraceLogCallback(graph_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);
     path_controls[1].declared=1;
-    InitWindow(1440, 900, model->skill_mode ? "Game Design Workbench - skill and progression explorer" : "Game Design Workbench - matrix graph");
-    if (!IsWindowReady()) { if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context, layout); gd_error(initial, "view.window", "Cannot initialize graph window", NULL, 0); return 2; }
+    if(!gd_native_window_open(&window,model->skill_mode ? "Game Design Workbench - skill and progression explorer":"Game Design Workbench - matrix graph",1440,900,1000,650,GD_WINDOW_VISIBLE)) { if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context, layout); gd_scene_error(initial,"view.window",&window); return 2; }
     analysis=initial->allocator.allocate(initial->allocator.context,sizeof(*analysis));
-    if (!analysis) { CloseWindow(); if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
+    if (!analysis) { gd_scene_close(&window); if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
     memset(analysis,0,sizeof(*analysis));
-    SetExitKey(KEY_NULL);
     measure_directed(layout);
-    SetWindowMinSize(1000, 650); SetTargetFPS(60); rlImGuiSetup(true);
     igGetIO_Nil()->IniFilename = NULL; igGetIO_Nil()->LogFilename = NULL;
     igGetStyle()->FontScaleMain = 1.1f;
     for (;;) {
-        int close_requested = WindowShouldClose();
-        int finishing = finish_next || (close_requested && !close_seen) || (frames && frame >= frames && !timed_finish_seen);
-        int width = GetScreenWidth(), height = GetScreenHeight(), split = width*60/100;
-        Rectangle viewport = {12, 140, (float)split-24, (float)height-190};
+        int ready=gd_scene_begin(&window),close_requested=window.close_requested;
+        window.close_requested=0;
+        int finishing=finish_next || close_requested || (frames && frame>=frames && !timed_finish_seen);
+        int width = gd_scene_width(), height = gd_scene_height(), split = width*60/100;
+        GD_Rect viewport = {12, 140, (float)split-24, (float)height-190};
         int refresh = 0, steps = 0, rearrange = 0, draft_changed = 0;
         int current_mode=focused ? GD_EXPLORE_RELATIONSHIPS:challenges;
         int requested_mode=current_mode, navigate=-1, focus_root=-1, focus_expand=-1;
         int selected_before=selected_record(model,layout,&selection,challenges,focused);
-        close_seen = close_requested; finish_next = 0;
+        finish_next=0;
+        if(ready<0){
+            if(!draft || (!draft->modified_count && editor.record<0)){gd_scene_error(initial,"view.render",&window);result=2;break;}
+            if(!result)fprintf(stderr,"gd: %s; draft retained. Close to finish.\n",window.error);
+            result=2;
+        }
         if (finishing) {
             int report = 0;
             /* After failure, retry only on explicit finish/close, not every frame. */
@@ -666,12 +664,12 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             if (frames && !draft->modified_count) { result = 2; break; }
             prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); fit = 1;
         }
-        BeginDrawing(); ClearBackground(graph_background); rlImGuiBegin();
-        if (GetTime() >= next_check) { if (gd_sources_changed(baseline)) stale = 1; next_check = GetTime()+1; }
-        DrawText(focused ? "Focused relationships" : challenges ? "Challenge progression" : model->skill_mode ? rank_mode ? "Skill rank graph" : "Skill prerequisite graph" : "Matrix graph", 20, 18, 26, graph_text);
-        DrawText(focused ? TextFormat("%d loaded records | %d drawn declarations | %d boundary declarations",layout->node_count,layout->edge_count,focus.boundary_count) : challenges ? TextFormat("%d challenges | %d drawn next links | All statuses | Gold: selected witness",layout->node_count,layout->edge_count) : model->skill_mode ? TextFormat("%d skills | %d prerequisite links | %d groups | All statuses", layout->node_count, model->skill_link_count, model->component_count) : TextFormat("%d groups (singletons included) | %d unplaced cases | Circle: noun | Square: verb", model->component_count, model->unplaced_cases), 20, 53, 16, graph_muted);
-        DrawText(draft ? "Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload | Ctrl+Z: undo" : "Drag node | Right drag: pan | Wheel: zoom | F: fit | F5: reload", 20, 82, 16, graph_muted);
-        if (draft) DrawText(draft->modified_count ? TextFormat("MODIFIED IN MEMORY: %d records * | No viewer Markdown writes", draft->modified_count) : "Draft matches loaded disk baseline | No Markdown writes", 20, 110, 16, draft->modified_count ? graph_selected : graph_muted);
+        if(ready<=0)continue;
+        if (gd_native_window_seconds(&window) >= next_check) { if (gd_sources_changed(baseline)) stale = 1; next_check = gd_native_window_seconds(&window)+1; }
+        gd_scene_text(focused ? "Focused relationships" : challenges ? "Challenge progression" : model->skill_mode ? rank_mode ? "Skill rank graph" : "Skill prerequisite graph" : "Matrix graph", 20, 18, 26, graph_text);
+        gd_scene_text(focused ? gd_scene_format("%d loaded records | %d drawn declarations | %d boundary declarations",layout->node_count,layout->edge_count,focus.boundary_count) : challenges ? gd_scene_format("%d challenges | %d drawn next links | All statuses | Gold: selected witness",layout->node_count,layout->edge_count) : model->skill_mode ? gd_scene_format("%d skills | %d prerequisite links | %d groups | All statuses", layout->node_count, model->skill_link_count, model->component_count) : gd_scene_format("%d groups (singletons included) | %d unplaced cases | Circle: noun | Square: verb", model->component_count, model->unplaced_cases), 20, 53, 16, graph_muted);
+        gd_scene_text(draft ? "Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload | Ctrl+Z: undo" : "Drag node | Right drag: pan | Wheel: zoom | F: fit | F5: reload", 20, 82, 16, graph_muted);
+        if (draft) gd_scene_text(draft->modified_count ? gd_scene_format("MODIFIED IN MEMORY: %d records * | No viewer Markdown writes", draft->modified_count) : "Draft matches loaded disk baseline | No Markdown writes", 20, 110, 16, draft->modified_count ? graph_selected : graph_muted);
         igSetNextWindowPos((ImVec2_c){(float)split, 12}, ImGuiCond_Always, (ImVec2_c){0,0});
         igSetNextWindowSize((ImVec2_c){(float)(width-split-12), (float)(height-55)}, ImGuiCond_Always);
         igBegin("Graph controls and source", NULL, ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
@@ -783,7 +781,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         igBeginChild_Str("Selected source", (ImVec2_c){0,0}, 0, 0);
         if (details(model, layout, &selection, draft, &editor, challenges, focused, routes, &witness, &navigate, &focus_root, &focus_expand,1)) draft_changed = 1;
         igEndChild(); igEnd();
-        if (draft && !igGetIO_Nil()->WantTextInput && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_Z)) {
+        if (draft && !igGetIO_Nil()->WantTextInput && (igIsKeyDown_Nil(ImGuiKey_LeftCtrl) || igIsKeyDown_Nil(ImGuiKey_RightCtrl)) && gd_key_pressed(ImGuiKey_Z)) {
             if (undo_edit(draft, layout, &selection, &editor)) draft_changed = 1;
         }
         if (focus_root>=0) { requested_mode=GD_EXPLORE_RELATIONSHIPS; navigate=focus_root; }
@@ -815,19 +813,19 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             accumulator=0; fit=1;
         }
         if (!igGetIO_Nil()->WantCaptureKeyboard && !igIsAnyItemActive() && !igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel)){
-            if(IsKeyPressed(KEY_ESCAPE)){selection=(GraphSelection){-1,-1,0,-1,-1};overview_controls.row=overview_controls.column=-1;analysis->initialized=0;}
-            if(IsKeyPressed(KEY_F)){int node=selection.node,edge=-1,i;gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis);
+            if(gd_key_pressed(ImGuiKey_Escape)){selection=(GraphSelection){-1,-1,0,-1,-1};overview_controls.row=overview_controls.column=-1;analysis->initialized=0;}
+            if(gd_key_pressed(ImGuiKey_F)){int node=selection.node,edge=-1,i;gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis);
                 for(i=0;i<layout->edge_count;++i)if(layout->edges[i].key==selection.cell && selection.cell>=0){edge=i;break;}
                 if(node<0 && selection.linked>=0)for(i=0;i<layout->node_count;++i)if(layout->nodes[i].key==selection.linked){node=i;break;}
                 if(!gd_graph_frame_selection(&camera,layout,analysis,&overview_controls,node,edge,viewport,1))fit=1;
             }
         }
-        if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F5)) refresh = 1;
-        if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_SPACE) && ((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && layout->mode!=GD_LAYOUT_COLUMNS) paused=!paused;
+        if (!igGetIO_Nil()->WantCaptureKeyboard && gd_key_pressed(ImGuiKey_F5)) refresh = 1;
+        if (!igGetIO_Nil()->WantCaptureKeyboard && gd_key_pressed(ImGuiKey_Space) && ((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && layout->mode!=GD_LAYOUT_COLUMNS) paused=!paused;
         if (fit) { fit_camera(&camera, layout, viewport); fit = 0; }
-        graph_input(layout,layout, &selection, &camera, viewport, overlay,gd_graph_overview_hit(&overview_controls,viewport,GetMousePosition()));
+        graph_input(layout,layout, &selection, &camera, viewport, overlay,gd_graph_overview_hit(&overview_controls,viewport,gd_mouse_position()));
         if (((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && !paused && layout->mode != GD_LAYOUT_COLUMNS) {
-            accumulator += fminf(GetFrameTime(), 0.05f);
+            accumulator += fminf(gd_frame_seconds(), 0.05f);
             while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
         } else accumulator = 0;
         if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=foundation_peer=-1;
@@ -844,19 +842,20 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         gd_graph_workspace_draw(layout,layout,analysis->shown,camera,viewport,1);
         gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,1);
         if (query && !focused && !challenges) {
-            int i; BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
+            int i; gd_scene_clip((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); gd_scene_set_camera(camera);
             for (i=0;i<layout->node_count;++i) {
-                int record=layout->nodes[i].key; Vector2 point=node_point(&layout->nodes[i]);
-                if (query->known[record]) DrawCircleV(point,7,(Color){65,200,175,255});
-                if (query->ancestors[record] || query->descendants[record]) DrawCircleLines((int)point.x,(int)point.y,24,graph_selected);
+                int record=layout->nodes[i].key; GD_Point point=node_point(&layout->nodes[i]);
+                if (query->known[record]) gd_scene_circle(point,7,(GD_Color){65,200,175,255});
+                if (query->ancestors[record] || query->descendants[record]) gd_scene_ring_pixels((int)point.x,(int)point.y,24,graph_selected);
             }
-            EndMode2D(); EndScissorMode();
+            gd_scene_screen(); gd_scene_unclip();
         }
         gd_graph_overview_draw(analysis,&overview_controls,viewport,selection.node,!igGetIO_Nil()->WantCaptureMouse);
-        if (paths) DrawText(TextFormat("D: dominated targets | !: ancestor | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,height-69,12,gd_path_color);
-        if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(Color){193,155,228,255});
-        DrawText(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);
-        rlImGuiEnd(); EndDrawing(); ++frame;
+        if (paths) gd_scene_text(gd_scene_format("D: dominated targets | !: ancestor | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,height-69,12,gd_path_color);
+        if (shared) gd_scene_text(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? gd_scene_format("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(GD_Color){193,155,228,255});
+        gd_scene_text(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);
+        if(!gd_scene_end(&window,graph_background))continue;
+        ++frame;
         if (screenshot && frame == frames && !gd_save_screenshot(screenshot)) { fputs("gd: graph screenshot export failed\n", stderr); result = 2; }
         if (refresh && draft && draft->modified_count) {
             snprintf(draft->message, sizeof(draft->message), "Refresh blocked: draft modified. Undo to disk sync point or finish/report first.");
@@ -920,7 +919,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
             }
         }
     }
-    rlImGuiShutdown(); CloseWindow();
+    gd_scene_close(&window);
     gd_diagnostics_clear(&diagnostics);
     gd_routes_destroy(routes); gd_draft_destroy(draft);
     if (baseline != initial) gd_destroy(baseline);
@@ -941,7 +940,7 @@ int gd_explorer_graph_prepare(GD_ExplorerContext *context) {
 void gd_explorer_graph_input(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane; GD_ExplorerSelection before=p->selection,choice;
     graph_input(p->layout,gd_explorer_display_layout(context),&p->selection,&p->camera,context->viewport,p->overlay,
-                gd_graph_overview_hit(&p->overview,context->viewport,GetMousePosition()) || igGetIO_Nil()->WantCaptureMouse);
+                gd_graph_overview_hit(&p->overview,context->viewport,gd_mouse_position()) || igGetIO_Nil()->WantCaptureMouse);
     choice=p->selection;
     if (choice.node!=before.node || choice.cell!=before.cell || choice.linked!=before.linked || choice.interaction!=before.interaction) {
         p->selection=before; gd_explorer_graph_select(context,&choice);
@@ -996,13 +995,13 @@ void gd_explorer_graph_draw(GD_ExplorerContext *context, const GD_ExplorerEviden
         e->reachability,e->reach_pair,e->shapes,e->overview);
     if (p->view==GD_EXPLORER_SKILLS) {
         int i; gd_skill_unlocks(model,p->known,gd_explorer_graph_record(context),context->query);
-        BeginScissorMode((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height);
-        BeginMode2D(p->camera);
+        gd_scene_clip((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height);
+        gd_scene_set_camera(p->camera);
         for (i=0;i<p->layout->node_count;++i) {
-            int record=p->layout->nodes[i].key; Vector2 point=node_point(&gd_explorer_display_layout(context)->nodes[i]);
-            if (context->query->known[record]) DrawCircleV(point,7,(Color){65,200,175,255});
-            if (context->query->ancestors[record] || context->query->descendants[record]) DrawCircleLines((int)point.x,(int)point.y,24,graph_selected);
+            int record=p->layout->nodes[i].key; GD_Point point=node_point(&gd_explorer_display_layout(context)->nodes[i]);
+            if (context->query->known[record]) gd_scene_circle(point,7,(GD_Color){65,200,175,255});
+            if (context->query->ancestors[record] || context->query->descendants[record]) gd_scene_ring_pixels((int)point.x,(int)point.y,24,graph_selected);
         }
-        EndMode2D(); EndScissorMode();
+        gd_scene_screen(); gd_scene_unclip();
     }
 }

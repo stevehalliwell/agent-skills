@@ -4,8 +4,7 @@
 #include "gd_graph_overview_draw.h"
 #include "gd_diagnostics_ui.h"
 #include "gd_explorer_ui.h"
-#include "raylib.h"
-#include "rlImGui.h"
+#include "gd_scene_draw.h"
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
@@ -14,7 +13,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-static const Color background = {18,24,34,255}, foreground = {225,233,241,255}, muted = {150,169,190,255}, selected_color = {255,217,125,255};
+static const GD_Color background = {18,24,34,255}, foreground = {225,233,241,255}, muted = {150,169,190,255}, selected_color = {255,217,125,255};
 typedef GD_ExplorerMdaDisplay MdaDisplay;
 static void mark_path(const GD_Mda *mda, MdaDisplay *display) {
     int v = display->record, count = 0;
@@ -27,12 +26,9 @@ static void mark_path(const GD_Mda *mda, MdaDisplay *display) {
         v = mda->parent[v];
     }
 }
-static Color role_color(GD_Role role) {
-    const Color colors[] = {{108,171,230,255},{224,160,109,255},{65,180,165,255},{193,155,228,255}};
+static GD_Color role_color(GD_Role role) {
+    const GD_Color colors[] = {{108,171,230,255},{224,160,109,255},{65,180,165,255},{193,155,228,255}};
     return gd_mda_role(role) ? colors[role-GD_MDA_MECHANIC] : muted;
-}
-static void mda_log(int level, const char *text, va_list arguments) {
-    if (level >= LOG_WARNING) { fputs("gd view: ",stderr); vfprintf(stderr,text,arguments); fputc('\n',stderr); }
 }
 static int visible(const GD_Model *model, const GD_Mda *mda, const MdaDisplay *display, int record) {
     const GD_Record *item = &model->records[record];
@@ -43,16 +39,16 @@ static int visible(const GD_Model *model, const GD_Mda *mda, const MdaDisplay *d
 /* Shared solver uses point-sized nodes. Render free-graph distances at 3x
    so its 110-unit resting edges leave room for 210-unit source cards. */
 static float spacing(const GD_Layout *layout) { return layout->mode == GD_LAYOUT_FORCE ? 3.0f:1.0f; }
-static Vector2 point(const GD_Layout *layout, const GD_LayoutNode *node) { float scale = spacing(layout); return (Vector2){node->x*scale,node->y*scale}; }
-static Vector2 control(Vector2 a, Vector2 b) {
+static GD_Point point(const GD_Layout *layout, const GD_LayoutNode *node) { float scale = spacing(layout); return (GD_Point){node->x*scale,node->y*scale}; }
+static GD_Point control(GD_Point a, GD_Point b) {
     /* Direct dynamics/mechanics links must not appear to pass through a
        systems node sitting in the intervening role band. */
-    return (Vector2){(a.x+b.x)/2,(a.y+b.y)/2-(fabsf(a.x-b.x) > 300 ? 110:30)};
+    return (GD_Point){(a.x+b.x)/2,(a.y+b.y)/2-(fabsf(a.x-b.x) > 300 ? 110:30)};
 }
-static Vector2 curve(Vector2 a, Vector2 c, Vector2 b, float t) {
-    float u = 1-t; return (Vector2){u*u*a.x+2*u*t*c.x+t*t*b.x,u*u*a.y+2*u*t*c.y+t*t*b.y};
+static GD_Point curve(GD_Point a, GD_Point c, GD_Point b, float t) {
+    float u = 1-t; return (GD_Point){u*u*a.x+2*u*t*c.x+t*t*b.x,u*u*a.y+2*u*t*c.y+t*t*b.y};
 }
-static float segment_square(Vector2 p, Vector2 a, Vector2 b) {
+static float segment_square(GD_Point p, GD_Point a, GD_Point b) {
     float x = b.x-a.x, y = b.y-a.y, square = x*x+y*y, t = square ? ((p.x-a.x)*x+(p.y-a.y)*y)/square:0;
     if (t < 0) t = 0; if (t > 1) t = 1;
     x = p.x-a.x-t*x; y = p.y-a.y-t*y; return x*x+y*y;
@@ -60,59 +56,59 @@ static float segment_square(Vector2 p, Vector2 a, Vector2 b) {
 static int mda_layout(const GD_Model *model,const GD_Mda *mda,GD_Layout *layout,int bands){
     GD_Allocator allocator=model->allocator;GD_Layout *candidate=allocator.allocate(allocator.context,sizeof(*candidate));int okay;float aspect=1.4f;
     if(!candidate)return 0;memset(candidate,0,sizeof(*candidate));
-    if(IsWindowReady() && GetScreenHeight()>200)aspect=(GetScreenWidth()-512.0f)/(GetScreenHeight()-200);
+    if(igGetCurrentContext() && gd_scene_height()>200)aspect=(gd_scene_width()-512.0f)/(gd_scene_height()-200);
     okay=gd_mda_layout(model,mda,candidate,bands) && gd_layout_prepare_free(candidate,allocator,aspect,1) && gd_layout_islands_set(candidate,layout->islands.preferred);
     if(okay)memcpy(layout,candidate,sizeof(*layout));allocator.release(allocator.context,candidate);return okay;
 }
-static void fit(Camera2D *camera, const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, Rectangle viewport) {
+static void fit(GD_Camera *camera, const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, GD_Rect viewport) {
     int i, found = 0; float left = 0, right = 1, top = 0, bottom = 1;
     for (i = 0; i < layout->node_count; ++i) if (visible(model,mda,display,layout->nodes[i].key)) {
-        Vector2 position = point(layout,&layout->nodes[i]);
+        GD_Point position = point(layout,&layout->nodes[i]);
         if (!found || position.x-120 < left) left = position.x-120;
         if (!found || position.x+120 > right) right = position.x+120;
         if (!found || position.y-100 < top) top = position.y-100;
         if (!found || position.y+55 > bottom) bottom = position.y+55;
         found = 1;
     }
-    camera->target = (Vector2){(left+right)/2,(top+bottom)/2};
+    camera->target = (GD_Point){(left+right)/2,(top+bottom)/2};
     camera->zoom = fminf(viewport.width/(right-left+60),viewport.height/(bottom-top+70));
     if (camera->zoom > 1.2f) camera->zoom = 1.2f;
     if (camera->zoom < 0.002f) camera->zoom = 0.002f;
 }
-static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout,const GD_Layout *shown, MdaDisplay *display, Camera2D *camera, Rectangle viewport, int blocked) {
-    Vector2 mouse = GetMousePosition(), world; int i;
-    camera->offset = (Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
-    if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) display->held = -1;
+static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout,const GD_Layout *shown, MdaDisplay *display, GD_Camera *camera, GD_Rect viewport, int blocked) {
+    GD_Point mouse = gd_mouse_position(), world; int i;
+    camera->offset = (GD_Point){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
+    if (!igIsMouseDown_Nil(ImGuiMouseButton_Left)) display->held = -1;
     if (blocked) { display->held=-1; return; }
     if (display->held >= 0 && gd_layout_pointer_dragged(layout,display->held,mouse.x,mouse.y)) {
-        world = GetScreenToWorld2D(mouse,*camera); gd_layout_drag_node(layout,display->held,world.x/spacing(layout),world.y/spacing(layout));
+        world = gd_screen_to_world(mouse,*camera); gd_layout_drag_node(layout,display->held,world.x/spacing(layout),world.y/spacing(layout));
     }
-    if (!CheckCollisionPointRec(mouse,viewport) || igGetIO_Nil()->WantCaptureMouse) return;
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
-        Vector2 delta = GetMouseDelta(); camera->target.x -= delta.x/camera->zoom; camera->target.y -= delta.y/camera->zoom;
+    if (!gd_rect_hit(mouse,viewport) || igGetIO_Nil()->WantCaptureMouse) return;
+    if (igIsMouseDown_Nil(ImGuiMouseButton_Right) || igIsMouseDown_Nil(ImGuiMouseButton_Middle)) {
+        GD_Point delta = gd_mouse_delta(); camera->target.x -= delta.x/camera->zoom; camera->target.y -= delta.y/camera->zoom;
     }
-    world = GetScreenToWorld2D(mouse,*camera);
-    if (GetMouseWheelMove()) {
-        Vector2 after; camera->zoom *= powf(1.15f,GetMouseWheelMove());
+    world = gd_screen_to_world(mouse,*camera);
+    if (gd_mouse_wheel()) {
+        GD_Point after; camera->zoom *= powf(1.15f,gd_mouse_wheel());
         if (camera->zoom < 0.002f) camera->zoom = 0.002f; if (camera->zoom > 4) camera->zoom = 4;
-        after = GetScreenToWorld2D(mouse,*camera); camera->target.x += world.x-after.x; camera->target.y += world.y-after.y;
+        after = gd_screen_to_world(mouse,*camera); camera->target.x += world.x-after.x; camera->target.y += world.y-after.y;
     }
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
-    world = GetScreenToWorld2D(mouse,*camera);
+    if (!gd_mouse_pressed(ImGuiMouseButton_Left)) return;
+    world = gd_screen_to_world(mouse,*camera);
     for (i = layout->node_count-1; i >= 0; --i) {
         const GD_LayoutNode *node = &shown->nodes[i];
-        Vector2 position = point(shown,node);
-        if (visible(model,mda,display,node->key) && CheckCollisionPointRec(world,(Rectangle){position.x-105,position.y-32,210,64})) {
+        GD_Point position = point(shown,node);
+        if (visible(model,mda,display,node->key) && gd_rect_hit(world,(GD_Rect){position.x-105,position.y-32,210,64})) {
             display->record = node->key; display->held = i; display->link = -1;
             gd_layout_pointer_begin(layout,i,world.x/spacing(layout),world.y/spacing(layout),mouse.x,mouse.y); return;
         }
     }
     for (i = 0; i < layout->edge_count; ++i) {
         const GD_LayoutEdge *edge = &layout->edges[i]; int k;
-        Vector2 a = point(shown,&shown->nodes[edge->a]), b = point(shown,&shown->nodes[edge->b]), c = control(a,b), previous = a;
+        GD_Point a = point(shown,&shown->nodes[edge->a]), b = point(shown,&shown->nodes[edge->b]), c = control(a,b), previous = a;
         if (!visible(model,mda,display,layout->nodes[edge->a].key) || !visible(model,mda,display,layout->nodes[edge->b].key)) continue;
         for (k = 1; k <= 20; ++k) {
-            Vector2 next = curve(a,c,b,k/20.0f);
+            GD_Point next = curve(a,c,b,k/20.0f);
             if (segment_square(world,previous,next) < 64/(camera->zoom*camera->zoom)) {
                 display->link = edge->key; display->record = model->edges[mda->links[edge->key].edge].source; return;
             }
@@ -133,75 +129,75 @@ static void projected_source(const GD_Model *model, const GD_Mda *mda, const GD_
     const GD_Edge *edge=&model->edges[mda->links[layout->edges[index].key].edge];
     igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
 }
-static void draw(const GD_Model *model, const GD_Mda *mda,GD_Layout *raw, GD_Layout *layout, const MdaDisplay *display, Camera2D camera, Rectangle viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
-    const Color shared_color={193,155,228,255};
+static void draw(const GD_Model *model, const GD_Mda *mda,GD_Layout *raw, GD_Layout *layout, const MdaDisplay *display, GD_Camera camera, GD_Rect viewport, GD_GraphAnalysis *analysis, int shared, int selected, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass, const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
+    const GD_Color shared_color={193,155,228,255};
     int pair=shared ? gd_graph_match(analysis,selected,peer):-1;
     const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
     const GD_GraphFeature *right=pair>=0 ? &analysis->features[analysis->pairs[pair].first_b]:NULL;
     const GD_GraphComparison *comparison=pair>=0 && branches ? gd_graph_compare(analysis,selected,peer):NULL;
     const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selected):NULL;
     int i, pass, drawn = 0;
-    BeginScissorMode((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); BeginMode2D(camera);
+    gd_scene_clip((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); gd_scene_set_camera(camera);
     /* Draw emphasis last so duplicate declarations cannot hide a witness. */
     for (pass = 0; pass < 2; ++pass) for (i = 0; i < layout->edge_count; ++i) {
         const GD_LayoutEdge *edge = &layout->edges[i];
         int emphasized = display->link == edge->key || display->path_links[edge->key];
         int source = layout->nodes[edge->a].key, target = layout->nodes[edge->b].key;
-        Vector2 a = point(layout,&layout->nodes[edge->a]), b = point(layout,&layout->nodes[edge->b]), c = control(a,b), tip, before;
-        Color color = display->link == edge->key || display->path_links[edge->key] ? selected_color : mda->selected[source] && mda->selected[target] ? (Color){104,182,171,255}:(Color){73,88,107,255};
+        GD_Point a = point(layout,&layout->nodes[edge->a]), b = point(layout,&layout->nodes[edge->b]), c = control(a,b), tip, before;
+        GD_Color color = display->link == edge->key || display->path_links[edge->key] ? selected_color : mda->selected[source] && mda->selected[target] ? (GD_Color){104,182,171,255}:(GD_Color){73,88,107,255};
         float dx, dy, length, t;
         if (emphasized != pass || !visible(model,mda,display,source) || !visible(model,mda,display,target)) continue;
-        if (overview && overview->selected_edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,21,selected_color);
-        if (reach_pair && reach_pair->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,17,gd_graph_branch_color(reach_pair->edges[i]));
-        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,15,gd_bypass_color);
-        if (path_selection && path_selection->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,11,gd_path_color);
-        if (comparison && comparison->edges[i]) DrawSplineSegmentBezierQuadratic(a,c,b,7,gd_graph_branch_color(comparison->edges[i]));
-        else if (!comparison && pair>=0 && (i==left->edge || i==right->edge)) DrawSplineSegmentBezierQuadratic(a,c,b,7,shared_color);
-        DrawSplineSegmentBezierQuadratic(a,c,b,display->link == edge->key ? 4:2.5f,color);
+        if (overview && overview->selected_edges[i]) gd_scene_quadratic(a,c,b,21,selected_color);
+        if (reach_pair && reach_pair->edges[i]) gd_scene_quadratic(a,c,b,17,gd_graph_branch_color(reach_pair->edges[i]));
+        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_scene_quadratic(a,c,b,15,gd_bypass_color);
+        if (path_selection && path_selection->edges[i]) gd_scene_quadratic(a,c,b,11,gd_path_color);
+        if (comparison && comparison->edges[i]) gd_scene_quadratic(a,c,b,7,gd_graph_branch_color(comparison->edges[i]));
+        else if (!comparison && pair>=0 && (i==left->edge || i==right->edge)) gd_scene_quadratic(a,c,b,7,shared_color);
+        gd_scene_quadratic(a,c,b,display->link == edge->key ? 4:2.5f,color);
         /* Mid-curve marker points in authored source-to-reference direction. */
         t = 0.5f; tip = curve(a,c,b,t); before = curve(a,c,b,t-0.025f);
         dx = tip.x-before.x; dy = tip.y-before.y; length = sqrtf(dx*dx+dy*dy);
         if (length > 0) {
             dx /= length; dy /= length;
-            DrawLineEx(tip,(Vector2){tip.x-dx*13-dy*6,tip.y-dy*13+dx*6},3,color);
-            DrawLineEx(tip,(Vector2){tip.x-dx*13+dy*6,tip.y-dy*13-dx*6},3,color);
+            gd_scene_line(tip,(GD_Point){tip.x-dx*13-dy*6,tip.y-dy*13+dx*6},3,color);
+            gd_scene_line(tip,(GD_Point){tip.x-dx*13+dy*6,tip.y-dy*13-dx*6},3,color);
         }
-        if (display->link == edge->key) DrawText(gd_field_name(model->edges[mda->links[edge->key].edge].field),(int)tip.x+5,(int)tip.y-22,14,selected_color);
+        if (display->link == edge->key) gd_scene_text(gd_field_name(model->edges[mda->links[edge->key].edge].field),(int)tip.x+5,(int)tip.y-22,14,selected_color);
     }
     for (i = 0; i < layout->node_count; ++i) {
         GD_LayoutNode *node = &layout->nodes[i],*physical=&raw->nodes[i]; const GD_Record *record = &model->records[node->key];
         float scale=spacing(layout);
-        Color color = role_color(record->role); char label[32]; Vector2 position = point(layout,node);
+        GD_Color color = role_color(record->role); char label[32]; GD_Point position = point(layout,node);
         if (!visible(model,mda,display,node->key)) continue;
         ++drawn;
         gd_layout_set_footprint(physical,-121/scale,-48/scale,121/scale,48/scale);
-        if (!mda->selected[node->key]) color = Fade(color,0.40f);
-        DrawRectangleRounded((Rectangle){position.x-105,position.y-32,210,64},0.17f,6,(Color){27,36,48,255});
-        DrawRectangleRoundedLinesEx((Rectangle){position.x-105,position.y-32,210,64},0.17f,6,display->record == node->key ? 3:1.5f,display->path_nodes[node->key] || display->record == node->key ? selected_color:color);
+        if (!mda->selected[node->key]) color = gd_color_alpha(color,0.40f);
+        gd_scene_round_rect((GD_Rect){position.x-105,position.y-32,210,64},0.17f,(GD_Color){27,36,48,255});
+        gd_scene_round_outline((GD_Rect){position.x-105,position.y-32,210,64},0.17f,display->record == node->key ? 3:1.5f,display->path_nodes[node->key] || display->record == node->key ? selected_color:color);
         snprintf(label,sizeof(label),"%.24s%s",record->name,strlen(record->name) > 24 ? "...":"");
         gd_graph_node_text_at(physical,node,gd_mda_role_name(record->role),(int)position.x-96,(int)position.y-24,12,color,scale);
         gd_graph_node_text_at(physical,node,label,(int)position.x-96,(int)position.y-5,16,mda->selected[node->key] ? foreground:muted,scale);
         if (node->key == mda->root) gd_graph_node_text_at(physical,node,"ROOT",(int)position.x+60,(int)position.y-24,12,selected_color,scale);
         if (shared) {
-            gd_graph_node_text_at(physical,node,TextFormat("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)position.x-96,(int)position.y+35,13,shared_color,scale);
+            gd_graph_node_text_at(physical,node,gd_scene_format("S%d%s",analysis->matched[i],analysis->complete ? "":"+"),(int)position.x-96,(int)position.y+35,13,shared_color,scale);
             if (comparison) {
                 unsigned category=comparison->nodes[i];
                 if (category) {
-                    Color branch_color=gd_graph_branch_color(category);
-                    DrawRectangle((int)position.x+100,(int)position.y-20,3,40,branch_color);
+                    GD_Color branch_color=gd_graph_branch_color(category);
+                    gd_scene_rect_pixels((int)position.x+100,(int)position.y-20,3,40,branch_color);
                     gd_graph_footprint_rect_at(physical,node,gd_graph_branch_badge(category,(int)position.x-40,(int)position.y+35,background),scale);
                 }
                 if (i==comparison->a || i==comparison->b) gd_graph_node_text_at(physical,node,i==comparison->a ? "A":"B",(int)position.x+83,(int)position.y+35,13,foreground,scale);
             } else if (pair>=0 && i==left->neighbor) gd_graph_node_text_at(physical,node,"shared",(int)position.x+25,(int)position.y+35,13,shared_color,scale);
         }
-        if (overview && overview->selected_nodes[i]) DrawRectangleLinesEx((Rectangle){position.x-121,position.y-48,242,96},2,selected_color);
+        if (overview && overview->selected_nodes[i]) gd_scene_outline((GD_Rect){position.x-121,position.y-48,242,96},2,selected_color);
         if (shapes) {
             gd_graph_footprint_rect_at(physical,node,gd_graph_shape_badge(shapes,i,(int)position.x-96,(int)position.y+52,background),scale);
-            if (gd_graph_shape_peer(shapes,i,selected)) DrawRectangleLinesEx((Rectangle){position.x-117,position.y-44,234,88},2,(Color){220,205,148,255});
+            if (gd_graph_shape_peer(shapes,i,selected)) gd_scene_outline((GD_Rect){position.x-117,position.y-44,234,88},2,(GD_Color){220,205,148,255});
         }
         if (reachability) {
             gd_graph_footprint_rect_at(physical,node,gd_graph_reachability_badge(reachability,i,(int)position.x-96,(int)position.y-48,background),scale);
-            if (reach_pair && reach_pair->nodes[i]) DrawRectangleLinesEx((Rectangle){position.x-113,position.y-40,226,80},2,gd_graph_branch_color(reach_pair->nodes[i]));
+            if (reach_pair && reach_pair->nodes[i]) gd_scene_outline((GD_Rect){position.x-113,position.y-40,226,80},2,gd_graph_branch_color(reach_pair->nodes[i]));
             if (reach_pair && (i==reach_pair->a || i==reach_pair->b)) gd_graph_node_text_at(physical,node,i==reach_pair->a ? "T-A":"T-B",(int)position.x+65,(int)position.y-48,12,foreground,scale);
         }
         if (paths) {
@@ -209,9 +205,9 @@ static void draw(const GD_Model *model, const GD_Mda *mda,GD_Layout *raw, GD_Lay
             if (paths->roots[i]) gd_graph_path_start_marker((int)position.x+94,(int)position.y+17);
         }
     }
-    EndMode2D();
-    if (!drawn) DrawText("No visible MDA nodes. Check supplied folders/display filters.",(int)viewport.x+12,(int)viewport.y+20,16,muted);
-    EndScissorMode();
+    gd_scene_screen();
+    if (!drawn) gd_scene_text("No visible MDA nodes. Check supplied folders/display filters.",(int)viewport.x+12,(int)viewport.y+20,16,muted);
+    gd_scene_unclip();
 }
 static void source_details(const GD_Model *model, const GD_Mda *mda, MdaDisplay *display) {
     int i, source = display->record;
@@ -265,7 +261,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     GD_OverviewControls overview_controls={1,-1,-1};
     GD_Layout *layout = initial->allocator.allocate(initial->allocator.context,sizeof(*layout));
     MdaDisplay display = {.record = -1,.link = -1,.held = -1,.roles = {true,true,true,true},.paused = true};
-    Camera2D camera = {{0,0},{0,0},0,1};
+    GD_Camera camera = {{0,0},{0,0},1};GD_NativeWindow window={0};
     int frame = 0, result = 0, fit_next = 1, stale = 0, layout_choice = bands ? 0:1;
     double next_check = 0; char failure[GD_MAX_PATH+512] = "";
     if(layout)memset(layout,0,sizeof(*layout));
@@ -277,25 +273,25 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
     if (mda->root >= 0 && mda->direction == GD_MDA_FORWARD && mda->nodes[mda->root].aesthetic >= 0 && mda->selected[mda->nodes[mda->root].aesthetic]) display.record = mda->nodes[mda->root].aesthetic;
     mark_path(mda,&display);
     if (display.record < 0) { int i; for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_MDA_AESTHETIC) { display.record = i; break; } }
-    SetTraceLogCallback(mda_log); SetTraceLogLevel(LOG_WARNING); SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);
-    InitWindow(1500,940,"Game Design Workbench - MDA explorer");SetExitKey(KEY_NULL);
-    if (!IsWindowReady()) { initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.window","Cannot initialize MDA window",NULL,0); return 2; }
+    if(!gd_native_window_open(&window,"Game Design Workbench - MDA explorer",1500,940,1100,720,GD_WINDOW_VISIBLE)) { initial->allocator.release(initial->allocator.context,layout); gd_scene_error(initial,"view.window",&window); return 2; }
     analysis=initial->allocator.allocate(initial->allocator.context,sizeof(*analysis));
-    if (!analysis) { CloseWindow(); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
+    if (!analysis) { gd_scene_close(&window); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
     memset(analysis,0,sizeof(*analysis));
-    SetWindowMinSize(1100,720); SetTargetFPS(60); rlImGuiSetup(true);
     igGetIO_Nil()->IniFilename = NULL; igGetIO_Nil()->LogFilename = NULL; igGetStyle()->FontScaleMain = 1.1f;
-    while (!WindowShouldClose() && (!frames || frame < frames)) {
-        int width = GetScreenWidth(), height = GetScreenHeight(), split = width-480, refresh = 0, i;
-        Rectangle viewport = {16,153,(float)split-32,(float)height-200};
+    while (!frames || frame<frames) {
+        int ready=gd_scene_begin(&window);
+        if(ready<0){gd_scene_error(initial,"view.render",&window);result=2;break;}
+        if(window.close_requested)break;
+        if(!ready)continue;
+        int width = gd_scene_width(), height = gd_scene_height(), split = width-480, refresh = 0, i;
+        GD_Rect viewport = {16,153,(float)split-32,(float)height-200};
         int direction = mda->direction, systems_supplied = 0;
         for (i = 0; i < model->collection_count; ++i) if (model->collections[i].role == GD_MDA_SYSTEM) systems_supplied = 1;
-        BeginDrawing(); ClearBackground(background); rlImGuiBegin();
-        if (GetTime() >= next_check) { if (gd_sources_changed(model)) stale = 1; next_check = GetTime()+1; }
-        DrawText("MDA declared-link explorer",20,18,27,foreground);
-        DrawText(TextFormat("%d / %d query nodes | %d core links | All statuses | Read-only",mda->selected_count,mda->node_count,mda->link_count),20,56,16,muted);
-        DrawText("Authored arrows do not prove cause. Systems are not dynamics.",20,82,16,muted);
-        for (i = 0; i < 4; ++i) DrawText(gd_mda_role_name((GD_Role)(GD_MDA_MECHANIC+i)),20+i*135,116,18,role_color((GD_Role)(GD_MDA_MECHANIC+i)));
+        if (gd_native_window_seconds(&window) >= next_check) { if (gd_sources_changed(model)) stale = 1; next_check = gd_native_window_seconds(&window)+1; }
+        gd_scene_text("MDA declared-link explorer",20,18,27,foreground);
+        gd_scene_text(gd_scene_format("%d / %d query nodes | %d core links | All statuses | Read-only",mda->selected_count,mda->node_count,mda->link_count),20,56,16,muted);
+        gd_scene_text("Authored arrows do not prove cause. Systems are not dynamics.",20,82,16,muted);
+        for (i = 0; i < 4; ++i) gd_scene_text(gd_mda_role_name((GD_Role)(GD_MDA_MECHANIC+i)),20+i*135,116,18,role_color((GD_Role)(GD_MDA_MECHANIC+i)));
         igSetNextWindowPos((ImVec2_c){(float)split,12},ImGuiCond_Always,(ImVec2_c){0,0});
         igSetNextWindowSize((ImVec2_c){(float)(width-split-12),(float)(height-24)},ImGuiCond_Always);
         igBegin("MDA query and source",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
@@ -368,19 +364,19 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         }
         igText("%d scoped records with questions | %d findings",mda->gap_count,mda->finding_count);
         igSeparator(); igBeginChild_Str("MDA source",(ImVec2_c){0,0},0,0); source_details(model,mda,&display); igEndChild(); igEnd();
-        if (!igGetIO_Nil()->WantCaptureKeyboard && IsKeyPressed(KEY_F5)) refresh = 1;
+        if (!igGetIO_Nil()->WantCaptureKeyboard && gd_key_pressed(ImGuiKey_F5)) refresh = 1;
         if(!igGetIO_Nil()->WantCaptureKeyboard && !igIsAnyItemActive() && !igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel)){
-            if(IsKeyPressed(KEY_ESCAPE)){display.record=display.link=display.held=-1;overview_controls.row=overview_controls.column=-1;analysis->initialized=0;}
-            if(IsKeyPressed(KEY_F)){int node=-1,edge=-1,i;analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
+            if(gd_key_pressed(ImGuiKey_Escape)){display.record=display.link=display.held=-1;overview_controls.row=overview_controls.column=-1;analysis->initialized=0;}
+            if(gd_key_pressed(ImGuiKey_F)){int node=-1,edge=-1,i;analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
                 for(i=0;i<layout->node_count;++i)if(layout->nodes[i].key==display.record){node=i;break;}
                 for(i=0;i<layout->edge_count;++i)if(layout->edges[i].key==display.link && display.link>=0){edge=i;break;}
                 if(!gd_graph_frame_selection(&camera,layout,analysis,&overview_controls,node,edge,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1))fit_next=1;
             }
         }
         mark_path(mda,&display);
-        camera.offset = (Vector2){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
+        camera.offset = (GD_Point){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
         if (fit_next) { fit(&camera,model,mda,layout,&display,viewport); fit_next = 0; }
-        input(model,mda,layout,layout,&display,&camera,viewport,gd_graph_overview_hit(&overview_controls,viewport,GetMousePosition())); mark_path(mda,&display);
+        input(model,mda,layout,layout,&display,&camera,viewport,gd_graph_overview_hit(&overview_controls,viewport,gd_mouse_position())); mark_path(mda,&display);
         if (!display.paused) gd_layout_step(layout,display.held);
         shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);
         const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls,NULL,0);
@@ -393,11 +389,12 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         gd_graph_workspace_draw(layout,layout,analysis->shown,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
         gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,layout->mode==GD_LAYOUT_FORCE ? 3:1);
         gd_graph_overview_draw(analysis,&overview_controls,viewport,display.link>=0 ? -1:shared_selected,!igGetIO_Nil()->WantCaptureMouse);
-        if (paths) DrawText(TextFormat("D: dominated targets | J: incoming neighbors | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,155,12,gd_path_color);
-        if (shared) DrawText(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? TextFormat("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(Color){193,155,228,255});
-        DrawText("Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload",20,height-40,14,muted);
-        DrawText("Declared links/questions are not design or experience verdicts.",20,height-21,14,muted);
-        rlImGuiEnd(); EndDrawing(); ++frame;
+        if (paths) gd_scene_text(gd_scene_format("D: dominated targets | J: incoming neighbors | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,155,12,gd_path_color);
+        if (shared) gd_scene_text(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? gd_scene_format("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,138,13,(GD_Color){193,155,228,255});
+        gd_scene_text("Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload",20,height-40,14,muted);
+        gd_scene_text("Declared links/questions are not design or experience verdicts.",20,height-21,14,muted);
+        if(!gd_scene_end(&window,background)){gd_scene_error(initial,"view.render",&window);result=2;break;}
+        ++frame;
         if (screenshot && frame == frames && !gd_save_screenshot(screenshot)) { gd_error(initial,"view.screenshot","MDA screenshot export failed",screenshot,0); result = 2; }
         if (refresh) {
             GD_Model *fresh = gd_create(initial->allocator); GD_Mda *replacement = NULL; GD_Layout *fresh_layout = NULL;
@@ -432,7 +429,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
             }
         }
     }
-    rlImGuiShutdown(); CloseWindow();
+    gd_scene_close(&window);
     gd_diagnostics_clear(&diagnostics);
     if (model != initial) { gd_mda_destroy(mda); gd_destroy(model); }
     initial->allocator.release(initial->allocator.context,analysis);
@@ -452,7 +449,7 @@ int gd_explorer_mda_visible(GD_ExplorerContext *context, int record) {
 void gd_explorer_mda_input(GD_ExplorerContext *context) {
     GD_ExplorerPane *p=context->pane;
     input(gd_explorer_model(context->project,GD_EXPLORER_MDA),context->project->mda,p->layout,gd_explorer_display_layout(context),&p->mda,&p->camera,context->viewport,
-          gd_graph_overview_hit(&p->overview,context->viewport,GetMousePosition()) || igGetIO_Nil()->WantCaptureMouse);
+          gd_graph_overview_hit(&p->overview,context->viewport,gd_mouse_position()) || igGetIO_Nil()->WantCaptureMouse);
     mark_path(context->project->mda,&p->mda);
 }
 void gd_explorer_mda_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *e) {

@@ -15,10 +15,10 @@ static const GD_ResourceNode *gd_explorer_picker_resource_node(const GD_Explorer
 }
 static int gd_explorer_picker_case(GD_ExplorerContext *context,const char *label,char *text,size_t capacity,int allow_any) {
     const GD_Rules *rules=context->project->rules; const GD_Model *model=rules->model; int i,before=gd_explorer_picker_case_index(model,rules,text); char id[GD_MAX_PATH];
-    if (gd_explorer_picker_begin(context,label,before>=0 ? TextFormat("%s | %s",rules->cases[before].name,model->records[rules->sources[rules->cases[before].source].record].name):allow_any ? "All source cases":"Choose source case")) {
+    if (gd_explorer_picker_begin(context,label,before>=0 ? gd_scene_format("%s | %s",rules->cases[before].name,model->records[rules->sources[rules->cases[before].source].record].name):allow_any ? "All source cases":"Choose source case")) {
         if (allow_any && gd_explorer_picker_item(context,"All source cases",!*text,0)) *text=0;
         for (i=0;i<rules->case_count;++i) { const GD_RuleCase *item=&rules->cases[i]; const GD_Record *source=&model->records[rules->sources[item->source].record]; int size=snprintf(id,sizeof(id),"%s#%s",source->reference,item->name); if (size<0 || (size_t)size>=capacity || size>=(int)sizeof(id)) continue;
-            igPushID_Int(i); if (gd_explorer_picker_item(context,TextFormat("%s | %s",item->name,source->reference),i==before,0)) memcpy(text,id,(size_t)size+1); igPopID();
+            igPushID_Int(i); if (gd_explorer_picker_item(context,gd_scene_format("%s | %s",item->name,source->reference),i==before,0)) memcpy(text,id,(size_t)size+1); igPopID();
         } gd_explorer_picker_end();
     }
     { const GD_ResourceNode *node=gd_explorer_picker_resource_node(context); igPushID_Str(label); igBeginDisabled(!node || node->case_index<0);
@@ -29,10 +29,10 @@ static int gd_explorer_picker_case(GD_ExplorerContext *context,const char *label
 }
 static void gd_explorer_picker_record(GD_ExplorerContext *context,const char *label,GD_Role role,char *text,size_t capacity) {
     const GD_Model *model=context->project->rules->model; int i,chosen=gd_explorer_record(model,text);
-    const char *preview=!*text ? "All loaded definitions":chosen>=0 ? model->records[chosen].display_name:role==GD_NOUN ? TextFormat("[Unresolved noun] %s",text):text;
+    const char *preview=!*text ? "All loaded definitions":chosen>=0 ? model->records[chosen].display_name:role==GD_NOUN ? gd_scene_format("[Unresolved noun] %s",text):text;
     if (gd_explorer_picker_begin(context,label,preview)) {
         if (gd_explorer_picker_item(context,"All loaded definitions",!*text,0)) *text=0;
-        for (i=0;i<model->record_count;++i) if (model->records[i].role==role && strlen(model->records[i].reference)<capacity && gd_explorer_picker_record_item(context,&model->records[i],TextFormat("%s | %s",model->records[i].display_name,model->records[i].reference),!strcmp(text,model->records[i].reference))) snprintf(text,capacity,"%s",model->records[i].reference);
+        for (i=0;i<model->record_count;++i) if (model->records[i].role==role && strlen(model->records[i].reference)<capacity && gd_explorer_picker_record_item(context,&model->records[i],gd_scene_format("%s | %s",model->records[i].display_name,model->records[i].reference),!strcmp(text,model->records[i].reference))) snprintf(text,capacity,"%s",model->records[i].reference);
         gd_explorer_picker_end();
     }
     { const GD_ResourceNode *node=gd_explorer_picker_resource_node(context); int record=-1;
@@ -44,7 +44,7 @@ static int gd_explorer_picker_local(GD_ExplorerContext *context,const char *labe
     const GD_Rules *rules=context->project->rules; int i; if (root<0 || root>=rules->case_count) return -1;
     if (gd_explorer_picker_begin(context,label,selected>=0 ? rules->participants[selected].name:allow_any ? "All local bindings":"Choose local binding")) {
         const GD_RuleCase *item=&rules->cases[root]; if (allow_any && gd_explorer_picker_item(context,"All local bindings",selected<0,0)) selected=-1;
-        for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) { const GD_RuleParticipant *participant=&rules->participants[i]; igPushID_Int(i); if (gd_explorer_picker_record_item(context,participant->noun_resolution==GD_RULE_RESOLVED ? &rules->model->records[participant->noun_record]:NULL,TextFormat("%s | %s%s",participant->name,gd_rule_noun_label(rules,participant),i==item->primary_participant ? " [authored A]":""),i==selected)) selected=i; igPopID(); }
+        for (i=item->first_participant;i<item->first_participant+item->participant_count;++i) { const GD_RuleParticipant *participant=&rules->participants[i]; igPushID_Int(i); if (gd_explorer_picker_record_item(context,participant->noun_resolution==GD_RULE_RESOLVED ? &rules->model->records[participant->noun_record]:NULL,gd_scene_format("%s | %s%s",participant->name,gd_rule_noun_label(rules,participant),i==item->primary_participant ? " [authored A]":""),i==selected)) selected=i; igPopID(); }
         gd_explorer_picker_end();
     } return selected;
 }
@@ -72,7 +72,7 @@ static void gd_explorer_picker_assumptions(GD_ExplorerContext *context,int root,
     if (root>=0 && root<rules->case_count && igTreeNode_Str("Add typed state assumption")) {
         int before=form->participant; form->participant=gd_explorer_picker_local(context,"State binding",root,form->participant,0); if (before!=form->participant) form->axis=-1;
         if (form->participant>=0 && rules->participants[form->participant].noun_resolution==GD_RULE_RESOLVED && gd_explorer_picker_begin(context,"Declared state axis",form->axis>=0 ? model->records[form->axis].reference:NULL)) {
-            for (i=rules->actor_first[rules->participants[form->participant].noun_record];i>=0;i=rules->next_axis[i]) if (rules->axis_resolution[i]==GD_RULE_RESOLVED) { int axis=model->edges[i].target; if (gd_explorer_picker_item(context,TextFormat("%s | %s",model->records[axis].name,model->records[axis].reference),axis==form->axis,0)) { form->axis=axis; form->value=0; } }
+            for (i=rules->actor_first[rules->participants[form->participant].noun_record];i>=0;i=rules->next_axis[i]) if (rules->axis_resolution[i]==GD_RULE_RESOLVED) { int axis=model->edges[i].target; if (gd_explorer_picker_item(context,gd_scene_format("%s | %s",model->records[axis].name,model->records[axis].reference),axis==form->axis,0)) { form->axis=axis; form->value=0; } }
             gd_explorer_picker_end();
         }
         if (form->axis>=0) {

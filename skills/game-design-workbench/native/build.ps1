@@ -1,10 +1,9 @@
 <#
 Build Windows/CJIT game-design tools. No downloads, installations, or project-data writes.
-Usage: ./build.ps1 [-View [-Graph] -RaylibDirectory PATH | -Test | -ViewerTest | -ExplorerTest -RaylibDirectory PATH] [-Cjit PATH] [-OutputDirectory PATH]
-Alternate output preserves running views. Stdout returns executable path; no project-data writes.
--Graph needs explicitly prepared gd-ui.dll from build-ui.ps1.
+Usage: ./build.ps1 [-View | -Test | -ViewerTest | -ExplorerTest | -MatrixTest] [-UiLibrary PATH] [-Cjit PATH] [-OutputDirectory PATH]
+-View (also -Graph) builds all windows. View, ExplorerTest and MatrixTest require matching
+prepared gd-native-ui.dll and fresh output. Stdout returns executable path.
 -ViewerTest builds headless protocol/transport fixture; does not launch it.
-RaylibDirectory is an extracted raylib 6.0 win64 SDK with lib/raylib.dll.
 #>
 param(
     [switch]$View,
@@ -12,18 +11,24 @@ param(
     [switch]$Test,
     [switch]$ViewerTest,
     [switch]$ExplorerTest,
+    [switch]$MatrixTest,
     [string]$UiLibrary = '',
-    [string]$RaylibDirectory = $env:RAYLIB_ROOT,
     [string]$Cjit = 'cjit',
     [string]$OutputDirectory = ''
 )
 $ErrorActionPreference = 'Stop'
-if ($ExplorerTest) { $Graph = $true }
-if ($Graph) { $View = $true }
-if (($View -and ($Test -or $ViewerTest)) -or ($Test -and $ViewerTest)) { throw 'Choose one of -View, -Test or -ViewerTest.' }
+if (@($Test,$ViewerTest,$ExplorerTest,$MatrixTest).Where({$_}).Count -gt 1 -or (($Test -or $ViewerTest) -and ($View -or $Graph))) { throw 'Choose one build target.' }
+if ($Graph -or $ExplorerTest -or $MatrixTest) { $View = $true }
 $root = $PSScriptRoot
 # Alternate output keeps a user's running explorer/draft untouched.
 $output = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $root 'build' }
+if ($View) {
+    if (-not $UiLibrary) { $UiLibrary = Join-Path $root 'build/native-ui/gd-native-ui.dll' }
+    if (-not (Test-Path -LiteralPath $UiLibrary -PathType Leaf) -or (Split-Path $UiLibrary -Leaf) -ne 'gd-native-ui.dll') { throw 'Supply matching gd-native-ui.dll from build-native-ui.ps1 with -UiLibrary.' }
+    if ($root -match '[^\x00-\x7F]' -or $output -match '[^\x00-\x7F]') { throw 'Installed CJIT requires ASCII build source/output paths.' }
+    if (-not $OutputDirectory) { throw 'View needs fresh -OutputDirectory to preserve running artifacts.' }
+    if ((Test-Path -LiteralPath $output) -and @(Get-ChildItem -LiteralPath $output -Force).Count) { throw 'View output must be new/empty; existing artifacts retained.' }
+}
 New-Item -ItemType Directory -Force $output | Out-Null
 $arguments = @('-q', '-DHAVE_CONFIG_H=1', '-DYAML_DECLARE_STATIC=1',
     '-I', (Join-Path $root 'vendor/libyaml/include'),
@@ -38,30 +43,19 @@ $arguments += @(Get-BuildSources 'core')
 if ($Test) { $arguments += Join-Path $root 'test_core.c' }
 elseif ($ViewerTest) { $arguments += Join-Path $root 'test_viewer.c' }
 elseif ($ExplorerTest) { $arguments += @('-DGD_EXPLORER_TEST=1', (Join-Path $root 'test_explorer_view.c')) }
+elseif ($MatrixTest) { $arguments += Join-Path $root 'test_native_matrix.c' }
 else { $arguments += Join-Path $root 'gd_cli.c' }
 $arguments += @(Get-BuildSources 'yaml')
 $arguments += @('-l', 'shell32', '-l', 'advapi32')
 $name = if ($Test) { 'test-core.exe' } elseif ($ViewerTest) { 'test-viewer.exe' } else { 'gd.exe' }
 if ($View) {
-    if (-not $RaylibDirectory) { throw 'View needs -RaylibDirectory PATH or RAYLIB_ROOT (raylib 6.0 win64 SDK). Headless build needs no raylib.' }
-    $library = Join-Path $RaylibDirectory 'lib/raylib.dll'
-    if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { throw "Missing raylib 6.0 DLL: $library" }
-    $header = Join-Path $RaylibDirectory 'include/raylib.h'
-    if (-not (Test-Path -LiteralPath $header -PathType Leaf) -or -not (Select-String -LiteralPath $header -Pattern '^#define RAYLIB_VERSION\s+"6\.0"' -Quiet)) { throw 'Supply matching raylib 6.0 SDK headers and libraries; do not reuse 5.5 binaries.' }
-    $arguments += @('-DGD_WITH_VIEW=1', '-I', (Join-Path $root 'vendor/raylib'))
-    $arguments += @(Get-BuildSources 'view')
-    $arguments += (Resolve-Path -LiteralPath $library).Path
-    Copy-Item -LiteralPath $library -Destination (Join-Path $output 'raylib.dll') -Force
-    if ($Graph) {
-        if (-not $UiLibrary) { $UiLibrary = Join-Path $root 'build/gd-ui.dll' }
-        if (-not (Test-Path -LiteralPath $UiLibrary -PathType Leaf)) { throw 'Graph view needs prepared gd-ui.dll. Run build-ui.ps1 explicitly first.' }
-        $arguments += @('-DGD_WITH_GRAPH=1', '-DNO_FONT_AWESOME=1', '-I', (Join-Path $root 'vendor/cimgui'), '-I', (Join-Path $root 'vendor/rlImGui'))
-        $arguments += @(Get-BuildSources 'graph')
-        $arguments += (Resolve-Path -LiteralPath $UiLibrary).Path
-        $uiDestination = Join-Path $output (Split-Path $UiLibrary -Leaf)
-        if ([IO.Path]::GetFullPath($UiLibrary) -ne [IO.Path]::GetFullPath($uiDestination)) { Copy-Item -LiteralPath $UiLibrary -Destination $uiDestination -Force }
-    }
-    $name = if ($ExplorerTest) { 'test-explorer-view.exe' } else { 'gd-view.exe' }
+    $library=Join-Path $output 'gd-native-ui.dll'
+    Copy-Item -LiteralPath $UiLibrary -Destination $library
+    $arguments += @('-DGD_WITH_VIEW=1','-DGD_WITH_GRAPH=1','-I',(Join-Path $root 'vendor/cimgui'))
+    if ($MatrixTest) { $arguments += Join-Path $root 'gd_native_canvas.c' }
+    else { $arguments += @(Get-BuildSources 'view') + @(Get-BuildSources 'graph') }
+    $arguments += @((Join-Path $root 'gd_native_window.c'),$library,(Join-Path ([Environment]::GetFolderPath('System')) 'user32.dll'))
+    $name = if ($ExplorerTest) { 'test-explorer-view.exe' } elseif ($MatrixTest) { 'test-native-matrix.exe' } else { 'gd-view.exe' }
 }
 $destination = Join-Path $output $name
 $arguments += @('-o', $destination)

@@ -7,7 +7,7 @@ static int explorer_overview_coverage_checks(GD_ExplorerContext *c,GD_Layout *sa
     for(scenario=0;scenario<8;++scenario) {
         int view=scenario==0 ? GD_EXPLORER_NOUNS:scenario<6 ? GD_EXPLORER_ACTORS:GD_EXPLORER_EFFECTS;
         GD_ExplorerPane *p=&c->panes[view];GD_ExplorerQueryOptions pending,applied={0};GD_Query *query;GD_QueryScene *scene;
-        const GD_GraphOverview *overview;int i,cell,marked=0,allocations,total=0;Camera2D camera;ExplorerViewer viewer={0};GD_ViewerRequest request={0};
+        const GD_GraphOverview *overview;int i,cell,marked=0,allocations,total=0;GD_Camera camera;ExplorerViewer viewer={0};GD_ViewerRequest request={0};
         c->pane=p;*c->active_view=view;c->analysis->initialized=0;
         OVERVIEW_CHECK(pane_prepare(c));
         if(scenario==0) {

@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 if ($env:OS -ne 'Windows_NT') { throw 'This visible desktop check requires Windows.' }
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw "Desktop capture helper requires Windows PowerShell 5.1. Run powershell.exe -NoProfile -File `"$PSCommandPath`" -Mode $Mode" }
 if (-not (Test-Path -LiteralPath $ViewExecutable -PathType Leaf)) {
-    throw 'Missing view executable. Run build.ps1 -Graph with an explicitly prepared UI DLL and raylib SDK first.'
+    throw 'Missing view executable. Run build.ps1 -View with prepared gd-native-ui.dll and fresh output first.'
 }
 Add-Type -AssemblyName System.Drawing, System.Windows.Forms
 Add-Type -ReferencedAssemblies System.Drawing, System.Windows.Forms -TypeDefinition @'

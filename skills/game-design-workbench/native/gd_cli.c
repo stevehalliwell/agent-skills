@@ -521,7 +521,7 @@ static int application(int argc, char **argv) {
 #ifdef GD_WITH_GRAPH
             status=gd_explorer_view(model,collections,count,unified_mode,matrix_layout,frames,screenshot,output_path);
 #else
-            gd_error(model,"view.graph_unavailable","Unified explorer needs a -Graph build with prepared raylib and gd-ui.dll",NULL,0);
+            gd_error(model,"view.graph_unavailable","Unified explorer needs a native graphical build with prepared native UI library",NULL,0);
 #endif
         }
         if (model->error_count) {
@@ -699,11 +699,11 @@ static int application(int argc, char **argv) {
             if (command == 7) status = gd_mda_view(model,mda,frames,screenshot,layout == GD_VIEW_COLUMNS);
             else status = gd_graph_view(model, frames, screenshot, layout, other_pairs, horizontal, output_path, explorer_mode, from, skill_query);
 #else
-            gd_error(model, "view.graph_unavailable", "Graph view needs a view build with prepared cimgui/rlImGui DLL", NULL, 0);
+            gd_error(model, "view.graph_unavailable", "Graph view needs a native graphical build", NULL, 0);
 #endif
         }
 #else
-        gd_error(model, "view.unavailable", "Use gd.ps1 or build.ps1 -View with the raylib SDK", NULL, 0);
+        gd_error(model, "view.unavailable", "Use a native graphical build (build.ps1 -View or build.sh --view) with prepared native UI library", NULL, 0);
 #endif
     }
     if (!view_command || model->error_count) {

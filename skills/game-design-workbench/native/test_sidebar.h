@@ -1,13 +1,27 @@
 /* Private build-directory file only; no user preferences, source writes or OS input. */
 #ifndef TEST_SIDEBAR_H
 #define TEST_SIDEBAR_H
-#include <limits.h>
+#include <errno.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 static int viewer_sidebar_checks(void){
     GD_Sidebar sidebar,restarted;char path[GD_MAX_PATH];int checks=0,result=0,created=0,v,i;FILE *file;
 #define SIDEBAR_CHECK(value) do{++checks;if(!(value)){fprintf(stderr,"Sidebar check failed: %s (line %d)\n",#value,__LINE__);goto cleanup;}}while(0)
     gd_sidebar_defaults(&sidebar);gd_sidebar_defaults(&restarted);
-    SIDEBAR_CHECK(snprintf(path,sizeof(path),"%ssidebar-checks-%u.ini",GetApplicationDirectory(),(unsigned)GetRandomValue(1,INT_MAX))<(int)sizeof(path));
-    SIDEBAR_CHECK(!FileExists(path));snprintf(sidebar.path,sizeof(sidebar.path),"%s",path);snprintf(restarted.path,sizeof(restarted.path),"%s",path);
+#ifdef _WIN32
+    char directory[GD_MAX_PATH];DWORD size=GetTempPathA(sizeof(directory),directory);
+    SIDEBAR_CHECK(size && size<sizeof(directory));
+    SIDEBAR_CHECK(snprintf(path,sizeof(path),"%ssidebar-checks-%lu.ini",directory,(unsigned long)GetCurrentProcessId())<(int)sizeof(path));
+#else
+    const char *directory=getenv("TMPDIR");if(!directory || *directory!='/')directory="/tmp";
+    SIDEBAR_CHECK(snprintf(path,sizeof(path),"%s/sidebar-checks-%lu.ini",directory,(unsigned long)getpid())<(int)sizeof(path));
+#endif
+    file=fopen(path,"rb");if(file){fclose(file);SIDEBAR_CHECK(0);}SIDEBAR_CHECK(errno==ENOENT);
+    snprintf(sidebar.path,sizeof(sidebar.path),"%s",path);snprintf(restarted.path,sizeof(restarted.path),"%s",path);
     SIDEBAR_CHECK(gd_sidebar_load(&sidebar) && !*sidebar.message);
     SIDEBAR_CHECK(gd_sidebar_save(&sidebar));created=1;
     SIDEBAR_CHECK(gd_sidebar_load(&restarted) && restarted.open==sidebar.open);

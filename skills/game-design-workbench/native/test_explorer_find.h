@@ -15,7 +15,7 @@ int gd_explorer_find_checks(GD_Allocator allocator,const GD_Collection *collecti
     panes=allocator.allocate(allocator.context,sizeof(*panes)*GD_EXPLORER_VIEWS);before=allocator.allocate(allocator.context,sizeof(*before)*GD_EXPLORER_VIEWS);
     layout_before=allocator.allocate(allocator.context,sizeof(*layout_before));c.analysis=allocator.allocate(allocator.context,sizeof(*c.analysis));
     if(panes)memset(panes,0,sizeof(*panes)*GD_EXPLORER_VIEWS);if(c.analysis)memset(c.analysis,0,sizeof(*c.analysis));
-    FIND_CHECK(panes && before && layout_before && c.analysis);c.project=project;c.viewport=(Rectangle){0,0,800,600};
+    FIND_CHECK(panes && before && layout_before && c.analysis);c.project=project;c.viewport=(GD_Rect){0,0,800,600};
     for(v=0;v<GD_EXPLORER_VIEWS;++v)pane_defaults(&panes[v],(GD_ExplorerView)v);
     FIND_CHECK(find_key(1,1,0,0)==GD_FIND_OPEN && find_key(1,1,0,1)==GD_FIND_OPEN && find_key(1,0,0,0)==GD_FIND_FIT && find_key(1,0,0,1)==GD_FIND_NONE && find_key(1,0,1,0)==GD_FIND_NONE && find_key(0,1,0,0)==GD_FIND_NONE);
     find_pattern(&pattern,"WaLkEr");FIND_CHECK(find_contains(&pattern,"nouns/walker") && !find_contains(&pattern,"w_a_l_k_e_r"));
@@ -32,7 +32,7 @@ int gd_explorer_find_checks(GD_Allocator allocator,const GD_Collection *collecti
         for(node=0;node<viewer_canvas_count(&c);++node)if(viewer_canvas_visible(&c,node))break;
         if(node==viewer_canvas_count(&c))continue;
         snprintf(text,sizeof(text),"%.100s",find_label(&c,node));find_collect(&c,text,&matches);FIND_CHECK(matches.count>0);
-        p->camera.target=(Vector2){100000,100000};
+        p->camera.target=(GD_Point){100000,100000};
         *fail_at=*calls+1;FIND_CHECK(find_navigate(&c,panes,&matches,0));*fail_at=0;
         FIND_CHECK(*calls==allocations && viewer_selected_node(&c)==matches.nodes[0]);
         FIND_CHECK(p->camera.zoom>=1 && p->camera.zoom<=1.2f && p->camera.target.x!=100000);
@@ -77,7 +77,7 @@ int gd_explorer_find_checks(GD_Allocator allocator,const GD_Collection *collecti
     /* ImGui-only typing/Enter/Escape; never posts input to native OS. */
     imgui=igCreateContext(NULL);FIND_CHECK(imgui!=NULL);igGetIO_Nil()->IniFilename=NULL;igGetIO_Nil()->LogFilename=NULL;
     igGetIO_Nil()->DisplaySize=(ImVec2_c){800,600};igGetIO_Nil()->DeltaTime=1.0f/60.0f;igGetIO_Nil()->BackendFlags|=ImGuiBackendFlags_RendererHasTextures;
-    {GD_ExplorerFind state={0};Camera2D camera=c.pane->camera;int selected;
+    {GD_ExplorerFind state={0};GD_Camera camera=c.pane->camera;int selected;
      state.open=state.focus=true;analyze(&c);find_test_frame(&c,panes,&state);find_test_frame(&c,panes,&state);
      FIND_CHECK(!memcmp(&camera,&c.pane->camera,sizeof(camera)));
      snprintf(text,sizeof(text),"/");ImGuiIO_AddInputCharactersUTF8(igGetIO_Nil(),text);find_test_frame(&c,panes,&state);
@@ -105,7 +105,7 @@ int gd_explorer_find_checks(GD_Allocator allocator,const GD_Collection *collecti
     FIND_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));c.pane->structure_state->pending.kind=GD_STRUCTURE_COUNT+1;
     snprintf(c.pane->structure_state->pending.features,sizeof(c.pane->structure_state->pending.features),"retained-partners");FIND_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));
     FIND_CHECK(gd_explorer_similarity_active(&c));
-    {GD_Similarity *map=c.pane->structure_state->result->similarity->map;Camera2D ordinary=c.pane->camera;int hold=c.pane->find_hold_node;const GD_Layout *held_layout=c.pane->find_hold_layout;uint64_t hash=viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map));
+    {GD_Similarity *map=c.pane->structure_state->result->similarity->map;GD_Camera ordinary=c.pane->camera;int hold=c.pane->find_hold_node;const GD_Layout *held_layout=c.pane->find_hold_layout;uint64_t hash=viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map));
      snprintf(text,sizeof(text),"%.100s",find_label(&c,0));find_collect(&c,text,&matches);FIND_CHECK(matches.count && find_navigate(&c,panes,&matches,0));
      FIND_CHECK(c.pane->find_hold_node==hold && c.pane->find_hold_layout==held_layout);
      FIND_CHECK(!memcmp(&ordinary,&c.pane->camera,sizeof(ordinary)) && hash==viewer_control_hash(UINT64_C(1469598103934665603),map,sizeof(*map)));

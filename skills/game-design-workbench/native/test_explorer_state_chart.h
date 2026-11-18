@@ -8,7 +8,7 @@ int gd_explorer_state_chart_checks(GD_Allocator allocator,const GD_Collection *c
     panes=allocator.allocate(allocator.context,GD_EXPLORER_VIEWS*sizeof(*panes));if(panes)memset(panes,0,GD_EXPLORER_VIEWS*sizeof(*panes));context.analysis=allocator.allocate(allocator.context,sizeof(*context.analysis));CHART_CHECK(panes && context.analysis);
     memset(panes,0,GD_EXPLORER_VIEWS*sizeof(*panes));memset(context.analysis,0,sizeof(*context.analysis));for(i=0;i<GD_EXPLORER_VIEWS;++i)pane_defaults(&panes[i],(GD_ExplorerView)i);
     context.history=allocator.allocate(allocator.context,sizeof(*context.history));CHART_CHECK(context.history);memset(context.history,0,sizeof(*context.history));
-    context.project=project;context.panes=panes;context.pane=&panes[active];context.active_view=&active;context.viewport=(Rectangle){0,0,880,800};
+    context.project=project;context.panes=panes;context.pane=&panes[active];context.active_view=&active;context.viewport=(GD_Rect){0,0,880,800};
     CHART_CHECK(pane_prepare(&context) && context.pane->chart_state && !context.pane->chart_state->query && !context.pane->layout->node_count);
     state=context.pane->chart_state;model=gd_explorer_model(project,GD_EXPLORER_STATES);noun=gd_query_record(model,"nouns/shellback",GD_NOUN);if(noun<0)noun=gd_query_record(model,"nouns/switch",GD_NOUN);CHART_CHECK(noun>=0);
     for(i=project->rules->actor_first[noun];i>=0;i=project->rules->next_axis[i])if(project->rules->axis_resolution[i]==GD_RULE_RESOLVED){int target=model->edges[i].target;if(project->rules->axes[target].valid && project->rules->axes[target].type==GD_AXIS_ENUM){if(axis<0)axis=target;else if(target!=axis)companion=target;}}
@@ -35,7 +35,7 @@ int gd_explorer_state_chart_checks(GD_Allocator allocator,const GD_Collection *c
     state->pending=state->applied;
     for(i=1;i<=4;++i){*fail_at=*calls+i;CHART_CHECK(!gd_explorer_action_run(&context,GD_ACTION_CHART_RUN));*fail_at=0;CHART_CHECK(state->query==retained && state->row==0 && state->scenario==0);}
     CHART_CHECK(gd_explorer_action_run(&context,GD_ACTION_VIEW_RESET) && state->query==retained && state->scenario==0);
-    {Camera2D camera=context.pane->camera;CHART_CHECK(gd_explorer_action_run(&context,GD_ACTION_SELECTION_CLEAR));CHART_CHECK(state->query==retained && state->row==0 && state->column==(companion>=0 ? 0:-1) && state->scenario==-1 && !memcmp(&camera,&context.pane->camera,sizeof(camera)));}
+    {GD_Camera camera=context.pane->camera;CHART_CHECK(gd_explorer_action_run(&context,GD_ACTION_SELECTION_CLEAR));CHART_CHECK(state->query==retained && state->row==0 && state->column==(companion>=0 ? 0:-1) && state->scenario==-1 && !memcmp(&camera,&context.pane->camera,sizeof(camera)));}
     CHART_CHECK(gd_explorer_action_run(&context,GD_ACTION_INPUTS_RESET) && state->query==retained && !*state->pending.object && *state->applied.object);
     state->row=0;state->column=companion>=0 ? 0:-1;state->scenario=0;state->pending=state->applied;CHART_CHECK(reload_project(&context,panes,collections,count,failure,sizeof(failure)));project=context.project;state=context.pane->chart_state;CHART_CHECK(state && state->query && state->query!=retained && state->row==0 && state->scenario>=0 && state->query->state_chart->scenario_count>0 && gd_explorer_form_equal(GD_FORM_CHART,&state->pending,&state->applied));
     CHART_CHECK(gd_explorer_action_run(&context,GD_ACTION_CHART_CLEAR) && !state->query && *state->pending.object);

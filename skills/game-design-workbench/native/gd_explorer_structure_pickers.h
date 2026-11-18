@@ -46,7 +46,7 @@ static int picker_selected_node(const GD_ExplorerContext *context,const GD_Struc
 }
 static const char *picker_node_label(const GD_StructureResult *result,int node) {
     int record=gd_structure_result_record(result,result->layout->nodes[node].key); const GD_Model *model=gd_explorer_model(result->project,result->view);
-    return TextFormat("%s | %s [#%d]",result->layout->nodes[node].label,record>=0 ? model->records[record].reference:"unresolved source",node);
+    return gd_scene_format("%s | %s [#%d]",result->layout->nodes[node].label,record>=0 ? model->records[record].reference:"unresolved source",node);
 }
 static void picker_nodes(GD_ExplorerContext *context,const GD_StructureResult *result,const char *label,char *text,size_t capacity,int multiple) {
     char id[GD_MAX_PATH]; int i,selected=picker_selected_node(context,result); const char *preview=*text ? "Selection configured":"Any / not selected";
@@ -96,7 +96,7 @@ static int picker_feature_update(char *list,size_t capacity,const char *id,doubl
 static const char *picker_feature_label(const GD_SimilarityFeatureInfo *feature,int incidence) {
     static const char *const names[]={"Connected item count","Incident relation-row count","Relation-kind count","Incoming row count","Outgoing row count","Authored source rank","Source status","Loaded source role","Selected hypothetical state value"};
     if (feature->property<=GD_SIMILARITY_STATE) return names[feature->property];
-    return TextFormat("%s %s via %s",feature->property==GD_SIMILARITY_DIRECT_SET ? "Direct items":"Reachable items",incidence ? "(adjacent)":feature->reverse ? "(incoming)":"(outgoing)",feature->relation<0 ? "all selected kinds":gd_graph_relation_name(feature->relation));
+    return gd_scene_format("%s %s via %s",feature->property==GD_SIMILARITY_DIRECT_SET ? "Direct items":"Reachable items",incidence ? "(adjacent)":feature->reverse ? "(incoming)":"(outgoing)",feature->relation<0 ? "all selected kinds":gd_graph_relation_name(feature->relation));
 }
 static const char *picker_question_label(int kind) {
     static const char *const names[]={"Connections and counts","Shared direct neighbours","Reachability / support paths","Mandatory support / dominators","Alternative support avoiding item","Cycles / boundaries / shapes","Adjacency overview","Declaration gaps (whole reader)","Shared reached sets","Discover comparison features","Similarity map (MDS)"};
@@ -108,7 +108,7 @@ static void picker_features(GD_ExplorerContext *context,const GD_StructureResult
         for (i=0;i<count;++i) { char tokens[GD_MAX_RULE_LINE+1],id[128]; const char *specs[GD_SIMILARITY_FEATURES]; int j,items; double weight; int selected=0;
             memcpy(tokens,text,strlen(text)+1); items=lines(tokens,specs,GD_SIMILARITY_FEATURES);
             for (j=0;j<items;++j) if (gd_similarity_feature_spec(specs[j],id,sizeof(id),&weight) && !strcmp(id,features[i].id)) { selected=1; break; }
-            if (gd_explorer_picker_item(context,TextFormat("%s | %s",picker_feature_label(&features[i],result->query->request.incidence),features[i].id),selected,1)) { if (selected) picker_feature_update(text,capacity,features[i].id,0,1); else gd_picker_toggle_limit(text,capacity,features[i].id,GD_SIMILARITY_FEATURES); }
+            if (gd_explorer_picker_item(context,gd_scene_format("%s | %s",picker_feature_label(&features[i],result->query->request.incidence),features[i].id),selected,1)) { if (selected) picker_feature_update(text,capacity,features[i].id,0,1); else gd_picker_toggle_limit(text,capacity,features[i].id,GD_SIMILARITY_FEATURES); }
         }
         gd_explorer_picker_end();
     }

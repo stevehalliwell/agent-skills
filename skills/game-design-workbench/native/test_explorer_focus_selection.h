@@ -7,7 +7,7 @@ static int focus_selection_checks(GD_ExplorerContext *base,GD_ExplorerPane *pane
 #define FOCUS_CHECK(value) do{++checks;if(!(value)){fprintf(stderr,"Focus selection check failed: %d: %s\n",__LINE__,#value);goto cleanup;}}while(0)
     FOCUS_CHECK(saved && probe && before && pose);
     for(v=0;v<GD_EXPLORER_VIEWS;++v)if(base->project->available&(1u<<v)){
-        GD_ExplorerSelection selection;Camera2D camera;GD_ExplorerPresentation inputs,after;int allocation_count=*calls;
+        GD_ExplorerSelection selection;GD_Camera camera;GD_ExplorerPresentation inputs,after;int allocation_count=*calls;
         p=&panes[v];memcpy(saved,p,sizeof(*saved));saving=1;c.pane=p;c.display_layout=NULL;
         p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};p->mda.record=p->mda.link=-1;p->grid.noun=p->grid.verb=-1;p->overview.row=p->overview.column=-1;
         FOCUS_CHECK(!gd_explorer_focus_available(&c));camera=p->camera;FOCUS_CHECK(!gd_explorer_focus_selection(&c) && !memcmp(&camera,&p->camera,sizeof(camera)));
@@ -44,7 +44,7 @@ static int focus_selection_checks(GD_ExplorerContext *base,GD_ExplorerPane *pane
     fit_view(&c,0);FOCUS_CHECK(p->camera.zoom<1);probe->nodes[1].y=2000;
     FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->focus_result.clipped && p->camera.zoom>=1 && p->camera.target.x==0 && p->camera.target.y==0);
     {
-        Camera2D camera=p->camera;for(i=0;i<4;++i)p->mda.roles[i]=false;
+        GD_Camera camera=p->camera;for(i=0;i<4;++i)p->mda.roles[i]=false;
         FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->focus_result.status==GD_FOCUS_HIDDEN && p->focus_result.hidden==1 && !memcmp(&camera,&p->camera,sizeof(camera)));
         p->mda.record=base->project->models[GD_EXPLORER_MDA_DATA]->record_count+1;
         FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->focus_result.status==GD_FOCUS_UNREPRESENTED && !memcmp(&camera,&p->camera,sizeof(camera)));
@@ -66,11 +66,11 @@ static int focus_selection_checks(GD_ExplorerContext *base,GD_ExplorerPane *pane
         pose->identity=&panes[GD_EXPLORER_SKILLS];FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->camera.target.x==0 && p->camera.target.y==0);
     }
     {
-        Camera2D camera=p->camera;c.viewport.width=0;FOCUS_CHECK(!gd_explorer_focus_selection(&c) && !memcmp(&camera,&p->camera,sizeof(camera)));
+        GD_Camera camera=p->camera;c.viewport.width=0;FOCUS_CHECK(!gd_explorer_focus_selection(&c) && !memcmp(&camera,&p->camera,sizeof(camera)));
     }
     c.viewport=base->viewport;c.display_layout=NULL;c.render_pose=NULL;distance=gd_layout_focus_create(a);FOCUS_CHECK(distance);
     p->distance_focus=distance;p->distance_focus_enabled=true;p->focus_auto_fit=true;p->distance_focus_revision=UINT64_MAX;gd_layout_focus_capture(distance,probe);
-    {Camera2D camera;int selected=analyze(&c);FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->focus_camera_override);camera=p->camera;distance_focus_update(&c,selected);FOCUS_CHECK(distance->active && !memcmp(&camera,&p->camera,sizeof(camera)));}
+    {GD_Camera camera;int selected=analyze(&c);FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->focus_camera_override);camera=p->camera;distance_focus_update(&c,selected);FOCUS_CHECK(distance->active && !memcmp(&camera,&p->camera,sizeof(camera)));}
     memcpy(p,saved,sizeof(*saved));saving=0;result=checks;
 cleanup:
     *fail_at=-1;if(saving)memcpy(p,saved,sizeof(*saved));base->analysis->initialized=0;if(distance)gd_layout_focus_destroy(distance);if(pose)a.release(a.context,pose);if(before)a.release(a.context,before);if(probe)a.release(a.context,probe);if(saved)a.release(a.context,saved);

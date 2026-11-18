@@ -1,54 +1,21 @@
 # Native ImGui migration
 
-## Selected direction
+Raylib and rlImGui removed from source and build recipes. All Workbench entry points share ImGui/cimgui **1.93.0**: Win32/D3D11 on Windows and GLFW/OpenGL3 on macOS. Windows CJIT build and CPU integration checks pass. User accepted reviewed Windows Crate presentation and authorized checkpoint. macOS code and recipe are present; no Mac build or runtime result yet.
 
-Remove raylib. Use Win32/D3D11 on Windows and GLFW/OpenGL3 on macOS, following Attendant's platform split. User selected ImGui **1.93** and approved dependency-only Zig/C++ builds. Application remains C99/CJIT. Full compiler/platform matrix stays at Step 6.
+Checkpoint `530c8d7` saves Actors recovery and initial dependency. Native port checkpoint follows. Existing viewers keep their own binaries and draft state. Do not rename or reuse transitional `gd-ui.dll`.
 
-No-raylib backend is **not yet connected to Workbench viewer**. Do not rename `gd-native-ui.dll` to `gd-ui.dll`; interfaces differ. Existing raylib viewer remains usable during migration and uses rebuilt matching 1.93 transitional library. Running old viewers keep their own binaries/DLLs.
+## Ownership
 
-## Current slice
+- `gd_native_window*.c`: C99 owns window, ImGui context, event pump and close requests. Windows pumps at most 256 owned messages per frame. Native adapters supply keyboard, pointer, clipboard and timing. Window never writes source records or decides draft exit.
+- `gd_native_ui*.cpp`: graphics dependency only. One owning thread/context. `begin_frame`: 1 ready, 0 minimized, -1 failed. No retry of failed graphics frame. Explorer still polls guarded IPC when minimized; retained draft can finish on explicit close after graphics failure.
+- `gd_native_canvas.c` / `gd_scene_draw.c`: shared anti-aliased ImGui primitives, transform and nested screen clipping. Bundled vector font uses fixed world metrics and cache keys across zoom; no extra font assets. Canvas replaces drawing calls, not pane state, query, history, filters or selection contracts.
+- PNG: re-submit completed draw data to owned offscreen target, never re-run UI/model or read another window. Bound to 16,777,216 pixels; explicit UTF-8 filename. Windows WIC; macOS ImageIO.
+- ABI: matching pinned headers/library and `IMGUI_DISABLE_OBSOLETE_FUNCTIONS` for all dependency translation units. See [pins and C99 adapter profile](vendor/cimgui/PROVENANCE.md).
 
-- [x] Upgrade pinned ImGui/cimgui to 1.93.0; retain licenses and upstream native backend sources.
-- [x] Build isolated Win32/D3D11 library with C ABI, no raylib or RichMd dependency.
-- [x] Verify C99/CJIT ABI, named-union offsets, context access, pre-init failure handling and absence of loaded raylib:21/21 headless checks.
-- [x] Rebuild transitional dependency, production viewer and CPU adapter against 1.93. Crate426/Mario400 IPC checks pass, plus3330 controls/25 feedback/36 sidebar/123 configuration each. These remain raylib-backed application checks.
-- [x] User-authorized hidden native GPU lifecycle check:48/48 passes. Three frames with resize, draw-data check, duplicate-init refusal and shutdown/reinitialization; no raylib loaded or visible window. Human graphical acceptance remains open.
-- [ ] Replace C99 window/input/timing/cursor/screenshot plumbing and canvas rendering; preserve guarded IPC, independent panes, drafts, pending/applied inputs and last-good results.
-- [ ] Implement macOS GLFW/OpenGL3 build/host and native qualification.
-- [ ] Remove transitional raylib/rlImGui source/build dependencies after consumers migrate. No compatibility shim recreating whole raylib API.
+## Build and checks
 
-## Boundary
+[Build commands](README.md#build). Use fresh output directories. Windows `-View`/`-Graph` build same full viewer. `-ExplorerTest` compiles app-local checks; no window is launched by builds. `--scene-helpers`, `--ipc-helpers`, `--state-chart-helpers`, `--pointer-helpers` and `--find-helpers` run on explicit game-design fixture paths without native windows. Pointer helpers feed ImGui events inside test process only, not OS input.
 
-`gd_native_ui.h` is C ABI. `gd_native_ui.cpp` owns device/swap chain, upstream ImGui platform/renderer adapters, resize and frame submission. C99 caller owns native window, ImGui context, message pump and all application/model state. One UI thread/context per adapter. Shutdown releases graphics resources, not caller window/context.
-
-Native frame API: `begin_frame` returns `1` ready, `0` minimized, `-1` error. Other mutating operations return `1` success/`0` error. Error text is borrowed until next error. Failed frame is terminal for adapter; shut down graphics and destroy ImGui context, never retry that frame. Application retains model/drafts independently; adapter never saves sources, closes window or exits process.
-
-Initialization attempts hardware then WARP. Neither path creates/focuses window. Resize handles back-buffer ownership explicitly. Render/present errors remain failures, not success or implicit query execution.
-
-[Dependency pins, C99 header adaptation and required build profile](vendor/cimgui/PROVENANCE.md) own version/layout contract. Initial ABI failure traced to missing `IMGUI_DISABLE_OBSOLETE_FUNCTIONS` in C++ build, not a reason to bypass size checks. Corrected shared profile; removed unsuccessful regeneration experiment. No changes to other projects' caches or sources.
-
-## Windows commands
-
-Run from native directory. Use fresh output directories. Existing dependency DLL and nonempty check output are refused. No scripts download or install dependencies.
-
-```powershell
-$env:ZIG_GLOBAL_CACHE_DIR = "$PWD/build/native-ui-zig-cache"
-./build-native-ui.ps1 -OutputDirectory ./build/native-ui-review
-./test-native-ui.ps1 -UiLibrary ./build/native-ui-review/gd-native-ui.dll
-```
-
-Build emits one JSON result; compiler output goes to stderr. Check emits one JSON result, exit0 success/2 failure. Missing library refuses before creating check output. Test output defaults to fresh GUID directory; explicit nonempty output is refused.
-
-Only after explicit window-check approval:
-
-```powershell
-./test-native-ui.ps1 -UiLibrary ./build/native-ui-review/gd-native-ui.dll -Gpu
-```
-
-`-Gpu` creates one owned hidden non-activating window, renders three frames with resize, checks drawing data, shuts down/reinitializes backend and destroys owned window. Never posts OS input or manipulates existing viewers. This is device-lifecycle validation, not human graphical acceptance.
-
-## Evidence and limits
-
-Current dependency/check: `build/native-ui-193-final/gd-native-ui.dll`, `build/native-ui-193-gpu-check-v2/test-native-ui.exe`. Headless21 and hidden GPU48 checks pass. Transitional viewer: `build/imgui-193-transition-view/gd-view.exe`; compiled, not launched. Verification receipts also sit beside dependency DLL; logs stay in session temp directory.
-
-Actors noun-browser fix has independent core150/150 and two-example CPU checks. Full historical shared-UX helper still fails empty-State-charts history assumption in prior checkpoint binary too; no unrelated driver repair or weakened assertion retained. Native backend draws into owned hidden window; actual Workbench native rendering, device-loss recovery, screenshot capture, final platform checks and all remaining walkthrough feedback stay open.
+- Windows build: `build/full-native-review-win/gd-view.exe`; PE imports have no raylib or `gd-ui.dll`. Core150/150, headless native ABI25/25. Crate/Mario IPC426/400; each has 3330 controls, 25 feedback, 37 sidebar, 123 configuration, 425 app-local pointer, 244 Find and 45 State charts checks. Each builds 15 CPU ImGui frames covering all unified projections, both Grid variants, Similarity and both applied state-chart layouts. Receipts in `build/full-native-review-adapter/`. Historical deep layout/UX gates remain deferred, not relaxed.
+- Prior authorized hidden backend checks passed143/143, including resize, PNG text/channel readback, Unicode path and teardown. Authorized hidden standalone matrix checks passed31 Crate/59 Mario; sources/model unchanged. User separately reviewed running native Crate Explorer; startup IPC inspection saw clean draft and no stale flag. This does not establish every-view interaction acceptance.
+- Headless commands do not link graphics. Native application still uses CJIT; dependency-only Zig/C++ exception remains. macOS compiler/runtime qualification, DPI, live IPC/restart, performance and visible all-view review remain open. Step 6 full matrix remains deferred.

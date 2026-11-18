@@ -7,22 +7,22 @@
 #include <stdlib.h>
 
 enum { GD_SIMILARITY_HIT_PIXELS=16,GD_SIMILARITY_HOVER_ROWS=8,GD_SIMILARITY_LABELS=64 };
-typedef struct { Vector2 point; int row,count; } GD_SimilarityViewPoint;
+typedef struct { GD_Point point; int row,count; } GD_SimilarityViewPoint;
 typedef struct GD_SimilarityView {
     GD_SimilarityViewPoint groups[GD_MAX_RECORDS]; int group_count;
     int pick_rows[GD_MAX_RECORDS],pick_count,pick_page,pick_peer,pick_open;
     int hover_rows[GD_SIMILARITY_HOVER_ROWS],hover_count;
-    Rectangle labels[GD_SIMILARITY_LABELS]; int label_count,hidden_labels;
+    GD_Rect labels[GD_SIMILARITY_LABELS]; int label_count,hidden_labels;
 } GD_SimilarityView;
 
 static inline void gd_similarity_view_choose(GD_ExplorerStructureState *state,int row,int peer) {
     assert(state && state->result && state->result->similarity && row>=0 && row<state->result->similarity->entry_count);
     if(peer)state->similarity_peer=row;else state->similarity_row=row;
 }
-static inline Vector2 gd_similarity_view_point(const GD_Similarity *map,int row) {
+static inline GD_Point gd_similarity_view_point(const GD_Similarity *map,int row) {
     double scale=map->distance_scale>0 ? map->distance_scale:1;
     /* One uniform scale only; never move individual points. */
-    return (Vector2){(float)(400*(map->x[row]/scale)),(float)(400*(map->y[row]/scale))};
+    return (GD_Point){(float)(400*(map->x[row]/scale)),(float)(400*(map->y[row]/scale))};
 }
 static inline const char *gd_similarity_view_name(const GD_SimilarityProjection *projection,int row) {
     int node;
@@ -50,7 +50,7 @@ static inline int gd_similarity_view_build(GD_SimilarityView *view,const GD_Simi
     if(!view || !map || !map->available || map->input.entry_count<0 || map->input.entry_count>GD_MAX_RECORDS || !isfinite(map->distance_scale) || map->distance_scale<0)return 0;
     /* Validate before changing existing presentation. */
     for(row=0;row<map->input.entry_count;++row)if(map->placed[row]){
-        Vector2 p=gd_similarity_view_point(map,row);if(!isfinite(p.x)||!isfinite(p.y))return 0;
+        GD_Point p=gd_similarity_view_point(map,row);if(!isfinite(p.x)||!isfinite(p.y))return 0;
     }
     for(row=0;row<map->input.entry_count;++row)if(map->placed[row])view->groups[count++]=(GD_SimilarityViewPoint){gd_similarity_view_point(map,row),row,1};
     qsort(view->groups,(size_t)count,sizeof(*view->groups),gd_similarity_view_order);
@@ -65,11 +65,11 @@ static inline int gd_similarity_view_build(GD_SimilarityView *view,const GD_Simi
 }
 /* Counts every placed hit. Optional prefix storage is presentation only;
    chooser passes full capacity. Retained row order preserves exact identities. */
-static inline int gd_similarity_view_hits(const GD_Similarity *map,Camera2D camera,Vector2 mouse,int *rows,int capacity) {
+static inline int gd_similarity_view_hits(const GD_Similarity *map,GD_Camera camera,GD_Point mouse,int *rows,int capacity) {
     int row,count=0;
-    if(!map || !map->available || map->input.entry_count<0 || map->input.entry_count>GD_MAX_RECORDS || capacity<0 || capacity>GD_MAX_RECORDS || (capacity && !rows) || !isfinite(camera.zoom) || camera.zoom<=0 || !isfinite(camera.rotation) || !isfinite(camera.target.x) || !isfinite(camera.target.y) || !isfinite(camera.offset.x) || !isfinite(camera.offset.y) || !isfinite(mouse.x) || !isfinite(mouse.y))return 0;
+    if(!map || !map->available || map->input.entry_count<0 || map->input.entry_count>GD_MAX_RECORDS || capacity<0 || capacity>GD_MAX_RECORDS || (capacity && !rows) || !isfinite(camera.zoom) || camera.zoom<=0 || !isfinite(camera.target.x) || !isfinite(camera.target.y) || !isfinite(camera.offset.x) || !isfinite(camera.offset.y) || !isfinite(mouse.x) || !isfinite(mouse.y))return 0;
     for(row=0;row<map->input.entry_count;++row)if(map->placed[row]){
-        Vector2 screen=GetWorldToScreen2D(gd_similarity_view_point(map,row),camera);float x=screen.x-mouse.x,y=screen.y-mouse.y;
+        GD_Point screen=gd_world_to_screen(gd_similarity_view_point(map,row),camera);float x=screen.x-mouse.x,y=screen.y-mouse.y;
         if(x*x+y*y<=GD_SIMILARITY_HIT_PIXELS*GD_SIMILARITY_HIT_PIXELS){if(count<capacity)rows[count]=row;++count;}
     }
     return count;

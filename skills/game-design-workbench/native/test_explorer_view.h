@@ -4,11 +4,15 @@
 #include "test_explorer_fresh_pane.h"
 int gd_explorer_structure_picker_checks(GD_ExplorerContext *context);
 #define EXPLORER_CHECK(expression) do { if (!(expression)) { fprintf(stderr,"Explorer check failed at line %d: %s\n",__LINE__,#expression); goto cleanup; } } while (0)
+static GD_NativeWindow explorer_test_window;
+static int explorer_test_frame_failed;
 static void explorer_test_render(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; int selected;
-    c->viewport=(Rectangle){14,112,872,783};
-    BeginDrawing(); ClearBackground(background); rlImGuiBegin();
-    DrawText(gd_explorer_view_names[p->view],20,18,26,foreground);
+    c->viewport=(GD_Rect){14,112,872,783};
+    int native=explorer_test_window.handle!=NULL;
+    if(!native)igNewFrame();
+    if(native ? gd_scene_begin(&explorer_test_window)!=1:!gd_scene_attach()){explorer_test_frame_failed=1;return;}
+    gd_scene_text(gd_explorer_view_names[p->view],20,18,26,foreground);
     igSetNextWindowPos((ImVec2_c){900,12},ImGuiCond_Always,(ImVec2_c){0,0});
     igSetNextWindowSize((ImVec2_c){588,916},ImGuiCond_Always);
     igBegin("Explorer test controls",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings);
@@ -28,7 +32,7 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     igEnd();
     matches(c); if (!gd_explorer_similarity_active(c)) distance_focus_update(c,selected);
     if (!gd_explorer_similarity_active(c) && p->distance_focus) gd_layout_focus_advance(p->distance_focus,p->layout,0.22f,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
-    p->camera.offset=(Vector2){450,503};
+    p->camera.offset=(GD_Point){450,503};
     if (!gd_explorer_similarity_active(c) && p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
     {
         GD_ExplorerEvidence e=evidence(c,selected);
@@ -43,7 +47,65 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     }
     overview_marks_draw(c);
     if (!gd_explorer_similarity_active(c)) { draw_matches(c); if (overview_available(c)) gd_graph_overview_draw_metric(c->analysis,&p->overview,c->viewport,p->view==GD_EXPLORER_MDA && p->mda.link>=0 ? -1:selected,0,overview_metric(p)); }
-    rlImGuiEnd(); EndDrawing();
+    if(native){if(!gd_scene_end(&explorer_test_window,background))explorer_test_frame_failed=1;}
+    else{
+        if(!gd_scene_detach())explorer_test_frame_failed=1;
+        igRender();ImDrawData *data=igGetDrawData();
+        if(!data || !data->Valid || data->TotalVtxCount<1 || data->TotalIdxCount<1)explorer_test_frame_failed=1;
+    }
+}
+/* Exercise drawing and balanced clipping without OS windows, GPU or input. */
+int gd_explorer_scene_checks(GD_Allocator allocator,const GD_Collection *collections,int count) {
+    GD_ExplorerContext c={0};GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
+    GD_ExplorerPane *pane=NULL;ImGuiContext *imgui=NULL;int checked=0,result=2,view=-1;
+    c.project=project;
+    EXPLORER_CHECK(project && !gd_explorer_error(project));
+    pane=allocator.allocate(allocator.context,sizeof(*pane));if(pane)memset(pane,0,sizeof(*pane));
+    c.analysis=allocator.allocate(allocator.context,sizeof(*c.analysis));c.query=allocator.allocate(allocator.context,sizeof(*c.query));
+    imgui=igCreateContext(NULL);EXPLORER_CHECK(pane && c.analysis && c.query && imgui);
+    ImGuiIO *io=igGetIO_Nil();io->IniFilename=NULL;io->LogFilename=NULL;io->DisplaySize=(ImVec2_c){1500,940};
+    io->BackendFlags|=ImGuiBackendFlags_RendererHasTextures|ImGuiBackendFlags_RendererHasVtxOffset;
+    EXPLORER_CHECK(ImFontAtlas_AddFontDefaultVector(io->Fonts,NULL));
+    c.pane=pane;explorer_test_frame_failed=0;
+    for(view=0;view<GD_EXPLORER_VIEWS;++view)if(project->available&(1u<<view)){
+        pane_defaults(pane,(GD_ExplorerView)view);memset(c.analysis,0,sizeof(*c.analysis));c.viewport=(GD_Rect){14,112,872,783};
+        EXPLORER_CHECK(pane_prepare(&c));
+        explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;
+        if(view==GD_EXPLORER_MATRIX || view==GD_EXPLORER_NOUNS){
+            pane->layout_choice=view==GD_EXPLORER_MATRIX ? GD_MATRIX_GRID_CHOICE:GD_NOUN_LAYOUT_FREE;
+            pane->fit=view==GD_EXPLORER_MATRIX ? GD_EXPLORER_FIT_GRID_READABLE:1;pane->prepared=0;
+            EXPLORER_CHECK(pane_prepare(&c));explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;
+        } else if(view==GD_EXPLORER_MDA) {
+            EXPLORER_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));
+            pane->structure_state->pending.kind=GD_STRUCTURE_COUNT+1;
+            snprintf(pane->structure_state->pending.features,sizeof(pane->structure_state->pending.features),"retained-partners");
+            EXPLORER_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN) && gd_explorer_similarity_active(&c));
+            explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;
+        } else if(view==GD_EXPLORER_STATES) {
+            const GD_Model *model=gd_explorer_model(project,GD_EXPLORER_STATES);int noun=-1,axis=-1;
+            for(int r=0;r<model->record_count && axis<0;++r)if(model->records[r].role==GD_NOUN) {
+                for(int e=project->rules->actor_first[r];e>=0;e=project->rules->next_axis[e])if(project->rules->axis_resolution[e]==GD_RULE_RESOLVED) {
+                    int target=model->edges[e].target;
+                    if(project->rules->axes[target].valid && project->rules->axes[target].type==GD_AXIS_ENUM){noun=r;axis=target;break;}
+                }
+            }
+            EXPLORER_CHECK(noun>=0 && axis>=0 && pane->chart_state);
+            GD_ExplorerChartState *chart=pane->chart_state;
+            snprintf(chart->pending.object,sizeof(chart->pending.object),"%s",model->records[noun].reference);
+            snprintf(chart->pending.axis,sizeof(chart->pending.axis),"%s",model->records[axis].reference);
+            EXPLORER_CHECK(gd_explorer_action_run(&c,GD_ACTION_CHART_RUN));
+            for(int mode=0;mode<2;++mode){chart->mode=mode;explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;}
+        }
+        gd_diagnostics_clear(&pane->diagnostics);gd_layout_focus_destroy(pane->distance_focus);gd_resource_routes_destroy(pane->resource_routes);
+        pane_release_layout(allocator,pane);memset(pane,0,sizeof(*pane));
+    }
+    printf("{\"ok\":true,\"frames\":%d,\"scope\":\"CPU ImGui draw data; no window or GPU\"}\n",checked);result=0;
+cleanup:
+    if(result)fprintf(stderr,"Scene qualification failed in explorer view %d\n",view);
+    if(imgui){if(imgui->WithinFrameScope)igEndFrame();igDestroyContext(imgui);}
+    if(pane){gd_diagnostics_clear(&pane->diagnostics);gd_layout_focus_destroy(pane->distance_focus);gd_resource_routes_destroy(pane->resource_routes);pane_release_layout(allocator,pane);allocator.release(allocator.context,pane);}
+    if(c.analysis)allocator.release(allocator.context,c.analysis);if(c.query)allocator.release(allocator.context,c.query);
+    gd_explorer_destroy(project);return result;
 }
 static int explorer_test_grid_capacity(GD_ExplorerContext *c, const char *output) {
     GD_ExplorerContext original=*c; GD_ExplorerProject synthetic=*c->project;
@@ -66,12 +128,12 @@ static int explorer_test_grid_capacity(GD_ExplorerContext *c, const char *output
     if (!pane_prepare(c) || p->grid.verbs!=GD_MAX_RECORDS-1) goto cleanup;
     grid_choose(c,0,GD_MAX_RECORDS-2);
     if (p->grid.verb!=GD_MAX_RECORDS-1 || p->selection.cell!=-1) goto cleanup;
-    p->camera.offset=(Vector2){450,503}; p->camera.zoom=1; p->fit=0; grid_frame_selection(c);
+    p->camera.offset=(GD_Point){450,503}; p->camera.zoom=1; p->fit=0; grid_frame_selection(c);
     explorer_test_render(c);
     {
-        Rectangle area=grid_bounds(&p->grid,p->grid.noun,p->grid.verb);
-        Vector2 center=GetWorldToScreen2D((Vector2){area.x+area.width/2,area.y+area.height/2},p->camera);
-        if (p->camera.zoom!=1 || !CheckCollisionPointRec(center,c->viewport)) goto cleanup;
+        GD_Rect area=grid_bounds(&p->grid,p->grid.noun,p->grid.verb);
+        GD_Point center=gd_world_to_screen((GD_Point){area.x+area.width/2,area.y+area.height/2},p->camera);
+        if (p->camera.zoom!=1 || !gd_rect_hit(center,c->viewport)) goto cleanup;
     }
     if (snprintf(path,sizeof(path),"%s/grid-last-column.png",output)>=(int)sizeof(path) || !gd_save_screenshot(path)) goto cleanup;
     /* Balanced maximum axes: 4,194,304 possible cells, no dense draw scan. */
@@ -106,16 +168,17 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     c.analysis=allocator.allocate(allocator.context,sizeof(*c.analysis));
     c.query=allocator.allocate(allocator.context,sizeof(*c.query));
     EXPLORER_CHECK(panes && saved && c.analysis && c.query); memset(c.analysis,0,sizeof(*c.analysis));
-    EXPLORER_CHECK(open_window("Workbench explorer app-local checks")); window=1;
-    EXPLORER_CHECK(IsWindowState(FLAG_MSAA_4X_HINT)); /* Requested hint, not proof of driver sample count. */
-    TraceLog(LOG_WARNING,"Explorer structured stdout: stderr warning probe");
+    explorer_test_frame_failed=0;
+    EXPLORER_CHECK(open_window(&explorer_test_window,"Workbench explorer app-local checks",GD_WINDOW_HIDDEN)); window=1;
+    EXPLORER_CHECK(igGetIO_Nil()->BackendFlags&ImGuiBackendFlags_RendererHasVtxOffset);
+    fputs("Explorer structured stdout: stderr warning probe\n",stderr);
     for (v=0;v<GD_EXPLORER_VIEWS;++v) {
         pane_defaults(&panes[v],(GD_ExplorerView)v); c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c));
         if (v==GD_EXPLORER_MDA) panes[v].mda.record=panes[v].layout->node_count ? panes[v].layout->nodes[0].key:-1;
         else panes[v].selection.node=panes[v].layout->node_count ? 0:-1;
         if (is_graph((GD_ExplorerView)v)) panes[v].inspected_record=gd_explorer_graph_record(&c);
         if (query_view((GD_ExplorerView)v)) {
-            GD_ExplorerPane *p=&panes[v]; GD_ExplorerQueryState *last; GD_Layout *layout; Camera2D camera; int errors=gd_explorer_model(project,(GD_ExplorerView)v)->error_count;
+            GD_ExplorerPane *p=&panes[v]; GD_ExplorerQueryState *last; GD_Layout *layout; GD_Camera camera; int errors=gd_explorer_model(project,(GD_ExplorerView)v)->error_count;
             if (v==GD_EXPLORER_ACTORS) {
                 int root,edge,found=0,nouns=0;
                 for (root=0;root<project->rules->model->record_count;++root) if (project->rules->model->records[root].role==GD_NOUN) ++nouns;
@@ -169,7 +232,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         explorer_test_render(&c);
         EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/layers-%d.png",output,v)<(int)sizeof(path) && gd_save_screenshot(path));
         {
-            Camera2D regular=panes[v].camera; int i;
+            GD_Camera regular=panes[v].camera; int i;
             EXPLORER_CHECK(distance_focus_toggle(&c,1)); explorer_test_render(&c);
             EXPLORER_CHECK(panes[v].distance_focus && panes[v].distance_focus->active);
             for (i=0;i<panes[v].layout->node_count;++i) {
@@ -188,7 +251,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             for (i=0;i<panes[v].layout->node_count;++i)
                 EXPLORER_CHECK(panes[v].layout->nodes[i].x==panes[v].distance_focus->base[i].x && panes[v].layout->nodes[i].y==panes[v].distance_focus->base[i].y);
             /* Auto-fit off preserves user camera through selection and focus-off. */
-            panes[v].focus_auto_fit=false; panes[v].camera.target=(Vector2){-123,789}; panes[v].camera.zoom=0.75f;
+            panes[v].focus_auto_fit=false; panes[v].camera.target=(GD_Point){-123,789}; panes[v].camera.zoom=0.75f;
             regular=panes[v].camera;
             EXPLORER_CHECK(distance_focus_toggle(&c,1)); distance_focus_update(&c,analyze(&c));
             EXPLORER_CHECK(!memcmp(&regular,&panes[v].camera,sizeof(regular)));
@@ -236,7 +299,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         }
         snprintf(p->find_reference,sizeof(p->find_reference),"%s",model->records[gd_explorer_graph_record(&c)].reference);
         matches(&c); EXPLORER_CHECK(p->visible_matches>0 && !p->hidden_matches);
-        c.viewport=(Rectangle){14,112,872,783}; grid_fit(&c,1); EXPLORER_CHECK(p->camera.zoom>0);
+        c.viewport=(GD_Rect){14,112,872,783}; grid_fit(&c,1); EXPLORER_CHECK(p->camera.zoom>0);
         p->fit=GD_EXPLORER_FIT_GRID_READABLE; explorer_test_render(&c);
         EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/grid-cases.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
         for (i=0;i<p->grid.nouns && !blank;++i) for (j=0;j<p->grid.verbs;++j)
@@ -316,15 +379,15 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         EXPLORER_CHECK(edge>=0); owner=model->edges[edge].source;
         EXPLORER_CHECK(center_relationships(&c,panes,owner) && pane_prepare(&c));
         p->selection=(GD_ExplorerSelection){edge,-1,0,-1,-1};
-        BeginDrawing(); rlImGuiBegin(); igBegin("Deferred Undo inspector",NULL,0);
-        gd_explorer_graph_details(&c); igEnd(); rlImGuiEnd(); EndDrawing();
+        EXPLORER_CHECK(gd_scene_begin(&explorer_test_window)==1);igBegin("Deferred Undo inspector",NULL,0);
+        gd_explorer_graph_details(&c);igEnd();EXPLORER_CHECK(gd_scene_end(&explorer_test_window,background));
         EXPLORER_CHECK(p->inspected_record==owner && undo_draft(&c,panes));
         EXPLORER_CHECK(p->inspected_record==owner && pane_prepare(&c));
         EXPLORER_CHECK(p->selection.cell==-1 && gd_explorer_graph_record(&c)==owner);
         EXPLORER_CHECK(explorer_test_fresh_pane(&c) && pane_prepare(&c));
     }
     /* Ordinary switches preserve independent canvas, settings and selection. */
-    c.pane=&panes[GD_EXPLORER_MDA]; panes[GD_EXPLORER_MDA].camera.target=(Vector2){321,123};
+    c.pane=&panes[GD_EXPLORER_MDA]; panes[GD_EXPLORER_MDA].camera.target=(GD_Point){321,123};
     snprintf(panes[GD_EXPLORER_MDA].mda.filter,sizeof(panes[GD_EXPLORER_MDA].mda.filter),"mechanics/");
     *saved=panes[GD_EXPLORER_MDA];
     EXPLORER_CHECK(change_view(&c,panes,GD_EXPLORER_RESOURCES,NULL));
@@ -350,7 +413,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
             EXPLORER_CHECK(c.pane->hidden_matches>0 && c.pane->visible_matches+c.pane->hidden_matches==total);
         }
         snprintf(c.pane->filter,sizeof(c.pane->filter),"no-match-for-this-filter");
-        c.pane->camera.target=(Vector2){19,29}; matches(&c);
+        c.pane->camera.target=(GD_Point){19,29}; matches(&c);
         EXPLORER_CHECK(!c.pane->visible_matches && c.pane->hidden_matches>0);
         fit_view(&c,1); EXPLORER_CHECK(c.pane->camera.target.x==19 && c.pane->camera.target.y==29);
         EXPLORER_CHECK(!strcmp(c.pane->filter,"no-match-for-this-filter"));
@@ -496,7 +559,7 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
     EXPLORER_CHECK(explorer_test_native_questions(&c,panes,collections,count,output,fail_at,calls)); project=c.project;
     c.pane=&panes[GD_EXPLORER_MDA]; EXPLORER_CHECK(gd_explorer_structure_picker_checks(&c));
     c.pane=&panes[GD_EXPLORER_RELATIONSHIPS]; EXPLORER_CHECK(gd_explorer_structure_picker_checks(&c));
-    c.pane=&panes[GD_EXPLORER_ACTORS]; EXPLORER_CHECK(explorer_test_picker_window(&c,output));
+    c.pane=&panes[GD_EXPLORER_ACTORS]; EXPLORER_CHECK(explorer_test_picker_window(&explorer_test_window,&c,output));
     for (v=0;v<GD_EXPLORER_VIEWS;++v) { c.pane=&panes[v]; EXPLORER_CHECK(pane_prepare(&c)); explorer_test_render(&c); }
     fprintf(stderr,"Explorer checks passed: six projections; independent switching; multi-match Find; hidden counts; reset isolation; draft preservation; qualified roots; stale-edge recovery and deferred active Undo; validated selection; stderr logging; reload rollback and restoration.\n");
     result=0;
@@ -505,7 +568,8 @@ cleanup:
     if (invalid_created) remove(invalid);
     if (probe_created) remove(probe_path);
     if (grid_probe_created) remove(grid_probe_path);
-    if (window) { rlImGuiShutdown(); CloseWindow(); }
+    if(explorer_test_frame_failed){fprintf(stderr,"Explorer render failed: %s\n",explorer_test_window.error);result=2;}
+    if(window && !gd_scene_close(&explorer_test_window))result=2;
     if (panes) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) { gd_diagnostics_clear(&panes[v].diagnostics); gd_layout_focus_destroy(panes[v].distance_focus); gd_resource_routes_destroy(panes[v].resource_routes); pane_release_layout(allocator,&panes[v]); }
         allocator.release(allocator.context,panes);

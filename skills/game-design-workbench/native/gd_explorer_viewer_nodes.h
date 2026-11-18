@@ -127,7 +127,7 @@ static int viewer_canvas_current(const GD_ExplorerContext *c) {
     return c->pane->prepared && c->pane->revision==revision;
 }
 static int viewer_select_node(GD_ExplorerContext *c, int node, GD_ViewerWriter *w) {
-    GD_ExplorerPane *p=c->pane; float width,height; Vector2 center;
+    GD_ExplorerPane *p=c->pane; float width,height; GD_Point center;
     if (gd_explorer_similarity_active(c)) {
         if (gd_explorer_similarity_select(c,node)) return 1;
         gd_viewer_error(w,"viewer.node_hidden","Similarity entry is unavailable or unplaced"); return 0;
@@ -147,12 +147,12 @@ static int viewer_select_node(GD_ExplorerContext *c, int node, GD_ViewerWriter *
     else p->selection=(GD_ExplorerSelection){-1,node,0,-1,-1};
     if (grid_view(p)) {
         GD_Model *model=gd_explorer_model(c->project,p->view); int record=p->layout->nodes[node].key;
-        Rectangle area=grid_bounds(&p->grid,model->records[record].role==GD_NOUN?record:-1,model->records[record].role==GD_VERB?record:-1);
-        center=(Vector2){area.x+area.width/2,area.y+area.height/2}; width=area.width; height=area.height;
+        GD_Rect area=grid_bounds(&p->grid,model->records[record].role==GD_NOUN?record:-1,model->records[record].role==GD_VERB?record:-1);
+        center=(GD_Point){area.x+area.width/2,area.y+area.height/2}; width=area.width; height=area.height;
     } else {
         center=position(c,node); width=fmaxf(250,gd_layout_node_width(&p->layout->nodes[node])); height=fmaxf(170,p->layout->nodes[node].height);
     }
-    p->camera.target=center; p->camera.offset=(Vector2){c->viewport.x+c->viewport.width/2,c->viewport.y+c->viewport.height/2};
+    p->camera.target=center; p->camera.offset=(GD_Point){c->viewport.x+c->viewport.width/2,c->viewport.y+c->viewport.height/2};
     p->camera.zoom=fmaxf(0.0001f,fminf(1.2f,fminf(c->viewport.width/(width+80),c->viewport.height/(height+80))));
     p->fit=0;p->find_hold_node=-1;return 1;
 }

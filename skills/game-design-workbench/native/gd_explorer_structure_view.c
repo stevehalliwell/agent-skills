@@ -237,7 +237,7 @@ static void node_row(GD_ExplorerContext *context, int index) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_StructureResult *result=state->result; const GD_StructureQuery *query=result->query;
     const GD_StructureNode *counts=&query->nodes[index]; int key=result->layout->nodes[index].key,record=gd_structure_result_record(result,key); char identity[GD_MAX_PATH];
     igPushID_Int(index);
-    if (igSmallButton(TextFormat("#%d %s",index,result->layout->nodes[index].label))) navigate(context,record,result->view==GD_EXPLORER_RESOURCES ? key:-1);
+    if (igSmallButton(gd_scene_format("#%d %s",index,result->layout->nodes[index].label))) navigate(context,record,result->view==GD_EXPLORER_RESOURCES ? key:-1);
     if (query->request.incidence) igText("%d incident rows | %d distinct partners | %d kinds",counts->incident,counts->partners,counts->kinds);
     else { igText("in %d | out %d | %d partners | %d kinds",counts->incoming,counts->outgoing,counts->partners,counts->kinds); igText("%d incident source rows",counts->incident); }
     if (result->effects) { const GD_EffectNode *item=&result->effects->nodes[key]; igTextWrapped("%s | %s%s%s",gd_effect_kind_name(item->kind),item->axis>=0 ? gd_explorer_model(result->project,result->view)->records[item->axis].reference:"unresolved axis",item->value ? " = ":"",item->value ? item->value:""); }
@@ -302,7 +302,7 @@ static void related_path_rows(GD_ExplorerContext *context) {
     for (i=0;i<closure->row_count;++i) if (comparison->nodes[i]) {
         if(!gd_evidence_page_take(&page,&ordinal))continue;
         igPushID_Int(i);
-        if (igTreeNode_Str(TextFormat("Reached member #%d: %s",i,result->layout->nodes[i].label))) {
+        if (igTreeNode_Str(gd_scene_format("Reached member #%d: %s",i,result->layout->nodes[i].label))) {
             int side;
             igText("Membership: %s",comparison->nodes[i]==GD_GRAPH_SHARED ? "shared":comparison->nodes[i]==GD_GRAPH_A_ONLY ? "first only":"second only");
             for (side=0;side<2;++side) {
@@ -383,7 +383,7 @@ static void result_panel(GD_ExplorerContext *context) {
         for(i=0;i<analysis->node_count;++i)nodes+=query->marked_nodes[i]!=0;
         for(i=0;i<analysis->edge_count;++i)links+=query->marked_edges[i]!=0;
         page=gd_explorer_evidence_pager("Marked nodes",&state->marked_node_page,nodes,GD_EVIDENCE_PAGE_ROWS);
-        for (i=0;i<analysis->node_count;++i) if (query->marked_nodes[i]) {if(!gd_evidence_page_take(&page,&ordinal))continue;int key=result->layout->nodes[i].key,source=gd_structure_result_record(result,key); igPushID_Int(i); if (igSmallButton(TextFormat("#%d %s",i,result->layout->nodes[i].label))) navigate(context,source,result->view==GD_EXPLORER_RESOURCES ? key:-1); igPopID(); }
+        for (i=0;i<analysis->node_count;++i) if (query->marked_nodes[i]) {if(!gd_evidence_page_take(&page,&ordinal))continue;int key=result->layout->nodes[i].key,source=gd_structure_result_record(result,key); igPushID_Int(i); if (igSmallButton(gd_scene_format("#%d %s",i,result->layout->nodes[i].label))) navigate(context,source,result->view==GD_EXPLORER_RESOURCES ? key:-1); igPopID(); }
         ordinal=0;page=gd_explorer_evidence_pager("Marked source rows",&state->marked_link_page,links,GD_EVIDENCE_PAGE_ROWS);
         for (i=0;i<analysis->edge_count;++i) if (query->marked_edges[i] && gd_evidence_page_take(&page,&ordinal))link_row(context,i,0);
         if (!nodes && !links) igTextWrapped("No retained selection-specific marks. Inspect context counts, operation parameters and completeness; not a gameplay absence proof.");
@@ -404,10 +404,10 @@ static void result_panel(GD_ExplorerContext *context) {
             page=gd_explorer_evidence_pager("Starts",&state->root_page,roots,GD_EVIDENCE_PAGE_ROWS);
             for (i=0;i<analysis->node_count;++i) if (query->roots[i]) {
                 int member,shown=0;if(!gd_evidence_page_take(&page,&ordinal))continue;igPushID_Int(i);
-                if (igTreeNode_Str(TextFormat("Start #%d: %s",i,result->layout->nodes[i].label))) {
+                if (igTreeNode_Str(gd_scene_format("Start #%d: %s",i,result->layout->nodes[i].label))) {
                     igText("Row %s | %d retained targets",analysis->reachability.finished[i] ? "finished":"unfinished",analysis->reachability.count[i]);
                     GD_EvidencePage members=gd_explorer_evidence_cursor_pager("Retained targets",&state->reach_member_pages[i],analysis->reachability.count[i]);
-                    for (member=0;member<analysis->node_count;++member) if (gd_graph_closure_contains(&analysis->reachability,i,member)) {if(!gd_evidence_page_take(&members,&shown))continue;int key=result->layout->nodes[member].key,source=gd_structure_result_record(result,key); igPushID_Int(member); if (igSmallButton(TextFormat("#%d %s",member,result->layout->nodes[member].label))) navigate(context,source,result->view==GD_EXPLORER_RESOURCES ? key:-1); igPopID(); }
+                    for (member=0;member<analysis->node_count;++member) if (gd_graph_closure_contains(&analysis->reachability,i,member)) {if(!gd_evidence_page_take(&members,&shown))continue;int key=result->layout->nodes[member].key,source=gd_structure_result_record(result,key); igPushID_Int(member); if (igSmallButton(gd_scene_format("#%d %s",member,result->layout->nodes[member].label))) navigate(context,source,result->view==GD_EXPLORER_RESOURCES ? key:-1); igPopID(); }
                     igTreePop();
                 }
                 igPopID();
@@ -424,7 +424,7 @@ static void result_panel(GD_ExplorerContext *context) {
             igText("%d bins | %d input rows (not flow)",overview->bins,overview->link_count);
             for(i=0;i<overview->bins*overview->bins;++i)total+=overview->counts[i]!=0;
             page=gd_explorer_evidence_pager("Nonempty cells",&state->overview_page,total,GD_EVIDENCE_PAGE_ROWS);
-            for(i=0;i<overview->bins*overview->bins;++i)if(overview->counts[i]){if(!gd_evidence_page_take(&page,&ordinal))continue;if(igTreeNode_Str(TextFormat("row bin %d / column bin %d: %d rows",i/overview->bins,i%overview->bins,overview->counts[i]))){igTextUnformatted("First native source example (not complete cell provenance)",NULL);if(overview->first[i]>=0)link_row(context,overview->first[i],0);igTreePop();}}
+            for(i=0;i<overview->bins*overview->bins;++i)if(overview->counts[i]){if(!gd_evidence_page_take(&page,&ordinal))continue;if(igTreeNode_Str(gd_scene_format("row bin %d / column bin %d: %d rows",i/overview->bins,i%overview->bins,overview->counts[i]))){igTextUnformatted("First native source example (not complete cell provenance)",NULL);if(overview->first[i]>=0)link_row(context,overview->first[i],0);igTreePop();}}
         }
         igTextWrapped("Indices are snapshot-local. Arrows remain authored; support is structural, never temporal execution. Pages cover retained rows only; native omissions and witness retention stay separate.");
         igTreePop();

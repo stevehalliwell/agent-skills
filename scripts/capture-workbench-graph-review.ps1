@@ -2,11 +2,11 @@
 .SYNOPSIS
 Capture six native graph projections without pointer/keyboard automation or example writes.
 .DESCRIPTION
-Usage: pwsh -NoProfile -File scripts/capture-workbench-graph-review.ps1 -RaylibDirectory PATH
+Usage: pwsh -NoProfile -File scripts/capture-workbench-graph-review.ps1 -Executable PATH -UiLibrary PATH
   [-Example little-plumber-guy-nes|crate-puzzle] [-Layers overview]
 Default captures all five layers. For multiple overrides invoke from PowerShell with -Layers @('default','overview').
-  [-Executable PATH] [-UiLibrary PATH] [-OutputParent PATH] [-Frames 4] [-Cjit cjit]
-Requires existing CJIT, prepared gd-ui.dll and raylib SDK. No downloads/installs.
+  [-OutputParent PATH] [-Frames 4] [-Cjit cjit]
+Requires existing CJIT and prepared gd-native-ui.dll. No downloads/installs.
 Creates unique ignored artifact directory; never overwrites an earlier run. Non-default layers
 compile PRIVATE copies with initialized control state; these are rendering probes, NOT evidence
 of real UI activation, input isolation or usability. Original production sources stay unchanged.
@@ -15,7 +15,6 @@ Stdout: one JSON result. Logs/screenshots/seeded sources stay in artifact direct
 1 capture/build/data-integrity failure; PowerShell argument binding errors are nonzero. No prompts.
 #>
 param(
-    [string]$RaylibDirectory='',
     [ValidateSet('little-plumber-guy-nes','crate-puzzle')][string]$Example='little-plumber-guy-nes',
     [ValidateSet('default','foundations','typed','shapes','overview')][string[]]$Layers=@('default','foundations','typed','shapes','overview'),
     [string]$Executable='', [string]$UiLibrary='', [string]$OutputParent='',
@@ -36,15 +35,13 @@ function Tree-Hash([string]$Path) {
     return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($manifest)))
 }
 try {
-    if (!$RaylibDirectory) { throw 'Require -RaylibDirectory pointing at prepared raylib SDK; no interactive prompt.' }
-    if (!$Executable) { $Executable=Join-Path $native 'build/graph-independent-review/gd-view.exe' }
-    if (!$UiLibrary) { $UiLibrary=Join-Path $native 'build/gd-ui.dll' }
+    if (!$Executable) { throw 'Supply current native gd-view.exe with -Executable.' }
+    if (!$UiLibrary) { throw 'Supply matching gd-native-ui.dll with -UiLibrary.' }
     if (!$OutputParent) { $OutputParent=Join-Path $native 'build' }
-    foreach ($path in @($Executable,$UiLibrary,(Join-Path $RaylibDirectory 'lib/raylib.dll'))) {
+    foreach ($path in @($Executable,$UiLibrary)) {
         if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing prepared input: $path" }
     }
     $Executable=[IO.Path]::GetFullPath($Executable); $UiLibrary=[IO.Path]::GetFullPath($UiLibrary)
-    $RaylibDirectory=[IO.Path]::GetFullPath($RaylibDirectory)
     $before=Tree-Hash $game
     $sourceMatchesHead=@(& git -C $repository diff --name-only HEAD -- skills/game-design-workbench/native).Count -eq 0
     $sourceFiles=@('gd_graph_view.c','gd_mda_view.c','gd_resource_view.c')
@@ -109,9 +106,9 @@ $items=@($args | ForEach-Object { if ([IO.Path]::GetFileName($_) -in $files) { J
 exit $LASTEXITCODE
 '@
             [IO.File]::WriteAllText($wrapper,$wrapperText.Replace('__SEED__',$escapedSeed).Replace('__CJIT__',$escapedCjit).Replace('__NATIVE__',$escapedNative))
-            & (Join-Path $native 'build.ps1') -Graph -Cjit $wrapper -UiLibrary $UiLibrary -RaylibDirectory $RaylibDirectory -OutputDirectory $seed *> (Join-Path $seed 'build.log')
+            & (Join-Path $native 'build.ps1') -Graph -Cjit $wrapper -UiLibrary $UiLibrary -OutputDirectory (Join-Path $seed 'bin') *> (Join-Path $seed 'build.log')
             if ($LASTEXITCODE -ne 0) { throw "Seeded $layer build failed; see $seed/build.log" }
-            $viewExecutable=Join-Path $seed 'gd-view.exe'
+            $viewExecutable=Join-Path $seed 'bin/gd-view.exe'
         }
         foreach ($view in @('skills','challenges','relationships','matrix','mda','resources')) {
             $arguments=@('view')

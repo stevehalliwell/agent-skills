@@ -11,7 +11,7 @@
 #include "gd_similarity_projection.h"
 #include "gd_named_query.h"
 #include "gd_diagnostics_ui.h"
-#include "raylib.h"
+#include "gd_scene_draw.h"
 
 enum { GD_EXPLORER_SOURCE_LISTS=64 };
 typedef struct {
@@ -21,7 +21,7 @@ typedef struct {
 typedef struct {
     GD_Allocator allocator; GD_ExplorerChartForm pending,applied; GD_Query *query;
     int mode,row,column,scenario,page,arrow_page,proposal_page,activation_page;
-    Camera2D cameras[2]; bool camera_ready[2];
+    GD_Camera cameras[2]; bool camera_ready[2];
     unsigned short participant_pages[GD_MAX_RULE_CASES];
     int node_count[2],edge_count;
     const char *nodes[2][GD_ACTOR_WRITES+GD_ACTOR_VARIANTS];
@@ -76,7 +76,7 @@ typedef struct {
     char feature_tokens[GD_MAX_RULE_LINE+1],entry_tokens[GD_MAX_RULE_LINE+1],feature_ids[GD_SIMILARITY_FEATURES][128];
     const char *feature_names[GD_SIMILARITY_FEATURES],*entry_ids[GD_STRUCTURE_SELECTORS]; double feature_weights[GD_SIMILARITY_FEATURES];
     GD_SimilaritySelection similarity_selection;
-    Camera2D similarity_camera; bool similarity_canvas,similarity_fit,similarity_camera_ready;
+    GD_Camera similarity_camera; bool similarity_canvas,similarity_fit,similarity_camera_ready;
     int similarity_row,similarity_peer,similarity_page,comparison_first,comparison_second,comparison_available,comparison_work;
     double comparison_distance,comparison_components[GD_SIMILARITY_FEATURES];
     int similarity_member_pages[GD_SIMILARITY_FEATURES],similarity_feature_page;
@@ -117,7 +117,7 @@ typedef struct {
 typedef struct {
     GD_ExplorerView view;
     GD_Layout *layout;
-    Camera2D camera,regular_camera;
+    GD_Camera camera,regular_camera;
     GD_ExplorerFocusResult focus_result; /* Last camera action, not analytical input. */
     bool focus_camera_override; /* Explicit framing wins next automatic distance-layout fit. */
     GD_LayoutFocus *distance_focus;
@@ -126,7 +126,7 @@ typedef struct {
     bool distance_focus_started; /* Previous frame time predates new transition. */
     const GD_Layout *find_hold_layout;
     int find_hold_node; /* >=0: Find anchor; -2: cleared selection holds focus pose; -1: no hold. */
-    Vector2 right_origin;
+    GD_Point right_origin;
     int right_started;
     GD_ExplorerSelection selection;
     GD_ExplorerQueryOptions query_options;
@@ -183,7 +183,7 @@ typedef struct {
     GD_GraphAnalysis *analysis; /* One active-view scratch; never snapshot storage. */
     const GD_ExplorerRuleContext *rule_context; /* Optional call-local discovery batch; never retained by a pane. */
     GD_SkillUnlocks *query;
-    Rectangle viewport;
+    GD_Rect viewport;
     uint64_t scope_revision;
     GD_Layout *display_layout; /* Borrowed render-only pose; never a solver target. */
     const struct GD_RenderPose *render_pose; /* Optional viewer-owned pose for camera actions only; IPC positions remain raw. */
@@ -214,7 +214,7 @@ static inline GD_Layout *gd_explorer_display_layout(const GD_ExplorerContext *co
 /* Camera only. Context viewport is drawable canvas; no allocation/evaluation. */
 int gd_explorer_focus_available(const GD_ExplorerContext *context);
 int gd_explorer_focus_selection(GD_ExplorerContext *context);
-void gd_explorer_focus_camera(Camera2D *camera,Rectangle viewport,Rectangle selected,Rectangle context,Vector2 primary,GD_ExplorerFocusResult *result);
+void gd_explorer_focus_camera(GD_Camera *camera,GD_Rect viewport,GD_Rect selected,GD_Rect context,GD_Point primary,GD_ExplorerFocusResult *result);
 int gd_explorer_similarity_focus(GD_ExplorerContext *context);
 int gd_explorer_similarity_frame(GD_ExplorerContext *context);
 
