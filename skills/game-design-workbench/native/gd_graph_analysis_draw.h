@@ -130,13 +130,22 @@ static inline void gd_graph_route_line(const GD_LayoutRoute *route, float width,
     for (i=1;i<route->count;++i) gd_graph_underlay_line((GD_Point){route->points[i-1].x,route->points[i-1].y},
         (GD_Point){route->points[i].x,route->points[i].y},width,color,dashed);
 }
-static inline void gd_graph_route_arrow(const GD_LayoutRoute *route, GD_Color color) {
-    GD_LayoutPoint from=route->points[route->count-2],tip=route->points[route->count-1];
+static inline void gd_graph_arrow(GD_LayoutPoint from,GD_LayoutPoint tip,GD_Color color) {
     float dx=tip.x-from.x,dy=tip.y-from.y,length=sqrtf(dx*dx+dy*dy);
     if (length<1) return;
     dx/=length; dy/=length;
     gd_scene_line((GD_Point){tip.x,tip.y},(GD_Point){tip.x-dx*13-dy*6,tip.y-dy*13+dx*6},3,color);
     gd_scene_line((GD_Point){tip.x,tip.y},(GD_Point){tip.x-dx*13+dy*6,tip.y-dy*13-dx*6},3,color);
+}
+static inline void gd_graph_route_arrow(const GD_LayoutRoute *route, GD_Color color) {
+    gd_graph_arrow(route->points[route->count-2],route->points[route->count-1],color);
+}
+/* Mid-route marker stays outside card endpoints on ordinary long links. */
+static inline GD_LayoutPoint gd_graph_route_mid_arrow(const GD_LayoutRoute *route,GD_Color color) {
+    int i=route->count/2;
+    GD_LayoutPoint from=route->points[i-1],tip=route->points[i];
+    if(route->count%2==0)tip=(GD_LayoutPoint){(from.x+tip.x)/2,(from.y+tip.y)/2};
+    gd_graph_arrow(from,tip,color);return tip;
 }
 static const GD_Color gd_path_color={230,142,180,255};
 static const GD_Color gd_bypass_color={89,220,226,255};

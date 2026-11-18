@@ -1,5 +1,5 @@
-/* Included only by -ExplorerTest. Exercise the shell's actual state helpers and
-   renderers in one owned window. Does not claim real-pointer/UI acceptance. */
+/* Included only by -ExplorerTest. Exercise actual state helpers and renderers.
+   CPU draw-data checks do not claim real-pointer or visible acceptance. */
 #include "test_explorer_picker_view.h"
 #include "test_explorer_fresh_pane.h"
 int gd_explorer_structure_picker_checks(GD_ExplorerContext *context);
@@ -32,8 +32,9 @@ static void explorer_test_render(GD_ExplorerContext *c) {
     igEnd();
     matches(c); if (!gd_explorer_similarity_active(c)) distance_focus_update(c,selected);
     if (!gd_explorer_similarity_active(c) && p->distance_focus) gd_layout_focus_advance(p->distance_focus,p->layout,0.22f,p->view==GD_EXPLORER_MDA && p->layout->mode==GD_LAYOUT_FORCE ? 3:1);
-    p->camera.offset=(GD_Point){450,503};
-    if (!gd_explorer_similarity_active(c) && p->fit) { fit_view(c,p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+    count_grid_viewport(c);
+    p->camera.offset=(GD_Point){c->viewport.x+c->viewport.width/2,c->viewport.y+c->viewport.height/2};
+    apply_pending_fit(c);
     {
         GD_ExplorerEvidence e=evidence(c,selected);
         if (gd_explorer_similarity_active(c)) gd_explorer_similarity_draw(c);
@@ -54,6 +55,12 @@ static void explorer_test_render(GD_ExplorerContext *c) {
         if(!data || !data->Valid || data->TotalVtxCount<1 || data->TotalIdxCount<1)explorer_test_frame_failed=1;
     }
 }
+static int explorer_test_grid_fitted(const GD_ExplorerContext *c) {
+    const GD_ExplorerPane *p=c->pane;
+    GD_Point first=gd_world_to_screen((GD_Point){-GD_MATRIX_NOUN_WIDTH,-GD_MATRIX_HEADER_HEIGHT},p->camera);
+    GD_Point last=gd_world_to_screen((GD_Point){p->grid.verbs*GD_MATRIX_COLUMN_WIDTH,p->grid.nouns*GD_MATRIX_ROW_HEIGHT},p->camera);
+    return gd_rect_hit(first,c->viewport) && gd_rect_hit(last,c->viewport);
+}
 /* Exercise drawing and balanced clipping without OS windows, GPU or input. */
 int gd_explorer_scene_checks(GD_Allocator allocator,const GD_Collection *collections,int count) {
     GD_ExplorerContext c={0};GD_ExplorerProject *project=gd_explorer_load(allocator,collections,count);
@@ -72,9 +79,10 @@ int gd_explorer_scene_checks(GD_Allocator allocator,const GD_Collection *collect
         EXPLORER_CHECK(pane_prepare(&c));
         explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;
         if(view==GD_EXPLORER_MATRIX || view==GD_EXPLORER_NOUNS){
-            pane->layout_choice=view==GD_EXPLORER_MATRIX ? GD_MATRIX_GRID_CHOICE:GD_NOUN_LAYOUT_FREE;
-            pane->fit=view==GD_EXPLORER_MATRIX ? GD_EXPLORER_FIT_GRID_READABLE:1;pane->prepared=0;
-            EXPLORER_CHECK(pane_prepare(&c));explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;
+            if(grid_view(pane))EXPLORER_CHECK(explorer_test_grid_fitted(&c));
+            EXPLORER_CHECK(gd_explorer_presentation_set(&c,"layout",view==GD_EXPLORER_MATRIX ? "grid":"free",pane->query_message,sizeof(pane->query_message)));
+            explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;
+            if(grid_view(pane))EXPLORER_CHECK(explorer_test_grid_fitted(&c));
         } else if(view==GD_EXPLORER_MDA) {
             EXPLORER_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN));
             pane->structure_state->pending.kind=GD_STRUCTURE_COUNT+1;
@@ -82,19 +90,27 @@ int gd_explorer_scene_checks(GD_Allocator allocator,const GD_Collection *collect
             EXPLORER_CHECK(gd_explorer_action_run(&c,GD_ACTION_STRUCTURE_RUN) && gd_explorer_similarity_active(&c));
             explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;
         } else if(view==GD_EXPLORER_STATES) {
-            const GD_Model *model=gd_explorer_model(project,GD_EXPLORER_STATES);int noun=-1,axis=-1;
-            for(int r=0;r<model->record_count && axis<0;++r)if(model->records[r].role==GD_NOUN) {
+            const GD_Model *model=gd_explorer_model(project,GD_EXPLORER_STATES);int noun=-1,axis=-1,companion=-1;
+            for(int r=0;r<model->record_count && companion<0;++r)if(model->records[r].role==GD_NOUN) {
+                int first=-1;
                 for(int e=project->rules->actor_first[r];e>=0;e=project->rules->next_axis[e])if(project->rules->axis_resolution[e]==GD_RULE_RESOLVED) {
                     int target=model->edges[e].target;
-                    if(project->rules->axes[target].valid && project->rules->axes[target].type==GD_AXIS_ENUM){noun=r;axis=target;break;}
+                    if(!project->rules->axes[target].valid || project->rules->axes[target].type!=GD_AXIS_ENUM)continue;
+                    if(first<0){first=target;if(axis<0){axis=first;noun=r;}}
+                    else if(first!=target){axis=first;companion=target;noun=r;break;}
                 }
             }
             EXPLORER_CHECK(noun>=0 && axis>=0 && pane->chart_state);
             GD_ExplorerChartState *chart=pane->chart_state;
             snprintf(chart->pending.object,sizeof(chart->pending.object),"%s",model->records[noun].reference);
             snprintf(chart->pending.axis,sizeof(chart->pending.axis),"%s",model->records[axis].reference);
+            if(companion>=0)snprintf(chart->pending.companion_axis,sizeof(chart->pending.companion_axis),"%s",model->records[companion].reference);
             EXPLORER_CHECK(gd_explorer_action_run(&c,GD_ACTION_CHART_RUN));
-            for(int mode=0;mode<2;++mode){chart->mode=mode;explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed);++checked;}
+            for(int mode=0;mode<2;++mode){
+                const GD_Query *retained=chart->query;
+                EXPLORER_CHECK(gd_explorer_presentation_set(&c,"state_chart_mode",mode ? "grid":"statechart",pane->query_message,sizeof(pane->query_message)));
+                explorer_test_render(&c);EXPLORER_CHECK(!explorer_test_frame_failed && chart->query==retained && chart->mode==mode);++checked;
+            }
         }
         gd_diagnostics_clear(&pane->diagnostics);gd_layout_focus_destroy(pane->distance_focus);gd_resource_routes_destroy(pane->resource_routes);
         pane_release_layout(allocator,pane);memset(pane,0,sizeof(*pane));
@@ -300,17 +316,18 @@ int gd_explorer_checks(GD_Allocator allocator, const GD_Collection *collections,
         snprintf(p->find_reference,sizeof(p->find_reference),"%s",model->records[gd_explorer_graph_record(&c)].reference);
         matches(&c); EXPLORER_CHECK(p->visible_matches>0 && !p->hidden_matches);
         c.viewport=(GD_Rect){14,112,872,783}; grid_fit(&c,1); EXPLORER_CHECK(p->camera.zoom>0);
-        p->fit=GD_EXPLORER_FIT_GRID_READABLE; explorer_test_render(&c);
+        p->fit=1; explorer_test_render(&c);
         EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/grid-cases.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
         for (i=0;i<p->grid.nouns && !blank;++i) for (j=0;j<p->grid.verbs;++j)
             if (gd_matrix_grid_cell(model,p->grid.order[i],p->grid.order[p->grid.nouns+j])<0) {
                 grid_choose(&c,i,j); EXPLORER_CHECK(p->selection.cell<0 && gd_explorer_graph_record(&c)<0); blank=1; break;
             }
-        EXPLORER_CHECK(blank); p->fit=GD_EXPLORER_FIT_GRID_READABLE; explorer_test_render(&c);
+        EXPLORER_CHECK(blank); p->fit=1; explorer_test_render(&c);
         EXPLORER_CHECK(p->peer==0 && p->foundation_peer==1); /* Dormant graph settings retained. */
         EXPLORER_CHECK(snprintf(path,sizeof(path),"%s/grid-blank.png",output)<(int)sizeof(path) && gd_save_screenshot(path));
         *saved=*p;
         EXPLORER_CHECK(change_view(&c,panes,GD_EXPLORER_SKILLS,NULL) && change_view(&c,panes,GD_EXPLORER_MATRIX,NULL));
+        EXPLORER_CHECK(p->fit==GD_EXPLORER_FIT_GRID_ALL); saved->fit=p->fit;
         EXPLORER_CHECK(!memcmp(saved,p,sizeof(*saved)));
         EXPLORER_CHECK(explorer_test_fresh_pane(&c) && p->layout_choice==0 && p->grid.noun==-1 && p->grid.verb==-1);
         p->layout_choice=GD_MATRIX_GRID_CHOICE; p->prepared=0; EXPLORER_CHECK(pane_prepare(&c));

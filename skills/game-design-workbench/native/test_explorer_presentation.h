@@ -421,7 +421,12 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         for(mode=0;mode<4;++mode){const char *layout=mode==1 ? "grid":mode==2 && v==GD_EXPLORER_MATRIX ? "columns":"free";GD_Rect bounds={0};
             PRESENT_STAGE(v,"layout",layout);PRESENT_CHECK(strstr(reply,"\"configured\":true") && !memcmp(&saved,&p->selection,sizeof(saved)) && p->noun_case_page==case_page && p->grid.noun==noun && p->grid.verb==verb);
             PRESENT_CHECK(pair_selection_nodes(&target,nodes)==(noun==verb ? 1:2));memcpy(raw,p->layout,sizeof(*raw));
-            if(grid_view(p)){GD_Rect area=v==GD_EXPLORER_NOUNS ? noun_grid_bounds(p,noun,verb):grid_bounds(&p->grid,noun,verb);grid_fit(&target,-1);PRESENT_CHECK(p->camera.zoom==1 && fabsf(p->camera.target.x-area.x-area.width/2)<0.01f && fabsf(p->camera.target.y-area.y-area.height/2)<0.01f);}
+            if(grid_view(p)){
+                float width=GD_MATRIX_NOUN_WIDTH+p->grid.verbs*GD_MATRIX_COLUMN_WIDTH,height=GD_MATRIX_HEADER_HEIGHT+p->grid.nouns*GD_MATRIX_ROW_HEIGHT;
+                PRESENT_CHECK(p->fit==1);apply_pending_fit(&target);
+                PRESENT_CHECK(width*p->camera.zoom<target.viewport.width && height*p->camera.zoom<target.viewport.height &&
+                    fabsf(p->camera.target.x+GD_MATRIX_NOUN_WIDTH-width/2)<0.01f && fabsf(p->camera.target.y+GD_MATRIX_HEADER_HEIGHT-height/2)<0.01f);
+            }
             else{PRESENT_CHECK(p->fit==GD_EXPLORER_FIT_SELECTION && pair_selection_bounds(&target,&bounds));fit_view(&target,GD_EXPLORER_FIT_SELECTION);PRESENT_CHECK(p->camera.zoom>0 && p->camera.zoom<=1.2f && bounds.width*p->camera.zoom<target.viewport.width && bounds.height*p->camera.zoom<target.viewport.height && fabsf(p->camera.target.x-bounds.x-bounds.width/2)<0.01f && fabsf(p->camera.target.y-bounds.y-bounds.height/2)<0.01f);PRESENT_ACTION(v,"view.cell.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true") && p->fit==GD_EXPLORER_FIT_SELECTION);}
             PRESENT_ACTION(v,"view.selection.focus");PRESENT_CHECK(strstr(reply,"\"framing\":{") && p->focus_result.selected==(grid_view(p) ? 1:noun==verb ? 1:2) && p->camera.zoom>=1);
             PRESENT_CHECK(!memcmp(raw,p->layout,sizeof(*raw)) && !memcmp(&saved,&p->selection,sizeof(saved)));
@@ -429,14 +434,14 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
         /* Header/node selection maps by record key, never old layout offset. */
         p->selection=(GD_ExplorerSelection){-1,nodes[0],0,-1,-1};noun=p->layout->nodes[nodes[0]].key;
         PRESENT_STAGE(v,"layout","grid");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->layout->nodes[p->selection.node].key==noun);
-        grid_fit(&target,-1);PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->layout->nodes[p->selection.node].key==noun && pair_selection_nodes(&target,nodes)==1);
+        apply_pending_fit(&target);PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->layout->nodes[p->selection.node].key==noun && pair_selection_nodes(&target,nodes)==1);
         PRESENT_CHECK(!gd_explorer_action_available(&target,GD_ACTION_VIEW_CELL_FIT));a.release(a.context,raw);
     }
     {
         GD_ExplorerPane *p=&panes[GD_EXPLORER_MATRIX];const GD_Model *model=gd_explorer_model(c.project,GD_EXPLORER_MATRIX);int row,column,blank=0,nodes[2];bool overlay=p->overlay;
         PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","grid");
         for(row=0;row<p->grid.nouns && row<64 && !blank;++row)for(column=0;column<p->grid.verbs && column<64;++column)if(gd_matrix_grid_cell(model,p->grid.order[row],p->grid.order[p->grid.nouns+column])<0){grid_choose(&target,row,column);blank=1;break;}
-        if(blank){int noun=p->grid.noun,verb=p->grid.verb;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell<0 && p->selection.node<0 && pair_selection_nodes(&target,nodes)==2 && p->grid.noun==noun && p->grid.verb==verb && p->overlay==overlay && p->layout->edge_count==model->cell_count);PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","grid");grid_fit(&target,-1);PRESENT_CHECK(p->selection.cell<0 && p->grid.noun==noun && p->grid.verb==verb);}
+        if(blank){int noun=p->grid.noun,verb=p->grid.verb;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell<0 && p->selection.node<0 && pair_selection_nodes(&target,nodes)==2 && p->grid.noun==noun && p->grid.verb==verb && p->overlay==overlay && p->layout->edge_count==model->cell_count);PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","grid");apply_pending_fit(&target);PRESENT_CHECK(p->selection.cell<0 && p->grid.noun==noun && p->grid.verb==verb);}
         for(i=0;i<model->cell_count;++i)if(!model->cells[i].active){int edge;grid_choose(&target,p->grid.slot[model->cells[i].noun],p->grid.slot[model->cells[i].verb]);p->overlay=false;PRESENT_STAGE(GD_EXPLORER_MATRIX,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && p->selection.cell==i && pair_selection_nodes(&target,nodes)==2 && !p->overlay);for(edge=0;edge<p->layout->edge_count && p->layout->edges[edge].key!=i;++edge){}PRESENT_CHECK(edge<p->layout->edge_count && !p->layout->edges[edge].active);PRESENT_ACTION(GD_EXPLORER_MATRIX,"view.selection.focus");PRESENT_CHECK(strstr(reply,"\"executed\":true") && p->focus_result.hidden_link && !p->overlay);p->overlay=overlay;break;}
     }
     {

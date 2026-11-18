@@ -20,15 +20,6 @@ static void grid_fit(GD_ExplorerContext *c, int only_matches) {
     GD_Rect bounds={-GD_MATRIX_NOUN_WIDTH,-GD_MATRIX_HEADER_HEIGHT,
         p->grid.verbs*GD_MATRIX_COLUMN_WIDTH+GD_MATRIX_NOUN_WIDTH,p->grid.nouns*GD_MATRIX_ROW_HEIGHT+GD_MATRIX_HEADER_HEIGHT};
     int i,found=0,record=gd_explorer_record(model,p->find_reference);
-    if (only_matches<0) {
-        /* Start readable, not fitted to a potentially huge Cartesian extent.
-           F still fits the full grid; camera never changes source scope. */
-        p->camera.zoom=1;
-        p->camera.target=(GD_Point){c->viewport.width/2-GD_MATRIX_NOUN_WIDTH,c->viewport.height/2-GD_MATRIX_HEADER_HEIGHT};
-        if(p->selection.node>=0 && p->selection.node<p->layout->node_count){int key=p->layout->nodes[p->selection.node].key;GD_Rect area=grid_bounds(&p->grid,model->records[key].role==GD_NOUN ? key:-1,model->records[key].role==GD_VERB ? key:-1);p->camera.target=(GD_Point){area.x+area.width/2,area.y+area.height/2};}
-        else if(p->grid.noun>=0 && p->grid.verb>=0){GD_Rect area=grid_bounds(&p->grid,p->grid.noun,p->grid.verb);p->camera.target=(GD_Point){area.x+area.width/2,area.y+area.height/2};}
-        return;
-    }
     if (only_matches) {
         for (i=0;i<p->layout->node_count;++i) if (p->match_nodes[i] && p->layout->nodes[i].key==record)
             grid_union(&bounds,grid_bounds(&p->grid,model->records[record].role==GD_NOUN ? record:-1,

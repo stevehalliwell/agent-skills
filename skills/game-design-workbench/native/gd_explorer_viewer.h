@@ -351,6 +351,7 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
     enter_view(c,viewer->panes,v,*request->reference?request->reference:NULL);
     *viewer->active=v;
     if (*request->reference) { matches(c); fit_view(c,1); c->pane->fit=0; }
+    else if (*request->id && c->pane->fit==GD_EXPLORER_FIT_GRID_ALL) c->pane->fit=0; /* Keep exact-node framing. */
     gd_viewer_write(w,"{\"ok\":true,\"focus_changed\":false,\"selection_changed\":%s,",*request->id?"true":"false"); viewer_member(w,"projection",viewer_projections[v]);
     gd_viewer_write(w,",\"visible_matches\":%d,\"hidden_matches\":%d,\"source_only\":%s}",c->pane->visible_matches,c->pane->hidden_matches,*request->id?"false":"true");
 }

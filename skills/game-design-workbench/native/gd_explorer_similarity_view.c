@@ -69,9 +69,11 @@ static int similarity_focus(GD_ExplorerContext *context,int frame) {
 }
 int gd_explorer_similarity_focus(GD_ExplorerContext *context){return similarity_focus(context,0);}
 int gd_explorer_similarity_frame(GD_ExplorerContext *context){return similarity_focus(context,1);}
-static GD_Rect legend_bounds(const GD_ExplorerContext *context,const GD_SimilarityProjection *projection) {
-    int features=projection->feature_count<3 ? projection->feature_count:3;
-    return (GD_Rect){context->viewport.x+6,context->viewport.y+5,fminf(620,context->viewport.width-12),(float)(16*(features+5)+8)};
+static GD_Rect legend_bounds(const GD_ExplorerContext *context) {
+    return (GD_Rect){context->viewport.x+6,context->viewport.y+5,fminf(454,context->viewport.width-12),66};
+}
+static GD_Rect similarity_footer(GD_Rect viewport) {
+    return (GD_Rect){viewport.x+6,viewport.y+viewport.height-45,viewport.width-12,40};
 }
 static void fit(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state; const GD_Similarity *map=state->result->similarity->map;
@@ -82,7 +84,7 @@ static void fit(GD_ExplorerContext *context) {
         if (!found || value.y<top) top=value.y; if (!found || value.y>bottom) bottom=value.y; found=1;
     }
     state->similarity_camera.target=(GD_Point){(left+right)/2,(top+bottom)/2};
-    float inset=legend_bounds(context,state->result->similarity).height+12,available=fmaxf(40,context->viewport.height-inset-40);
+    float inset=legend_bounds(context).height+12,available=fmaxf(40,context->viewport.height-inset-40);
     state->similarity_camera.zoom=fminf(fmaxf(40,context->viewport.width-48)/fmaxf(1,right-left),fmaxf(40,available-48)/fmaxf(1,bottom-top));
     if (state->similarity_camera.zoom>4) state->similarity_camera.zoom=4;
     if (state->similarity_camera.zoom<0.00001f) state->similarity_camera.zoom=0.00001f;
@@ -104,7 +106,8 @@ void gd_explorer_similarity_input(GD_ExplorerContext *context) {
     if(igIsMouseDown_Nil(ImGuiMouseButton_Middle) || igIsMouseDown_Nil(ImGuiMouseButton_Right)){
         GD_Point delta=gd_mouse_delta();camera->target.x-=delta.x/camera->zoom;camera->target.y-=delta.y/camera->zoom;
     }
-    if(!map || !map->available || !view || gd_rect_hit(mouse,legend_bounds(context,projection)))return;
+    if(!map || !map->available || !view || gd_rect_hit(mouse,legend_bounds(context)))return;
+    if((state->similarity_row>=0 || state->similarity_peer>=0) && gd_rect_hit(mouse,similarity_footer(context->viewport)))return;
     view->hover_count=gd_similarity_view_hits(map,*camera,mouse,view->hover_rows,GD_SIMILARITY_HOVER_ROWS);
     if(!view->hover_count || !gd_mouse_pressed(ImGuiMouseButton_Left))return;
     int peer=igIsKeyDown_Nil(ImGuiKey_LeftShift) || igIsKeyDown_Nil(ImGuiKey_RightShift);
@@ -130,10 +133,12 @@ static void draw_name(GD_ExplorerContext *context,GD_SimilarityView *view,GD_Poi
 }
 void gd_explorer_similarity_draw(GD_ExplorerContext *context) {
     GD_ExplorerStructureState *state=context->pane->structure_state;const GD_SimilarityProjection *projection=state->result->similarity;const GD_Similarity *map=projection->map;GD_SimilarityView *view=state->similarity_view;
-    GD_Rect viewport=context->viewport,legend=legend_bounds(context,projection);int rows[2]={state->similarity_row,state->similarity_peer};
+    GD_Rect viewport=context->viewport,legend=legend_bounds(context),footer=similarity_footer(viewport);
+    int rows[2]={state->similarity_row,state->similarity_peer},show_footer=rows[0]>=0 || rows[1]>=0;
     gd_scene_clip((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height);
     if(!map || !map->available || !view){gd_scene_text("Similarity fit unavailable. Inspect limits/unplaced context in controls.",(int)viewport.x+15,(int)viewport.y+20,17,muted);gd_scene_unclip();return;}
     view->label_count=1;view->labels[0]=legend;view->hidden_labels=0;
+    if(show_footer)view->labels[view->label_count++]=footer;
     for(int group=0;group<view->group_count;++group){
         const GD_SimilarityViewPoint *value=&view->groups[group];GD_Point screen=gd_world_to_screen(value->point,state->similarity_camera);
         if(!gd_rect_hit(screen,viewport))continue;
@@ -144,7 +149,8 @@ void gd_explorer_similarity_draw(GD_ExplorerContext *context) {
         int row=rows[role];GD_Color color=role ? second_color:first_color;
         if(row>=0 && row<projection->entry_count && map->placed[row]){
             GD_Point screen=gd_world_to_screen(gd_similarity_view_point(map,row),state->similarity_camera);
-            gd_scene_ring_pixels((int)screen.x,(int)screen.y,role ? 17:20,color);
+            if(role)gd_scene_outline((GD_Rect){screen.x-17,screen.y-17,34,34},2,color);
+            else gd_scene_ring_pixels((int)screen.x,(int)screen.y,20,color);
             draw_name(context,view,screen,gd_similarity_view_name(projection,row),color,1,role);
         }
     }
@@ -153,14 +159,17 @@ void gd_explorer_similarity_draw(GD_ExplorerContext *context) {
         for(int role=0;role<2;++role)if(rows[role]>=0 && rows[role]<projection->entry_count && map->placed[rows[role]]){GD_Point p=gd_similarity_view_point(map,rows[role]);if(p.x==value->point.x && p.y==value->point.y)selected=1;}
         if(!selected && value->count==1)draw_name(context,view,gd_world_to_screen(value->point,state->similarity_camera),gd_similarity_view_name(projection,value->row),foreground,0,0);
     }
-    gd_scene_rect(legend,(GD_Color){24,29,38,245});int x=(int)legend.x+4,y=(int)legend.y+4;
-    gd_scene_text(gd_scene_format("Applied measurements: %d | %d placed / %d missing",projection->feature_count,map->complete_entries,map->missing_entries),x,y,14,foreground);y+=16;
-    for(int feature=0;feature<projection->feature_count && feature<3;++feature){gd_scene_text(gd_scene_format("%s | weight %.5g",gd_similarity_view_measurement(projection,feature),projection->features[feature].weight),x,y,14,muted);y+=16;}
-    gd_scene_text(projection->feature_count>3 ? "+ more measurements in inspector; hover for explanation":"Hover legend for measurement IDs and explanation",x,y,14,muted);y+=16;
-    gd_scene_text("Approximate 2D fit; axes have no independent meaning.",x,y,14,muted);y+=16;
-    gd_scene_text("Not execution, causality or importance. Numbers count coincident entries.",x,y,14,muted);y+=16;
-    gd_scene_text(gd_scene_format("%d crowded labels: hover / click to choose; Shift-click selects peer",view->hidden_labels),x,y,14,muted);
-    for(int role=0;role<2;++role)if(rows[role]>=0 && rows[role]<projection->entry_count)gd_scene_text(gd_scene_format("%s: %s",role ? "Peer":"Selected",gd_similarity_view_name(projection,rows[role])),(int)viewport.x+10,(int)(viewport.y+viewport.height-38+18*role),15,role ? second_color:first_color);
+    gd_scene_clip((int)legend.x,(int)legend.y,(int)legend.width,(int)legend.height);
+    gd_scene_rect(legend,(GD_Color){24,29,38,245});int x=(int)legend.x+8,y=(int)legend.y+5;
+    gd_scene_text(gd_scene_format("%d placed | %d missing | %d measurements",map->complete_entries,map->missing_entries,projection->feature_count),x,y,16,foreground);
+    gd_scene_text("Approximate feature distance. Hover for measurements.",x,y+21,14,muted);
+    gd_scene_text(gd_scene_format("%d crowded labels hidden. Hover or click to inspect.",view->hidden_labels),x,y+40,14,muted);
+    gd_scene_unclip();
+    if(show_footer){
+        gd_scene_rect(footer,(GD_Color){24,29,38,245});
+        for(int role=0;role<2;++role)if(rows[role]>=0 && rows[role]<projection->entry_count)
+            gd_scene_text(gd_scene_format("%s: %s",role ? "Peer":"Selected",gd_similarity_view_name(projection,rows[role])),(int)footer.x+8,(int)footer.y+3+17*role,15,role ? second_color:first_color);
+    }
     gd_scene_unclip();
 }
 /* Tooltips share an ImGui window. Measure this frame's text before Begin so
@@ -204,7 +213,7 @@ void gd_explorer_similarity_popup(GD_ExplorerContext *context) {
     }
     if(view)view->pick_open=0;
     if(!active || !view || igGetIO_Nil()->WantCaptureMouse)return;
-    if(gd_rect_hit(gd_mouse_position(),legend_bounds(context,projection))){
+    if(gd_rect_hit(gd_mouse_position(),legend_bounds(context))){
         const char *lines[GD_SIMILARITY_HOVER_ROWS*4+3];char weights[GD_SIMILARITY_HOVER_ROWS][64],more[96];int count=0;
         lines[count++]="Applied measurements and weights (pending edits do not change this map)";
         for(int feature=0;feature<projection->feature_count && feature<GD_SIMILARITY_HOVER_ROWS;++feature){

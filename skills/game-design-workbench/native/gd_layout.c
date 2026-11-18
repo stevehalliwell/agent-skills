@@ -5,7 +5,7 @@
 
 #define GD_REPULSION_SAMPLES 32
 
-typedef struct { int node, group, layer, degree, key; const char *label; int64_t sum; int count,previous; } LayoutOrder;
+typedef struct { int node, group, layer, degree, key; const char *label; double sum; int count,previous; } LayoutOrder;
 static int compare_order(const void *a, const void *b) {
     const LayoutOrder *left = a, *right = b;
     int order;
@@ -173,6 +173,7 @@ void gd_layout_step_weighted(GD_Layout *layout, int held_node,const int *counts)
                 sample%2 ? group->count-forward:forward;
             int other_index = layout->order[group->first+(local+offset)%group->count];
             const GD_LayoutNode *other = &layout->nodes[other_index];
+            if(layout->mode==GD_LAYOUT_DIRECTED && layout->align_ranks && other->layer!=node->layer)continue;
             float dx = node->x-other->x, dy = node->y-other->y;
             float square = dx*dx+dy*dy;
             if (square < 1) { dx = (i < other_index ? -1.0f : 1.0f); dy = 0.5f; square = dx*dx+dy*dy; }
@@ -207,6 +208,11 @@ void gd_layout_step_weighted(GD_Layout *layout, int held_node,const int *counts)
         node->vx *= 0.85f; node->vy *= 0.85f;
         speed = sqrtf(node->vx*node->vx+node->vy*node->vy);
         if (speed > 5) { node->vx *= 5/speed; node->vy *= 5/speed; }
+        if(layout->mode==GD_LAYOUT_DIRECTED && layout->align_ranks){
+            float cross=directed_cross(layout,node),velocity=layout->horizontal ? node->vy:node->vx;
+            float next=rank_clamp_cross(layout,i,cross+velocity,8);
+            if(layout->horizontal)node->vy=next-cross;else node->vx=next-cross;
+        }
         node->x += node->vx; node->y += node->vy;
     }
     if (layout->mode==GD_LAYOUT_FORCE) {collision_separate(layout,held_node);workspace_contain(layout,held_node);if(layout->islands.enabled)islands_step(layout,held_node);}
@@ -216,6 +222,9 @@ void gd_layout_step(GD_Layout *layout,int held_node) { gd_layout_step_weighted(l
 void gd_layout_move_node(GD_Layout *layout, int node, float x, float y) {
     if (node < 0 || node >= layout->node_count) return;
     if (!isfinite(x) || !isfinite(y) || (layout->nodes[node].x==x && layout->nodes[node].y==y)) return;
+    if(layout->mode==GD_LAYOUT_DIRECTED && layout->align_ranks){
+        if(layout->horizontal)y=rank_clamp_cross(layout,node,y,8);else x=rank_clamp_cross(layout,node,x,8);
+    }
     layout->nodes[node].x = layout->mode == GD_LAYOUT_DIRECTED && layout->horizontal ? layout->nodes[node].axis : x;
     layout->nodes[node].y = layout->mode == GD_LAYOUT_DIRECTED && !layout->horizontal ? layout->nodes[node].axis : y;
     layout->nodes[node].vx = layout->nodes[node].vy = 0;

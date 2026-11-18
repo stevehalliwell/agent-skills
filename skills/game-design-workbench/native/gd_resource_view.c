@@ -327,19 +327,20 @@ static void draw_resource_graph(const GD_ResourceGraph *graph,GD_Layout *raw, GD
     gd_scene_clip((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); gd_scene_set_camera(camera);
     for (i=0;i<layout->edge_count;++i) {
         const GD_LayoutEdge *edge=&layout->edges[i]; const GD_ResourceRelation *rel=&graph->relations[edge->key];
-        const GD_LayoutNode *a=&layout->nodes[edge->a],*b=&layout->nodes[edge->b];
+        GD_LayoutRoute route;
         GD_Color color=rel->kind==GD_RESOURCE_ROLE_BINDING ? role_color : rel->kind==GD_RESOURCE_INVOCATION ? selected_color :
             rel->kind==GD_RESOURCE_EXCLUSION ? (GD_Color){230,125,125,255} : rel->kind==GD_RESOURCE_REQUIREMENT ? (GD_Color){81,194,178,255} :
             rel->kind==GD_RESOURCE_PRESERVATION ? (GD_Color){180,201,119,255} : facet_color;
         if (!analysis->shown[edge->a] || !analysis->shown[edge->b]) continue;
-        if (overview && overview->selected_edges[i]) gd_scene_line((GD_Point){a->x,a->y},(GD_Point){b->x,b->y},21,selected_color);
-        if (reach_pair && reach_pair->edges[i]) gd_scene_line((GD_Point){a->x,a->y},(GD_Point){b->x,b->y},17,gd_graph_branch_color(reach_pair->edges[i]));
-        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_scene_line((GD_Point){a->x,a->y},(GD_Point){b->x,b->y},15,gd_bypass_color);
-        if (path_selection && path_selection->edges[i]) gd_scene_line((GD_Point){a->x,a->y},(GD_Point){b->x,b->y},11,gd_path_color);
-        if (comparison && comparison->edges[i]) gd_scene_line((GD_Point){a->x,a->y},(GD_Point){b->x,b->y},7,gd_graph_branch_color(comparison->edges[i]));
+        gd_layout_route(layout,i,&route);
+        if (overview && overview->selected_edges[i]) gd_graph_route_line(&route,21,selected_color,0);
+        if (reach_pair && reach_pair->edges[i]) gd_graph_route_line(&route,17,gd_graph_branch_color(reach_pair->edges[i]),0);
+        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_graph_route_line(&route,15,gd_bypass_color,0);
+        if (path_selection && path_selection->edges[i]) gd_graph_route_line(&route,11,gd_path_color,0);
+        if (comparison && comparison->edges[i]) gd_graph_route_line(&route,7,gd_graph_branch_color(comparison->edges[i]),0);
         else if (!comparison && shared && pair>=0 && (i==analysis->features[analysis->pairs[pair].first_a].edge || i==analysis->features[analysis->pairs[pair].first_b].edge))
-            gd_scene_line((GD_Point){a->x,a->y},(GD_Point){b->x,b->y},7,role_color);
-        gd_scene_line((GD_Point){a->x,a->y},(GD_Point){b->x,b->y},1.5f,color);
+            gd_graph_route_line(&route,7,role_color,0);
+        gd_graph_route_line(&route,1.5f,color,0);
     }
     for (i=0;i<layout->node_count;++i) {
         GD_LayoutNode *n=&layout->nodes[i],*physical=&raw->nodes[i]; const GD_ResourceNode *item=&graph->nodes[n->key];
@@ -413,8 +414,9 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
             gd_layout_islands_set(layout,!layout->islands.preferred);if(layout->islands.enabled)paused=0;
         }
         if (!igIsMouseDown_Nil(ImGuiMouseButton_Left)) held=-1;
+        gd_graph_overview_input(&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
         if (gd_graph_overview_hit(&overview_controls,viewport,mouse)) held=-1;
-        if (gd_rect_hit(mouse,viewport) && !gd_graph_overview_hit(&overview_controls,viewport,mouse)) {
+        if (gd_rect_hit(mouse,viewport) && !igGetIO_Nil()->WantCaptureMouse && !gd_graph_overview_hit(&overview_controls,viewport,mouse)) {
             GD_Point world=gd_screen_to_world(mouse,camera);
             float wheel=gd_mouse_wheel();
             if (wheel) { GD_Point after; camera.zoom*=powf(1.15f,wheel); if(camera.zoom<0.002f)camera.zoom=0.002f; if(camera.zoom>4)camera.zoom=4; after=gd_screen_to_world(mouse,camera); camera.target.x+=world.x-after.x; camera.target.y+=world.y-after.y; }
@@ -516,7 +518,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
                             paths,bypass,reachability,reach_pair,shapes,overview);
         gd_graph_workspace_draw(layout,layout,analysis->shown,camera,viewport,1);
         gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,1);
-        gd_graph_overview_draw(analysis,&overview_controls,viewport,selected,1);
+        gd_graph_overview_draw(analysis,&overview_controls,viewport,selected,!igGetIO_Nil()->WantCaptureMouse);
         gd_scene_rect_pixels(split,100,width-split,height-100,(GD_Color){29,38,51,255});
         gd_scene_text(path_tab==0 ? "[Context]":"Context",split+14,76,14,foreground);
         gd_scene_text(path_tab==1 ? "[Paths]":"Paths",split+124,76,14,foreground);
@@ -578,19 +580,24 @@ void gd_explorer_resource_draw(GD_ExplorerContext *context, const GD_ExplorerEvi
         gd_scene_clip((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); gd_scene_set_camera(p->camera);
         for (i=0;i<p->layout->edge_count;++i) if (query->marked_relations[i] || query->side_relations[i]) {
             const GD_LayoutEdge *edge=&p->layout->edges[i];
-            if (context->analysis->shown[edge->a] && context->analysis->shown[edge->b])
-                gd_scene_line((GD_Point){shown->nodes[edge->a].x,shown->nodes[edge->a].y},(GD_Point){shown->nodes[edge->b].x,shown->nodes[edge->b].y},
-                    (query->marked_relations[i] ? 9:5)/p->camera.zoom,query->marked_relations[i] ? (GD_Color){45,214,199,150}:(GD_Color){243,186,87,115});
+            if (context->analysis->shown[edge->a] && context->analysis->shown[edge->b]){
+                GD_LayoutRoute route;gd_layout_route(shown,i,&route);
+                gd_graph_route_line(&route,(query->marked_relations[i] ? 9:5)/p->camera.zoom,
+                    query->marked_relations[i] ? (GD_Color){45,214,199,150}:(GD_Color){243,186,87,115},0);
+            }
         }
         if (p->resource_witness>=0 && p->resource_witness<query->witness_count) {
             const GD_ResourceWitness *w=&query->witnesses[p->resource_witness];
             for (i=0;i<w->count;++i) {
                 const GD_ResourceArc *arc=&query->arcs[w->arcs[i]];
-                const GD_LayoutNode *a=&shown->nodes[arc->from],*b=&shown->nodes[arc->to];
-                float dx=b->x-a->x,dy=b->y-a->y,length=hypotf(dx,dy),size=8/p->camera.zoom;
-                if (!context->analysis->shown[arc->from] || !context->analysis->shown[arc->to] || length<2*size) continue;
-                dx/=length; dy/=length;
-                { GD_Point tip={a->x+(b->x-a->x)*0.6f,a->y+(b->y-a->y)*0.6f};
+                GD_LayoutRoute route;GD_LayoutPoint a,b;float dx,dy,length,size=8/p->camera.zoom;
+                if (!context->analysis->shown[arc->from] || !context->analysis->shown[arc->to])continue;
+                gd_layout_route(shown,arc->relation,&route);
+                if(shown->edges[arc->relation].a==arc->from){a=route.points[route.count/2];b=route.points[route.count-1];}
+                else{a=route.points[route.count/2];b=route.points[0];}
+                dx=b.x-a.x;dy=b.y-a.y;length=hypotf(dx,dy);
+                if(length<2*size)continue;
+                { GD_Point tip={a.x+dx*.2f,a.y+dy*.2f};dx/=length;dy/=length;
                   gd_scene_triangle(tip,(GD_Point){tip.x-dx*size-dy*size/2,tip.y-dy*size+dx*size/2},(GD_Point){tip.x-dx*size+dy*size/2,tip.y-dy*size-dx*size/2},(GD_Color){45,214,199,255}); }
             }
         }

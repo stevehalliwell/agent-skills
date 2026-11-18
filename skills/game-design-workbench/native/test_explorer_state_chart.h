@@ -25,10 +25,23 @@ int gd_explorer_state_chart_checks(GD_Allocator allocator,const GD_Collection *c
         CHART_CHECK(frame_selection(&context) && isfinite(context.pane->camera.target.x) && isfinite(context.pane->camera.target.y));
         CHART_CHECK(*calls==before && state->query==retained && state->row==0 && state->scenario==0 && !context.pane->layout->node_count);
     }
-    {int before=*calls;CHART_CHECK(gd_explorer_presentation_set(&context,"state_chart_mode","grid",message,sizeof(message)));CHART_CHECK(*calls==before && state->query==retained && state->mode==1 && state->scenario==0 && state->row==0);
+    {int before=*calls;GD_Camera chart=context.pane->camera;GD_Rect viewport=context.viewport;
+        CHART_CHECK(gd_explorer_presentation_set(&context,"state_chart_mode","grid",message,sizeof(message)));CHART_CHECK(*calls==before && state->query==retained && state->mode==1 && state->scenario==0 && state->row==0);
+        CHART_CHECK(context.pane->fit==GD_EXPLORER_FIT_GRID_ALL);
+        count_grid_viewport(&context);apply_pending_fit(&context);
+        GD_Camera whole=context.pane->camera;context.viewport=viewport;
+        CHART_CHECK(whole.zoom>0 && state->query==retained && state->scenario==0 && *calls==before);
         state->scenario=-1;state->column=-1;CHART_CHECK(gd_explorer_chart_cell_filtered(state,0,0) && gd_explorer_chart_cell_filtered(state,0,1) && !gd_explorer_chart_cell_filtered(state,1,0));
         CHART_CHECK(frame_selection(&context) && context.pane->focus_result.selected==(companion>=0 ? retained->state_chart->companion_count:1) && *calls==before && state->query==retained);
-        state->scenario=0;state->column=companion>=0 ? 0:-1;CHART_CHECK(gd_explorer_presentation_set(&context,"state_chart_mode","statechart",message,sizeof(message)));CHART_CHECK(state->query==retained && state->mode==0);}
+        state->scenario=0;state->column=companion>=0 ? 0:-1;CHART_CHECK(gd_explorer_presentation_set(&context,"state_chart_mode","statechart",message,sizeof(message)));CHART_CHECK(state->query==retained && state->mode==0 && !memcmp(&chart,&context.pane->camera,sizeof(chart)));
+        CHART_CHECK(gd_explorer_presentation_set(&context,"state_chart_mode","grid",message,sizeof(message)) && context.pane->fit==GD_EXPLORER_FIT_GRID_ALL);
+        count_grid_viewport(&context);apply_pending_fit(&context);context.viewport=viewport;
+        CHART_CHECK(!memcmp(&whole,&context.pane->camera,sizeof(whole)) && state->query==retained && state->scenario==0 && *calls==before);
+        enter_view(&context,panes,GD_EXPLORER_NOUNS,NULL);
+        CHART_CHECK(context.pane->fit==GD_EXPLORER_FIT_GRID_ALL);
+        enter_view(&context,panes,GD_EXPLORER_STATES,NULL);
+        CHART_CHECK(context.pane->fit==GD_EXPLORER_FIT_GRID_ALL && state->query==retained && state->scenario==0 && *calls==before);
+        CHART_CHECK(gd_explorer_presentation_set(&context,"state_chart_mode","statechart",message,sizeof(message)));}
     CHART_CHECK(gd_explorer_control_set(&context,GD_FORM_CHART,"object","nouns/not-present",message,sizeof(message)));CHART_CHECK(state->query==retained && strcmp(state->pending.object,state->applied.object));
     CHART_CHECK(!gd_explorer_action_run(&context,GD_ACTION_CHART_RUN) && state->query==retained);
     CHART_CHECK(!reload_project(&context,panes,collections,count,failure,sizeof(failure)) && context.project==project && state->query==retained);

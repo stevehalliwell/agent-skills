@@ -69,7 +69,12 @@ typedef struct {
     int valid, complete, work, limit, family_count, node_count;
 } GD_GraphShapes;
 #define GD_OVERVIEW_BINS 32
-typedef struct { int enabled,row,column; } GD_OverviewControls;
+typedef struct {
+    int enabled,row,column;
+    float x,y,size; /* Viewport-relative top left; size 0 uses bottom-right default. */
+    int placed,gesture;
+    float mouse_x,mouse_y,start_x,start_y,start_width,start_height;
+} GD_OverviewControls;
 typedef struct {
     int counts[GD_OVERVIEW_BINS*GD_OVERVIEW_BINS], first[GD_OVERVIEW_BINS*GD_OVERVIEW_BINS];
     int nodes[GD_MAX_RECORDS], node_bin[GD_MAX_RECORDS], start[GD_OVERVIEW_BINS+1];

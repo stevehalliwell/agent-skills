@@ -37,7 +37,7 @@ typedef struct {
     bool clipped,hidden_link;
     float zoom;
 } GD_ExplorerFocusResult;
-enum { GD_EXPLORER_FIT_GRID_READABLE=4, GD_EXPLORER_FIT_RESOURCE_WITNESS=5, GD_EXPLORER_FIT_QUERY_READABLE=6, GD_EXPLORER_FIT_SELECTION=7 };
+enum { GD_EXPLORER_FIT_RESOURCE_WITNESS=5, GD_EXPLORER_FIT_QUERY_READABLE=6, GD_EXPLORER_FIT_SELECTION=7, GD_EXPLORER_FIT_GRID_ALL=8 };
 typedef struct { int record, has_rank; int64_t rank; char rank_text[64], filter[129]; } GD_ExplorerSkillEditor;
 typedef struct {
     int record, link, held;
@@ -126,6 +126,8 @@ typedef struct {
     bool distance_focus_started; /* Previous frame time predates new transition. */
     const GD_Layout *find_hold_layout;
     int find_hold_node; /* >=0: Find anchor; -2: cleared selection holds focus pose; -1: no hold. */
+    int focus_pressed_node,focus_last_click; /* Node index + 1; zero means none. */
+    bool focus_double_click;
     GD_Point right_origin;
     int right_started;
     GD_ExplorerSelection selection;
@@ -201,6 +203,7 @@ void gd_explorer_chart_controls(GD_ExplorerContext *context);
 void gd_explorer_chart_draw(GD_ExplorerContext *context);
 void gd_explorer_chart_input(GD_ExplorerContext *context);
 int gd_explorer_chart_fit(GD_ExplorerContext *context);
+void gd_explorer_chart_fit_all(GD_ExplorerContext *context);
 int gd_explorer_chart_focus(GD_ExplorerContext *context);
 int gd_explorer_chart_cell_filtered(const GD_ExplorerChartState *state,int row,int column);
 void gd_explorer_chart_details(GD_ExplorerContext *context);

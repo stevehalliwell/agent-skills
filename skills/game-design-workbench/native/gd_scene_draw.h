@@ -61,5 +61,4 @@ void gd_scene_circle_pixels(int x,int y,float radius,GD_Color color);
 void gd_scene_ring_pixels(int x,int y,float radius,GD_Color color);
 void gd_scene_triangle(GD_Point a,GD_Point b,GD_Point c,GD_Color color);
 void gd_scene_triangle_outline(GD_Point a,GD_Point b,GD_Point c,GD_Color color);
-void gd_scene_quadratic(GD_Point a,GD_Point control,GD_Point b,float width,GD_Color color);
 #endif

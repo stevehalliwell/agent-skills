@@ -84,7 +84,7 @@ static void pane_defaults(GD_ExplorerPane *p, GD_ExplorerView view) {
     p->navigate=p->focus_root=p->focus_expand=p->inspected_record=-1;
     p->reach=(GD_ReachControls){0,-1,0,-1,-1}; p->overview=(GD_OverviewControls){1,-1,-1};
     p->shared=true;p->visual_filter=true;p->workspace_bounds=true; p->paused=view==GD_EXPLORER_MDA || view==GD_EXPLORER_RESOURCES || view==GD_EXPLORER_EFFECTS;
-    p->layout_choice=view==GD_EXPLORER_NOUNS ? GD_NOUN_LAYOUT_GRID:view<=GD_EXPLORER_RELATIONSHIPS || query_view(view) ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE; p->fit=view==GD_EXPLORER_NOUNS ? GD_EXPLORER_FIT_GRID_READABLE:1; p->focus.root=-1;
+    p->layout_choice=view==GD_EXPLORER_NOUNS ? GD_NOUN_LAYOUT_GRID:view<=GD_EXPLORER_RELATIONSHIPS || query_view(view) ? GD_LAYOUT_DIRECTED:GD_LAYOUT_FORCE; p->fit=1; p->focus.root=-1;
     p->paths.declared=view==GD_EXPLORER_CHALLENGES;
 }
 static float pane_aspect(const GD_ExplorerContext *c) {
@@ -152,7 +152,7 @@ static int pane_prepare(GD_ExplorerContext *c) {
         if (!p->distance_focus) return 0;
     }
     if (p->distance_focus) { gd_layout_focus_capture(p->distance_focus,p->layout); p->distance_focus_revision=UINT64_MAX; }
-    p->find_hold_node=-1;p->prepared=1; p->revision=revision; return 1;
+    p->find_hold_node=-1;p->focus_pressed_node=p->focus_last_click=0;p->prepared=1; p->revision=revision; return 1;
 }
 static int selected_record(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane;
@@ -229,7 +229,8 @@ static int distance_focus_toggle(GD_ExplorerContext *c, int enabled) {
         p->distance_focus->active=0;
     }
     p->distance_focus_started=true;
-    p->find_hold_node=-1;p->distance_focus_enabled=enabled!=0; p->selection.held=p->mda.held=-1;
+    p->find_hold_node=-1;p->focus_pressed_node=p->focus_last_click=0;
+    p->distance_focus_enabled=enabled!=0;p->selection.held=p->mda.held=-1;
     return 1;
 }
 static int distance_focus_node(const GD_ExplorerPane *p, int selected) {
@@ -302,11 +303,24 @@ static void matches(GD_ExplorerContext *c) {
 }
 #include "gd_explorer_pair_selection.h"
 #include "gd_explorer_focus_selection.h"
+static int chart_grid_active(const GD_ExplorerPane *p) {
+    return p->view==GD_EXPLORER_STATES && p->chart_state && p->chart_state->mode && p->chart_state->query;
+}
+static int count_grid_active(const GD_ExplorerContext *c) {
+    return !gd_explorer_similarity_active(c) && (grid_view(c->pane) || chart_grid_active(c->pane));
+}
+static void count_grid_viewport(GD_ExplorerContext *c) {
+    if(count_grid_active(c) || (c->pane->view==GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(c))){
+        c->viewport.y+=GD_COUNT_GRID_HEADER;c->viewport.height-=GD_COUNT_GRID_HEADER;
+    }
+}
 static void fit_view(GD_ExplorerContext *c, int only_matches) {
     GD_ExplorerPane *p=c->pane; int i,found=0; float left=0,right=1,top=0,bottom=1;
-    if(p->view==GD_EXPLORER_STATES){GD_ExplorerChartState *state=p->chart_state;float height;if(only_matches==1 || gd_explorer_chart_fit(c))return;
-        height=state && state->query && !state->mode && state->query->request.companion_axis ? 780:390;p->camera.zoom=fmaxf(.65f,fminf(1,c->viewport.height/height));p->camera.target=(GD_Point){c->viewport.width/(2*p->camera.zoom),height/2};return;}
-    if (grid_view(p)) { grid_fit(c,only_matches); return; }
+    if(p->view==GD_EXPLORER_STATES){
+        if(only_matches!=1 && (only_matches==GD_EXPLORER_FIT_GRID_ALL || !gd_explorer_chart_fit(c)))gd_explorer_chart_fit_all(c);
+        return;
+    }
+    if (grid_view(p)) { grid_fit(c,only_matches==1); return; }
     if(only_matches==GD_EXPLORER_FIT_SELECTION){GD_Rect bounds={0};if(!pair_selection_bounds(c,&bounds))return;p->camera.target=(GD_Point){bounds.x+bounds.width/2,bounds.y+bounds.height/2};p->camera.zoom=fmaxf(0.002f,fminf(1.2f,fminf(c->viewport.width/(bounds.width+60),c->viewport.height/(bounds.height+60))));return;}
     if (only_matches==4 && query_view(p->view)) {
         const GD_ExplorerQueryState *state=p->query_state; fit_view(c,0);
@@ -328,6 +342,13 @@ static void fit_view(GD_ExplorerContext *c, int only_matches) {
     p->camera.target=(GD_Point){(left+right)/2,(top+bottom)/2};
     p->camera.zoom=fminf(c->viewport.width/(right-left+60),c->viewport.height/(bottom-top+60));
     if (p->camera.zoom>1.2f) p->camera.zoom=1.2f; if (p->camera.zoom<0.002f) p->camera.zoom=0.002f;
+}
+static void apply_pending_fit(GD_ExplorerContext *c) {
+    GD_ExplorerPane *p=c->pane;
+    if(gd_explorer_similarity_active(c) || !p->fit)return;
+    fit_view(c,p->fit==GD_EXPLORER_FIT_SELECTION || p->fit==GD_EXPLORER_FIT_GRID_ALL ? p->fit:
+        p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0);
+    p->fit=0;
 }
 static void draw_matches(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane; int i;
@@ -491,6 +512,32 @@ static void resource_input(GD_ExplorerContext *c) {
         if (p->selection.held>=0 && igIsMouseDown_Nil(ImGuiMouseButton_Left) && gd_layout_pointer_dragged(p->layout,p->selection.held,mouse.x,mouse.y)) gd_layout_drag_node(p->layout,p->selection.held,world.x,world.y);
     }
 }
+/* Retarget only after a completed second click on the same shown node.
+   A press followed by a drag (even if it returns to origin) is not a click. */
+static void distance_focus_click(GD_ExplorerContext *c,int node) {
+    GD_ExplorerPane *p=c->pane;
+    if(!p->distance_focus_enabled || query_view(p->view) || p->view==GD_EXPLORER_NOUNS){
+        p->focus_pressed_node=p->focus_last_click=0;return;
+    }
+    if(gd_mouse_pressed(ImGuiMouseButton_Left)){
+        p->focus_pressed_node=node+1;
+        p->focus_double_click=node>=0 && p->focus_last_click==node+1 && igIsMouseDoubleClicked_Nil(ImGuiMouseButton_Left);
+        p->focus_last_click=0;
+    }
+    if(p->focus_pressed_node && igIsMouseReleased_Nil(ImGuiMouseButton_Left)){
+        ImGuiIO *io=igGetIO_Nil();GD_Point mouse=gd_mouse_position(),origin=io->MouseClickedPos[ImGuiMouseButton_Left];
+        float dx=mouse.x-origin.x,dy=mouse.y-origin.y;
+        const float limit=GD_NODE_DRAG_PIXELS*GD_NODE_DRAG_PIXELS;
+        int selected=p->focus_pressed_node-1;
+        if(!io->WantCaptureMouse && gd_rect_hit(mouse,c->viewport) && !gd_graph_overview_hit(&p->overview,c->viewport,mouse) &&
+            io->MouseDragMaxDistanceSqr[ImGuiMouseButton_Left]<=limit && dx*dx+dy*dy<=limit &&
+            distance_focus_node(p,analyze(c))==selected){
+            if(p->focus_double_click && p->distance_focus->anchor_node!=selected)p->find_hold_node=-1;
+            else p->focus_last_click=selected+1;
+        }
+        p->focus_pressed_node=0;
+    }
+}
 static void canvas_input(GD_ExplorerContext *c) {
     GD_ExplorerPane *p=c->pane;
     if(!igIsMouseDown_Nil(ImGuiMouseButton_Left))p->selection.held=p->mda.held=-1;
@@ -503,7 +550,11 @@ static void canvas_input(GD_ExplorerContext *c) {
     else if(p->view==GD_EXPLORER_MDA)gd_explorer_mda_input(c);
     else if(query_view(p->view))gd_explorer_query_input(c);
     else resource_input(c);
-    if(!gd_explorer_similarity_active(c) && !grid_view(p) && gd_mouse_pressed(ImGuiMouseButton_Left))canvas_node_hold(c,p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held);
+    if(!gd_explorer_similarity_active(c) && !grid_view(p)){
+        int node=p->view==GD_EXPLORER_MDA ? p->mda.held:p->selection.held;
+        if(gd_mouse_pressed(ImGuiMouseButton_Left))canvas_node_hold(c,node);
+        distance_focus_click(c,node);
+    }else p->focus_pressed_node=p->focus_last_click=0;
 }
 static int choose_view(const GD_ExplorerProject *project, const char *label, int active, int include_current) {
     int v,result=-1;
@@ -574,7 +625,11 @@ static int presentation_widget(GD_ExplorerContext *c,const char *name,const char
     return changed;
 }
 static int layout_controls(GD_ExplorerContext *c) {
-    if(c->pane->view==GD_EXPLORER_STATES){presentation_widget(c,"state_chart_mode","Mode");igTextWrapped("Statechart: orthogonal enum-axis regions and conditional proposals. Grid: joint same-binding hypotheses. Mode switch never runs analysis.");return 0;}
+    if(c->pane->view==GD_EXPLORER_STATES){
+        presentation_widget(c,"state_chart_mode","Mode");
+        if(igIsItemHovered(0))igSetTooltip("Chart: conditional proposals by axis. Grid: hypotheses on the same local binding. Switching never runs analysis.");
+        return 0;
+    }
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); int rearrange=0;
     if(p->view==GD_EXPLORER_NOUNS || p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_ACTORS || p->view==GD_EXPLORER_RELATIONSHIPS){igTextDisabled("Noun suffix: A actor | N non-actor | U unclassified");if(igIsItemHovered(ImGuiHoveredFlags_None))igSetTooltip("Actor labels are underlined; non-actor labels bold; unclassified labels regular. Plain text retains suffix. Unresolved references are not Unclassified.");}
     if(p->view==GD_EXPLORER_NOUNS){int side,i;for(side=0;side<2;++side){int selected=side ? p->grid.verb:p->grid.noun;if(gd_explorer_picker_begin(c,side ? "Column noun":"Row noun",selected>=0 ? model->records[selected].display_name:NULL)){for(i=0;i<c->project->noun_grid->noun_count;++i){int record=c->project->noun_grid->nouns[i];if(gd_explorer_picker_record_item(c,&model->records[record],model->records[record].display_name,record==selected))gd_explorer_presentation_set(c,side ? "noun_column":"noun_row",model->records[record].reference,p->query_message,sizeof(p->query_message));}gd_explorer_picker_end();}}}
@@ -582,7 +637,7 @@ static int layout_controls(GD_ExplorerContext *c) {
     if (p->view==GD_EXPLORER_NOUNS || is_graph(p->view) || p->view==GD_EXPLORER_MDA || (query_view(p->view) && p->query_state && p->query_state->scene && gd_query_scene_overview_mode(p->query_state->scene)!=GD_ACTOR_INTERACTIONS)) presentation_widget(c,"layout","Layout");
     else if (query_view(p->view)) igTextWrapped(p->query_state && p->query_state->scene && p->query_state->scene->overview ? "Overview placement: weighted Free interaction map. Usage cloud also offers fixed-ring and Free layouts. Explicit query layouts remain separate.":"Layout: separate native query bands; incoming weighting never changes declarations. Query/ghost associations are not temporal paths.");
     else igTextWrapped(p->view==GD_EXPLORER_NOUNS ? "Layout: noun x noun case-count grid":"Layout: free incidence graph");
-    if (free_graph(p) && !grid_view(p))igTextDisabled("Free placement: shared Neighborhood seed.");
+    if (free_graph(p) && !grid_view(p) && igIsItemHovered(0))igSetTooltip("Free graph starts from the shared Neighborhood seed.");
     if (p->view==GD_EXPLORER_SKILLS || p->view==GD_EXPLORER_CHALLENGES) presentation_widget(c,"direction","Direction");
     if (is_graph(p->view)) presentation_widget(c,"sort","Sort / initial order");
     if(query_view(p->view) && p->query_state && p->query_state->scene) {
@@ -596,14 +651,16 @@ static int layout_controls(GD_ExplorerContext *c) {
         if(igIsItemHovered(ImGuiHoveredFlags_None))igSetTooltip("Bounds follow shown cards in retained active-edge components. Whole-island forces run while settling; no analysis Run or inferred links.");
         if(p->layout->islands.enabled){igTextDisabled("%d islands; %u overlap/clearance pairs before last step",p->layout->islands.count,p->layout->islands.overlaps);if(p->layout->islands.limited)igTextDisabled("Island separation limited by work or workspace.");}
     }
-    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool workspace=p->workspace_bounds;if(igCheckbox("Workspace bounds",&workspace))gd_explorer_presentation_set(c,"workspace_bounds",workspace ? "true":"false",p->query_message,sizeof(p->query_message));if(p->workspace_bounds){igTextDisabled("Outline follows shown card/label footprints. Solver container stays fixed; release returns outside cards inside.");igTextDisabled("Bounds can crowd edges; internal motion may remain.");}}
-    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){bool filtered=p->visual_filter;if(igCheckbox("Smooth displayed motion",&filtered))gd_explorer_presentation_set(c,"visual_filter",filtered ? "true":"false",p->query_message,sizeof(p->query_message));if(filtered)igTextDisabled("Rendering only; solver positions and velocities remain raw.");}
-    if (!layout_settles(p))
-        igTextWrapped("Stable layout; settling applies only to movable graph layouts.");
-    else { igCheckbox("Pause settling",&p->paused); igSameLine(0,-1); }
-    if (igButton("Frame (F)",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.fit");
-    if (!query_view(p->view) || (p->query_state && p->query_state->scene)) { igSameLine(0,-1); if (igButton("Rearrange",(ImVec2_c){0,0})) gd_explorer_presentation_action(c,"view.rearrange"); }
-    if(p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_NOUNS){igSameLine(0,-1);igBeginDisabled(!gd_explorer_action_available(c,GD_ACTION_VIEW_CELL_FIT));gd_explorer_action_button(c,GD_ACTION_VIEW_CELL_FIT);igEndDisabled();}
+    if(free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c)){
+        bool workspace=p->workspace_bounds,filtered=p->visual_filter;
+        if(igCheckbox("Workspace bounds",&workspace))gd_explorer_presentation_set(c,"workspace_bounds",workspace ? "true":"false",p->query_message,sizeof(p->query_message));
+        if(igIsItemHovered(0))igSetTooltip("Outline follows shown footprints. Solver bounds stay fixed; release returns outside cards inside. Bounds can crowd edges.");
+        if(igCheckbox("Smooth motion",&filtered))gd_explorer_presentation_set(c,"visual_filter",filtered ? "true":"false",p->query_message,sizeof(p->query_message));
+        if(igIsItemHovered(0))igSetTooltip("Rendering only. Solver positions and velocities stay raw.");
+    }
+    if (layout_settles(p)) { igCheckbox("Pause settling",&p->paused); igSameLine(0,8); }
+    if (!query_view(p->view) || (p->query_state && p->query_state->scene)) gd_explorer_action_button(c,GD_ACTION_VIEW_REARRANGE);
+    if(p->view==GD_EXPLORER_MATRIX || p->view==GD_EXPLORER_NOUNS)gd_explorer_action_button(c,GD_ACTION_VIEW_CELL_FIT);
     if (p->layout->mode==GD_LAYOUT_FORCE && p->layout->collision_limited)
         igTextWrapped("Footprint separation reached bounded work/movement limit; overlaps may remain. Resume settling to continue. Camera does not establish clearance.");
     if (p->view==GD_EXPLORER_MATRIX && grid_view(p)) igTextWrapped("Grid shows every loaded noun, verb and declared cell, including inactive pairs. Wheel zooms cells/labels; right/middle drag pans. Arrows select (held repeat); PageUp/Down changes case. Blank is not a defect. Graph analysis/focus layers unavailable in Grid; settings retained for graph layouts.");
@@ -791,9 +848,11 @@ static int refresh_sources(GD_ExplorerContext *c, GD_ExplorerPane *panes, const 
 }
 /* Shared state transition after caller establishes its own edit guard. */
 static void enter_view(GD_ExplorerContext *c, GD_ExplorerPane *panes, int target, const char *find_reference) {
+    int switching=c->pane!=&panes[target];
     c->pane->selection.held=c->pane->mda.held=-1; c->pane->right_started=0;
     c->pane=&panes[target];
     if (find_reference) { snprintf(c->pane->find_reference,sizeof(c->pane->find_reference),"%s",find_reference); c->pane->fit=2; }
+    else if(switching && count_grid_active(c))c->pane->fit=GD_EXPLORER_FIT_GRID_ALL;
     c->analysis->initialized=0;
 }
 static int change_view(GD_ExplorerContext *c, GD_ExplorerPane *panes, int target, const char *find_reference) {
@@ -823,7 +882,7 @@ static int reset_view(GD_ExplorerContext *c) {
     if(!gd_explorer_similarity_active(c) && !presentation_rearrange(c,&values,0)){
         p->workspace_bounds=bounds;snprintf(p->query_message,sizeof(p->query_message),"Cannot reset presentation; last good view retained.");return 0;
     }
-    p->overview.enabled=1;
+    p->overview.enabled=1;p->overview.placed=p->overview.gesture=0;p->overview.size=0;
     p->island_separation=false;if(!query_view(p->view) || free_graph(p))pane_islands(c,0);
     distance_focus_toggle(c,0);pane_workspace(c,free_graph(p) && !grid_view(p) && !gd_explorer_similarity_active(c));p->visual_filter=true;p->overlay=false;
     p->mda.only_scope=p->mda.only_path=p->resource_only_witness=false;
@@ -832,7 +891,7 @@ static int reset_view(GD_ExplorerContext *c) {
     memset(&p->evidence_pages,0,sizeof(p->evidence_pages));
     p->paused=p->view==GD_EXPLORER_MDA || p->view==GD_EXPLORER_RESOURCES || p->view==GD_EXPLORER_EFFECTS;
     p->camera=(GD_Camera){.zoom=1};p->focus_result=(GD_ExplorerFocusResult){0};
-    if(gd_explorer_similarity_active(c))p->structure_state->similarity_fit=true;else p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1;
+    if(gd_explorer_similarity_active(c))p->structure_state->similarity_fit=true;else p->fit=1;
     c->analysis->initialized=0;return 1;
 }
 int gd_explorer_draft_history(GD_ExplorerContext *c,int redo) {
@@ -913,6 +972,26 @@ int gd_explorer_reset_all(GD_ExplorerContext *c){
 failed:
     snprintf(c->pane->query_message,sizeof(c->pane->query_message),"Cannot prepare Reset all; all panes, results and drafts retained.");return 0;
 }
+/* Inspector width stays session-local. A narrow ImGui splitter consumes its own
+   pointer gesture without changing camera zoom or any pane/form state. */
+static void inspector_splitter(int split,int height,float *preferred_width,int width) {
+    const int grip=8;
+    igSetNextWindowPos((ImVec2_c){split-grip,12},ImGuiCond_Always,(ImVec2_c){0,0});
+    igSetNextWindowSize((ImVec2_c){grip,height-24},ImGuiCond_Always);
+    igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding,(ImVec2_c){0,0});
+    igPushStyleVar_Vec2(ImGuiStyleVar_WindowMinSize,(ImVec2_c){1,1});
+    igBegin("##inspector splitter",NULL,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoMove|
+        ImGuiWindowFlags_NoBackground|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoNav);
+    igInvisibleButton("Resize inspector",(ImVec2_c){grip,height-24},0);
+    int active=igIsItemHovered(0) || igIsItemActive();
+    if(active)igSetMouseCursor(ImGuiMouseCursor_ResizeEW);
+    gd_scene_line((GD_Point){split-4,12},(GD_Point){split-4,height-12},active ? 2:1,active ? muted:(GD_Color){65,78,95,255});
+    if(igIsItemActive() && !gd_mouse_pressed(ImGuiMouseButton_Left) && igIsMousePosValid(NULL)){
+        float delta=gd_mouse_delta().x;
+        if(delta)*preferred_width=fminf(fmaxf(310,width-split-delta),width-256);
+    }
+    igEnd();igPopStyleVar(2);
+}
 int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int count,
                      int initial_view, int matrix_layout, int frames, const char *screenshot, const char *output_path) {
     GD_Allocator allocator=diagnostic->allocator;
@@ -922,6 +1001,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     ExplorerViewer viewer={0}; char ipc_error[256]="";
     int active=0,v,frame=0,result=0,stale=0,timed_seen=0,close_next=0;
     GD_NativeWindow window={0};GD_Sidebar sidebar;GD_ExplorerFind finds[GD_EXPLORER_VIEWS]={0};
+    float inspector_width=0;int inspector_open=1;
     double next_check=0; char failure[GD_MAX_PATH+512]="",report_path[GD_MAX_PATH]="";
     const GD_Error *error=gd_explorer_error(project);
     if (!project || !project->available || error || (initial_view>=0 && (initial_view>=GD_EXPLORER_VIEWS || !(project->available&(1u<<initial_view))))) {
@@ -941,10 +1021,8 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     for (v=0;v<GD_EXPLORER_VIEWS;++v) pane_defaults(&panes[v],(GD_ExplorerView)v);
     if (matrix_layout>=0 && initial_view==GD_EXPLORER_NOUNS) {
         panes[GD_EXPLORER_NOUNS].layout_choice=matrix_layout==GD_LAYOUT_FORCE ? GD_NOUN_LAYOUT_FREE:GD_NOUN_LAYOUT_GRID;
-        panes[GD_EXPLORER_NOUNS].fit=matrix_layout==GD_LAYOUT_FORCE ? 1:GD_EXPLORER_FIT_GRID_READABLE;
     } else if (matrix_layout>=0) {
         panes[GD_EXPLORER_MATRIX].layout_choice=matrix_layout;
-        if (matrix_layout==GD_MATRIX_GRID_CHOICE) panes[GD_EXPLORER_MATRIX].fit=GD_EXPLORER_FIT_GRID_READABLE;
     }
     if (initial_view>=0) active=initial_view;
     else while (!(project->available&(1u<<active))) ++active;
@@ -956,12 +1034,13 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     viewer.collections=collections; viewer.collection_count=count;
     viewer.server=gd_viewer_server_open(allocator,ipc_error,sizeof(ipc_error));
     for (;;) {
-        int ready=gd_scene_begin(&window),closing=window.close_requested,width=gd_scene_width(),height=gd_scene_height(),split=width*60/100;
+        int ready=gd_scene_begin(&window),closing=window.close_requested,width=gd_scene_width(),height=gd_scene_height();
+        int split=inspector_open ? width-(int)fminf(fmaxf(310,inspector_width>0 ? inspector_width:width*0.4f),width-256):width;
         window.close_requested=0;
         int requested=-1,find_view=-1,refresh=0,selected,relationship_root=-1,undo=0,redo=0,navigation=0,reset_all=0;
-        char find_reference[260]="";int find_shortcut;
+        char find_reference[260]="";int find_shortcut,find_was_open,popup_was_open,text_was_active;
         GD_ExplorerPane *p=&panes[active]; GD_Model *model=gd_explorer_model(project,p->view);
-        c.pane=p;c.render_pose=render; c.viewport=(GD_Rect){14,112,(float)split-28,(float)height-157};
+        c.pane=p;c.render_pose=render;c.viewport=(GD_Rect){14,80,(float)split-28,(float)height-125};
         if(ready<0){
             if(!project->draft || (!project->draft->modified_count && !gd_explorer_rank_pending(project,panes))){gd_scene_error(diagnostic,"view.render",&window);result=2;break;}
             if(!result)fprintf(stderr,"gd: %s; draft retained. Close to finish.\n",window.error);
@@ -985,31 +1064,53 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             for (v=0;v<GD_EXPLORER_FAMILIES;++v) if (project->models[v] && gd_sources_changed(project->models[v])) stale=1;
             next_check=gd_native_window_seconds(&window)+1;
         }
-        gd_scene_text("Game Design Workbench",20,14,26,foreground);
-        if (gd_explorer_similarity_active(&c)) gd_scene_text(gd_scene_format("%s | SIMILARITY | %d selected entries | separate native distance approximation",p->structure_state->result->options.projection,p->structure_state->result->similarity->entry_count),20,49,16,muted);
-        else if(p->view==GD_EXPLORER_STATES)gd_scene_text(gd_scene_format("State charts | %s | source-backed hypotheses, not execution",p->chart_state->mode ? "Grid":"Statechart"),20,49,16,muted);
-        else gd_scene_text(gd_scene_format("%s | %d projected identities | %d projected links | positions transient",gd_explorer_view_names[active],p->layout->node_count,p->layout->edge_count),20,49,16,muted);
-        gd_scene_text(project->draft && project->draft->modified_count ? gd_scene_format("DRAFT: %d records modified in memory | source files unchanged",project->draft->modified_count):"Source-backed projections | Graph analysis uses shown graph | No source writes",20,77,15,project->draft && project->draft->modified_count ? gold:muted);
-        igSetNextWindowPos((ImVec2_c){(float)split,12},ImGuiCond_Always,(ImVec2_c){0,0});
-        igSetNextWindowSize((ImVec2_c){(float)(width-split-12),(float)(height-24)},ImGuiCond_Always);
-        igBegin("Explorer controls and source",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
-        if (*ipc_error) igTextWrapped("%s",ipc_error);
-        if (gd_viewer_server_error(viewer.server)) igTextWrapped("%s",gd_viewer_server_error(viewer.server));
+        gd_scene_clip(14,10,split-(inspector_open ? 28:155),68);
+        gd_scene_text(gd_explorer_similarity_active(&c) ? "Similarity":gd_explorer_view_names[active],20,12,26,foreground);
+        if (gd_explorer_similarity_active(&c)) gd_scene_text(gd_scene_format("%s | %d entries",p->structure_state->result->options.projection,p->structure_state->result->similarity->entry_count),20,42,16,muted);
+        else if(p->view==GD_EXPLORER_STATES){
+            const GD_Query *query=p->chart_state->query;const char *mode=p->chart_state->mode ? "Grid":"Chart";
+            gd_scene_text(query ? gd_scene_format("%s | %d hypotheses | %d proposals",mode,query->state_chart->scenario_count,query->state_chart->write_count):mode,20,42,16,muted);
+        }
+        else gd_scene_text(gd_scene_format("%d nodes | %d links",p->layout->node_count,p->layout->edge_count),20,42,16,muted);
+        if(stale || (project->draft && project->draft->modified_count))
+            gd_scene_text(gd_scene_format("%s%s",stale ? "STALE: last good snapshot  ":"",
+                project->draft && project->draft->modified_count ? gd_scene_format("DRAFT: %d records modified",project->draft->modified_count):""),20,60,14,gold);
+        gd_scene_unclip();
         find_shortcut=find_key(gd_key_pressed(ImGuiKey_F),igIsKeyDown_Nil(ImGuiKey_LeftCtrl)||igIsKeyDown_Nil(ImGuiKey_RightCtrl),igIsKeyDown_Nil(ImGuiKey_LeftShift)||igIsKeyDown_Nil(ImGuiKey_RightShift)||igIsKeyDown_Nil(ImGuiKey_LeftAlt)||igIsKeyDown_Nil(ImGuiKey_RightAlt)||igIsKeyDown_Nil(ImGuiKey_LeftSuper)||igIsKeyDown_Nil(ImGuiKey_RightSuper),igGetIO_Nil()->WantCaptureKeyboard);
         if(find_shortcut==GD_FIND_OPEN){
             if(gd_explorer_rank_pending(project,panes) || igIsMouseDown_Nil(ImGuiMouseButton_Left) || igIsMouseDown_Nil(ImGuiMouseButton_Right) || igIsMouseDown_Nil(ImGuiMouseButton_Middle) || igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel))snprintf(failure,sizeof(failure),"Finish active rank edit, drag or dialog before Find; no input discarded.");
-            else{finds[active].open=true;finds[active].focus=true;}
+            else{finds[active].open=true;finds[active].focus=true;inspector_open=1;}
         }
         if(!igGetIO_Nil()->WantTextInput)history_observe(&c);
+        find_was_open=finds[active].open;
+        popup_was_open=igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel);
+        text_was_active=igIsAnyItemActive() || igGetIO_Nil()->WantTextInput;
+        if(split==width){
+            igSetNextWindowPos((ImVec2_c){width-12,12},ImGuiCond_Always,(ImVec2_c){1,0});
+            igBegin("##show inspector",NULL,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoMove|
+                ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing);
+            if(igButton(*failure || *ipc_error || gd_viewer_server_error(viewer.server) ? "Show inspector (!)##show":"Show inspector##show",(ImVec2_c){0,0}))inspector_open=1;
+            if(igIsItemHovered(0) && *failure)igSetTooltip("%s",failure);
+            igEnd();
+        }else{
+        inspector_splitter(split,height,&inspector_width,width);
+        igSetNextWindowPos((ImVec2_c){(float)split,12},ImGuiCond_Always,(ImVec2_c){0,0});
+        igSetNextWindowSize((ImVec2_c){(float)(width-split-12),(float)(height-24)},ImGuiCond_Always);
+        igBegin("Inspector",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
+        if(igSmallButton("Hide inspector"))inspector_open=0;
+        if (*ipc_error) igTextWrapped("%s",ipc_error);
+        if (gd_viewer_server_error(viewer.server)) igTextWrapped("%s",gd_viewer_server_error(viewer.server));
         if(gd_explorer_action_request(&c,GD_ACTION_BACK))navigation=-1;igSameLine(0,8);
-        if(gd_explorer_action_request(&c,GD_ACTION_FORWARD))navigation=1;igSameLine(0,8);
+        if(gd_explorer_action_request(&c,GD_ACTION_FORWARD))navigation=1;
+        if(width-split>=380)igSameLine(0,16);
         if(gd_explorer_action_request(&c,GD_ACTION_UNDO))undo=1;igSameLine(0,8);
         if(gd_explorer_action_request(&c,GD_ACTION_REDO))redo=1;igSameLine(0,12);
         if(gd_explorer_action_request(&c,GD_ACTION_RESET_ALL))reset_all=1;
         if(igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))igSetTooltip("Reset all panes: clear selections, analyses, inputs, filters, Find, cameras and navigation history. Restore default folds. Keep draft edits and Undo/Redo. No source writes.");
         if(*history->message)igTextWrapped("%s",history->message);
         requested=choose_view(project,"Data / projection",active,1);
-        int find_was_open=finds[active].open,popup_was_open=igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel),text_was_active=igIsAnyItemActive() || igGetIO_Nil()->WantTextInput;
+        popup_was_open|=igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel);
+        text_was_active|=igIsAnyItemActive() || igGetIO_Nil()->WantTextInput;
         if(finds[active].open){analyze(&c);find_controls(&c,panes,&finds[active]);}
         if(stale)igTextWrapped("STALE: source changed or could not be checked. Last good snapshot retained.");
         if(*failure)igTextWrapped("%s",failure);
@@ -1018,20 +1119,20 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         selected=selected_record(&c);
         if(sidebar_section(&sidebar,GD_SIDEBAR_VIEW)){
             gd_explorer_action_button(&c,GD_ACTION_VIEW_RESET);
-            igTextWrapped("Reset view: camera/layout/display only. Selection, analysis and drafts stay intact.");
+            if(igIsItemHovered(0))igSetTooltip("Reset camera, layout and display. Keep selection, analysis and drafts.");
+            igSameLine(0,8);gd_explorer_action_button(&c,GD_ACTION_VIEW_FIT);
+            gd_explorer_action_button(&c,GD_ACTION_VIEW_SELECTION_FOCUS);
+            if(igIsItemHovered(0))igSetTooltip("Camera only. Keep text readable; distant context may stay off-screen.");
+            igSameLine(0,8);gd_explorer_action_button(&c,GD_ACTION_SELECTION_CLEAR);
+            if(igIsItemHovered(0))igSetTooltip("Clear selection and overview brush. Keep camera, filters, queries and drafts.");
             if (p->view!=GD_EXPLORER_STATES && p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view)) {
                 bool enabled=p->distance_focus_enabled;
                 if (igCheckbox("Focus layout by shown-link distance",&enabled) && !distance_focus_toggle(&c,enabled))
                     snprintf(failure,sizeof(failure),"Cannot allocate bounded distance-focus scratch; regular layout retained.");
-                igCheckbox("Auto-fit camera on focus changes",&p->focus_auto_fit);
-                if (p->distance_focus_enabled) igTextWrapped("Shown-link distance is layout only, not flow. Animated 220 ms transitions retain constrained bands/roots; Free graphs do not pin data roots. Canvas clicks inspect and hold current pose, without refocus or auto-fit. Toggle focus off/on to refocus. Auto-fit off keeps camera unchanged on focus changes. Off returns to regular pose, then resumes drag/settling. F and Find still frame explicitly.");
+                if(igIsItemHovered(0))igSetTooltip("Click to inspect. Double-click a node to retarget. Distances describe shown links, not flow. Turning off restores regular layout.");
+                if(p->distance_focus_enabled)igCheckbox("Auto-fit camera on refocus",&p->focus_auto_fit);
             }
-            if (!gd_explorer_similarity_active(&c) && layout_controls(&c)) { p->prepared=0; pane_prepare(&c); p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:1; }
-            if(gd_explorer_similarity_active(&c))gd_explorer_action_button(&c,GD_ACTION_VIEW_FIT);
-        igBeginDisabled(!gd_explorer_action_available(&c,GD_ACTION_VIEW_SELECTION_FOCUS));gd_explorer_action_button(&c,GD_ACTION_VIEW_SELECTION_FOCUS);igEndDisabled();
-        if(igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))igSetTooltip("Camera only; select a canvas item/source. Keep readable text; distant context may stay off-screen. No layout/filter/query change.");
-        igSameLine(0,8);gd_explorer_action_button(&c,GD_ACTION_SELECTION_CLEAR);
-        if(igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))igSetTooltip("Clear active pane selection and overview brush. Keep camera, filters, queries and drafts. Escape dismisses text/popups first.");
+            if (!gd_explorer_similarity_active(&c) && layout_controls(&c)) { p->prepared=0; pane_prepare(&c); p->fit=1; }
         if(p->focus_result.status!=GD_FOCUS_NONE)igTextWrapped("Last focus: %s | %d selected, %d hidden, %d direct context | %s%s",focus_status_name(p->focus_result.status),p->focus_result.selected,p->focus_result.hidden,p->focus_result.context,p->focus_result.clipped ? "some context off-screen":"no framing clip",p->focus_result.hidden_link ? " | selected link remains hidden":"");
         }
         if(p->focus_result.status==GD_FOCUS_HIDDEN)igTextWrapped("Selection hidden by current filters/scope; camera unchanged. No data revealed.");
@@ -1054,7 +1155,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(&c); gd_explorer_rules_controls(&c); }
         if (query_view(p->view)) gd_explorer_query_controls(&c);
         if (!gd_explorer_similarity_active(&c) && !grid_view(p) && p->distance_focus_enabled && distance_focus_node(p,selected)<0)
-            igTextWrapped("No distance focus applied: select a visible node, then toggle Focus layout off/on. Canvas clicks inspect without refocus; source-only or edge inspection has no focus anchor.");
+            igTextWrapped("No distance focus applied: double-click a visible node. Source-only and edge inspection have no focus anchor.");
         if(p->view!=GD_EXPLORER_STATES)gd_explorer_structure_controls(&c);
         if (p->view!=GD_EXPLORER_STATES && p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view) && igCollapsingHeader_TreeNodeFlags("Analysis layers",0)) analysis_controls(&c,selected);
         if (overview_only(p) && overview_available(&c) && igCollapsingHeader_TreeNodeFlags("Adjacency / incidence overview",0)) overview_controls(&c);
@@ -1115,10 +1216,12 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             }
         }
         igEnd();
+        }
         viewer_feedback(&viewer);
         {
             GD_Point mouse=gd_mouse_position();
-            if (gd_mouse_pressed(ImGuiMouseButton_Right) && gd_rect_hit(mouse,c.viewport) && !igGetIO_Nil()->WantCaptureMouse) {
+            int over_overview=overview_available(&c) && gd_graph_overview_hit(&p->overview,c.viewport,mouse);
+            if (gd_mouse_pressed(ImGuiMouseButton_Right) && gd_rect_hit(mouse,c.viewport) && !over_overview && !igGetIO_Nil()->WantCaptureMouse) {
                 p->right_origin=mouse; p->right_started=1;
             }
             if (p->right_started==1 && igIsMouseDown_Nil(ImGuiMouseButton_Right)) {
@@ -1127,7 +1230,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             }
             if (igIsMouseReleased_Nil(ImGuiMouseButton_Right) && p->right_started) {
                 float dx=mouse.x-p->right_origin.x,dy=mouse.y-p->right_origin.y;
-                if (p->right_started==1 && dx*dx+dy*dy<=16 && gd_rect_hit(mouse,c.viewport)) igOpenPopup_Str("Find selected context",0);
+                if (p->right_started==1 && dx*dx+dy*dy<=16 && !over_overview && gd_rect_hit(mouse,c.viewport)) igOpenPopup_Str("Find selected context",0);
                 p->right_started=0;
             }
             if (igBeginPopup("Find selected context",0)) {
@@ -1183,11 +1286,12 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         if (!pane_prepare(&c)) { gd_error(diagnostic,"explorer.projection","Cannot update bounded projection layout",NULL,0); result=2; break; }
         selected=analyze(&c); matches(&c); if (!gd_explorer_similarity_active(&c)) distance_focus_update(&c,selected);
         /* Reserve fixed-screen status/legend band outside grid pan/zoom and hit area. */
-        if ((grid_view(p) || p->view==GD_EXPLORER_NOUNS) && !gd_explorer_similarity_active(&c)) { c.viewport.y+=GD_COUNT_GRID_HEADER; c.viewport.height-=GD_COUNT_GRID_HEADER; }
+        count_grid_viewport(&c);
         p->camera.offset=(GD_Point){c.viewport.x+c.viewport.width/2,c.viewport.y+c.viewport.height/2};
         c.display_layout=NULL;if(p->fit)render->valid=0;
-        if (!gd_explorer_similarity_active(&c) && p->fit) { fit_view(&c,p->fit==GD_EXPLORER_FIT_SELECTION ? GD_EXPLORER_FIT_SELECTION:p->fit==GD_EXPLORER_FIT_QUERY_READABLE ? 4:p->fit==GD_EXPLORER_FIT_GRID_READABLE ? -1:p->fit==GD_EXPLORER_FIT_RESOURCE_WITNESS ? 3:p->fit==2 ? 1:p->fit==3 ? 2:0); p->fit=0; }
+        apply_pending_fit(&c);
         if(render_active(&c)){if(gd_render_pose_matches(render,p->layout,render_identity(&c)))c.display_layout=&render->layout;else render_update(&c,render,0,1);}else render->valid=0;
+        if(overview_available(&c))gd_graph_overview_input(&p->overview,c.viewport,!igGetIO_Nil()->WantCaptureMouse);
         canvas_input(&c);
         c.display_layout=NULL;
         if (!gd_explorer_similarity_active(&c) && layout_settles(p) && !p->distance_focus_enabled && !(p->distance_focus && p->distance_focus->animating) && !p->paused) {
@@ -1216,8 +1320,10 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             gd_graph_islands_draw(p->layout,c.display_layout ? c.display_layout:p->layout,query_view(p->view) ? NULL:c.analysis->shown,p->camera,c.viewport,p->view==GD_EXPLORER_MDA ? 3:1);
         }
         if (!gd_explorer_similarity_active(&c)) { draw_matches(&c); if (overview_available(&c)) gd_graph_overview_draw_metric(c.analysis,&p->overview,c.viewport,p->view==GD_EXPLORER_MDA && p->mda.link>=0 ? -1:selected,!igGetIO_Nil()->WantCaptureMouse,overview_metric(p)); }
-        gd_scene_text(p->view==GD_EXPLORER_STATES ? "Click state/cell: filter evidence | Click transition: inspect | Wheel: zoom | Right/middle: pan | F: frame | F5: refresh":gd_explorer_similarity_active(&c) ? "Similarity: Click inspect | Shift-click compare | Wheel zoom | Right/middle pan | F fit | F5 refresh":grid_view(p) ? "Grid: Arrows select | PageUp/Down cases | Wheel zoom | Right/middle drag pan | F fit | F5 refresh":p->distance_focus_enabled ? "Distance focus: click inspects | Toggle focus to refocus | Off: restore pose | F: fit":"Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
+        gd_scene_clip(14,height-39,split-28,39);
+        gd_scene_text(p->view==GD_EXPLORER_STATES ? "Click state/cell: filter evidence | Click transition: inspect | Wheel: zoom | Right/middle: pan | F: frame | F5: refresh":gd_explorer_similarity_active(&c) ? "Similarity: Click inspect | Shift-click compare | Wheel zoom | Right/middle pan | F fit | F5 refresh":grid_view(p) ? "Grid: Arrows select | PageUp/Down cases | Wheel zoom | Right/middle drag pan | F fit | F5 refresh":p->distance_focus_enabled ? "Click: inspect | Double-click: retarget focus | F: fit":"Drag: layout | Right click: Find | Right/middle drag: pan | Wheel: zoom | F: fit | F5: refresh",20,height-36,14,muted);
         gd_scene_text(gd_explorer_similarity_active(&c) ? "Selected typed-feature distance approximation only; missing entries remain unplaced. No importance or execution proof.":incidence(p->view) ? "Shown incidence only; not flow, causality or equivalence.":"Authored declarations only; not learning, causality or physical reachability.",20,height-18,13,muted);
+        gd_scene_unclip();
         gd_explorer_similarity_popup(&c);
         c.display_layout=NULL;p->focus_camera_override=false;
         if(!gd_scene_end(&window,background))continue;

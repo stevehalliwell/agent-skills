@@ -36,11 +36,13 @@ int gd_explorer_shared_ux_checks(GD_Allocator allocator,const GD_Collection *col
     {GD_OverviewControls controls={1,-1,-1};GD_Rect viewport={0,0,800,600},expanded=gd_graph_overview_visible_bounds(&controls,viewport),collapsed;GD_Point body={expanded.x+10,expanded.y+60};
         UX_CHECK(expanded.height>GD_OVERVIEW_HEADER_HEIGHT && gd_graph_overview_hit(&controls,viewport,body));
         UX_CHECK(!gd_graph_overview_toggle(&controls,viewport,body) && controls.enabled);
-        UX_CHECK(gd_graph_overview_toggle(&controls,viewport,(GD_Point){expanded.x+10,expanded.y+10}) && !controls.enabled);
+        UX_CHECK(expanded.x+expanded.width==viewport.width-GD_OVERVIEW_MARGIN && expanded.y+expanded.height==viewport.height-GD_OVERVIEW_MARGIN);
+        UX_CHECK(!gd_graph_overview_toggle(&controls,viewport,(GD_Point){expanded.x+50,expanded.y+10}) && controls.enabled);
+        UX_CHECK(gd_graph_overview_toggle(&controls,viewport,(GD_Point){expanded.x+expanded.width-10,expanded.y+10}) && !controls.enabled);
         collapsed=gd_graph_overview_visible_bounds(&controls,viewport);
-        UX_CHECK(collapsed.height==GD_OVERVIEW_HEADER_HEIGHT && collapsed.x+collapsed.width==expanded.x+expanded.width && collapsed.y==expanded.y && !gd_graph_overview_hit(&controls,viewport,body));
+        UX_CHECK(collapsed.height==GD_OVERVIEW_HEADER_HEIGHT && collapsed.x+collapsed.width==expanded.x+expanded.width && collapsed.y+collapsed.height==expanded.y+expanded.height && !gd_graph_overview_hit(&controls,viewport,body));
         UX_CHECK(gd_graph_overview_hit(&controls,viewport,(GD_Point){collapsed.x+10,collapsed.y+10}));
-        UX_CHECK(gd_graph_overview_toggle(&controls,viewport,(GD_Point){collapsed.x+10,collapsed.y+10}) && controls.enabled);
+        UX_CHECK(gd_graph_overview_toggle(&controls,viewport,(GD_Point){collapsed.x+collapsed.width-10,collapsed.y+10}) && controls.enabled);
         UX_CHECK(gd_graph_overview_visible_bounds(&controls,(GD_Rect){0,0,800,120}).height==GD_OVERVIEW_HEADER_HEIGHT && controls.enabled);
         UX_CHECK(!gd_graph_overview_hit(&controls,(GD_Rect){0,0,20,20},(GD_Point){10,10}) && !gd_graph_overview_toggle(&controls,(GD_Rect){0,0,20,20},(GD_Point){10,10}) && controls.enabled);
     }

@@ -279,7 +279,7 @@ static int presentation_rearrange(GD_ExplorerContext *c,const GD_ExplorerPresent
     p->layout=next->layout; p->distance_focus=next->distance_focus; p->distance_focus_revision=UINT64_MAX;
     p->rank=next->rank; p->layout_choice=next->layout_choice; p->sort=next->sort; p->horizontal=next->horizontal; p->grid=next->grid; p->selection=next->selection; p->focus=next->focus;
     p->prepared=next->prepared; p->revision=next->revision;p->island_separation=next->island_separation;
-    {int nodes[2];p->fit=grid_view(p) ? GD_EXPLORER_FIT_GRID_READABLE:pair_selection_nodes(c,nodes) ? GD_EXPLORER_FIT_SELECTION:1;}
+    {int nodes[2];p->fit=!grid_view(p) && pair_selection_nodes(c,nodes) ? GD_EXPLORER_FIT_SELECTION:1;}
     if(!same_topology) c->analysis->initialized=0;
     allocator.release(allocator.context,next);return 1;
 failed:
@@ -325,7 +325,15 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
         if(!presentation_rearrange(c,&next,0)) goto failed;
         if(!strcmp(name,"layout") && free_graph(p)) p->paused=false;
     }
-    else if(!strcmp(name,"state_chart_mode")){GD_ExplorerChartState *state=p->chart_state;if(state->mode!=next.state_chart_mode){state->cameras[state->mode]=p->camera;state->camera_ready[state->mode]=true;state->mode=next.state_chart_mode;p->camera=state->cameras[state->mode];if(!state->camera_ready[state->mode]){p->fit=1;state->camera_ready[state->mode]=true;}}}
+    else if(!strcmp(name,"state_chart_mode")){
+        GD_ExplorerChartState *state=p->chart_state;
+        if(state->mode!=next.state_chart_mode){
+            state->cameras[state->mode]=p->camera;state->camera_ready[state->mode]=true;
+            state->mode=next.state_chart_mode;p->camera=state->cameras[state->mode];
+            p->fit=state->mode ? GD_EXPLORER_FIT_GRID_ALL:!state->camera_ready[state->mode];
+            state->camera_ready[state->mode]=true;
+        }
+    }
     else if(!strcmp(name,"island_separation")){if(!pane_islands(c,next.island_separation))goto failed;p->island_separation=next.island_separation;if(next.island_separation)p->paused=false;}
     else if(!strcmp(name,"workspace_bounds")){if(!pane_workspace(c,next.workspace_bounds))goto failed;p->workspace_bounds=next.workspace_bounds;p->fit=1;}
     else if(!strcmp(name,"noun_row") || !strcmp(name,"noun_column")) noun_grid_choose(c,next.noun_row,next.noun_column);
@@ -360,7 +368,7 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
     if(!strcmp(name,"view.find.clear")) {*p->find_reference=0;matches(c);return 1;}
     if(!strcmp(name,"view.witness.fit")) {if(p->view!=GD_EXPLORER_RESOURCES || !p->resource_routes || !p->resource_routes->witness_count)return 0;p->fit=GD_EXPLORER_FIT_RESOURCE_WITNESS;return 1;}
     if(!strcmp(name,"view.cell.fit")) {int nodes[2];if(gd_explorer_similarity_active(c) || p->selection.node>=0 || !pair_selection_nodes(c,nodes))return 0;if(grid_view(p))grid_frame_selection(c);else p->fit=GD_EXPLORER_FIT_SELECTION;return 1;}
-    if(!strcmp(name,"view.selection.focus")) {GD_ExplorerContext canvas=*c;if(!gd_explorer_similarity_active(c) && (grid_view(p) || p->view==GD_EXPLORER_NOUNS)){canvas.viewport.y+=GD_COUNT_GRID_HEADER;canvas.viewport.height-=GD_COUNT_GRID_HEADER;}return gd_explorer_focus_selection(&canvas);}
+    if(!strcmp(name,"view.selection.focus")) {GD_ExplorerContext canvas=*c;count_grid_viewport(&canvas);return gd_explorer_focus_selection(&canvas);}
     if(!strcmp(name,"view.selection.clear")){
         p->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};p->grid.noun=p->grid.verb=-1;p->mda.record=p->mda.link=p->mda.held=-1;p->inspected_record=p->editor.record=p->navigate=-1;
         p->overview.row=p->overview.column=-1;p->find_hold_node=-2;p->find_hold_layout=p->layout;*p->find_reference=0;p->focus_result=(GD_ExplorerFocusResult){0};
@@ -371,7 +379,7 @@ int gd_explorer_presentation_action(GD_ExplorerContext *c,const char *name) {
         if(c->analysis)c->analysis->initialized=0;return 1;
     }
     if(!strcmp(name,"view.fit")) {
-        GD_ExplorerContext canvas=*c;if(!gd_explorer_similarity_active(c) && (grid_view(p) || p->view==GD_EXPLORER_NOUNS)){canvas.viewport.y+=GD_COUNT_GRID_HEADER;canvas.viewport.height-=GD_COUNT_GRID_HEADER;}
+        GD_ExplorerContext canvas=*c;count_grid_viewport(&canvas);
         if(gd_explorer_focus_available(&canvas))return frame_selection(&canvas);
         if(gd_explorer_similarity_active(c))p->structure_state->similarity_fit=true;else p->fit=1;return 1;
     }

@@ -40,18 +40,10 @@ static int visible(const GD_Model *model, const GD_Mda *mda, const MdaDisplay *d
    so its 110-unit resting edges leave room for 210-unit source cards. */
 static float spacing(const GD_Layout *layout) { return layout->mode == GD_LAYOUT_FORCE ? 3.0f:1.0f; }
 static GD_Point point(const GD_Layout *layout, const GD_LayoutNode *node) { float scale = spacing(layout); return (GD_Point){node->x*scale,node->y*scale}; }
-static GD_Point control(GD_Point a, GD_Point b) {
-    /* Direct dynamics/mechanics links must not appear to pass through a
-       systems node sitting in the intervening role band. */
-    return (GD_Point){(a.x+b.x)/2,(a.y+b.y)/2-(fabsf(a.x-b.x) > 300 ? 110:30)};
-}
-static GD_Point curve(GD_Point a, GD_Point c, GD_Point b, float t) {
-    float u = 1-t; return (GD_Point){u*u*a.x+2*u*t*c.x+t*t*b.x,u*u*a.y+2*u*t*c.y+t*t*b.y};
-}
-static float segment_square(GD_Point p, GD_Point a, GD_Point b) {
-    float x = b.x-a.x, y = b.y-a.y, square = x*x+y*y, t = square ? ((p.x-a.x)*x+(p.y-a.y)*y)/square:0;
-    if (t < 0) t = 0; if (t > 1) t = 1;
-    x = p.x-a.x-t*x; y = p.y-a.y-t*y; return x*x+y*y;
+static void mda_route(const GD_Layout *layout,int edge,GD_LayoutRoute *route) {
+    int i;float scale=spacing(layout);
+    gd_layout_route(layout,edge,route);
+    for(i=0;i<route->count;++i){route->points[i].x*=scale;route->points[i].y*=scale;}
 }
 static int mda_layout(const GD_Model *model,const GD_Mda *mda,GD_Layout *layout,int bands){
     GD_Allocator allocator=model->allocator;GD_Layout *candidate=allocator.allocate(allocator.context,sizeof(*candidate));int okay;float aspect=1.4f;
@@ -103,18 +95,14 @@ static void input(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout,co
             gd_layout_pointer_begin(layout,i,world.x/spacing(layout),world.y/spacing(layout),mouse.x,mouse.y); return;
         }
     }
+    {int nearest=-1;float scale=spacing(shown),distance=8/(camera->zoom*scale);
     for (i = 0; i < layout->edge_count; ++i) {
-        const GD_LayoutEdge *edge = &layout->edges[i]; int k;
-        GD_Point a = point(shown,&shown->nodes[edge->a]), b = point(shown,&shown->nodes[edge->b]), c = control(a,b), previous = a;
+        const GD_LayoutEdge *edge = &layout->edges[i];float candidate;
         if (!visible(model,mda,display,layout->nodes[edge->a].key) || !visible(model,mda,display,layout->nodes[edge->b].key)) continue;
-        for (k = 1; k <= 20; ++k) {
-            GD_Point next = curve(a,c,b,k/20.0f);
-            if (segment_square(world,previous,next) < 64/(camera->zoom*camera->zoom)) {
-                display->link = edge->key; display->record = model->edges[mda->links[edge->key].edge].source; return;
-            }
-            previous = next;
-        }
+        candidate=gd_layout_route_distance(shown,i,world.x/scale,world.y/scale);
+        if(candidate<distance){nearest=i;distance=candidate;}
     }
+    if(nearest>=0){display->link=layout->edges[nearest].key;display->record=model->edges[mda->links[display->link].edge].source;}}
 }
 static int analyze_display(const GD_Model *model, const GD_Mda *mda, const GD_Layout *layout, const MdaDisplay *display, GD_GraphAnalysis *analysis, GD_GraphLens lens, int *peer) {
     unsigned char shown[GD_MAX_RECORDS]; int i,selected=-1;
@@ -143,25 +131,18 @@ static void draw(const GD_Model *model, const GD_Mda *mda,GD_Layout *raw, GD_Lay
         const GD_LayoutEdge *edge = &layout->edges[i];
         int emphasized = display->link == edge->key || display->path_links[edge->key];
         int source = layout->nodes[edge->a].key, target = layout->nodes[edge->b].key;
-        GD_Point a = point(layout,&layout->nodes[edge->a]), b = point(layout,&layout->nodes[edge->b]), c = control(a,b), tip, before;
-        GD_Color color = display->link == edge->key || display->path_links[edge->key] ? selected_color : mda->selected[source] && mda->selected[target] ? (GD_Color){104,182,171,255}:(GD_Color){73,88,107,255};
-        float dx, dy, length, t;
+        GD_LayoutRoute route;GD_LayoutPoint tip;
+        GD_Color color = emphasized ? selected_color : mda->selected[source] && mda->selected[target] ? (GD_Color){104,182,171,255}:(GD_Color){73,88,107,255};
         if (emphasized != pass || !visible(model,mda,display,source) || !visible(model,mda,display,target)) continue;
-        if (overview && overview->selected_edges[i]) gd_scene_quadratic(a,c,b,21,selected_color);
-        if (reach_pair && reach_pair->edges[i]) gd_scene_quadratic(a,c,b,17,gd_graph_branch_color(reach_pair->edges[i]));
-        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_scene_quadratic(a,c,b,15,gd_bypass_color);
-        if (path_selection && path_selection->edges[i]) gd_scene_quadratic(a,c,b,11,gd_path_color);
-        if (comparison && comparison->edges[i]) gd_scene_quadratic(a,c,b,7,gd_graph_branch_color(comparison->edges[i]));
-        else if (!comparison && pair>=0 && (i==left->edge || i==right->edge)) gd_scene_quadratic(a,c,b,7,shared_color);
-        gd_scene_quadratic(a,c,b,display->link == edge->key ? 4:2.5f,color);
-        /* Mid-curve marker points in authored source-to-reference direction. */
-        t = 0.5f; tip = curve(a,c,b,t); before = curve(a,c,b,t-0.025f);
-        dx = tip.x-before.x; dy = tip.y-before.y; length = sqrtf(dx*dx+dy*dy);
-        if (length > 0) {
-            dx /= length; dy /= length;
-            gd_scene_line(tip,(GD_Point){tip.x-dx*13-dy*6,tip.y-dy*13+dx*6},3,color);
-            gd_scene_line(tip,(GD_Point){tip.x-dx*13+dy*6,tip.y-dy*13-dx*6},3,color);
-        }
+        mda_route(layout,i,&route);
+        if (overview && overview->selected_edges[i]) gd_graph_route_line(&route,21,selected_color,0);
+        if (reach_pair && reach_pair->edges[i]) gd_graph_route_line(&route,17,gd_graph_branch_color(reach_pair->edges[i]),0);
+        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_graph_route_line(&route,15,gd_bypass_color,0);
+        if (path_selection && path_selection->edges[i]) gd_graph_route_line(&route,11,gd_path_color,0);
+        if (comparison && comparison->edges[i]) gd_graph_route_line(&route,7,gd_graph_branch_color(comparison->edges[i]),0);
+        else if (!comparison && pair>=0 && (i==left->edge || i==right->edge)) gd_graph_route_line(&route,7,shared_color,0);
+        gd_graph_route_line(&route,display->link == edge->key ? 4:2.5f,color,0);
+        tip=gd_graph_route_mid_arrow(&route,color);
         if (display->link == edge->key) gd_scene_text(gd_field_name(model->edges[mda->links[edge->key].edge].field),(int)tip.x+5,(int)tip.y-22,14,selected_color);
     }
     for (i = 0; i < layout->node_count; ++i) {
@@ -376,6 +357,7 @@ int gd_mda_view(GD_Model *initial, GD_Mda *initial_mda, int frames, const char *
         mark_path(mda,&display);
         camera.offset = (GD_Point){viewport.x+viewport.width/2,viewport.y+viewport.height/2};
         if (fit_next) { fit(&camera,model,mda,layout,&display,viewport); fit_next = 0; }
+        gd_graph_overview_input(&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
         input(model,mda,layout,layout,&display,&camera,viewport,gd_graph_overview_hit(&overview_controls,viewport,gd_mouse_position())); mark_path(mda,&display);
         if (!display.paused) gd_layout_step(layout,display.held);
         shared_selected=analyze_display(model,mda,layout,&display,analysis,shared_lens,&shared_peer);

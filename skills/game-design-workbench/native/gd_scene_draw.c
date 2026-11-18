@@ -86,6 +86,3 @@ void gd_scene_triangle(GD_Point a,GD_Point b,GD_Point c,GD_Color color){
 void gd_scene_triangle_outline(GD_Point a,GD_Point b,GD_Point c,GD_Color color){
     if(scene.draw)ImDrawList_AddTriangle(scene.draw,gd_canvas_to_screen(scene.camera,a),gd_canvas_to_screen(scene.camera,b),gd_canvas_to_screen(scene.camera,c),pixel(color),scene.camera.zoom,0);
 }
-void gd_scene_quadratic(GD_Point a,GD_Point control,GD_Point b,float w,GD_Color c){
-    if(scene.draw)gd_canvas_curve(&scene,a,(GD_Point){(a.x+2*control.x)/3,(a.y+2*control.y)/3},(GD_Point){(b.x+2*control.x)/3,(b.y+2*control.y)/3},b,pixel(c),w);
-}

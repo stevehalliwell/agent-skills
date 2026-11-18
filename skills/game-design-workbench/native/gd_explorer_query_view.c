@@ -416,17 +416,14 @@ void gd_explorer_query_draw(GD_ExplorerContext *context) {
     if(scene->overview && !scene->layout.node_count) {gd_scene_text("No retained actors. Explicit noun is_actor: true is required; review scope and limits.",(int)context->viewport.x+24,(int)context->viewport.y+24,18,(GD_Color){170,188,209,255});return;}
     gd_scene_clip((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height); gd_scene_set_camera(pane->camera);
     for (i=0;i<layout->edge_count;++i) {
-        const GD_LayoutEdge *edge=&layout->edges[i]; const GD_QuerySceneEdge *metadata=&scene->edges[i]; GD_LayoutRoute route; int j,marked=state->selected && state->selected->highlighted[metadata->source];
+        const GD_LayoutEdge *edge=&layout->edges[i]; const GD_QuerySceneEdge *metadata=&scene->edges[i]; GD_LayoutRoute route; int marked=state->selected && state->selected->highlighted[metadata->source];
         float thickness=1.5f;
         if(scene->overview) {marked=pane->selection.cell==i || pane->selection.node==edge->a || pane->selection.node==edge->b;thickness=1.5f+fminf(5,log2f((float)gd_query_scene_overview_count(scene,i)));}
         GD_Color color=marked ? (GD_Color){65,227,195,255}:metadata->kind==GD_QUERY_EDGE_INVOCATION || metadata->kind==GD_QUERY_EDGE_FRONTIER ? (GD_Color){180,160,222,160}:(GD_Color){120,151,175,110};
         if(scene->overview && pane->selection.node>=0 && !marked) color.a=35;
         gd_layout_route(layout,i,&route);
-        for (j=1;j<route.count;++j) {
-            GD_Point a={route.points[j-1].x,route.points[j-1].y},b={route.points[j].x,route.points[j].y};
-            if (metadata->kind==GD_QUERY_EDGE_INVOCATION || metadata->kind==GD_QUERY_EDGE_FRONTIER) { int segment; for (segment=0;segment<12;segment+=2) gd_scene_line((GD_Point){a.x+(b.x-a.x)*segment/12,a.y+(b.y-a.y)*segment/12},(GD_Point){a.x+(b.x-a.x)*(segment+1)/12,a.y+(b.y-a.y)*(segment+1)/12},(marked ? 3:1.5f)/pane->camera.zoom,color); }
-            else gd_scene_line(a,b,(marked ? thickness+1.5f:thickness)/pane->camera.zoom,color);
-        }
+        gd_graph_route_line(&route,(marked ? thickness+1.5f:thickness)/pane->camera.zoom,color,
+            metadata->kind==GD_QUERY_EDGE_INVOCATION || metadata->kind==GD_QUERY_EDGE_FRONTIER);
         if(scene->overview && metadata->kind!=GD_QUERY_EDGE_AXIS && pane->camera.zoom*14>=8 && (marked || gd_query_scene_overview_mode(scene)==GD_ACTOR_INTERACTIONS)) {
             const GD_LayoutNode *a=&layout->nodes[edge->a],*b=&layout->nodes[edge->b];
             gd_scene_text(gd_scene_format("%d records",gd_query_scene_overview_count(scene,i)),(int)((a->x+b->x)/2),(int)((a->y+b->y)/2),14,(GD_Color){210,224,230,255});

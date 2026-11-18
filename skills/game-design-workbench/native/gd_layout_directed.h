@@ -1,7 +1,7 @@
 /* Private deterministic drawing pass. Included after LayoutOrder definition.
    Four full edge sweeps + bounded sorts; no source or layer mutation. */
 static int directed_compare(const void *left, const void *right) {
-    const LayoutOrder *a=left,*b=right; int64_t x,y;
+    const LayoutOrder *a=left,*b=right; double x,y;
     if (a->group!=b->group) return a->group<b->group ? -1:1;
     if (a->layer!=b->layer) return a->layer<b->layer ? -1:1;
     x=a->sum*b->count; y=b->sum*a->count;
@@ -35,6 +35,51 @@ static void directed_order(GD_Layout *layout, LayoutOrder *order) {
     }
     for (i=0;i<layout->node_count;++i) { layout->order[i]=order[i].node; layout->position[order[i].node]=i; }
 }
+static float directed_span(const GD_Layout *layout,const GD_LayoutNode *node,int x_axis) {
+    float span=x_axis ? gd_layout_node_width(node):node->height>0 ? node->height:120;
+    if(!layout->align_ranks)return span;
+    return fmaxf(span,2*(x_axis ? fmaxf(-node->footprint.left,node->footprint.right):fmaxf(-node->footprint.top,node->footprint.bottom)));
+}
+static float directed_cross(const GD_Layout *layout,const GD_LayoutNode *node) {
+    return layout->horizontal ? node->y:node->x;
+}
+/* Keep within-band order. Other ranks never consume lateral room. */
+static float rank_clamp_cross(const GD_Layout *layout,int index,float cross,float margin) {
+    const GD_LayoutNode *node=&layout->nodes[index];const GD_LayoutGroup *group=&layout->groups[node->group];
+    float start=layout->horizontal ? group->y:group->x,extent=layout->horizontal ? group->height:group->width;
+    float half=directed_span(layout,node,!layout->horizontal)/2,lo=start+half+margin,hi=start+extent-half-margin;
+    int i=layout->position[index],side;
+    for(side=-1;side<=1;side+=2)if(i+side>=group->first && i+side<group->first+group->count){
+        const GD_LayoutNode *peer=&layout->nodes[layout->order[i+side]];
+        if(peer->layer==node->layer){
+            float gap=half+directed_span(layout,peer,!layout->horizontal)/2+16;
+            if(side<0)lo=fmaxf(lo,directed_cross(layout,peer)+gap);
+            else hi=fminf(hi,directed_cross(layout,peer)-gap);
+        }
+    }
+    return lo<=hi ? fminf(hi,fmaxf(lo,cross)):directed_cross(layout,node);
+}
+/* Eight edge/vertex sweeps. Favor cross-rank neighbor alignment without
+   changing band membership, within-band order or footprint clearance. */
+static void rank_align(GD_Layout *layout,LayoutOrder *scratch) {
+    int pass,i;
+    /* Order/position now live in the layout. Reuse sort scratch by node. */
+    for(pass=0;pass<8;++pass){
+        for(i=0;i<layout->node_count;++i){scratch[i].sum=0;scratch[i].count=0;}
+        for(i=0;i<layout->edge_count;++i){
+            const GD_LayoutEdge *edge=&layout->edges[i];const GD_LayoutNode *a=&layout->nodes[edge->a],*b=&layout->nodes[edge->b];
+            if(!edge->active || a->group!=b->group || a->layer==b->layer || a->layer<0 || b->layer<0)continue;
+            scratch[edge->a].sum+=b->anchor;++scratch[edge->a].count;
+            scratch[edge->b].sum+=a->anchor;++scratch[edge->b].count;
+        }
+        for(i=0;i<layout->node_count;++i){
+            int index=layout->order[pass%2 ? layout->node_count-i-1:i];GD_LayoutNode *node=&layout->nodes[index];
+            if(!scratch[index].count)continue;
+            node->anchor=rank_clamp_cross(layout,index,(float)(0.4*node->anchor+0.6*scratch[index].sum/scratch[index].count),16);
+            if(layout->horizontal)node->y=node->anchor;else node->x=node->anchor;
+        }
+    }
+}
 /* Straight long links must not turn unrelated intermediate nodes into apparent
    incidences. Move within existing band order, never route through a side lane.
    Two passes, at most node-capacity squared edge checks; not an obstacle solver. */
@@ -44,14 +89,18 @@ static void directed_clearance(GD_Layout *layout) {
         GD_LayoutNode *node=&layout->nodes[layout->order[i]];
         float cross=layout->horizontal ? node->y:node->x;
         float axis=layout->horizontal ? node->x:node->y;
-        float span=layout->horizontal ? (node->height>0 ? node->height:120):gd_layout_node_width(node);
+        float span=directed_span(layout,node,!layout->horizontal);
         float minimum=cross-64,maximum=cross+64;
         int neighbor;
+        if(layout->align_ranks){
+            minimum=rank_clamp_cross(layout,layout->order[i],minimum,16);
+            maximum=rank_clamp_cross(layout,layout->order[i],maximum,16);
+        }
         for (neighbor=-1;neighbor<=1;neighbor+=2) if (i+neighbor>=0 && i+neighbor<layout->node_count) {
             const GD_LayoutNode *other=&layout->nodes[layout->order[i+neighbor]];
             if (other->group==node->group && other->layer==node->layer) {
                 float other_cross=layout->horizontal ? other->y:other->x;
-                float other_span=layout->horizontal ? (other->height>0 ? other->height:120):gd_layout_node_width(other);
+                float other_span=directed_span(layout,other,!layout->horizontal);
                 if (neighbor<0) minimum=fmaxf(minimum,other_cross+(span+other_span)/2+16);
                 else maximum=fminf(maximum,other_cross-(span+other_span)/2-16);
             }
@@ -87,8 +136,7 @@ static int directed_arrange(GD_Layout *layout, LayoutOrder *order, GD_LayoutSort
     for (i=0;i<layout->node_count;++i) if (layout->nodes[i].layer>maximum) maximum=layout->nodes[i].layer;
     for (i=0;i<layout->node_count;++i) {
         GD_LayoutNode *node=&layout->nodes[i]; int slot=node->layer<0 ? maximum+2:node->layer;
-        float width=gd_layout_node_width(node),height=node->height>0 ? node->height:120;
-        float span=layout->horizontal ? width:height;
+        float span=directed_span(layout,node,layout->horizontal);
         if (span>axis_span[slot]) axis_span[slot]=span;
     }
     layout->directed_shelf=maximum+2;
@@ -102,7 +150,7 @@ static int directed_arrange(GD_Layout *layout, LayoutOrder *order, GD_LayoutSort
         for (j=0;j<group->count;++j) {
             const GD_LayoutNode *node=&layout->nodes[layout->order[group->first+j]];
             int slot=node->layer<0 ? maximum+2:node->layer;
-            band_width[slot]+=(layout->horizontal ? (node->height>0 ? node->height:120):gd_layout_node_width(node))+spacing;
+            band_width[slot]+=directed_span(layout,node,!layout->horizontal)+spacing;
         }
         for (j=0;j<=maximum+2;++j) if (band_width[j]>0) {
             band_width[j]-=spacing; if (band_width[j]>widest) widest=band_width[j];
@@ -111,7 +159,7 @@ static int directed_arrange(GD_Layout *layout, LayoutOrder *order, GD_LayoutSort
         for (j=0;j<group->count;++j) {
             GD_LayoutNode *node=&layout->nodes[layout->order[group->first+j]];
             int slot=node->layer<0 ? maximum+2:node->layer;
-            float span=layout->horizontal ? (node->height>0 ? node->height:120):gd_layout_node_width(node);
+            float span=directed_span(layout,node,!layout->horizontal);
             node->anchor=cross+48+(widest-band_width[slot])/2+used[slot]+span/2;
             used[slot]+=span+spacing; node->axis=axis[slot]; node->vx=node->vy=0;
             node->x=layout->horizontal ? node->axis:node->anchor; node->y=layout->horizontal ? node->anchor:node->axis;
@@ -122,6 +170,7 @@ static int directed_arrange(GD_Layout *layout, LayoutOrder *order, GD_LayoutSort
             swap=group->width; group->width=group->height; group->height=swap;
         }
     }
+    if (layout->align_ranks) rank_align(layout,order);
     if (layout->direct_routes) directed_clearance(layout);
     layout->width=layout->horizontal ? total_axis:fmaxf(0,cross-48);
     layout->height=layout->horizontal ? fmaxf(0,cross-48):total_axis;

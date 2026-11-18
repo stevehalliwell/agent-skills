@@ -175,7 +175,7 @@ int gd_mda_path(const GD_Mda *mda, int target, int *nodes, int *links, int capac
 int gd_mda_layout(const GD_Model *model, const GD_Mda *mda, GD_Layout *layout, int bands) {
     int mapping[GD_MAX_RECORDS], i;
     int has_systems = 0;
-    memset(layout,0,sizeof(*layout)); layout->group_count = 1; layout->horizontal = 1;
+    memset(layout,0,sizeof(*layout)); layout->group_count = 1; layout->horizontal = 1;layout->direct_routes=1;
     for (i = 0; i < model->record_count; ++i) if (model->records[i].role == GD_MDA_SYSTEM) has_systems = 1;
     for (i = 0; i < model->record_count; ++i) {
         mapping[i] = -1;

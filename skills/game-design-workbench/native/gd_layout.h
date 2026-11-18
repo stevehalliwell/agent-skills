@@ -51,7 +51,7 @@ typedef struct {
     GD_LayoutMode mode;
     GD_LayoutSort sort;
     unsigned tick;
-    int horizontal, direct_routes;
+    int horizontal, direct_routes, align_ranks;
     float width, height;
     float spring_gap; /* Desired Free edge gap outside footprints; 0 keeps default 8. Not a hard collision gap. */
     GD_LayoutWorkspace workspace; /* Optional fixed containment; never follows moving nodes. */

@@ -101,6 +101,112 @@ int gd_explorer_pointer_checks(GD_Allocator allocator,const GD_Collection *colle
             POINTER_CHECK(!p->distance_focus->animating && !p->distance_focus->returning);
         }
     }
+    /* Native ImGui splitter confines its width change to the drawer. */
+    {float width=320;const GD_ExplorerPane *p=c.pane;GD_Camera camera=p->camera;
+     pointer_test_frame();pointer_test_sample(476,80,0);inspector_splitter(480,600,&width,800);
+     pointer_test_frame();pointer_test_sample(476,80,1);inspector_splitter(480,600,&width,800);
+     POINTER_CHECK(igIsAnyItemActive() && width==320);
+     pointer_test_frame();pointer_test_sample(390,80,1);inspector_splitter(480,600,&width,800);
+     POINTER_CHECK(igIsAnyItemActive() && width==406 && !memcmp(&camera,&p->camera,sizeof(camera)));
+     pointer_test_frame();pointer_test_sample(390,80,0);inspector_splitter(394,600,&width,800);
+     POINTER_CHECK(!igIsAnyItemActive() && width==406);
+    }
+    /* Overview gestures are captured before canvas input. Display placement
+       and the gold brush are independent, including after viewport shrink. */
+    {GD_OverviewControls o={.enabled=1,.row=2,.column=3};GD_Rect vp=c.viewport;
+     GD_Rect base=gd_graph_overview_visible_bounds(&o,vp),box,shrunk;
+     int x=(int)base.x+4,y=(int)base.y+4;
+     POINTER_CHECK(base.x+base.width==vp.width-GD_OVERVIEW_MARGIN && base.y+base.height==vp.height-GD_OVERVIEW_MARGIN);
+     pointer_test_frame();pointer_test_sample(x,y,1);gd_graph_overview_input(&o,vp,1);
+     POINTER_CHECK(o.gesture==GD_OVERVIEW_RESIZE);
+     pointer_test_frame();pointer_test_sample(x-50,y-50,1);gd_graph_overview_input(&o,vp,0);box=gd_graph_overview_visible_bounds(&o,vp);
+     POINTER_CHECK(box.width==base.width+50 && box.height==base.height+50 && box.x+box.width==base.x+base.width);
+     POINTER_CHECK(gd_graph_overview_hit(&o,vp,(GD_Point){0,0}));
+     pointer_test_frame();pointer_test_sample(x-50,y-50,0);gd_graph_overview_input(&o,vp,0);
+     POINTER_CHECK(!o.gesture && !gd_graph_overview_hit(&o,vp,(GD_Point){0,0}));
+     x=(int)box.x+50;y=(int)box.y+11;
+     pointer_test_frame();pointer_test_sample(x,y,1);gd_graph_overview_input(&o,vp,1);POINTER_CHECK(o.gesture==GD_OVERVIEW_MOVE);
+     pointer_test_frame();pointer_test_sample(x-180,y-99,1);gd_graph_overview_input(&o,vp,1);
+     base=gd_graph_overview_visible_bounds(&o,vp);POINTER_CHECK(base.x==box.x-180 && base.y==box.y-99 && base.width==box.width);
+     pointer_test_frame();pointer_test_sample(x-180,y-99,0);gd_graph_overview_input(&o,vp,1);
+     shrunk=gd_graph_overview_visible_bounds(&o,(GD_Rect){20,30,260,320});
+     POINTER_CHECK(shrunk.x>=20 && shrunk.y>=30 && shrunk.x+shrunk.width<=280 && shrunk.y+shrunk.height<=350);
+     x=(int)(base.x+base.width)-10;y=(int)base.y+10;
+     pointer_test_frame();pointer_test_sample(x,y,1);gd_graph_overview_input(&o,vp,1);
+     POINTER_CHECK(!o.enabled && o.gesture==GD_OVERVIEW_TOGGLING && o.row==2 && o.column==3);
+     pointer_test_frame();pointer_test_sample(x,y,0);gd_graph_overview_input(&o,vp,1);box=gd_graph_overview_visible_bounds(&o,vp);
+     pointer_test_frame();pointer_test_sample((int)(box.x+box.width)-10,(int)box.y+10,1);gd_graph_overview_input(&o,vp,1);
+     box=gd_graph_overview_visible_bounds(&o,vp);POINTER_CHECK(o.enabled && box.x==base.x && box.y==base.y && box.width==base.width && o.row==2 && o.column==3);
+     pointer_test_frame();pointer_test_sample(x,y,0);gd_graph_overview_input(&o,vp,1);
+    }
+    /* Single click never retargets. A second press is still speculative;
+       only valid release commits, and a drag cancels it. */
+    {GD_ExplorerPane *p=&panes[GD_EXPLORER_SKILLS];int node,dx=0;GD_Camera camera;ImGuiIO *io=igGetIO_Nil();
+     c.pane=p;c.display_layout=NULL;c.render_pose=NULL;
+     POINTER_CHECK(p->layout->node_count>1 && distance_focus_toggle(&c,1));
+     p->overview.enabled=0;p->focus_auto_fit=false;p->fit=0;p->find_hold_node=-1;
+     p->selection=(GD_ExplorerSelection){-1,0,0,-1,-1};distance_focus_update(&c,analyze(&c));distance_focus_frame(&c,0);distance_focus_frame(&c,.22f);
+     POINTER_CHECK(p->distance_focus->anchor_node==0);
+     node=p->layout->node_count-1;p->camera=(GD_Camera){{400,300},position(&c,node),1};camera=p->camera;
+     for(int pass_number=0;pass_number<2;++pass_number){
+         pointer_test_frame();io->DeltaTime=1;pointer_test_sample(400,300,0);io->DeltaTime=1.0f/60;
+         pointer_test_frame();pointer_test_sample(400,300,1);canvas_input(&c);distance_focus_update(&c,analyze(&c));
+         POINTER_CHECK(p->selection.node==node && p->distance_focus->anchor_node==0);
+         pointer_test_frame();pointer_test_sample(400,300,0);canvas_input(&c);
+         POINTER_CHECK(p->focus_last_click==node+1 && p->distance_focus->anchor_node==0);
+         pointer_test_frame();pointer_test_sample(400,300,1);canvas_input(&c);distance_focus_update(&c,analyze(&c));
+         POINTER_CHECK(p->focus_double_click && p->distance_focus->anchor_node==0);
+         dx=pass_number ? 0:12;
+         pointer_test_frame();pointer_test_sample(400+dx,300,1);canvas_input(&c);distance_focus_update(&c,analyze(&c));
+         pointer_test_frame();pointer_test_sample(400,300,0);canvas_input(&c);distance_focus_update(&c,analyze(&c));
+         POINTER_CHECK(p->distance_focus->anchor_node==(pass_number ? node:0) && p->selection.node==node && !memcmp(&camera,&p->camera,sizeof(camera)));
+         p->camera.target=position(&c,node);camera=p->camera;
+     }
+     POINTER_CHECK(distance_focus_toggle(&c,0));
+    }
+    /* MDA picks the shared drawn route, in both title-band and scaled Free space. */
+    for(int mode=0;mode<2;++mode){
+        GD_ExplorerPane *p=&panes[GD_EXPLORER_MDA];GD_Layout *layout;int chosen=-1;GD_Point target={0};float scale=mode ? 3:1;
+        c.pane=p;p->layout_choice=mode;p->prepared=0;p->overview.enabled=0;
+        POINTER_CHECK(pane_prepare(&c));layout=p->layout;
+        for(int e=0;e<layout->edge_count && chosen<0;++e){
+            GD_LayoutRoute route;int clear=1,mid;gd_layout_route(layout,e,&route);mid=route.count/2;
+            GD_LayoutPoint a=route.points[mid-1],b=route.points[mid];
+            target=(GD_Point){(a.x+b.x)*.5f*scale,(a.y+b.y)*.5f*scale};
+            for(int n=0;n<layout->node_count && clear;++n){GD_Point point=position(&c,n);clear=fabsf(target.x-point.x)>108 || fabsf(target.y-point.y)>35;}
+            for(int k=0;k<layout->edge_count && clear;++k)if(k!=e)clear=gd_layout_route_distance(layout,k,target.x/scale,target.y/scale)>8/scale;
+            if(clear)chosen=e;
+        }
+        POINTER_CHECK(chosen>=0);
+        p->camera=(GD_Camera){{400,300},target,1};
+        pointer_test_frame();pointer_test_sample(400,300,1);canvas_input(&c);
+        POINTER_CHECK(p->mda.link==layout->edges[chosen].key && p->mda.held<0);
+        POINTER_CHECK(p->mda.record==gd_explorer_model(c.project,p->view)->edges[c.project->mda->links[p->mda.link].edge].source);
+        pointer_test_frame();pointer_test_sample(400,300,0);canvas_input(&c);
+    }
+    /* Constrained ranks align a cross-band chain next to a wider fork.
+       Measured asymmetric bounds are never allowed to overlap on drag. */
+    for(int horizontal=0;horizontal<2;++horizontal){
+        GD_Layout *rank=before;float baseline,aligned;int i;
+        memset(rank,0,sizeof(*rank));rank->node_count=4;rank->group_count=1;rank->edge_count=3;rank->direct_routes=1;rank->horizontal=horizontal;
+        for(i=0;i<4;++i){rank->nodes[i].key=i;rank->nodes[i].label=i==2 ? "Branch":"Chain";rank->nodes[i].layer=i==3 ? 2:i>0;}
+        gd_layout_set_footprint(&rank->nodes[2],-150,-82,180,99);
+        rank->edges[0]=(GD_LayoutEdge){0,1,0,1,GD_PREREQUISITES};rank->edges[1]=(GD_LayoutEdge){0,2,1,1,GD_PREREQUISITES};rank->edges[2]=(GD_LayoutEdge){1,3,2,1,GD_PREREQUISITES};
+        POINTER_CHECK(gd_layout_arrange(rank,GD_LAYOUT_DIRECTED,GD_SORT_NAME));
+        baseline=horizontal ? fabsf(rank->nodes[1].y-rank->nodes[3].y):fabsf(rank->nodes[1].x-rank->nodes[3].x);
+        rank->align_ranks=1;POINTER_CHECK(gd_layout_arrange(rank,GD_LAYOUT_DIRECTED,GD_SORT_NAME));
+        aligned=horizontal ? fabsf(rank->nodes[1].y-rank->nodes[3].y):fabsf(rank->nodes[1].x-rank->nodes[3].x);
+        POINTER_CHECK(aligned<baseline*.35f && rank->nodes[1].axis<rank->nodes[3].axis);
+        gd_layout_move_node(rank,1,rank->nodes[2].x,rank->nodes[2].y);
+        for(i=0;i<120;++i)gd_layout_step(rank,-1);
+        for(i=0;i<rank->node_count;++i){int j;const GD_LayoutNode *a=&rank->nodes[i];
+            POINTER_CHECK((horizontal ? a->x:a->y)==a->axis);
+            for(j=i+1;j<rank->node_count;++j){const GD_LayoutNode *b=&rank->nodes[j];
+                POINTER_CHECK(a->x+a->footprint.right<=b->x+b->footprint.left || b->x+b->footprint.right<=a->x+a->footprint.left ||
+                    a->y+a->footprint.bottom<=b->y+b->footprint.top || b->y+b->footprint.bottom<=a->y+a->footprint.top);
+            }
+        }
+    }
     /* Content envelope uses displayed centers plus raw measured footprints,
        not solver container, filtered footprint copies or hidden cards. */
     {GD_LayoutBounds bounds,unchanged={1,2,3,4};unsigned char shown[GD_MAX_RECORDS]={0};int allocations=*calls;

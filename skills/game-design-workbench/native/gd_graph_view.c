@@ -823,6 +823,7 @@ int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_View
         if (!igGetIO_Nil()->WantCaptureKeyboard && gd_key_pressed(ImGuiKey_F5)) refresh = 1;
         if (!igGetIO_Nil()->WantCaptureKeyboard && gd_key_pressed(ImGuiKey_Space) && ((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && layout->mode!=GD_LAYOUT_COLUMNS) paused=!paused;
         if (fit) { fit_camera(&camera, layout, viewport); fit = 0; }
+        gd_graph_overview_input(&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
         graph_input(layout,layout, &selection, &camera, viewport, overlay,gd_graph_overview_hit(&overview_controls,viewport,gd_mouse_position()));
         if (((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && !paused && layout->mode != GD_LAYOUT_COLUMNS) {
             accumulator += fminf(gd_frame_seconds(), 0.05f);
