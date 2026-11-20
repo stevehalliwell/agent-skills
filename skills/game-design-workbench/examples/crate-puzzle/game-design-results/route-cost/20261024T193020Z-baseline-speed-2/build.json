@@ -1,0 +1,33 @@
+{
+  "checkpoint": "014af8bd477524a145d6ad077abf3ca2ad60c47a",
+  "cwd": "D:\\Repos\\agent-skills-route-baseline\\skills\\game-design-workbench\\native",
+  "compiler_program": "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links\\zig.exe",
+  "compiler_version": "0.17.0",
+  "arguments": [
+    "cc",
+    "-std=c99",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-DHAVE_CONFIG_H=1",
+    "-DYAML_DECLARE_STATIC=1",
+    "-I",
+    ".",
+    "-I",
+    "vendor/libyaml/include",
+    "-I",
+    "vendor/libyaml/src",
+    "gd_experiment.c",
+    "vendor/pcg-basic/pcg_basic.c",
+    "vendor/libyaml/src/api.c",
+    "vendor/libyaml/src/parser.c",
+    "vendor/libyaml/src/reader.c",
+    "vendor/libyaml/src/scanner.c",
+    "../examples/crate-puzzle/experiments/route-cost/route_timing.c",
+    "-o",
+    "build/experiment-checks/route-timing-zig.exe"
+  ],
+  "build_metadata": "[\"C:\\\\Users\\\\steve\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Links\\\\zig.exe\",\"cc\",\"-std=c99\",\"-Wall\",\"-Wextra\",\"-Werror\",\"-DHAVE_CONFIG_H=1\",\"-DYAML_DECLARE_STATIC=1\",\"-I\",\".\",\"-I\",\"vendor/libyaml/include\",\"-I\",\"vendor/libyaml/src\",\"gd_experiment.c\",\"vendor/pcg-basic/pcg_basic.c\",\"vendor/libyaml/src/api.c\",\"vendor/libyaml/src/parser.c\",\"vendor/libyaml/src/reader.c\",\"vendor/libyaml/src/scanner.c\",\"../examples/crate-puzzle/experiments/route-cost/route_timing.c\",\"-o\",\"build/experiment-checks/route-timing-zig.exe\"]",
+  "output": "D:\\Repos\\agent-skills-game-design-workbench\\skills\\game-design-workbench\\examples\\crate-puzzle\\game-design-results\\route-cost\\20261024T193020Z-baseline-speed-2",
+  "source_clean_before_run": true
+}

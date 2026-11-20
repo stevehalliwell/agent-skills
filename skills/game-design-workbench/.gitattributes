@@ -1,0 +1,9 @@
+* text eol=lf
+# Preserve supplied offline card material byte-for-byte.
+references/** -text
+references/**/*.md text eol=lf
+references/schell/** -text
+*.pdf binary
+*.png binary
+*.jpg binary
+*.gif binary

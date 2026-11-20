@@ -1,0 +1,56 @@
+#ifndef GD_STRUCTURE_CLI_H
+#define GD_STRUCTURE_CLI_H
+#include "gd_projection.h"
+#include "gd_structure_query.h"
+#include "gd_actor_identity.h"
+#define GD_STRUCTURE_QUESTIONS (GD_STRUCTURE_COUNT+2)
+struct GD_SimilaritySelection;
+struct GD_SimilarityProjection;
+/* Discovery includes typed similarity frontends. Structural kernel enum stays
+   structural; similarity uses canonical native count context, not a new graph evaluator. */
+const char *gd_structure_question_name(int index);
+int gd_structure_question_index(const char *name);
+typedef struct {
+    const char *question,*projection,*from,*to,*avoid,*scope_root;
+    const char *roots[GD_STRUCTURE_SELECTORS],*relations[GD_STRUCTURE_KINDS],*statuses[GD_STRUCTURE_SELECTORS];
+    int root_count,relation_count,status_count,include_inactive,work_limit;
+    GD_StructureDirection direction; GD_GraphLens lens;
+    const GD_Query *actor_query; /* Borrowed finite actors input; NULL for whole-reader declaration-gaps. */
+    const struct GD_SimilaritySelection *similarity; /* Consumed by named similarity-map frontend. */
+} GD_StructureOptions;
+typedef enum { GD_DECLARATION_RESOLVED, GD_DECLARATION_MISSING, GD_DECLARATION_UNLOADED, GD_DECLARATION_AMBIGUOUS, GD_DECLARATION_STATES } GD_DeclarationIdentity;
+typedef struct {
+    int rows,counts[GD_DECLARATION_STATES];
+    unsigned char identities[GD_MAX_EDGES];
+} GD_DeclarationGaps;
+const char *gd_declaration_identity_name(GD_DeclarationIdentity identity);
+typedef struct {
+    GD_Allocator allocator; const GD_ExplorerProject *project; GD_ExplorerView view;
+    GD_StructureOptions options; /* Strings remain borrowed until destruction. */
+    GD_Layout *layout; /* Owned separately except embedded actor_scene layout. */
+    GD_StructureQuery *query;
+    GD_DeclarationGaps *gaps; /* Whole loaded reader context; no graph filters. */
+    GD_EffectGraph *effects; /* Canonical declaration concepts, independent of focused contributors. */
+    GD_ActorInventory *inventory; /* Canonical declarations, not finite hypotheses. */
+    GD_QueryScene *actor_scene; /* Own canonical all-variant topology; borrows options.actor_query. */
+    struct GD_SimilarityProjection *similarity; /* Owned, borrows this canonical context; destroy first. */
+    int selector_work,source_incomplete;
+    int similarity_first_node,similarity_second_node; /* Inspected pair, not structural roots; self-pair valid. */
+} GD_StructureResult;
+/* Shared native preparation for CLI and viewer. Owns canonical projection and
+   query; borrows immutable project/options strings and optional finite actor_query.
+   Diagnostic receives errors. Destroy result before borrowed query/project. Failure retains no partial owned allocation. */
+GD_StructureResult *gd_structure_result_build(GD_Model *diagnostic, const GD_ExplorerProject *project, const GD_StructureOptions *options);
+void gd_structure_result_destroy(GD_StructureResult *result);
+int gd_structure_result_record(const GD_StructureResult *result, int key);
+int gd_structure_result_edge_record(const GD_StructureResult *result, int key);
+int gd_structure_result_node_id(const GD_StructureResult *result, int key, char *text, size_t size);
+int gd_write_structure_result(FILE *output, const GD_StructureResult *result, int json, const char *fields);
+int gd_write_structure_retained(FILE *output,const GD_StructureResult *result,int json,const char *fields);
+/* CLI parser supplies explicit collections/original roles. No second parser. */
+int gd_structure_cli(GD_Allocator allocator, const GD_Collection *collections, int count,
+    const GD_StructureOptions *options, int json, const char *fields, const char *initial_error);
+int gd_structure_fields(const char *fields);
+int gd_structure_question_fields(const char *question,const char *fields);
+int gd_write_structure_catalogue(FILE *output, int json, int comma);
+#endif

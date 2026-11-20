@@ -1,0 +1,417 @@
+<# Native/core and CLI regression checks. No downloads or source-record changes.
+Usage: ./test.ps1 [-View [-Graph] -UiLibrary PATH] [-Cjit PATH]
+Fixtures and captures stay in ignored build/. View opens a bounded visible window.
+#>
+param([switch]$View, [switch]$Graph, [string]$UiLibrary = '', [string]$Cjit = 'cjit', [string]$OutputDirectory = '')
+$ErrorActionPreference = 'Stop'
+if ($Graph) { $View = $true }
+$root = $PSScriptRoot
+& (Join-Path $root 'build.ps1') -Test -Cjit $Cjit | Out-Host
+$fixtures = Join-Path $root ('build/checks-' + [guid]::NewGuid().ToString('N'))
+& (Join-Path $root 'build/test-core.exe') $fixtures
+if ($LASTEXITCODE -ne 0) { throw 'Native domain checks failed' }
+$similarity = Get-Content -LiteralPath (Join-Path $fixtures 'similarity-map.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $similarity.ok -or -not $similarity.coverage.available -or $similarity.data.points.Count -ne 2 -or $similarity.data.features[0].id -ne 'reached-outgoing:all-selected-kinds' -or $similarity.data.evidence.pair.distance -ne 0.5 -or $similarity.data.evidence.pair.components[0].unweighted_distance -ne 0.5 -or $similarity.data.PSObject.Properties.Name -contains 'inputs' -or $similarity.data.PSObject.Properties.Name -contains 'source_context') { throw 'Native similarity serializer/default fields failed' }
+$similarityInputs = Get-Content -LiteralPath (Join-Path $fixtures 'similarity-inputs.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $similarityInputs.ok -or $similarityInputs.data.inputs.rows.Count -ne 2 -or $similarityInputs.data.inputs.rows[0][0].Count -ne 3 -or $similarityInputs.data.source_context.data.question -ne 'related-paths' -or $similarityInputs.data.PSObject.Properties.Name -contains 'points') { throw 'Native similarity exact input/context fields failed' }
+$similarityFeatures = Get-Content -LiteralPath (Join-Path $fixtures 'similarity-features.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $similarityFeatures.coverage.catalogue_complete -or $similarityFeatures.coverage.fit_performed -or @($similarityFeatures.data.features | Where-Object id -eq 'reached-outgoing:all-selected-kinds').Count -ne 1) { throw 'Native similarity capability catalogue failed' }
+$similarityLimited = Get-Content -LiteralPath (Join-Path $fixtures 'similarity-limited.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $similarityLimited.ok -or -not $similarityLimited.coverage.limited -or $similarityLimited.coverage.available -or $similarityLimited.coverage.feature_table_complete -or $null -ne $similarityLimited.data.points -or $null -ne $similarityLimited.data.features[0]) { throw 'Native similarity partial output invented feature/point facts' }
+$draftReport = Get-Content -LiteralPath (Join-Path $fixtures 'draft-changes.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$change = $draftReport.data.changes[0]
+if (-not $draftReport.ok -or $draftReport.data.applied -or $draftReport.data.changes.Count -ne 1 -or $change.reference -ne 'atoms/root' -or $change.fields.rank.loaded -ne 1 -or $change.fields.rank.current_disk -ne 9 -or $change.fields.rank.edited -ne 4 -or -not $change.current_disk_available -or -not $draftReport.coverage.disk_changed_since_load) { throw 'Draft three-way rank handoff failed' }
+if ($change.fields.prerequisites.loaded.Count -ne 0 -or $change.fields.prerequisites.current_disk.Count -ne 0 -or ($change.fields.prerequisites.edited -join ',') -ne 'atoms/leaf' -or @($draftReport.data.affected | Where-Object { $_.reference -eq 'atoms/child' -and $null -eq $_.authored_rank }).Count -ne 1) { throw 'Draft prerequisite handoff or descendant intent failed' }
+foreach ($file in @('draft-unavailable.json', 'draft-identity.json')) {
+    $partial = Get-Content -LiteralPath (Join-Path $fixtures $file) -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($partial.ok -or $partial.coverage.complete -or $partial.data.changes[0].current_disk_available -or $null -ne $partial.data.changes[0].fields.rank.current_disk -or $partial.data.changes[0].fields.rank.edited -ne 4 -or $partial.errors.Count -lt 1) { throw "Unsafe partial draft report: $file" }
+}
+$emptyDraft = Get-Content -LiteralPath (Join-Path $fixtures 'draft-empty.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $emptyDraft.ok -or $emptyDraft.data.changes.Count -ne 0 -or $emptyDraft.coverage.disk_changed_since_load) { throw 'Return to disk sync point failed' }
+& (Join-Path $root 'build.ps1') -Cjit $Cjit | Out-Host
+$executable = Join-Path $root 'build/gd.exe'
+$gapFixture = Join-Path $fixtures 'declaration-gaps'
+$gaps = (& $executable query --question declaration-gaps --projection relationships --skill-atoms "things=$gapFixture/things" --related "actions=$gapFixture/actions" --fields findings --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $gaps.ok -or $gaps.data.declaration_gap_inventory.rows -ne 4 -or $gaps.data.declaration_gap_inventory.missing -ne 1 -or $gaps.data.declaration_gap_inventory.unloaded -ne 1 -or $gaps.data.declaration_gap_inventory.missing_metadata_checked -or -not $gaps.coverage.query_complete -or -not $gaps.coverage.source_incomplete) { throw 'Native declaration gap CLI contract failed' }
+$catalogue = (& $executable query --list --json | ConvertFrom-Json)
+$bindingCatalogue = @($catalogue.data.questions | Where-Object name -eq 'object-bindings')[0]
+if (-not $bindingCatalogue.ui_available -or $bindingCatalogue.ui_mode -ne 'resources' -or $bindingCatalogue.ui_unavailable_parameters.Count -ne 0) { throw 'Object binding catalogue does not match complete native reader controls' }
+foreach ($name in @('conditional-outcomes','conditional-consistency','skill-unlocks','resource-declarations','resource-routes')) {
+    $entry = @($catalogue.data.questions | Where-Object name -eq $name)
+    if ($entry.Count -ne 1 -or -not $entry[0].ui_available -or $entry[0].ipc_available -or -not $entry[0].ui_validation) { throw "Named delegate catalogue missing scope/validation boundary: $name" }
+}
+foreach ($question in @($catalogue.data.questions | Where-Object { $_.projections -contains 'actor-inventory' })) {
+    if (($question.required_bindings_by_projection.'actor-inventory'.all_of -join ',') -ne 'nouns,axes') { throw 'Actor inventory catalogue omitted required typed bindings' }
+    if ($question.name -ne 'declaration-gaps' -and $question.parameters_by_projection.actors -notcontains '--context-not (repeat)') { throw 'Actor catalogue advertises wrong negative-context flag' }
+}
+$namedRules = Join-Path $fixtures 'named-rules'
+$namedRuleInputs = @('--nouns', "things=$namedRules/things", '--axes', "actions=$namedRules/actions", '--mechanics', "cases=$namedRules/cases")
+$namedAssumptions = @('--case', 'cases/rules#caller', '--assume', 'Left:actions/Life=alive')
+$legacyOutcome = (& $executable rules @namedRuleInputs @namedAssumptions --json | ConvertFrom-Json)
+$namedOutcome = (& $executable query --question conditional-outcomes --projection rules @namedRuleInputs @namedAssumptions --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedOutcome.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyOutcome.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedOutcome.data.native_result.data)) { throw 'Named conditional outcome diverged from native rules report' }
+$legacyConsistency = (& $executable rules @namedRuleInputs --analyze --json | ConvertFrom-Json)
+$namedConsistency = (& $executable query --question conditional-consistency --projection rules @namedRuleInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedConsistency.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyConsistency.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedConsistency.data.native_result.data)) { throw 'Named consistency diverged from native comparison report' }
+$namedSkillsFolder = Join-Path $fixtures 'named-skills/things'
+$namedSkillInputs = @('--skill-atoms', "things=$namedSkillsFolder", '--from', 'things/root', '--known', 'things/pre')
+$legacyKnowledge = (& $executable skill-atoms @namedSkillInputs --json | ConvertFrom-Json)
+$namedKnowledge = (& $executable query --question skill-unlocks --projection skills @namedSkillInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedKnowledge.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyKnowledge.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedKnowledge.data.native_result.data)) { throw 'Named explicit skill knowledge diverged from native knowledge report' }
+$legacyResources = (& $executable resources @namedRuleInputs --json | ConvertFrom-Json)
+$namedResources = (& $executable query --question resource-declarations --projection resources @namedRuleInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedResources.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyResources.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedResources.data.native_result.data)) { throw 'Named Resource declarations diverged from native report' }
+$resourceTarget = $namedResources.data.native_result.data.nodes[0].id
+$legacyRoutes = (& $executable resources @namedRuleInputs --to $resourceTarget --json | ConvertFrom-Json)
+$namedRoutes = (& $executable query --question resource-routes --projection resources @namedRuleInputs --to $resourceTarget --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $namedRoutes.ok -or (ConvertTo-Json -Compress -Depth 100 $legacyRoutes.data) -ne (ConvertTo-Json -Compress -Depth 100 $namedRoutes.data.native_result.data)) { throw 'Named conditional routes diverged from native report' }
+function Assert-NamedText {
+    param([string]$Question, [string]$Projection, [string[]]$Flags)
+    $lines = @(& $executable query --question $Question --projection $Projection @Flags --format text)
+    if ($LASTEXITCODE -ne 0 -or -not $lines.Count -or $lines[0] -notlike "$Question *" -or @($lines | Where-Object { $_ -like '{"schema_version"*' }).Count) { throw "Named delegate text output emitted JSON or failed: $Question" }
+}
+Assert-NamedText conditional-outcomes rules ($namedRuleInputs + $namedAssumptions)
+Assert-NamedText conditional-consistency rules $namedRuleInputs
+Assert-NamedText skill-unlocks skills $namedSkillInputs
+Assert-NamedText resource-declarations resources $namedRuleInputs
+Assert-NamedText resource-routes resources ($namedRuleInputs + @('--to', $resourceTarget))
+$namedPruned = (& $executable query --question conditional-outcomes --projection rules @namedRuleInputs @namedAssumptions --fields analysis --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or @($namedPruned.data.native_result.data.PSObject.Properties).Count -ne 1 -or -not $namedPruned.data.native_result.data.analysis) { throw 'Named delegate native field pruning failed' }
+foreach ($bad in @(@('--question','conditional-consistency','--projection','rules','--work-limit','0'), @('--question','conditional-outcomes','--projection','rules'), @('--question','conditional-outcomes','--projection','rules','--case','cases/rules#caller','--status','accepted'), @('--question','resource-declarations','--projection','resources','--accepted-only'), @('--question','resource-routes','--projection','resources'), @('--question','conditional-consistency','--projection','skills'))) {
+    $badNamed = (& $executable query @namedRuleInputs @bad --json 2>$null | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 2 -or $badNamed.ok -or -not $badNamed.errors.Count) { throw 'Named delegate silently accepted unsupported selector/projection/filter/work override' }
+}
+$joinFixture = Join-Path $fixtures 'related-paths'
+$joinInputs = @('--skill-atoms', "atoms=$joinFixture/things", '--challenges', "challenges=$joinFixture/actions", '--related', "context=$joinFixture/cases")
+$similarityCatalogue = (& $executable query --question similarity-features --projection relationships @joinInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similarityCatalogue.ok -or -not $similarityCatalogue.coverage.catalogue_complete -or @($similarityCatalogue.data.features | Where-Object id -eq 'reached-outgoing:all-selected-kinds').Count -ne 1) { throw 'Similarity feature discovery CLI failed' }
+$similarityFlags = @('--feature', 'reached-outgoing:all-selected-kinds=2', '--entry', 'challenges/first', '--entry', 'challenges/second', '--from', 'challenges/first', '--to', 'challenges/second')
+$similarityMap = (& $executable query --question similarity-map --projection relationships @joinInputs @similarityFlags --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similarityMap.ok -or -not $similarityMap.coverage.available -or $similarityMap.data.points.Count -ne 2 -or $similarityMap.data.features[0].weight -ne 2 -or $similarityMap.data.evidence.pair.distance -ne 0.5 -or $similarityMap.data.scope.relation_kinds -contains 'next' -or $similarityMap.data.scope.entry_selection_erases_context) { throw 'Similarity CLI selection/weight/pair/default continuation contract failed' }
+$similaritySelf = (& $executable query --question similarity-map --projection relationships @joinInputs --feature 'reached-outgoing:all-selected-kinds=2' --entry challenges/first --entry challenges/second --from challenges/first --to challenges/first --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similaritySelf.coverage.available -or $similaritySelf.data.evidence.pair.distance -ne 0 -or (ConvertTo-Json -Compress -Depth 10 $similaritySelf.data.points) -ne (ConvertTo-Json -Compress -Depth 10 $similarityMap.data.points)) { throw 'Similarity CLI self-pair rejected or changed fitted geometry' }
+$similaritySource = (& $executable query --question similarity-map --projection relationships @joinInputs @similarityFlags --fields source --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or $null -ne $similaritySource.data.source_context.data.selectors.from -or $null -ne $similaritySource.data.source_context.data.selectors.to -or $similaritySource.data.source_context.data.scope.source -ne -1 -or $similaritySource.data.source_context.data.scope.target -ne -1) { throw 'Similarity inspection leaked into canonical context selectors' }
+$similarityAll = (& $executable query --question similarity-map --projection relationships @joinInputs @similarityFlags --relation all --fields evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or [Math]::Abs($similarityAll.data.evidence.pair.distance - (2.0/3.0)) -gt 1e-12 -or $similarityAll.data.PSObject.Properties.Name -contains 'points') { throw 'Similarity CLI explicit continuation/field pruning failed' }
+$similarityZero = (& $executable query --question similarity-map --projection relationships @joinInputs @similarityFlags --work-limit 0 --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similarityZero.ok -or -not $similarityZero.coverage.limited -or $similarityZero.coverage.available -or $null -ne $similarityZero.data.points -or $null -ne $similarityZero.data.evidence.pair) { throw 'Similarity CLI unfinished fit invented points/pair evidence' }
+$similarityMissing = (& $executable query --question similarity-map --projection relationships @joinInputs --feature source-status=0 --feature retained-partners --entry challenges/first --entry challenges/second --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $similarityMissing.ok -or $similarityMissing.coverage.complete_entries -ne 0 -or $similarityMissing.coverage.missing_entries -ne 2 -or @($similarityMissing.data.points | Where-Object placed).Count -ne 0 -or $similarityMissing.data.points[0].missing_features[0].reason -ne 'absent authored field') { throw 'Similarity CLI zero-weight missing cell was imputed' }
+foreach ($bad in @(@('--feature','unsupported-feature'), @('--feature','retained-partners=0'), @('--feature','retained-partners','--entry','missing/native'), @('--feature','retained-partners','--direction','backward'), @('--feature','retained-partners','--from','challenges/first'), @('--feature','retained-partners','--from','challenges/first','--to','challenges/second','--status','accepted','--work-limit','0'))) {
+    $badSimilarity = (& $executable query --question similarity-map --projection relationships @joinInputs @bad --json 2>$null | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 2 -or $badSimilarity.ok -or -not $badSimilarity.errors.Count) { throw 'Similarity CLI accepted unavailable feature/entry/weight/direction/pair' }
+}
+$joined = (& $executable query --question related-paths --projection relationships @joinInputs --from challenges/first --to challenges/second --fields nodes,links,evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $joined.ok -or -not $joined.coverage.query_complete -or $joined.data.evidence.related_paths.comparison.shared -ne 2 -or $joined.data.evidence.related_paths.comparison.first_only -ne 1 -or $joined.data.evidence.related_paths.comparison.second_only -ne 1 -or $joined.data.scope.relation_kinds -contains 'next') { throw 'Mixed-kind reached-set CLI comparison or continuation boundary failed' }
+$mechanic = @($joined.data.nodes | Where-Object id -eq 'context/rule')[0]
+$joinWitness = @($joined.data.evidence.related_paths.witnesses | Where-Object member -eq $mechanic.index)[0]
+if ($joinWitness.sides[0].length -ne 3 -or $joinWitness.sides[1].length -ne 3 -or $joinWitness.sides[0].suffix.Count -ne 3 -or $joined.data.links[$joinWitness.sides[0].suffix[0].link].kind -ne 'mechanics' -or $joined.data.links[$joinWitness.sides[0].suffix[1].link].kind -ne 'prerequisites' -or $joined.data.links[$joinWitness.sides[0].suffix[2].link].kind -ne 'requires') { throw 'Mixed-kind witness lost typed ancestry or original link provenance' }
+$joinPartial = (& $executable query --question related-paths --projection relationships @joinInputs --from challenges/first --work-limit 0 --fields evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $joinPartial.ok -or $joinPartial.coverage.available -or $joinPartial.coverage.query_complete -or $joinPartial.data.evidence.related_paths.available) { throw 'Unfinished reached sets became checked absence' }
+$joinNoSource = (& $executable query --question related-paths --projection relationships @joinInputs --json 2>$null | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $joinNoSource.ok) { throw 'Related paths invented implicit source' }
+$joinCatalogue = @($catalogue.data.questions | Where-Object name -eq 'related-paths')[0]
+if ($joinCatalogue.required_parameters -notcontains '--from' -or $joinCatalogue.parameters -notcontains '--direction forward|backward|both') { throw 'Related paths catalogue omitted required source or supported direction' }
+$actorFixture = Join-Path $fixtures 'actor-inventory'
+$actorInputs = @('--nouns', "things=$actorFixture/things", '--axes', "actions=$actorFixture/actions", '--mechanics', "cases=$actorFixture/cases")
+$inventory = (& $executable query --question direct-connections --projection actor-inventory @actorInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $inventory.ok -or $inventory.data.nodes.Count -ne 10 -or $inventory.data.links.Count -ne 18 -or $inventory.data.actor_inventory_coverage.construction_limited -or -not $inventory.coverage.query_complete) { throw 'Actor inventory structural CLI contract failed' }
+$left = @($inventory.data.nodes | Where-Object local_name -eq 'Left')[0]
+if ($left.counts.incoming -ne 1 -or $left.counts.outgoing -ne 3 -or $left.counts.distinct_partners -ne 3 -or $left.counts.incident_rows -ne 4) { throw 'Actor inventory parallel/map declarations conflated' }
+$inventorySelected = (& $executable query --question direct-connections --projection actor-inventory @actorInputs --from $left.id --relation declared_noun --fields nodes,evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $inventorySelected.ok -or $inventorySelected.data.evidence.marked_links.Count -ne 1 -or @($inventorySelected.data.nodes | Where-Object id -eq $left.id)[0].counts.incident_rows -ne 1) { throw 'Actor inventory stable selector/relation mismatch' }
+$finiteInputs = @('--case', 'cases/rules#caller', '--participant', 'Left', '--axis', 'actions/Life')
+$finite = (& $executable query --question adjacency --projection actors @actorInputs @finiteInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $finite.ok -or -not $finite.coverage.identities_complete -or $finite.data.projection -ne 'actors' -or $finite.data.actor_query_context.question -ne 'actor-states' -or $finite.data.actor_query_context.data.variants.Count -ne 2 -or $finite.data.actor_topology_coverage.construction_limited -or $finite.data.PSObject.Properties.Name -contains 'actor_inventory_coverage') { throw 'Finite actor structural scope/native context mismatch' }
+$binding = @($finite.data.nodes | Where-Object native_kind -eq 'selected_binding')[0]
+$finiteSelected = (& $executable query --question reachability --projection actors @actorInputs @finiteInputs --from $binding.id --work-limit 0 --fields nodes,evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $finiteSelected.ok -or $finiteSelected.coverage.query_complete -or $finiteSelected.data.evidence.cycle -ne $null -or $finiteSelected.data.actor_query_context.data.variants.Count -ne 2) { throw 'Finite actor selector/zero-search scope mismatch' }
+$finiteReordered = (& $executable query --question direct-connections --projection actors @actorInputs @finiteInputs --value dead --value alive --from $binding.id --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $finiteReordered.ok -or @($finiteReordered.data.nodes | Where-Object id -eq $binding.id).Count -ne 1) { throw 'Finite actor identity depends on variant order' }
+$missingScope = (& $executable query --question adjacency --projection actors @actorInputs --json 2>$null | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $missingScope.ok) { throw 'Finite actor topology accepted missing native scope' }
+$effectFixture = Join-Path $fixtures 'effect-concepts'
+$effectInputs = @('--nouns', "things=$effectFixture/things", '--axes', "actions=$effectFixture/actions", '--mechanics', "cases=$effectFixture/cases")
+$effect = (& $executable query --question adjacency --projection effects @effectInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $effect.ok -or -not $effect.coverage.identities_complete -or $effect.data.projection -ne 'effects' -or $effect.data.effect_topology_coverage.construction_limited -or @($effect.data.nodes | Where-Object native_kind -eq gain).Count -ne 1 -or @($effect.data.links | Where-Object target -eq Two).Count -lt 1) { throw 'Effect structural scope/provenance mismatch' }
+$gain = @($effect.data.nodes | Where-Object native_kind -eq gain)[0]
+$invocation = @($effect.data.links | Where-Object kind -eq effect_invocation)[0]
+if ($invocation.participant_role -ne 'call_owner' -or $invocation.call_owner -ne 'One' -or $invocation.target -ne $null) { throw 'Effect invocation owner mislabelled as effect target' }
+if ($gain.counts.incoming -ne 4) { throw 'Effect direct links lost parallel targets or counted runtime frequency' }
+$effectSelected = (& $executable query --question direct-connections --projection effects @effectInputs --from $gain.id --fields nodes,evidence --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $effectSelected.ok -or @($effectSelected.data.nodes | Where-Object id -eq $gain.id).Count -ne 1 -or -not $effectSelected.data.effect_source_context.ok) { throw 'Effect structural opaque selector/native source mismatch' }
+$nativeResource = (& $executable resources @effectInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($nativeResource | ConvertTo-Json -Depth 100 -Compress) -cne ($effect.data.effect_source_context | ConvertTo-Json -Depth 100 -Compress)) { throw 'Effect source context differs from native Resource serializer' }
+$example = Join-Path (Split-Path $root -Parent) 'examples/crate-puzzle/game-design'
+$inputs = @('--nouns', "nouns=$example/nouns", '--verbs', "verbs=$example/verbs", '--interactions', "interactions=$example/interactions")
+$result = (& $executable matrix @inputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $result.ok -or $result.data.cells.Count -ne 4 -or $result.coverage.record_count -ne 16) { throw 'Example matrix mismatch' }
+$push = @($result.data.cells | Where-Object { $_.noun -eq 'nouns/crate' -and $_.verb -eq 'verbs/push' })
+if ($push.Count -ne 1 -or $push[0].cases.Count -ne 3 -or -not $push[0].active) { throw 'Conditional cases flattened' }
+$groups = @($result.data.components)
+if ($groups.Count -ne 8 -or @($groups | Where-Object { $_.members.Count -eq 1 }).Count -ne 6) { throw 'Connected grouping changed' }
+$crateGroup = $groups | Where-Object { $_.members -contains 'nouns/crate' }
+if ($crateGroup.active_pair_count -ne 1 -or ($crateGroup.members -join ',') -ne 'nouns/crate,verbs/push') { throw 'Case count or context inflated component' }
+$case = $result.data.cases | Where-Object reference -eq 'interactions/wall-activation'
+if ($case.coverage -ne 'not_applicable') { throw 'Non-applicability lost' }
+$connectivity = (& $executable connectivity @inputs --json | ConvertFrom-Json)
+$crate = $connectivity.data.nouns | Where-Object reference -eq 'nouns/crate'
+$wall = $connectivity.data.nouns | Where-Object reference -eq 'nouns/wall'
+$pull = $connectivity.data.verbs | Where-Object reference -eq 'verbs/pull'
+if ($LASTEXITCODE -ne 0 -or $crate.partner_count -ne 1 -or $crate.case_count -ne 3 -or $wall.partner_count -ne 0 -or $pull.partner_count -ne 0 -or $pull.status -ne 'rejected') { throw 'Connectivity semantics changed' }
+$selected = (& $executable matrix @inputs --json --fields cells | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($selected.data.PSObject.Properties.Name -join ',') -ne 'cells' -or -not $selected.coverage.complete) { throw 'Field selection lost envelope' }
+$onlyGroups = (& $executable matrix @inputs --json --fields components | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($onlyGroups.data.PSObject.Properties.Name -join ',') -ne 'components' -or $onlyGroups.data.components.Count -ne 8) { throw 'Component field selection failed' }
+$text = & $executable matrix @inputs --format text
+if ($LASTEXITCODE -ne 0 -or ($text -join "`n") -notmatch '4 declared cells') { throw 'Text mode failed' }
+$skillInputs = @('--skill-atoms', "skill-atoms=$example/skill-atoms")
+$skills = (& $executable skill-atoms @skillInputs --json | ConvertFrom-Json)
+$coordinate = $skills.data.skills | Where-Object reference -eq 'skill-atoms/coordinate'
+$plan = $skills.data.skills | Where-Object reference -eq 'skill-atoms/plan-push'
+$late = $skills.data.skills | Where-Object reference -eq 'skill-atoms/read-switch'
+if ($LASTEXITCODE -ne 0 -or -not $skills.ok -or -not $skills.coverage.placement_complete -or $skills.data.skills.Count -ne 6 -or $skills.data.links.Count -ne 5) { throw 'Skill graph inventory failed' }
+if ($coordinate.authored_rank -ne 2 -or $coordinate.minimum_rank -ne 3 -or $coordinate.display_rank -ne 3 -or $coordinate.prerequisite_depth -ne 3 -or -not $coordinate.rank_conflict) { throw 'Authored rank / prerequisite depth / display rank conflated' }
+if ($null -ne $plan.authored_rank -or $plan.display_rank -ne 1 -or -not $late.root -or $late.authored_rank -ne 3 -or $late.prerequisite_depth -ne 0) { throw 'Null rank or late root lost' }
+if ($skills.data.findings.Count -ne 1 -or $skills.data.findings[0].code -ne 'skill.rank_conflict' -or $skills.data.findings[0].line -le 0) { throw 'Expected sourced skill finding missing' }
+if ($skills.data.components.Count -ne 1 -or $skills.data.components[0].link_count -ne 5) { throw 'Skill weak grouping changed' }
+$skillFields = (& $executable skill-atoms @skillInputs --json --fields links | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($skillFields.data.PSObject.Properties.Name -join ',') -ne 'links' -or $skillFields.data.links.Count -ne 5) { throw 'Skill field selection failed' }
+$skillText = & $executable skill-atoms @skillInputs --format text
+if ($LASTEXITCODE -ne 0 -or ($skillText -join "`n") -notmatch 'RANK CONFLICT') { throw 'Skill text output failed' }
+$incompleteInputs = @('--skill-atoms', "atoms=$fixtures/skill-incomplete/things", '--related', "context=$fixtures/skill-incomplete/actions")
+$incomplete = (& $executable skill-atoms @incompleteInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $incomplete.ok -or -not $incomplete.coverage.complete -or $incomplete.coverage.placement_complete -or $incomplete.data.links.Count -ne 6 -or @($incomplete.data.skills | Where-Object cycle).Count -ne 3) { throw 'Cycle/unresolved graph semantics failed' }
+$unresolved = $incomplete.data.skills | Where-Object reference -eq 'atoms/missing'
+if ($unresolved.root -or $unresolved.placement_complete -or $null -ne $unresolved.prerequisite_depth -or $null -ne $unresolved.rank_conflict -or $unresolved.relationships[0].reference -ne 'atoms/absent') { throw 'Missing prerequisite became independent root or vanished' }
+$unicode = Join-Path $root ('build/space ' + [char]0x96ea + '-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $unicode | Out-Null
+foreach ($collection in @('nouns', 'verbs', 'interactions', 'skill-atoms', 'challenges', 'mechanics', 'systems', 'dynamics', 'aesthetics', 'control-vars')) { Copy-Item -LiteralPath (Join-Path $example $collection) -Destination $unicode -Recurse }
+$unicodeInputs = @('--nouns', "nouns=$unicode/nouns", '--verbs', "verbs=$unicode/verbs", '--interactions', "interactions=$unicode/interactions")
+$unicodeResult = (& $executable matrix @unicodeInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $unicodeResult.ok -or $unicodeResult.data.cells.Count -ne 4) { throw 'Unicode/space collection paths failed' }
+$unicodeSkills = (& $executable skill-atoms --skill-atoms "skill-atoms=$unicode/skill-atoms" --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $unicodeSkills.ok -or $unicodeSkills.data.skills.Count -ne 6) { throw 'Unicode skill path failed' }
+$emptySkills = Join-Path $unicode 'empty-skills'
+New-Item -ItemType Directory -Path $emptySkills | Out-Null
+$emptySkillResult = (& $executable skill-atoms --skill-atoms "skills=$emptySkills" --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $emptySkillResult.ok -or $emptySkillResult.data.skills.Count -ne 0 -or $emptySkillResult.data.links.Count -ne 0) { throw 'Empty skill graph failed' }
+$log = Join-Path $root 'build/expected-error.txt'
+foreach ($flag in @('--lens', '--direction')) {
+    $value = if ($flag -eq '--lens') { 'any' } else { 'forward' }
+    $previousPreference = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    $badGap = (& $executable query --question declaration-gaps --projection relationships --skill-atoms "things=$gapFixture/things" $flag $value --json 2>$log | ConvertFrom-Json); $gapExit = $LASTEXITCODE
+    $ErrorActionPreference = $previousPreference
+    if ($gapExit -ne 2 -or $badGap.ok -or $badGap.errors[0].code -ne 'cli.arguments') { throw 'Declaration gap silently accepted graph parameter' }
+}
+$previousPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+$failureOutput = & $executable matrix --json 2>$log
+$failureExit = $LASTEXITCODE
+$ErrorActionPreference = $previousPreference
+$failure = $failureOutput | ConvertFrom-Json
+if ($failureExit -ne 2 -or $failure.ok -or $failure.coverage.complete -or $failure.errors[0].code -ne 'cli.arguments') { throw 'Structured failure contract changed' }
+$routeInputs = @('--skill-atoms', "skill-atoms=$unicode/skill-atoms", '--challenges', "challenges=$unicode/challenges")
+$routeResult = (& $executable scaffolding @routeInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $routeResult.ok -or -not $routeResult.coverage.routes_complete -or $routeResult.data.checks.Count -ne 10 -or $routeResult.data.witnesses.Count -ne 12) { throw 'Scaffolding example/Unicode paths failed' }
+$planning = $routeResult.data.checks | Where-Object { $_.challenge -eq 'challenges/combined-room' -and $_.skill -eq 'skill-atoms/plan-push' }
+$switch = $routeResult.data.checks | Where-Object { $_.challenge -eq 'challenges/combined-room' -and $_.skill -eq 'skill-atoms/route-switch' }
+if ($planning.coverage -ne 'absent' -or $switch.coverage -ne 'some_routes' -or -not $switch.supported_route -or -not $switch.unsupported_route) { throw 'Scaffolding opportunity meaning failed' }
+$bypass = $routeResult.data.witnesses | Where-Object { $_.check -eq $switch.index -and -not $_.supported }
+$practice = $routeResult.data.witnesses | Where-Object { $_.check -eq $switch.index -and $_.supported }
+if (($bypass.path -join ',') -ne 'challenges/move-demo,challenges/push-room,challenges/combined-room' -or $practice.path -notcontains 'challenges/switch-practice') { throw 'Scaffolding route evidence failed' }
+$oneShot = @($routeResult.data.findings | Where-Object code -eq 'scaffolding.single_shot')
+if ($oneShot.Count -ne 2 -or @($oneShot | Where-Object { $_.severity -ne 'info' -or $_.line -le 0 }).Count -gt 0) { throw 'Single-shot finding severity/location failed' }
+$selectedRoutes = (& $executable scaffolding @routeInputs --fields checks,witnesses | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or @($selectedRoutes.data.PSObject.Properties.Name).Count -ne 3 -or $selectedRoutes.data.checks.Count -ne 10) { throw 'Scaffolding field selection failed' }
+$routeText = (& $executable scaffolding @routeInputs --format text | Out-String)
+if ($LASTEXITCODE -ne 0 -or $routeText -notmatch 'prior opportunity some_routes') { throw 'Scaffolding explicit text failed' }
+$emptyRoutes = (& $executable scaffolding --skill-atoms "skills=$emptySkills" --challenges "challenges=$emptySkills" --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $emptyRoutes.ok -or $emptyRoutes.data.checks.Count -ne 0 -or -not $emptyRoutes.coverage.routes_complete) { throw 'Empty scaffolding failed' }
+$previousPreference = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+$badRoutes = (& $executable scaffolding --skill-atoms "skills=$emptySkills" --json 2>$log | ConvertFrom-Json); $badExit = $LASTEXITCODE
+$ErrorActionPreference = $previousPreference
+if ($badExit -ne 2 -or $badRoutes.ok -or $badRoutes.errors[0].code -ne 'cli.arguments') { throw 'Scaffolding explicit role contract failed' }
+$mdaInputs = @('--mechanics', "mechanics=$unicode/mechanics", '--systems', "systems=$unicode/systems", '--dynamics', "dynamics=$unicode/dynamics", '--aesthetics', "aesthetics=$unicode/aesthetics")
+$mda = (& $executable mda @mdaInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $mda.ok -or $mda.data.nodes.Count -ne 9 -or $mda.data.links.Count -ne 6 -or $mda.data.gaps.Count -ne 3 -or -not $mda.coverage.graph_references_complete -or $mda.data.paths.Count -ne 0) { throw 'MDA graph/status/gap scope failed' }
+$focused = (& $executable mda @mdaInputs --from mechanics/crate-pushing --direction forward | ConvertFrom-Json)
+$intent = $focused.data.paths | Where-Object to -eq 'aesthetics/deliberate-tension'
+if ($LASTEXITCODE -ne 0 -or -not $focused.ok -or $focused.data.nodes.Count -ne 4 -or $focused.data.links.Count -ne 6 -or $intent.full_length -ne 3 -or ($intent.records -join ',') -ne 'mechanics/crate-pushing,dynamics/careful-positioning,aesthetics/deliberate-tension' -or @($intent.steps | Where-Object { -not $_.reversed }).Count) { throw 'MDA forward witness or alternatives/boundary links lost' }
+$backward = (& $executable mda @mdaInputs --from aesthetics/deliberate-tension --direction backward --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or $backward.data.nodes.Count -ne 6 -or @($backward.data.paths.steps | Where-Object reversed).Count) { throw 'MDA authored-basis traversal failed' }
+$fieldsMda = (& $executable mda @mdaInputs --json --fields gaps | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($fieldsMda.data.PSObject.Properties.Name -join ',') -ne 'gaps' -or -not $fieldsMda.coverage.complete) { throw 'MDA field selection lost envelope' }
+$mdaText = & $executable mda @mdaInputs --format text
+if ($LASTEXITCODE -ne 0 -or ($mdaText -join "`n") -notmatch '9/9 MDA nodes' -or ($mdaText -join "`n") -notmatch 'not causation') { throw 'MDA text output failed' }
+$noSystems = @('--mechanics', "mechanics=$unicode/mechanics", '--dynamics', "dynamics=$unicode/dynamics", '--aesthetics', "aesthetics=$unicode/aesthetics")
+$unloaded = (& $executable mda @noSystems --from mechanics/crate-pushing --direction forward --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $unloaded.ok -or $unloaded.coverage.graph_references_complete -or $unloaded.coverage.query_references_complete -or $unloaded.data.nodes.Count -ne 3 -or @($unloaded.data.links | Where-Object resolution -eq 'unloaded').Count -ne 1 -or @($unloaded.data.findings | Where-Object { $_.code -eq 'mda.reference_unloaded' -and $_.severity -eq 'info' }).Count -ne 1) { throw 'MDA unloaded system context confused with missing data' }
+$unavailableMda = (& $executable mda @noSystems --systems "systems=$unicode/missing-systems-folder" --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $unavailableMda.ok -or $unavailableMda.coverage.complete -or @($unavailableMda.data.links | Where-Object resolution -eq 'unavailable').Count -ne 1 -or @($unavailableMda.data.links | Where-Object resolution -eq 'missing').Count) { throw 'Failed MDA source load became a proven missing-record claim' }
+$wrongRole = (& $executable mda @noSystems --related "systems=$unicode/systems" --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $wrongRole.ok -or @($wrongRole.data.links | Where-Object resolution -eq 'wrong_role').Count -ne 1 -or @($wrongRole.data.nodes | Where-Object aesthetic_trace -eq 'unknown').Count -ne 5) { throw 'MDA roles or conservative unknowns failed' }
+$emptyMdaInputs = @('--mechanics', "m=$emptySkills", '--dynamics', "d=$emptySkills", '--aesthetics', "a=$emptySkills")
+$emptyMda = (& $executable mda @emptyMdaInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $emptyMda.ok -or $emptyMda.data.nodes.Count -or $emptyMda.data.links.Count -or -not $emptyMda.coverage.complete) { throw 'MDA empty result failed' }
+$badMda = (& $executable mda @mdaInputs --from mechanics/absent --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $badMda.ok -or $badMda.coverage.complete -or $badMda.errors[0].code -ne 'mda.root') { throw 'MDA missing root must fail, not return all nodes' }
+$badMdaFields = (& $executable mda @mdaInputs --fields invented --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $badMdaFields.ok -or $badMdaFields.errors[0].code -ne 'cli.arguments') { throw 'MDA unsupported fields must fail structurally' }
+$partialMda = (& $executable mda --mechanics "things=$fixtures/mda-resolution/things" --dynamics "actions=$fixtures/mda-resolution/actions" --aesthetics "cases=$fixtures/mda-resolution/cases" --from cases/intent --direction backward --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $partialMda.ok -or $partialMda.coverage.complete -or $partialMda.data.nodes.Count -ne 2 -or @($partialMda.data.links | Where-Object resolution -eq 'ambiguous').Count -ne 1 -or @($partialMda.errors | Where-Object code -eq 'input.identity').Count -ne 1) { throw 'MDA partial ambiguity/identity preservation failed' }
+$sharedMda = Get-Content -LiteralPath (Join-Path $fixtures 'mda-forward.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$customMdaInputs = @('--mechanics', "things=$fixtures/mda-traces/things", '--dynamics', "actions=$fixtures/mda-traces/actions", '--aesthetics', "cases=$fixtures/mda-traces/cases", '--systems', "arrangements=$fixtures/mda-traces/arrangements")
+$customMda = (& $executable mda @customMdaInputs --from things/push --direction forward --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($sharedMda | ConvertTo-Json -Depth 30 -Compress) -ne ($customMda | ConvertTo-Json -Depth 30 -Compress) -or @($customMda.data.links | Where-Object { $_.source -eq 'actions/drift' -and $_.field -eq 'mechanics' }).Count -ne 2) { throw 'Shared MDA API/CLI parity, aliases, or raw duplicate declarations failed' }
+$controlInputs = @('--control-vars', "control-vars=$unicode/control-vars")
+$controlSources = @(Get-ChildItem -LiteralPath "$example/control-vars" -File | Get-FileHash | Select-Object Path,Hash)
+$controls = (& $executable controls @controlInputs --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $controls.ok -or $controls.coverage.resolved_count -ne 7 -or ($controls.data.controls | Where-Object reference -eq 'control-vars/walk-duration').value -ne 0.5) { throw 'Control resolution/Unicode sources failed' }
+$overrideControls = (& $executable controls @controlInputs --set control-vars/walk-speed=4 --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $overrideControls.ok -or ($overrideControls.data.controls | Where-Object reference -eq 'control-vars/push-duration').value -ne 0.5 -or ($overrideControls.data.controls | Where-Object reference -eq 'control-vars/walk-speed').authored_value -ne 2) { throw 'Control override propagation/source preservation failed' }
+$exportControls = (& $executable controls export @controlInputs --as json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or $exportControls.'initial-energy' -ne 3 -or $exportControls.'push-duration' -ne 1 -or $exportControls.'walk-duration' -ne 0.5 -or $null -ne $exportControls.schema_version) { throw 'Raw typed JSON control export failed' }
+$csvControls = (& $executable controls export @controlInputs --as csv | ConvertFrom-Csv)
+if ($LASTEXITCODE -ne 0 -or $csvControls.Count -ne 7 -or ($csvControls | Where-Object key -eq 'walk-speed').unit -ne 'm/s') { throw 'Control CSV export failed' }
+$iniControls = (& $executable controls export @controlInputs --as ini | Out-String)
+if ($LASTEXITCODE -ne 0 -or $iniControls -notmatch '\[controls\]' -or $iniControls -notmatch 'walk-duration=0.5') { throw 'Control INI export failed' }
+$controlFields = (& $executable controls @controlInputs --fields controls --from control-vars/walk-duration | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $controlFields.ok -or $controlFields.data.controls.Count -ne 3) { throw 'Control focus/dependency selection failed' }
+$emptyControls = (& $executable controls export --control-vars "config=$emptySkills" --as json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or @($emptyControls.PSObject.Properties).Count -ne 0) { throw 'Empty control export failed' }
+$badControls = (& $executable controls export @controlInputs --set control-vars/walk-speed=0 --as csv 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $badControls.ok -or $badControls.coverage.complete -or $badControls.errors[0].code -ne 'controls.arithmetic') { throw 'Failed control export must return error envelope, not partial CSV' }
+$badControlKey = (& $executable controls @controlInputs --set control-vars/missing=1 --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $badControlKey.ok -or $badControlKey.errors[0].code -ne 'controls.override') { throw 'Unknown override key accepted' }
+$enumInputs = @('--control-vars', "config=$fixtures/control-loading/things", '--status', 'all')
+$enumExport = (& $executable controls export @enumInputs --as json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or $enumExport.flag -isnot [bool] -or $enumExport.flag -or $enumExport.mode -ne '=value') { throw 'Boolean false or enum text lost in export' }
+$enumCsv = (& $executable controls export @enumInputs --as csv 2>$log | ConvertFrom-Csv)
+if ($LASTEXITCODE -ne 0 -or ($enumCsv | Where-Object key -eq 'mode').value -ne '=value' -or (Get-Content -LiteralPath $log -Raw) -notmatch 'controls.csv_formula') { throw 'Spreadsheet warning changed data or was omitted' }
+$selectionInputs = @('--control-vars', "config=$fixtures/control-selection/things")
+$namedControls = (& $executable controls export @selectionInputs --include c --as json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($namedControls.PSObject.Properties.Name -join ',') -ne 'c' -or $namedControls.c -ne 5) { throw 'Named export included dependency-only controls or lost draft support' }
+$allControls = (& $executable controls export @selectionInputs --status all --exclude b --as json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or @($allControls.PSObject.Properties).Count -ne 3 -or $null -ne $allControls.b -or $allControls.c -ne 5 -or $allControls.d -isnot [bool]) { throw 'All-status/exclude combination failed' }
+$statusControls = (& $executable controls export @selectionInputs --status accepted --status proposed --exclude c --as json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($statusControls.PSObject.Properties.Name -join ',') -ne 'a,b') { throw 'Multiple status/export exclusions failed' }
+$excludedControls = (& $executable controls export @selectionInputs --include b --exclude b --as json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or @($excludedControls.PSObject.Properties).Count) { throw 'Exclusion must win over explicit inclusion' }
+$acceptedControls = (& $executable controls export @selectionInputs --as json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $acceptedControls.ok -or @($acceptedControls.errors | Where-Object code -eq 'controls.status').Count -ne 1) { throw 'Accepted formula silently consumed draft dependency' }
+$unknownFilter = (& $executable controls export @selectionInputs --exclude absent --as json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $unknownFilter.ok -or $unknownFilter.errors[0].code -ne 'controls.selection') { throw 'Unknown exclusion key silently ignored' }
+$importFile = Join-Path $unicode 'game-tweaks.json'
+$gameValues = (& $executable controls export @controlInputs --as json | ConvertFrom-Json)
+$gameValues.'walk-speed' = 4
+[IO.File]::WriteAllText($importFile,($gameValues | ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false))
+$importPlan = (& $executable controls import @controlInputs --input $importFile --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $importPlan.ok -or -not $importPlan.data.ready -or $importPlan.data.applied -or $importPlan.data.items.Count -ne 1 -or $importPlan.data.items[0].name -ne 'walk-speed' -or $importPlan.data.items[0].fields.value -ne 4 -or ($importPlan.data.derived | Where-Object reference -eq 'control-vars/walk-duration').candidate -ne 0.25) { throw 'JSON tuning round-trip/formula preservation failed' }
+$importFields = (& $executable controls import @controlInputs --input $importFile --fields items | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or ($importFields.data.PSObject.Properties.Name -join ',') -ne 'applied,ready,items,source_digest' -or $importFields.data.items.Count -ne 1) { throw 'Import field selection lost flags or returned unrelated data' }
+$csvImportFile = Join-Path $unicode 'game-tweaks.csv'
+($csvControls | Where-Object key -eq 'walk-speed').value = '4'
+[IO.File]::WriteAllText($csvImportFile,($csvControls | ConvertTo-Csv -NoTypeInformation | Out-String),[Text.UTF8Encoding]::new($false))
+$csvPlan = (& $executable controls import @controlInputs --input $csvImportFile --input-format csv | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $csvPlan.ok -or $csvPlan.data.items.Count -ne 1 -or $csvPlan.data.items[0].fields.value -ne 4) { throw 'CSV tuning round-trip failed' }
+$iniImportFile = Join-Path $unicode 'game-tweaks.ini'
+[IO.File]::WriteAllText($iniImportFile,($iniControls -replace '(?m)^walk-speed=2\r?$', 'walk-speed=4'),[Text.UTF8Encoding]::new($false))
+$iniPlan = (& $executable controls import @controlInputs --input $iniImportFile --input-format ini | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $iniPlan.ok -or $iniPlan.data.items.Count -ne 1 -or $iniPlan.data.items[0].fields.value -ne 4) { throw 'INI tuning round-trip failed' }
+$gameValues.'walk-duration' = 0.3
+[IO.File]::WriteAllText($importFile,($gameValues | ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false))
+$conflictPlan = (& $executable controls import @controlInputs --input $importFile --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or $conflictPlan.ok -or $conflictPlan.data.ready -or $conflictPlan.data.items.Count -or @($conflictPlan.errors | Where-Object code -eq 'controls.import_formula').Count -ne 1) { throw 'Direct derived tweak must block complete update batch' }
+$enumImportFile = Join-Path $unicode 'enum-tweaks.json'
+[IO.File]::WriteAllText($enumImportFile,([ordered]@{flag=$true;mode='other'} | ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false))
+$enumPlan = (& $executable controls import @enumInputs --input $enumImportFile --json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or -not $enumPlan.ok -or $enumPlan.data.items.Count -ne 2 -or ($enumPlan.data.items | Where-Object name -eq 'flag').fields.value -isnot [bool] -or ($enumPlan.data.items | Where-Object name -eq 'mode').fields.value -ne 'other') { throw 'Typed boolean/enum import failed' }
+$explorerInputs = @('--skill-atoms', "skill-atoms=$example/skill-atoms", '--challenges', "challenges=$example/challenges")
+$headlessExplorer = (& $executable view skill-atoms @explorerInputs --mode challenges --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or @($headlessExplorer.errors | Where-Object code -eq 'view.unavailable').Count -ne 1) { throw 'Combined explorer inputs rejected before view dispatch' }
+$headlessFocus = (& $executable view skill-atoms @explorerInputs --mode relationships --from skill-atoms/coordinate --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or @($headlessFocus.errors | Where-Object code -eq 'view.unavailable').Count -ne 1) { throw 'Focused explorer arguments rejected before display dispatch' }
+$skillRoot = (& $executable view skill-atoms @explorerInputs --from skill-atoms/coordinate --known skill-atoms/push --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or @($skillRoot.errors | Where-Object code -eq 'view.unavailable').Count -ne 1) { throw 'Skill root/known assumptions rejected before display dispatch' }
+$missingChallenges = (& $executable view skill-atoms --skill-atoms "skill-atoms=$example/skill-atoms" --mode challenges --json 2>$log | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 2 -or @($missingChallenges.errors | Where-Object code -eq 'cli.arguments').Count -ne 1) { throw 'Challenges mode must require explicit challenge mapping' }
+$controlText = (& $executable controls @controlInputs --format text | Out-String)
+if ($LASTEXITCODE -ne 0 -or $controlText -notmatch '7/7 resolved') { throw 'Control text inspection failed' }
+$controlSourcesAfter = @(Get-ChildItem -LiteralPath "$example/control-vars" -File | Get-FileHash | Select-Object Path,Hash)
+if (($controlSources | ConvertTo-Json -Compress) -ne ($controlSourcesAfter | ConvertTo-Json -Compress)) { throw 'Canonical control files changed during tests' }
+if ($View) {
+    if (!$OutputDirectory) { $OutputDirectory=Join-Path $root ('build/native-view-test-' + [guid]::NewGuid().ToString('N')) }
+    $viewExecutable = & (Join-Path $root 'build.ps1') -View -UiLibrary $UiLibrary -Cjit $Cjit -OutputDirectory $OutputDirectory
+    $capture = Join-Path $unicode 'matrix.png'
+    & $viewExecutable view matrix @unicodeInputs --frames 3 --screenshot $capture
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $capture -PathType Leaf)) { throw 'Bounded view/Unicode capture failed' }
+    $bytes = [IO.File]::ReadAllBytes($capture)
+    if ($bytes.Length -lt 8 -or [BitConverter]::ToString($bytes[0..7]) -ne '89-50-4E-47-0D-0A-1A-0A') { throw 'Invalid PNG capture' }
+    Write-Output "View capture: $capture"
+    if ($Graph) {
+        foreach ($explorerMode in @('skills','challenges','relationships')) {
+            $capture = Join-Path $unicode "explorer-$explorerMode.png"
+            $proposal = (& $viewExecutable view skill-atoms @explorerInputs --mode $explorerMode --frames 4 --screenshot $capture | ConvertFrom-Json)
+            if ($LASTEXITCODE -ne 0 -or -not $proposal.ok -or $proposal.data.applied -or $proposal.data.changes.Count -or -not (Test-Path -LiteralPath $capture)) { throw "Combined explorer $explorerMode capture/handoff failed" }
+        }
+        $focusInputs=@($explorerInputs)+@('--related',"mechanics=$example/mechanics",'--related',"nouns=$example/nouns",'--related',"verbs=$example/verbs",'--related',"resources=$example/resources",'--related',"control-vars=$example/control-vars")
+        $focusCapture=Join-Path $unicode 'focused-crate-pushing.png'
+        $focusReport=(& $viewExecutable view skill-atoms @focusInputs --mode relationships --from mechanics/crate-pushing --frames 3 --screenshot $focusCapture | ConvertFrom-Json)
+        if ($LASTEXITCODE -ne 0 -or -not $focusReport.ok -or $focusReport.data.changes.Count -or -not (Test-Path -LiteralPath $focusCapture)) { throw 'Focused record root/capture/proposal failed' }
+        $missingRoot=(& $viewExecutable view skill-atoms @focusInputs --mode relationships --from mechanics/absent --frames 1 --json 2>$log | ConvertFrom-Json)
+        if ($LASTEXITCODE -ne 2 -or $missingRoot.ok -or $missingRoot.errors[0].code -ne 'skills.selector') { throw 'Unknown focused root did not fail without a window' }
+        foreach ($layout in @('graph', 'columns')) {
+            $graphCapture = Join-Path $unicode "$layout.png"
+            [string[]]$extra = @()
+            if ($layout -eq 'columns') { $extra += '--show-other-pairs' }
+            & $viewExecutable view matrix @unicodeInputs --layout $layout @extra --frames 60 --screenshot $graphCapture
+            if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $graphCapture -PathType Leaf)) { throw "Graph $layout capture failed" }
+            Write-Output "Graph capture: $graphCapture"
+        }
+        foreach ($skillLayout in @('prerequisites', 'rank')) {
+            foreach ($direction in @('down', 'right')) {
+                $skillCapture = Join-Path $unicode "skills-$skillLayout-$direction.png"
+                $viewReport = & $viewExecutable view skill-atoms --skill-atoms "skill-atoms=$unicode/skill-atoms" --related "mechanics=$example/mechanics" --layout $skillLayout --direction $direction --frames 60 --screenshot $skillCapture | ConvertFrom-Json
+                if ($LASTEXITCODE -ne 0 -or -not $viewReport.ok -or $viewReport.data.applied -or $viewReport.data.changes.Count -ne 0 -or -not (Test-Path -LiteralPath $skillCapture -PathType Leaf)) { throw "Skill $skillLayout/$direction capture/report failed" }
+                Write-Output "Skill capture: $skillCapture"
+            }
+        }
+        $viewReport = & $viewExecutable view skill-atoms @incompleteInputs --frames 60 --screenshot (Join-Path $unicode 'skills-incomplete.png') | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0 -or -not $viewReport.ok -or $viewReport.coverage.placement_complete) { throw 'Incomplete skill graph capture/report failed' }
+        $reportFile = Join-Path $unicode 'empty-changes.json'
+        foreach ($mdaLayout in @('columns', 'graph')) {
+            $captureMda = Join-Path $unicode "mda-$mdaLayout.png"
+            $mdaStdout = @(& $viewExecutable view mda @mdaInputs --from mechanics/crate-pushing --direction forward --layout $mdaLayout --frames 3 --screenshot $captureMda)
+            if ($LASTEXITCODE -ne 0 -or $mdaStdout.Count -or -not (Test-Path -LiteralPath $captureMda -PathType Leaf)) { throw "MDA $mdaLayout view capture/stdout failed" }
+            Write-Output "MDA capture: $captureMda"
+        }
+        $mdaCaptureError = (& $viewExecutable view mda @mdaInputs --frames 1 --screenshot (Join-Path $unicode 'missing-directory/mda.png') 2>$log | ConvertFrom-Json)
+        if ($LASTEXITCODE -ne 2 -or $mdaCaptureError.ok -or $mdaCaptureError.errors[0].code -ne 'view.screenshot') { throw 'MDA screenshot failure lost structured error/exit' }
+        $fileStdout = @(& $viewExecutable view skill-atoms --skill-atoms "skills=$emptySkills" --frames 3 --screenshot (Join-Path $unicode 'skills-empty.png') --output $reportFile)
+        if ($LASTEXITCODE -ne 0 -or $fileStdout.Count -ne 0) { throw 'File-output view leaked stdout or failed' }
+        $fileReport = Get-Content -LiteralPath $reportFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        if (-not $fileReport.ok -or $fileReport.data.changes.Count -ne 0) { throw 'Empty skill graph file report failed' }
+        $empty = Join-Path $unicode 'empty'
+        foreach ($collection in @('nouns', 'verbs', 'interactions')) { New-Item -ItemType Directory -Path (Join-Path $empty $collection) -Force | Out-Null }
+        & $viewExecutable view matrix --layout graph --nouns "nouns=$empty/nouns" --verbs "verbs=$empty/verbs" --interactions "interactions=$empty/interactions" --frames 3 --screenshot (Join-Path $unicode 'empty.png')
+        if ($LASTEXITCODE -ne 0) { throw 'Empty graph failed' }
+    }
+}
+foreach ($resourceName in @('crate-puzzle', 'little-plumber-guy-nes')) {
+    $resourceGame = Join-Path (Split-Path $root -Parent) "examples/$resourceName/game-design"
+    $resourceInputs = @()
+    foreach ($role in @('interactions', 'mechanics', 'nouns', 'verbs', 'axes', 'resources', 'control-vars', 'systems')) {
+        $resourceInputs += @("--$role", "$role=$(Join-Path $resourceGame $role)")
+    }
+    $resourceJson = & $executable resources @resourceInputs --json
+    if ($LASTEXITCODE -ne 0) { throw "Resource declaration report failed: $resourceName" }
+    $resourceData = $resourceJson | ConvertFrom-Json
+    if (-not $resourceData.ok -or $resourceData.coverage.complete -or -not $resourceData.data.routes.available -or $resourceData.coverage.composed_outcomes_available -or -not $resourceData.data.nodes.Count) {
+        throw 'Resource incidence report overstated scope or lost retained nodes'
+    }
+    $resourceJson | Set-Content -LiteralPath (Join-Path $fixtures "resources-$resourceName.json") -Encoding UTF8
+}
+Write-Output "Resource declaration evidence: $fixtures/resources-*.json"
+Write-Output 'CLI checks passed: Resource direct declarations (conditional witnesses available), matrix/connectivity, components, cases/dispositions, skill prerequisites/ranks/findings, challenge/route opportunity/witnesses, MDA shared queries/aliases/direction/boundaries/duplicates/unknowns/partial identity errors, typed control resolution/overrides/scoped dependencies/status-name selection/JSON-CSV-INI export-import plans/false-enums/formula protection, cycles/missing targets, empty results, field selection, text, Unicode/space paths, structured failure.'

@@ -1,0 +1,33 @@
+{
+  "question": "Prescribed-route timing under assumed delays",
+  "evidence_kind": "simulation, not observed player behavior",
+  "checkpoint_commit": "014af8bd477524a145d6ad077abf3ca2ad60c47a",
+  "configuration_id": "baseline-speed-2",
+  "seed": "0x000000000000002a",
+  "trials_requested": 1000,
+  "trials_attempted": 1000,
+  "trials_completed": 1000,
+  "invalid_trials": 0,
+  "undefined_completion_times": 0,
+  "within_8_seconds": 245,
+  "criterion_denominator": 1000,
+  "fraction_within_8_seconds": 0.245,
+  "criterion_minimum_fraction": 0.9,
+  "criterion_satisfied": false,
+  "completion_time_seconds": {
+    "minimum": 6.472825908102095,
+    "maximum": 10.635222096694633,
+    "mean": 8.510268915928435
+  },
+  "remaining_energy_all_trials": 0,
+  "analytical_continuous_fraction": 0.26031746031746034,
+  "analysis_method": "For every validated attempted trial, count completion-time <= 8 s; divide by 1000. Range and arithmetic mean use all 1000 times. No trials excluded.",
+  "capture_wall_seconds": 1.0038945999986026,
+  "sha256": {
+    "input.json": "5df1e7c8acf260c0bcd421b12abc872c041d272bf79592e125c8239d55b1bbef",
+    "stdout.ndjson": "714e256b428bac654b6817a7d432ad732e79d41fd3453e5787bf14c5b71d0f85",
+    "stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "supervision.json": "e1c6b261bb348f063d18d781c580f76f03832d3d85bafaa0600d7d537b3365a2"
+  },
+  "program_sha256": "1fde3911e0548bdafa4bb92dee0bf2418c08cb3b7e02d73d58df86221e8982ae"
+}

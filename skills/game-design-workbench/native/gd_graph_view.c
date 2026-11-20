@@ -1,0 +1,1008 @@
+#include "gd.h"
+#include "gd_layout.h"
+#include "gd_graph_analysis_ui.h"
+#include "gd_graph_analysis_draw.h"
+#include "gd_graph_overview_draw.h"
+#include "gd_skill_unlocks.h"
+#include "gd_diagnostics_ui.h"
+#include "gd_explorer_ui.h"
+#include "gd_scene_draw.h"
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#define CIMGUI_NO_EXPORT
+#include "cimgui.h"
+#include "gd_evidence_page_ui.h"
+#include "gd_noun_label_ui.h"
+#include <math.h>
+#include <stdarg.h>
+#include <string.h>
+
+static const GD_Color graph_background = {18, 24, 34, 255};
+static const GD_Color graph_text = {225, 233, 241, 255};
+static const GD_Color graph_muted = {150, 169, 190, 255};
+static const GD_Color graph_active = {65, 180, 165, 255};
+static const GD_Color graph_selected = {255, 217, 125, 255};
+
+typedef GD_ExplorerSelection GraphSelection;
+static int measure_directed(GD_Layout *layout) {
+    int i;
+    if (layout->mode!=GD_LAYOUT_DIRECTED || !igGetCurrentContext()) return 1;
+    for (i=0;i<layout->node_count;++i) {
+        layout->nodes[i].width=fmaxf(220,(float)gd_scene_text_width(layout->nodes[i].label,18)+44);
+        layout->nodes[i].height=120;
+    }
+    return gd_layout_arrange(layout,GD_LAYOUT_DIRECTED,layout->sort);
+}
+static int prepare_native_layout(const GD_Model *model, GD_Layout *layout, GD_LayoutMode mode, GD_LayoutSort sort, int rank_mode, int horizontal, int challenges, GD_Focus *focus) {
+    int okay;
+    if (focus) okay=gd_focus_layout(model,focus,layout,sort);
+    else if (challenges) okay=gd_route_layout(model,layout,horizontal,sort) && measure_directed(layout);
+    else if (model->skill_mode) okay=gd_skill_layout(model,layout,rank_mode,horizontal,sort) && measure_directed(layout);
+    else return gd_matrix_layout(model,layout,mode,sort);
+    /* Keep native semantic seed and annotations; Free removes axis locks only.
+       Used by standalone and unified viewers, with one shared solver. */
+    if(okay && mode==GD_LAYOUT_FORCE)layout->mode=GD_LAYOUT_FORCE;
+    return okay;
+}
+static int prepare_layout(const GD_Model *model,GD_Layout *layout,GD_LayoutMode mode,GD_LayoutSort sort,int rank_mode,int horizontal,int challenges,GD_Focus *focus){
+    GD_Allocator allocator=model->allocator;GD_Layout *candidate=allocator.allocate(allocator.context,sizeof(*candidate));int okay;float aspect=1.4f;
+    if(!candidate)return 0;memset(candidate,0,sizeof(*candidate));
+    if(igGetCurrentContext() && gd_scene_height()>190)aspect=(gd_scene_width()*0.6f-24)/(gd_scene_height()-190);
+    okay=prepare_native_layout(model,candidate,mode,sort,rank_mode,horizontal,challenges,focus) && gd_layout_prepare_free(candidate,allocator,aspect,1) && gd_layout_islands_set(candidate,layout->islands.preferred);
+    if(okay)memcpy(layout,candidate,sizeof(*layout));allocator.release(allocator.context,candidate);return okay;
+}
+static GD_Point node_point(const GD_LayoutNode *node) { return (GD_Point){node->x, node->y}; }
+static void fit_camera(GD_Camera *camera, const GD_Layout *layout, GD_Rect viewport) {
+    float min_x = 0, min_y = 0, max_x = 1, max_y = 1;
+    int i;
+    for (i = 0; i < layout->node_count; ++i) {
+        const GD_LayoutNode *node = &layout->nodes[i];
+        float label_width = (float)gd_scene_text_width(node->label, 18)/2+20;
+        if (!i || node->x-label_width < min_x) min_x = node->x-label_width;
+        if (!i || node->x+label_width > max_x) max_x = node->x+label_width;
+        if (!i || node->y-85 < min_y) min_y = node->y-85;
+        if (!i || node->y+50 > max_y) max_y = node->y+50;
+    }
+    camera->target = (GD_Point){(min_x+max_x)/2, (min_y+max_y)/2};
+    camera->offset = (GD_Point){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
+    camera->zoom = fminf(viewport.width/(max_x-min_x+130), viewport.height/(max_y-min_y+70));
+    if (camera->zoom > 1.2f) camera->zoom = 1.2f;
+    if (camera->zoom < 0.002f) camera->zoom = 0.002f;
+}
+static void graph_input(GD_Layout *layout,const GD_Layout *shown, GraphSelection *selection, GD_Camera *camera,
+                        GD_Rect viewport, int other_pairs, int blocked) {
+    GD_Point mouse = gd_mouse_position(), world;
+    int i;
+    camera->offset = (GD_Point){viewport.x+viewport.width/2, viewport.y+viewport.height/2};
+    if (!igIsMouseDown_Nil(ImGuiMouseButton_Left)) selection->held = -1;
+    if (blocked) { selection->held=-1; return; }
+    if (selection->held >= 0 && gd_layout_pointer_dragged(layout,selection->held,mouse.x,mouse.y)) {
+        world = gd_screen_to_world(mouse, *camera);
+        gd_layout_drag_node(layout, selection->held, world.x, world.y);
+    }
+    if (!gd_rect_hit(mouse, viewport) || igGetIO_Nil()->WantCaptureMouse) return;
+    if (igIsMouseDown_Nil(ImGuiMouseButton_Right) || igIsMouseDown_Nil(ImGuiMouseButton_Middle)) {
+        GD_Point delta = gd_mouse_delta(); camera->target.x -= delta.x/camera->zoom; camera->target.y -= delta.y/camera->zoom;
+    }
+    world = gd_screen_to_world(mouse, *camera);
+    if (gd_mouse_wheel()) {
+        GD_Point after;
+        camera->zoom *= powf(1.15f, gd_mouse_wheel());
+        if (camera->zoom < 0.002f) camera->zoom = 0.002f;
+        if (camera->zoom > 4) camera->zoom = 4;
+        after = gd_screen_to_world(mouse, *camera);
+        camera->target.x += world.x-after.x; camera->target.y += world.y-after.y;
+    }
+    if (!gd_mouse_pressed(ImGuiMouseButton_Left)) return;
+    world = gd_screen_to_world(mouse, *camera);
+    for (i = layout->node_count-1; i >= 0; --i) {
+        GD_Point point = node_point(&shown->nodes[i]);
+        float dx = point.x-world.x, dy = point.y-world.y;
+        if (dx*dx+dy*dy <= 22*22) {
+            selection->node = selection->held = i; selection->cell = selection->linked = -1;
+            gd_layout_pointer_begin(layout,i,world.x,world.y,mouse.x,mouse.y);
+            selection->interaction = 0; return;
+        }
+    }
+    for (i = 0; i < layout->edge_count; ++i) {
+        const GD_LayoutEdge *edge = &layout->edges[i];
+        if (!edge->active && !other_pairs) continue;
+        float distance = gd_layout_route_distance(shown,i,world.x,world.y);
+        if (distance <= 7/camera->zoom) {
+            selection->cell = edge->key; selection->node = selection->linked = -1;
+            selection->interaction = 0; return;
+        }
+    }
+}
+static int witness_node(const GD_Routes *routes, int witness, int record) {
+    int i;
+    if (!routes || witness<0 || witness>=routes->witness_count) return 0;
+    for (i=0;i<routes->witnesses[witness].length;++i) if (routes->witnesses[witness].path[i]==record) return 1;
+    return 0;
+}
+static int witness_edge(const GD_Routes *routes, int witness, int source, int target) {
+    int i;
+    if (!routes || witness<0 || witness>=routes->witness_count) return 0;
+    for (i=1;i<routes->witnesses[witness].length;++i) if (routes->witnesses[witness].path[i-1]==source && routes->witnesses[witness].path[i]==target) return 1;
+    return 0;
+}
+static void draw_graph(const GD_Model *model,GD_Layout *raw, GD_Layout *layout, const GraphSelection *selection,
+                       GD_Camera camera, GD_Rect viewport, int other_pairs, const GD_Draft *draft, int challenges, int focused, const GD_Routes *routes, int witness,
+                       GD_GraphAnalysis *analysis, int shared, int peer, int branches, const GD_GraphPaths *paths, const GD_PathBypass *bypass,
+                       const GD_GraphClosure *foundations, const GD_GraphComparison *foundation_pair,
+                       const GD_GraphClosure *reachability, const GD_GraphComparison *reach_pair, const GD_GraphShapes *shapes, const GD_GraphOverview *overview) {
+    const GD_Color shared_color={193,155,228,255};
+    int pair=shared ? gd_graph_match(analysis,selection->node,peer):-1;
+    const GD_GraphFeature *left=pair>=0 ? &analysis->features[analysis->pairs[pair].first_a]:NULL;
+    const GD_GraphFeature *right=pair>=0 ? &analysis->features[analysis->pairs[pair].first_b]:NULL;
+    const GD_GraphComparison *comparison=pair>=0 && branches ? gd_graph_compare(analysis,selection->node,peer):NULL;
+    const GD_PathSelection *path_selection=paths ? gd_graph_path_selection(analysis,selection->node):NULL;
+    GD_Rect bounds[GD_MAX_RECORDS];
+    int i;
+    memset(bounds, 0, sizeof(bounds));
+    if (!layout->node_count) {
+        gd_scene_text(focused ? "No relationship root selected." : challenges ? "No challenge nodes in supplied folder." : model->skill_mode ? "No skill nodes in supplied folder." : "No noun/verb nodes in supplied folders.", (int)viewport.x+16, (int)viewport.y+24, 18, graph_muted);
+        return;
+    }
+    gd_scene_clip((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
+    gd_scene_set_camera(camera);
+    for (i = 0; i < layout->node_count; ++i) {
+        const GD_LayoutNode *node = &layout->nodes[i];
+        GD_Rect *box = &bounds[node->group];
+        float half = (float)gd_scene_text_width(node->label, 18)/2+22;
+        float left = node->x-half, right = node->x+half, top = node->y-55, bottom = node->y+50;
+        if (!box->width) *box = (GD_Rect){left, top, right-left, bottom-top};
+        else {
+            float x = fminf(box->x, left), y = fminf(box->y, top);
+            box->width = fmaxf(box->x+box->width, right)-x;
+            box->height = fmaxf(box->y+box->height, bottom)-y; box->x = x; box->y = y;
+        }
+    }
+    for (i = 0; !focused && !challenges && i < model->component_count; ++i) {
+        const GD_Component *group = &model->components[i];
+        const char *prefix = group->member_count == 1 && !group->edge_count ? "Isolated: " : "Group: ";
+        if (model->skill_mode && group->member_count == 1 && model->skills[group->anchor].incomplete)
+            prefix = model->skills[group->anchor].cycle ? "Cycle: " : "Unresolved: ";
+        gd_scene_text(gd_scene_format("%s%s", prefix, model->records[group->anchor].display_name),
+                 (int)bounds[i].x+10, (int)bounds[i].y+9, 14, graph_muted);
+    }
+    for (i = 0; i < layout->edge_count; ++i) {
+        const GD_LayoutEdge *edge = &layout->edges[i];
+        GD_LayoutRoute route; GD_Point middle;
+        gd_layout_route(layout,i,&route);
+        middle=(GD_Point){route.points[route.count/2].x,route.points[route.count/2].y};
+        if (route.count%2==0) { middle.x=(middle.x+route.points[route.count/2-1].x)/2; middle.y=(middle.y+route.points[route.count/2-1].y)/2; }
+        GD_Color color = selection->cell == edge->key ? graph_selected : edge->active ? graph_active : graph_muted;
+        if (!edge->active && !other_pairs) continue;
+        int conflict = !focused && !challenges && model->skill_mode && (model->skills[layout->nodes[edge->a].key].incomplete || model->skills[layout->nodes[edge->b].key].incomplete);
+        if (overview && overview->selected_edges[i]) gd_graph_route_line(&route,21,graph_selected,!edge->active || conflict);
+        if (reach_pair && reach_pair->edges[i]) gd_graph_route_line(&route,17,gd_graph_branch_color(reach_pair->edges[i]),!edge->active || conflict);
+        if (bypass && bypass->complete && bypass->found && bypass->edges[i]) gd_graph_route_line(&route,15,gd_bypass_color,!edge->active || conflict);
+        if (path_selection && path_selection->edges[i]) gd_graph_route_line(&route,11,gd_path_color,!edge->active || conflict);
+        if (foundation_pair && foundation_pair->edges[i]) gd_graph_route_line(&route,9,gd_graph_branch_color(foundation_pair->edges[i]),!edge->active || conflict);
+        if ((comparison && comparison->edges[i]) || (!comparison && pair>=0 && (i==left->edge || i==right->edge))) {
+            GD_Color underlay=comparison ? gd_graph_branch_color(comparison->edges[i]):shared_color;
+            gd_graph_route_line(&route,7,underlay,!edge->active || conflict);
+        }
+        if (challenges && witness_edge(routes,witness,layout->nodes[edge->a].key,layout->nodes[edge->b].key)) color=graph_selected;
+        if (conflict && selection->cell != edge->key) color = (GD_Color){238, 114, 120, 255};
+        gd_graph_route_line(&route,selection->cell==edge->key ? 4/camera.zoom:edge->active && !conflict ? 2.5f:1.5f,color,!edge->active || conflict);
+        if (focused || model->skill_mode) {
+            gd_graph_route_arrow(&route,color);
+            if (focused && selection->cell==edge->key) {
+                const char *label=gd_field_name(model->edges[edge->key].field);
+                int width=gd_scene_text_width(label,13), x=(int)middle.x-width/2, y=(int)middle.y-8;
+                gd_scene_rect_pixels(x-3,y-2,width+6,18,graph_background); gd_scene_text(label,x,y,13,color);
+            }
+        } else {
+            const char *label = gd_scene_format("%d cases", model->cells[edge->key].pair_count);
+            int width = gd_scene_text_width(label, 15), x = (int)middle.x-width/2, y = (int)middle.y-9;
+            gd_scene_rect_pixels(x-4, y-2, width+8, 20, graph_background); gd_scene_text(label, x, y, 15, color);
+        }
+    }
+    for (i = 0; i < layout->node_count; ++i) {
+        GD_LayoutNode *node = &layout->nodes[i],*physical=&raw->nodes[i];
+        gd_layout_set_footprint(physical,-40,-40,40,40);
+        GD_Color color = selection->node == i ? graph_selected : node->side ? (GD_Color){224, 160, 109, 255} : (GD_Color){108, 171, 230, 255};
+        if (challenges && witness_node(routes,witness,node->key)) color=graph_selected;
+        if (node->side) gd_scene_rect_pixels((int)node->x-12, (int)node->y-12, 24, 24, color);
+        else gd_scene_circle(node_point(node), 13, color);
+        gd_graph_record_text_at(physical,node,&model->records[node->key],node->label, (int)node->x-gd_scene_text_width(node->label, 18)/2, (int)node->y+22, 18, graph_text,1);
+        if (draft && (draft->rank_changed[node->key] || draft->prerequisites_changed[node->key])) {
+            gd_scene_ring_pixels((int)node->x, (int)node->y, 25, graph_selected);
+            gd_graph_node_text_at(physical,node,"*", (int)node->x+22, (int)node->y-28, 24, graph_selected,1);
+        }
+        if (focused) {
+            int collection=model->records[node->key].collection;
+            const char *alias=collection>=0 && collection<model->collection_count ? model->collections[collection].alias:"loaded record";
+            const char *caption = node->side ? gd_scene_format("ROOT | %s",alias):alias;
+            gd_graph_node_text_at(physical,node,caption,(int)node->x-gd_scene_text_width(caption,13)/2,(int)node->y+43,13,graph_muted,1);
+        } else if (challenges) {
+            const char *caption = model->records[node->key].entry ? "ENTRY" : routes && routes->reachable[node->key] ? "declared reachable" : "no declared entry path";
+            gd_graph_node_text_at(physical,node,caption,(int)node->x-gd_scene_text_width(caption,13)/2,(int)node->y+43,13,graph_muted,1);
+        } else if (model->skill_mode) {
+            const GD_Record *record = &model->records[node->key]; const GD_SkillState *state = &model->skills[node->key];
+            const char *caption = state->cycle ? "CYCLE" : state->incomplete ? "UNKNOWN ANCESTRY" :
+                state->rank_conflict ? gd_scene_format("rank %lld -> %lld (conflict)", (long long)record->rank, (long long)state->display_rank) :
+                record->has_rank ? gd_scene_format("rank %lld", (long long)record->rank) : "rank null";
+            if (layout->mode==GD_LAYOUT_FORCE) caption=node->layer<0 ? gd_scene_format("Unplaced | %s",caption):gd_scene_format("Band %d | %s",node->layer,caption);
+            GD_Color warning = state->incomplete ? (GD_Color){238,114,120,255} : (GD_Color){245,179,96,255};
+            if (state->incomplete || state->rank_conflict) gd_scene_ring_pixels((int)node->x, (int)node->y, 18, warning);
+            gd_graph_node_text_at(physical,node,caption, (int)node->x-gd_scene_text_width(caption, 13)/2, (int)node->y+43, 13, state->incomplete || state->rank_conflict ? warning : graph_muted,1);
+        }
+        if (shared) {
+            const char *badge=gd_scene_format("S%d%s",analysis->matched[i],analysis->complete ? "":"+");
+            gd_graph_node_text_at(physical,node,badge,(int)node->x-gd_scene_text_width(badge,13)/2,(int)node->y-37,13,shared_color,1);
+            if (pair>=0 && (i==analysis->pairs[pair].a || i==analysis->pairs[pair].b)) gd_scene_ring_pixels((int)node->x,(int)node->y,30,shared_color);
+            if (comparison) {
+                unsigned category=comparison->nodes[i];
+                if (category) {
+                    GD_Color branch_color=gd_graph_branch_color(category);
+                    gd_scene_ring_pixels((int)node->x,(int)node->y,21,branch_color);
+                    gd_graph_footprint_rect_at(physical,node,gd_graph_branch_badge(category,(int)node->x+36,(int)node->y-8,graph_background),1);
+                }
+                if (i==comparison->a || i==comparison->b) gd_graph_node_text_at(physical,node,i==comparison->a ? "A":"B",(int)node->x-43,(int)node->y-8,13,graph_text,1);
+            } else if (pair>=0 && i==left->neighbor) gd_graph_node_text_at(physical,node,"shared",(int)node->x+19,(int)node->y-8,13,shared_color,1);
+        }
+        if (overview && overview->selected_nodes[i]) gd_scene_ring_pixels((int)node->x,(int)node->y,40,graph_selected);
+        if (shapes) {
+            gd_graph_footprint_rect_at(physical,node,gd_graph_shape_badge(shapes,i,(int)node->x-65,(int)node->y-71,graph_background),1);
+            if (gd_graph_shape_peer(shapes,i,selection->node)) gd_scene_ring_pixels((int)node->x,(int)node->y,36,(GD_Color){220,205,148,255});
+        }
+        if (reachability) {
+            gd_graph_footprint_rect_at(physical,node,gd_graph_reachability_badge(reachability,i,(int)node->x+36,(int)node->y-53,graph_background),1);
+            if (reach_pair) {
+                if (reach_pair->nodes[i]) gd_scene_ring_pixels((int)node->x,(int)node->y,32,gd_graph_branch_color(reach_pair->nodes[i]));
+                if (i==reach_pair->a || i==reach_pair->b) gd_graph_node_text_at(physical,node,i==reach_pair->a ? "T-A":"T-B",(int)node->x-67,(int)node->y-53,12,graph_text,1);
+            }
+        }
+        if (foundations && foundations->eligible[i]) {
+            gd_graph_footprint_rect_at(physical,node,gd_graph_foundation_badge(foundations,i,(int)node->x+36,(int)node->y-23,graph_background),1);
+            if (foundation_pair) {
+                if (foundation_pair->nodes[i]) gd_scene_ring_pixels((int)node->x,(int)node->y,28,gd_graph_branch_color(foundation_pair->nodes[i]));
+                if (i==foundation_pair->a || i==foundation_pair->b) gd_graph_node_text_at(physical,node,i==foundation_pair->a ? "A":"B",(int)node->x-43,(int)node->y-23,13,graph_text,1);
+            }
+        }
+        if (paths) {
+            gd_graph_footprint_rect_at(physical,node,gd_graph_path_badge(paths,path_selection,bypass,i,(int)node->x+36,(int)node->y+7,graph_background),1);
+            if (paths->roots[i]) gd_graph_path_start_marker((int)node->x-49,(int)node->y-24);
+        }
+    }
+    gd_scene_screen(); gd_scene_unclip();
+}
+static void projected_source(const GD_Model *model, const GD_Layout *layout, int index, int focused, int challenges) {
+    int key=layout->edges[index].key,i; const GD_Edge *edge=NULL;
+    if (focused || challenges) edge=&model->edges[key];
+    else if (model->skill_mode) {
+        const GD_SkillLink *link=&model->skill_links[key];
+        for (i=0;i<model->edge_count;++i) if (model->edges[i].field==GD_PREREQUISITES && model->edges[i].source==link->dependent && model->edges[i].target==link->prerequisite) { edge=&model->edges[i]; break; }
+    } else {
+        const GD_Cell *cell=&model->cells[key];
+        igTextWrapped("Derived case-pair cell: %s / %s | %d cases; inspect cell for authored sources",model->records[cell->noun].reference,model->records[cell->verb].reference,cell->pair_count);
+    }
+    if (edge) igTextWrapped("%s | %s -> %s | %s:%d",gd_field_name(edge->field),model->records[edge->source].reference,edge->reference,model->records[edge->source].source_path,edge->line);
+}
+static const unsigned char *path_entries(const GD_Model *model, const GD_Layout *layout, int challenges, unsigned char *entries) {
+    int i; if (!challenges) return NULL;
+    for (i=0;i<layout->node_count;++i) entries[i]=(unsigned char)model->records[layout->nodes[i].key].entry;
+    return entries;
+}
+static void shared_source(const GD_Model *model, const GD_Layout *layout, const GD_GraphAnalysis *analysis, int pair, int focused, int challenges) {
+    int side;
+    for (side=0;side<2;++side) {
+        const GD_GraphMatch *match=&analysis->pairs[pair];
+        const GD_GraphFeature *feature=&analysis->features[side ? match->first_b:match->first_a];
+        projected_source(model,layout,feature->edge,focused,challenges);
+    }
+}
+typedef GD_ExplorerSkillEditor SkillEditor;
+static int has_prerequisite(const GD_Model *model, int record, const char *reference) {
+    int i;
+    for (i = 0; i < model->edge_count; ++i) if (model->edges[i].source == record && model->edges[i].field == GD_PREREQUISITES && !strcmp(model->edges[i].reference, reference)) return 1;
+    return 0;
+}
+static int edit_skill(GD_Draft *draft, int record, SkillEditor *editor) {
+    const GD_Record *item = &draft->model->records[record];
+    int i, changed = 0, apply;
+    if (editor->record != record || editor->has_rank != item->has_rank || (item->has_rank && editor->rank != item->rank)) {
+        editor->record = record; editor->has_rank = item->has_rank; editor->rank = item->rank;
+        if (item->has_rank) snprintf(editor->rank_text, sizeof(editor->rank_text), "%lld", (long long)item->rank);
+        else snprintf(editor->rank_text, sizeof(editor->rank_text), "null");
+    }
+    igSeparator(); igTextUnformatted("Edit in-memory draft (no Markdown writes)", NULL);
+    igTextUnformatted("Rank (Enter / Apply)", NULL); igSetNextItemWidth(-1);
+    apply = igInputText("##rank", editor->rank_text, sizeof(editor->rank_text), ImGuiInputTextFlags_EnterReturnsTrue, NULL, NULL);
+    if (igIsItemDeactivatedAfterEdit()) apply = 1;
+    if (igButton("Apply rank to draft", (ImVec2_c){0,0})) apply = 1;
+    igSameLine(0, -1);
+    if (igButton("Clear rank to null", (ImVec2_c){0,0})) { snprintf(editor->rank_text, sizeof(editor->rank_text), "null"); apply = 1; }
+    if (apply) changed = gd_draft_rank(draft, record, editor->rank_text) > 0;
+    igTextUnformatted("Filter prerequisites", NULL); igSetNextItemWidth(-1);
+    igInputText("##prerequisite-filter", editor->filter, sizeof(editor->filter), 0, NULL, NULL);
+    igTextWrapped("Checked skills are prerequisites of this skill. Self/cycle links are allowed and flagged. Node dragging changes layout only.");
+    igBeginChild_Str("Prerequisite choices", (ImVec2_c){0,125}, 0, 0);
+    for (i = 0; i < draft->model->record_count; ++i) {
+        const GD_Record *target = &draft->model->records[i];
+        bool enabled;
+        if (target->role != GD_SKILL || (*editor->filter && !gd_text_contains(target->reference, editor->filter))) continue;
+        enabled = has_prerequisite(draft->model, record, target->reference) != 0;
+        if (igCheckbox(target->reference, &enabled)) { if (gd_draft_prerequisite(draft, record, target->reference, enabled) > 0) changed = 1; break; }
+    }
+    igEndChild();
+    for (i = 0; i < draft->model->edge_count; ++i) {
+        const GD_Edge *edge = &draft->model->edges[i];
+        if (edge->source != record || edge->field != GD_PREREQUISITES || (edge->target >= 0 && draft->model->records[edge->target].role == GD_SKILL)) continue;
+        igText("Unresolved/wrong-role: %s", edge->reference); igPushID_Int(i);
+        if (igButton("Remove unresolved prerequisite", (ImVec2_c){0,0})) {
+            if (gd_draft_prerequisite(draft, record, edge->reference, 0) > 0) changed = 1;
+            igPopID(); break;
+        }
+        igPopID();
+    }
+    return changed;
+}
+static int undo_edit(GD_Draft *draft, const GD_Layout *layout, GraphSelection *selection, SkillEditor *editor) {
+    int record = draft->history_count ? draft->history[draft->history_count-1].record : -1, i;
+    if (!gd_draft_undo(draft)) return 0;
+    /* Links may have disappeared/reordered. Invalidate edge selection before details. */
+    selection->cell = selection->linked = selection->held = -1;
+    for (i = 0; i < layout->node_count; ++i) if (layout->nodes[i].key == record) selection->node = i;
+    editor->record = -1; return 1;
+}
+static void route_details(const GD_Model *model, const GD_Routes *routes, int record, int *selected_witness, int *navigate) {
+    int i,j;
+    if (!routes) { igTextUnformatted("Route analysis unavailable",NULL); return; }
+    if (model->records[record].role==GD_CHALLENGE) {
+        igText("Entry: %s | Reachable from declared entry: %s",model->records[record].entry ? "yes":"no",routes->reachable[record] ? "yes":"no / unknown");
+        for (i=0;i<routes->check_count;++i) if (routes->checks[i].challenge==record) {
+            const GD_RouteCheck *check=&routes->checks[i]; igPushID_Int(i);
+            igTextWrapped("%s: %s | %s via %s (%s)",model->records[check->skill].reference,gd_support_name(check->coverage),gd_field_name(check->demand_field),model->records[check->demanded_by].reference,check->prerequisite ? "prerequisite":"direct demand");
+            if (igButton("Inspect skill prerequisites",(ImVec2_c){0,0})) *navigate=check->skill;
+            for (j=0;j<routes->witness_count;++j) if (routes->witnesses[j].check==i) {
+                igPushID_Int(j);
+                if (igButton(routes->witnesses[j].supported ? "Supported route witness":"Unsupported route witness",(ImVec2_c){0,0})) *selected_witness=j;
+                igPopID();
+            }
+            igPopID();
+        }
+    }
+    if (*selected_witness>=0 && *selected_witness<routes->witness_count) {
+        const GD_RouteWitness *path=&routes->witnesses[*selected_witness];
+        igSeparator(); igText("%s witness: %d of %d trailing challenges",path->supported ? "Supported":"Unsupported",path->length,path->full_length);
+        if (path->length<path->full_length) igTextUnformatted("Prefix truncated; gold highlights retained suffix only.",NULL);
+        if (igButton("Clear route highlight",(ImVec2_c){0,0})) *selected_witness=-1;
+        for (i=0;i<path->length;++i) { igPushID_Int(i); if (igButton(model->records[path->path[i]].reference,(ImVec2_c){0,0})) *navigate=path->path[i]; igPopID(); }
+    }
+    if (routes->witnesses_omitted) igText("%d additional witnesses omitted",routes->witnesses_omitted);
+}
+static int details(const GD_Model *model, const GD_Layout *layout, GraphSelection *selection, GD_Draft *draft, SkillEditor *editor, int challenges, int focused, const GD_Routes *routes, int *witness, int *navigate, int *focus_root, int *focus_expand, int relationships_available) {
+    int record_index = -1, i, changed = 0;
+    int edge_count=challenges || focused ? model->edge_count:model->skill_mode ? model->skill_link_count:model->cell_count;
+    if (selection->cell>=edge_count) selection->cell=-1;
+    if (selection->node>=layout->node_count) selection->node=-1;
+    if (selection->linked>=model->record_count) selection->linked=-1;
+    if (selection->cell >= 0 && (challenges || focused)) {
+        const GD_Edge *edge=&model->edges[selection->cell];
+        igText("%s -> %s",model->records[edge->source].display_name,edge->target>=0 && model->records[edge->target].is_noun ? model->records[edge->target].display_name:edge->reference);
+        igText("Authored %s reference, source line %d. Not causal evidence.",gd_field_name(edge->field),edge->line);
+        record_index=edge->source;
+        if (igButton(focused ? "Inspect reference target" : "Inspect next challenge",(ImVec2_c){0,0}) && edge->target>=0) *navigate=edge->target;
+    } else if (selection->cell >= 0 && model->skill_mode) {
+        const GD_SkillLink *link = &model->skill_links[selection->cell];
+        igText("%s -> %s", model->records[link->prerequisite].display_name, model->records[link->dependent].display_name);
+        igTextUnformatted("Prerequisite -> dependent. All declared statuses included.", NULL);
+        record_index = link->dependent;
+        if (igButton("Inspect prerequisite", (ImVec2_c){0,0})) *navigate = link->prerequisite;
+    } else if (selection->cell >= 0) {
+        const GD_Cell *cell = &model->cells[selection->cell];
+        igText("%s x %s", model->records[cell->noun].display_name, model->records[cell->verb].display_name);
+        igText("%d conditional cases | active pair: %s", cell->pair_count, cell->active ? "yes" : "no");
+        if (selection->interaction >= cell->pair_count) selection->interaction = 0;
+        if (igButton("Previous case", (ImVec2_c){0,0})) { selection->interaction = (selection->interaction+cell->pair_count-1)%cell->pair_count; selection->linked = -1; }
+        igSameLine(0, -1);
+        if (igButton("Next case", (ImVec2_c){0,0})) { selection->interaction = (selection->interaction+1)%cell->pair_count; selection->linked = -1; }
+        record_index = model->pairs[cell->first_pair+selection->interaction].interaction;
+        igText("Case %d/%d: %s", selection->interaction+1, cell->pair_count, model->records[record_index].display_name);
+        igText("Coverage: %s", model->records[record_index].coverage ? model->records[record_index].coverage : "unset");
+    } else if (selection->node >= 0) {
+        record_index = layout->nodes[selection->node].key;
+        gd_noun_ui_text(&model->records[record_index],gd_scene_format("%s: %s",focused ? "Record":challenges ? "Challenge":model->skill_mode ? "Skill":model->records[record_index].role==GD_NOUN ? "Noun":"Verb",model->records[record_index].display_name));
+        if (!focused && !challenges && model->skill_mode) igText("%d loaded prerequisites | %d dependents", model->skills[record_index].prerequisite_count, model->skills[record_index].dependent_count);
+        else if (!focused && !challenges) igText("%d active partners | %d total cases", model->connectivity[record_index].partners, model->connectivity[record_index].cases);
+    }
+    if (record_index<0 && selection->linked>=0) record_index=selection->linked;
+    if (record_index < 0) { igTextUnformatted("Select a node or edge to inspect its source.", NULL); return 0; }
+    if (selection->linked >= 0) {
+        if (igButton("Back to selection", (ImVec2_c){0,0})) {
+            int applied=draft && editor->record>=0 ? gd_draft_rank(draft,editor->record,editor->rank_text):0;
+            if (applied>=0) { selection->linked=-1; if (applied>0) changed=1; }
+            else record_index=selection->linked;
+        } else record_index=selection->linked;
+    }
+    igSeparator();
+    igTextUnformatted(model->records[record_index].reference, NULL);
+    igText("Status: %s", model->records[record_index].status ? model->records[record_index].status : "unset");
+    igBeginDisabled(!relationships_available);
+    if (igButton(focused ? "Center relationships here" : "Explore relationships here",(ImVec2_c){0,0})) *focus_root=record_index;
+    igEndDisabled();
+    if (!relationships_available) igTextWrapped("Relationships unavailable: supply --skill-atoms ALIAS=FOLDER.");
+    if (focused && igButton("Expand this record one hop (in + out)",(ImVec2_c){0,0})) *focus_expand=record_index;
+    if (model->records[record_index].role == GD_SKILL) {
+        const GD_Record *record = &model->records[record_index]; const GD_SkillState *state = &model->skills[record_index];
+        igText("Authored rank: %s", record->has_rank ? gd_scene_format("%lld", (long long)record->rank) : "null");
+        igText("Prerequisite depth: %s", state->depth >= 0 ? gd_scene_format("%d", state->depth) : "unknown");
+        igText("Relative prerequisite layer: %d (not authored rank)", state->layout_layer);
+        igText("Minimum rank: %s | Display rank: %s", state->has_minimum ? gd_scene_format("%lld", (long long)state->minimum_rank) : state->incomplete ? "unknown" : "none", state->has_display ? gd_scene_format("%lld", (long long)state->display_rank) : state->incomplete ? "unknown" : "unranked (null)");
+        if (state->incomplete) igTextUnformatted(state->cycle ? "CONFLICT: prerequisite cycle." : "UNKNOWN: incomplete prerequisite ancestry.", NULL);
+        else if (state->rank_conflict) igTextUnformatted("CONFLICT: authored rank precedes prerequisites. No source edit.", NULL);
+        else igTextUnformatted("No declared rank conflict. Not evidence of learning.", NULL);
+        if (draft) {
+            igTextUnformatted(draft->rank_changed[record_index] || draft->prerequisites_changed[record_index] ? "MODIFIED IN MEMORY: differs from loaded disk baseline" : "Draft values match loaded disk baseline", NULL);
+            if (!focused && !challenges && edit_skill(draft, record_index, editor)) changed=1;
+        }
+    }
+    if (!focused && model->route_mode) {
+        if ((challenges && model->records[record_index].role==GD_SKILL) || (!challenges && model->records[record_index].role==GD_CHALLENGE)) {
+            if (igButton(challenges ? "Show in Skills mode":"Show in Challenges mode",(ImVec2_c){0,0})) *navigate=record_index;
+        }
+        if (model->records[record_index].role==GD_SKILL) {
+            igSeparator(); igTextUnformatted("Challenges declaring this skill (all statuses)",NULL);
+            for (i=0;i<model->edge_count;++i) {
+                const GD_Edge *edge=&model->edges[i];
+                if (edge->target!=record_index || edge->field<GD_INTRODUCES || edge->field>GD_TESTS_MASTERY || model->records[edge->source].role!=GD_CHALLENGE) continue;
+                igPushID_Int(i);
+                if (igButton(gd_scene_format("%s: %s",gd_field_name(edge->field),model->records[edge->source].reference),(ImVec2_c){0,0})) *navigate=edge->source;
+                igPopID();
+            }
+        }
+        if (!challenges && routes && model->records[record_index].role==GD_SKILL) {
+            for (i=0;i<routes->check_count;++i) {
+                const GD_RouteCheck *check=&routes->checks[i];
+                if (check->skill!=record_index || !check->prerequisite) continue;
+                igPushID_Int(GD_MAX_EDGES+i);
+                if (igButton(gd_scene_format("Prerequisite demand: %s via %s",model->records[check->challenge].reference,model->records[check->demanded_by].reference),(ImVec2_c){0,0})) *navigate=check->challenge;
+                igPopID();
+            }
+        }
+        if (challenges) route_details(model,routes,record_index,witness,navigate);
+    }
+    igPushTextWrapPos(0);
+    igTextUnformatted(model->records[record_index].source_path, NULL);
+    if (igButton("Copy source path", (ImVec2_c){0,0})) igSetClipboardText(model->records[record_index].source_path);
+    for (i = 0; i < model->edge_count; ++i) {
+        const GD_Edge *edge = &model->edges[i];
+        const char *label;
+        if (edge->source != record_index) continue;
+        igPushID_Int(i);
+        label = gd_scene_format("%s: %s%s", gd_field_name(edge->field), edge->reference, edge->target < 0 ? " [not uniquely loaded]" : "");
+        igTextUnformatted(label, NULL);
+        if (igIsItemClicked(ImGuiMouseButton_Left) && edge->target >= 0) *navigate = edge->target;
+        igPopID();
+    }
+    if (focused) {
+        igSeparator(); igTextUnformatted("Incoming consumed declarations (all loaded records)",NULL);
+        for (i=0;i<model->edge_count;++i) {
+            const GD_Edge *edge=&model->edges[i];
+            if (edge->target!=record_index) continue;
+            igTextWrapped("%s: %s (source line %d)",gd_field_name(edge->field),model->records[edge->source].reference,edge->line);
+            if (igIsItemClicked(ImGuiMouseButton_Left)) *navigate=edge->source;
+        }
+    }
+    igSeparator(); igTextUnformatted(model->records[record_index].body, NULL); igPopTextWrapPos();
+    return changed;
+}
+static int selected_record(const GD_Model *model, const GD_Layout *layout, const GraphSelection *selection, int challenges, int focused) {
+    const GD_Cell *cell;
+    if (selection->linked>=0 && selection->linked<model->record_count) return selection->linked;
+    if (selection->node>=0 && selection->node<layout->node_count) return layout->nodes[selection->node].key;
+    if (selection->cell<0) return -1;
+    if (challenges || focused) return selection->cell<model->edge_count ? model->edges[selection->cell].source:-1;
+    if (model->skill_mode) return selection->cell<model->skill_link_count ? model->skill_links[selection->cell].dependent:-1;
+    if (selection->cell>=model->cell_count) return -1;
+    cell=&model->cells[selection->cell];
+    if (selection->interaction<0 || selection->interaction>=cell->pair_count) return -1;
+    return model->pairs[cell->first_pair+selection->interaction].interaction;
+}
+static void select_record(const GD_Layout *layout, GraphSelection *selection, int record) {
+    int i; *selection=(GraphSelection){-1,-1,0,-1,-1};
+    for (i=0;i<layout->node_count;++i) if (layout->nodes[i].key==record) { selection->node=i; return; }
+    if (record>=0) selection->linked=record;
+}
+static int focus_find(const GD_Model *model, const char *reference) {
+    int i, found=-1;
+    for (i=0;i<model->record_count;++i) if (!strcmp(model->records[i].reference,reference)) {
+        if (found>=0) return -1;
+        found=i;
+    }
+    return found;
+}
+static void unlock_panel(const GD_Model *model, GD_SkillUnlocks *query, unsigned char *known, int selected, int *dirty, int *navigate) {
+    int i;
+    if (!query) return;
+    if (selected<0 || model->records[selected].role!=GD_SKILL) selected=-1;
+    if (selected!=query->root || *dirty) { gd_skill_unlocks(model,known,selected,query); *dirty=0; }
+    if (!igCollapsingHeader_TreeNodeFlags("Skill understanding, combinations and unlocks",ImGuiTreeNodeFlags_DefaultOpen)) return;
+    igTextWrapped("Hypothetical knowledge only. Unlocks are not learned automatically. All statuses retained. Teal: supplied; gold outline: chains from selection.");
+    if (igButton("Clear known assumptions",(ImVec2_c){0,0})) { memset(known,0,GD_MAX_RECORDS); *dirty=1; }
+    igBeginChild_Str("Known assumptions",(ImVec2_c){0,110},0,0);
+    for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL) {
+        bool checked=known[i]!=0;
+        igPushID_Int(i);
+        if (igCheckbox(model->records[i].display_name,&checked)) { known[i]=(unsigned char)checked; *dirty=1; }
+        igPopID();
+    }
+    igEndChild();
+    if (*dirty) { gd_skill_unlocks(model,known,selected,query); *dirty=0; }
+    if (selected>=0) {
+        igTextWrapped("Selected: %s | %s",model->records[selected].reference,gd_skill_eligibility_name(query->eligibility[selected]));
+        if (known[selected] && query->missing[selected]) igTextWrapped("Known assumption does not imply its prerequisites: %d still not supplied.",query->missing[selected]);
+        for (i=0;i<model->skill_link_count;++i) if (model->skill_links[i].dependent==selected && !known[model->skill_links[i].prerequisite])
+            igTextWrapped("Still needs: %s",model->records[model->skill_links[i].prerequisite].reference);
+        if (query->eligibility[selected]==GD_SKILL_UNRESOLVED) igTextWrapped("Unresolved ancestry/cycle: inspect source prerequisites and diagnostics; supplied counts do not prove eligibility.");
+    }
+    if (query->limited || query->comparisons_omitted) igTextWrapped("Partial exploration: work limit %s; %d comparison evidence rows omitted.",query->limited ? "reached":"not reached",query->comparisons_omitted);
+    if (igTreeNodeEx_Str("Combinations and prerequisite chains",ImGuiTreeNodeFlags_DefaultOpen)) {
+        for (i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL &&
+            (selected<0 || query->ancestors[i] || query->descendants[i] || i==selected)) {
+            igPushID_Int(i);
+            if (igSmallButton(model->records[i].reference)) *navigate=i;
+            igTextWrapped("%s | %d supplied / %d missing%s",gd_skill_eligibility_name(query->eligibility[i]),query->supplied[i],query->missing[i],query->known[i] ? " | known assumption":"");
+            igPopID();
+        }
+        igTreePop();
+    }
+    if (selected>=0 && igTreeNode_Str("Compare shared-link candidates")) {
+        for (i=0;i<query->comparison_count;++i) {
+            const GD_SkillComparison *item=&query->comparisons[i]; const GD_Edge *edge=&model->edges[item->root_edge];
+            igPushID_Int(i);
+            if (igSmallButton(model->records[item->candidate].reference)) *navigate=item->candidate;
+            igTextWrapped("Shared %s: %s | lines %d, %d",gd_field_name(edge->field),edge->reference,edge->line,model->edges[item->candidate_edge].line);
+            igPopID();
+        }
+        igTextWrapped("Comparison candidates only; not proof of contrast, transfer or mastery."); igTreePop();
+    }
+}
+int gd_graph_view(GD_Model *initial, int frames, const char *screenshot, GD_ViewLayout initial_layout, int other_pairs, int horizontal, const char *output_path, GD_ExplorerMode explorer_mode, const char *focus_from, const GD_SkillUnlocks *initial_query) {
+    GD_Model *baseline = initial;
+    GD_Draft *draft = initial->skill_mode ? gd_draft_create(initial) : NULL;
+    GD_Model *model = draft ? draft->model : initial;
+    GD_Routes *routes = draft && model->route_mode ? gd_analyze_routes(model) : NULL;
+    int challenges = explorer_mode == GD_EXPLORE_CHALLENGES, focused = explorer_mode == GD_EXPLORE_RELATIONSHIPS;
+    int witness = -1, remembered[3]={-1,-1,-1}, query_dirty=1;
+    unsigned char known[GD_MAX_RECORDS]={0};
+    GD_SkillUnlocks *query=NULL;
+    GD_Focus focus;
+    GD_GraphAnalysis *analysis=NULL; bool shared=true,branches=false,foundation_enabled=false,shape_enabled=false; int shared_peer=-1,foundation_peer=-1;
+    GD_GraphLens shared_lens=GD_GRAPH_ANY;
+    GD_PathControls path_controls[3]={{0}};
+    GD_GraphEvidencePages evidence_pages[3]={{0}};
+    GD_OverviewControls overview_controls={1,-1,-1};
+    GD_ReachControls reach_controls[3]={{0,-1,0,-1,-1},{0,-1,0,-1,-1},{0,-1,0,-1,-1}};
+    GD_DiagnosticBrowser diagnostics={0};
+    int root=focus_from ? focus_find(model,focus_from):-1;
+    char browse[129]="";
+    SkillEditor editor = {-1,0,0,{0},{0}};
+    char report_path[GD_MAX_PATH] = "";
+    int finish_next=0,timed_finish_seen=0;
+    GD_Layout *layout = initial->allocator.allocate(initial->allocator.context, sizeof(*layout));
+    GraphSelection selection = {-1, -1, 0, -1, -1};
+    GD_Camera camera = {{0,0},{0,0},1};GD_NativeWindow window={0};
+    int frame=0,result=0,sort=GD_SORT_NAME;
+    int mode=initial_layout==GD_VIEW_COLUMNS ? GD_LAYOUT_COLUMNS:GD_LAYOUT_FORCE;
+    if(model->skill_mode || focused || challenges)mode=initial_layout==GD_VIEW_GRAPH ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;
+    /* Keep each standalone projection's choice; depth/rank basis is separate. */
+    int layout_modes[3]={model->skill_mode ? GD_LAYOUT_DIRECTED:mode,GD_LAYOUT_DIRECTED,GD_LAYOUT_DIRECTED};
+    int rank_mode = initial_layout == GD_VIEW_RANK;
+    bool paused = false, overlay = other_pairs != 0;
+    double next_check = 0;
+    float accumulator = 0;
+    int stale = 0, fit = 1;
+    char failure[GD_MAX_PATH+512] = "";
+    if (output_path) snprintf(report_path, sizeof(report_path), "%s", output_path);
+    if (focus_from && root<0) {
+        if (layout) initial->allocator.release(initial->allocator.context,layout);
+        gd_routes_destroy(routes); gd_draft_destroy(draft);
+        gd_error(initial,"view.root","--from must identify a unique loaded record",NULL,0); return 2;
+    }
+    if (focused && root<0 && model->record_count) { root=0; for (int i=0;i<model->record_count;++i) if (model->records[i].role==GD_SKILL) { root=i; break; } }
+    gd_focus_reset(model,&focus,root);layout_modes[focused ? GD_EXPLORE_RELATIONSHIPS:challenges]=mode;
+    if(layout)memset(layout,0,sizeof(*layout));
+    if ((initial->skill_mode && !draft) || (model->route_mode && (!routes || model->error_count || model->errors_omitted)) || !layout || !prepare_layout(model, layout, (GD_LayoutMode)mode, GD_SORT_NAME, rank_mode, horizontal, challenges, focused ? &focus:NULL)) {
+        if (layout) initial->allocator.release(initial->allocator.context, layout);
+        gd_routes_destroy(routes); gd_draft_destroy(draft);
+        gd_error(initial, "view.memory", "Cannot allocate draft or prepare graph presentation", NULL, 0); return 2;
+    }
+    {
+        int i;
+        for (i = 0; i < model->cell_count; ++i) if (model->cells[i].active || other_pairs) { selection.cell = i; break; }
+        if (selection.cell < 0 && layout->node_count) selection.node = 0;
+    }
+    if (focused) select_record(layout,&selection,focus.root);
+    else if (root>=0 && model->records[root].role==GD_SKILL) select_record(layout,&selection,root);
+    if (model->skill_mode) {
+        query=initial->allocator.allocate(initial->allocator.context,sizeof(*query));
+        if (!query) { gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate skill exploration",NULL,0); return 2; }
+        if (initial_query) memcpy(known,initial_query->known,sizeof(known));
+        gd_skill_unlocks(model,known,-1,query);
+    }
+    path_controls[1].declared=1;
+    if(!gd_native_window_open(&window,model->skill_mode ? "Game Design Workbench - skill and progression explorer":"Game Design Workbench - matrix graph",1440,900,1000,650,GD_WINDOW_VISIBLE)) { if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context, layout); gd_scene_error(initial,"view.window",&window); return 2; }
+    analysis=initial->allocator.allocate(initial->allocator.context,sizeof(*analysis));
+    if (!analysis) { gd_scene_close(&window); if (query) initial->allocator.release(initial->allocator.context,query); gd_routes_destroy(routes); gd_draft_destroy(draft); initial->allocator.release(initial->allocator.context,layout); gd_error(initial,"view.memory","Cannot allocate graph analysis",NULL,0); return 2; }
+    memset(analysis,0,sizeof(*analysis));
+    measure_directed(layout);
+    igGetIO_Nil()->IniFilename = NULL; igGetIO_Nil()->LogFilename = NULL;
+    igGetStyle()->FontScaleMain = 1.1f;
+    for (;;) {
+        int ready=gd_scene_begin(&window),close_requested=window.close_requested;
+        window.close_requested=0;
+        int finishing=finish_next || close_requested || (frames && frame>=frames && !timed_finish_seen);
+        int width = gd_scene_width(), height = gd_scene_height(), split = width*60/100;
+        GD_Rect viewport = {12, 140, (float)split-24, (float)height-190};
+        int refresh = 0, steps = 0, rearrange = 0, draft_changed = 0;
+        int current_mode=focused ? GD_EXPLORE_RELATIONSHIPS:challenges;
+        int requested_mode=current_mode, navigate=-1, focus_root=-1, focus_expand=-1;
+        int selected_before=selected_record(model,layout,&selection,challenges,focused);
+        finish_next=0;
+        if(ready<0){
+            if(!draft || (!draft->modified_count && editor.record<0)){gd_scene_error(initial,"view.render",&window);result=2;break;}
+            if(!result)fprintf(stderr,"gd: %s; draft retained. Close to finish.\n",window.error);
+            result=2;
+        }
+        if (finishing) {
+            int report = 0;
+            /* After failure, retry only on explicit finish/close, not every frame. */
+            timed_finish_seen = 1;
+            if (!draft) break;
+            {
+                int applied=editor.record>=0 ? gd_draft_rank(draft,editor.record,editor.rank_text):0;
+                if (applied>0 && model->route_mode) { gd_routes_destroy(routes); gd_recompute_skills(model); routes=gd_analyze_routes(model); witness=-1; }
+                if (applied<0) report=-1;
+                else report=gd_draft_finish(draft,*report_path ? report_path:NULL);
+            }
+            if (report >= 0) { if (!result) result = report; break; }
+            fprintf(stderr, "gd: %s\n", draft->message);
+            if (frames && !draft->modified_count) { result = 2; break; }
+            prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); fit = 1;
+        }
+        if(ready<=0)continue;
+        if (gd_native_window_seconds(&window) >= next_check) { if (gd_sources_changed(baseline)) stale = 1; next_check = gd_native_window_seconds(&window)+1; }
+        gd_scene_text(focused ? "Focused relationships" : challenges ? "Challenge progression" : model->skill_mode ? rank_mode ? "Skill rank graph" : "Skill prerequisite graph" : "Matrix graph", 20, 18, 26, graph_text);
+        gd_scene_text(focused ? gd_scene_format("%d loaded records | %d drawn declarations | %d boundary declarations",layout->node_count,layout->edge_count,focus.boundary_count) : challenges ? gd_scene_format("%d challenges | %d drawn next links | All statuses | Gold: selected witness",layout->node_count,layout->edge_count) : model->skill_mode ? gd_scene_format("%d skills | %d prerequisite links | %d groups | All statuses", layout->node_count, model->skill_link_count, model->component_count) : gd_scene_format("%d groups (singletons included) | %d unplaced cases | Circle: noun | Square: verb", model->component_count, model->unplaced_cases), 20, 53, 16, graph_muted);
+        gd_scene_text(draft ? "Drag: layout | Right drag: pan | Wheel: zoom | F: fit | F5: reload | Ctrl+Z: undo" : "Drag node | Right drag: pan | Wheel: zoom | F: fit | F5: reload", 20, 82, 16, graph_muted);
+        if (draft) gd_scene_text(draft->modified_count ? gd_scene_format("MODIFIED IN MEMORY: %d records * | No viewer Markdown writes", draft->modified_count) : "Draft matches loaded disk baseline | No Markdown writes", 20, 110, 16, draft->modified_count ? graph_selected : graph_muted);
+        igSetNextWindowPos((ImVec2_c){(float)split, 12}, ImGuiCond_Always, (ImVec2_c){0,0});
+        igSetNextWindowSize((ImVec2_c){(float)(width-split-12), (float)(height-55)}, ImGuiCond_Always);
+        igBegin("Graph controls and source", NULL, ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
+        if (model->skill_mode) {
+            if (model->route_mode) igCombo_Str("Explore",&requested_mode,"Skills\0Challenges\0Relationships\0",-1);
+            else {
+                int option=focused ? 1:0;
+                if (igCombo_Str("Explore",&option,"Skills\0Relationships\0",-1)) requested_mode=option ? GD_EXPLORE_RELATIONSHIPS:GD_EXPLORE_SKILLS;
+            }
+            {
+                int choice=mode==GD_LAYOUT_FORCE ? (focused || challenges ? 1:2):focused || challenges ? 0:rank_mode;
+                if(igCombo_Str("Layout",&choice,focused ? "Stable neighborhood\0Free graph\0":challenges ? "Declared route bands\0Free graph\0":"Prerequisite depth\0Authored rank constraints\0Free graph\0",-1)) {
+                    if(!focused && !challenges && choice<2)rank_mode=choice;
+                    mode=choice==(focused || challenges ? 1:2) ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;rearrange=1;
+                }
+                if(!focused && igCombo_Str("Direction",&horizontal,"Top to bottom\0Left to right\0",-1))rearrange=1;
+                igTextWrapped(mode==GD_LAYOUT_FORCE ? "Free graph: all nodes may move. Band/root labels retain source meaning; positions are not execution order.":focused ? "Stable neighborhood; drag for transient placement.":challenges ? "Read-only routes. Bands show shortest entry-hop distance; cycles/backlinks remain. Not physical reachability or teaching order.":"Chain axis is locked during dragging and settling. Rank bands compress numeric gaps; same-rank prerequisites still precede dependents.");
+            }
+        } else if (focused) {
+            int choice=mode==GD_LAYOUT_FORCE;
+            if(igCombo_Str("Layout",&choice,"Stable neighborhood\0Free graph\0",-1)){mode=choice ? GD_LAYOUT_FORCE:GD_LAYOUT_DIRECTED;rearrange=1;}
+            if (igButton("Return to matrix graph",(ImVec2_c){0,0})) requested_mode=GD_EXPLORE_SKILLS;
+        }
+        else rearrange = igCombo_Str("Layout", &mode, "Force-directed\0Noun / verb columns\0", -1);
+        if (focused) {
+            igTextWrapped("Already-consumed declarations only; not every project relationship. Both incoming/outgoing links; authored arrow direction. No inferred impact, causality or learning.");
+            if (focus.root>=0) igTextWrapped("Root: %s",model->records[focus.root].reference);
+            if (focus.boundary_count) igTextWrapped("Boundary declarations remain outside visible scope or not uniquely loaded. Inspect source links; no placeholder identities invented.");
+        }
+        if (igCombo_Str("Sort / initial order", &sort, focused ? "Name\0Drawn declarations (descending)\0" : challenges ? "Name\0Drawn route links (descending)\0" : model->skill_mode ? "Name\0Declared links (descending)\0" : "Name\0Active partners (descending)\0", -1)) rearrange = 1;
+        if (rearrange) {
+            prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; accumulator = 0; fit = 1;
+        }
+        if ((!focused && !challenges) || mode==GD_LAYOUT_FORCE) { igCheckbox("Pause settling", &paused); igSameLine(0, -1); }
+        else igTextUnformatted(focused ? "Stable neighborhood; drag for transient placement." : "Stable bands; drag for transient lateral placement.",NULL);
+        if (igButton("Fit", (ImVec2_c){0,0})) fit = 1;
+        igSameLine(0, -1);
+        if(layout->mode==GD_LAYOUT_FORCE){bool islands=layout->islands.preferred!=0;if(igCheckbox("Separate connected islands",&islands)){gd_layout_islands_set(layout,islands);if(islands)paused=false;}}
+        if (igButton("Rearrange", (ImVec2_c){0,0})) { prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL); selection.held = -1; fit = 1; }
+        if (!focused && !model->skill_mode) igCheckbox("Overlay other pairs (does not merge groups)", &overlay);
+        if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=foundation_peer=-1;
+        { int pair=gd_graph_analysis_panel(layout,analysis,selection.node,&shared,&shared_lens,&branches,&shared_peer,&evidence_pages[focused ? 2:challenges ? 1:0]);
+          if (pair>=0) shared_source(model,layout,analysis,pair,focused,challenges); }
+        {
+            unsigned char entries[GD_MAX_RECORDS]; GD_PathControls *control=&path_controls[focused ? 2:challenges ? 1:0];
+            if (gd_graph_paths_panel(layout,analysis,control,selection.node,path_entries(model,layout,challenges,entries),!focused && !model->skill_mode,&evidence_pages[focused ? 2:challenges ? 1:0])) {
+                const GD_PathSelection *support=gd_graph_path_selection(analysis,selection.node); int i;
+                igTextUnformatted("Support source declarations:",NULL);
+                for (i=support->retained-1;i>=0;--i) projected_source(model,layout,support->arcs[i]/2,focused,challenges);
+                if (control->compare) {
+                    const GD_PathBypass *bypass=gd_graph_path_bypass(analysis,selection.node,-1,GD_GRAPH_ANALYSIS_WORK);
+                    if (bypass && bypass->complete && bypass->found) {
+                        igTextUnformatted("Bypass source declarations:",NULL);
+                        for (i=bypass->retained-1;i>=0;--i) projected_source(model,layout,bypass->arcs[i]/2,focused,challenges);
+                    }
+                }
+            }
+            if (control->enabled && model->skill_mode && !focused && !challenges) igTextWrapped("Path domination is NOT AND prerequisite necessity. Every declared prerequisite remains required; one path is not an acquisition plan.");
+        }
+        if (gd_graph_foundations_panel(model,layout,analysis,selection.node,focused,&foundation_enabled,&foundation_peer,&evidence_pages[focused ? 2:challenges ? 1:0])) {
+            const GD_GraphComparison *comparison=gd_graph_closure_choose(analysis,selection.node,&foundation_peer); int i,shown=0,total=0;
+            igTextWrapped("Projected dependency links; first source per deduplicated Skills link, raw rows in Relationships:");
+            if(comparison)for(i=0;i<layout->edge_count;++i)total+=comparison->edges[i]!=0;
+            GD_EvidencePage page=gd_explorer_evidence_pager("Foundation declarations",&evidence_pages[focused ? 2:challenges ? 1:0].foundation_sources,total,GD_EVIDENCE_PAGE_ROWS);
+            if(comparison)for(i=0;i<layout->edge_count;++i)if(comparison->edges[i] && gd_evidence_page_take(&page,&shown))projected_source(model,layout,i,focused,challenges);
+        }
+        if (gd_graph_reachability_panel(layout,analysis,selection.node,&reach_controls[focused ? 2:challenges ? 1:0],!focused && !model->skill_mode,&evidence_pages[focused ? 2:challenges ? 1:0])) {
+            const GD_GraphComparison *comparison=&analysis->reachability.comparison; int i,shown=0,total=0;
+            igTextWrapped("Typed traversal source examples (first source per projected Skills link):");
+            for(i=0;i<layout->edge_count;++i)total+=comparison->edges[i]!=0;
+            GD_EvidencePage page=gd_explorer_evidence_pager("Traversal declarations",&evidence_pages[focused ? 2:challenges ? 1:0].reach_sources,total,GD_EVIDENCE_PAGE_ROWS);
+            for(i=0;i<layout->edge_count;++i)if(comparison->edges[i] && gd_evidence_page_take(&page,&shown))projected_source(model,layout,i,focused,challenges);
+        }
+        { int node=gd_graph_shapes_panel(model,layout,analysis,selection.node,&shape_enabled,&evidence_pages[focused ? 2:challenges ? 1:0]); if (node>=0) navigate=layout->nodes[node].key; }
+        if (gd_graph_overview_panel(model,layout,analysis,&overview_controls,!focused && !model->skill_mode,&evidence_pages[focused ? 2:challenges ? 1:0])) {
+            int i,shown=0;
+            GD_EvidencePage page=gd_explorer_evidence_pager("Overview declarations",&evidence_pages[focused ? 2:challenges ? 1:0].overview_sources,analysis->overview.selected_count,GD_EVIDENCE_PAGE_ROWS);
+            for(i=0;i<layout->edge_count;++i)if(analysis->overview.selected_edges[i] && gd_evidence_page_take(&page,&shown))projected_source(model,layout,i,focused,challenges);
+        }
+        refresh = igButton("Refresh sources", (ImVec2_c){0,0});
+        if (stale) igTextUnformatted("STALE: disk sources changed or could not be checked.", NULL);
+        if (*failure) igTextWrapped("%s", failure);
+        if (draft) {
+            igText("%d modified records | %d undo steps to disk sync point", draft->modified_count, draft->history_count);
+            if (igButton("Undo last edit (Ctrl+Z)", (ImVec2_c){0,0})) draft_changed = undo_edit(draft, layout, &selection, &editor);
+            igTextUnformatted("Report file (empty = stdout; new .json file only)", NULL); igSetNextItemWidth(-1);
+            igInputText("##report-path", report_path, sizeof(report_path), 0, NULL, NULL);
+            if (igButton("Finish and report changes", (ImVec2_c){0,0})) finish_next = 1;
+            if (*draft->message) igTextWrapped("%s", draft->message);
+        }
+        if ((model->route_mode || focused) && igCollapsingHeader_TreeNodeFlags("Browse current mode",0)) {
+            int i; igInputText("Filter names",browse,sizeof(browse),0,NULL,NULL);
+            igBeginChild_Str("Mode records",(ImVec2_c){0,110},0,0);
+            for (i=0;i<model->record_count;++i) if ((focused || model->records[i].role==(challenges ? GD_CHALLENGE:GD_SKILL)) && (!*browse || strstr(model->records[i].reference,browse))) {
+                if (igButton(model->records[i].reference,(ImVec2_c){0,0})) navigate=i;
+            }
+            igEndChild();
+        }
+        if (model->route_mode) {
+            igTextWrapped("Route opportunity analysis uses current skill draft; not evidence of learning. Challenges remain read-only.");
+            if (routes) igText("%d checks | Route references %s | Requirements %s",routes->check_count,routes->routes_complete ? "complete":"incomplete",routes->requirements_complete ? "complete":"incomplete");
+        }
+        if (model->skill_mode && !focused && !challenges) unlock_panel(model,query,known,selected_before,&query_dirty,&navigate);
+        igSeparator();
+        {
+            int target=gd_diagnostics_panel(&diagnostics,model,model->findings,model->finding_count,model->findings_omitted,selected_before);
+            if (target>=0) navigate=target;
+        }
+        igBeginChild_Str("Selected source", (ImVec2_c){0,0}, 0, 0);
+        if (details(model, layout, &selection, draft, &editor, challenges, focused, routes, &witness, &navigate, &focus_root, &focus_expand,1)) draft_changed = 1;
+        igEndChild(); igEnd();
+        if (draft && !igGetIO_Nil()->WantTextInput && (igIsKeyDown_Nil(ImGuiKey_LeftCtrl) || igIsKeyDown_Nil(ImGuiKey_RightCtrl)) && gd_key_pressed(ImGuiKey_Z)) {
+            if (undo_edit(draft, layout, &selection, &editor)) draft_changed = 1;
+        }
+        if (focus_root>=0) { requested_mode=GD_EXPLORE_RELATIONSHIPS; navigate=focus_root; }
+        if (model->skill_mode && (requested_mode!=current_mode || navigate>=0)) {
+            int applied=editor.record>=0 ? gd_draft_rank(draft,editor.record,editor.rank_text):0;
+            if (applied<0) { requested_mode=current_mode; navigate=focus_root=-1; }
+            else if (applied>0) draft_changed=1;
+            if (requested_mode!=GD_EXPLORE_RELATIONSHIPS && navigate>=0 && model->route_mode && (model->records[navigate].role==GD_SKILL || model->records[navigate].role==GD_CHALLENGE)) requested_mode=model->records[navigate].role==GD_CHALLENGE;
+        }
+        if (draft_changed) query_dirty=1;
+        if (draft_changed || requested_mode!=current_mode || navigate>=0 || focus_expand>=0) {
+            /* Prerequisite edits can remove/reorder selected edge. Recover via
+               editor/node identity, never dereference the old edge index. */
+            int selected=draft_changed ? (editor.record>=0 ? editor.record : selection.node>=0 ? layout->nodes[selection.node].key : selected_before) : selected_record(model,layout,&selection,challenges,focused);
+            if (requested_mode!=current_mode) { remembered[current_mode]=selected; selected=remembered[requested_mode];layout_modes[current_mode]=mode;mode=layout_modes[requested_mode]; }
+            if (navigate>=0) selected=navigate;
+            focused=requested_mode==GD_EXPLORE_RELATIONSHIPS;
+            challenges=requested_mode==GD_EXPLORE_CHALLENGES;
+            if (focused && (focus_root>=0 || focus.root<0)) {
+                int root=focus_root>=0 ? focus_root:selected>=0 ? selected:selected_before;
+                gd_focus_reset(model,&focus,root); selected=root;
+            }
+            if (focused && focus_expand>=0) gd_focus_expand(model,&focus,focus_expand);
+            if (draft_changed && model->route_mode) {
+                gd_routes_destroy(routes); gd_recompute_skills(model); routes=gd_analyze_routes(model); witness=-1;
+            }
+            prepare_layout(model,layout,(GD_LayoutMode)mode,(GD_LayoutSort)sort,rank_mode,horizontal,challenges,focused ? &focus:NULL);
+            select_record(layout,&selection,selected); editor.record=-1;
+            accumulator=0; fit=1;
+        }
+        if (!igGetIO_Nil()->WantCaptureKeyboard && !igIsAnyItemActive() && !igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel)){
+            if(gd_key_pressed(ImGuiKey_Escape)){selection=(GraphSelection){-1,-1,0,-1,-1};overview_controls.row=overview_controls.column=-1;analysis->initialized=0;}
+            if(gd_key_pressed(ImGuiKey_F)){int node=selection.node,edge=-1,i;gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis);
+                for(i=0;i<layout->edge_count;++i)if(layout->edges[i].key==selection.cell && selection.cell>=0){edge=i;break;}
+                if(node<0 && selection.linked>=0)for(i=0;i<layout->node_count;++i)if(layout->nodes[i].key==selection.linked){node=i;break;}
+                if(!gd_graph_frame_selection(&camera,layout,analysis,&overview_controls,node,edge,viewport,1))fit=1;
+            }
+        }
+        if (!igGetIO_Nil()->WantCaptureKeyboard && gd_key_pressed(ImGuiKey_F5)) refresh = 1;
+        if (!igGetIO_Nil()->WantCaptureKeyboard && gd_key_pressed(ImGuiKey_Space) && ((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && layout->mode!=GD_LAYOUT_COLUMNS) paused=!paused;
+        if (fit) { fit_camera(&camera, layout, viewport); fit = 0; }
+        gd_graph_overview_input(&overview_controls,viewport,!igGetIO_Nil()->WantCaptureMouse);
+        graph_input(layout,layout, &selection, &camera, viewport, overlay,gd_graph_overview_hit(&overview_controls,viewport,gd_mouse_position()));
+        if (((!focused && !challenges) || mode==GD_LAYOUT_FORCE) && !paused && layout->mode != GD_LAYOUT_COLUMNS) {
+            accumulator += fminf(gd_frame_seconds(), 0.05f);
+            while (accumulator >= 1.0f/60 && steps++ < 4) { gd_layout_step(layout, selection.held); accumulator -= 1.0f/60; }
+        } else accumulator = 0;
+        if (gd_graph_analyze(layout,NULL,overlay,shared_lens,analysis)) shared_peer=foundation_peer=-1;
+        unsigned char entries[GD_MAX_RECORDS];
+        const GD_GraphPaths *paths=gd_graph_paths_prepare(analysis,&path_controls[focused ? 2:challenges ? 1:0],path_entries(model,layout,challenges,entries),!focused && !model->skill_mode);
+        const GD_PathBypass *bypass=paths && path_controls[focused ? 2:challenges ? 1:0].compare ? gd_graph_path_bypass(analysis,selection.node,-1,GD_GRAPH_ANALYSIS_WORK):NULL;
+        const GD_GraphClosure *foundations=foundation_enabled ? gd_graph_foundations(model,analysis,focused):NULL;
+        const GD_GraphComparison *foundation_pair=foundations ? gd_graph_closure_choose(analysis,selection.node,&foundation_peer):NULL;
+        const GD_GraphClosure *reachability=gd_graph_reachability_prepare(analysis,&reach_controls[focused ? 2:challenges ? 1:0],!focused && !model->skill_mode);
+        const GD_GraphComparison *reach_pair=reachability ? gd_graph_closure_choose_into(analysis,&analysis->reachability,selection.node,&reach_controls[focused ? 2:challenges ? 1:0].peer):NULL;
+        const GD_GraphShapes *shapes=shape_enabled ? gd_graph_model_shapes(model,analysis):NULL;
+        const GD_GraphOverview *overview=gd_graph_overview(analysis,&overview_controls,!focused && !model->skill_mode);
+        draw_graph(model,layout, layout, &selection, camera, viewport, overlay, draft, challenges, focused, routes, focused ? -1:witness,analysis,shared,shared_peer,branches,paths,bypass,foundations,foundation_pair,reachability,reach_pair,shapes,overview);
+        gd_graph_workspace_draw(layout,layout,analysis->shown,camera,viewport,1);
+        gd_graph_islands_draw(layout,layout,analysis->shown,camera,viewport,1);
+        if (query && !focused && !challenges) {
+            int i; gd_scene_clip((int)viewport.x,(int)viewport.y,(int)viewport.width,(int)viewport.height); gd_scene_set_camera(camera);
+            for (i=0;i<layout->node_count;++i) {
+                int record=layout->nodes[i].key; GD_Point point=node_point(&layout->nodes[i]);
+                if (query->known[record]) gd_scene_circle(point,7,(GD_Color){65,200,175,255});
+                if (query->ancestors[record] || query->descendants[record]) gd_scene_ring_pixels((int)point.x,(int)point.y,24,graph_selected);
+            }
+            gd_scene_screen(); gd_scene_unclip();
+        }
+        gd_graph_overview_draw(analysis,&overview_controls,viewport,selection.node,!igGetIO_Nil()->WantCaptureMouse);
+        if (paths) gd_scene_text(gd_scene_format("D: dominated targets | !: ancestor | Pink: support | Cyan: bypass | C/F/R: witness | starts %d",paths->root_count),20,height-69,12,gd_path_color);
+        if (shared) gd_scene_text(branches ? "Pair branches (one hop): selected A / peer B | S badges remain graph-wide | Shown graph only":analysis->complete ? gd_scene_format("S: %s | Thick purple: example links | Shown graph only",gd_graph_lens_names[shared_lens]):"PARTIAL shared-neighbor query | S counts are lower bounds | Shown graph only",20,height-49,13,(GD_Color){193,155,228,255});
+        gd_scene_text(focused ? "Arrows: authored source -> target | Square: root | Click source, then expand | Scope is partial" : challenges ? "Arrows: authored next | Square: entry | Gold: witness | Prior opportunities, not learning verdicts" : model->skill_mode ? "Arrows: prerequisite -> dependent | Red: unknown/cyclic | Orange: rank conflict | Positions transient" : overlay ? "Solid: accepted + defined | Dashed: other pairs; clustering unchanged" : "Active pairs only; other cases remain available in edge details/overlay", 20, height-30, 16, graph_muted);
+        if(!gd_scene_end(&window,graph_background))continue;
+        ++frame;
+        if (screenshot && frame == frames && !gd_save_screenshot(screenshot)) { fputs("gd: graph screenshot export failed\n", stderr); result = 2; }
+        if (refresh && draft && draft->modified_count) {
+            snprintf(draft->message, sizeof(draft->message), "Refresh blocked: draft modified. Undo to disk sync point or finish/report first.");
+            refresh = 0;
+        }
+        if (refresh) {
+            GD_Model *fresh = gd_create(initial->allocator);
+            GD_Draft *replacement = NULL;
+            GD_Routes *replacement_routes = NULL;
+            char reference[260] = "", noun[260] = "", verb[260] = "", root_reference[260]="";
+            int fresh_root=-1;
+            if (focus.root>=0) snprintf(root_reference,sizeof(root_reference),"%s",model->records[focus.root].reference);
+            int selected=selected_record(model,layout,&selection,challenges,focused);
+            if (selected>=0) snprintf(reference,sizeof(reference),"%s",model->records[selected].reference);
+            if (!focused && !challenges && !model->skill_mode && selection.cell >= 0) {
+                snprintf(noun, sizeof(noun), "%s", model->records[model->cells[selection.cell].noun].reference);
+                snprintf(verb, sizeof(verb), "%s", model->records[model->cells[selection.cell].verb].reference);
+            }
+            int ready=fresh && gd_load(fresh, baseline->collections, baseline->collection_count) && (!draft || (replacement = gd_draft_create(fresh)) != NULL) &&
+                (!fresh->route_mode || ((replacement_routes=gd_analyze_routes(replacement->model))!=NULL && !replacement->model->error_count && !replacement->model->errors_omitted));
+            if (ready && focused && *root_reference) {
+                fresh_root=focus_find(fresh,root_reference);
+                if (fresh_root<0) {
+                    gd_error(fresh,"view.root","Relationship root no longer uniquely loaded; leave Relationships or center another record before reload",NULL,0);
+                    ready=0;
+                }
+            }
+            if (ready) {
+                GD_Model *old = baseline;
+                int i;
+                if (query) {
+                    unsigned char remapped[GD_MAX_RECORDS]={0};
+                    for (i=0;i<model->record_count;++i) if (known[i]) {
+                        int target=focus_find(fresh,model->records[i].reference);
+                        if (target>=0 && fresh->records[target].role==GD_SKILL) remapped[target]=1;
+                    }
+                    memcpy(known,remapped,sizeof(known)); query_dirty=1;
+                }
+                { int slot; for (slot=0;slot<3;++slot) gd_graph_paths_remap(&path_controls[slot],model,fresh); }
+                gd_routes_destroy(routes); routes=replacement_routes;
+                gd_draft_destroy(draft); draft = replacement;
+                baseline = fresh; model = draft ? draft->model : baseline;
+                editor.record = -1; shared_peer=-1; analysis->initialized=0;
+                witness=-1; remembered[0]=remembered[1]=remembered[2]=-1;
+                if (!focused && *root_reference) fresh_root=focus_find(model,root_reference);
+                gd_focus_reset(model,&focus,fresh_root);
+                prepare_layout(model, layout, (GD_LayoutMode)mode, (GD_LayoutSort)sort, rank_mode, horizontal, challenges, focused ? &focus:NULL);
+                selection = (GraphSelection){-1,-1,0,-1,-1};
+                select_record(layout,&selection,focus_find(model,reference));
+                for (i = 0; i < model->cell_count; ++i) if (!strcmp(noun, model->records[model->cells[i].noun].reference) && !strcmp(verb, model->records[model->cells[i].verb].reference)) selection.cell = i;
+                if (old != initial) gd_destroy(old);
+                gd_diagnostics_clear(&diagnostics);
+                stale = 0; failure[0] = 0; fit = 1; accumulator = 0;
+            } else {
+                const GD_Error *error=fresh && fresh->error_count ? &fresh->errors[0] : replacement && replacement->model->error_count ? &replacement->model->errors[0] : NULL;
+                stale=1;
+                if (error) snprintf(failure,sizeof(failure),"%s:%d: %s",error->path ? error->path:"(runtime)",error->line,error->message);
+                else snprintf(failure,sizeof(failure),"Cannot prepare refresh snapshot");
+                gd_diagnostics_rejected(&diagnostics,initial->allocator,fresh && fresh->error_count ? fresh:replacement ? replacement->model:fresh);
+                gd_routes_destroy(replacement_routes); gd_draft_destroy(replacement); gd_destroy(fresh);
+            }
+        }
+    }
+    gd_scene_close(&window);
+    gd_diagnostics_clear(&diagnostics);
+    gd_routes_destroy(routes); gd_draft_destroy(draft);
+    if (baseline != initial) gd_destroy(baseline);
+    if (query) initial->allocator.release(initial->allocator.context,query);
+    initial->allocator.release(initial->allocator.context,analysis);
+    initial->allocator.release(initial->allocator.context, layout);
+    return result;
+}
+
+/* Unified shell adapters reuse projection, source editing and drawing. Window,
+   input lifetime and per-view settings belong to the shell, not these helpers. */
+int gd_explorer_graph_prepare(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
+    int okay=prepare_native_layout(model,p->layout,p->view==GD_EXPLORER_MATRIX && p->layout_choice==GD_MATRIX_GRID_CHOICE ? GD_LAYOUT_COLUMNS:(GD_LayoutMode)p->layout_choice,(GD_LayoutSort)p->sort,p->rank,p->horizontal,
+                          p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS ? &p->focus:NULL);
+    return okay;
+}
+void gd_explorer_graph_input(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_ExplorerSelection before=p->selection,choice;
+    graph_input(p->layout,gd_explorer_display_layout(context),&p->selection,&p->camera,context->viewport,p->overlay,
+                gd_graph_overview_hit(&p->overview,context->viewport,gd_mouse_position()) || igGetIO_Nil()->WantCaptureMouse);
+    choice=p->selection;
+    if (choice.node!=before.node || choice.cell!=before.cell || choice.linked!=before.linked || choice.interaction!=before.interaction) {
+        p->selection=before; gd_explorer_graph_select(context,&choice);
+    }
+    p->inspected_record=gd_explorer_graph_record(context);
+}
+int gd_explorer_graph_record(const GD_ExplorerContext *context) {
+    const GD_ExplorerPane *p=context->pane;
+    return selected_record(gd_explorer_model(context->project,p->view),p->layout,&p->selection,
+                           p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS);
+}
+int gd_explorer_graph_commit(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_Draft *draft=context->project->draft;
+    int applied=draft && p->editor.record>=0 ? gd_draft_rank(draft,p->editor.record,p->editor.rank_text):0;
+    if (applied>0 && !gd_explorer_edited(context->project)) return -1;
+    return applied;
+}
+int gd_explorer_graph_select(GD_ExplorerContext *context, const GD_ExplorerSelection *choice) {
+    if (gd_explorer_graph_commit(context)<0) return 0;
+    context->pane->selection=*choice;
+    context->pane->inspected_record=gd_explorer_graph_record(context);
+    return 1;
+}
+int gd_explorer_graph_details(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
+    int changed;
+    p->inspected_record=gd_explorer_graph_record(context);
+    changed=details(model,p->layout,&p->selection,gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA ? context->project->draft:NULL,
+        &p->editor,p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS,context->project->routes,
+        &p->witness,&p->navigate,&p->focus_root,&p->focus_expand,!!(context->project->available&(1u<<GD_EXPLORER_RELATIONSHIPS)));
+    if (!changed) p->inspected_record=gd_explorer_graph_record(context);
+    else if (p->editor.record>=0) p->inspected_record=p->editor.record;
+    return changed;
+}
+void gd_explorer_graph_source(GD_ExplorerContext *context, int edge) {
+    GD_ExplorerPane *p=context->pane;
+    projected_source(gd_explorer_model(context->project,p->view),p->layout,edge,
+                     p->view==GD_EXPLORER_RELATIONSHIPS,p->view==GD_EXPLORER_CHALLENGES);
+}
+void gd_explorer_graph_unlocks(GD_ExplorerContext *context) {
+    GD_ExplorerPane *p=context->pane; int dirty=0;
+    GD_Model *model=gd_explorer_model(context->project,p->view);
+    gd_skill_unlocks(model,p->known,gd_explorer_graph_record(context),context->query);
+    unlock_panel(model,context->query,p->known,gd_explorer_graph_record(context),&dirty,&p->navigate);
+}
+void gd_explorer_graph_draw(GD_ExplorerContext *context, const GD_ExplorerEvidence *e) {
+    GD_ExplorerPane *p=context->pane; GD_Model *model=gd_explorer_model(context->project,p->view);
+    draw_graph(model,p->layout,gd_explorer_display_layout(context),&p->selection,p->camera,context->viewport,p->overlay,
+        gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA ? context->project->draft:NULL,
+        p->view==GD_EXPLORER_CHALLENGES,p->view==GD_EXPLORER_RELATIONSHIPS,context->project->routes,p->witness,
+        context->analysis,p->shared,p->peer,p->branches,e->paths,e->bypass,e->foundations,e->foundation_pair,
+        e->reachability,e->reach_pair,e->shapes,e->overview);
+    if (p->view==GD_EXPLORER_SKILLS) {
+        int i; gd_skill_unlocks(model,p->known,gd_explorer_graph_record(context),context->query);
+        gd_scene_clip((int)context->viewport.x,(int)context->viewport.y,(int)context->viewport.width,(int)context->viewport.height);
+        gd_scene_set_camera(p->camera);
+        for (i=0;i<p->layout->node_count;++i) {
+            int record=p->layout->nodes[i].key; GD_Point point=node_point(&gd_explorer_display_layout(context)->nodes[i]);
+            if (context->query->known[record]) gd_scene_circle(point,7,(GD_Color){65,200,175,255});
+            if (context->query->ancestors[record] || context->query->descendants[record]) gd_scene_ring_pixels((int)point.x,(int)point.y,24,graph_selected);
+        }
+        gd_scene_screen(); gd_scene_unclip();
+    }
+}
