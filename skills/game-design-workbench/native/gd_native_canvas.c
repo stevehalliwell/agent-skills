@@ -1,5 +1,4 @@
 #include "gd_native_canvas.h"
-#include <float.h>
 #include <math.h>
 
 enum { GD_CANVAS_FONT_PIXEL_LIMIT=256, GD_CANVAS_FONT_RASTER_DENSITY=4 };
@@ -59,7 +58,7 @@ ImVec2_c gd_canvas_measure(const char *text,float size) {
     ImGuiIO *io=igGetIO_Nil();
     ImFont *font=io->FontDefault ? io->FontDefault:io->Fonts->Fonts.Size ? io->Fonts->Fonts.Data[0]:NULL;
     if(!font)return (ImVec2_c){0,0};
-    ImVec2_c extent=ImFont_CalcTextSizeA(font,font_pixels(size),FLT_MAX,0,text,NULL,NULL);
+    ImVec2_c extent=ImFont_CalcTextSizeA(font,font_pixels(size),igGET_FLT_MAX(),0,text,NULL,NULL);
     extent.x/=GD_CANVAS_FONT_RASTER_DENSITY;extent.y/=GD_CANVAS_FONT_RASTER_DENSITY;return extent;
 }
 void gd_canvas_text(GD_NativeCanvas *canvas,ImVec2_c position,const char *text,float size,ImU32 color) {

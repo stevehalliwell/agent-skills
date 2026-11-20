@@ -23,7 +23,7 @@ Build scripts never launch windows, download dependencies or write source data. 
 
 ### macOS
 
-Needs installed CJIT, Zig and Apple SDK. Prepare upstream GLFW 3.4 source separately from [release tag `3.4`](https://github.com/glfw/glfw/tree/3.4). Scripts never download or modify dependency checkout. New native macOS build/runtime checks remain pending on a Mac.
+Needs installed CJIT, Zig and Apple SDK. Prepare upstream GLFW 3.4 source separately from [release tag `3.4`](https://github.com/glfw/glfw/tree/3.4). Scripts never download or modify dependency checkout. Apple Silicon build/runtime checks pass; see [Mac qualification](#mac-qualification).
 
 ```sh
 native=skills/game-design-workbench/native
@@ -33,7 +33,32 @@ bash "$native/build.sh" --view --ui-library "$ui" --output-directory "$native/bu
 bash "$native/build.sh" --explorer-test --ui-library "$ui" --output-directory "$native/build/mac-native-adapter"
 ```
 
-`CJIT`, `ZIG`, `SDKROOT` override tools/SDK. Full compiler matrix stays in Step 6. Native `libgd-native-ui.dylib` loads relative to executable; prepared GLFW header lives beside dependency. `build-sources.txt` owns shared application source lists. Native macOS experiment supervision still fails explicitly; no model launch.
+`CJIT`, `ZIG`, `SDKROOT` override tools/SDK. Native `libgd-native-ui.dylib` loads relative to executable; prepared GLFW header lives beside dependency. `build-sources.txt` owns shared application source lists. Native macOS experiment supervision still fails explicitly; no model launch.
+
+#### Mac qualification
+
+Checked macOS 14.5 arm64, Apple SDK 14.5, CJIT `164cf0a`, Zig `0.17.0`, GLFW 3.4.0 and pinned ImGui/cimgui 1.93.0:
+
+- CJIT and Zig: headless CLI, native core, viewer transport fixture, full viewer and CPU explorer adapter build and run. Core: 150/150 each. Node native suite: 94 passed, 5 skipped each; optional pointer/deep/layout checks not run.
+- All 10 explorer modes render default pane states and save PNGs with both compilers and both Crate/Plumber examples: 40/40 bounded smoke checks. Source file hashes unchanged. Startup/render/capture checks do not establish configured-query or mouse/keyboard interaction acceptance.
+- Running CJIT Plumber explorer answers `viewer list`, `inspect`, `nodes`, `controls` and `actions` through native Unix socket. Bounded viewer exits cleanly with no draft changes.
+- CJIT canvas uses cimgui's `igGET_FLT_MAX()` accessor. Apple's `<float.h>` expects `__FLT_MAX__`, which CJIT does not define; direct `FLT_MAX` use previously broke full viewer/adapter builds.
+
+Reproduce headless qualification after preparing `$ui` above. Use fresh adapter directories on rerun. Repeat with `compiler=zig`:
+
+```sh
+compiler=cjit
+cli=$(bash "$native/build.sh" --compiler "$compiler")
+core=$(bash "$native/build.sh" --compiler "$compiler" --test)
+transport=$(bash "$native/build.sh" --compiler "$compiler" --viewer-test)
+adapter=$(bash "$native/build.sh" --compiler "$compiler" --explorer-test \
+  --ui-library "$ui" --output-directory "$native/build/mac-check-adapter-$compiler")
+"$core" "$native/build/mac-check-core-$compiler"
+GD_NATIVE_EXE="$cli" GD_VIEWER_TEST_EXE="$transport" GD_VIEWER_ADAPTER_EXE="$adapter" \
+  node --test skills/game-design-workbench/test/native-*.test.mjs
+```
+
+Intel Macs, mixed-DPI display changes, minimize/restore, clipboard, interactive editing/Undo, guarded live refresh/restart and performance remain unqualified. Windows Step 6 full matrix remains deferred.
 
 ## Unified explorer
 

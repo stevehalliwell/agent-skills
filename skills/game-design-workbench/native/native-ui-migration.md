@@ -1,6 +1,6 @@
 # Native ImGui migration
 
-Raylib and rlImGui removed from source and build recipes. All Workbench entry points share ImGui/cimgui **1.93.0**: Win32/D3D11 on Windows and GLFW/OpenGL3 on macOS. Windows CJIT build and CPU integration checks pass. User accepted reviewed Windows Crate presentation and authorized checkpoint. macOS code and recipe are present; no Mac build or runtime result yet.
+Raylib and rlImGui removed from source and build recipes. All Workbench entry points share ImGui/cimgui **1.93.0**: Win32/D3D11 on Windows and GLFW/OpenGL3 on macOS. Windows CJIT build and CPU integration checks pass. User accepted reviewed Windows Crate presentation and authorized checkpoint. macOS arm64 CJIT/Zig builds, CPU integration, all-mode render/capture smoke checks and live Unix-socket inspection pass. [Mac qualification and limits](README.md#mac-qualification).
 
 Checkpoint `530c8d7` saves Actors recovery and initial dependency. Native port checkpoint follows. Existing viewers keep their own binaries and draft state. Do not rename or reuse transitional `gd-ui.dll`.
 
@@ -18,4 +18,4 @@ Checkpoint `530c8d7` saves Actors recovery and initial dependency. Native port c
 
 - Windows build: `build/full-native-review-win/gd-view.exe`; PE imports have no raylib or `gd-ui.dll`. Core150/150, headless native ABI25/25. Crate/Mario IPC426/400; each has 3330 controls, 25 feedback, 37 sidebar, 123 configuration, 425 app-local pointer, 244 Find and 45 State charts checks. Each builds 15 CPU ImGui frames covering all unified projections, both Grid variants, Similarity and both applied state-chart layouts. Receipts in `build/full-native-review-adapter/`. Historical deep layout/UX gates remain deferred, not relaxed.
 - Prior authorized hidden backend checks passed143/143, including resize, PNG text/channel readback, Unicode path and teardown. Authorized hidden standalone matrix checks passed31 Crate/59 Mario; sources/model unchanged. User separately reviewed running native Crate Explorer; startup IPC inspection saw clean draft and no stale flag. This does not establish every-view interaction acceptance.
-- Headless commands do not link graphics. Native application still uses CJIT; dependency-only Zig/C++ exception remains. macOS compiler/runtime qualification, DPI, live IPC/restart, performance and visible all-view review remain open. Step 6 full matrix remains deferred.
+- Headless commands do not link graphics. Application remains C99; graphics dependency uses Zig/C++. Mac application qualification covers CJIT and Zig C builds. Mixed-DPI changes, interactive editing/Undo, minimize/restore, clipboard, guarded live refresh/restart, performance and human all-view acceptance remain open. Windows Step 6 full matrix remains deferred.
