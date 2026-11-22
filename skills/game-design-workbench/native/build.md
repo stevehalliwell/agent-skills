@@ -41,7 +41,7 @@ Checked macOS 14.5 arm64, Apple SDK 14.5, CJIT `164cf0a`, Zig `0.17.0`, GLFW 3.4
 - All 10 Explorer modes render and save PNGs with both compilers against two example models: 40/40 bounded smoke checks. Source hashes unchanged. These checks do not establish configured-query or mouse/keyboard acceptance.
 - Live read-only IPC: `viewer list`, `inspect`, `nodes`, `controls`, and `actions` answered through the Unix socket. Viewer exited cleanly with no draft changes.
 
-These checks predate inspector JSON patches, exact evidence reveals, and evidence-targeted Go / Dismiss hints. Those changes passed Windows adapter and transport checks but have not been retested on macOS. See [Windows checks](#windows-checks) for the live smoke scope.
+The compiler matrix above predates inspector JSON patches and evidence-targeted hints. The follow-up macOS walkthrough passed on `f8afeb1`: patch a nested inspector fold, reveal an exact evidence row, and exercise Go and Dismiss. This was a live smoke check, not a rerun of the full compiler matrix. See [Windows checks](#windows-checks) for the Windows smoke scope.
 
 Reproduce headless qualification after preparing `$ui` above. Use fresh adapter directories on rerun. Repeat with `compiler=zig`:
 
