@@ -21,7 +21,7 @@ Build scripts never launch windows, download dependencies or write source data. 
 
 ### macOS
 
-Needs installed CJIT, Zig and Apple SDK. Prepare upstream GLFW 3.4 source separately from [release tag `3.4`](https://github.com/glfw/glfw/tree/3.4). Scripts never download or modify dependency checkout. Apple Silicon build/runtime checks pass; see [Mac qualification](#mac-qualification).
+Needs installed CJIT, Zig and Apple SDK. Prepare upstream GLFW 3.4 source separately from [release tag `3.4`](https://github.com/glfw/glfw/tree/3.4). Scripts never download or modify the dependency checkout. See [Mac qualification](#mac-qualification) for tested scope.
 
 ```sh
 native=skills/game-design-workbench/native
@@ -40,6 +40,8 @@ Checked macOS 14.5 arm64, Apple SDK 14.5, CJIT `164cf0a`, Zig `0.17.0`, GLFW 3.4
 - CJIT and Zig: headless CLI, native core, viewer transport fixture, full viewer and CPU explorer adapter build and run. Core: 150/150 each. Node native suite: 94 passed, 5 skipped each; optional pointer/deep/layout checks not run.
 - All 10 Explorer modes render and save PNGs with both compilers against two example models: 40/40 bounded smoke checks. Source hashes unchanged. These checks do not establish configured-query or mouse/keyboard acceptance.
 - Live read-only IPC: `viewer list`, `inspect`, `nodes`, `controls`, and `actions` answered through the Unix socket. Viewer exited cleanly with no draft changes.
+
+These checks predate inspector JSON patches, exact evidence reveals, and evidence-targeted Go / Dismiss hints. Those changes passed Windows adapter and transport checks but have not been retested on macOS. See [Windows checks](#windows-checks) for the live smoke scope.
 
 Reproduce headless qualification after preparing `$ui` above. Use fresh adapter directories on rerun. Repeat with `compiler=zig`:
 
@@ -63,3 +65,5 @@ GD_NATIVE_EXE="$cli" GD_VIEWER_TEST_EXE="$transport" GD_VIEWER_ADAPTER_EXE="$ada
 ```
 
 The second command includes windowed checks. Run it only when a test window is appropriate. Generated binaries and test output stay under ignored `native/build/`. Core and capture checks do not establish real-pointer interaction, layout readability, or workflow usefulness.
+
+A bounded Windows Explorer smoke test on a copy of Crate Puzzle verified nested inspector fold patches, rejected stale and invalid patches, revealed an exact noun case, and displayed a hint without changing selection. The viewer exited with an empty draft and unchanged source. The Go and Dismiss buttons were not clicked.
