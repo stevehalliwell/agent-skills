@@ -7,28 +7,34 @@ static const char *const viewer_projections[GD_EXPLORER_VIEWS]={"skills","challe
 typedef struct {
     GD_ExplorerContext *context; GD_ExplorerPane *panes; GD_ViewerServer *server;
     int *active,*stale; uint64_t reload_generation;
-    GD_ViewerRequest hint; int has_hint;
+    GD_ViewerRequest hint; int has_hint,hint_go;
     GD_ViewerRequest pending_hint; int hint_pending;
     uint64_t hint_generation,pending_hint_generation;
     unsigned hint_revision,pending_hint_revision;
     const GD_Collection *collections; int collection_count;
     char toast[128]; double toast_started,toast_until; float toast_from; int human_go;
     char layer_token[64],knowledge_token[64]; int layer_view;
+    GD_InspectorSurvey *inspector_survey;
 } ExplorerViewer;
-static int viewer_hint_current(const ExplorerViewer *viewer) {
-    return !*viewer->hint.id || (viewer->hint_generation==viewer->reload_generation && viewer->hint_revision==viewer->context->project->revision);
-}
+static int viewer_hint_current(ExplorerViewer *viewer);
 static int viewer_interacting(void) {
     return igGetIO_Nil()->WantTextInput || igIsMouseDown_Nil(ImGuiMouseButton_Left) || igIsMouseDown_Nil(ImGuiMouseButton_Right) || igIsMouseDown_Nil(ImGuiMouseButton_Middle) ||
         igIsKeyDown_Nil(ImGuiKey_Enter) || igIsKeyDown_Nil(ImGuiKey_Space) || igIsKeyDown_Nil(ImGuiKey_Tab) || igIsKeyDown_Nil(ImGuiKey_UpArrow) || igIsKeyDown_Nil(ImGuiKey_DownArrow) || igIsKeyDown_Nil(ImGuiKey_LeftArrow) || igIsKeyDown_Nil(ImGuiKey_RightArrow);
 }
 static void viewer_apply_hint(ExplorerViewer *viewer) {
     if (!viewer->hint_pending || viewer_interacting()) return;
-    viewer->hint=viewer->pending_hint; viewer->has_hint=1; viewer->hint_pending=0;
+    viewer->hint=viewer->pending_hint; viewer->has_hint=1; viewer->hint_pending=viewer->hint_go=0;
     viewer->hint_generation=viewer->pending_hint_generation; viewer->hint_revision=viewer->pending_hint_revision;
 }
 static void viewer_member(GD_ViewerWriter *w, const char *key, const char *value) {
     gd_viewer_quote(w,key); gd_viewer_write(w,":"); gd_viewer_quote(w,value);
+}
+static void viewer_hint_fields(GD_ViewerWriter *w,const GD_ViewerRequest *hint) {
+    viewer_member(w,"projection",hint->projection);
+    gd_viewer_write(w,",");viewer_member(w,"reference",*hint->reference ? hint->reference:NULL);
+    gd_viewer_write(w,",");viewer_member(w,"id",*hint->id ? hint->id:NULL);
+    gd_viewer_write(w,",");viewer_member(w,"form",*hint->form ? hint->form:NULL);
+    gd_viewer_write(w,",");viewer_member(w,"message",*hint->value ? hint->value:NULL);
 }
 static void viewer_form(GD_ViewerWriter *w, GD_ExplorerForm form, const void *values) {
     int i,count; const GD_ExplorerControl *fields=gd_explorer_form_fields(form,&count);
@@ -189,13 +195,13 @@ static void viewer_inspect(ExplorerViewer *viewer, GD_ViewerWriter *w, const cha
     }
     if (gd_viewer_field(fields,"agent_hint")) {
     gd_viewer_write(w,",\"agent_hint\":");
-    if (viewer->has_hint) { gd_viewer_write(w,"{"); viewer_member(w,"projection",viewer->hint.projection); gd_viewer_write(w,","); viewer_member(w,"reference",*viewer->hint.reference?viewer->hint.reference:NULL); gd_viewer_write(w,","); viewer_member(w,"id",*viewer->hint.id?viewer->hint.id:NULL); gd_viewer_write(w,",\"stale\":%s}",viewer_hint_current(viewer)?"false":"true"); }
+    if (viewer->has_hint) {gd_viewer_write(w,"{");viewer_hint_fields(w,&viewer->hint);gd_viewer_write(w,",\"stale\":%s}",viewer_hint_current(viewer) ? "false":"true");}
     else gd_viewer_write(w,"null");
     gd_viewer_write(w,",\"pending_agent_hint\":");
-    if (viewer->hint_pending) { gd_viewer_write(w,"{"); viewer_member(w,"projection",viewer->pending_hint.projection); gd_viewer_write(w,","); viewer_member(w,"reference",*viewer->pending_hint.reference?viewer->pending_hint.reference:NULL); gd_viewer_write(w,","); viewer_member(w,"id",*viewer->pending_hint.id?viewer->pending_hint.id:NULL); gd_viewer_write(w,"}"); }
+    if (viewer->hint_pending) {gd_viewer_write(w,"{");viewer_hint_fields(w,&viewer->pending_hint);gd_viewer_write(w,"}");}
     else gd_viewer_write(w,"null");
     }
-    gd_viewer_write(w,",\"limits\":{\"derived_navigation\":true,\"node_catalogue\":true,\"selected_source_body\":true,\"application_controls\":false,\"application_actions\":true,\"form_controls\":true,\"presentation_controls\":true,\"retained_result_inspection\":true,\"evidence_paging\":true,\"source_refresh\":true,\"events\":false,\"source_writes\":false,\"selection_owner\":\"application selection; agent hints separate\",\"control_indices\":\"snapshot-local only; not durable selectors\",\"evidence_tables\":\"retained native JSON byte pages via viewer result; matching retained-row pages via viewer evidence; source_slot remains native metadata; completeness and native omissions remain explicit\"}}");
+    gd_viewer_write(w,",\"limits\":{\"derived_navigation\":true,\"node_catalogue\":true,\"selected_source_body\":true,\"application_controls\":false,\"application_actions\":true,\"form_controls\":true,\"presentation_controls\":true,\"inspector_state\":%s,\"retained_result_inspection\":true,\"evidence_paging\":true,\"source_refresh\":true,\"events\":false,\"source_writes\":false,\"selection_owner\":\"application selection; agent hints separate\",\"control_indices\":\"snapshot-local only; not durable selectors\",\"evidence_tables\":\"retained native JSON byte pages via viewer result; matching retained-row pages via viewer evidence; source_slot remains native metadata; completeness and native omissions remain explicit\"}}",viewer->inspector_survey ? "true":"false");
 }
 static int viewer_projection(const char *name) {
     int v; for (v=0;v<GD_EXPLORER_VIEWS;++v) if (!strcmp(name,viewer_projections[v])) return v; return -1;
@@ -223,14 +229,15 @@ static void viewer_feedback(ExplorerViewer *viewer) {
         if (igBegin("Agent hint",&open,ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoSavedSettings)) {
             int current=viewer_hint_current(viewer);
             igBeginDisabled(!current);
-            if (igSmallButton("Go")) snprintf(viewer->hint.command,sizeof(viewer->hint.command),"navigate");
+            if (igSmallButton("Go"))viewer->hint_go=1;
             igEndDisabled(); igSameLine(0,-1);
             if (igSmallButton("Dismiss")) open=false;
-            igTextWrapped("%s | %s",viewer->hint.projection,*viewer->hint.id?viewer->hint.id:viewer->hint.reference);
-            if (!current) igTextWrapped("Hint predates source/draft changes. Request a fresh hint.");
+            if(*viewer->hint.value)igTextWrapped("%s",viewer->hint.value);
+            igTextWrapped("%s | %s",viewer->hint.projection,*viewer->hint.form ? viewer->hint.form:*viewer->hint.id ? viewer->hint.id:viewer->hint.reference);
+            if (!current) igTextWrapped("Hint no longer matches the current evidence or source. Request a fresh hint.");
         }
         igEnd();
-        if (!open) { viewer->has_hint=0; viewer->hint_pending=0; }
+        if (!open) {viewer->has_hint=viewer->hint_pending=viewer->hint_go=0;}
     }
     {
         float alpha=viewer_toast_alpha(viewer,igGetTime());
@@ -269,9 +276,47 @@ static void viewer_actions(GD_ExplorerContext *c, GD_ViewerWriter *w) {
 #include "gd_explorer_viewer_controls.h"
 #include "gd_explorer_viewer_evidence.h"
 #include "gd_explorer_viewer_results.h"
+#include "gd_explorer_viewer_inspector.h"
+static int viewer_hint_current(ExplorerViewer *viewer) {
+    const GD_ViewerRequest *hint=&viewer->hint;GD_ExplorerContext target=*viewer->context;char token[64];int v;
+    if(*hint->id && (viewer->hint_generation!=viewer->reload_generation || viewer->hint_revision!=target.project->revision))return 0;
+    if(!*hint->form)return 1;
+    v=viewer_projection(hint->projection);
+    if(v<0 || !(target.project->available&(1u<<v)))return 0;
+    target.pane=&viewer->panes[v];viewer_control_token(viewer,&target,GD_FORM_PRESENTATION,token,sizeof(token));
+    return !strcmp(token,hint->expect);
+}
+static int viewer_hint_form(const char *form) {
+    static const char *const allowed[]={"inspector","source","link","cell","case","diagnostic","rule","rule.check","noun.case","actor.case","case.participant","similarity.member","similarity.member-source","chart.cell","chart.hypothesis","chart.proposal","chart.activation","effect.path-step"};
+    size_t i;for(i=0;i<sizeof(allowed)/sizeof(*allowed);++i)if(!strcmp(form,allowed[i]))return 1;
+    return 0;
+}
+static int viewer_inspector_destination(const GD_ExplorerContext *c,const char *id,int *form) {
+    const PresentationField *field=presentation_field(id);size_t base=offsetof(GD_ExplorerPresentation,inspector_sections),offset;
+    *form=-1;
+    if(!c->sidebar || !c->inspector)return -1;
+    if(!strncmp(id,"form.",5)){
+        int target=viewer_form_kind(id+5);
+        if(target<0 || target==GD_FORM_PRESENTATION || !gd_explorer_form_available(c,(GD_ExplorerForm)target))return -1;
+        *form=target;return target==GD_FORM_RULES && c->pane->view!=GD_EXPLORER_RESOURCES ? GD_SIDEBAR_SELECTION:GD_SIDEBAR_ANALYSIS;
+    }
+    if(!field || strncmp(id,"inspector_",10) || field->control.type!=GD_CONTROL_BOOL || field->control.offset<base)return -1;
+    offset=(field->control.offset-base)/sizeof(bool);
+    if(offset>=GD_SIDEBAR_COUNT || (offset==GD_SIDEBAR_FILTERS && (!has_display_filters(c->pane) || gd_explorer_similarity_active(c))))return -1;
+    return (int)offset;
+}
+static void viewer_focus_section(GD_ExplorerContext *c,int section) {
+    if(c->inspector && c->sidebar){c->inspector->open=true;c->inspector->scroll_pending=false;c->sidebar->open|=1u<<section;c->sidebar->reveal=section+1;c->sidebar->reveal_form=0;}
+}
+static void viewer_queue_hint(ExplorerViewer *viewer,const GD_ViewerRequest *request,GD_ViewerWriter *w) {
+    viewer->pending_hint=*request;viewer->hint_pending=1;
+    viewer->pending_hint_generation=viewer->reload_generation;viewer->pending_hint_revision=viewer->context->project->revision;
+    gd_viewer_write(w,"{\"ok\":true,\"hint_updated\":true,\"display_pending\":true,\"persistent\":false,\"focus_changed\":false}");
+}
 static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_ViewerWriter *w) {
     ExplorerViewer *viewer=data; GD_ExplorerContext *c=viewer->context,target=*c;
     int v=viewer_projection(request->projection),node=-1;
+    if(!strcmp(request->command,"inspector") || !strcmp(request->command,"inspector-patch")){viewer_inspector_dispatch(viewer,request,w);return;}
     if (!strcmp(request->command,"inspect")) { viewer_inspect(viewer,w,request->fields); return; }
     if (!strcmp(request->command,"refresh")) {
         char message[GD_MAX_PATH+512]; int updated;
@@ -288,13 +333,50 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
     target.pane=&viewer->panes[v];target.panes=viewer->panes;target.active_view=viewer->active;
     if (!strcmp(request->command,"evidence")) { viewer_evidence(viewer,request,&target,w); return; }
     if (!strcmp(request->command,"result")) { viewer_result(viewer,request,&target,w); return; }
+    if(!strcmp(request->command,"hint") && *request->form){
+        char token[64];int form;viewer_control_token(viewer,&target,GD_FORM_PRESENTATION,token,sizeof(token));
+        if(!viewer_hint_form(request->form) || (!strcmp(request->form,"inspector") && (*request->reference || viewer_inspector_destination(&target,request->id,&form)<0))){gd_viewer_error(w,"viewer.hint","Unsupported evidence form or unavailable inspector section");return;}
+        if(strcmp(token,request->expect)){gd_viewer_error(w,"viewer.stale_controls","Read current evidence or presentation controls before offering a hint");return;}
+        viewer_queue_hint(viewer,request,w);return;
+    }
+    if (!strcmp(request->command,"move")) {
+        char token[64];float xy[2],old_x,old_y;GD_ExplorerPane *p=target.pane;const GD_LayoutNode *item;
+        if(viewer_interacting() || gd_explorer_rank_pending(c->project,viewer->panes)){gd_viewer_error(w,"viewer.busy","Move blocked by active input or pending rank");return;}
+        viewer_control_token(viewer,&target,GD_FORM_PRESENTATION,token,sizeof(token));
+        if(strcmp(token,request->expect)){gd_viewer_error(w,"viewer.stale_controls","Read current presentation controls before moving a node");return;}
+        if(!viewer_movable_canvas(&target) || (gd_explorer_family(p->view)==GD_EXPLORER_SKILL_DATA && !viewer_canvas_current(&target))){gd_viewer_error(w,"viewer.move","Current canvas does not support node placement; inspect viewer nodes");return;}
+        if(!presentation_coordinates(request->value,xy,2)){gd_viewer_error(w,"viewer.move","Use finite X,Y within +/-1000000 native layout units");return;}
+        node=viewer_find_node(&target,request->id,w);if(node<0)return;
+        item=&p->layout->nodes[node];old_x=item->x;old_y=item->y;
+        if(query_view(p->view))gd_query_scene_move(p->query_state->scene,node,xy[0],xy[1]);else gd_layout_move_node(p->layout,node,xy[0],xy[1]);
+        gd_viewer_write(w,"{\"ok\":true,\"moved\":%s,\"layout_position\":{\"x\":%.9g,\"y\":%.9g},\"focus_changed\":false,\"source_draft_changed\":false}",
+            item->x!=old_x || item->y!=old_y ? "true":"false",(double)item->x,(double)item->y);
+        return;
+    }
     if (!strcmp(request->command,"select")) {
         char token[64];
         if(viewer_interacting() || gd_explorer_rank_pending(c->project,viewer->panes)) {gd_viewer_error(w,"viewer.busy","Selection blocked by active input/pending rank; nothing changed");return;}
         viewer_control_token(viewer,&target,GD_FORM_PRESENTATION,token,sizeof(token));
         if(strcmp(token,request->expect)) {gd_viewer_error(w,"viewer.stale_controls","Selection scope changed; read evidence again");return;}
+        if(!strcmp(request->form,"inspector")){
+            int form,section=viewer_inspector_destination(&target,request->id,&form);
+            if(section<0 || *request->reference || (!viewer->human_go && v!=*viewer->active)){gd_viewer_error(w,"viewer.selection","Select an available inspector section in the active projection, or offer it as a hint");return;}
+            if(v!=*viewer->active){enter_view(c,viewer->panes,v,NULL);*viewer->active=v;}
+            viewer_focus_section(&target,section);target.sidebar->reveal_form=form+1;
+            gd_viewer_write(w,"{\"ok\":true,\"selected\":true,\"focus_changed\":false,\"source_draft_changed\":false}");return;
+        }
         if(!viewer_select(&target,request,w)) return;
-        if(target.pane->structure_state && strcmp(request->form,"rule") && strcmp(request->form,"rule.check")) target.pane->structure_state->similarity_canvas=false;
+        if(viewer->human_go){
+            if(v!=*viewer->active){enter_view(c,viewer->panes,v,NULL);*viewer->active=v;}
+            viewer_focus_section(&target,!strcmp(request->form,"similarity.member") ? GD_SIDEBAR_ANALYSIS:GD_SIDEBAR_SELECTION);
+        }
+        if(v!=*viewer->active){
+            target.pane->reveal_case=target.pane->reveal_participant=0;
+            if(target.pane->structure_state)target.pane->structure_state->reveal_similarity_feature=0;
+            if(target.pane->chart_state)target.pane->chart_state->reveal_proposal=target.pane->chart_state->reveal_activation=0;
+            if(target.pane->query_state)target.pane->query_state->reveal_contributor=target.pane->query_state->reveal_contributor_step=0;
+        }
+        if(target.pane->structure_state && strcmp(request->form,"rule") && strcmp(request->form,"rule.check") && strcmp(request->form,"similarity.member")) target.pane->structure_state->similarity_canvas=false;
         viewer_toast(viewer,"CLI selected context in",gd_explorer_view_names[v]); gd_viewer_write(w,"{\"ok\":true,\"selected\":true,\"focus_changed\":false,\"source_draft_changed\":false}"); return;
     }
     if (!strcmp(request->command,"nodes")) { viewer_nodes(viewer,request,&target,w); return; }
@@ -307,6 +389,7 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
         viewer_control_token(viewer,&target,(GD_ExplorerForm)form,token,sizeof(token));
         if (strcmp(request->expect,token)) { gd_viewer_error(w,"viewer.stale_controls","Form/source scope changed; read controls again before configuring"); return; }
         if (!gd_explorer_control_set(&target,(GD_ExplorerForm)form,request->control,request->value,message,sizeof(message))) { gd_viewer_error(w,"viewer.control",message); return; }
+        if(viewer->inspector_survey && !strncmp(request->control,"inspector_",10))viewer->inspector_survey->ready=0;
         viewer_toast(viewer,"CLI configured controls in",gd_explorer_view_names[v]); viewer_controls(viewer,request,&target,w,1); return;
     }
     if (!strcmp(request->command,"action")) {
@@ -349,11 +432,7 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
         if (!viewer_canvas_current(&target)) { gd_viewer_error(w,"viewer.stale_canvas","Destination canvas is unprepared or from older draft revision; explicitly open projection first"); return; }
         node=viewer_find_node(&target,request->id,w); if (node<0) return;
     }
-    if (!strcmp(request->command,"hint")) {
-        viewer->pending_hint=*request; viewer->hint_pending=1;
-        viewer->pending_hint_generation=viewer->reload_generation; viewer->pending_hint_revision=c->project->revision;
-        gd_viewer_write(w,"{\"ok\":true,\"hint_updated\":true,\"display_pending\":true,\"persistent\":false,\"focus_changed\":false}"); return;
-    }
+    if (!strcmp(request->command,"hint")) {viewer_queue_hint(viewer,request,w);return;}
     if (viewer_interacting() || gd_explorer_rank_pending(c->project,viewer->panes)) {
         gd_viewer_error(w,"viewer.busy","Navigation blocked by text input, pointer interaction or pending rank input; nothing applied"); return;
     }
@@ -368,5 +447,14 @@ static void viewer_dispatch(void *data, const GD_ViewerRequest *request, GD_View
     else if (*request->id && c->pane->fit==GD_EXPLORER_FIT_GRID_ALL) c->pane->fit=0; /* Keep exact-node framing. */
     gd_viewer_write(w,"{\"ok\":true,\"focus_changed\":false,\"selection_changed\":%s,",*request->id?"true":"false"); viewer_member(w,"projection",viewer_projections[v]);
     gd_viewer_write(w,",\"visible_matches\":%d,\"hidden_matches\":%d,\"source_only\":%s}",c->pane->visible_matches,c->pane->hidden_matches,*request->id?"false":"true");
+}
+static int viewer_open_hint(ExplorerViewer *viewer,GD_ViewerWriter *w) {
+    viewer->hint_go=0;
+    if(!viewer_hint_current(viewer)){gd_viewer_error(w,"viewer.stale_hint","Hint no longer matches current evidence or source; request a fresh hint");return 0;}
+    snprintf(viewer->hint.command,sizeof(viewer->hint.command),"%s",*viewer->hint.form ? "select":"navigate");
+    viewer->human_go=1;viewer_dispatch(viewer,&viewer->hint,w);viewer->human_go=0;
+    strcpy(viewer->hint.command,"hint");
+    if(w->failed || strncmp(w->text,"{\"ok\":true",10))return 0;
+    viewer->has_hint=0;return 1;
 }
 #endif

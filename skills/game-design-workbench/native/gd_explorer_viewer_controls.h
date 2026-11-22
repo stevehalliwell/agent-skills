@@ -15,6 +15,8 @@ static uint64_t viewer_form_hash(uint64_t hash,GD_ExplorerForm form,const void *
     hash=viewer_control_hash(hash,&present,sizeof(present));
     if (values) for (i=0;i<count;++i) {
         const char *value=(const char *)values+fields[i].offset;
+        /* Camera and inspector geometry do not change retained evidence scope. */
+        if(form==GD_FORM_PRESENTATION && (!strcmp(fields[i].name,"camera_pose") || !strncmp(fields[i].name,"inspector_",10)))continue;
         hash=viewer_control_hash(hash,value,fields[i].type==GD_CONTROL_TEXT ? strlen(value)+1:fields[i].capacity);
     }
     return hash;

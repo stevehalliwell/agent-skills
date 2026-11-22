@@ -3,6 +3,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 #include "gd_explorer_picker.h"
 #include <ctype.h>
 #include <math.h>
@@ -436,7 +437,9 @@ static void result_panel(GD_ExplorerContext *context) {
 #endif
 void gd_explorer_structure_controls(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerStructureForm *form; int i;
-    if (!gd_projection_name(pane->view) || !igCollapsingHeader_TreeNodeFlags("Built-in structural / similarity questions",0)) return;
+    if (!gd_projection_name(pane->view))return;
+    if((pane->structure_state && pane->structure_state->reveal_similarity_feature) || (context->sidebar && context->sidebar->reveal_form==GD_FORM_STRUCTURE+1))igSetNextItemOpen(true,ImGuiCond_Always);
+    if (!igCollapsingHeader_TreeNodeFlags("Built-in structural / similarity questions",0)) return;
     gd_explorer_structure_prepare(context);
     form=gd_explorer_form_pending(context,GD_FORM_STRUCTURE,1);
     if (!form) { igTextWrapped("Cannot allocate question inputs; other pane state retained."); return; }

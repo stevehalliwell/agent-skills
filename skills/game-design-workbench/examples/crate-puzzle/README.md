@@ -1,6 +1,6 @@
 # Crate-and-switch example
 
-67 records across 15 collections. Four provisional axes cover switch occupancy, exit state, energy quantity and ordered crate/switch occupancy context. All 12 interaction/mechanic records have readable `gd-rule` blocks with 16 named cases. Missing noun inventories, geometry, input/timing and outcomes remain unspecified; migration does not create a playable model. Includes six skill atoms, three crate/push cases, one executed timing investigation, one unexecuted planning investigation, and a working concept. No project-local workbench runtime or nested copy of tutorial data is required.
+67 records across 15 collections. Four provisional axes cover switch occupancy, exit state, energy quantity and ordered crate/switch occupancy context. All 12 interaction/mechanic records have readable `gd-rule` blocks with 16 named cases. The model leaves some noun inventories, geometry, input timing, and outcomes unspecified. Includes six skill atoms, three crate/push cases, one executed timing investigation, one unexecuted planning investigation, and a working concept. No project-local workbench runtime or nested copy of tutorial data is required.
 
 ## Game concept
 
@@ -58,6 +58,4 @@ Workbench parts used:
 
 All experiment-specific material lives here: owning record under `game-design/experiments/`, code/input/recipe under `experiments/route-cost/`, and retained run evidence under [game-design-results/route-cost/](game-design-results/route-cost/). Shared workbench helpers remain outside the example; they are not a second copy of its data.
 
-## Saved history
-
-Earlier baselines and dated reviews remain unchanged/historical. Their hashes and CLI-era metadata do not require retaining old tooling. For current review, follow [review workflow](../../workflows/review.md); record commit plus relevant draft paths, and explicitly select an actual committed intention only when comparing intent. Do not relabel old evidence as freshly run.
+For a new design review, follow the [review workflow](../../workflows/review.md). Treat the saved route-cost run as evidence for its recorded inputs, not a fresh run.

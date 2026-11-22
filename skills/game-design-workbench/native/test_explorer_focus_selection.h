@@ -16,7 +16,8 @@ static int focus_selection_checks(GD_ExplorerContext *base,GD_ExplorerPane *pane
             if(v==GD_EXPLORER_RESOURCES){p->resource_only_witness=false;for(i=0;i<4;++i)p->mda.roles[i]=true;*p->filter=0;}
             memcpy(before,p->layout,sizeof(*before));selection=p->selection;gd_explorer_presentation_read(&c,&inputs);
             FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->focus_result.selected>0 && p->camera.zoom>=1 && p->camera.zoom<=1.2f);
-            gd_explorer_presentation_read(&c,&after);FOCUS_CHECK(!memcmp(&inputs,&after,sizeof(inputs)) && !memcmp(before,p->layout,sizeof(*before)) && !memcmp(&selection,&p->selection,sizeof(selection)) && *calls==allocation_count);
+            gd_explorer_presentation_read(&c,&after);memcpy(after.camera_pose,inputs.camera_pose,sizeof(after.camera_pose));
+            FOCUS_CHECK(!memcmp(&inputs,&after,sizeof(inputs)) && !memcmp(before,p->layout,sizeof(*before)) && !memcmp(&selection,&p->selection,sizeof(selection)) && *calls==allocation_count);
             if(v!=GD_EXPLORER_MDA && focus_source_record(&c,0)>=0){p->selection=(GD_ExplorerSelection){-1,-1,0,focus_source_record(&c,0),-1};FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->focus_result.selected>0 && !memcmp(before,p->layout,sizeof(*before)));}
             if(v==GD_EXPLORER_MATRIX){const GD_Model *model=gd_explorer_model(c.project,GD_EXPLORER_MATRIX);for(i=0;i<model->cell_count && !model->cells[i].pair_count;++i){}if(i<model->cell_count){p->selection=(GD_ExplorerSelection){-1,-1,0,model->pairs[model->cells[i].first_pair].interaction,-1};FOCUS_CHECK(gd_explorer_focus_selection(&c) && p->focus_result.selected>0 && !memcmp(before,p->layout,sizeof(*before)));}}
         }

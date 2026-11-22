@@ -6,6 +6,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 #include "gd_explorer_picker.h"
 #include <math.h>
 #include <stdarg.h>
@@ -17,9 +18,14 @@ static int sidebar_section(GD_Sidebar *sidebar,GD_SidebarSection section) {
     /* Skipped/minimized windows return false without changing their tree state. */
     if(igGetCurrentWindow()->SkipItems)return 0;
     igSetNextItemOpen(before,ImGuiCond_Always);
-    open=igCollapsingHeader_TreeNodeFlags(gd_sidebar_labels[section],0);
+    open=(igCollapsingHeader_TreeNodeFlags)(gd_sidebar_labels[section],0);
+    gd_inspector_survey_root(section,gd_sidebar_labels[section],open);
+    if(sidebar->reveal==(int)section+1){igSetScrollHereY(0.08f);sidebar->reveal=0;}
     if(igIsItemToggledOpen() && open!=before){if(open)sidebar->open|=bit;else sidebar->open&=~bit;gd_sidebar_save(sidebar);}
     return open;
+}
+static void inspector_form_anchor(const GD_Sidebar *sidebar,GD_ExplorerForm form) {
+    if(sidebar->reveal_form==(int)form+1)igSetScrollFromPosY_Float(igGetCursorPosY(),0.08f);
 }
 static int open_window(GD_NativeWindow *window,const char *title,GD_WindowVisibility visibility) {
     if(!gd_native_window_open(window,title,1500,940,1000,700,visibility))return 0;
@@ -988,7 +994,7 @@ static void inspector_splitter(int split,int height,float *preferred_width,int w
     gd_scene_line((GD_Point){split-4,12},(GD_Point){split-4,height-12},active ? 2:1,active ? muted:(GD_Color){65,78,95,255});
     if(igIsItemActive() && !gd_mouse_pressed(ImGuiMouseButton_Left) && igIsMousePosValid(NULL)){
         float delta=gd_mouse_delta().x;
-        if(delta)*preferred_width=fminf(fmaxf(310,width-split-delta),width-256);
+        if(delta)*preferred_width=inspector_bound_width(width,width-split-delta);
     }
     igEnd();igPopStyleVar(2);
 }
@@ -1001,7 +1007,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     ExplorerViewer viewer={0}; char ipc_error[256]="";
     int active=0,v,frame=0,result=0,stale=0,timed_seen=0,close_next=0;
     GD_NativeWindow window={0};GD_Sidebar sidebar;GD_ExplorerFind finds[GD_EXPLORER_VIEWS]={0};
-    float inspector_width=0;int inspector_open=1;
+    GD_ExplorerInspector inspector={.open=true};
     double next_check=0; char failure[GD_MAX_PATH+512]="",report_path[GD_MAX_PATH]="";
     const GD_Error *error=gd_explorer_error(project);
     if (!project || !project->available || error || (initial_view>=0 && (initial_view>=GD_EXPLORER_VIEWS || !(project->available&(1u<<initial_view))))) {
@@ -1027,15 +1033,25 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     if (initial_view>=0) active=initial_view;
     else while (!(project->available&(1u<<active))) ++active;
     if (output_path) snprintf(report_path,sizeof(report_path),"%s",output_path);
-    c.project=project; c.pane=&panes[active];c.panes=panes;c.active_view=&active;c.history=history;c.finds=finds;c.sidebar=&sidebar;
+    c.project=project; c.pane=&panes[active];c.panes=panes;c.active_view=&active;c.history=history;c.finds=finds;c.sidebar=&sidebar;c.inspector=&inspector;
     if (!open_window(&window,"Game Design Workbench - Explorer",GD_WINDOW_VISIBLE)) { gd_scene_error(diagnostic,"view.window",&window); result=2; goto cleanup; }
     gd_sidebar_init(&sidebar);
     viewer.context=&c; viewer.panes=panes; viewer.active=&active; viewer.stale=&stale; viewer.reload_generation=1;
     viewer.collections=collections; viewer.collection_count=count;
     viewer.server=gd_viewer_server_open(allocator,ipc_error,sizeof(ipc_error));
+    if(viewer.server){viewer.inspector_survey=allocator.allocate(allocator.context,sizeof(*viewer.inspector_survey));
+        if(viewer.inspector_survey)memset(viewer.inspector_survey,0,sizeof(*viewer.inspector_survey));}
     for (;;) {
         int ready=gd_scene_begin(&window),closing=window.close_requested,width=gd_scene_width(),height=gd_scene_height();
-        int split=inspector_open ? width-(int)fminf(fmaxf(310,inspector_width>0 ? inspector_width:width*0.4f),width-256):width;
+        int split;
+        inspector.viewport_width=width;
+        if(panes[active].reveal_case && panes[active].reveal_case_edge==panes[active].selection.cell){
+            inspector.open=true;sidebar.open|=1u<<GD_SIDEBAR_SELECTION;
+        }
+        if(panes[active].structure_state && panes[active].structure_state->reveal_similarity_feature){inspector.open=true;sidebar.open|=1u<<GD_SIDEBAR_ANALYSIS;}
+        if(panes[active].chart_state && (panes[active].chart_state->reveal_proposal || panes[active].chart_state->reveal_activation)){inspector.open=true;sidebar.open|=1u<<GD_SIDEBAR_SELECTION;}
+        if(panes[active].query_state && panes[active].query_state->reveal_contributor){inspector.open=true;sidebar.open|=1u<<GD_SIDEBAR_SELECTION;}
+        split=width-inspector_pixels(&inspector);
         window.close_requested=0;
         int requested=-1,find_view=-1,refresh=0,selected,relationship_root=-1,undo=0,redo=0,navigation=0,reset_all=0;
         char find_reference[260]="";int find_shortcut,find_was_open,popup_was_open,text_was_active;
@@ -1064,7 +1080,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             for (v=0;v<GD_EXPLORER_FAMILIES;++v) if (project->models[v] && gd_sources_changed(project->models[v])) stale=1;
             next_check=gd_native_window_seconds(&window)+1;
         }
-        gd_scene_clip(14,10,split-(inspector_open ? 28:155),68);
+        gd_scene_clip(14,10,split-(inspector.open ? 28:155),68);
         gd_scene_text(gd_explorer_similarity_active(&c) ? "Similarity":gd_explorer_view_names[active],20,12,26,foreground);
         if (gd_explorer_similarity_active(&c)) gd_scene_text(gd_scene_format("%s | %d entries",p->structure_state->result->options.projection,p->structure_state->result->similarity->entry_count),20,42,16,muted);
         else if(p->view==GD_EXPLORER_STATES){
@@ -1079,25 +1095,29 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         find_shortcut=find_key(gd_key_pressed(ImGuiKey_F),igIsKeyDown_Nil(ImGuiKey_LeftCtrl)||igIsKeyDown_Nil(ImGuiKey_RightCtrl),igIsKeyDown_Nil(ImGuiKey_LeftShift)||igIsKeyDown_Nil(ImGuiKey_RightShift)||igIsKeyDown_Nil(ImGuiKey_LeftAlt)||igIsKeyDown_Nil(ImGuiKey_RightAlt)||igIsKeyDown_Nil(ImGuiKey_LeftSuper)||igIsKeyDown_Nil(ImGuiKey_RightSuper),igGetIO_Nil()->WantCaptureKeyboard);
         if(find_shortcut==GD_FIND_OPEN){
             if(gd_explorer_rank_pending(project,panes) || igIsMouseDown_Nil(ImGuiMouseButton_Left) || igIsMouseDown_Nil(ImGuiMouseButton_Right) || igIsMouseDown_Nil(ImGuiMouseButton_Middle) || igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel))snprintf(failure,sizeof(failure),"Finish active rank edit, drag or dialog before Find; no input discarded.");
-            else{finds[active].open=true;finds[active].focus=true;inspector_open=1;}
+            else{finds[active].open=true;finds[active].focus=true;inspector.open=true;}
         }
         if(!igGetIO_Nil()->WantTextInput)history_observe(&c);
         find_was_open=finds[active].open;
         popup_was_open=igIsPopupOpen_Str(NULL,ImGuiPopupFlags_AnyPopupId|ImGuiPopupFlags_AnyPopupLevel);
         text_was_active=igIsAnyItemActive() || igGetIO_Nil()->WantTextInput;
+        gd_inspector_survey_begin(viewer.inspector_survey,active);
         if(split==width){
             igSetNextWindowPos((ImVec2_c){width-12,12},ImGuiCond_Always,(ImVec2_c){1,0});
             igBegin("##show inspector",NULL,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoMove|
                 ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing);
-            if(igButton(*failure || *ipc_error || gd_viewer_server_error(viewer.server) ? "Show inspector (!)##show":"Show inspector##show",(ImVec2_c){0,0}))inspector_open=1;
+            if(igButton(*failure || *ipc_error || gd_viewer_server_error(viewer.server) ? "Show inspector (!)##show":"Show inspector##show",(ImVec2_c){0,0}))inspector.open=true;
             if(igIsItemHovered(0) && *failure)igSetTooltip("%s",failure);
             igEnd();
         }else{
-        inspector_splitter(split,height,&inspector_width,width);
+        inspector_splitter(split,height,&inspector.preferred_width,width);
         igSetNextWindowPos((ImVec2_c){(float)split,12},ImGuiCond_Always,(ImVec2_c){0,0});
         igSetNextWindowSize((ImVec2_c){(float)(width-split-12),(float)(height-24)},ImGuiCond_Always);
-        igBegin("Inspector",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
-        if(igSmallButton("Hide inspector"))inspector_open=0;
+        if(inspector.scroll_pending){igSetNextWindowScroll((ImVec2_c){-1,(float)inspector.scroll});inspector.scroll_pending=false;}
+        igBegin("Inspector",NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing);
+        inspector.scroll=(int)fminf(10000000,fmaxf(0,igGetScrollY()));
+        inspector.scroll_max=(int)fminf(10000000,fmaxf(0,igGetScrollMaxY()));
+        if(igSmallButton("Hide inspector"))inspector.open=false;
         if (*ipc_error) igTextWrapped("%s",ipc_error);
         if (gd_viewer_server_error(viewer.server)) igTextWrapped("%s",gd_viewer_server_error(viewer.server));
         if(gd_explorer_action_request(&c,GD_ACTION_BACK))navigation=-1;igSameLine(0,8);
@@ -1150,13 +1170,13 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         selected=analyze(&c); /* Required independently of sidebar visibility. */
         if(sidebar_section(&sidebar,GD_SIDEBAR_ANALYSIS)){
         gd_explorer_action_button(&c,GD_ACTION_INPUTS_RESET);
-        if(p->view==GD_EXPLORER_STATES)gd_explorer_chart_controls(&c);
+        if(p->view==GD_EXPLORER_STATES){inspector_form_anchor(&sidebar,GD_FORM_CHART);gd_explorer_chart_controls(&c);}
         if(p->view!=GD_EXPLORER_STATES && !gd_explorer_similarity_active(&c))scope_controls(&c);
-        if (p->view==GD_EXPLORER_RESOURCES) { gd_explorer_resource_controls(&c); gd_explorer_rules_controls(&c); }
-        if (query_view(p->view)) gd_explorer_query_controls(&c);
+        if (p->view==GD_EXPLORER_RESOURCES) {inspector_form_anchor(&sidebar,GD_FORM_RESOURCE);gd_explorer_resource_controls(&c);inspector_form_anchor(&sidebar,GD_FORM_RULES);gd_explorer_rules_controls(&c);}
+        if (query_view(p->view)){inspector_form_anchor(&sidebar,GD_FORM_QUERY);gd_explorer_query_controls(&c);}
         if (!gd_explorer_similarity_active(&c) && !grid_view(p) && p->distance_focus_enabled && distance_focus_node(p,selected)<0)
             igTextWrapped("No distance focus applied: double-click a visible node. Source-only and edge inspection have no focus anchor.");
-        if(p->view!=GD_EXPLORER_STATES)gd_explorer_structure_controls(&c);
+        if(p->view!=GD_EXPLORER_STATES){inspector_form_anchor(&sidebar,GD_FORM_STRUCTURE);gd_explorer_structure_controls(&c);}
         if (p->view!=GD_EXPLORER_STATES && p->view!=GD_EXPLORER_NOUNS && !gd_explorer_similarity_active(&c) && !grid_view(p) && !query_view(p->view) && igCollapsingHeader_TreeNodeFlags("Analysis layers",0)) analysis_controls(&c,selected);
         if (overview_only(p) && overview_available(&c) && igCollapsingHeader_TreeNodeFlags("Adjacency / incidence overview",0)) overview_controls(&c);
         if (p->view==GD_EXPLORER_SKILLS && igCollapsingHeader_TreeNodeFlags("Skill opportunities / knowledge",0)) { gd_explorer_graph_unlocks(&c); viewer_control_token(&viewer,&c,GD_FORM_PRESENTATION,viewer.knowledge_token,sizeof(viewer.knowledge_token)); }
@@ -1182,7 +1202,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             igEndChild();
         }
         if(sidebar_section(&sidebar,GD_SIDEBAR_SELECTION)){
-            if(p->view!=GD_EXPLORER_STATES)gd_explorer_rules_selection_controls(&c);
+            if(p->view!=GD_EXPLORER_STATES){if(p->view!=GD_EXPLORER_RESOURCES)inspector_form_anchor(&sidebar,GD_FORM_RULES);gd_explorer_rules_selection_controls(&c);}
             if(p->view==GD_EXPLORER_STATES)gd_explorer_chart_details(&c);
             else if(p->view==GD_EXPLORER_NOUNS) noun_grid_details(&c);
             else if (is_graph(p->view)) { if (!(grid_view(p) && grid_blank_details(&c)) && gd_explorer_graph_details(&c)) gd_explorer_edited(project); }
@@ -1217,6 +1237,12 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
         }
         igEnd();
         }
+        p->reveal_case=p->reveal_participant=0;
+        if(p->structure_state)p->structure_state->reveal_similarity_feature=p->structure_state->reveal_similarity_member=0;
+        if(p->chart_state)p->chart_state->reveal_proposal=p->chart_state->reveal_activation=0;
+        if(p->query_state)p->query_state->reveal_contributor=p->query_state->reveal_contributor_step=0;
+        sidebar.reveal=sidebar.reveal_form=0;
+        gd_inspector_survey_end();viewer_inspector_seal(&viewer);
         viewer_feedback(&viewer);
         {
             GD_Point mouse=gd_mouse_position();
@@ -1351,13 +1377,9 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
             }
             c.pane=&panes[active];
         }
-        if (viewer.has_hint && !strcmp(viewer.hint.command,"navigate") && !viewer_interacting()) {
+        if(viewer.has_hint && viewer.hint_go && !viewer_interacting()){
             char reply[1024]; GD_ViewerWriter writer={reply,0,sizeof(reply),0};
-            if (!viewer_hint_current(&viewer)) gd_viewer_error(&writer,"viewer.stale_hint","Exact-node hint predates source reload or draft change; request a fresh hint");
-            else { viewer.human_go=1; viewer_dispatch(&viewer,&viewer.hint,&writer); viewer.human_go=0; }
-            if (!strncmp(reply,"{\"ok\":true",10)) viewer.has_hint=0;
-            else snprintf(failure,sizeof(failure),"Agent hint not opened: %s",reply);
-            snprintf(viewer.hint.command,sizeof(viewer.hint.command),"hint");
+            if(!viewer_open_hint(&viewer,&writer))snprintf(failure,sizeof(failure),"Agent hint not opened: %s",reply);
         }
         if(reset_all && gd_explorer_action_run(&c,GD_ACTION_RESET_ALL)){render->valid=0;viewer.has_hint=viewer.hint_pending=0;*viewer.layer_token=*viewer.knowledge_token=0;*failure=0;}
         gd_viewer_server_poll(viewer.server,viewer_dispatch,&viewer);
@@ -1368,6 +1390,7 @@ int gd_explorer_view(GD_Model *diagnostic, const GD_Collection *collections, int
     gd_scene_close(&window);
 cleanup:
     gd_viewer_server_close(viewer.server);
+    if(viewer.inspector_survey)allocator.release(allocator.context,viewer.inspector_survey);
     if (panes) {
         for (v=0;v<GD_EXPLORER_VIEWS;++v) {
             gd_diagnostics_clear(&panes[v].diagnostics);

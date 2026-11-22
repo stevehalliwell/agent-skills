@@ -1,6 +1,6 @@
 # State predicates and unknown truth
 
-Review 01 slice. Shared C99 compiles participant `requires` and case-local `skip_if` into derived Boolean programs. Raw body text stays authoritative. No JSON expression-tree authoring, gameplay runtime or source writes.
+Shared C99 compiles participant `requires` and case-local `skip_if` into derived Boolean programs. Raw body text stays authoritative. No JSON expression-tree authoring, gameplay runtime or source writes.
 
 ## Source
 
@@ -34,7 +34,7 @@ Each participant keeps raw `requires`, `skip_if`, `other_axes` and field lines, 
 - Program tokens: `op` (`state`, `any`, `not`, `and`, `or`, `compare`, `control`), original `text`, byte `offset` within raw field value. State operands also retain canonical target/state and resolution. Operators never mutate actors.
 - `other_axes_mode`: `unspecified`, `any`, `invalid`. Preserve omitted versus authored scope without representing omission as false.
 
-Coverage adds `condition_count`, `condition_token_count`, `condition_bindings_complete`. Readiness covers authored supported predicates and `other_axes` declarations in retained cases only. It does not cover absent rules, unspecified other dimensions, context, reachability, effects, composition or complete migration. Zero authored conditions does not imply an unrestricted design.
+Coverage adds `condition_count`, `condition_token_count`, `condition_bindings_complete`. Readiness covers authored supported predicates and `other_axes` declarations in retained cases only. It does not cover absent rules, unspecified other dimensions, context, reachability, effects or composition. Zero authored conditions does not imply an unrestricted design.
 
 Ambiguous names, closed-missing values, incompatible types, malformed logic and limits produce sourced errors. Open/incomplete names remain undetermined with informational findings. Unresolved numeric inputs remain unknown, not false. Malformed/limited numeric syntax rolls back its entire Boolean field. Invalid/limited fields return no valid-looking partial program; earlier complete fields stay inspectable.
 

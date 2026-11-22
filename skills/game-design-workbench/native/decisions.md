@@ -51,7 +51,7 @@ gd query --question decision-assessments --projection challenges \
   --demand dexterity --intent undecided --json
 ```
 
-Require exactly one explicit Challenge collection binding. Dedicated `gd_load_challenges` shares source scan/identity/remap code; legacy `gd_load`, graph and learning-query role requirements stay unchanged. Optional `--demand` and `--intent` each accept one value; repeats fail. Do not accept unrelated rule, graph, scenario, control or display parameters. Other query families reject these selectors. All supplied Challenge statuses remain included and labelled; no hidden accepted-only filter.
+Require exactly one explicit Challenge collection binding. Optional `--demand` and `--intent` each accept one value; repeats fail. Do not accept unrelated rule, graph, scenario, control or display parameters. Other query families reject these selectors. All supplied Challenge statuses remain included and labelled; no hidden accepted-only filter.
 
 JSON/text selection follows normal CLI conventions: noninteractive/GD_AGENT/CI defaults JSON; `--format` overrides. stdout is result data; stderr is diagnostics. `--fields summary,assessments` selects data members only and requires JSON; parameters, coverage and errors remain.
 

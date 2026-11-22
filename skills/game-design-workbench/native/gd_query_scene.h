@@ -60,6 +60,8 @@ int gd_query_scene_place(GD_QueryScene *scene,GD_LayoutMode mode,int workspace,f
 int gd_query_scene_workspace(GD_QueryScene *scene,int enabled,float aspect);
 int gd_query_scene_islands(GD_QueryScene *scene,int enabled);
 void gd_query_scene_step(GD_QueryScene *scene,int held_node);
+int gd_query_scene_movable(const GD_QueryScene *scene);
+void gd_query_scene_move(GD_QueryScene *scene,int node,float x,float y);
 void gd_query_scene_drag(GD_QueryScene *scene,int node,float x,float y);
 void gd_query_scene_destroy(GD_QueryScene *scene);
 /* Snapshot record for source inspection/Find; -1 if no resolved source. */

@@ -13,9 +13,28 @@
 typedef struct { GD_ExplorerControl control; unsigned views; size_t source; int integer_bool; } PresentationField;
 #define PF(name,label,type,choices,keys,views,member,integer_bool) {{#name,label,choices,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,keys},views,offsetof(GD_ExplorerPane,member),integer_bool}
 #define VF(name,label,type,views) {{#name,label,NULL,type,offsetof(GD_ExplorerPresentation,name),sizeof(((GD_ExplorerPresentation *)0)->name),0,NULL},views,(size_t)-1,0}
+#define SF(name,label,section) {{"inspector_" #name,label,NULL,GD_CONTROL_BOOL,offsetof(GD_ExplorerPresentation,inspector_sections[section]),sizeof(bool),0,NULL},PV_ALL,(size_t)-1,0}
 static const PresentationField presentation_fields[]={
  {{"state_chart_mode","State chart mode","Statechart\0Grid\0",GD_CONTROL_INT,offsetof(GD_ExplorerPresentation,state_chart_mode),sizeof(int),0,"statechart\0grid\0"},1u<<GD_EXPLORER_STATES,(size_t)-1,0},
  VF(layout,"Layout",GD_CONTROL_INT,PV_ALL&~PV_RESOURCE),
+ VF(camera_pose,"Canvas camera (world x,y,zoom)",GD_CONTROL_TEXT,PV_ALL),
+ VF(inspector_open,"Show inspector",GD_CONTROL_BOOL,PV_ALL),
+ VF(inspector_width,"Preferred inspector width (0 = automatic)",GD_CONTROL_INT,PV_ALL),
+ VF(inspector_pixels,"Effective inspector width",GD_CONTROL_INT,PV_ALL),
+ VF(inspector_scroll,"Inspector vertical scroll pixels",GD_CONTROL_INT,PV_ALL),
+ VF(inspector_scroll_max,"Inspector scroll limit",GD_CONTROL_INT,PV_ALL),
+ VF(chart_hypothesis_page,"Chart hypothesis evidence page",GD_CONTROL_INT,1u<<GD_EXPLORER_STATES),
+ VF(chart_transition_page,"Chart transition label page",GD_CONTROL_INT,1u<<GD_EXPLORER_STATES),
+ VF(chart_proposal_page,"Chart proposal page",GD_CONTROL_INT,1u<<GD_EXPLORER_STATES),
+ VF(chart_activation_page,"Chart mapped activation page",GD_CONTROL_INT,1u<<GD_EXPLORER_STATES),
+ SF(view,"Fold: View & layout",GD_SIDEBAR_VIEW),
+ SF(find,"Fold: Find selected in another view",GD_SIDEBAR_FIND),
+ SF(filters,"Fold: Canvas Display",GD_SIDEBAR_FILTERS),
+ SF(analysis,"Fold: Analysis",GD_SIDEBAR_ANALYSIS),
+ SF(browse,"Fold: Browse shown nodes",GD_SIDEBAR_BROWSE),
+ SF(selection,"Fold: Selection & evidence",GD_SIDEBAR_SELECTION),
+ SF(sources,"Fold: Sources & changes",GD_SIDEBAR_SOURCES),
+ SF(diagnostics,"Fold: Diagnostics",GD_SIDEBAR_DIAGNOSTICS),
  PF(noun_row,"Row noun",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,grid.noun,0),
  PF(noun_column,"Column noun",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,grid.verb,0),
  PF(noun_case_page,"Case evidence page",GD_CONTROL_INT,NULL,NULL,1u<<GD_EXPLORER_NOUNS,noun_case_page,0),
@@ -77,6 +96,7 @@ static const PresentationField presentation_fields[]={
 };
 #undef PF
 #undef VF
+#undef SF
 /* Controls are contiguous only in their public snapshot, not in this table. */
 const GD_ExplorerControl *gd_explorer_presentation_fields(int *count) {
     /* Copied once into static immutable-after-init metadata on GUI owner thread. */
@@ -95,6 +115,17 @@ static int presentation_cache(const GD_ExplorerContext *c) {
     for(i=0;i<a->edge_count;++i)if(a->edges[i].a!=layout->edges[i].a || a->edges[i].b!=layout->edges[i].b || a->edges[i].key!=layout->edges[i].key || a->edges[i].relation!=layout->edges[i].relation)return 0;
     return 1;
 }
+static float inspector_bound_width(int width,float preferred) {
+    return fmaxf(0,fminf(fmaxf(310,preferred),width-256));
+}
+static int inspector_pixels(const GD_ExplorerInspector *inspector) {
+    int width=inspector->viewport_width;
+    return inspector->open ? (int)inspector_bound_width(width,inspector->preferred_width>0 ? inspector->preferred_width:width*0.4f):0;
+}
+static const GD_StateChartScenario *presentation_chart_scenario(const GD_ExplorerContext *c) {
+    const GD_ExplorerChartState *s=c->pane->chart_state;
+    return c->pane->view==GD_EXPLORER_STATES && s && s->query && s->scenario>=0 && s->scenario<s->query->state_chart->scenario_count ? &s->query->state_chart->scenarios[s->scenario]:NULL;
+}
 void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresentation *out) {
     const GD_ExplorerPane *p=c->pane; int i,record; memset(out,0,sizeof(*out));
     for(i=0;i<(int)(sizeof(presentation_fields)/sizeof(*presentation_fields));++i) {
@@ -104,6 +135,11 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
     }
     out->layout=p->view==GD_EXPLORER_ACTORS && p->query_state && gd_query_scene_overview_mode(p->query_state->scene)==GD_ACTOR_INTERACTIONS ? 1:p->view==GD_EXPLORER_SKILLS ? p->layout_choice==GD_LAYOUT_FORCE ? 2:p->rank:
         p->view==GD_EXPLORER_CHALLENGES || p->view==GD_EXPLORER_RELATIONSHIPS || query_view(p->view) ? p->layout_choice==GD_LAYOUT_FORCE:p->layout_choice;
+    {const GD_Camera *camera=gd_explorer_similarity_active(c) ? &p->structure_state->similarity_camera:&p->camera;
+     snprintf(out->camera_pose,sizeof(out->camera_pose),"%.9g,%.9g,%.9g",(double)camera->target.x,(double)camera->target.y,(double)camera->zoom);}
+    if(c->inspector){out->inspector_open=c->inspector->open;out->inspector_width=(int)c->inspector->preferred_width;out->inspector_pixels=inspector_pixels(c->inspector);out->inspector_scroll=c->inspector->scroll;out->inspector_scroll_max=c->inspector->scroll_max;}
+    if(p->chart_state){out->chart_hypothesis_page=p->chart_state->page;out->chart_transition_page=p->chart_state->arrow_page;out->chart_proposal_page=p->chart_state->proposal_page;out->chart_activation_page=p->chart_state->activation_page;}
+    if(c->sidebar)for(i=0;i<GD_SIDEBAR_COUNT;++i)out->inspector_sections[i]=(c->sidebar->open&(1u<<i))!=0;
     if(p->view!=GD_EXPLORER_RESOURCES)memcpy(out->filter,p->list_search,sizeof(out->filter));
     out->state_chart_mode=p->chart_state ? p->chart_state->mode:0;
     out->distance_focus=p->distance_focus_enabled; out->focus_root=p->focus.root;
@@ -122,7 +158,22 @@ void gd_explorer_presentation_read(const GD_ExplorerContext *c,GD_ExplorerPresen
 int gd_explorer_presentation_editable(const GD_ExplorerContext *c,const char *name) {
     const PresentationField *field=presentation_field(name); const GD_ExplorerPane *p=c->pane;
     if(!field || !(field->views&(1u<<p->view))) return 0;
-    if(p->view==GD_EXPLORER_STATES)return p->prepared && p->chart_state && !strcmp(name,"state_chart_mode");
+    if(!strncmp(name,"inspector_",10)){
+        if(!strcmp(name,"inspector_pixels") || !strcmp(name,"inspector_scroll_max"))return 0;
+        if(!strcmp(name,"inspector_scroll"))return c->inspector && c->inspector->open;
+        if(!strcmp(name,"inspector_open"))return c->inspector!=NULL;
+        if(!strcmp(name,"inspector_width"))return c->inspector && c->inspector->viewport_width>=566;
+        return c->sidebar!=NULL;
+    }
+    if(!strcmp(name,"camera_pose"))return p->prepared;
+    if(p->view==GD_EXPLORER_STATES){
+        const GD_ExplorerChartState *s=p->chart_state;
+        if(!p->prepared || !s)return 0;
+        if(!strcmp(name,"state_chart_mode"))return 1;
+        if(!strcmp(name,"chart_hypothesis_page"))return s->query!=NULL;
+        if(!strcmp(name,"chart_transition_page"))return s->query && !s->mode;
+        return (!strcmp(name,"chart_proposal_page") || !strcmp(name,"chart_activation_page")) && presentation_chart_scenario(c);
+    }
     if(!strncmp(name,"overview_",9))return overview_available(c);
     if(p->view==GD_EXPLORER_NOUNS && !strcmp(name,"paused"))return p->prepared && !grid_view(p);
     if(!strcmp(name,"list_search") || !strcmp(name,"filter") || !strcmp(name,"paused") || !strcmp(name,"focus_auto_fit")) return 1;
@@ -288,8 +339,20 @@ failed:
 }
 int gd_explorer_presentation_maximum(const GD_ExplorerContext *c,const char *name) {
     const GD_ExplorerPane *p=c->pane;int total=-1,size=GD_EVIDENCE_PAGE_ROWS;
+    if(!strcmp(name,"inspector_scroll"))return c->inspector ? c->inspector->scroll_max:0;
+    if(!strcmp(name,"inspector_width"))return c->inspector ? (int)inspector_bound_width(c->inspector->viewport_width,(float)c->inspector->viewport_width):0;
     if(!strcmp(name,"overview_row") || !strcmp(name,"overview_column"))return GD_OVERVIEW_BINS-1;
-    if(!strcmp(name,"noun_case_page"))total=c->project->noun_grid && p->selection.cell>=0 && p->selection.cell<c->project->noun_grid->pair_count ? c->project->noun_grid->pairs[p->selection.cell].count:0;
+    if(!strncmp(name,"chart_",6)){
+        const GD_ExplorerChartState *s=p->chart_state;const GD_StateChartScenario *scenario=presentation_chart_scenario(c);int i;
+        total=0;
+        if(!strcmp(name,"chart_proposal_page"))total=scenario ? scenario->write_count:0;
+        else if(!strcmp(name,"chart_activation_page"))total=scenario ? scenario->activation_count:0;
+        else if(s && s->query){
+            if(!strcmp(name,"chart_transition_page")){size=GD_CHART_ARROWS_PER_PAGE;for(i=0;i<s->edge_count;++i)total+=gd_explorer_chart_matches(s,s->edge_scenarios[i]);}
+            else for(i=0;i<s->query->state_chart->scenario_count;++i)total+=gd_explorer_chart_matches(s,i);
+        }
+    }
+    else if(!strcmp(name,"noun_case_page"))total=c->project->noun_grid && p->selection.cell>=0 && p->selection.cell<c->project->noun_grid->pair_count ? c->project->noun_grid->pairs[p->selection.cell].count:0;
     else if(!strcmp(name,"actor_case_page"))total=gd_explorer_query_case_count(c,p->selection.cell);
     else if(!strcmp(name,"contributor_page"))total=p->query_state && p->query_state->selected ? p->query_state->selected->count:0;
     else if(!strcmp(name,"rules_page"))total=gd_explorer_rules_row_count(p->rule_state);
@@ -303,6 +366,26 @@ int gd_explorer_presentation_maximum(const GD_ExplorerContext *c,const char *nam
     }
     if(total<0)return 4096;
     {GD_EvidencePage page=gd_evidence_page(total,size,0);return page.pages ? page.pages-1:0;}
+}
+static int presentation_coordinates(const char *value,float *fields,int count) {
+    int i;
+    /* Keep transformed coordinates inside renderer integer ranges. */
+    for(i=0;i<count;++i){
+        char *end;errno=0;fields[i]=strtof(value,&end);
+        if(end==value || errno || !isfinite(fields[i]) || *end!=(i+1<count ? ',':'\0'))return 0;
+        if(i+1<count)value=end+1;
+    }
+    return fabsf(fields[0])<=1000000 && fabsf(fields[1])<=1000000;
+}
+static int presentation_camera_set(GD_ExplorerContext *c,const char *value) {
+    GD_ExplorerPane *p=c->pane;int similarity=gd_explorer_similarity_active(c);
+    GD_Camera *camera=similarity ? &p->structure_state->similarity_camera:&p->camera;
+    float fields[3];
+    if(!presentation_coordinates(value,fields,3) || fields[2]<0.00001f || fields[2]>4)return 0;
+    camera->target=(GD_Point){fields[0],fields[1]};camera->zoom=fields[2];
+    if(similarity){p->structure_state->similarity_camera_ready=true;p->structure_state->similarity_fit=false;}
+    else{p->fit=0;p->focus_camera_override=true;}
+    return 1;
 }
 int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const char *value,char *message,size_t capacity) {
     const PresentationField *entry=presentation_field(name); const GD_ExplorerControl *field=entry ? &entry->control:NULL; GD_ExplorerPresentation next; GD_ExplorerPane *p=c->pane;
@@ -321,10 +404,31 @@ int gd_explorer_presentation_set(GD_ExplorerContext *c,const char *name,const ch
         *(int *)slot=(int)number;
     }
     error="Cannot apply presentation candidate; last good state retained";
-    if(!strcmp(name,"layout") || !strcmp(name,"sort") || !strcmp(name,"direction")) {
+    if(!strcmp(name,"inspector_open"))c->inspector->open=next.inspector_open;
+    else if(!strcmp(name,"inspector_scroll")){c->inspector->scroll=next.inspector_scroll;c->inspector->scroll_pending=true;if(c->sidebar)c->sidebar->reveal=c->sidebar->reveal_form=0;}
+    else if(!strcmp(name,"inspector_width")){
+        error="Inspector width must be 0 (automatic) or at least 310 pixels within the current window";
+        if(next.inspector_width && next.inspector_width<310)goto failed;
+        c->inspector->preferred_width=(float)next.inspector_width;
+    }
+    else if(!strncmp(name,"inspector_",10)){
+        unsigned section=(unsigned)((field->offset-offsetof(GD_ExplorerPresentation,inspector_sections))/sizeof(bool));
+        if(section>=GD_SIDEBAR_COUNT)goto failed;
+        if(next.inspector_sections[section])c->sidebar->open|=1u<<section;
+        else c->sidebar->open&=~(1u<<section);
+    }
+    else if(!strcmp(name,"camera_pose")) {
+        error="Camera requires finite x,y,zoom; x/y within +/-1000000, zoom 0.00001 to 4";
+        if(!presentation_camera_set(c,next.camera_pose))goto failed;
+    }
+    else if(!strcmp(name,"layout") || !strcmp(name,"sort") || !strcmp(name,"direction")) {
         if(!presentation_rearrange(c,&next,0)) goto failed;
         if(!strcmp(name,"layout") && free_graph(p)) p->paused=false;
     }
+    else if(!strcmp(name,"chart_hypothesis_page"))p->chart_state->page=next.chart_hypothesis_page;
+    else if(!strcmp(name,"chart_transition_page"))p->chart_state->arrow_page=next.chart_transition_page;
+    else if(!strcmp(name,"chart_proposal_page"))p->chart_state->proposal_page=next.chart_proposal_page;
+    else if(!strcmp(name,"chart_activation_page"))p->chart_state->activation_page=next.chart_activation_page;
     else if(!strcmp(name,"state_chart_mode")){
         GD_ExplorerChartState *state=p->chart_state;
         if(state->mode!=next.state_chart_mode){

@@ -10,6 +10,3 @@ status: "rejected"
 
 ## Disposition and rationale
 Rejected to retain irreversible-push planning. Surface this reason before suggesting pulling again. Current pushing rule owns unavailable-pulling fact.
-
-## Migration provenance
-Former decisions/no-pulling; record_kind proposal; alternative_group crate-actions; related_decisions []; subjects [mechanics/crate-pushing].

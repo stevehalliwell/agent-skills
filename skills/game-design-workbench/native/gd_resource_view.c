@@ -568,6 +568,7 @@ int gd_resource_view(GD_Model *model, GD_ResourceGraph *graph, int frames, const
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 int gd_explorer_resource_prepare(GD_ExplorerContext *context) {
     return resource_layout(context->project->resources,context->pane->layout);
 }

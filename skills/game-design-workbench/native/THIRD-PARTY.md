@@ -30,7 +30,7 @@
 - cimgui/ImGui updated from existing local pinned Git objects; no downloads or prebuilt Attendant DLL imported. [Pins, C99 header adaptation and ABI profile](vendor/cimgui/PROVENANCE.md).
 - cimgui pin: `2a6a93fccd10f275ee9206167dc9698f6f00fac1`; Dear ImGui pin: `c1aaac65e896a45f81f47a4d68f9959e0f86c859` (1.93.0 / 19300). MIT licenses: `vendor/cimgui/LICENSE`, `vendor/cimgui/imgui/LICENSE.txt`. Retained upstream Win32/D3D11 and GLFW/OpenGL3 backend sources share ImGui license.
 - `build-native-ui.ps1` and `build-native-ui.sh` build matching dependency libraries with Zig/C++; application/window owner stays C99. `IMGUI_DISABLE_OBSOLETE_FUNCTIONS` is mandatory across dependency translation units.
-- Bundled scalable ImGui font; no external font/icon assets. Headless computation never links graphics. Raylib and rlImGui are no longer used or vendored.
+- Bundled scalable ImGui font; no external font/icon assets. Headless computation never links graphics.
 
 ## Local message pipes
 

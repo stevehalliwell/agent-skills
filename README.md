@@ -61,7 +61,7 @@ Former Attendant `.mjs` version: [`044a1eb5fae3f969ff484b4509e77c0110e5e541`](ht
 
 - [`brainstorming`](skills/brainstorming/) — Expands and refines ideas before choosing a direction.
 - [`competitor-analysis`](skills/competitor-analysis/) — Compares competitor positioning and offerings with evidence.
-- [`game-design-workbench`](skills/game-design-workbench/) — Models game designs in Markdown, explores rules and relationships with native CLI and graph views, and provides local framework guides and worked examples.
+- [`game-design-workbench`](skills/game-design-workbench/) — Game design, analysis, and exploration for existing, in-development, or imagined games. Record designs in Markdown and inspect rules, skills, routes, and resources through the CLI or desktop Explorer.
 - [`five-whys`](skills/five-whys/) — Leads evidence-aware, non-blaming root-cause analysis.
 - [`question-research`](skills/question-research/) — Builds retained, evidence-linked answers to focused questions.
 - [`persona`](skills/persona/) — Applies on-demand working perspectives, including an independent developer for explicitly delegated implementation and step commits; preserves task workflows and approval gates.

@@ -33,7 +33,7 @@ void gd_viewer_error(GD_ViewerWriter *w, const char *code, const char *message) 
     gd_viewer_write(w,"{\"ok\":false,\"code\":"); gd_viewer_quote(w,code);
     gd_viewer_write(w,",\"message\":"); gd_viewer_quote(w,message); gd_viewer_write(w,"}");
 }
-/* Flat protocol only. JSON escapes decode before duplicate/field/value checks. */
+/* Flat envelope except the bounded inspector patch. Decode JSON keys before duplicate checks. */
 typedef struct { const char *p,*end; } Reader;
 static void spaces(Reader *r) { while (r->p<r->end && (*r->p==' ' || *r->p=='\r' || *r->p=='\n' || *r->p=='\t')) ++r->p; }
 static int take(Reader *r, char c) { spaces(r); if (r->p==r->end || *r->p!=c) return 0; ++r->p; return 1; }
@@ -105,6 +105,56 @@ static int unsigned_value(Reader *r, unsigned maximum, unsigned *output) {
     if (r->p==start || (r->p-start>1 && *start=='0')) return 0;
     *output=value; return 1;
 }
+static int inspector_value(Reader *reader,GD_InspectorPatchKind kind,unsigned *value) {
+    size_t size;
+    if(kind!=GD_INSPECTOR_PATCH_OPEN && kind!=GD_INSPECTOR_PATCH_FOLD)return unsigned_value(reader,10000000,value);
+    spaces(reader);size=(size_t)(reader->end-reader->p);
+    if(size>=4 && !memcmp(reader->p,"true",4)){reader->p+=4;*value=1;return 1;}
+    if(size>=5 && !memcmp(reader->p,"false",5)){reader->p+=5;*value=0;return 1;}
+    return 0;
+}
+static int inspector_parse_item(Reader *reader,GD_InspectorPatch *patch,GD_InspectorPatchKind kind,const char *key) {
+    GD_InspectorPatchItem *item;int i;
+    if(patch->count>=GD_INSPECTOR_PATCH_ITEMS)return 0;
+    for(i=0;i<patch->count;++i)if(patch->items[i].kind==kind && !strcmp(patch->items[i].key,key))return 0;
+    item=&patch->items[patch->count];item->kind=kind;strcpy(item->key,key);
+    if(!inspector_value(reader,kind,&item->value))return 0;
+    ++patch->count;return 1;
+}
+static int inspector_read_patch(Reader *reader,GD_InspectorPatch *patch) {
+    Reader r=*reader;unsigned seen=0;char name[GD_INSPECTOR_PATCH_KEY];
+    patch->count=0;
+    if(!take(&r,'{'))return 0;
+    if(!take(&r,'}'))for(;;){
+        GD_InspectorPatchKind kind;
+        if(!string(&r,name,sizeof(name),0) || !take(&r,':'))return 0;
+        if(!strcmp(name,"open"))kind=GD_INSPECTOR_PATCH_OPEN;
+        else if(!strcmp(name,"width"))kind=GD_INSPECTOR_PATCH_WIDTH;
+        else if(!strcmp(name,"scroll"))kind=GD_INSPECTOR_PATCH_SCROLL;
+        else if(!strcmp(name,"folds"))kind=GD_INSPECTOR_PATCH_FOLD;
+        else if(!strcmp(name,"scrolls"))kind=GD_INSPECTOR_PATCH_CHILD;
+        else if(!strcmp(name,"pages"))kind=GD_INSPECTOR_PATCH_PAGE;
+        else return 0;
+        if(seen&(1u<<kind))return 0;
+        seen|=1u<<kind;
+        if(kind>=GD_INSPECTOR_PATCH_FOLD){
+            if(!take(&r,'{'))return 0;
+            if(!take(&r,'}'))for(;;){
+                if(!string(&r,name,sizeof(name),0) || !*name || !take(&r,':') || !inspector_parse_item(&r,patch,kind,name))return 0;
+                if(take(&r,'}'))break;
+                if(!take(&r,','))return 0;
+            }
+        }else if(!inspector_parse_item(&r,patch,kind,""))return 0;
+        if(take(&r,'}'))break;
+        if(!take(&r,','))return 0;
+    }
+    *reader=r;return 1;
+}
+int gd_viewer_inspector_patch_parse(const char *json,GD_InspectorPatch *patch) {
+    Reader r={json,json+strlen(json)};
+    if((size_t)(r.end-r.p)>GD_VIEWER_REQUEST_LIMIT || !inspector_read_patch(&r,patch))return 0;
+    spaces(&r);return r.p==r.end;
+}
 static int fields_valid(const char *fields) {
     const char *p=fields; unsigned seen=0;
     const char *const names[]={"selection","snapshots","panes","agent_hint","source"};
@@ -142,12 +192,19 @@ int gd_viewer_parse(const char *text, size_t size, GD_ViewerRequest *request) {
         else if (!strcmp(key,"control")) { bit=2048; target=request->control; capacity=sizeof(request->control); }
         else if (!strcmp(key,"value")) { bit=4096; target=request->value; capacity=sizeof(request->value); }
         else if (!strcmp(key,"expect")) { bit=8192; target=request->expect; capacity=sizeof(request->expect); }
+        else if (!strcmp(key,"patch")) bit=16384;
         else return 0;
         if (seen&bit) return 0;
         seen|=bit;
         if (bit==1) { spaces(&r); if (r.p==r.end || *r.p++!='1') return 0; }
         else if (bit==128) { if (!unsigned_value(&r,64u*1024u*1024u,&request->offset)) return 0; }
         else if (bit==256) { if (!unsigned_value(&r,GD_VIEWER_NODE_PAGE,&request->limit) || !request->limit) return 0; }
+        else if (bit==16384) {
+            GD_InspectorPatch patch;const char *start=r.p;size_t bytes;
+            if(!inspector_read_patch(&r,&patch))return 0;
+            bytes=(size_t)(r.p-start);if(bytes>=sizeof(request->value))return 0;
+            memcpy(request->value,start,bytes);request->value[bytes]=0;
+        }
         else if (!string(&r,target,capacity,bit==4096) || (!*target && bit!=4096)) return 0;
         spaces(&r);
         if (take(&r,'}')) break;
@@ -155,18 +212,25 @@ int gd_viewer_parse(const char *text, size_t size, GD_ViewerRequest *request) {
     }
     spaces(&r);
     if (r.p!=r.end || (seen&3)!=3) return 0;
+    if (!strcmp(request->command,"inspector")) return request->offset<=GD_MAX_EDGES && !(seen&~(7u|128u|256u|8192u));
+    if (!strcmp(request->command,"inspector-patch")) return (seen&(16384|8192))==(16384|8192) && !(seen&~(7u|16384u|8192u));
     if (!strcmp(request->command,"inspect")) return !(seen&~(7u|32u)) && (!(seen&32) || fields_valid(request->fields));
     if (!strcmp(request->command,"nodes")) return request->offset<=GD_MAX_RECORDS && !(seen&~(7u|8u|128u|256u));
     if (!strcmp(request->command,"select")) return (seen&(8|1024|64|8192))==(8|1024|64|8192) && !(seen&~(7u|8u|1024u|64u|8192u|16u));
     if (!strcmp(request->command,"result")) return (seen&(8|1024))==(8|1024) && !(seen&~(7u|8u|1024u|32u|128u|256u|8192u));
     if (!strcmp(request->command,"evidence")) return request->offset<=GD_MAX_EDGES && !(seen&~(7u|8u|1024u|128u|256u|16u));
     if (!strcmp(request->command,"controls")) return request->offset<=GD_VIEWER_CONTROL_OFFSET && !(seen&~(7u|8u|1024u|2048u|128u|256u)) && (!(seen&2048) || (seen&1024)) && (!(seen&(128|256)) || (seen&2048));
+    if (!strcmp(request->command,"move")) return (seen&(8|64|4096|8192))==(8|64|4096|8192) && !(seen&~(7u|8u|64u|4096u|8192u));
     if (!strcmp(request->command,"configure")) return (seen&(8|1024|2048|4096|8192))==(8|1024|2048|4096|8192) && !(seen&~(7u|8u|1024u|2048u|4096u|8192u));
     if (!strcmp(request->command,"actions")) return !(seen&~(7u|8u));
     if (!strcmp(request->command,"action")) return (seen&(8|512))==(8|512) && !(seen&~(7u|8u|512u|8192u));
     if (!strcmp(request->command,"refresh")) return !(seen&~7u);
+    if (!strcmp(request->command,"hint")) {
+        if(strlen(request->value)>255)return 0;
+        if(seen&1024)return (seen&(8|64|8192))==(8|64|8192) && !(seen&~(7u|8u|16u|64u|1024u|4096u|8192u));
+        return (seen&8) && ((seen&(16|64))==16 || (seen&(16|64))==64) && !(seen&~(7u|8u|16u|64u|4096u));
+    }
     if ((seen&(16|64))==(16|64) || (seen&~(7u|8u|16u|64u))) return 0;
-    if (!strcmp(request->command,"hint")) return (seen&8) && (seen&(16|64));
     if (!strcmp(request->command,"navigate")) return (seen&8)!=0;
     return 0;
 }
@@ -391,8 +455,9 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
     GD_ViewerWriter w={request,0,sizeof(request),0}; GD_ViewerRequest parsed;
     int i,count=0; Exchange *e;
     if (command && !strcmp(command,"--help")) {
-        puts("Usage: gd viewer list|inspect|nodes|hint|navigate|actions|action|refresh|controls|configure|evidence|select|result [--target SESSION] [--projection VIEW]\n"
-             "hint/navigate --reference ALIAS/NAME (Find) or --id NATIVE_ID (exact select/frame); never both.\n"
+        puts("Usage: gd viewer list|inspect|nodes|hint|navigate|actions|action|refresh|controls|configure|inspector|inspector-patch|move|evidence|select|result [--target SESSION] [--projection VIEW]\n"
+             "hint/navigate --reference ALIAS/NAME (Find) or --id NATIVE_ID (exact select/frame); never both for navigation.\n"
+             "hint --projection VIEW --form TYPE --id KEY [--reference PARENT] --expect TOKEN [--value MESSAGE] offers exact evidence or an inspector section via Go/Dismiss. Message max 255 UTF-8 bytes.\n"
              "nodes [--projection VIEW] [--offset 0..4096] [--limit 1..64] reads prepared canvas; default active view, page 64.\n"
              "inspect --fields selection,snapshots,panes,agent_hint,source narrows optional sections; source body opt-in.\n"
              "hint requires projection and reference/id; navigate requires projection.\n"
@@ -400,8 +465,13 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
              "action --projection VIEW --action NAME [--expect TOKEN] runs one; analytical actions require current controls token for their form. Draft Undo/Redo are UI-only.\n"
              "controls [--projection VIEW] [--form FORM [--control NAME --offset N --limit N]] reads types/values/choice keys.\n"
              "configure --projection VIEW --form FORM --control NAME --value TEXT --expect TOKEN stages analytical input; presentation applies immediately like GUI. Empty text clears.\n"
+             "inspector [--offset N --limit N --expect TOKEN] reads active inspector geometry, rendered folds and child scrolls.\n"
+             "inspector-patch --expect TOKEN --value JSON updates only supplied open, width, scroll, folds, scrolls or pages. All fields validate before any change.\n"
+             "move --projection VIEW --id NATIVE_ID --value X,Y --expect TOKEN moves a visible node in native layout units using the presentation control_token.\n"
              "evidence [--projection VIEW] [--form FAMILY --offset N --limit N] reads matching retained rows. Without form, lists page and selection families.\n"
              "select --projection VIEW --form TYPE --id KEY --expect TOKEN changes exact inspection; cell also accepts --reference NOUN --id VERB.\n"
+             "For a selected noun pair or Actor association, read case-index and select noun.case or actor.case with its key and selection_token.\n"
+             "Read case-participants --reference CASE_KEY or similarity-members --reference FEATURE_ID (discover via similarity-features). Select case.participant or similarity.member with that parent, child key and token.\n"
              "For state-charts, read chart-cells or chart-hypotheses; select chart.cell or chart.hypothesis with key and selection_token from that page.\n"
              "result --projection VIEW --form query|structure|rules|bindings|resource|mda|challenges|actor-overview|noun-grid [--fields NATIVE_FIELDS --offset BYTE --limit KIB --expect TOKEN] reads base64 native JSON chunks; no evaluation.\n"
              "refresh reloads original source bindings now; active edits/dirty drafts block, never discard.\n"
@@ -444,7 +514,11 @@ int gd_viewer_command(int argc, char **argv, GD_Allocator a) {
     if (action) { gd_viewer_write(&w,",\"action\":"); gd_viewer_quote(&w,action); }
     if (form) { gd_viewer_write(&w,",\"form\":"); gd_viewer_quote(&w,form); }
     if (control) { gd_viewer_write(&w,",\"control\":"); gd_viewer_quote(&w,control); }
-    if (value) { gd_viewer_write(&w,",\"value\":"); gd_viewer_quote(&w,value); }
+    if (value && !strcmp(command,"inspector-patch")) {
+        GD_InspectorPatch patch;
+        if(!gd_viewer_inspector_patch_parse(value,&patch))return cli_failure("viewer.arguments","Use a partial JSON patch object; see gd viewer --help");
+        gd_viewer_write(&w,",\"patch\":%s",value);
+    } else if (value) { gd_viewer_write(&w,",\"value\":"); gd_viewer_quote(&w,value); }
     if (expect) { gd_viewer_write(&w,",\"expect\":"); gd_viewer_quote(&w,expect); }
     if (offset) gd_viewer_write(&w,",\"offset\":%u",page_offset);
     if (limit) gd_viewer_write(&w,",\"limit\":%u",page_limit);

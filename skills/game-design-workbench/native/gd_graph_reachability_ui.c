@@ -2,6 +2,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 #include "gd_evidence_page_ui.h"
 #include <stdio.h>
 

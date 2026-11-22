@@ -4,6 +4,10 @@ C99 tools now provide bounded Windows process capture and graphics-free NDJSON v
 
 No automatic execution, compilation, Git/checkpoint/approval automation, registry, optimizer, expectation evaluation, source adoption, or result view. [Checkpoint policy](../workflows/commands.md#experiment-checkpoints) remains agent/human responsibility. Supplying a commit string records provenance; it does not prove committed state or grant execution permission.
 
+## Shared model helpers
+
+`gd_experiment.h` and `gd_experiment.c` provide bounded frozen-JSON input, reentrant PCG32 random draws, finite measurements, JSON encoding, and clock, step, and output accounting. They do not load live controls, evaluate formulas, or interpret expectations. The [route-cost recipe](../examples/crate-puzzle/experiments/route-cost/recipe.md) shows the model and resolved input together. Opening a recipe, input, or result does not run the model.
+
 ## Build and engineering checks
 
 From repository root, with explicitly installed tools:
@@ -13,7 +17,7 @@ pwsh -NoProfile -File skills/game-design-workbench/native/test-experiment.ps1 -C
 pwsh -NoProfile -File skills/game-design-workbench/native/test-experiment-supervision.ps1 -Compiler Both
 ```
 
-Choose `CJIT` or `Zig` when only one compiler is installed. No downloads, packages, Node, display, raylib or Attendant runtime. First script compiles route model but runs only input/random and result helper checks. Second script builds tools and runs synthetic emitters/validators only. No route model linkage in emitter or helper checks. Artifacts stay under ignored `native/build/experiment-checks/` and `native/build/synthetic-<id>/`; existing viewers are untouched.
+Choose `CJIT` or `Zig` when only one compiler is installed. No downloads, packages, Node, display, or Attendant runtime. First script compiles route model but runs only input/random and result helper checks. Second script builds tools and runs synthetic emitters/validators only. No route model linkage in emitter or helper checks. Artifacts stay under ignored `native/build/experiment-checks/` and `native/build/synthetic-<id>/`; existing viewers are untouched.
 
 Build outputs include:
 

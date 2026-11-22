@@ -28,6 +28,18 @@ static int viewer_rule_rows(const GD_ExplorerPane *p,int checks) {
     if(s->bindings)return 0;
     return s->result && s->result->analysis && s->result->request.kind==GD_NAMED_OUTCOMES ? s->result->analysis->scenario.checks_count:0;
 }
+static int viewer_case_slots(const GD_ExplorerContext *c,int kind) {
+    const GD_ExplorerPane *p=c->pane;
+    if(kind==9 && p->view==GD_EXPLORER_NOUNS && c->project->noun_grid && p->selection.cell>=0 && p->selection.cell<c->project->noun_grid->pair_count)return c->project->rules->case_count;
+    if(kind==10 && gd_explorer_presentation_editable(c,"actor_case_page"))return c->project->rules->case_count;
+    return 0;
+}
+static void viewer_case_key(const GD_ExplorerPane *p,int kind,int slot,const char *token,char *key,size_t capacity) {
+    uint64_t hash=viewer_control_hash(UINT64_C(14695981039346656037),token,strlen(token));
+    if(kind==10){const GD_QueryScene *scene=p->query_state->scene;hash=viewer_control_hash(hash,&scene,sizeof(scene));}
+    hash=viewer_control_hash(hash,&slot,sizeof(slot));
+    snprintf(key,capacity,"%s:%016llx",kind==9 ? "noun-case":"actor-case",(unsigned long long)hash);
+}
 static int viewer_evidence_match(const GD_ExplorerContext *c,const GD_ViewerRequest *request,int kind,int source_slot,const GD_DiagnosticSet *diagnostics,GD_DiagnosticItem *diagnostic) {
     if(kind==10)return gd_query_scene_overview_case(c->pane->query_state->scene,c->pane->selection.cell,source_slot);
     if(kind==9)return gd_noun_grid_case(c->project->noun_grid,c->pane->selection.cell,source_slot);
@@ -86,13 +98,20 @@ static void viewer_chart_evidence(ExplorerViewer *viewer,const GD_ViewerRequest 
     gd_viewer_write(w,"],\"returned_rows\":%d,\"next_offset\":",written);if(i<total)gd_viewer_write(w,"%d",i);else gd_viewer_write(w,"null");
     gd_viewer_write(w,",\"scope\":\"applied vocabulary cells or retained hypotheses; no Run, runtime inference or source completeness claim; read result --form query for full evidence and limits\"}");
 }
+#include "gd_explorer_viewer_nested.h"
 static void viewer_evidence(ExplorerViewer *viewer,const GD_ViewerRequest *request,GD_ExplorerContext *c,GD_ViewerWriter *w) {
     GD_ExplorerPane *p=c->pane; GD_Model *model=gd_explorer_model(c->project,p->view); GD_DiagnosticSet diagnostics=viewer_diagnostic_set(c);
     int total=0,matching=0,ordinal=0,start=(int)request->offset,i,written=0,kind=0; char token[64]; const char *form=request->form;
+    int compact_cases=!strcmp(form,"case-index"),limit=(int)request->limit;
+    if(compact_cases && limit>8)limit=8;
     ViewerChartKind chart=viewer_chart_form(form,"chart-cells","chart-hypotheses");
     if(chart){viewer_chart_evidence(viewer,request,c,w,chart);return;}
+    if(!strcmp(form,"case-participants")){viewer_case_participants(viewer,request,c,w);return;}
+    if(!strcmp(form,"effect-paths") || !strcmp(form,"effect-path-steps")){viewer_effect_paths(viewer,request,c,w,!strcmp(form,"effect-path-steps"));return;}
+    if(!strcmp(form,"chart-proposals") || !strcmp(form,"chart-activations")){viewer_chart_children(viewer,request,c,w,!strcmp(form,"chart-activations"));return;}
+    if(!strcmp(form,"similarity-features") || !strcmp(form,"similarity-members")){viewer_similarity_evidence(viewer,request,c,w,!strcmp(form,"similarity-members"));return;}
     if(!*form) {
-        gd_viewer_write(w,"{\"ok\":true,\"forms\":[\"links\",\"cells\",\"cases\",\"diagnostics\",\"starts\",\"known\",\"rule-rows\",\"rule-checks\",\"noun-cases\",\"actor-cases\",\"chart-cells\",\"chart-hypotheses\"],\"selection_forms\":[\"source\",\"link\",\"cell\",\"case\",\"diagnostic\",\"rule\",\"rule.check\",\"chart.cell\",\"chart.hypothesis\"],\"selection_guard\":\"selection_token from evidence, or presentation control_token; chart keys require same-page selection_token\",\"offset_units\":\"matching-retained-rows\",\"source_slot\":\"native snapshot metadata, not a write selector\",\"native_results\":[\"query\",\"structure\",\"rules\",\"bindings\",\"resource\",\"mda\",\"challenges\",\"skills\",\"layers\",\"comparison\",\"actor-overview\",\"noun-grid\"],\"result_command\":\"viewer result --projection VIEW --form FAMILY; base64 byte pages of native JSON\",\"layers_require\":\"view.analyze or current GUI layer cache; no hidden evaluation\"}"); return;
+        gd_viewer_write(w,"{\"ok\":true,\"forms\":[\"links\",\"cells\",\"cases\",\"diagnostics\",\"starts\",\"known\",\"rule-rows\",\"rule-checks\",\"noun-cases\",\"actor-cases\",\"case-index\",\"case-participants\",\"similarity-features\",\"similarity-members\",\"chart-cells\",\"chart-hypotheses\",\"chart-proposals\",\"chart-activations\",\"effect-paths\",\"effect-path-steps\"],\"selection_forms\":[\"source\",\"link\",\"cell\",\"case\",\"diagnostic\",\"rule\",\"rule.check\",\"noun.case\",\"actor.case\",\"case.participant\",\"similarity.member\",\"similarity.member-source\",\"chart.cell\",\"chart.hypothesis\",\"chart.proposal\",\"chart.activation\",\"effect.path-step\",\"inspector\"],\"selection_guard\":\"selection_token from evidence, or presentation control_token; chart and noun/Actor case keys require same-page selection_token\",\"offset_units\":\"matching-retained-rows\",\"source_slot\":\"native snapshot metadata, not a write selector\",\"native_results\":[\"query\",\"structure\",\"rules\",\"bindings\",\"resource\",\"mda\",\"challenges\",\"skills\",\"layers\",\"comparison\",\"actor-overview\",\"noun-grid\"],\"result_command\":\"viewer result --projection VIEW --form FAMILY; base64 byte pages of native JSON\",\"layers_require\":\"view.analyze or current GUI layer cache; no hidden evaluation\"}"); return;
     }
     if(!strcmp(form,"links")) {kind=1;total=p->prepared && p->layout && !gd_explorer_similarity_active(c) ? p->layout->edge_count:0;}
     else if(!strcmp(form,"cells")) {kind=2;total=p->view==GD_EXPLORER_MATRIX ? model->cell_count:0;}
@@ -102,18 +121,21 @@ static void viewer_evidence(ExplorerViewer *viewer,const GD_ViewerRequest *reque
     else if(!strcmp(form,"known")) {kind=6;total=p->view==GD_EXPLORER_SKILLS ? model->record_count:0;}
     else if(!strcmp(form,"rule-rows")) {kind=7;total=viewer_rule_rows(p,0);}
     else if(!strcmp(form,"rule-checks")) {kind=8;total=viewer_rule_rows(p,1);}
-    else if(!strcmp(form,"noun-cases")) {kind=9;total=p->view==GD_EXPLORER_NOUNS && p->selection.cell>=0 ? c->project->rules->case_count:0;}
-    else if(!strcmp(form,"actor-cases")){kind=10;total=p->view==GD_EXPLORER_ACTORS && p->query_state && p->query_state->scene && p->query_state->scene->overview && p->selection.cell>=0 && p->selection.cell<p->query_state->scene->layout.edge_count ? c->project->rules->case_count:0;}
+    else if(compact_cases){kind=viewer_link_case_kind(c);total=viewer_case_slots(c,kind);}
+    else if(!strcmp(form,"noun-cases")) {kind=9;total=viewer_case_slots(c,kind);}
+    else if(!strcmp(form,"actor-cases")){kind=10;total=viewer_case_slots(c,kind);}
     else {gd_viewer_error(w,"viewer.evidence","Unknown page family; read viewer evidence catalogue or use viewer result for native result tables");return;}
     for(i=0;i<total;++i)matching+=viewer_evidence_match(c,request,kind,i,&diagnostics,NULL);
     viewer_control_token(viewer,c,GD_FORM_PRESENTATION,token,sizeof(token));
     gd_viewer_write(w,"{\"ok\":true,"); viewer_member(w,"projection",viewer_projections[p->view]); gd_viewer_write(w,",");viewer_member(w,"form",form);
     gd_viewer_write(w,",");viewer_member(w,"selection_token",token); gd_viewer_write(w,",\"source_slots\":%d,\"total_rows\":%d,\"offset\":%d,\"offset_units\":\"matching-retained-rows\",\"rows\":[",total,matching,start);
-    for(i=0;i<total && written<(int)request->limit;++i) {
+    for(i=0;i<total && written<limit;++i) {
         char key[64]; GD_DiagnosticItem diagnostic;
         if(!viewer_evidence_match(c,request,kind,i,&diagnostics,&diagnostic))continue;
         if(ordinal++<start)continue;
-        if(written++) gd_viewer_write(w,","); viewer_row_key(c,kind==1 ? "link":kind==2 ? "cell":kind==4 ? "diagnostic":kind==7 ? "rule":kind==8 ? "check":"row",i,key,sizeof(key));
+        if(written++) gd_viewer_write(w,",");
+        if(kind==9 || kind==10)viewer_case_key(p,kind,i,token,key,sizeof(key));
+        else viewer_row_key(c,kind==1 ? "link":kind==2 ? "cell":kind==4 ? "diagnostic":kind==7 ? "rule":kind==8 ? "check":"row",i,key,sizeof(key));
         gd_viewer_write(w,"{\"source_slot\":%d,",i);viewer_member(w,"key",key);
         if(kind==1) {
             const GD_LayoutEdge *edge=&p->layout->edges[i]; char id[GD_MAX_PATH];
@@ -136,7 +158,7 @@ static void viewer_evidence(ExplorerViewer *viewer,const GD_ViewerRequest *reque
         else if(kind==4) {gd_viewer_write(w,",\"kind\":%d,\"line\":%d,\"truncated\":%s,",diagnostic.kind,diagnostic.line,diagnostic.truncated ? "true":"false");viewer_member(w,"code",diagnostic.code);gd_viewer_write(w,",");viewer_member(w,"message",diagnostic.message);gd_viewer_write(w,",");viewer_member(w,"path",diagnostic.path);gd_viewer_write(w,",");viewer_member(w,"reference",diagnostic.record_reference);}
         else if(kind==5) {int node=-1,j;char id[GD_MAX_PATH];if(p->layout)for(j=0;j<p->layout->node_count;++j)if(p->layout->nodes[j].key==p->paths.keys[i])node=j;gd_viewer_write(w,",\"id\":");gd_viewer_quote(w,node>=0 && presentation_node_id(c,node,id,sizeof(id)) ? id:NULL);}
         else if(kind==7) {gd_viewer_write(w,",\"selected\":%s,\"row_kind\":",p->rule_state->row==i ? "true":"false");gd_viewer_quote(w,p->rule_state->bindings ? "binding":p->rule_state->result->request.kind==GD_NAMED_OUTCOMES ? "proposal":"comparison");gd_viewer_write(w,",\"evidence\":\"same slot in retained bindings/rules native result; exact rule key plus selection_token required\"");}
-        else if(kind==9 || kind==10) {const GD_Rules *rules=c->project->rules;const GD_RuleCase *item=&rules->cases[i];const GD_Record *source=&model->records[rules->sources[item->source].record];int participant;gd_viewer_write(w,",");viewer_member(w,"source",source->reference);gd_viewer_write(w,",");viewer_member(w,"case",item->name);gd_viewer_write(w,",");viewer_member(w,"context",item->context);gd_viewer_write(w,",\"line\":%d,\"participants\":[",item->line);for(participant=item->first_participant;participant<item->first_participant+item->participant_count;++participant){const GD_RuleParticipant *binding=&rules->participants[participant];if(participant>item->first_participant)gd_viewer_write(w,",");gd_viewer_write(w,"{");viewer_member(w,"local",binding->name);gd_viewer_write(w,",");viewer_member(w,"noun",binding->noun);gd_viewer_write(w,",");viewer_member(w,"label",binding->noun_resolution==GD_RULE_RESOLVED ? model->records[binding->noun_record].display_name:"[Unresolved noun]");gd_viewer_write(w,",");viewer_member(w,"requires",binding->requires);gd_viewer_write(w,",");viewer_member(w,"skip_if",binding->skip_if);gd_viewer_write(w,"}");}gd_viewer_write(w,"]");}
+        else if(kind==9 || kind==10) {const GD_Rules *rules=c->project->rules;const GD_RuleCase *item=&rules->cases[i];const GD_Record *source=&model->records[rules->sources[item->source].record];int participant;gd_viewer_write(w,",");viewer_member(w,"source",source->reference);gd_viewer_write(w,",");viewer_member(w,"case",item->name);if(!compact_cases){gd_viewer_write(w,",");viewer_member(w,"context",item->context);}gd_viewer_write(w,",\"line\":%d,\"participant_count\":%d",item->line,item->participant_count);if(!compact_cases){gd_viewer_write(w,",\"participants\":[");for(participant=item->first_participant;participant<item->first_participant+item->participant_count;++participant){const GD_RuleParticipant *binding=&rules->participants[participant];if(participant>item->first_participant)gd_viewer_write(w,",");gd_viewer_write(w,"{");viewer_member(w,"local",binding->name);gd_viewer_write(w,",");viewer_member(w,"noun",binding->noun);gd_viewer_write(w,",");viewer_member(w,"label",binding->noun_resolution==GD_RULE_RESOLVED ? model->records[binding->noun_record].display_name:"[Unresolved noun]");gd_viewer_write(w,",");viewer_member(w,"requires",binding->requires);gd_viewer_write(w,",");viewer_member(w,"skip_if",binding->skip_if);gd_viewer_write(w,"}");}gd_viewer_write(w,"]");}}
         else if(kind==8) {const GD_RuleWriteCheck *check=&p->rule_state->result->analysis->scenario.checks[i];gd_viewer_write(w,",\"first_proposal_slot\":%d,\"second_proposal_slot\":%d,\"conflict\":",check->first,check->second);gd_viewer_quote(w,gd_rule_truth_name(check->conflict));}
         else {gd_viewer_write(w,",\"reference\":");gd_viewer_quote(w,model->records[i].reference);}
         gd_viewer_write(w,"}");
@@ -163,6 +185,16 @@ static int viewer_select(GD_ExplorerContext *c,const GD_ViewerRequest *request,G
             }
         }
         gd_viewer_error(w,"viewer.selection","Use an exact current chart key and its evidence selection_token; no reference filter or index");return 0;
+    }
+    if(!strcmp(request->form,"chart.proposal") || !strcmp(request->form,"chart.activation"))return viewer_select_chart_child(c,request,w,!strcmp(request->form,"chart.activation"));
+    if(!strcmp(request->form,"effect.path-step"))return viewer_select_effect_step(c,request,w);
+    if(!strcmp(request->form,"case.participant"))return viewer_select_participant(c,request,w);
+    if(!strcmp(request->form,"similarity.member") || !strcmp(request->form,"similarity.member-source"))return viewer_select_similarity_member(c,request,w);
+    if(!strcmp(request->form,"noun.case") || !strcmp(request->form,"actor.case")) {
+        int kind=!strcmp(request->form,"noun.case") ? 9:10,ordinal;
+        if(!*request->reference)found=viewer_find_case(c,request,kind,request->id,request->expect,&ordinal);
+        if(found>=0)return viewer_reveal_case(c,kind,found,ordinal,-1,w);
+        gd_viewer_error(w,"viewer.selection","Use a case key from evidence for the current selected pair or association");return 0;
     }
     if(!viewer_canvas_current(c)) {gd_viewer_error(w,"viewer.stale_canvas","Explicitly open current projection first");return 0;}
     if(!strcmp(request->form,"rule") || !strcmp(request->form,"rule.check")) {

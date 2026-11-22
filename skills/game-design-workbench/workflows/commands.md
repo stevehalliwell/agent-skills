@@ -19,7 +19,7 @@ Read relevant source when a projection is unnecessary. Schema/query/search prepa
 
 ## Experiment checkpoints
 
-Native matrix/skill/MDA analysis/views, challenge-route analysis, and typed control resolution/import planning/export are available; see [native contract](../native/README.md). [Shared experiment helpers and crate baseline](../native/README.md#prepared-experiments) are available; [owning experiment](../examples/crate-puzzle/game-design/experiments/route-cost.md#results) now records one complete baseline run. [Explicit Windows process supervision and read-only result validation](../native/experiments.md) are implemented and checked with synthetic emitters. Batch/sweep/replay automation and result views remain undelivered. No Git/approval/lifecycle automation is added. Agent builds bounded experiments and interprets results using [experiment workflow](experiment.md); use [tuning extension](experiment-tuning.md) only for requested comparisons or search. Do not invent an available runner or execute an experiment merely because a document describes one.
+Use [native experiment helpers](../native/experiments.md) for Windows process supervision and read-only result validation. Use the [experiment workflow](experiment.md) to build a bounded model and interpret results. Use [tuning](experiment-tuning.md) only for requested comparisons or search. No Git or approval automation. Opening a recipe does not authorize execution.
 
 When an explicitly authorized experiment has executable implementation:
 
@@ -29,12 +29,6 @@ When an explicitly authorized experiment has executable implementation:
 4. Record commit, command, versions, seed, effective inputs, limits, completion status, and results in owning experiment. Keep rebuildable outputs separate from non-rebuildable evidence. Done: observations and modeled outputs remain distinct from interpretation.
 
 Git and agent workflow provide copying, merge updates, history, and checkpoints. Do not add custom lifecycle programs for these steps. Keep executable code for domain computation and tests. Copying/editing existing Markdown assets is agent work; do not add code mirrors to regenerate them.
-
-## Review 01 repository migration maintenance
-
-Repository-only `scripts/migrate-workbench-actor-rules.mjs` adopts a temporary reviewed proposal through public Attendant metadata operations and readable fence replacement. It is not an installed authoring command, content generator or evaluator. Original Markdown remains authoritative.
-
-Run `node scripts/migrate-workbench-actor-rules.mjs --help` for required explicit repository/proposal/Attendant/native paths. Default plans only; `--stage NEW_DIR` copies and validates both examples before authorized `--apply`. Exact rule coverage, inside-project mutation collections, strict Attendant validation and native checks are required. Safe rerun skips unchanged fields/fences. Failure reports completed operations and whether partial changes are possible; batches are not transactions. No deletion, automatic repair, frozen-evidence rewrite or experiment execution.
 
 ## Repository asset checks
 

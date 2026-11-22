@@ -41,10 +41,10 @@ Attendant preserves body and immutable identity metadata. It may reserialize fro
 - Edit selected authored `rank` only; preserve `id`, `name`, `created_at`, body, unrelated metadata, and all descendants' authored ranks.
 - Explain remaining conflicts rather than repairing them. Derived display movement is not source mutation; native skill CLI/view computes declared prerequisite/rank findings.
 - For tutorial coordinate 2 → 3, use exact update above. Compare selected record and every other source file before/after; recompute with native skill command or reopen clean graph. Findings concern declared structure, not actual learning.
-- Native viewer can edit rank/prerequisite drafts and return a JSON proposal, not apply it. Read [draft handoff](../native/README.md#draft-editing-and-json-handoff). Check current record identity and values against report before authorized update; resolve stale differences explicitly, never replay a stale whole record. Supply only authorized edited fields. Agent chooses Attendant or precise source edit under guards above; native viewer has no authoritative writer.
+- Native viewer can edit rank/prerequisite drafts and return a JSON proposal, not apply it. Read [draft handoff](../native/explorer.md#draft-editing-and-json-handoff). Check current record identity and values against report before authorized update; resolve stale differences explicitly, never replay a stale whole record. Supply only authorized edited fields. Agent chooses Attendant or precise source edit under guards above; native viewer has no authoritative writer.
 
 ## Definition changes
 
-Glossary owns canonical spelling/aliases and chooses inline meaning **or** a canonical documentation target such as `nouns/crate`. Edit that one owner. Domain references stay `alias/name`; aliases do not change technical identity. Explicit renaming/moving between collections requires reviewed reference migration, not string replacement across guessed synonyms.
+Glossary owns canonical spelling/aliases and chooses inline meaning **or** a canonical documentation target such as `nouns/crate`. Edit that one owner. Domain references stay `alias/name`; aliases do not change technical identity. Review and update affected references when explicitly renaming or moving records, not string replacement across guessed synonyms.
 
 Run declared relationship queries and inspect exact source references to assess a change. Report unknown prose dependencies and unsupported transitive/game-state impact analysis. Validate changed source.

@@ -256,7 +256,7 @@ Source model has no dedicated decision collection or frontmatter classification 
 - Dynamics own intended/predicted/observed behavior with explicit epistemic status. Contextual claims about how players deliberate may fit here.
 - Experiments own hypotheses, method, observations and interpretation used to test classification or quality claims.
 
-Keep confirmed assessment blocks in existing Challenge owners. Review remaining vocabulary and any further machine-readable dimensions before extending contract. This reference does not authorize new collections, additional example migrations or automatic classification.
+Keep confirmed assessment blocks in existing Challenge owners. Review remaining vocabulary and any further machine-readable dimensions before extending contract. This reference does not authorize new collections, automatic classification.
 
 ## Review outcome
 

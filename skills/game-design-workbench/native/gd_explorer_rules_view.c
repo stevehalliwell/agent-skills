@@ -2,6 +2,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 #include "gd_explorer_loaded_pickers.h"
 #include <string.h>
 
@@ -218,6 +219,7 @@ void gd_explorer_rules_selection_controls(GD_ExplorerContext *context) {
 }
 void gd_explorer_rules_controls(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerRuleState *state; GD_ExplorerRuleForm *form,before; const GD_Rules *rules=context->project->rules; const GD_Model *model=context->project->models[GD_EXPLORER_RULE_DATA]; int i;
+    if(context->sidebar && context->sidebar->reveal_form==GD_FORM_RULES+1)igSetNextItemOpen(true,ImGuiCond_Always);
     if (!igCollapsingHeader_TreeNodeFlags("Object bindings / rule checks [native]",0)) return;
     form=gd_explorer_form_pending(context,GD_FORM_RULES,1); state=pane->rule_state;
     if (!form) { igTextWrapped("Cannot allocate rule controls."); return; }

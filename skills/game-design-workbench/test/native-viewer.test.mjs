@@ -312,6 +312,16 @@ test('viewer protocol and native local request/reply without any GUI',{skip:!nat
       }
       assert.equal(invoke(['inspect','--target',first.session]).mutations,11);
     });
+    await t.test('partial inspector JSON travels as an object; duplicate keys fail before dispatch',async()=>{
+      const patch={folds:{'fold-key':true},scrolls:{'scroll-key':40}};
+      const base=['inspector-patch','--target',first.session,'--expect','fixture-token','--value'];
+      const parsed=invoke([...base,JSON.stringify(patch)]);
+      assert.deepEqual(parsed.patch,patch);assert.equal(parsed.expect,'fixture-token');
+      const request={protocol:1,command:'inspector-patch',expect:'fixture-token',patch:{width:500}};
+      assert.deepEqual((await raw(first.session,JSON.stringify(request))).patch,{width:500});
+      assert.equal(invoke([...base,'{"open":true,"open":false}'],2).code,'viewer.arguments');
+      assert.equal(invoke(['inspect','--target',first.session]).mutations,13);
+    });
     second=await owner();
     await t.test('multiple sessions require exact target',()=>{
       assert.notEqual(first.session,second.session);

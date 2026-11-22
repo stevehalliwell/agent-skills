@@ -67,6 +67,19 @@ static int explorer_viewer_nodes_checks(ExplorerViewer *viewer, GD_ExplorerPane 
         memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);
         REQUEST("navigate","resources",identity); NODE_CHECK(strstr(reply,"viewer.node_hidden")!=NULL);
         NODE_CHECK(!memcmp(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS)); target.pane->mda.roles[kind]=shown;
+        {
+            GD_LayoutNode saved=target.pane->layout->nodes[0];GD_ExplorerSelection picked=target.pane->selection;int prior=*viewer->active;
+            REQUEST("nodes","resources","");NODE_CHECK(strstr(reply,"\"movable\":true") && strstr(reply,"\"layout_position\":{"));
+            strcpy(request.command,"move");strcpy(request.id,identity);strcpy(request.value,"12.5,-64");strcpy(request.expect,"old");
+            w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);
+            NODE_CHECK(strstr(reply,"viewer.stale_controls") && target.pane->layout->nodes[0].x==saved.x);
+            viewer_control_token(viewer,&target,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));
+            igGetIO_Nil()->WantTextInput=true;w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);igGetIO_Nil()->WantTextInput=false;
+            NODE_CHECK(strstr(reply,"viewer.busy") && target.pane->layout->nodes[0].x==saved.x);
+            w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);
+            NODE_CHECK(strstr(reply,"\"moved\":true") && target.pane->layout->nodes[0].x==12.5f && target.pane->layout->nodes[0].y==-64 && *viewer->active==prior && !memcmp(&picked,&target.pane->selection,sizeof(picked)));
+            target.pane->layout->nodes[0]=saved;
+        }
         for (kind=GD_RESOURCE_FACET;kind<=GD_RESOURCE_ROLE;++kind) {
             viewer_identities(&target,&ids); node=-1;
             for (i=0;i<viewer_canvas_count(&target);++i) if (target.project->resources->nodes[target.pane->layout->nodes[i].key].kind==kind && viewer_canvas_id(&target,i,&ids,identity,sizeof(identity))) { node=i; break; }
@@ -142,7 +155,30 @@ static int explorer_viewer_nodes_checks(ExplorerViewer *viewer, GD_ExplorerPane 
         state->result->similarity->map->placed[0]=0;
         {GD_Camera placed=state->similarity_camera;NODE_CHECK(gd_explorer_action_run(c,GD_ACTION_VIEW_SELECTION_FOCUS) && pane->focus_result.status==GD_FOCUS_UNPLACED && !memcmp(&placed,&state->similarity_camera,sizeof(placed)));}
         REQUEST("navigate","mda",identity); NODE_CHECK(strstr(reply,"viewer.node_hidden")!=NULL); state->result->similarity->map->placed[0]=1;
-        state->similarity_canvas=false;
+        {
+            const char *feature="direct-outgoing:all-selected-kinds";const GD_SimilarityProjection *projection;const GD_SimilarityCell *cell=NULL;int row,member=-1;
+            snprintf(state->pending.features,sizeof(state->pending.features),"%s",feature);
+            NODE_CHECK(gd_explorer_action_run(c,GD_ACTION_STRUCTURE_RUN));state=pane->structure_state;projection=state->result->similarity;
+            for(row=0;row<projection->entry_count;++row){cell=viewer_similarity_cell(projection,row,0);if(cell->present && cell->count)break;}
+            NODE_CHECK(row<projection->entry_count);state->similarity_row=row;
+            strcpy(request.command,"evidence");strcpy(request.form,"similarity-features");request.limit=1;
+            w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);
+            NODE_CHECK(strstr(reply,feature) && strstr(reply,"\"member_count\":"));
+            strcpy(request.form,"similarity-members");strcpy(request.reference,feature);
+            for(i=0;i<cell->count;++i)if(gd_structure_result_record(projection->context,projection->context->layout->nodes[cell->members[i]].key)>=0){member=i;break;}
+            NODE_CHECK(member>=0);request.offset=(unsigned)member;
+            viewer_control_token(viewer,c,GD_FORM_PRESENTATION,request.expect,sizeof(request.expect));
+            viewer_child_key(request.reference,request.expect,member,request.id,sizeof(request.id));
+            w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);
+            NODE_CHECK(strstr(reply,request.id) && strstr(reply,"\"source\":\""));
+            strcpy(request.command,"select");strcpy(request.form,"similarity.member");
+            w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);
+            NODE_CHECK(strstr(reply,"\"selected\":true") && state->similarity_canvas && state->reveal_similarity_feature==1 && state->reveal_similarity_member==member+1);
+            state->reveal_similarity_feature=state->reveal_similarity_member=0;
+            strcpy(request.form,"similarity.member-source");
+            w=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};viewer_dispatch(viewer,&request,&w);
+            NODE_CHECK(strstr(reply,"\"selected\":true") && !state->similarity_canvas && pane->mda.record==gd_structure_result_record(projection->context,projection->context->layout->nodes[cell->members[member]].key));
+        }
     }
     c->pane=&panes[GD_EXPLORER_MATRIX]; *viewer->active=GD_EXPLORER_MATRIX; ok=1;
 cleanup:

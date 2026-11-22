@@ -259,13 +259,34 @@ static int viewer_presentation_checks(ExplorerViewer *original,int *fail_at,int 
             PRESENT_STAGE(v,"actor_overview","interactions");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]));
             panes[v].query_options=saved[0];a.release(a.context,saved);
         }
+        {
+            GD_Camera old=panes[v].camera;int fit=panes[v].fit;bool override=panes[v].focus_camera_override;
+            PRESENT_STAGE(v,"camera_pose","125.5,-64,0.8");
+            PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].camera.target.x==125.5f && panes[v].camera.target.y==-64 && panes[v].camera.zoom==0.8f && !panes[v].fit);
+            PRESENT_STAGE(v,"camera_pose","1,2,nan");PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].camera.target.x==125.5f && panes[v].camera.zoom==0.8f);
+            PRESENT_STAGE(v,"camera_pose","1000001,2,1");PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].camera.target.x==125.5f);
+            panes[v].camera=old;panes[v].fit=fit;panes[v].focus_camera_override=override;
+        }
         if(v==GD_EXPLORER_NOUNS){
             const GD_NounGrid *grid=c.project->noun_grid;const GD_Model *model=grid->rules->model;
             PRESENT_CHECK(grid_view(&panes[v]) && !layout_settles(&panes[v]) && panes[v].layout->node_count==grid->noun_count && grid->pair_count>0);
             PRESENT_STAGE(v,"noun_row",model->records[grid->pairs[0].a].reference);PRESENT_CHECK(strstr(reply,"\"configured\":true"));
             PRESENT_STAGE(v,"noun_column",model->records[grid->pairs[0].b].reference);PRESENT_CHECK(strstr(reply,"\"configured\":true") && panes[v].selection.cell==0 && !panes[v].query_state);
             PRESENT_ACTION(v,"view.cell.fit");PRESENT_CHECK(strstr(reply,"\"executed\":true"));
-            PRESENT_CHECK(viewer_result_reassemble(&viewer,(GD_ExplorerView)v,"noun-grid",NULL,reply,decoded) && strstr(reply,"distinct declared cases") && strstr(reply,"\"is_actor\":null"));
+            PRESENT_CHECK(viewer_result_reassemble(&viewer,(GD_ExplorerView)v,"noun-grid",NULL,reply,decoded) && strstr(reply,"distinct declared cases"));
+            {
+                static const char *fields[]={"\"is_actor\":null}","\"is_actor\":false}","\"is_actor\":true}"};
+                int expected[3]={0},kind,noun;
+                for(noun=0;noun<grid->noun_count;++noun){
+                    const GD_Record *record=&model->records[grid->nouns[noun]];
+                    ++expected[!record->is_actor_line ? 0:record->is_actor ? 2:1];
+                }
+                for(kind=0;kind<3;++kind){
+                    const char *match=reply;int count=0;
+                    while((match=strstr(match,fields[kind]))!=NULL){++count;++match;}
+                    PRESENT_CHECK(count==expected[kind]);
+                }
+            }
             PRESENT_REQUEST("evidence",v);strcpy(request.form,"noun-cases");PRESENT_SEND();PRESENT_CHECK(!w.failed && strstr(reply,"\"participants\":[") && strstr(reply,"\"requires\":"));
             {GD_Layout *last=panes[v].layout;int allocation;for(allocation=1;allocation<=2;++allocation){*fail_at=*calls+allocation;PRESENT_STAGE(v,"layout","free");*fail_at=-1;PRESENT_CHECK(strstr(reply,"viewer.control") && panes[v].layout==last && grid_view(&panes[v]) && panes[v].selection.cell==0);}}
             PRESENT_STAGE(v,"layout","free");PRESENT_CHECK(strstr(reply,"\"configured\":true") && free_graph(&panes[v]) && !grid_view(&panes[v]) && layout_settles(&panes[v]) && panes[v].selection.cell==0 && panes[v].layout->node_count==grid->noun_count && panes[v].layout->edge_count==grid->pair_count);

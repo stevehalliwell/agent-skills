@@ -53,7 +53,7 @@ Native result remains authoritative for typed identities, exact source lines/con
 - Declaration delegate borrows graph; no additional search/work ceiling.
 - `gd_named_build()` owns result/scratch through project allocator. Rule delegates allocate private mutable `GD_RuleAnalysis` workspace, copying compiled tables only; never evaluate/compare into `project->calls`.
 - Model/rules/graph and request strings outlive result. Skill draft edit invalidates retained skill result. Writer rejects stale draft revision/model before any output; rebuild before reading borrowed model.
-- Legacy assumption parser combines source lookup and diagnostics. Single-threaded adapter forwards diagnostics and restores every source diagnostic slot when diagnostic model is separate. Viewer captures/restores same channel around candidate construction. Source records/rules unchanged; no concurrent parser/observer contract added.
+- Assumption parser combines source lookup and diagnostics. Single-threaded adapter forwards diagnostics and restores every source diagnostic slot when diagnostic model is separate. Viewer captures/restores same channel around candidate construction. Source records/rules unchanged; no concurrent parser/observer contract added.
 - Candidate failure frees only candidate; caller retains prior result. Destroy result before project/draft storage.
 
 ## Viewer
@@ -68,4 +68,4 @@ Skills retains existing explicit-knowledge/chains/combinations controls. Resourc
 
 ## Verification boundary
 
-Full CJIT/Zig native and CLI, Node/public Attendant integrations, strict both-example metadata validation and bounded window/render checks pass. Native 127/127 per compiler; Node retains one skipped desktop-report integration. Extended window harness exercises all three inspector modes, candidate failure, reload/reset and cleanup on private copies, without OS input. Real-pointer/manual usefulness remains human gate. [Validation evidence](../../../reports/graph-query-research/validation-checkpoint.md); native reader/report checks do not replace Attendant validation or all-14-question usefulness review.
+[Native checks](build.md) cover CLI and viewer adapters, including failed candidates and reload/reset on private copies. These checks do not replace Attendant validation, real-pointer review, or judgment about usefulness for a design question.

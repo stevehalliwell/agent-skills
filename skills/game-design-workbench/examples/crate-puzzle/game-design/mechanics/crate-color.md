@@ -15,9 +15,6 @@ resources: []
 
 Use crate color to communicate whether next push leaves a recovery option. Not adopted; rule and accessibility implications remain open.
 
-## Migration provenance
-Former decisions/crate-color; record_kind proposal; alternative_group crate-feedback; related_decisions []; subjects [nouns/crate].
-
 ```gd-rule
 case proposal-only:
     target: Crate

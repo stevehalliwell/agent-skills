@@ -30,4 +30,4 @@ If saving is requested, write a new dated Markdown report under `game-design-res
 
 Read old reports as historical. Use Git log/diff and cited paths to inspect changes since review; if relevant drafts were uncommitted, exact reconstruction may be unavailable. Say so. Changed inputs, rules, or guidance require fresh inspection before claiming current applicability. Even unchanged source does not make an old interpretation newly run.
 
-Preserve old reports and evidence; no automatic repair, adoption, rerun, or commit follows reopening. Historical hash metadata from retired tooling can remain untouched, but does not require retaining that tooling. Missing revisions/data are explicit reproduction limits.
+Preserve old reports and evidence; no automatic repair, adoption, rerun, or commit follows reopening. Missing revisions/data are explicit reproduction limits.

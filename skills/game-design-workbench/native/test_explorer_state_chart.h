@@ -4,6 +4,7 @@
 static int chart_ipc_checks(GD_ExplorerContext *context,int noun,int axis,int companion,int *calls) {
     GD_Allocator allocator=context->project->allocator;const GD_Model *model=context->project->rules->model;
     GD_ExplorerContext owner=*context;GD_ExplorerPane *pane=context->pane;GD_ExplorerChartState *state;
+    GD_ExplorerInspector inspector={.viewport_width=1200,.scroll_max=500};GD_Sidebar sidebar={0};
     GD_Draft *draft=context->project->draft;GD_Query *retained;GD_Camera camera=pane->camera,cameras[2];
     GD_ViewerRequest *request=allocator.allocate(allocator.context,sizeof(*request));
     ExplorerViewer *viewer=allocator.allocate(allocator.context,sizeof(*viewer));
@@ -17,7 +18,7 @@ static int chart_ipc_checks(GD_ExplorerContext *context,int noun,int axis,int co
 #define IPC_ACTION(name_) do{IPC_REQUEST("action","");strcpy(request->action,name_);}while(0)
 #define IPC_READ_KEY(out_) do{key=strstr(reply,"\"key\":\"chart-");IPC_CHECK(key && sscanf(key+7,"%63[^\"]",out_)==1);}while(0)
     IPC_CHECK(request && viewer && reply && imgui);igGetIO_Nil()->IniFilename=NULL;
-    owner.pane=&context->panes[active];owner.active_view=&active;
+    owner.pane=&context->panes[active];owner.active_view=&active;owner.inspector=&inspector;owner.sidebar=&sidebar;
     memset(viewer,0,sizeof(*viewer));viewer->context=&owner;viewer->panes=context->panes;viewer->active=&active;viewer->stale=&stale;
     before=*calls;
     IPC_REQUEST("controls","chart");strcpy(request->control,"object");request->offset=noun+1;IPC_SEND();
@@ -57,6 +58,34 @@ static int chart_ipc_checks(GD_ExplorerContext *context,int noun,int axis,int co
     IPC_CHECK(strstr(reply,"\"selected\":true") && state->scenario==0 && state->row==0 && state->column==0 && pane->selection.linked>=0);
     IPC_CHECK(*calls==before && state->query==retained && !pane->prepared && !pane->fit && !state->mode);
     IPC_CHECK(!memcmp(&camera,&pane->camera,sizeof(camera)) && !memcmp(cameras,state->cameras,sizeof(cameras)));
+    {
+        const GD_StateChart *chart=retained->state_chart;int i,kind;
+        for(kind=0;kind<2;++kind){
+            const char *form=kind ? "chart.activation":"chart.proposal";
+            for(i=0;i<chart->scenario_count;++i)if(kind ? chart->scenarios[i].activation_count:chart->scenarios[i].write_count)break;
+            IPC_CHECK(i<chart->scenario_count);gd_explorer_chart_select(context,0,0,i);
+            IPC_REQUEST("evidence",kind ? "chart-activations":"chart-proposals");IPC_SEND();
+            key=strstr(reply,"\"key\":\"child:");IPC_CHECK(key && sscanf(key+7,"%63[^\"]",hypothesis_key)==1 && strstr(reply,"\"visible_page\":0"));
+            IPC_REQUEST("hint",form);strcpy(request->id,hypothesis_key);strcpy(request->value,"Inspect this declared effect.");IPC_TOKEN(GD_FORM_PRESENTATION);IPC_SEND();
+            IPC_CHECK(viewer->hint_pending && !viewer->has_hint && active==GD_EXPLORER_MATRIX && !inspector.open && !sidebar.open);
+            viewer_apply_hint(viewer);IPC_CHECK(viewer->has_hint && viewer_hint_current(viewer) && !inspector.open);
+            ++viewer->reload_generation;writer=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};
+            IPC_CHECK(!viewer_open_hint(viewer,&writer) && strstr(reply,"viewer.stale_hint") && !inspector.open && active==GD_EXPLORER_MATRIX);--viewer->reload_generation;
+            writer=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};
+            IPC_CHECK(viewer_open_hint(viewer,&writer) && !viewer->has_hint && active==GD_EXPLORER_STATES && inspector.open && sidebar.reveal==GD_SIDEBAR_SELECTION+1);
+            IPC_CHECK(state->scenario==i && state->query==retained && (kind ? state->reveal_activation==1:state->reveal_proposal==1));
+            active=GD_EXPLORER_MATRIX;owner.pane=&context->panes[active];inspector.open=false;sidebar.open=0;sidebar.reveal=0;
+        }
+        gd_explorer_chart_select(context,0,0,0);
+        IPC_REQUEST("hint","inspector");strcpy(request->id,"form.chart");IPC_TOKEN(GD_FORM_PRESENTATION);IPC_SEND();
+        viewer_apply_hint(viewer);writer=(GD_ViewerWriter){reply,0,GD_VIEWER_REPLY_LIMIT,0};
+        IPC_CHECK(viewer_open_hint(viewer,&writer) && inspector.open && sidebar.reveal==GD_SIDEBAR_ANALYSIS+1 && sidebar.reveal_form==GD_FORM_CHART+1 && state->scenario==0);
+        IPC_REQUEST("select","inspector");strcpy(request->id,"inspector_selection");IPC_TOKEN(GD_FORM_PRESENTATION);IPC_SEND();
+        IPC_CHECK(strstr(reply,"\"selected\":true") && sidebar.reveal==GD_SIDEBAR_SELECTION+1 && !sidebar.reveal_form);
+        IPC_REQUEST("configure","presentation");strcpy(request->control,"inspector_scroll");strcpy(request->value,"180");IPC_TOKEN(GD_FORM_PRESENTATION);IPC_SEND();
+        IPC_CHECK(strstr(reply,"\"configured\":true") && inspector.scroll==180 && inspector.scroll_pending && !sidebar.reveal);
+        active=GD_EXPLORER_MATRIX;owner.pane=&context->panes[active];
+    }
     IPC_ACTION("chart.clear");IPC_SEND();IPC_CHECK(strstr(reply,"viewer.stale_controls") && state->query==retained && state->scenario==0);
     IPC_TOKEN(GD_FORM_CHART);strcpy(old_token,request->expect);
     IPC_REQUEST("configure","chart");strcpy(request->control,"work_limit");strcpy(request->value,"0");IPC_TOKEN(GD_FORM_CHART);IPC_SEND();

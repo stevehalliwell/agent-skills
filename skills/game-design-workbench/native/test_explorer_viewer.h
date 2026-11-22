@@ -8,6 +8,7 @@
 #include "test_explorer_presentation.h"
 #include "test_explorer_configuration.h"
 #include "test_explorer_similarity.h"
+#include "test_explorer_inspector.h"
 int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, int count, int *fail_at, int *calls,int run_deep_checks,int run_layout_research) {
     GD_ExplorerProject *project=gd_explorer_load(a,collections,count);
     GD_ExplorerPane *panes=NULL,*before=NULL; GD_GraphAnalysis *analysis=NULL; char *reply=NULL,*configuration_json=NULL,*presentation_json=NULL,*decoded=NULL;
@@ -34,6 +35,7 @@ int gd_explorer_viewer_checks(GD_Allocator a, const GD_Collection *collections, 
     c.project=project; c.pane=&panes[active]; c.analysis=analysis; c.viewport=(GD_Rect){0,0,800,600};
     c.pane->layout_choice=GD_MATRIX_GRID_CHOICE; CHECK(pane_prepare(&c)); c.pane->fit=0;
     viewer=(ExplorerViewer){&c,panes,NULL,&active,&stale,1,{0},0}; viewer.collections=collections; viewer.collection_count=count;
+    CHECK(inspector_snapshot_checks(&viewer,a,reply));
     memcpy(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS);
     v=*calls; DISPATCH("nodes","effects",""); CHECK(!w.failed && strstr(reply,"\"prepared\":false") && strstr(reply,"\"nodes\":[]"));
     CHECK(*calls==v && !memcmp(before,panes,sizeof(*panes)*GD_EXPLORER_VIEWS));

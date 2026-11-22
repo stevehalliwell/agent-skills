@@ -34,7 +34,7 @@ Case-level `unknown_conditions` and `unknown_effects` retain readable missing/un
 
 Read-only `gd_rule_quantity_value` and `gd_rule_condition_value` consume explicit `GD_RulePredicateFact` assumptions keyed by snapshot participant/axis. Fact `value` is enum token or numeric literal in declared axis unit. TRUE asserts literal; false/unknown numeric facts alone do not establish a current quantity. Conflicting, missing, wrong-type or oversized numeric assumptions remain unknown. Facts do not prove realizable scenes or observed gameplay.
 
-These primitives establish neither complete case applicability nor preservation, composed outcomes, consistent simultaneous writes or universal equivalence. Remaining Review 01 integration must retain that distinction.
+These primitives establish neither complete case applicability nor preservation, composed outcomes, consistent simultaneous writes or universal equivalence.
 
 ## Ownership and bounds
 

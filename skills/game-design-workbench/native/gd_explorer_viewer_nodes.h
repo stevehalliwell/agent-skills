@@ -84,8 +84,13 @@ static int viewer_selected_node(const GD_ExplorerContext *c) {
     }
     return p->selection.node;
 }
+static int viewer_movable_canvas(const GD_ExplorerContext *c) {
+    const GD_ExplorerPane *p=c->pane;
+    return p->prepared && p->layout && p->view!=GD_EXPLORER_STATES && !grid_view(p) && !gd_explorer_similarity_active(c) &&
+        (!query_view(p->view) || (p->query_state && gd_query_scene_movable(p->query_state->scene)));
+}
 static void viewer_nodes(ExplorerViewer *viewer, const GD_ViewerRequest *request, GD_ExplorerContext *c, GD_ViewerWriter *w) {
-    ViewerIdentities ids; GD_Model *model=gd_explorer_model(c->project,c->pane->view);
+    const GD_ExplorerPane *p=c->pane; ViewerIdentities ids; GD_Model *model=gd_explorer_model(c->project,p->view);
     int i,total=viewer_canvas_count(c),end=(int)request->offset+(int)(request->limit?request->limit:GD_VIEWER_NODE_PAGE);
     viewer_identities(c,&ids); if (end>total) end=total;
     gd_viewer_write(w,"{\"ok\":true,\"protocol\":1,"); viewer_member(w,"projection",viewer_projections[c->pane->view]);
@@ -95,7 +100,7 @@ static void viewer_nodes(ExplorerViewer *viewer, const GD_ViewerRequest *request
     gd_viewer_quote(w,c->pane->view==GD_EXPLORER_STATES ? "statechart/grid; inspect result --form query":gd_explorer_similarity_active(c)?"similarity":"ordinary");
     gd_viewer_write(w,",\"available\":%s,\"pane_revision\":%u,\"total\":%d,\"offset\":%u,\"nodes\":[",c->pane->view!=GD_EXPLORER_STATES && c->pane->prepared && (gd_explorer_similarity_active(c)?c->pane->structure_state->result->similarity->table_complete:c->pane->layout!=NULL)?"true":"false",c->pane->revision,total,request->offset);
     for (i=(int)request->offset;i<end;++i) {
-        char id[GD_MAX_PATH]; int record=viewer_canvas_record(c,i),available=viewer_canvas_id(c,i,&ids,id,sizeof(id));
+        char id[GD_MAX_PATH]; int record=viewer_canvas_record(c,i),available=viewer_canvas_id(c,i,&ids,id,sizeof(id)),shown=viewer_canvas_visible(c,i);
         const char *label=gd_explorer_similarity_active(c)?c->pane->structure_state->result->similarity->ids[i]:c->pane->layout->nodes[i].label;
         if (i!=(int)request->offset) gd_viewer_write(w,",");
         gd_viewer_write(w,"{\"id\":"); gd_viewer_quote(w,available?id:NULL);
@@ -103,7 +108,9 @@ static void viewer_nodes(ExplorerViewer *viewer, const GD_ViewerRequest *request
         gd_viewer_write(w,","); viewer_member(w,"kind",viewer_canvas_kind(c,i));
         gd_viewer_write(w,","); viewer_member(w,"source",record>=0?model->records[record].reference:NULL);
         if(record>=0 && model->records[record].is_noun)gd_viewer_write(w,",\"is_actor\":%s",!model->records[record].is_actor_line ? "null":model->records[record].is_actor ? "true":"false");
-        gd_viewer_write(w,",\"visible\":%s,\"selected\":%s,\"snapshot_local\":%d,\"identity_available\":%s}",viewer_canvas_visible(c,i)?"true":"false",viewer_selected_node(c)==i?"true":"false",i,available?"true":"false");
+        gd_viewer_write(w,",\"visible\":%s,\"selected\":%s,\"snapshot_local\":%d,\"identity_available\":%s,\"movable\":%s,\"layout_position\":",shown?"true":"false",viewer_selected_node(c)==i?"true":"false",i,available?"true":"false",available && viewer_movable_canvas(c) && shown?"true":"false");
+        if(!gd_explorer_similarity_active(c) && p->layout){const GD_LayoutNode *node=&p->layout->nodes[i];gd_viewer_write(w,"{\"x\":%.9g,\"y\":%.9g}",(double)node->x,(double)node->y);}else gd_viewer_write(w,"null");
+        gd_viewer_write(w,"}");
     }
     if (ids.limited) { gd_viewer_error(w,"viewer.identity_limit","Native identity work limit reached; request narrower page"); return; }
     gd_viewer_write(w,"],\"next_offset\":");

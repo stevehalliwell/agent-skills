@@ -23,4 +23,4 @@ closed: false
 
 Ordered contact vocabulary used by [powered walker contact](../interactions/touch-walker-powered.md). `sideContacts` retains that rule's authored `Player sideContacts Walker` relation. Operands refer to its local participants; swapping them does not establish the same condition.
 
-Rule `context_axes` declares this vocabulary. No noun implicitly gains a Contact state. Open vocabulary; this record does not enumerate other directions, define collision geometry, measure a scene, supply initial state or prove that any contact occurs. Other contact cases still need faithful rule migration. [Model limits](../../model-limits.md) remain.
+Rule `context_axes` declares this vocabulary. No noun implicitly gains a Contact state. Open vocabulary; this record does not enumerate other directions, define collision geometry, measure a scene, supply initial state or prove that any contact occurs. See [model limits](../../model-limits.md).

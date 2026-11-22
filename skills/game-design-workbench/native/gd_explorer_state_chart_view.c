@@ -5,11 +5,12 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 #include "gd_explorer_picker.h"
 #include <string.h>
 #include <math.h>
 
-enum { CHART_ARROWS_PER_PAGE=8,CHART_REGION_HEIGHT=420,CHART_NODE_STEP=198,
+enum { CHART_REGION_HEIGHT=420,CHART_NODE_STEP=198,
     CHART_GRID_LEFT=210,CHART_GRID_TOP=104,CHART_GRID_COLUMN=205,CHART_GRID_ROW=100 };
 static const GD_Color chart_text={225,233,241,255},chart_muted={150,169,190,255},chart_gold={255,217,125,255},chart_blue={86,166,255,255};
 static int chart_node(GD_ExplorerChartState *state,int region,const char *value,int add) {
@@ -61,7 +62,7 @@ int gd_explorer_chart_run(GD_ExplorerContext *context) {
     gd_query_destroy(state->query);state->applied=state->pending;state->query=query;
     query->request.participant=*state->applied.participant ? state->applied.participant:NULL;
     query->request.companion_axis=*state->applied.companion_axis ? state->applied.companion_axis:NULL;
-    state->row=state->column=state->scenario=-1;state->page=state->arrow_page=state->proposal_page=state->activation_page=0;++state->generation;
+    state->row=state->column=state->scenario=-1;state->page=state->arrow_page=state->proposal_page=state->activation_page=0;state->reveal_proposal=state->reveal_activation=0;++state->generation;
     state->camera_ready[state->mode]=true;
     memset(state->participant_pages,0,sizeof(state->participant_pages));chart_cache(state);
     context->pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};context->pane->fit=1;
@@ -134,7 +135,7 @@ void gd_explorer_chart_controls(GD_ExplorerContext *context) {
         igTextWrapped("Same local binding only. Matching/unknown/excluded/unfinished counts are hypotheses, not events or frequency. Open vocabularies and unloaded/opaque declarations remain incomplete. No initial/final states, inferred hierarchy or reachability.");igTreePop();
     }
     if(igSmallButton("Clear state/cell filter")){state->row=state->column=-1;state->page=state->arrow_page=0;}
-    if(!state->mode){int edges=0;for(i=0;i<state->edge_count;++i)if(gd_explorer_chart_matches(state,state->edge_scenarios[i]))++edges;gd_explorer_evidence_pager("Diagram transitions",&state->arrow_page,edges,CHART_ARROWS_PER_PAGE);}
+    if(!state->mode){int edges=0;for(i=0;i<state->edge_count;++i)if(gd_explorer_chart_matches(state,state->edge_scenarios[i]))++edges;gd_explorer_evidence_pager("Diagram transitions",&state->arrow_page,edges,GD_CHART_ARROWS_PER_PAGE);}
     for(i=0;i<state->query->state_chart->scenario_count;++i)if(gd_explorer_chart_matches(state,i))++count;
     page=gd_explorer_evidence_pager("Hypothesis evidence",&state->page,count,GD_EVIDENCE_PAGE_ROWS);count=0;
     for(i=0;i<state->query->state_chart->scenario_count;++i)if(gd_explorer_chart_matches(state,i)){
@@ -197,7 +198,7 @@ void gd_explorer_chart_fit_all(GD_ExplorerContext *context){
 }
 int gd_explorer_chart_focus(GD_ExplorerContext *context){return chart_focus(context,0);}
 void gd_explorer_chart_select(GD_ExplorerContext *context,int row,int column,int scenario) {
-    GD_ExplorerChartState *state=context->pane->chart_state;state->row=row;state->column=column;if(state->scenario!=scenario)state->proposal_page=state->activation_page=0;state->scenario=scenario;if(scenario<0)state->page=state->arrow_page=0;
+    GD_ExplorerChartState *state=context->pane->chart_state;state->row=row;state->column=column;if(state->scenario!=scenario)state->proposal_page=state->activation_page=state->reveal_proposal=state->reveal_activation=0;state->scenario=scenario;if(scenario<0)state->page=state->arrow_page=0;
     context->pane->selection=(GD_ExplorerSelection){-1,-1,0,-1,-1};
     if(scenario>=0){const GD_QueryBinding *binding=&state->query->bindings[state->query->state_chart->scenarios[scenario].binding];context->pane->selection.linked=state->query->rules->sources[state->query->rules->cases[binding->case_index].source].record;}
 }
@@ -261,8 +262,8 @@ void gd_explorer_chart_draw(GD_ExplorerContext *context) {
         gd_count_legend(range,context->viewport.x+6,context->viewport.y-GD_COUNT_GRID_HEADER+24,fminf(360,context->viewport.width-12),"Matching hypotheses");
         gd_scene_unclip();return;
     }else{
-        struct { GD_Rect box; const char *root,*status,*target; GD_Color color; int scenario,preserve; } labels[CHART_ARROWS_PER_PAGE];
-        int regions=chart->companion_axis>=0 ? 2:1,ordinal=0,shown=0,first=state->arrow_page*CHART_ARROWS_PER_PAGE,lane[2]={0};
+        struct { GD_Rect box; const char *root,*status,*target; GD_Color color; int scenario,preserve; } labels[GD_CHART_ARROWS_PER_PAGE];
+        int regions=chart->companion_axis>=0 ? 2:1,ordinal=0,shown=0,first=state->arrow_page*GD_CHART_ARROWS_PER_PAGE,lane[2]={0};
         float width=fmaxf(state->node_count[0],state->node_count[1])*CHART_NODE_STEP+260;
         gd_scene_round_outline((GD_Rect){12,8,width,regions*(float)CHART_REGION_HEIGHT},.02f,2,chart_muted);
         gd_scene_text(query->model->records[query->request.noun].reference,30,22,20,chart_text);
@@ -274,7 +275,7 @@ void gd_explorer_chart_draw(GD_ExplorerContext *context) {
                 if(click && gd_rect_hit(mouse,box)){int hypotheses=region ? chart->companion_count:query->state_coverage->value_count;if(i<hypotheses)gd_explorer_chart_select(context,region ? state->row:i,region ? i:state->column,-1);else {pane->selection.linked=axis;state->scenario=-1;}}
             }
         }
-        for(i=0;i<state->edge_count && shown<CHART_ARROWS_PER_PAGE;++i){
+        for(i=0;i<state->edge_count && shown<GD_CHART_ARROWS_PER_PAGE;++i){
             int scenario_index=state->edge_scenarios[i],index=state->edge_writes[i],source,target;const GD_StateChartScenario *scenario=&chart->scenarios[scenario_index];const GD_RuleWrite *write=&chart->writes[index];const GD_QueryBinding *binding=&query->bindings[scenario->binding];const GD_RuleCase *root=&query->rules->cases[binding->case_index];GD_Rect a,b,label;float y;GD_Color color;
             if(!gd_explorer_chart_matches(state,scenario_index))continue;if(ordinal++<first)continue;
             region=write->axis==query->request.axis ? 0:1;source=region ? chart_node(state,1,scenario->companion_value,0):scenario->value;target=write->kind==GD_WRITE_PRESERVE ? source:chart_node(state,region,write->state,0);if(source<0 || target<0)continue;
@@ -321,11 +322,13 @@ void gd_explorer_chart_details(GD_ExplorerContext *context) {
     if(!scenario->write_count)igTextWrapped("No retained proposals. Preservation is not implied.");
     GD_EvidencePage proposals=gd_explorer_evidence_pager("All participant proposals",&state->proposal_page,scenario->write_count,GD_EVIDENCE_PAGE_ROWS);
     for(i=proposals.first;i<proposals.end;++i){int index=scenario->first_write+i;const GD_RuleWrite *write=&query->state_chart->writes[index];const GD_RuleCase *origin=&query->rules->cases[write->origin_case];const GD_Record *source=&query->model->records[query->rules->sources[origin->source].record];
+        if(state->reveal_proposal==i+1)igSetScrollFromPosY_Float(igGetCursorPosY(),0.08f);
         igTextWrapped("Proposal %d: %s | %s | %s | %s%s | line %d%s",i,write->actor>=0 ? query->rules->participants[write->actor].name:"unresolved actor",write->axis>=0 ? query->model->records[write->axis].reference:"unresolved axis",gd_effect_kind_name(query->state_chart->families[index]),write->kind==GD_WRITE_PRESERVE ? "preserve":write->kind==GD_WRITE_STATE ? write->state:"quantity",write->kind==GD_WRITE_QUANTITY && write->value.known ? gd_scene_format(" %.9g",write->value.number):"",write->line,write->conditional ? " [conditional]":"");
         igTextWrapped("Origin %s#%s | %s:%d | activation %d | declared unit %s",source->reference,origin->name,source->source_path,write->line,query->state_chart->write_activations[index],write->axis>=0 && query->model->records[write->axis].axis.unit ? query->model->records[write->axis].axis.unit:"unspecified");
     }
     GD_EvidencePage activations=gd_explorer_evidence_pager("Mapped activations",&state->activation_page,scenario->activation_count,GD_EVIDENCE_PAGE_ROWS);
     for(i=activations.first;i<activations.end;++i){const GD_RuleActivation *activation=&query->state_chart->activations[scenario->first_activation+i];int step;igPushID_Int(i);
+        if(state->reveal_activation==i+1){igSetScrollFromPosY_Float(igGetCursorPosY(),0.08f);igSetNextItemOpen(true,ImGuiCond_Always);}
         if(igTreeNode_Str(gd_scene_format("Activation %d: %s | local %s",i,gd_rule_truth_name(activation->applicability),gd_rule_truth_name(activation->local_applicability)))){
             for(step=0;step<activation->path_count;++step){const GD_RuleCase *root=&query->rules->cases[activation->path[step]];igTextWrapped("Mapped ancestor %s#%s",query->model->records[query->rules->sources[root->source].record].reference,root->name);if(activation->calls[step]>=0){const GD_RuleCall *call=&query->analysis->calls[activation->calls[step]];igTextWrapped("Call line %d: %.*s",call->line,(int)call->length,call->text);}}
             gd_explorer_rule_case_details(context,activation->case_index);igTreePop();

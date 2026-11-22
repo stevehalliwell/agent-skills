@@ -87,13 +87,13 @@ route-timing --input <committed frozen-input.json>
   --toolchain <actual compiler version>
 ```
 
-`--checkpoint` records supplied provenance; program does not verify Git or grant permission. [Native supervisor](../../../../native/experiments.md#run-only-after-reviewed-checkpoint-and-execution-approval) requires ASCII CLI paths/metadata for this increment and supplies recorded input copy. Unicode JSON content is supported; Unicode Windows file paths/CLI metadata and non-Windows execution are not established.
+`--checkpoint` records supplied provenance; program does not verify Git or grant permission. [Native supervisor](../../../../native/experiments.md#run-only-after-reviewed-checkpoint-and-execution-approval) requires ASCII CLI paths and metadata and supplies recorded input copy. Unicode JSON content is supported; Unicode Windows file paths/CLI metadata and non-Windows execution are not established.
 
 6. Use [implemented native supervision command](../../../../native/experiments.md#run-only-after-reviewed-checkpoint-and-execution-approval), with compiled model/input/checkpoint/build/toolchain and new approved dated result directory outside design collections. It launches suspended into owned kill-on-close Windows job, arms independent wall watchdog before resume, captures raw stdout/stderr under combined cap, and validates full protocol. Child runs in recorded result directory with NUL stdin and immutable recorded input copy. Model also checks cooperative time/steps/stdout bytes. Process/job/watchdog is not a security sandbox.
 7. Parse/validate all NDJSON before interpreting it: exact protocol/experiment/configuration, identities, declared type/unit definitions, unique trial indices, finite measurements, trace monotonicity, counts, final completion and process exit. Exit 0 alone is insufficient. A killed process or missing/malformed final record is incomplete evidence, never fabricated success. Preserve partial/error/limit records and logs.
 8. Preserve actual checkpoint, frozen input, source/dependency versions, actual build/invocation, elapsed execution, effective limits and outputs. Interpret criterion only after validation. Record actual evidence through public Attendant only when authorized; canonical source writes are separate from execution.
 
-[Supervision/result-reader implementation and synthetic checks](../../../../native/experiments.md) are now available. Use them after checkpoint/execution approval; do not bypass safeguards or treat synthetic fixtures as game trials. Result views remain later work. No lifecycle/checkpoint automation, expectation CLI, or schema migration is added.
+Synthetic supervisor checks are not game trials. Validate actual output before interpreting results.
 
 ## Output contract
 

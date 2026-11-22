@@ -3,6 +3,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 #include "gd_explorer_picker.h"
 #include "gd_similarity_view.h"
 #include <math.h>
@@ -286,16 +287,21 @@ static void inspect(GD_ExplorerContext *context) {
         if (!value->present) igText("Missing: %s",projection->missing[offset]==GD_SIMILARITY_NO_VARIANT ? "no selected hypothesis context":"absent authored field");
         else if (definition->kind==GD_SIMILARITY_NUMBER) { igText("Value %.17g | complete-row observed range",value->number); if (projection->map && projection->map->input_complete && projection->map->complete_entries) igText("%.17g .. %.17g",projection->map->low[feature],projection->map->high[feature]); else igTextUnformatted("Range unavailable",NULL); }
         else if (definition->kind==GD_SIMILARITY_NAME) igText("Exact value: %s",value->name);
-        else if (igTreeNode_Str(gd_scene_format("%d exact context members (known empty differs missing)",value->count))) {
+        else {
+            int reveal=state->reveal_similarity_feature==feature+1;
+            if(reveal){igSetScrollHereY(0.1f);igSetNextItemOpen(true,ImGuiCond_Always);}
+            if (igTreeNode_Str(gd_scene_format("%d exact context members (known empty differs missing)",value->count))) {
             int member;GD_EvidencePage page=gd_explorer_evidence_pager("Members",&state->similarity_member_pages[feature],value->count,GD_EVIDENCE_PAGE_ROWS);
             igBeginChild_Str("Feature members",(ImVec2_c){0,130},0,0);
             /* Exhaustive pagination; at most 64 widgets per expanded set. */
             for (member=page.first;member<page.end;++member) {
                 int node=value->members[member]; igPushID_Int(member);
+                if(reveal && state->reveal_similarity_member==member+1)igSetScrollFromPosY_Float(igGetCursorPosY(),0.1f);
                 if (igSmallButton(gd_scene_format("#%d %s",node,projection->context->layout->nodes[node].label))) gd_explorer_structure_source_node(context,node);
                 igPopID();
             }
             igEndChild(); igTreePop();
+            }
         }
         igPopID();
     }

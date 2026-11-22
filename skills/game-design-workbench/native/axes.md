@@ -1,8 +1,8 @@
 # Typed axes and explicit applicability
 
-Review 01 foundation. `gd rules --axes ALIAS=FOLDER --nouns ALIAS=FOLDER` reads typed definitions and resolves explicit participant-to-noun and noun-to-axis bindings. Supply interaction/mechanic source bindings too; see [rule reader](rules.md). No inferred applicability, state execution or runtime mutation.
+`gd rules --axes ALIAS=FOLDER --nouns ALIAS=FOLDER` reads typed definitions and resolves explicit participant-to-noun and noun-to-axis bindings. Supply interaction/mechanic source bindings too; see [rule reader](rules.md). No inferred applicability, state execution or runtime mutation.
 
-Both examples register `game-design/axes as axes` through Attendant. Shared templates/live contracts include typed definitions and optional noun applicability. Current native inventory: crate has 4 axes and 12 rule records / 16 cases; plumber has 20 axes and 73 rule records / 164 cases. Explicit primary-target representation migration is complete; unspecified noun inventories and draft/deferred cases remain intentional gaps. Existing noun IDs/statuses/bodies stay unchanged. Representation coverage does not establish complete gameplay knowledge.
+Use [axis templates](../templates/axes/) for typed definitions. Noun applicability is explicit; an unspecified inventory does not imply that every axis applies. Coverage describes the supplied model, not complete gameplay knowledge.
 
 Sections: [Source contract](#source-contract) · [Actor applicability](#actor-applicability) · [Headless facts](#headless-facts) · [Engineering and checks](#engineering-and-checks).
 

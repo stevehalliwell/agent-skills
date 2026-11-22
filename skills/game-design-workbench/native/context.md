@@ -34,7 +34,7 @@ case contact:
 - Bare operator resolves only among the rule's declared context axes. Use `AXIS.VALUE` or `ALIAS/AXIS.VALUE` for disambiguation. Axis/value spelling is exact and case-sensitive.
 - Canonical qualification may select a known applicable definition despite other unloaded references; it never creates missing inventory membership or searches global actor axes.
 - `context: ANY` explicitly leaves context unrestricted. ANY is ASCII case-insensitive. Omitted `context` remains unspecified, not ANY or false; no vocabulary or participants manufactured for it.
-- This slice accepts one triple or ANY, separated by spaces/tabs. Compound context logic and numeric relations are not implemented. Invalid triples retain raw text with a sourced error; no valid-looking partial relation is returned.
+- The reader accepts one triple or ANY, separated by spaces/tabs. Compound context logic and numeric relations are not implemented. Invalid triples retain raw text with a sourced error; no valid-looking partial relation is returned.
 - Operator atoms are literal spans, not quoted strings/function calls. Qualification follows existing first-period state syntax. No new verb/input action is inferred from the operator.
 
 ## Headless output
@@ -49,11 +49,10 @@ Use existing `gd rules` with explicit interaction/mechanic, noun and axis mappin
 
 Missing/open information produces scoped informational findings, never false contact. Known empty inventories/closed-missing operators, ambiguous names, invalid definitions/types, syntax errors and undeclared endpoints produce sourced errors. Parsed syntax can still have incomplete/error bindings. No native source writes or automatic repair.
 
-## Bounds and current example
+## Bounds and checks
 
 - At most one context per existing bounded case: 4,096 cases, 8,192 participants, 8,192-byte body lines. Three token spans borrow retained rule text; canonical values borrow immutable model text. No allocation or recursion in context resolution.
 - Local-name comparisons and operator lookup share existing 16,777,216 charged symbol-work budget with state predicates/effects. Exhaustion retains checked bindings and makes later targets unavailable, not missing. Metadata inventory references remain bounded by existing record/edge limits.
-- Live migration: plumber Contact lists seven known ordered operators from existing sources; crate Contact lists crate-specific `occupies`. Vocabularies remain open. All 85 live rule records have structured blocks; relations are authored predicates, not scene observations.
 - Tests cover order, same-type/self bindings, case-local identity, explicit/unknown/empty inventories, qualified/ambiguous/open/closed operators, duplicate references/values, wrong-role/type/definition paths, Unicode/raw offsets, metadata duplicate detection after field-index expansion, shared work exhaustion and source immutability. No scene or UX acceptance claimed.
 
 [State predicates](conditions.md) remain separate logical facts. [Conditional outcome analysis](outcomes.md) combines explicit relation assumptions with requirements/exclusions, quantity proposals, preservation and mapped calls; bounded comparisons never infer contact or geometry.

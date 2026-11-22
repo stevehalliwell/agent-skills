@@ -65,7 +65,7 @@ $gd = '../../native/build/gd.exe'
   --json --fields axes,actors,cases,findings
 ```
 
-Existing native view can open the same folders in Skills, Challenges and Relationships modes. Use [documented view invocation](../../native/README.md#skill-prerequisites-and-ranks), replacing crate-puzzle folders with this example; no separate example viewer or copied runtime.
+Existing native view can open the same folders in Skills, Challenges and Relationships modes. Use [documented view invocation](../../native/skill-routes.md#skill-prerequisites-and-ranks), replacing crate-puzzle folders with this example; no separate example viewer or copied runtime.
 
 ## How this example was authored
 

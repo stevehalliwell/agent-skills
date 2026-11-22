@@ -15,6 +15,11 @@ typedef struct {
     unsigned offset,limit;
 } GD_ViewerRequest;
 typedef struct { char *text; size_t size, capacity; int failed; } GD_ViewerWriter;
+enum { GD_INSPECTOR_PATCH_ITEMS=64,GD_INSPECTOR_PATCH_KEY=40 };
+typedef enum { GD_INSPECTOR_PATCH_OPEN,GD_INSPECTOR_PATCH_WIDTH,GD_INSPECTOR_PATCH_SCROLL,GD_INSPECTOR_PATCH_FOLD,GD_INSPECTOR_PATCH_CHILD,GD_INSPECTOR_PATCH_PAGE } GD_InspectorPatchKind;
+typedef struct { GD_InspectorPatchKind kind; char key[GD_INSPECTOR_PATCH_KEY]; unsigned value; } GD_InspectorPatchItem;
+typedef struct { int count; GD_InspectorPatchItem items[GD_INSPECTOR_PATCH_ITEMS]; } GD_InspectorPatch;
+int gd_viewer_inspector_patch_parse(const char *json,GD_InspectorPatch *patch);
 void gd_viewer_write(GD_ViewerWriter *writer, const char *format, ...);
 void gd_viewer_quote(GD_ViewerWriter *writer, const char *text);
 void gd_viewer_error(GD_ViewerWriter *writer, const char *code, const char *message);

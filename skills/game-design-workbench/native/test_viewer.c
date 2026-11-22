@@ -33,16 +33,22 @@ static int checks(void) {
     int capture_count=capture_checks();if(!capture_count)return 2;
     const char *valid[]={
         "{\"protocol\":1,\"command\":\"inspect\"}",
+        "{\"protocol\":1,\"command\":\"inspector\",\"offset\":64,\"limit\":64,\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"expect\":\"token\",\"patch\":{\"width\":500,\"folds\":{\"section-3\":true},\"scrolls\":{\"scroll-a-b\":20}}}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"expect\":\"token\",\"patch\":{\"pages\":{\"page-a-b\":0}}}",
         " { \"command\":\"navigate\",\"projection\":\"skills\",\"protocol\":1 } ",
         "{\"protocol\":1,\"command\":\"nodes\",\"offset\":0,\"limit\":64}",
         "{\"protocol\":1,\"command\":\"nodes\",\"projection\":\"effects\",\"offset\":4096,\"limit\":1}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"effects\",\"id\":\"effect:Ω\"}",
+        "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"actors\",\"form\":\"case.participant\",\"reference\":\"parent\",\"id\":\"child\",\"expect\":\"token\",\"value\":\"Read the guard.\"}",
         "{\"protocol\":1,\"command\":\"inspect\",\"fields\":\"source\"}",
         "{\"protocol\":1,\"command\":\"refresh\"}",
         "{\"protocol\":1,\"command\":\"evidence\"}",
         "{\"protocol\":1,\"command\":\"evidence\",\"projection\":\"resources\",\"form\":\"diagnostics\",\"offset\":32768,\"limit\":1}",
         "{\"protocol\":1,\"command\":\"result\",\"projection\":\"actors\",\"form\":\"query\",\"fields\":\"variants\",\"offset\":67108864,\"limit\":64,\"expect\":\"token\"}",
         "{\"protocol\":1,\"command\":\"select\",\"projection\":\"matrix\",\"form\":\"cell\",\"reference\":\"nouns/hero\",\"id\":\"verbs/jump\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"move\",\"projection\":\"resources\",\"id\":\"node\",\"value\":\"10,-20.5\",\"expect\":\"token\"}",
+        "{\"protocol\":1,\"command\":\"select\",\"projection\":\"actors\",\"form\":\"case.participant\",\"reference\":\"case\",\"id\":\"child\",\"expect\":\"token\"}",
         "{\"protocol\":1,\"command\":\"actions\"}",
         "{\"protocol\":1,\"command\":\"action\",\"projection\":\"actors\",\"action\":\"query.run\"}",
         "{\"protocol\":1,\"command\":\"controls\"}",
@@ -64,6 +70,7 @@ static int checks(void) {
         "{\"protocol\":1,\"command\":\"inspect\",}",
         "{\"protocol\":1,\"command\":\"navigate\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\"}",
+        "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\",\"form\":\"inspector\",\"id\":\"inspector_analysis\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\",\"reference\":\"\\u0000\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\",\"reference\":\"\\ud800\"}",
         "{\"protocol\":1,\"command\":\"hint\",\"projection\":\"skills\",\"reference\":\"\\udc00\"}",
@@ -72,11 +79,22 @@ static int checks(void) {
         "{\"protocol\":1,\"command\":\"quit\"}",
         "{\"protocol\":1,\"command\":\"evidence\",\"offset\":32769}",
         "{\"protocol\":1,\"command\":\"evidence\",\"fields\":\"ignored\"}",
+        "{\"protocol\":1,\"command\":\"inspector\",\"projection\":\"matrix\"}",
+        "{\"protocol\":1,\"command\":\"inspect\",\"patch\":{}}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"patch\":{\"open\":true}}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"expect\":\"token\",\"patch\":{\"open\":1}}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"expect\":\"token\",\"patch\":{\"width\":400,\"wid\\u0074h\":500}}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"expect\":\"token\",\"patch\":{\"folds\":{\"x\":true,\"\\u0078\":false}}}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"expect\":\"token\",\"patch\":{\"scroll\":null}}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"expect\":\"token\",\"patch\":{\"run\":true}}",
+        "{\"protocol\":1,\"command\":\"inspector-patch\",\"expect\":\"token\",\"patch\":{},\"value\":\"{}\"}",
         "{\"protocol\":1,\"command\":\"result\",\"form\":\"query\"}",
         "{\"protocol\":1,\"command\":\"result\",\"projection\":\"actors\"}",
         "{\"protocol\":1,\"command\":\"result\",\"projection\":\"actors\",\"form\":\"query\",\"offset\":67108865}",
         "{\"protocol\":1,\"command\":\"select\",\"projection\":\"matrix\",\"form\":\"cell\",\"id\":\"exact\"}",
         "{\"protocol\":1,\"command\":\"select\",\"projection\":\"matrix\",\"form\":\"cell\",\"id\":\"exact\",\"expect\":\"token\",\"offset\":0}",
+        "{\"protocol\":1,\"command\":\"move\",\"projection\":\"resources\",\"id\":\"node\",\"value\":\"10,20\"}",
+        "{\"protocol\":1,\"command\":\"move\",\"projection\":\"resources\",\"reference\":\"node\",\"value\":\"10,20\",\"expect\":\"token\"}",
         "{\"protocol\":1,\"command\":\"refresh\",\"projection\":\"skills\"}",
         "{\"protocol\":1,\"command\":\"refresh\",\"fields\":\"source\"}",
         "{\"protocol\":1,\"command\":\"actions\",\"action\":\"query.run\"}",
@@ -199,6 +217,8 @@ static void dispatch(void *context, const GD_ViewerRequest *request, GD_ViewerWr
         gd_viewer_write(w,"{\"ok\":true,\"nodes\":[],\"total\":0,\"offset\":%u,\"limit\":%u,\"next_offset\":null}",request->offset,request->limit);
     } else if (!strcmp(request->command,"controls")) {
         gd_viewer_write(w,"{\"ok\":true,\"forms\":[],\"offset\":%u,\"limit\":%u}",request->offset,request->limit);
+    } else if (!strcmp(request->command,"inspector-patch")) {
+        ++owner->mutations;gd_viewer_write(w,"{\"ok\":true,\"patch\":%s,\"expect\":",request->value);gd_viewer_quote(w,request->expect);gd_viewer_write(w,"}");
     } else if (!strcmp(request->command,"configure")) {
         ++owner->mutations; gd_viewer_write(w,"{\"ok\":true,\"configured\":true,\"value\":"); gd_viewer_quote(w,request->value); gd_viewer_write(w,",\"expect\":"); gd_viewer_quote(w,request->expect); gd_viewer_write(w,"}");
     } else if (!strcmp(request->command,"actions")) {

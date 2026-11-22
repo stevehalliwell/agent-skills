@@ -5,7 +5,7 @@ Export values, tweak them in-game, then deterministically update existing litera
 ## Scope and permission
 
 - Resolve actual control collection alias/directory through public Attendant `schema`; read its fields and usage. Live contract remains authoritative. Native tools never discover project collections.
-- Use [native control contract](../native/README.md#control-values-and-exports) for supported grammar, selection, formats, and limits.
+- Use [native control contract](../native/control-values.md) for supported grammar, selection, formats, and limits.
 - Export/import accepted controls by default. Configure status/name filters for other tuning sets. Repeat the same selection at import. Name exclusions omit output keys, not required dependency reads.
 - Import updates `value` only on existing literal controls. Preserve formulas, types, units, bounds, enum choices, statuses, bodies, and identities. Omitted controls retain their definitions; affected formulas recompute from changed inputs.
 - A request to import/apply game tweaks authorizes scoped adoption unless project usage requires another gate. A request to preview alone does not. A ready native plan is not itself write permission.

@@ -2,6 +2,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 #include "gd_explorer_loaded_pickers.h"
 #include "gd_graph_analysis_draw.h"
 #include <math.h>
@@ -36,7 +37,7 @@ static int focus_result(GD_ExplorerContext *context,GD_ExplorerQueryState *state
     for (i=0;i<scene->layout.node_count;++i) if (scene->nodes[i].source==target && scene->nodes[i].kind==GD_QUERY_NODE_EFFECT) ++matches;
     if (matches!=1) { gd_query_scene_destroy(scene); gd_effect_query_destroy(query); return 0; }
     if(state->scene && !query_place(context,scene,(GD_LayoutMode)context->pane->layout_choice)) {gd_query_scene_destroy(scene);gd_effect_query_destroy(query);return 0;}
-    gd_query_scene_destroy(state->scene); gd_effect_query_destroy(state->selected); state->selected=query; state->scene=scene;state->contributor_page=0; return 1;
+    gd_query_scene_destroy(state->scene); gd_effect_query_destroy(state->selected); state->selected=query; state->scene=scene;state->contributor_page=state->reveal_contributor=state->reveal_contributor_step=0; return 1;
 }
 static GD_ExplorerQueryState *build_state(GD_ExplorerContext *context, const GD_ExplorerQueryOptions *options, int allow_empty, const char *primary_value) {
     GD_Model *model=gd_explorer_model(context->project,context->pane->view); GD_Allocator allocator=context->project->allocator;
@@ -100,6 +101,7 @@ failure:
 /* Scene slots are transient, even when two results have identical topology. */
 static void query_scene_changed(GD_ExplorerContext *context) {
     if(context->pane->query_state)memset(context->pane->query_state->case_pages,0,sizeof(context->pane->query_state->case_pages));
+    context->pane->reveal_case=0;
     context->pane->overview.row=context->pane->overview.column=-1;
     if(context->analysis)context->analysis->initialized=0;
     ++context->scope_revision;
@@ -471,15 +473,16 @@ void gd_explorer_query_input(GD_ExplorerContext *context) {
     }
     if (pane->selection.held>=0 && igIsMouseDown_Nil(ImGuiMouseButton_Left) && gd_layout_pointer_dragged(pane->layout,pane->selection.held,mouse.x,mouse.y)) gd_query_scene_drag(pane->query_state->scene,pane->selection.held,world.x,world.y);
 }
-static void case_details(GD_ExplorerContext *context, int index) {
+static void case_details_at(GD_ExplorerContext *context,int index,int reveal_participant) {
     const GD_Rules *rules=context->project->rules; const GD_RuleCase *item=&rules->cases[index]; const GD_Record *record=&rules->model->records[rules->sources[item->source].record]; int i;
     igTextWrapped("%s | status %s | %s",record->reference,record->status ? record->status:"unspecified",record->source_path);
     igTextWrapped("Case %s | line %d | authored A %s | context %s",item->name,item->line,item->primary_target ? item->primary_target:"unspecified",item->context ? item->context:"unspecified");
     if (item->unknown_conditions) igTextWrapped("Unknown conditions: %s",item->unknown_conditions); if (item->unknown_effects) igTextWrapped("Unknown effects: %s",item->unknown_effects);
     unsigned short *cursor=context->pane->view==GD_EXPLORER_STATES ? &context->pane->chart_state->participant_pages[index]:&context->pane->query_state->case_participant_pages[index];
     GD_EvidencePage participants=gd_explorer_evidence_cursor_pager("Local participants",cursor,item->participant_count);
-    for (i=item->first_participant+participants.first;i<item->first_participant+participants.end;++i) { const GD_RuleParticipant *actor=&rules->participants[i]; igTextWrapped("%s (%s): requires %s | excludes %s | other axes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->other_axes ? actor->other_axes:"unspecified",actor->becomes ? actor->becomes:"none",actor->preserve ? actor->preserve:"none",actor->causes ? actor->causes:"none"); }
+    for (i=item->first_participant+participants.first;i<item->first_participant+participants.end;++i) { const GD_RuleParticipant *actor=&rules->participants[i];if(reveal_participant==i+1)igSetScrollFromPosY_Float(igGetCursorPosY(),0.15f);igTextWrapped("%s (%s): requires %s | excludes %s | other axes %s | becomes %s | preserves %s | calls %s",actor->name,gd_rule_noun_label(rules,actor),actor->requires ? actor->requires:"unspecified",actor->skip_if ? actor->skip_if:"none",actor->other_axes ? actor->other_axes:"unspecified",actor->becomes ? actor->becomes:"none",actor->preserve ? actor->preserve:"none",actor->causes ? actor->causes:"none"); }
 }
+static void case_details(GD_ExplorerContext *context,int index) { case_details_at(context,index,0); }
 void gd_explorer_rule_case_details(GD_ExplorerContext *context,int index) { case_details(context,index); }
 int gd_explorer_query_case_count(const GD_ExplorerContext *context,int edge) {
     const GD_ExplorerQueryState *state=context->pane->query_state;int i,count=0;
@@ -487,7 +490,7 @@ int gd_explorer_query_case_count(const GD_ExplorerContext *context,int edge) {
     for(i=0;i<context->project->rules->case_count;++i)count+=gd_query_scene_overview_case(state->scene,edge,i);
     return count;
 }
-void gd_explorer_query_source(GD_ExplorerContext *context, int edge) {
+static void query_source(GD_ExplorerContext *context, int edge, int reveal_case) {
     GD_ExplorerQueryState *state=context->pane->query_state; const GD_QuerySceneEdge *item; const GD_Rules *rules=context->project->rules;
     if (!state || !state->scene || edge<0 || edge>=state->scene->layout.edge_count) return;
     item=&state->scene->edges[edge];
@@ -496,7 +499,7 @@ void gd_explorer_query_source(GD_ExplorerContext *context, int edge) {
         igTextWrapped("%d distinct interaction records; same-case participation, not direct modification or frequency. Conditional/excluded declarations stay evidence, not proven applicability.",gd_query_scene_overview_count(state->scene,edge));
         igTextWrapped("Overview incomplete %s | construction limited %s",gd_query_scene_overview_incomplete(state->scene) ? "yes":"no",state->scene->limited ? "yes":"no");
         {int c,ordinal=0,current=state->case_pages[edge];GD_EvidencePage page=gd_explorer_evidence_pager("Cases",&current,gd_explorer_query_case_count(context,edge),GD_EVIDENCE_PAGE_ROWS);state->case_pages[edge]=(unsigned char)current;
-         for(c=0;c<rules->case_count;++c)if(gd_query_scene_overview_case(state->scene,edge,c)){int row=ordinal++;if(row<page.first || row>=page.end)continue;igPushID_Int(c);case_details(context,c);igPopID();}}
+         for(c=0;c<rules->case_count;++c)if(gd_query_scene_overview_case(state->scene,edge,c)){int row=ordinal++;if(row<page.first || row>=page.end)continue;igPushID_Int(c);if(reveal_case==c+1)igSetScrollFromPosY_Float(igGetCursorPosY(),0.15f);case_details_at(context,c,reveal_case==c+1 ? context->pane->reveal_participant:0);igPopID();}}
         return;
     }
     if (state->query->effects) {
@@ -526,6 +529,7 @@ static void coverage_details(GD_ExplorerContext *context, int value_index) {
         igPopID();
     }
 }
+void gd_explorer_query_source(GD_ExplorerContext *context,int edge) { query_source(context,edge,0); }
 void gd_explorer_query_details(GD_ExplorerContext *context) {
     GD_ExplorerPane *pane=context->pane; GD_ExplorerQueryState *state=pane->query_state; int record=gd_explorer_query_record(pane),selected=pane->selection.node,i;
     if (state && state->scene && selected>=0 && selected<state->scene->layout.node_count) {
@@ -556,12 +560,13 @@ void gd_explorer_query_details(GD_ExplorerContext *context) {
         } else if (item->kind==GD_QUERY_NODE_ACTIVATION) case_details(context,state->query->variants->activations[item->source].case_index);
         if (igTreeNode_Str("Incident guards/effects and exact source declarations")) { for (i=0;i<pane->layout->edge_count;++i) if (pane->layout->edges[i].a==selected || pane->layout->edges[i].b==selected) { igPushID_Int(i); gd_explorer_query_source(context,i); igPopID(); } igTreePop(); }
     }
+    if(state && state->selected && state->reveal_contributor)igSetNextItemOpen(true,ImGuiCond_Always);
     if (state && state->selected && igTreeNode_Str("Selected result: exact contributor paths")) {
         igTextWrapped("Producer limit %s | source incomplete %s | unexamined links %d | unresolved targets %d",state->selected->limited ? "yes":"no",state->selected->source_incomplete ? "yes":"no",state->selected->unexamined_links,state->selected->unresolved_targets);
         GD_EvidencePage page=gd_explorer_evidence_pager("Contributor paths",&state->contributor_page,state->selected->count,GD_EVIDENCE_PAGE_ROWS);
-        for (i=page.first;i<page.end;++i) { int path[GD_MAX_RULE_EXPANSION_DEPTH],count=gd_effect_contributor_path(state->selected,i,path,GD_MAX_RULE_EXPANSION_DEPTH),step; const GD_EffectLink *link=&state->query->effects->links[state->selected->links[i]]; igTextWrapped("Target: %s",link->participant>=0 ? context->project->rules->participants[link->participant].name:"unresolved"); for (step=0;step<count;++step) case_details(context,state->query->resource->nodes[state->query->effects->nodes[path[step]].activation].case_index); }
+        for (i=page.first;i<page.end;++i) { int path[GD_MAX_RULE_EXPANSION_DEPTH],count=gd_effect_contributor_path(state->selected,i,path,GD_MAX_RULE_EXPANSION_DEPTH),step; const GD_EffectLink *link=&state->query->effects->links[state->selected->links[i]]; igTextWrapped("Target: %s",link->participant>=0 ? context->project->rules->participants[link->participant].name:"unresolved"); for (step=0;step<count;++step) { if(state->reveal_contributor==i+1 && state->reveal_contributor_step==step+1)igSetScrollFromPosY_Float(igGetCursorPosY(),0.08f); case_details(context,state->query->resource->nodes[state->query->effects->nodes[path[step]].activation].case_index); } }
         igTreePop();
     }
-    if (pane->selection.cell>=0) gd_explorer_query_source(context,pane->selection.cell);
+    if (pane->selection.cell>=0) query_source(context,pane->selection.cell,pane->selection.cell==pane->reveal_case_edge ? pane->reveal_case:0);
     if (record>=0) { GD_Model *model=gd_explorer_model(context->project,pane->view); const GD_Record *source=&model->records[record]; gd_noun_ui_text(source,source->display_name);igTextWrapped("%s | status %s | %s",source->reference,source->status ? source->status:"unspecified",source->source_path); if (igSmallButton("Copy source path")) igSetClipboardText(source->source_path); if (igTreeNode_Str("Full authored source (other effects retained)")) { igPushTextWrapPos(0); igTextUnformatted(source->body,NULL); igPopTextWrapPos(); igTreePop(); } }
 }

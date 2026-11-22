@@ -12,6 +12,7 @@
 #include "gd_named_query.h"
 #include "gd_diagnostics_ui.h"
 #include "gd_scene_draw.h"
+#include "gd_sidebar.h"
 
 enum { GD_EXPLORER_SOURCE_LISTS=64 };
 typedef struct {
@@ -22,6 +23,7 @@ typedef struct { int matching,unknown,excluded,unfinished,retained; } GD_Explore
 typedef struct {
     GD_Allocator allocator; GD_ExplorerChartForm pending,applied; GD_Query *query;
     int mode,row,column,scenario,page,arrow_page,proposal_page,activation_page;
+    int reveal_proposal,reveal_activation; /* One-shot row indices + 1. */
     GD_Camera cameras[2]; bool camera_ready[2];
     unsigned short participant_pages[GD_MAX_RULE_CASES];
     int node_count[2],edge_count;
@@ -55,7 +57,7 @@ typedef struct {
     GD_Allocator allocator; GD_ExplorerQueryOptions applied;
     GD_Query *query; GD_QueryScene *scene; GD_Layout *empty;
     GD_EffectQuery *selected;
-    int coverage_page,contributor_page;
+    int coverage_page,contributor_page,reveal_contributor,reveal_contributor_step;
     unsigned short case_participant_pages[GD_MAX_RULE_CASES];
     unsigned char case_pages[GD_MAX_PAIRS]; /* Exact scene edge; <=64 case pages. */
     GD_ActorComparison comparison; int comparison_first,comparison_second,comparison_ready;
@@ -81,6 +83,7 @@ typedef struct {
     int similarity_row,similarity_peer,similarity_page,comparison_first,comparison_second,comparison_available,comparison_work;
     double comparison_distance,comparison_components[GD_SIMILARITY_FEATURES];
     int similarity_member_pages[GD_SIMILARITY_FEATURES],similarity_feature_page;
+    int reveal_similarity_feature,reveal_similarity_member; /* One-shot inspector reveal; indices + 1. */
     int marked_node_page,marked_link_page,peer_page,member_page,root_page,pair_page,overview_page,finding_pages[3],hypothesis_page;
     unsigned short witness_pages[2],reach_member_pages[GD_MAX_RECORDS],matrix_case_pages[GD_MAX_EDGES],support_pages[2][GD_MAX_RECORDS];
     int witness_arcs[GD_MAX_RECORDS]; /* Synchronous renderer scratch; never native result storage. */
@@ -108,6 +111,10 @@ typedef struct {
 typedef struct {
     int state_chart_mode;
     int layout,actor_overview,noun_row,noun_column,noun_case_page,sort,direction,lens,peer,foundation_peer,reach_relation,reach_peer,reach_target;
+    char camera_pose[64]; /* Absolute world center and zoom, serialized as x,y,zoom. */
+    bool inspector_open,inspector_sections[GD_SIDEBAR_COUNT];
+    int inspector_width,inspector_pixels,inspector_scroll,inspector_scroll_max;
+    int chart_hypothesis_page,chart_transition_page,chart_proposal_page,chart_activation_page;
     int focus_root,mda_root,mda_direction,resource_witness,route_witness,similarity_row,similarity_peer;
     int overview_row,overview_column,coverage_page,actor_case_page,contributor_page,structure_page,rules_page,rules_axis_page,similarity_page,bypass_candidate;
     bool paused,workspace_bounds,island_separation,visual_filter,overlay,distance_focus,focus_auto_fit,shared,branches,foundations,shapes;
@@ -148,6 +155,7 @@ typedef struct {
     char resource_message[160];
     GD_MatrixGrid grid; /* Caller-owned presentation, never typed snapshot data. */
     int noun_case_page,overview_source_page,foundation_source_page,reach_source_page,find_source_page;
+    int reveal_case,reveal_case_edge,reveal_participant; /* One-shot inspector reveal; case/participant indices + 1. */
     int noun_source_pages[GD_EXPLORER_SOURCE_LISTS],noun_source_pairs[GD_EXPLORER_SOURCE_LISTS],noun_source_row,noun_source_column; /* Visible source-page cache, separate from primary inspector. */
     GD_ExplorerSkillEditor editor;
     GD_ExplorerMdaDisplay mda;
@@ -180,6 +188,8 @@ typedef struct {
     int records[2],participant;
     unsigned char cases[GD_MAX_RULE_CASES];
 } GD_ExplorerRuleContext;
+typedef struct { bool open,scroll_pending; int viewport_width,scroll,scroll_max; float preferred_width; } GD_ExplorerInspector;
+enum { GD_CHART_ARROWS_PER_PAGE=8 };
 typedef struct {
     GD_ExplorerProject *project;
     GD_ExplorerPane *pane;
@@ -195,6 +205,7 @@ typedef struct {
     struct GD_SelectionHistory *history;
     struct GD_ExplorerFind *finds; /* Optional shell-owned transient Find state. */
     struct GD_Sidebar *sidebar; /* Optional shell-owned shared fold preferences. */
+    GD_ExplorerInspector *inspector; /* Optional shell-owned desktop geometry. */
 } GD_ExplorerContext;
 int gd_explorer_chart_prepare(GD_ExplorerContext *context);
 int gd_explorer_chart_run(GD_ExplorerContext *context);

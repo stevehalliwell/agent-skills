@@ -50,15 +50,10 @@ $bindings = @(
 & $gd query --list --json --fields questions
 ```
 
-Domain output preserves record statuses, original source/target references, fields, source paths/lines and reversed path-step flags. Structural output preserves original endpoints and labels traversal separately. Discovery's additive `direction_semantics` field explains direction for supported structural path questions; help includes paired MDA examples.
+Domain output preserves record statuses, original source/target references, fields, source paths/lines and reversed path-step flags. Structural output preserves original endpoints and labels traversal separately. Discovery's `direction_semantics` field explains direction for supported structural path questions; help includes paired MDA examples.
 
-## Checks and limits
+## Check and interpret the traces
 
-- Fresh CJIT CLI build: `native/build/mda-direction-cli/gd.exe`; no compiler warnings. No viewer launched.
-- Four new checks plus eight structural-query regressions:12/12, no skips with explicit executable. Covers help/JSON discovery, direction parity, source-line/status evidence, shortest-path distinction, automatic JSON/explicit text and invalid-direction failure. Combined with Forge/resource regressions:24/24, no skips.
-- Old CLI fails new discovery regression as expected. Domain forward/backward/both and structural forward/backward output bytes match old CLI exactly: five comparisons. Traversal behavior unchanged.
-- Game-design source bytes unchanged by queries. Source models, experiments and existing pane/draft state not modified.
-- Replay from repository root with `GD_NATIVE_EXE` set to current CLI: `node --test skills/game-design-workbench/test/native-mda-direction.test.mjs skills/game-design-workbench/test/native-structure-queries.test.mjs`. Unset executable reports skipped checks, not passes.
-- Artifacts: `../../native/build/mda-direction-review-1794865577588/`. Exact comparison receipts and native outputs retained locally; durable replay in `test/native-mda-direction.test.mjs`.
+From repository root, set `GD_NATIVE_EXE` to the built CLI and run `node --test skills/game-design-workbench/test/native-mda-direction.test.mjs skills/game-design-workbench/test/native-structure-queries.test.mjs` to check direction, provenance, and output. Unset executable skips native checks.
 
-Core reference completeness is not whole-game completeness, applicability, causation, observed dynamics or guaranteed experience. No player study, rendered/pointer review, alternate-compiler matrix or new commit implied.
+Core reference completeness is not whole-game completeness, applicability, causation, observed dynamics, or guaranteed experience.

@@ -3,6 +3,7 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_NO_EXPORT
 #include "cimgui.h"
+#include "gd_inspector_ipc_ui.h"
 
 void gd_diagnostics_clear(GD_DiagnosticBrowser *browser) {
     gd_diagnostics_destroy(browser->rejected); browser->rejected=NULL; browser->capture_failed=0; browser->open_next=browser->collapse_next=false;
