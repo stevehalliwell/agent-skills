@@ -31,11 +31,22 @@ Use these rules where resource behavior is part of correctness or product value.
 
 - **Use representations that make correctness checkable.** Prefer integers over floating point when the domain is discrete or exact arithmetic is required; choose widths, ranges, scaling, and overflow behavior explicitly. Integer operations may be cheaper and some CPUs can execute integer and floating-point work in parallel. Neither advantage is universal: use floating point when the domain needs it, and measure representative workloads before changing a numeric representation for speed. Treat integer width, signedness, conversion, indexing, units, alignment, and byte order as design decisions when they affect behavior. Keep platform-specific code behind small boundaries with explicit contracts and fault models. Keep dependencies, macros, build variants, and feature flags few because each expands behavior that must be understood and tested.
 
+## Allocation ladder
+
+Choose by owner, lifetime, size, and whether live elements may move. Set count and byte limits up front where the workload allows; check bounds and define what happens when full. Use the simplest option that fits each group:
+
+- **One lifetime, known size:** Allocate once. Use fixed-capacity arrays for bounded collections that must not relocate on append.
+- **Shared cleanup:** Use one arena per owner (tab, document, request). Keep frame or operation scratch separate; reset only after its last consumer finishes.
+- **Variable-size payloads:** Keep small descriptors (offset or pointer plus length) in the array. Pack filename bytes or other payloads by actual length in a separate bounded bump allocator. Avoid a maximum-sized buffer in every record.
+- **Independent deletion:** Swap back only if order and stable addresses do not matter. Mark rare deletions and reclaim at reset. For frequent reuse of equal-sized slots, store the free-list link in each freed slot; no extra array needed. Reusing a record slot does not reclaim its bump-allocated payload.
+- **When these patterns do not fit:** Reach for a more elaborate arena or allocator. State when references become invalid.
+
 ## Application and verification
 
 On invocation, inspect the supplied target or ask for the code/system and operating constraint when no target is known. Apply relevant ground rules, not the entire list. For code changes, load [Coding](../coding/SKILL.md) and follow its verification workflow. Check ownership, bounds, failure paths, and performance claims against the operating model with focused tests, analysis, or measurement. For review-only work, report findings and evidence limits without editing. Done when resource constraints and verification state are explicit.
 
 ## References
 
+- [Memory management strategies](references/memory-management-strategies.md) — read when choosing allocation layout or deletion policy. The ladder and worked tab layout draw from Nic Barker’s *Memory Management, Explained Simply* (Parts 1–3, linked in guide).
 - [NASA/JPL Power of 10](references/10rules.md) — read when evaluating safety-critical C control flow, bounds, assertions, or analysis constraints; it is not a universal compliance mandate.
 - [TigerStyle](references/TIGER_STYLE.md) — read when a low-level design/review needs detailed safety, performance, or developer-experience rationale beyond the inline rules.

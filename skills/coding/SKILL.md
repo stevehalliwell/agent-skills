@@ -131,7 +131,7 @@ Before changing a boundary, check:
 - Keep a self-explanatory one-off literal inline when a named constant adds indirection without meaning. A constant is not configuration: do not create mutable configuration for a value that never varies.
 - Prefer independent guard clauses over compound wrapper conditions to keep the main path shallow. Keep value returns and cleanup explicit; do not force early exits where they obscure cleanup, transaction boundaries, or normal flow.
 - Name operations by their actual behavior; reserve threading-coordination terms for real synchronization, not immutable commitment or publication.
-- Prefer an enum or equivalent named mode when a parameter selects behavior. Avoid boolean parameters whose `true`/`false` meaning is unclear at the call site; retain a boolean for a clear predicate or binary state.
+- Compare modes, states, and operations against named enum values and test flags with named bit masks, not raw numbers. Retain booleans for clear binary predicates.
 - Separate logical blocks with a blank line: setup, validation, main work, and result/cleanup. Do not add whitespace mechanically between every statement.
 
 ## Rules
@@ -150,5 +150,6 @@ Source attribution and optional background only. All operational guidance is inl
 
 - Rich Hickey, [Simple Made Easy transcript](https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/SimpleMadeEasy.md): simple versus easy, independent concerns, plain data, and visible complexity.
 - Casey Muratori, [Why most developers don't care about performance software (and should we?)](https://www.youtube.com/watch?v=8xBJPa_480Q): required machine work, direct calls, optimizable architecture, concurrency, and test cost.
+- Nic Barker, *Memory Management, Explained Simply* ([Part 1](https://www.youtube.com/watch?v=3rez2rDYHHA), [Part 2](https://www.youtube.com/watch?v=7mYWbTgEGb8), [Part 3](https://www.youtube.com/watch?v=VW_NUH-6kv0)): use data size and lifetime to choose simpler allocation and layout.
 - John Ousterhout, [software design talk](https://www.youtube.com/watch?v=LtRWu9DErgU): deep modules, caller knowledge, component-centered interfaces, and strategic design.
 - Dietrich Gebert, [Ponytail](https://github.com/DietrichGebert/ponytail): solution ladder, minimum necessary code, tracing before editing, and verification without cutting safeguards.
