@@ -1,6 +1,6 @@
 ---
 name: attendant
-description: "Set up Attendant, create an empty collection/table, create or update records, query or search local records, validate records, diagnose projection health, read human feedback, or launch/control the native Markdown GUI through reveal, find and selection inspection. Use for `.pi/attendant.tables`, collection schemas/usage, Attendant-managed Markdown or explicit Attendant workspace requests. Route setup and empty collections through guarded workflows. Skip ordinary Markdown editing without a GUI request and non-Attendant data; migration/import is not supported."
+description: "Set up Attendant, create an empty collection/table, create or update records, query or search local records, validate records, diagnose projection health, read human feedback, or launch/control the native Markdown GUI through open, reveal, find and selection inspection. Use for `.pi/attendant.tables`, collection schemas/usage, Attendant-managed Markdown or explicit Attendant workspace requests. Route setup and empty collections through guarded workflows. Skip ordinary Markdown editing without a GUI request and non-Attendant data; migration/import is not supported."
 ---
 
 # Attendant
@@ -60,7 +60,7 @@ Use GUI for human Markdown editing, feedback and explicit live selection/navigat
 - Resolve `<gui>` to quoted absolute `<skill-dir>/native/build/gui/attendant-gui-zig.exe` on Windows, without `.exe` on macOS. Use built CJIT counterpart if Zig output is absent. For a named build variant, use matching `build/gui-<variant>/` executable. Do not substitute spike or stale incompatible builds.
 - Resolve `<assets>` to quoted absolute `<skill-dir>/native/build/deps/richmd/assets`. Native library must remain beside executable; assets are required for startup, not controls. Both macOS compiler outputs run without `DYLD_LIBRARY_PATH`.
 - If missing, follow [build reference](references/build.md#gui-dependencies-and-application). Dependency acquisition is explicit, not authorized by an ordinary query/control request. Never install tools or download GUI dependencies implicitly. Use fresh `ATTENDANT_GUI_VARIANT` instead of overwriting mapped binaries/DLLs or closing a user viewer.
-- Start a viewer only when requested. Prefer existing responsive viewer for same project; reveal/find/inspect never start one. Launch as a persistent desktop process, wait for successful inspection before sending controls, and leave human viewer running. Report missing/ambiguous/unresponsive recipients; do not kill them or open a duplicate to bypass discovery failure.
+- Start a viewer only when requested. Prefer existing responsive viewer for same project; open/reveal/find/inspect never start one. Launch as a persistent desktop process, wait for successful inspection before sending controls, and leave human viewer running. Report missing/ambiguous/unresponsive recipients; do not kill them or open a duplicate to bypass discovery failure.
 
 ```sh
 # Placeholders denote quoted absolute paths. --file is optional.
@@ -72,7 +72,8 @@ Startup accepts `--frames 1..6000 --shot FILE.ppm` for bounded captures; `--shot
 
 ### Human editing and navigation
 
-- Sidebar groups configured collection records and root Markdown. Automatic open/Refresh files discovers only non-dot root `.md` files plus configured collection files, not other root folders or descendants. Skip links/junctions/reparse points and special entries. Explicit **Open Markdown** remains available; do not promise recursive discovery.
+- Sidebar groups configured collection records and root Markdown. Automatic open/Refresh files discovers only non-dot root `.md` files plus configured collection files, not other root folders or descendants. Skip links/junctions/reparse points and special entries. Manually opened files are tabs only, not discovered records.
+- Type a project-relative or absolute path and press Enter or **Open Markdown**. Or drop up to 16 local Markdown files onto the window. Explicit opening and startup `--file` can target files outside the project. Opened files share the 16-tab limit and reuse tabs by normalized path.
 - Navigation deduplicates managed records, compacts genuine single-child paths and preserves current-window expansion on refresh. Folders precede files; ASCII case-insensitive sort uses UTF-8 byte tie-break. Capacity is 4096 documents. Incomplete discovery keeps partial results and warning; hard refresh failure keeps previous navigation and dirty tabs. No Git filtering or watcher.
 - Tabs show raw source and rendered body. Local links and typed record references navigate; unresolved references stay visible. **Save** or Ctrl+S writes source. Reload/close guard dirty work; external changes invalidate saved selections and block stale replacement. Far-right tab-bar **X** closes all; Save/Discard/Cancel applies per dirty tab. Cancel stops remaining closes without reopening earlier tabs.
 - **Wrap** defaults on across raw editors in window. Toggle/reflow does not change bytes, dirty state, selection or undo. Drag vertical dividers to resize sidebar and source/preview; widths and wrap/find settings do not persist after restart.
@@ -92,7 +93,7 @@ Startup accepts `--frames 1..6000 --shot FILE.ppm` for bounded captures; `--shot
 
 - Human selects source or preview text, then **Comment on selection** freezes independent excerpt/context snapshot. Preview selection can cross formatting, paragraphs, code and table cells. Proven source runs may map an enclosing range; otherwise selection stays context-only. Never invent coordinates or reuse older source selection.
 - Composer separates excerpt from human comment. Dirty source requires explicit **Save & Send**. Save failure queues nothing. Queue failure after successful save reports **saved-but-not-queued**; saved source is not rolled back. First Send can create/register managed `_meta_comments` collection; merely reading feedback must not bootstrap it.
-- Saved feedback binds target SHA-256 and zero-based/end-exclusive Unicode-code-point range, including BOM/front matter. Context-only stored feedback uses zero bounds and empty selected source, with rendered context separately. Human body remains verbatim. Live inspection instead uses null bounds for context-only selection.
+- Comments on explicitly opened files go in the viewer project's feedback collection, with the target file's absolute path. Saved feedback binds target SHA-256 and zero-based/end-exclusive Unicode-code-point range, including BOM/front matter. Context-only stored feedback uses zero bounds and empty selected source, with rendered context separately. Human body remains verbatim. Live inspection instead uses null bounds for context-only selection.
 - Pending/resolved feedback follows saved anchors only after hash/text checks. Reading, inspecting or opening feedback never resolves it. Follow [commands and feedback](references/commands.md#human-feedback) for schema/usage, hash checks, authorized work and explicit resolution.
 
 ### IPC commands
@@ -100,6 +101,8 @@ Startup accepts `--frames 1..6000 --shot FILE.ppm` for bounded captures; `--shot
 Use GUI executable as client; do not simulate clicks or construct binary packets for ordinary operations. Always pass explicit project root. Controls require one matching responsive viewer; no automatic startup, disk writes or OS focus stealing.
 
 ```sh
+# Activate a file tab in an existing viewer; path can also be project-relative.
+<gui> --project /path/to/project --open /path/to/project/docs/draft.md
 # Passive hint; human chooses Go. Optional line is positive and 1-based.
 <gui> --project /path/to/project --reveal records/tasks/first.md --line 12
 # Current document and live source/preview selection, including unsaved buffer:
@@ -108,6 +111,12 @@ Use GUI executable as client; do not simulate clicks or construct binary packets
 <gui> --project /path/to/project --find "the plan" --view preview --file README.md
 <gui> --project /path/to/project --find "TODO" --view source --match-case
 <gui> --project /path/to/project --find "tasks" --view sidebar
+```
+
+**Open:** queues tab activation without a search, reveal hint, or source write. Target must be local Markdown under the project, in a configured collection, or already open in a tab. It cannot introduce an outside file to a running viewer; use human open or startup `--file`. Receipt is not proof of activation. Check `--inspect` for the active path; later open failures appear in the viewer.
+
+```json
+{"ok":true,"queued":true,"persistent":false,"os_focus_changed":false}
 ```
 
 **Reveal:** receipt updates a separate, nonpersistent agent hint; does not switch tab, move caret/selection, scroll or focus. Only human **Go** navigates/highlights. Latest hint wins. Dirty/stale target receives no anchor; hash/line checks protect saved location. Receipt is not proof human followed it:
@@ -138,7 +147,7 @@ Treat dirty selections as unsaved buffer state; revision is not disk hash. Inspe
 
 ### IPC failures, paths and transport
 
-- Controls emit one JSON object on stdout; errors also explain on stderr. Exit 0 means delivered hint/queued find/successful inspection, 2 invalid invocation, 1 source/recipient/transport failure. Error shape is `{"ok":false,"code":"...","message":"..."}`. Check exit status and fields; never treat missing viewer as empty selection.
+- Controls emit one JSON object on stdout; errors also explain on stderr. Exit 0 means delivered hint/queued open or find/successful inspection, 2 invalid invocation, 1 source/recipient/transport failure. Error shape is `{"ok":false,"code":"...","message":"..."}`. Check exit status and fields; never treat missing viewer as empty selection.
 - Use exactly one control mode per command. `--line` belongs only to reveal; `--view`/`--match-case` only to find. No `--assets`, `--shot` or `--frames` in control commands. `--file` is allowed only for source/preview find.
 - Paths must be ordinary local paths without application-link ancestry. Windows rejects UNC, remote/extended namespace and reparse paths. macOS permits standard `/tmp`, `/var`, `/etc` OS aliases, rejects other symlinks and nonlocal volumes. Checks are not an atomic filesystem sandbox.
 - Windows discovers matching `AttendantMarkdownWorkspace` windows on current desktop and uses bounded `WM_COPYDATA` requests/replies. No network listener. Busy/rendering viewers can refuse inspection; do not force focus or close viewers to recover.

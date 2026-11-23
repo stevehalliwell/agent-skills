@@ -29,7 +29,7 @@ static int gui_event_ready(test_command_live *live, usize *offset, int *ready, c
     }
     return 0;
 }
-static int gui_preview_preserved(const char *project, const char *baseline, int context) {
+static int gui_preview_preserved(const char *project, const char *baseline) {
     file_tree before = {0}; arena_reset(gui_files.memory);
     TEST_ASSERT_FILE_OK(file_directory_list_tree(&gui_files, (cstring){(char *)baseline}, &before));
     for (usize i = 0; i < before.count; ++i) {
@@ -37,7 +37,7 @@ static int gui_preview_preserved(const char *project, const char *baseline, int 
         TEST_ASSERT_FILE_OK(file_tree_join(prior, baseline, entry->path));
         TEST_ASSERT_FILE_OK(file_tree_join(current, project, entry->path));
         TEST_ASSERT_FILE_OK(file_native_kind(current, &kind)); TEST_ASSERT(kind == entry->kind);
-        if (kind != file_entry_regular || !strcmp(entry->path, ".pi/attendant.tables") || (context && !strcmp(entry->path, "README.md"))) continue;
+        if (kind != file_entry_regular || !strcmp(entry->path, ".pi/attendant.tables")) continue;
         TEST_ASSERT_FILES_EQUAL(((cstring){prior}), ((cstring){current}));
     }
     arena_reset(gui_files.memory); return 0;
@@ -45,10 +45,10 @@ static int gui_preview_preserved(const char *project, const char *baseline, int 
 static int gui_preview(const char *mode, const char *text, const char *hash, int context_mode) {
     char project[NATIVE_PATH_SIZE], target[NATIVE_PATH_SIZE], baseline[NATIVE_PATH_SIZE];
     TEST_ASSERT(gui_project(project) == 0);
-    TEST_ASSERT_FILE_OK(file_tree_join(target, project, "README.md"));
+    TEST_ASSERT_FILE_OK(file_tree_join(target, context_mode ? gui_case.path : project, "README.md"));
     TEST_ASSERT_FILE_OK(file_write_bytes((cstring){target}, text, strlen(text)));
     TEST_ASSERT(gui_baseline(project, baseline) == 0);
-    const char *arguments[] = {gui_testing, "--project", project, "--assets", gui_assets, "--file", "README.md", "--frames", "240", "--exercise-selection", mode};
+    const char *arguments[] = {gui_testing, "--project", project, "--assets", gui_assets, "--file", target, "--frames", "240", "--exercise-selection", mode};
     test_command_workspace workspaces[2];
     for (unsigned i = 0; i < 2; ++i) workspaces[i] = (test_command_workspace){gui_commands.scratch, gui_live_output[i], gui_live_errors[i], sizeof(gui_live_output[i]), sizeof(gui_live_errors[i])};
     test_command command = {.arguments = arguments, .argument_count = 11, .working_directory = gui_root, .timeout_ms = 30000};
@@ -103,11 +103,17 @@ static int gui_preview(const char *mode, const char *text, const char *hash, int
     TEST_ASSERT(!strcmp(assembled, selected));
     while (!gui_live[0].complete) { TEST_ASSERT_COMMAND_OK(test_command_poll(&gui_live[0])); if (!gui_live[0].complete) test_command_sleep(1); }
     TEST_ASSERT_COMMAND_EXIT(&gui_live[0].result, 0);
-    TEST_ASSERT(gui_preview_preserved(project, baseline, context_mode) == 0);
+    TEST_ASSERT(gui_preview_preserved(project, baseline) == 0);
     char expected[16384]; TEST_ASSERT(snprintf(expected, sizeof(expected), "%s%s", text, context_mode ? "\n" : "") < (int)sizeof(expected));
     TEST_ASSERT_FILE_TEXT(((cstring){target}), expected);
     TEST_ASSERT(gui_query(project) == 0 && integration_number_is("meta_comments.pending", 1) && integration_count("rows") == 1);
     TEST_ASSERT(integration_text_is("rows.0.target_hash", hash));
+    const char *target_path = integration_text("rows.0.target_path");
+    char expected_target[NATIVE_PATH_SIZE], actual_target[NATIVE_PATH_SIZE];
+    TEST_ASSERT(target_path);
+    TEST_ASSERT_FILE_OK(file_tree_path((cstring){(char *)target_path}, actual_target, 0));
+    TEST_ASSERT_FILE_OK(file_tree_path((cstring){target}, expected_target, 0));
+    TEST_ASSERT(!source_path_compare(actual_target, expected_target));
     if (context_mode) TEST_ASSERT(integration_number_is("rows.0.range_start", 0) && integration_number_is("rows.0.range_end", 0) && integration_text_is("rows.0.selected_text", ""));
     else {
         usize start, end, size; const char *bytes;
@@ -135,7 +141,7 @@ static int gui_wait_event(usize *offset, const char *event) {
     TEST_ASSERT(ready && gui_live[0].active && !gui_live[0].observed); return 0;
 }
 static int gui_search_roundtrip(void) {
-    char project[NATIVE_PATH_SIZE], baseline[NATIVE_PATH_SIZE], path[NATIVE_PATH_SIZE];
+    char project[NATIVE_PATH_SIZE], baseline[NATIVE_PATH_SIZE], path[NATIVE_PATH_SIZE], nested[NATIVE_PATH_SIZE], outside[NATIVE_PATH_SIZE];
     TEST_ASSERT_FILE_OK(test_directory_next(&gui_case, "search-project", project));
     TEST_ASSERT_FILE_OK(file_directory_copy(&gui_files, (cstring){"tests/fixtures/project"}, (cstring){project}));
     TEST_ASSERT_FILE_OK(file_tree_join(path, project, ".gui-test-owned"));
@@ -143,6 +149,11 @@ static int gui_search_roundtrip(void) {
     TEST_ASSERT_FILE_OK(file_tree_join(path, project, "README.md"));
     const char content[] = "Read **the** plan.\n\nSecond plan.\n";
     TEST_ASSERT_FILE_OK(file_write_bytes((cstring){path}, content, sizeof(content) - 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(path, project, "docs")); TEST_ASSERT(file_directory_create(path, 1));
+    TEST_ASSERT_FILE_OK(file_tree_join(nested, path, "draft café.md"));
+    TEST_ASSERT_FILE_OK(file_create_text((cstring){nested}, "Nested draft\n"));
+    TEST_ASSERT_FILE_OK(file_tree_join(outside, gui_case.path, "outside.md"));
+    TEST_ASSERT_FILE_OK(file_create_text((cstring){outside}, "Outside draft\n"));
     TEST_ASSERT(gui_baseline(project, baseline) == 0);
     const char *arguments[] = {gui_testing, "--project", project, "--assets", gui_assets, "--file", "records/tasks/first.md", "--frames", "1200", "--exercise-selection", "search-server"};
     test_command_workspace buffers = {gui_commands.scratch, gui_live_output[0], gui_live_errors[0], sizeof(gui_live_output[0]), sizeof(gui_live_errors[0])};
@@ -179,6 +190,22 @@ static int gui_search_roundtrip(void) {
     TEST_ASSERT(gui_execute(invalid, 7, 2, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0 && integration_text_is("code", "invalid-search"));
     const char *missing_view[] = {gui_other, "--project", project, "--find", "plan"};
     TEST_ASSERT(gui_execute(missing_view, 5, 2, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0 && integration_text_is("code", "usage"));
+    const char *open[] = {gui_other, "--project", project, "--open", nested};
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        TEST_ASSERT(gui_execute(open, 5, 0, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0);
+        integration_json_node *queued = integration_json_get(0, "queued"); TEST_ASSERT(queued && queued->type == PDJSON_TRUE);
+        TEST_ASSERT(gui_wait_event(&offset, "open-applied") == 0 && integration_number_is("tabs", 3));
+        TEST_ASSERT(gui_execute(unchanged, 4, 0, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0);
+        const char *active = integration_text("document.path");
+        char expected[NATIVE_PATH_SIZE], actual[NATIVE_PATH_SIZE];
+        TEST_ASSERT(active);
+        TEST_ASSERT_FILE_OK(file_tree_path((cstring){(char *)active}, actual, 0));
+        TEST_ASSERT_FILE_OK(file_tree_path((cstring){nested}, expected, 0));
+        TEST_ASSERT(!source_path_compare(actual, expected));
+    }
+    open[4] = outside;
+    TEST_ASSERT(gui_execute(open, 5, 1, 60000) == 0 && integration_json_parse(0, gui_result.output.data, gui_result.output.len) == 0 && integration_text_is("code", "open-refused"));
+    TEST_ASSERT_FILE_TEXT(((cstring){outside}), "Outside draft\n");
     while (!gui_live[0].complete) { TEST_ASSERT_COMMAND_OK(test_command_poll(&gui_live[0])); if (!gui_live[0].complete) test_command_sleep(1); }
     TEST_ASSERT_COMMAND_EXIT(&gui_live[0].result, 0);
     TEST_ASSERT_DIRECTORIES_EQUAL(&gui_files, ((cstring){project}), ((cstring){baseline}));

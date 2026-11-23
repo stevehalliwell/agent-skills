@@ -30,10 +30,25 @@ static void find_keys(gui_app *app) {
         find_close(app, target);
     }
 }
-static void apply_agent_search(gui_app *app) {
+static void apply_agent_navigation(gui_app *app) {
     if (!app->search_ready) return;
     app->search_ready = 0;
     gui_search *request = &app->pending_search;
+    if (request->version == GUI_OPEN_VERSION) {
+        if (app->composer_active || app->pending_action != GUI_ACTION_NONE || app->close_all || app->request_exit) {
+            snprintf(app->workspace.error, sizeof(app->workspace.error), "Agent open not applied while viewer is busy");
+        } else if (!gui_control_path_allowed(&app->workspace, request->path) || !gui_reveal_ordinary_path(request->path)) {
+            snprintf(app->workspace.error, sizeof(app->workspace.error), "Agent open file is unavailable or no longer permitted");
+        } else if (gui_open_document(&app->workspace, request->path)) {
+            igClearActiveID();
+#ifdef ATTENDANT_GUI_TESTING
+            if (app->selection_exercise == 17) {
+                printf("{\"event\":\"open-applied\",\"tabs\":%d}\n", app->workspace.tab_count); fflush(stdout);
+            }
+#endif
+        }
+        return;
+    }
     if (app->composer_active || app->pending_action != GUI_ACTION_NONE || app->close_all) {
         snprintf(app->workspace.error, sizeof(app->workspace.error), "Agent search not applied while dialog/close-all is active"); return;
     }

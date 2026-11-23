@@ -10,7 +10,7 @@ C99 application using shared source API and pinned ImGui/RichMd native library. 
 
 - `main.c` owns UI/focus, tabs, navigation, wrapped source geometry, find routing and pending agent controls. `find.h`, `find-ui.h` and `navigation.h` keep application policy outside reusable filesystem helpers.
 - `workspace.c` owns source sessions, document revisions and selection snapshots. Undo remains ImGui-owned, isolated by literal full file-path bytes plus slot/generation; no persistent per-file history or same-path reopen lifetime promise.
-- `reveal.h` defines passive reveal v1 and separate find packets. `inspect.h` defines inspection v2. `ipc-macos.h` supplies framed same-UID transport; Windows uses bounded `WM_COPYDATA`. Use GUI CLI client for ordinary controls, not hand-built packets.
+- `reveal.h` defines passive reveal v1 and the shared navigation packet for live `--find` and `--open`. `inspect.h` defines inspection v2. `ipc-macos.h` supplies framed same-UID transport; Windows uses bounded `WM_COPYDATA`. Use GUI CLI client for ordinary controls, not hand-built packets.
 - Automatic discovery uses shared `base.h` search with native `*.md` enumeration on Windows and `root_only`; no recursive directory pass. Generic recursive search remains available but disabled for automatic workspace discovery.
 - GUI requires native library beside executable and explicit assets path. Both macOS compiler outputs launch without loader-environment setup. C++ exceptions stay behind C ABI. Borrowed bridge strings expire on next render/shutdown; copy before retaining them. Single UI thread/context.
 - Terminal render failure abandons frame and exits; unsaved tabs/composer drafts are not recovered.

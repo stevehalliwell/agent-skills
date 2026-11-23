@@ -53,12 +53,12 @@ Keep native library beside executable and supply assets path. `--file` is option
 
 ## Use the workspace
 
-- Select a collection record or root Markdown file from sidebar. Use **Open Markdown** for an explicit path and **Refresh files** after files change.
+- Select a collection record or root Markdown file from sidebar. Type a project-relative or absolute path and press Enter or **Open Markdown**, or drop local Markdown files onto the window. These files open as tabs without changing sidebar discovery. Use **Refresh files** after discovered files change.
 - Edit source on left; read rendered body on right. Follow dependency and local Markdown links. **Save** or Ctrl+S writes source. Reload and close prompt before discarding dirty work; far-right tab-bar **X** closes all tabs.
 - **Wrap** toggles soft source wrapping without changing file. Drag vertical dividers to resize panes.
 - Ctrl+F searches last-focused sidebar, source or preview. Sidebar filters names/paths; source includes unsaved text; preview searches visible text. Enter/F3 selects next document match; Shift reverses direction. **Match case** changes case handling. Escape closes document search; sidebar Escape clears and hides filter.
 - Select source or preview text, then **Comment on selection**. Add comment and send; dirty source requires **Save & Send**. If queueing fails after save, file stays saved and error says feedback was not queued.
-- Agent reveal shows a location hint; choose **Go** to navigate. Agents can also inspect current selection or explicitly show find results. [Agent GUI and IPC guide](../SKILL.md#gui-workspace).
+- Agents can queue tab activation with `--open PATH` for an existing viewer. Outside files must already be open or belong to a configured collection. Agent reveal shows a location hint; choose **Go** to navigate. Agents can also inspect current selection or explicitly show find results. [Agent GUI and IPC guide](../SKILL.md#gui-workspace).
 
 ## Data safety and limits
 

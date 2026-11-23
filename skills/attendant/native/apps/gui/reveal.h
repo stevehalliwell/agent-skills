@@ -31,6 +31,9 @@ int gui_reveal_send(const char *project, const char *path, uint32_t line);
 #define GUI_SEARCH_ACCEPTED 0x41544632u
 #define GUI_SEARCH_BUSY 0x41544633u
 #define GUI_SEARCH_QUERY 1024
+/* Version 2 reserves an open-only request in the existing navigation queue. */
+#define GUI_OPEN_VERSION 2u
+#define GUI_OPEN_VIEW 3u
 typedef struct gui_search {
     uint32_t version, view, match_case;
     char project[GUI_PATH], path[GUI_PATH], query[GUI_SEARCH_QUERY];
@@ -38,6 +41,8 @@ typedef struct gui_search {
 uintptr_t gui_search_receive(const gui_workspace *workspace, gui_search *pending, int *ready,
     int busy, const void *data, size_t size);
 int gui_search_send(const char *project, const char *path, const char *query, uint32_t view, int match_case);
+int gui_open_send(const char *project, const char *path);
+int gui_control_path_allowed(const gui_workspace *workspace, const char *path);
 /* Lines follow InputTextMultiline: LF/CRLF. Bare CR cannot be mapped safely. */
 int gui_reveal_has_line(const char *text, uint32_t line);
 /* Outside IPC callback. Ordinary local ancestry only; no application links.

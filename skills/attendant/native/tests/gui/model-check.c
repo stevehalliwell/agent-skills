@@ -99,6 +99,16 @@ int main(int argc, char **argv) {
         CHECK(gui_search_receive(workspace, &pending, &ready, 0, external + 1, sizeof(request)) == GUI_SEARCH_ACCEPTED && ready);
         ready = 0; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, external + 1, sizeof(request) - 1));
         request.view = 0; CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        request.version = GUI_OPEN_VERSION; request.view = GUI_OPEN_VIEW;
+        CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request))); /* Not a search. */
+        request.query[0] = 0;
+        CHECK(gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)) == GUI_SEARCH_ACCEPTED && ready && pending.version == GUI_OPEN_VERSION);
+        ready = 0;
+        CHECK(gui_search_receive(workspace, &pending, &ready, 1, &request, sizeof(request)) == GUI_SEARCH_BUSY && !ready);
+        CHECK(gui_full_path(workspace->root, "../outside.md", request.path));
+        CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
+        request.path[0] = 0;
+        CHECK(!gui_search_receive(workspace, &pending, &ready, 0, &request, sizeof(request)));
         CHECK(!workspace->tab_count && workspace->active < 0);
     }
     CHECK(gui_open_document(workspace, "records/tasks/first.md")); first = workspace->active; tab = &workspace->tabs[first];

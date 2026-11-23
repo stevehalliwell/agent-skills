@@ -23,12 +23,16 @@
 #include "navigation.h"
 #if defined(_WIN32)
 __declspec(dllimport) LPWSTR *WINAPI CommandLineToArgvW(LPCWSTR, int *);
+__declspec(dllimport) void WINAPI DragAcceptFiles(HWND, BOOL);
+__declspec(dllimport) UINT WINAPI DragQueryFileW(HANDLE, UINT, LPWSTR, UINT);
+__declspec(dllimport) void WINAPI DragFinish(HANDLE);
 #endif
 
 typedef enum gui_action { GUI_ACTION_NONE, GUI_ACTION_CLOSE, GUI_ACTION_RELOAD, GUI_ACTION_EXIT } gui_action;
 typedef struct gui_app {
     gui_workspace workspace;
-    char open_path[GUI_PATH];
+    char open_path[GUI_PATH], drop_paths[GUI_TABS][GUI_PATH];
+    int drop_count;
     gui_reveal hint, pending_hint;
     gui_search pending_search;
     int search_ready;
@@ -62,15 +66,51 @@ typedef struct gui_app {
 #endif
 } gui_app;
 static gui_app *application;
+static int navigation_busy(const gui_app *app) {
+    return app->inspection_busy || app->composer_active || app->pending_action != GUI_ACTION_NONE || app->close_all || app->request_exit;
+}
+static int accept_drop(gui_app *app, unsigned count) {
+    const char *error = NULL;
+    if (navigation_busy(app) || app->drop_count) error = "File drop ignored while viewer is busy; try again";
+    else if (!count || count > GUI_TABS) error = "Drop 1 to 16 Markdown files at a time";
+    if (error) snprintf(app->workspace.error, sizeof(app->workspace.error), "%s", error);
+    return !error;
+}
+static void apply_file_drop(gui_app *app) {
+    int count = app->drop_count;
+    if (!count) return;
+    app->drop_count = 0;
+    if (!accept_drop(app, (unsigned)count)) return;
+    for (int i = 0; i < count; ++i) {
+        const char *path = app->drop_paths[i]; size_t length = strlen(path);
+        if (length < 3 || source_case_compare(path + length - 3, ".md") || !gui_reveal_ordinary_path(path)) {
+            snprintf(app->workspace.error, sizeof(app->workspace.error), "Drop requires an ordinary local Markdown file with a bounded path");
+        } else gui_open_document(&app->workspace, path);
+    }
+}
 static void link_clicked(const char *url, void *user) { gui_open_link(&((gui_app *)user)->workspace, url); }
 #if defined(_WIN32)
 static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
+    if (message == WM_DROPFILES) {
+        HANDLE drop = (HANDLE)wparam;
+        UINT count = DragQueryFileW(drop, (UINT)-1, NULL, 0);
+        if (application && accept_drop(application, count)) {
+            wchar_t wide[GUI_PATH];
+            for (UINT i = 0; i < count; ++i) {
+                char *path = application->drop_paths[i];
+                UINT length = DragQueryFileW(drop, i, NULL, 0);
+                if (!length || length >= GUI_PATH || DragQueryFileW(drop, i, wide, GUI_PATH) != length ||
+                    !WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, path, GUI_PATH, NULL, NULL)) path[0] = 0;
+            }
+            application->drop_count = (int)count;
+        }
+        DragFinish(drop); return 0;
+    }
     if (message == WM_COPYDATA && application && lparam) {
         const COPYDATASTRUCT *copy = (const COPYDATASTRUCT *)lparam;
         if (copy->dwData == GUI_SEARCH_SET)
             return (LRESULT)gui_search_receive(&application->workspace, &application->pending_search, &application->search_ready,
-                application->inspection_busy || application->composer_active || application->pending_action != GUI_ACTION_NONE || application->close_all,
-                copy->lpData, copy->cbData);
+                navigation_busy(application), copy->lpData, copy->cbData);
         if (copy->dwData == GUI_INSPECT_REQUEST) {
             uintptr_t result;
             if (!application->inspection) application->inspection = VirtualAlloc(NULL, sizeof(*application->inspection), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -93,6 +133,16 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
 static void window_close(GLFWwindow *window) {
     if (application) application->request_exit = 1;
     glfwSetWindowShouldClose(window, GLFW_FALSE);
+}
+static void window_drop(GLFWwindow *window, int count, const char **paths) {
+    (void)window;
+    if (!application || !accept_drop(application, (unsigned)count)) return;
+    for (int i = 0; i < count; ++i) {
+        char *path = application->drop_paths[i];
+        if (strlen(paths[i]) < GUI_PATH && string_view_utf8_valid(string_view_from_cstr(paths[i]))) strcpy(path, paths[i]);
+        else path[0] = 0;
+    }
+    application->drop_count = count;
 }
 #endif
 static void clear_composer_preview(gui_app *app) {
@@ -611,9 +661,9 @@ static void draw_workspace(gui_app *app) {
     show_text(workspace->root);
     if (igButton("Refresh files", zero)) gui_refresh(workspace);
     igSameLine(0, -1); igSetNextItemWidth(500);
-    igInputText("##open-path", app->open_path, sizeof(app->open_path), 0, NULL, NULL);
+    bool submitted = igInputTextWithHint("##open-path", "Markdown path (or drop files)", app->open_path, sizeof(app->open_path), ImGuiInputTextFlags_EnterReturnsTrue, NULL, NULL);
     igSameLine(0, -1);
-    if (igButton("Open Markdown", zero)) gui_open_document(workspace, app->open_path);
+    if (igButton("Open Markdown", zero) || submitted) gui_open_document(workspace, app->open_path);
 #ifdef ATTENDANT_GUI_TESTING
     app->issues_shown = 0;
 #endif
@@ -691,12 +741,12 @@ static int load_fonts(gui_app *app, const char *assets) {
     return app->source_font && igGetIO_Nil()->FontDefault;
 }
 static int usage(FILE *output, int code) {
-    fprintf(output, "Usage: attendant-gui --project DIR --assets DIR [--file PATH] [--frames 1..6000 --shot FILE.ppm]\n       attendant-gui --project DIR --reveal FILE [--line N]\n       attendant-gui --project DIR --inspect\n       attendant-gui --project DIR --find QUERY --view sidebar|source|preview [--file PATH] [--match-case]\n");
-    if (code) gui_reveal_error(code, "usage", "Expected GUI startup or one control: --inspect, --reveal FILE [--line N], --find QUERY --view sidebar|source|preview [--file PATH] [--match-case]; control cannot combine startup/test flags");
+    fprintf(output, "Usage: attendant-gui --project DIR --assets DIR [--file PATH] [--frames 1..6000 --shot FILE.ppm]\n       attendant-gui --project DIR --reveal FILE [--line N]\n       attendant-gui --project DIR --open PATH\n       attendant-gui --project DIR --inspect\n       attendant-gui --project DIR --find QUERY --view sidebar|source|preview [--file PATH] [--match-case]\n");
+    if (code) gui_reveal_error(code, "usage", "Expected GUI startup or one control: --inspect, --open PATH, --reveal FILE [--line N], --find QUERY --view sidebar|source|preview [--file PATH] [--match-case]; control cannot combine startup/test flags");
     return code;
 }
 int main(int argc, char **argv) {
-    const char *project = NULL, *assets = NULL, *initial = NULL, *shot = NULL, *reveal = NULL, *find_query = NULL;
+    const char *project = NULL, *assets = NULL, *initial = NULL, *shot = NULL, *reveal = NULL, *find_query = NULL, *open_path = NULL;
     uint32_t find_view = 1; int view_supplied = 0, find_case = 0;
     uint32_t reveal_line = 1;
     int line_supplied = 0, inspect = 0;
@@ -747,6 +797,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--file") && i + 1 < argc) initial = argv[++i];
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) shot = argv[++i];
         else if (!strcmp(argv[i], "--reveal") && i + 1 < argc) reveal = argv[++i];
+        else if (!strcmp(argv[i], "--open") && !open_path && i + 1 < argc) open_path = argv[++i];
         else if (!strcmp(argv[i], "--inspect")) inspect = 1;
         else if (!strcmp(argv[i], "--find") && i + 1 < argc) find_query = argv[++i];
         else if (!strcmp(argv[i], "--match-case")) find_case = 1;
@@ -768,14 +819,16 @@ int main(int argc, char **argv) {
             frame_limit = (int)value;
         } else return usage(stderr, 2);
     }
-    if (reveal || inspect || find_query) {
-        if (!project || ((reveal != NULL) + inspect + (find_query != NULL) != 1) ||
+    if (reveal || inspect || find_query || open_path) {
+        if (!project || ((reveal != NULL) + inspect + (find_query != NULL) + (open_path != NULL) != 1) ||
             ((!reveal) && line_supplied) || assets || (initial && !find_query) || shot || frame_limit ||
             (find_query ? !view_supplied || (!find_view && initial) : view_supplied || find_case)) return usage(stderr, 2);
 #ifdef ATTENDANT_GUI_TESTING
         if (exercise || edit_exercise || preview_exercise || reveal_exercise || selection_exercise) return usage(stderr, 2);
 #endif
-        code = find_query ? gui_search_send(project, initial, find_query, find_view, find_case) : inspect ? gui_inspect(project) : gui_reveal_send(project, reveal, reveal_line);
+        if (open_path) code = gui_open_send(project, open_path);
+        else if (find_query) code = gui_search_send(project, initial, find_query, find_view, find_case);
+        else code = inspect ? gui_inspect(project) : gui_reveal_send(project, reveal, reveal_line);
 #if defined(_WIN32)
         for (i = 0; i < argc; i++) HeapFree(GetProcessHeap(), 0, owned[i]);
 #endif
@@ -812,6 +865,7 @@ int main(int argc, char **argv) {
     if (!window) goto cleanup;
     glfwMakeContextCurrent(window); glfwSwapInterval(1);
     glfwSetWindowCloseCallback(window, window_close);
+    glfwSetDropCallback(window, window_drop);
 #endif
     context = igCreateContext(NULL); igGetIO_Nil()->IniFilename = NULL; igStyleColorsDark(NULL);
 #ifdef ATTENDANT_GUI_TESTING
@@ -827,7 +881,7 @@ int main(int argc, char **argv) {
     window = CreateWindowExA(0, description.lpszClassName, "Attendant - shared Markdown workspace", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 1440, 1000, NULL, NULL, description.hInstance, NULL);
     if (!window || !crmd_init(window, assets, link_clicked, application)) { fprintf(stderr, "%s\n", crmd_error()); goto cleanup; }
-    gui_ready = 1; ShowWindow(window, SW_SHOWDEFAULT); UpdateWindow(window);
+    gui_ready = 1; DragAcceptFiles(window, TRUE); ShowWindow(window, SW_SHOWDEFAULT); UpdateWindow(window);
 #else
     if (!crmd_init(window, assets, link_clicked, application)) { fprintf(stderr, "%s\n", crmd_error()); goto cleanup; }
     gui_ready = 1;
@@ -843,7 +897,7 @@ int main(int argc, char **argv) {
 #else
         glfwPollEvents();
         gui_ipc_poll(&server, &application->workspace, &application->pending_hint, &application->pending_hint_ready, application->inspection,
-            &application->pending_search, &application->search_ready, application->composer_active || application->pending_action != GUI_ACTION_NONE || application->close_all);
+            &application->pending_search, &application->search_ready, navigation_busy(application));
 #ifdef ATTENDANT_GUI_TESTING
         application->inspection_requests = (int)server.inspections;
 #endif
@@ -861,9 +915,10 @@ int main(int argc, char **argv) {
 #ifdef ATTENDANT_GUI_TESTING
         exercise_input(application, window, frame);
 #endif
+        apply_file_drop(application);
         application->inspection_busy = 1;
         if (!crmd_begin_frame()) goto cleanup;
-        apply_agent_search(application);
+        apply_agent_navigation(application);
         /* Later human navigation cancels an unrendered Go; incoming hints do not. */
         if (application->scroll_hint && (application->workspace.active < 0 ||
             (application->shown_activation == application->workspace.activation &&

@@ -15,7 +15,7 @@ static char gui_production[NATIVE_PATH_SIZE], gui_testing[NATIVE_PATH_SIZE], gui
 static char gui_compiler[16];
 static unsigned gui_groups;
 static const char gui_original[] = "# Workspace\r\n\r\nPlain Markdown café Ω 😀.\r\n";
-static const char gui_sql[] = "SELECT name,status,target_hash,range_start,range_end,selected_text,source_path FROM _meta_comments";
+static const char gui_sql[] = "SELECT name,status,target_path,target_hash,range_start,range_end,selected_text,source_path FROM _meta_comments";
 
 static int gui_suite_setup(void) {
     gui_files = (file_tree_workspace){arena_from_buffer(gui_file_memory, sizeof(gui_file_memory)), 32, 8192};

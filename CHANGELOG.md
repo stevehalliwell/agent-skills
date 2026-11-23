@@ -4,6 +4,7 @@
 
 ### Added
 
+- Attendant GUI opens dropped Markdown files and accepts live `--open PATH` requests. Explicit paths can reach nested files without recursive discovery. Live requests keep existing project, collection, and open-tab boundaries.
 - Native Attendant Markdown workspace GUI with source/preview editing, human feedback, reveal and selection inspection.
 - README native-app setup notes for CJIT and Zig (`zig cc`), plus pinned source revision for former Attendant implementation.
 - Native Attendant GUI: default-on raw **Wrap** toggle, context-aware Ctrl+F for file/source/preview panes, and bounded Markdown navigation with explicit incomplete-discovery warnings. Automatic discovery currently includes root Markdown and configured collection files only. Windows CJIT/Zig checks pass; usability changes await macOS validation.
